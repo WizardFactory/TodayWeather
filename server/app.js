@@ -4,9 +4,25 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
+
+var config = require('./config/config');
+
+// Bootstrap db connection
+var db = mongoose.connect(config.db.path, config.db.options, function(err) {
+  if (err) {
+    console.error('Could not connect to MongoDB!');
+    console.log(err);
+  }
+});
+mongoose.connection.on('error', function(err) {
+      console.error('MongoDB connection error: ' + err);
+      process.exit(-1);
+    }
+);
 
 var app = express();
 
