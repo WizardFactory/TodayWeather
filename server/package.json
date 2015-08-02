@@ -16,7 +16,6 @@
     "morgan": "~1.6.1",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
-    "winston": "^1.0.1",
-    "xml2js": "^0.4.9"
+    "winston": "^1.0.1"
   }
 }
