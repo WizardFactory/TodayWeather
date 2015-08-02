@@ -1,7 +1,15 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope) {
+    .controller('DashCtrl', function($scope, $cordovaGeolocation) {
+        $scope.location = "Current Position Searching...";
 
+        $cordovaGeolocation.getCurrentPosition().then(function (position) {
+            var lat  = position.coords.latitude
+            var long = position.coords.longitude
+            $scope.location = "latitude : " + lat + ", longitude : " + long;
+        }, function(err) {
+            $scope.location = "error";
+        });
     })
 
     .controller('ChatsCtrl', function($scope, Chats) {
