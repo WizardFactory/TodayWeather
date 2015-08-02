@@ -8,9 +8,13 @@ var mongoose = require('mongoose');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
-var mgrToken = require('./controllers/token.controller.js');
 
+/*
+* wizard factory's modules
+*/
 var config = require('./config/config');
+var Logger = require('./lib/log');
+global.log  = new Logger(__dirname + "/debug.log");
 
 // Bootstrap db connection
 var db = mongoose.connect(config.db.path, config.db.options, function(err) {
