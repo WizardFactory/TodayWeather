@@ -1,7 +1,25 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope) {
+    .controller('DashCtrl', function($scope, $cordovaGeolocation, $http) {
+        $scope.location = "Current Position Searching...";
+        $scope.address = "";
 
+        $cordovaGeolocation.getCurrentPosition().then(function(position) {
+            var lat  = position.coords.latitude
+            var long = position.coords.longitude
+            $scope.location = "latitude : "+lat+", longitude : "+long;
+
+            var url = "http://maps.googleapis.com/maps/api/geocode/json?latlng="+lat+","+long+"&sensor=true";
+            $http({method: 'GET', url: url}).
+                success(function(data, status, headers, config) {
+                    $scope.address = data.results[0].formatted_address;
+                }).
+                error(function(data, status, headers, config) {
+                    $scope.address = "error";
+                });
+        }, function(err) {
+            $scope.location = "error";
+        });
     })
 
     .controller('ChatsCtrl', function($scope, Chats) {
