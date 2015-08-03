@@ -1,28 +1,48 @@
 angular.module('starter.controllers', [])
 
-.controller('DashCtrl', function($scope) {})
+    .controller('DashCtrl', function($scope, $cordovaGeolocation, $http) {
+        $scope.location = "Current Position Searching...";
+        $scope.address = "";
 
-.controller('ChatsCtrl', function($scope, Chats) {
-  // With the new view caching in Ionic, Controllers are only called
-  // when they are recreated or on app start, instead of every page change.
-  // To listen for when this page is active (for example, to refresh data),
-  // listen for the $ionicView.enter event:
-  //
-  //$scope.$on('$ionicView.enter', function(e) {
-  //});
+        $cordovaGeolocation.getCurrentPosition().then(function(position) {
+            var lat  = position.coords.latitude
+            var long = position.coords.longitude
+            $scope.location = "latitude : "+lat+", longitude : "+long;
 
-  $scope.chats = Chats.all();
-  $scope.remove = function(chat) {
-    Chats.remove(chat);
-  };
-})
+            var url = "http://maps.googleapis.com/maps/api/geocode/json?latlng="+lat+","+long+"&sensor=true";
+            $http({method: 'GET', url: url}).
+                success(function(data, status, headers, config) {
+                    $scope.address = data.results[0].formatted_address;
+                }).
+                error(function(data, status, headers, config) {
+                    $scope.address = "error";
+                });
+        }, function(err) {
+            $scope.location = "error";
+        });
+    })
 
-.controller('ChatDetailCtrl', function($scope, $stateParams, Chats) {
-  $scope.chat = Chats.get($stateParams.chatId);
-})
+    .controller('ChatsCtrl', function($scope, Chats) {
+        // With the new view caching in Ionic, Controllers are only called
+        // when they are recreated or on app start, instead of every page change.
+        // To listen for when this page is active (for example, to refresh data),
+        // listen for the $ionicView.enter event:
+        //
+        //$scope.$on('$ionicView.enter', function(e) {
+        //});
 
-.controller('AccountCtrl', function($scope) {
-  $scope.settings = {
-    enableFriends: true
-  };
-});
+        $scope.chats = Chats.all();
+        $scope.remove = function(chat) {
+            Chats.remove(chat);
+        };
+    })
+
+    .controller('ChatDetailCtrl', function($scope, $stateParams, Chats) {
+        $scope.chat = Chats.get($stateParams.chatId);
+    })
+
+    .controller('AccountCtrl', function($scope) {
+        $scope.settings = {
+            enableFriends: true
+        };
+    });

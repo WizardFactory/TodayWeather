@@ -1,5 +1,5 @@
 {
-  "name": "todayweather",
+  "name": "TodayWeather",
   "version": "1.0.0",
   "description": "TodayWeather: An Ionic project",
   "dependencies": {
@@ -19,10 +19,21 @@
     "cordova-plugin-console",
     "cordova-plugin-whitelist",
     "cordova-plugin-splashscreen",
-    "com.ionic.keyboard"
+    "com.ionic.keyboard",
+    "cordova-plugin-geolocation"
   ],
   "cordovaPlatforms": [
     "android",
-    "ios"
+    "ios",
+    {
+      "platform": "android",
+      "version": "",
+      "locator": "android"
+    },
+    {
+      "platform": "ios",
+      "version": "",
+      "locator": "ios"
+    }
   ]
 }
