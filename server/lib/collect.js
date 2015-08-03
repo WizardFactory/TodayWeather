@@ -130,7 +130,7 @@ CollectData.prototype.__proto__ = events.EventEmitter.prototype;
 
 CollectData.prototype.makeUrl = function(base, key, date, time, x, y){
     //var url1 = 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData?serviceKey='+ config.key.kma +'&base_date=20150727&base_time=0800&nx=' + nx + '&ny=' + ny;
-    return base + '?serviceKey=' + key + '&base_date=' + date + '&base_time=' + time + '&nx=' + x + '&ny=' + y;
+    return base + '?serviceKey=' + key + '&base_date=' + date + '&base_time=' + time + '&nx=' + x + '&ny=' + y + '&pageNo=1&numOfRows=999';
 };
 
 CollectData.prototype.resetResult = function(){
