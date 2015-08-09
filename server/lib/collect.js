@@ -22,7 +22,7 @@
 
 var events = require('events');
 var req = require('request');
-var xml2json  = require('./xml2json.js');
+var xml2json  = require('xml2js').parseString;
 
 /*
 * constructor
@@ -238,7 +238,6 @@ CollectData.prototype.getData = function(index, url,callback){
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
     req.get(url, null, function(err, response, body){
-        var resultJson = '';
         if(err) {
             log.error(err);
             self.emit('recvFail', index);
@@ -248,24 +247,20 @@ CollectData.prototype.getData = function(index, url,callback){
             return;
         }
         //log.info(body);
-
-        try{
-            var parser = new xml2json(body);
-            parser.toJson();
-            //log.info('index['+ index +'] : ' + JSON.stringify(parser.getJson()));
-
-            resultJson = JSON.stringify(parser.getJson());
-        }
-        catch(e){
-            log.error('Error!!!', meta);
-        }
-        finally{
-            self.emit('recvData', index, resultJson);
-
-            if(callback){
-                callback(err, index, resultJson);
+        xml2json(body, function(err, result){
+            try{
+                self.emit('recvData', index, result);
+                //self.emit('recvData', index, JSON.stringify(result));
             }
-        }
+            catch(e){
+                log.error('Error!!!', meta);
+            }
+            finally{
+                if(callback){
+                    callback(err, index, result);
+                }
+            }
+        });
     });
 };
 
