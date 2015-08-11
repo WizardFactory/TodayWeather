@@ -187,4 +187,4 @@ Converter.prototype.getCoordinate = function(){
     return this.coordinate;
 };
 
-module.exports = Converter; 
+module.exports = Converter; 
