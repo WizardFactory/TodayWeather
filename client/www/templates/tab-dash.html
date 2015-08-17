@@ -1,30 +1,49 @@
-<ion-view view-title="Dashboard">
-    <ion-content class="padding">
-        <div class="list card">
-            <div class="item item-divider">Recent Updates</div>
-            <div class="item item-body">
-                <div>
-                    There is a fire in <b>sector 3</b>
+<ion-view hide-nav-bar="true">
+    <ion-content>
+        <div style="width: 100%; height: 100%; background-color: #22a1db; color: white">
+            <div class="row-top" style="height: 7%;">
+                <div class="col" style="text-align: center; background-color: white; opacity: 0.6; color: black;">
+                    <p style="font-size: 24px">오늘은 폭염이 예상됩니다.</p>
                 </div>
             </div>
-        </div>
-        <div class="list card">
-            <div class="item item-divider">Health</div>
-            <div class="item item-body">
-                <div>
-                    You ate an apple today!
+            <div class="row-center row-no-padding" style="height: 34%;">
+                <div class="row-top row-no-padding" style="height: 20%;"></div>
+                <div class="row-center row-no-padding" style="height: 20%;">
+                    <div class="col" style="text-align: center">
+                       <p style="font-size: 24px">서울시 잠실본동</p>
+                    </div>
+                </div>
+                <div class="row row-bottom row-no-padding" style="height: 60%;">
+                    <div class="col" style="height: 100%">
+                        <div class="row row-no-padding" style="height: 100%">
+                            <div style="height: 100%; width: 60%; text-align: right; vertical-align: text-bottom; font-size: 112px; margin: 30px 0">
+                                27
+                            </div>
+                            <div style="height: 100%; width: 40%;">
+                                <div class="row-no-padding"><img src="img/reddot.png" width="18px"></div>
+                                <div class="row-no-padding"><img src="img/SunWithCloud.png" width="74px"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="list card">
-            <div class="item item-divider">Upcoming</div>
-            <div class="item item-body">
-                <div>
-                    You have <b>29</b> meetings on your calendar tomorrow.
-                </div>
+            <div class="row-bottom row-no-padding" style="height: 59%;">
+                <ion-scroll zooming="false" direction="x" style="width: 100%; height: 100%">
+                    <div class="col" style="height: 100%; width: 1200px">
+                        <div class="row-top row-no-padding" style="height: 54%;">
+                        </div>
+                        <div class="row row-bottom row-no-padding" style="height: 46%;">
+                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
+                                <div class="row">{{value.hour}}</div>
+                                <div class="row"><img src={{value.tempIcon}}></div>
+                                <div class="row">{{value.temp}}</div>
+                                <div class="row"><img src={{value.weatherIcon}}></div>
+                                <div class="row">{{value.pop}}</div>
+                            </div>
+                        </div>
+                    </div>
+                </ion-scroll>
             </div>
         </div>
-        <div>{{location}}</div>
-        <div>{{address}}</div>
     </ion-content>
 </ion-view>
