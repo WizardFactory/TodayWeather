@@ -3,10 +3,20 @@ angular.module('starter.controllers', [])
     .controller('DashCtrl', function($scope, $cordovaGeolocation, $http) {
         $scope.location = "Current Position Searching...";
         $scope.address = "";
+        $scope.timeTable = [];
+        for(var i=0; i<3; i++) {
+            for (var j=0; j<24; j+=3) {
+                tempObject = {day: i, hour: j,
+                                    tempIcon: 'temp-10', temp: 30,
+                                    weatherIcon: 'weatherIcon', pop: 20}; //Probability of precipitation
+
+                $scope.timeTable.push(tempObject);
+            }
+        }
 
         $cordovaGeolocation.getCurrentPosition().then(function(position) {
-            var lat  = position.coords.latitude
-            var long = position.coords.longitude
+            var lat  = position.coords.latitude;
+            var long = position.coords.longitude;
             $scope.location = "latitude : "+lat+", longitude : "+long;
 
             var url = "http://maps.googleapis.com/maps/api/geocode/json?latlng="+lat+","+long+"&sensor=true";
