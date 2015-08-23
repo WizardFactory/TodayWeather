@@ -19,9 +19,34 @@ $calm:                            #22a1db !default;
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
+@font-face {
+  font-family: "helvetica neue ultralight";
+  src: url("../fonts/HelveticaNeue-UltraLight.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Nanum Barun Gothic";
+  src: url("../fonts/NanumBarunGothic.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+
 .scroll {
   height: 100%;
 }
+
+.col {
+  font-family: 'Nanum Barun Gothic';
+}
+
+.big-digit {
+  font-family: 'Helvetica Neue UltraLight';
+  text-align: right;
+  font-size: 134px;
+}
+
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
