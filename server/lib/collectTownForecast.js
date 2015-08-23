@@ -32,35 +32,100 @@ var xml2json  = require('xml2js').parseString;
  *       options : there are some options. timeout, retryCount
  *       callback : It will get the result notify.
 */
-function CollectData(list, options, callback){
+function CollectData(options, callback){
     var self = this;
 
+    self.listPointNumber = Object.freeze(
+        [
+            {name: '강원도', code: '105'},
+            {name: '전국', code: '108'},
+            {name: '경기도', code: '109'},
+            {name: '충청도', code: '133'},
+            {name: '전라도', code: '156'},
+            {name: '경상도', code: '159'},
+            {name: '제주도', code: '184'}
+        ]
+    );
+
+    self.listAreaCode = Object.freeze(
+        [
+            {name: '경기도', code: '11B00000'},
+            {name: '강원도 영서', code: '11D10000'},
+            {name: '강원도 영동', code: '11D20000'},
+            {name: '충청남도', code: '11C20000'},
+            {name: '충청북도', code: '11C10000'},
+            {name: '전라남도', code: '11F20000'},
+            {name: '전라북도', code: '11F10000'},
+            {name: '경상북도', code: '11H10000'},
+            {name: '경상남도', code: '11H20000'},
+            {name: '제주도', code: '11G00000'}
+        ]
+    );
+
+    self.listCityCode = Object.freeze(
+        [
+            {name: '서울', code: '11B10101'},
+            {name: '인천', code: '11B20201'},
+            {name: '수원', code: '11B20601'},
+            {name: '문산', code: '11B20305'},
+            {name: '춘천', code: '11D10301'},
+            {name: '원주', code: '11D10401'},
+            {name: '강릉', code: '11D20501'},
+            {name: '대전', code: '11C20401'},
+            {name: '서산', code: '11C20101'},
+            {name: '청주', code: '11C10301'},
+            {name: '광주', code: '11F20501'},
+            {name: '여수', code: '11F20401'},
+            {name: '전주', code: '11F10201'},
+            {name: '목포', code: '21F20801'},
+            {name: '부산', code: '11H20201'},
+            {name: '울산', code: '11H20101'},
+            {name: '창원', code: '11H20301'},
+            {name: '대구', code: '11H10701'},
+            {name: '안동', code: '11H10501'},
+            {name: '제주', code: '11G00201'},
+            {name: '서귀포', code: '11G00401'},
+            {name: '세종', code: '11C20404'},
+            {name: '포항', code: '11H10201'},
+            {name: '군산', code: '21F10501'}
+        ]
+    );
+
+    self.listSeaCode = Object.freeze(
+        [
+            {name: '서해북부 ', code: '12A30000'},
+            {name: '서해중부 ', code: '12A20000'},
+            {name: '서해남부 ', code: '12A10000'},
+            {name: '남해서부 ', code: '12B10000'},
+            {name: '남해동부 ', code: '12B20000'},
+            {name: '제주도 ', code: '12B10500'},
+            {name: '동해남부 ', code: '12C10000'},
+            {name: '동해중부 ', code: '12C20000'},
+            {name: '동해북부 ', code: '12C30000'}
+        ]
+    );
+
     self.DATA_TYPE = Object.freeze({
-        CURRENT: 0,
-        SHORTEST: 1,
-        SHORT: 2
+        TOWN_CURRENT: 0,
+        TOWN_SHORTEST: 1,
+        TOWN_SHORT: 2,
+        MID_FORECAST: 3,
+        MID_LAND: 4,
+        MID_TEMP: 5,
+        MID_SEA: 6
     });
 
-    /*
-    * 현재 동네별예보 정보 서비스만 등록. 해당 서비스에 실황,초단기,단기 세개의 예보정보 제공됨.
-    */
     self.DATA_URL = Object.freeze({
-        CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastGrib',
-        SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastTimeData',
-        SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData'
+        TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastGrib',
+        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastTimeData',
+        TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData',
+        MID_FORECAST: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast',
+        MID_LAND: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather',
+        MID_TEMP: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature',
+        MID_SEA: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleSeaWeather'
     });
 
     events.EventEmitter.call(this);
-
-    if(list) {
-        self.srcList = list;
-        self.listCount = list.length;
-        self.resetResult();
-    }
-    else{
-        log.info('There is no list. The list is required when you want to use this module.');
-        return;
-    }
 
     if(options){
         if(options.timeout){
@@ -86,17 +151,19 @@ function CollectData(list, options, callback){
     self.on('recvFail', function(listIndex){
         log.error('receive fail[%d]', listIndex);
         if(self.resultList[listIndex].retryCount > 0){
-            log.info('try again:', listIndex);
+            log.error('try again:', listIndex);
+            //log.error('URL : ', self.resultList[listIndex].url);
+            //log.error(self.resultList[listIndex].options);
 
             self.resultList[listIndex].retryCount--;
-            self.getData(listIndex, self.resultList[listIndex].url);
+            self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
         }
         else
         {
             self.recvFailed = false;
             self.receivedCount++;
 
-            log.info('ignore this: ', listIndex);
+            log.error('ignore this: ', listIndex);
 
             if(self.receivedCount === self.listCount){
                 self.emit('dataComplated');
@@ -119,30 +186,89 @@ function CollectData(list, options, callback){
         }
     });
 
-    log.info('The list was created for the weather data:',
-        self.listCount, self.timeout, self.resultList.length,
-        self.resultList[0].isCompleted, self.resultList[self.resultList.length - 1].isCompleted);
+    //log.info('The list was created for the weather data');
 
     return self;
 }
 
 CollectData.prototype.__proto__ = events.EventEmitter.prototype;
 
+CollectData.prototype.getUrl = function(dataType, key, date, time, data){
+    var self = this;
+    var url = '';
 
-CollectData.prototype.makeUrl = function(base, key, date, time, x, y){
-    //var url1 = 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData?serviceKey='+ config.key.kma +'&base_date=20150727&base_time=0800&nx=' + nx + '&ny=' + ny;
-    return base + '?serviceKey=' + key + '&base_date=' + date + '&base_time=' + time + '&nx=' + x + '&ny=' + y + '&pageNo=1&numOfRows=999';
+    // start from base address
+    switch(dataType){
+        case self.DATA_TYPE.TOWN_CURRENT:
+            url = self.DATA_URL.TOWN_CURRENT;
+            break;
+        case self.DATA_TYPE.TOWN_SHORTEST:
+            url = self.DATA_URL.TOWN_SHORTEST;
+            break;
+        case self.DATA_TYPE.TOWN_SHORT:
+            url = self.DATA_URL.TOWN_SHORT;
+            break;
+        case self.DATA_TYPE.MID_FORECAST:
+            url = self.DATA_URL.MID_FORECAST;
+            break;
+        case self.DATA_TYPE.MID_LAND:
+            url = self.DATA_URL.MID_LAND;
+            break;
+        case self.DATA_TYPE.MID_TEMP:
+            url = self.DATA_URL.MID_TEMP;
+            break;
+        case self.DATA_TYPE.MID_SEA:
+            url = self.DATA_URL.MID_SEA;
+            break;
+    }
+
+    // add key data
+    url += '?serviceKey=' + key;
+
+    try{
+        // add additional data such as location info, code
+        if(dataType <= self.DATA_TYPE.TOWN_SHORT){
+            url += '&base_date=' + date + '&base_time=' + time + '&nx=' + data.x + '&ny=' + data.y;
+        }
+        else if(dataType <= self.DATA_TYPE.MID_SEA){
+            if(time !== '0600' && time !== '1800'){
+                log.error('getMidRangeForecast : Only both 0600 and 0800 is accepted by server');
+                return '';
+            }
+
+            url += (dataType === self.DATA_TYPE.MID_FORECAST)? '&stnId=':'&regId=';
+            url += data.code + '&tmFc=' + date + time;
+        }
+        else{
+            log.error('getUrl : unknown data type');
+            return '';
+        }
+    }
+    catch(e){
+        log.error('failed to make URL');
+    }
+
+    // add count that would to get.
+    url += '&pageNo=1&numOfRows=999';
+
+    return url;
 };
 
 CollectData.prototype.resetResult = function(){
     var self = this;
     self.resultList = [];
-    for(var i=0 ; i < self.srcList.length ; i++) {
+    for(var i=0 ; i < self.listCount ; i++) {
         var item = {
             isCompleted: false,
             data: {},
             url:'',
-            retryCount: self.retryCount
+            retryCount: self.retryCount,
+            options: {
+                date: '',
+                time: '',
+                dataType: -1,
+                code: ''
+            }
         };
         self.resultList.push(item);
     }
@@ -151,82 +277,11 @@ CollectData.prototype.resetResult = function(){
 };
 
 /*
-* Description : request and get weather data from server by using coordinate list
-*               객체 초기화시 parameter로 넘겨준 좌표 리스트를 이용해서 각 좌표에 해당하는 날씨 데이터를 서버로 요청한다.
-* Parameter
-*      dataType : data type(current, shortest, short)- Which data do you want to get?
-*      key : key string you already got by DATA.go.kr
-*      date : data string - ex.) 20150730
-*      time : time string - ex.) 0800
-*      callback : callback function - when receiving data is completed, it would be called.
-* */
-CollectData.prototype.getTownData = function(dataType, key, date, time, callback){
-    var self = this;
-    var url = '';
-    var meta = {};
-
-    meta.method = 'getDataFromList';
-    meta.dataType = dataType;
-    meta.key = key;
-    meta.date = date;
-    meta.time = time;
-
-    if(!self.srcList) {
-        log.error('There is no location list');
-        return;
-    }
-
-    if(callback || self.callback){
-        self.on('dataComplated', function() {
-            try{
-                if (self.callback) {
-                    self.callback(self.recvFailed, self.resultList);
-                }
-                if (callback) {
-                    callback(self.recvFailed, self.resultList);
-                }
-            }
-            catch(e){
-                log.error("ERROR !!! in event dataComplated");
-            }
-        });
-    }
-
-    switch(dataType) {
-        case self.DATA_TYPE.CURRENT:
-            url = self.DATA_URL.CURRENT;
-            break;
-        case self.DATA_TYPE.SHORTEST:
-            url = self.DATA_URL.SHORTEST;
-            break;
-        case self.DATA_TYPE.SHORT:
-            url = self.DATA_URL.SHORT;
-            break;
-        default:
-            log.error('unknown data type. please check your input parameter.');
-            return;
-            break;
-    }
-
-    try {
-        self.resetResult();
-        for (var i in self.srcList) {
-            // Should I need to use closure ??? What do you think?
-            self.resultList[i].url = self.makeUrl(url, key, date, time, self.srcList[i].x, self.srcList[i].y);
-            self.getData(parseInt(i), dataType, self.resultList[i].url);
-        }
-    }
-    catch(e){
-        log.err('ERROR !!! ', meta);
-    }
-};
-
-/*
 * Description : It request the weather data from server lead to url.
 *               If it successes to get data, it would send 'recvData' event to this.
 *               If it fail to get data, it would send 'recvFail' event to this.
 * */
-CollectData.prototype.getData = function(index, dataType, url,callback){
+CollectData.prototype.getData = function(index, dataType, url,options, callback){
     var self = this;
     var meta = {};
 
@@ -238,14 +293,29 @@ CollectData.prototype.getData = function(index, dataType, url,callback){
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
     req.get(url, null, function(err, response, body){
+        var statusCode = response.statusCode;
         if(err) {
             log.error(err);
+            log.error('#', meta);
+
             self.emit('recvFail', index);
             if(callback){
                 callback(err, index);
             }
             return;
         }
+
+        if(statusCode === 404 || statusCode === 403){
+            log.error('ERROR!!! StatusCode : ', statusCode);
+            log.error('#', meta);
+
+            self.emit('recvFail', index);
+            if(callback){
+                callback(err, index);
+            }
+            return;
+        }
+
         //log.info(body);
         xml2json(body, function(err, result){
             try {
@@ -264,18 +334,33 @@ CollectData.prototype.getData = function(index, dataType, url,callback){
                     || (result.response.header[0].resultCode[0] !== '0000')
                     ||(result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.error('There are no data');
+                    log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
+                    log.error(meta);
+
+                    self.emit('recvFail', index);
                 }
                 else{
                     switch(dataType) {
-                        case self.DATA_TYPE.CURRENT:
+                        case self.DATA_TYPE.TOWN_CURRENT:
                             self.organizeCurrentData(index, result);
                             break;
-                        case self.DATA_TYPE.SHORTEST:
+                        case self.DATA_TYPE.TOWN_SHORTEST:
                             self.organizeShortestData(index, result);
                             break;
-                        case self.DATA_TYPE.SHORT:
+                        case self.DATA_TYPE.TOWN_SHORT:
                             self.organizeShortData(index, result);
+                            break;
+                        case self.DATA_TYPE.MID_FORECAST:
+                            self.organizeForecastData(index, result, options);
+                            break;
+                        case self.DATA_TYPE.MID_LAND:
+                            self.organizeLandData(index, result, options);
+                            break;
+                        case self.DATA_TYPE.MID_TEMP:
+                            self.organizeTempData(index, result, options);
+                            break;
+                        case self.DATA_TYPE.MID_SEA:
+                            self.organizeSeaData(index, result, options);
                             break;
                         default:
                             log.error('can not organize data as it is unknown data type');
@@ -285,6 +370,7 @@ CollectData.prototype.getData = function(index, dataType, url,callback){
             }
             catch(e){
                 log.error('Error!!!', meta);
+                self.emit('recvFail', index);
             }
             finally{
                 if(callback){
@@ -580,6 +666,127 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         log.error('Error!! organizeCurrentData : failed data organized');
     }
 };
+
+CollectData.prototype.organizeForecastData = function(index, listData, options){
+    var self = this;
+    var meta = {};
+    var i = 0;
+    var listItem = listData.response.body[0].items[0].item;
+    var listResult = [];
+
+    //log.info('organizeForecastData count : ' + listItem.length);
+    //log.info(listItem);
+
+    try{
+        var result = {};
+        var template = {
+            date: options.date,
+            time: options.time,
+            pointNumber: options.code,
+            cnt: 0,
+            wfsv: ''
+        };
+
+        for(i=0 ; i < listItem.length ; i++){
+            var item = listItem[i];
+            //log.info(item);
+            if(item.wfSv === undefined){
+                log.info(item);
+                log.error('organizeForecastData : There is not forecast date');
+                continue;
+            }
+            result = template;
+            result.wfsv = item.wfSv;
+            var insertItem = JSON.parse(JSON.stringify(result));
+            listResult.push(insertItem);
+        }
+
+        //log.info('result count : ', listResult.length);
+        //for(i=0 ; i<listResult.length ; i++){
+        //    log.info(listResult[i]);
+        //}
+
+        self.emit('recvData', index, listResult);
+    }
+    catch(e){
+        log.error('Error!! organizeForecastData : failed data organized');
+    }
+};
+
+CollectData.prototype.organizeLandData = function(index, listData){
+    /* 추후 구현 */
+};
+
+CollectData.prototype.organizeTempData = function(index, listData){
+    /* 추후 구현 */
+};
+
+CollectData.prototype.organizeSeaData = function(index, listData){
+    /* 추후 구현 */
+};
+
+CollectData.prototype.requestData = function(srcList, dataType, key, date, time, callback){
+    var self = this;
+    var meta = {};
+    var options = {date: date, time: time};
+
+
+    meta.method = 'requestData';
+    meta.dataType = dataType;
+    meta.key = key;
+    meta.date = date;
+    meta.time = time;
+
+    if(srcList){
+        self.srcList = srcList;
+        self.listCount = srcList.length;
+        self.resetResult();
+    }
+    else{
+        log.error('There is no location list');
+        log.error('#', meta);
+        return;
+    }
+
+    if(callback || self.callback){
+        self.on('dataComplated', function() {
+            try{
+                if (self.callback) {
+                    self.callback(self.recvFailed, self.resultList);
+                }
+                if (callback) {
+                    callback(self.recvFailed, self.resultList);
+                }
+            }
+            catch(e){
+                log.error("requestData : ERROR !!! in event dataComplated");
+                log.error('#', meta);
+            }
+        });
+    }
+
+    try{
+        for(var i in self.srcList){
+            var string = self.getUrl(dataType, key, date, time, self.srcList[i]);
+            self.resultList[i].url = string.toString();
+            self.resultList[i].options.date = date;
+            self.resultList[i].options.time = time;
+            self.resultList[i].options.dataType = dataType;
+            if(srcList[i].code !== undefined){
+                self.resultList[i].options.code = srcList[i].code;
+            }
+
+            if(self.resultList[i].url !== ''){
+                self.getData(parseInt(i), dataType, self.resultList[i].url, self.resultList[i].options);
+            }
+        }
+    }
+    catch(e){
+        log.error('# ERROR!! ', meta);
+    }
+};
+
+
 
 module.exports = CollectData;
 
