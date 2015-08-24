@@ -12,22 +12,25 @@ var keyString = 'KXK7ONQ7F8BaIRLM1Us%2FHmITwhKnrkq8XR0GI1lEimenATLDvAXpsBpOXPfTU
 
 global.log  = new Logger(__dirname + "/debug.log");
 
-describe('unit test - lib/collect class', function(){
+
+describe('unit test - get town forecast in lib/collect class', function(){
+
     it('lib/collect : get towns SHORT info by using XY list', function(done){
         var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-        var collection = new collect(listXY);
+        var collection = new collect();
         assert.doesNotThrow(function(){
-            collection.getTownData(collection.DATA_TYPE.SHORT, keyString, '20150815', '0500', function(err, dataList){
-                log.info('short data receive completed : ', dataList.length);
+            //collection.getTownData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150815', '0500', function(err, dataList){
+            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150823', '1400', function(err, dataList){
+                log.info('short data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
-                //for(var i in dataList){
-                //    for(var j in dataList[i].data){
-                //        log.info(dataList[i].data[j]);
-                //    }
-                //}
+                for(var i in dataList){
+                    for(var j in dataList[i].data){
+                        log.info(dataList[i].data[j]);
+                    }
+                }
 
 
                 assert.equal(dataList.length, listXY.length, 'check receive count');
@@ -45,13 +48,14 @@ describe('unit test - lib/collect class', function(){
         });
     });
 
+/*
     it('lib/collect : get towns SHORTEST info by using XY list', function(done){
         var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-        var collection = new collect(listXY);
+        var collection = new collect();
         assert.doesNotThrow(function(){
-            collection.getTownData(collection.DATA_TYPE.SHORTEST, keyString, '20150815', '1530', function(err, dataList){
-                log.info('shortest data receive completed : ', dataList.length);
+            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORTEST, keyString, '20150815', '1530', function(err, dataList){
+                log.info('shortest data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
@@ -75,22 +79,23 @@ describe('unit test - lib/collect class', function(){
             });
         });
     });
+*/
 
     it('lib/collect : get towns CURRENT info by using XY list', function(done){
         var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-        var collection = new collect(listXY);
+        var collection = new collect();
         assert.doesNotThrow(function(){
-            collection.getTownData(collection.DATA_TYPE.CURRENT, keyString, '20150815', '1600', function(err, dataList){
-                log.info('current data receive completed : ', dataList.length);
+            collection.requestData(listXY, collection.DATA_TYPE.TOWN_CURRENT, keyString, '20150823', '1400', function(err, dataList){
+                log.info('current data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
-                //for(var i in dataList){
-                //    for(var j in dataList[i].data){
-                //        log.info(dataList[i].data[j]);
-                //    }
-                //}
+                for(var i in dataList){
+                    for(var j in dataList[i].data){
+                        log.info(dataList[i].data[j]);
+                    }
+                }
 
                 assert.equal(dataList.length, listXY.length, 'check receive count');
 
@@ -106,4 +111,91 @@ describe('unit test - lib/collect class', function(){
             });
         });
     });
+
+});
+
+describe('unit test - get middle range forecast in lib/collect class', function() {
+/*
+    it('lib/collect : get Middle range forecast info by using XY list', function(done){
+        var collection = new collect();
+        assert.doesNotThrow(function(){
+            collection.requestData(collection.listPointNumber, collection.DATA_TYPE.MID_FORECAST, keyString, '20150823', '0600', function(err, dataList){
+                log.info('current data receive completed : %d\n', dataList.length);
+
+                log.info(dataList);
+                //log.info(dataList[0]);
+                for(var i in dataList){
+                    for(var j in dataList[i].data){
+                        log.info(dataList[i].data[j]);
+                    }
+                }
+
+                done();
+            });
+        });
+    });
+*/
+/*
+    it('lib/collect : get Middle range LAND info by using XY list', function(done){
+
+        var collection = new collect();
+        assert.doesNotThrow(function(){
+            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keyString, '20150822', '0600', function(err, dataList){
+                log.info('current data receive completed : %d\n', dataList.length);
+
+                //log.info(dataList);
+                //log.info(dataList[0]);
+                //for(var i in dataList){
+                //    for(var j in dataList[i].data){
+                //        log.info(dataList[i].data[j]);
+                //    }
+                //}
+
+                done();
+            });
+        });
+    });
+*/
+/*
+    it('lib/collect : get Middle range TEMP info by using XY list', function(done){
+
+        var collection = new collect();
+        assert.doesNotThrow(function(){
+            collection.requestData(collection.listCityCode, collection.DATA_TYPE.MID_TEMP, keyString, '20150822', '0600', function(err, dataList){
+                log.info('current data receive completed : %d\n', dataList.length);
+
+                //log.info(dataList);
+                //log.info(dataList[0]);
+                //for(var i in dataList){
+                //    for(var j in dataList[i].data){
+                //        log.info(dataList[i].data[j]);
+                //    }
+                //}
+
+                done();
+            });
+        });
+    });
+*/
+/*
+    it('lib/collect : get Middle range SEA info by using XY list', function(done){
+
+        var collection = new collect();
+        assert.doesNotThrow(function(){
+            collection.requestData(collection.listSeaCode, collection.DATA_TYPE.MID_SEA, keyString, '20150822', '0600', function(err, dataList){
+                log.info('current data receive completed : %d\n', dataList.length);
+
+                //log.info(dataList);
+                //log.info(dataList[0]);
+                //for(var i in dataList){
+                //    for(var j in dataList[i].data){
+                //        log.info(dataList[i].data[j]);
+                //    }
+                //}
+
+                done();
+            });
+        });
+    });
+*/
 });
