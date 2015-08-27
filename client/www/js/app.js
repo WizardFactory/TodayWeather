@@ -18,7 +18,11 @@ angular.module('starter', ['ionic', 'starter.controllers', 'starter.services', '
             }
             if (window.StatusBar) {
                 // org.apache.cordova.statusbar required
-                StatusBar.styleLightContent();
+                //StatusBar.styleLightContent();
+                StatusBar.overlaysWebView(false);
+                StatusBar.backgroundColorByHexString('#22a1db');
+                //StatusBar.hide();
+                //ionic.Platform.fullScreen();
             }
         });
     })
@@ -82,5 +86,6 @@ angular.module('starter', ['ionic', 'starter.controllers', 'starter.services', '
         // if none of the above states are matched, use this as the fallback
         $urlRouterProvider.otherwise('/tab/dash');
 
+        $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
     });

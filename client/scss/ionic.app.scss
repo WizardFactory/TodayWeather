@@ -27,27 +27,287 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 @font-face {
-  font-family: "Nanum Barun Gothic";
-  src: url("../fonts/NanumBarunGothic.woff") format("woff");
+  font-family: "Helvetica Neue Thin";
+  src: url("../fonts/HelveticaNeue-Thin.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
 }
+
+@font-face {
+  font-family: "Nanum Barun Gothic UltraLight";
+  src: url("../fonts/NanumBarunGothicUltraLight.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+
+// Include all of Ionic
+@import "www/lib/ionic/scss/ionic";
 
 .scroll {
   height: 100%;
 }
 
 .col {
-  font-family: 'Nanum Barun Gothic';
+  font-family: "Nanum Barun Gothic UltraLight";
+}
+
+.row + .row {
+   margin-top: 0px;
+}
+
+.region {
+  display: table;
+}
+
+.region p {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  margin: 0px;
+  font-size: 20px;
 }
 
 .big-digit {
   font-family: 'Helvetica Neue UltraLight';
   text-align: right;
-  font-size: 134px;
+  font-size: 100px;
+  letter-spacing: -2px;
 }
 
-// Include all of Ionic
-@import "www/lib/ionic/scss/ionic";
+.big-temp-point img{
+  width: 18px;
+}
 
+.big-temp-sky-state img{
+  width: 56px;
+}
 
+.small-time {
+  display: table;
+}
+
+.small-time p {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 14px;
+  margin: 0px;
+}
+
+.small-image {
+  display: table;
+}
+
+.small-image div{
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.small-image div img{
+  width: 24px;
+  margin: 0 auto;
+  display: block;
+}
+
+.small-digit {
+  display: table;
+}
+
+.small-digit p{
+  display: table-cell;
+  vertical-align: middle;
+  font-family: 'Helvetica Neue Thin';
+  text-align: center;
+  font-size: 15px;
+  margin: 0px;
+}
+
+//iphone 4
+@media only screen and (min-device-width: 320px)
+    and (max-device-width: 480px)
+    and (-webkit-min-device-pixel-ratio: 2)
+    and (device-aspect-ratio: 320/480)
+{
+  .region  p {
+    font-size: 20px;
+  }
+
+  .big-digit {
+    font-size: 94px;
+    letter-spacing: -3px;
+  }
+
+  .big-temp-point img{
+    width: 14px;
+  }
+
+  .big-temp-sky-state img{
+    width: 52px;
+  }
+
+  .small-time p {
+    font-size: 13px;
+  }
+
+  .small-image div img {
+    width: 20px;
+  }
+
+  .small-digit p {
+    font-size: 14px;
+  }
+}
+
+//iphone 5
+//this is default.
+@media only screen and (min-device-width: 320px)
+    and (max-device-width: 568px)
+    and (-webkit-min-device-pixel-ratio: 2)
+    and (device-aspect-ratio: 320/568)
+{
+  .region p {
+    font-size: 20px;
+  }
+
+  .big-digit {
+    font-size: 110px;
+    letter-spacing: -2px;
+  }
+
+  .big-temp-point img{
+    width: 18px;
+  }
+
+  .big-temp-sky-state img{
+    width: 62px;
+  }
+
+  .small-time p {
+    font-size: 14px;
+  }
+
+  .small-image div img {
+    width: 24px;
+  }
+
+  .small-digit p {
+    font-size: 15px;
+  }
+}
+
+//iphone 6
+@media only screen and (min-device-width: 375px)
+    and (max-device-width: 667px)
+    and (-webkit-min-device-pixel-ratio: 2)
+    and (device-aspect-ratio: 375/667)
+{
+   .region p {
+    font-size: 26px;
+  }
+
+  .big-digit {
+    font-size: 128px;
+    letter-spacing: -3px;
+  }
+
+  .big-temp-point img{
+    width: 22px;
+  }
+
+  .big-temp-sky-state img{
+    width: 68px;
+  }
+
+  .small-time p {
+    font-size: 14px;
+  }
+
+  .small-image div img {
+    width: 30px;
+  }
+
+  .small-digit p {
+    font-size: 15px;
+  }
+}
+
+//iphone 6+
+@media only screen and (min-device-width: 414px)
+    and (max-device-width: 736px)
+    and (-webkit-min-device-pixel-ratio: 3)
+    and (device-aspect-ratio: 414/736)
+{
+  .region p {
+    font-size: 28px;
+  }
+
+  .big-digit {
+    font-size: 150px;
+    letter-spacing: -6px;
+  }
+
+  .big-temp-point img{
+    width: 24px;
+  }
+
+  .big-temp-sky-state img{
+    width: 78px;
+  }
+
+  .small-time p {
+    font-size: 15px;
+  }
+
+  .small-image div img {
+    width: 32px;
+  }
+
+  .small-digit p {
+    font-size: 16px;
+  }
+}
+
+/* SS S3 */
+//@media screen and (device-width: 320px) and (device-height: 640px) and (-webkit-device-pixel-ratio: 2) {
+//
+//}
+
+/* SS Galaxy Note3, S5, S4, S6 */
+@media screen and (device-width: 360px) and (device-height: 640px)
+    and (-webkit-device-pixel-ratio: 3)
+    and (device-aspect-ratio: 360/640)
+{
+   .region p {
+    font-size: 26px;
+  }
+
+  .big-digit {
+    font-size: 128px;
+    letter-spacing: -3px;
+  }
+
+  .big-temp-point img{
+    width: 22px;
+  }
+
+  .big-temp-sky-state img{
+    width: 68px;
+  }
+}
+
+.main-content {
+  width: 100%;
+  height: 100%;
+  background-color: #22a1db;
+  color: white;
+}
+
+//.scroll-content {
+//  background: url("../img/screen-dash.png");
+//  background-size: cover;
+//}
+
+.tabs {
+  border: 0;
+  background-size: 0;
+}
