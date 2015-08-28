@@ -2,6 +2,7 @@
  * 
  *
  * */
+
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
@@ -29,8 +30,8 @@ function queryAllEntries () {
             first:'$first',
             }}
         }}, function(err, qDocList) {
-        process.exit(0);
-    });
+            process.exit(0);
+        });
 }
 
 function createDocRecurse (err) {
