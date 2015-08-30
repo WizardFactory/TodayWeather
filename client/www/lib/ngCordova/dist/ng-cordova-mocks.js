@@ -1,7 +1,7 @@
 /*!
  * ngCordova
- * v0.1.17-alpha
- * Copyright 2014 Drifty Co. http://drifty.com/
+ * v0.1.20-alpha
+ * Copyright 2015 Drifty Co. http://drifty.com/
  * See LICENSE in this repository for license information
  */
 (function(){
@@ -603,6 +603,17 @@ ngCordovaMocks.factory('$cordovaDevice', function () {
      */
     version: version,
 
+    /**
+     @ngdoc property
+     @name manufacturer
+     @propertyOf ngCordovaMocks.cordovaDevice
+
+     @description
+     The manufacturer of the device.
+     This property should only be used in automated tests.
+     */
+    version: version,
+
     getDevice: function () {
       return this.device;
     },
@@ -625,6 +636,10 @@ ngCordovaMocks.factory('$cordovaDevice', function () {
 
     getVersion: function () {
       return this.version;
+    },
+
+    getManufacturer: function () {
+      return this.manufacturer;
     }
   };
 });
@@ -1089,6 +1104,77 @@ ngCordovaMocks.factory('$cordovaDialogs', ['$q', function ($q) {
 
 /**
  * @ngdoc service
+ * @name ngCordovaMocks.cordovaFacebook
+ *
+ * @description
+ * A service for testing Facebook features
+ * in an app built with ngCordova.
+ **/
+ngCordovaMocks.factory('$cordovaFacebook', ['$q', function ($q) {
+  return {
+
+    /**
+     * These properties are here for the purpose of automated testing only.
+     **/
+    loginShouldSucceedWith: null,
+    showDialogShouldSucceedWith: null,
+    apiShouldSucceedWith: null,
+    getAccessTokenShouldSucceedWith: null,
+    getLoginStatusShouldSucceedWith: null,
+    logoutShouldSuceedWith: null,
+
+    login: function (permissions) {
+      if (this.loginShouldSucceedWith !== null) {
+        return $q.when(this.loginShouldSucceedWith);
+      } else {
+        return $q.reject();
+      }
+    },
+
+    showDialog: function (options) {
+      if (this.showDialogShouldSucceedWith !== null) {
+        return $q.when(this.showDialogShouldSucceedWith);
+      } else {
+        return $q.reject();
+      }
+    },
+
+    api: function (path, permissions) {
+      if (this.apiShouldSucceedWith !== null) {
+        return $q.when(this.apiShouldSucceedWith);
+      } else {
+        return $q.reject();
+      }
+    },
+
+    getAccessToken: function () {
+      if (this.getAccessTokenShouldSucceedWith !== null) {
+        return $q.when(this.getAccessTokenShouldSucceedWith);
+      } else {
+        return $q.reject();
+      }
+    },
+
+    getLoginStatus: function () {
+      if (this.getLoginStatusShouldSucceedWith !== null) {
+        return $q.when(this.getLoginStatusShouldSucceedWith);
+      } else {
+        return $q.reject();
+      }
+    },
+
+    logout: function () {
+      if (this.logoutShouldSuceedWith !== null) {
+        return $q.when(this.logoutShouldSuceedWith);
+      } else {
+        return $q.reject();
+      }
+    }
+  };
+}]);
+
+/**
+ * @ngdoc service
  * @name ngCordovaMocks.cordovaFile
  *
  * @description
@@ -1274,14 +1360,6 @@ ngCordovaMocks.factory('$cordovaFile', ['$q', function ($q) {
 
     readFileMetadataAbsolute: function (filePath) {
       return mockIt.call(this, 'There was an error reading the file metadta from the absolute path');
-    },
-
-    downloadFile: function (source, filePath, trust, options) {
-      return mockIt.call(this, 'There was an error downloading the file.');
-    },
-
-    uploadFile: function (server, filePath, options) {
-      return mockIt.call(this, 'There was an error uploading the file.');
     }
   };
 }]);
@@ -1367,6 +1445,48 @@ ngCordovaMocks.factory('$cordovaFileOpener2', ['$q', function ($q) {
 }]);
 
 
+/**
+ * @ngdoc service
+ * @name ngCordovaMocks.cordovaFileTransfer
+ *
+ * @description
+ * A service for testing download and upload
+ * in an app build with ngCordova.
+ */
+ngCordovaMocks.factory('$cordovaFileTransfer', ['$q', function ($q) {
+    var throwsError = false;
+
+    var mockIt = function (errorMessage) {
+        var defer = $q.defer();
+        if (this.throwsError) {
+            defer.reject(errorMessage);
+        } else {
+            defer.resolve();
+        }
+        return defer.promise;
+    };
+
+    return {
+        /**
+         * @ngdoc property
+         * @name throwsError
+         * @propertyOf ngCordovaMocks.cordovaFileTransfer
+         *
+         * @description
+         * A flag that signals whether a promise should be rejected or not.
+         * This property should only be used in automated tests.
+         **/
+        throwsError: throwsError,
+
+        download: function (source, filePath, trust, options) {
+            return mockIt.call(this, 'There was an error downloading the file.');
+        },
+
+        upload: function (server, filePath, options) {
+            return mockIt.call(this, 'There was an error uploading the file.'); 
+        }
+    };
+}]);
 /**
  * @ngdoc service
  * @name ngCordovaMocks.cordovaGeolocation
