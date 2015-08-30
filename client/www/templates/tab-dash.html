@@ -1,5 +1,10 @@
 <ion-view hide-nav-bar="true">
     <ion-content overflow-scroll="true">
+        <ion-refresher
+                pulling-text="위치,날씨정보"
+                refreshing-text="업데이트 중"
+                on-refresh="doRefresh()">
+        </ion-refresher>
         <div class="main-content">
             <div class="row row-no-padding" style="height: 35%;">
                 <div class="col" style="height: 100%">
@@ -30,8 +35,8 @@
                 </div>
             </div>
             <div class="row row-no-padding" style="height: 5%;"></div>
-            <div class="row row-no-padding" style="height: 60%;">
-                <ion-scroll zooming="false" direction="x" has-bouncing="false" style="width: 100%; height: 100%">
+            <div class="row row-no-padding" style="height: 55%;">
+                <ion-scroll zooming="false" direction="x" has-bouncing="false" scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col" style="padding: 0; height: 100%; width: 1290px;">
                         <div class="row row-no-padding" style="height: 50%;"></div>
                         <div class="row row-no-padding" style="height: 2%;"></div>
@@ -62,7 +67,7 @@
                     </div>
                 </ion-scroll>
             </div>
-            <!--<hr style="color: white; opacity: 0.6">-->
+            <div class="row row-no-padding" style="height: 5%;"></div>
         </div>
     </ion-content>
 </ion-view>
