@@ -10,6 +10,7 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 
 var townForecast = require('./routes/routeTownForecast');
+var controllerManager = require('./controllers/controllerManager');
 /*
 * wizard factory's modules
 */
@@ -48,6 +49,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 app.use('/users', users);
 app.use('/town', townForecast);
+
+var manager = new controllerManager();
+manager.startManager();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

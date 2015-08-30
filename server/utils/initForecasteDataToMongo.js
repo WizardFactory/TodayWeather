@@ -1,3 +1,8 @@
+/*
+ * 
+ *
+ * */
+
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
@@ -18,14 +23,15 @@ var bSchema = new mongoose.Schema({
 
 var bDoc = mongoose.model('base', bSchema);
 
+//삭제 예정 
 function queryAllEntries () {
     bDoc.aggregate(
         {$group: {oppArray: {$push: {
             first:'$first',
             }}
         }}, function(err, qDocList) {
-        process.exit(0);
-    });
+            process.exit(0);
+        });
 }
 
 function createDocRecurse (err) {

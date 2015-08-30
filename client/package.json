@@ -1,7 +1,7 @@
 {
   "name": "TodayWeather",
-  "version": "1.0.0",
-  "description": "TodayWeather: An Ionic project",
+  "version": "0.0.1",
+  "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "dependencies": {
     "gulp": "^3.5.6",
     "gulp-sass": "^1.3.3",
@@ -20,7 +20,8 @@
     "cordova-plugin-whitelist",
     "cordova-plugin-splashscreen",
     "com.ionic.keyboard",
-    "cordova-plugin-geolocation"
+    "cordova-plugin-geolocation",
+    "cordova-plugin-statusbar"
   ],
   "cordovaPlatforms": [
     "android",
