@@ -14,6 +14,22 @@ angular.module('starter.controllers', [])
             }
         }
 
+        $scope.doRefresh = function() {
+            setTimeout(function() {
+                    // Stop the ion-refresher from spinning
+                    $scope.$broadcast('scroll.refreshComplete');
+                },
+                3000);
+            //$http.get('/new-items')
+            //    .success(function(newItems) {
+            //        $scope.items = newItems;
+            //    })
+            //    .finally(function() {
+            //        // Stop the ion-refresher from spinning
+            //        $scope.$broadcast('scroll.refreshComplete');
+            //    });
+        };
+
         $cordovaGeolocation.getCurrentPosition().then(function(position) {
             var lat  = position.coords.latitude;
             var long = position.coords.longitude;
