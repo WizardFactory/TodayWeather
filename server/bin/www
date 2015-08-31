@@ -7,12 +7,26 @@
 var app = require('../app');
 var debug = require('debug')('server:server');
 var http = require('http');
+var config = require('../config/config');
 
 /**
  * Get port from environment and store in Express.
  */
+var port;
+var local_ipaddress;
+if(config.mode === 'local'){
+  port = normalizePort(process.env.PORT || '3000');
 
-var port = normalizePort(process.env.PORT || '3000');
+}
+else{
+  local_ipaddress = process.env.OPENSHIFT_NODEJS_IP;
+  port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+
+  if(local_ipaddress === "undefined") {
+    console.info('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
+    local_ipaddress = "127.0.0.1";
+  }
+}
 app.set('port', port);
 
 /**
@@ -25,7 +39,15 @@ var server = http.createServer(app);
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
+if(config.mode === 'local'){
+  server.listen(port);
+}
+else{
+  server.listen(port, local_ipaddress, function() {
+    console.log('%s: Node server started on %s:%d ...',
+        Date(Date.now() ), local_ipaddress, port);
+  });
+}
 server.on('error', onError);
 server.on('listening', onListening);
 
