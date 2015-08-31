@@ -1,18 +1,52 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope, $cordovaGeolocation, $http) {
+    .controller('DashCtrl', function($scope, $ionicScrollDelegate, $cordovaGeolocation, $timeout, $http) {
         $scope.location = "Current Position Searching...";
         $scope.address = "";
         $scope.timeTable = [];
-        for(var i=0; i<3; i++) {
-            for (var j=0; j<24; j+=3) {
-                tempObject = {day: i, hour: j,
-                                    tempIcon: 'temp-10', temp: 30,
-                                    weatherIcon: 'weatherIcon', pop: 20}; //Probability of precipitation
 
-                $scope.timeTable.push(tempObject);
+        function getDayString(day, hours) {
+            if (hours !== 0) {
+                return '';
+            }
+            switch (day) {
+                case 0: return '어제';
+                case 1: return '오늘';
+                case 2: return '내일';
+                case 3: return '모레';
+                default : console.error("Fail to get day string day="+day+" hours="+hours);
             }
         }
+        function getTimeString(positionHours, day, hours) {
+            if (positionHours === hours && day === 1) {
+                return '지금';
+            }
+            return hours+'시';
+        }
+        function getPositionHours(currentHours) {
+            return Math.floor(currentHours/3)*3;
+        }
+        function makeTimeTable(currentHours) {
+            var positionHours = getPositionHours(currentHours);
+            var day = 0;
+            var hours = positionHours;
+            for(var i=0; i<3; i++) {
+                for (var j = 0; j<8; j++) {
+                    tempObject = {day: getDayString(day, hours), hour: getTimeString(positionHours, day, hours),
+                        tempIcon: 'temp-10', temp: 30,
+                        weatherIcon: 'weatherIcon', pop: 20}; //Probability of precipitation
+
+                    $scope.timeTable.push(tempObject);
+
+                    hours += 3;
+                    if (hours == 24) {
+                        hours = 0;
+                        day += 1;
+                    }
+                }
+            }
+        }
+        makeTimeTable((new Date()).getHours());
 
         $scope.doRefresh = function() {
             setTimeout(function() {
@@ -102,6 +136,11 @@ angular.module('starter.controllers', [])
                 { id: 24, yesterday: 1, today: 4 }
             ];
         };
+
+        $timeout(function () {
+            $ionicScrollDelegate.$getByHandle('chart').scrollTo(375, 0, false);
+        }, 0);
+
     })
 
     .controller('ChatsCtrl', function($scope, Chats) {
