@@ -1,6 +1,15 @@
 {
-  "name": "server",
+  "name": "TodayWeather",
   "version": "0.0.1",
+  "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WizardFactory/TodayWeather.git"
+  },
+  "bugs": {
+    "url": "http://github.com/WizardFactory/TodayWeather/issues"
+  },
+  "license" : "MIT",
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
