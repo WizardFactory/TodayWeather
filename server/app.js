@@ -19,17 +19,29 @@ var Logger = require('./lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
 // Bootstrap db connection
-var db = mongoose.connect(config.db.path, config.db.options, function(err) {
-  if (err) {
-    console.error('Could not connect to MongoDB!');
-    console.log(err);
-  }
-});
-mongoose.connection.on('error', function(err) {
-      console.error('MongoDB connection error: ' + err);
-      process.exit(-1);
+var db;
+if(config.mode === 'local'){
+  db = mongoose.connect(config.db.path, config.db.options, function(err) {
+    if (err) {
+      console.error('Could not connect to MongoDB!');
+      console.log(err);
     }
-);
+  });
+  mongoose.connection.on('error', function(err) {
+        console.error('MongoDB connection error: ' + err);
+        process.exit(-1);
+      }
+  );
+}
+else{
+  var connectInfo = process.env.OPENSHIFT_MONGODB_DB_URL;
+  db = mongoose.connect(connectInfo, function(err){
+    if(err){
+      console.error('could net connect to MongoDB');
+      console.error(err);
+    }
+  });
+}
 
 var app = express();
 

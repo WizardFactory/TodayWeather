@@ -4,6 +4,7 @@
 'use strict';
 
 module.exports = {
+    mode: 'local',
     db: {
         path: 'mongodb://localhost/todayweather',
         options: {
@@ -11,291 +12,215 @@ module.exports = {
             pass: ''
         }
     },
+    testTownData:[
+        {
+            regionName: '경기도',
+            cityName: '성남시분당구',
+            townName: '수내3동',
+            x:62,
+            y:122,
+            data:{
+                short: [
+                    {date: '20150828', time: '0000', pop: 10, pty: 0, r06: 0, reh: 78, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 1, wav: -1, vec: 160, wsd: 2},
+                    {date: '20150828', time: '0300', pop: 10, pty: 0, r06: 0, reh: 83, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 127, wsd: 1}, 
+                    {date: '20150828', time: '0900', pop: 10, pty: 0, r06: 0, reh: 73, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 150, wsd: 1}, 
+                    {date: '20150828', time: '1200', pop: 20, pty: 0, r06: 0, reh: 56, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 254, wsd: 2}, 
+                    {date: '20150828', time: '1500', pop: 20, pty: 0, r06: 0, reh: 51, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 29, uuu: 3, vvv: 0, wav: -1, vec: 265, wsd: 3},
+                    {date: '20150828', time: '1800', pop: 20, pty: 0, r06: 0, reh: 55, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 3, vvv: 0, wav: -1, vec: 271, wsd: 3},
+                    {date: '20150828', time: '2100', pop: 10, pty: 0, r06: 0, reh: 69, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 273, wsd: 2},
+                    {date: '20150829', time: '0000', pop: 10, pty: 0, r06: 0, reh: 78, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 114, wsd: 1},
+                    {date: '20150829', time: '0300', pop: 10, pty: 0, r06: 0, reh: 83, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 139, wsd: 1},
+                    {date: '20150829', time: '0600', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 109, wsd: 1},
+                    {date: '20150829', time: '0900', pop: 10, pty: 0, r06: 0, reh: 73, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 108, wsd: 1},
+                    {date: '20150829', time: '1200', pop: 10, pty: 0, r06: 0, reh: 55, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 284, wsd: 2},
+                    {date: '20150829', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150830', time: '0000', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 317, wsd: 1},
+                    {date: '20150830', time: '0300', pop: 10, pty: 0, r06: 0, reh: 89, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 318, wsd: 1},
+                    {date: '20150830', time: '0600', pop: 10, pty: 0, r06: 0, reh: 88, s06: 0, sky: 2, t3h: 18, tmn: 17, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 172, wsd: 0},
+                    {date: '20150830', time: '0900', pop: 10, pty: 0, r06: 0, reh: 70, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 37, wsd: 0},
+                    {date: '20150830', time: '1200', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 270, wsd: 1},
+                    {date: '20150830', time: '1500', pop: 20, pty: 0, r06: 0, reh: 54, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 28, uuu: 1, vvv: 0, wav: -1, vec: 291, wsd: 2},
+                    {date: '20150830', time: '1800', pop: 20, pty: 0, r06: 0, reh: 63, s06: 0, sky: 3, t3h: 25, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 283, wsd: 2},
+                    {date: '20150830', time: '2100', pop: 10, pty: 0, r06: 0, reh: 80, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 292, wsd: 1},
+                    {date: '20150831', time: '0000', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 76, wsd: 0},
+                    {date: '20150831', time: '0300', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 317, wsd: 0},
+                    {date: '20150831', time: '0600', pop: 10, pty: 0, r06: 0, reh: 91, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 86, wsd: 1},
+                    {date: '20150831', time: '0900', pop: 10, pty: 0, r06: 0, reh: 64, s06: 0, sky: 2, t3h: 24, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 81, wsd: 1},
+                    {date: '20150831', time: '1200', pop: 10, pty: 0, r06: 0, reh: 55, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: -1, vvv: 1, wav: -1, vec: 128, wsd: 2},
+                    {date: '20150831', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150901', time: '0000', pop: 20, pty: 0, r06: 0, reh: 74, s06: 0, sky: 3, t3h: 23, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 116, wsd: 2},
+                    {date: '20150901', time: '0300', pop: 20, pty: 0, r06: 0, reh: 74, s06: 0, sky: 3, t3h: 22, tmn: 0, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 55, wsd: 2},
+                    {date: '20150901', time: '0600', pop: 20, pty: 0, r06: 0, reh: 74, s06: 0, sky: 3, t3h: 21, tmn: 20, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 58, wsd: 2},
+                    {date: '20150901', time: '0900', pop: 20, pty: 0, r06: 0, reh: 64, s06: 0, sky: 3, t3h: 24, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 51, wsd: 3},
+                    {date: '20150901', time: '1200', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 66, wsd: 3},
+                    {date: '20150901', time: '1500', pop: 20, pty: 0, r06: 0, reh: 53, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 28, uuu: -2, vvv: -1, wav: -1, vec: 62, wsd: 3},
+                    {date: '20150901', time: '1800', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 63, wsd: 3},
+                    {date: '20150901', time: '2100', pop: 30, pty: 0, r06: 0, reh: 64, s06: 0, sky: 4, t3h: 24, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 58, wsd: 3},
+                ],
+                shortest: [],
+                current: [
+                    {date: '20150831', time: '0300', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 90, pty: 0, lgt: 0, vec: 360, wsd: 0},
+                    {date: '20150831', time: '0400', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 27, wsd: 0},
+                    {date: '20150831', time: '0500', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 92, pty: 0, lgt: 0, vec: 135, wsd: 0},
+                    {date: '20150831', time: '0600', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 95, pty: 0, lgt: 0, vec: 117, wsd: 0},
+                    {date: '20150831', time: '0700', t1h: 21, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 89, pty: 0, lgt: 0, vec: 108, wsd: 0},
+                    {date: '20150831', time: '0800', t1h: 23, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 82, pty: 0, lgt: 0, vec: 101, wsd: 0},
+                    {date: '20150831', time: '0900', t1h: 24, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 75, pty: 0, lgt: 0, vec: 108, wsd: 0},
+                    {date: '20150831', time: '1000', t1h: 26, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 68, pty: 0, lgt: 0, vec: 99, wsd: 0},
+                    {date: '20150831', time: '1100', t1h: 27, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 61, pty: 0, lgt: 0, vec: 106, wsd: 0},
+                    {date: '20150831', time: '1200', t1h: 28, rn1: 0, sky: 1, uuu: -1, vvv: 0, reh: 54, pty: 0, lgt: 0, vec: 90, wsd: 1},
+                    {date: '20150831', time: '1300', t1h: 29, rn1: 0, sky: 2, uuu: -1, vvv: 0, reh: 52, pty: 0, lgt: 0, vec: 90, wsd: 1},
+                    {date: '20150831', time: '1400', t1h: 30, rn1: 0, sky: 3, uuu: -1, vvv: 0, reh: 49, pty: 0, lgt: 0, vec: 111, wsd: 1}
+                ]
+            }
 
+        },
+        {
+            regionName: '경기도',
+            cityName: '성남시분당구',
+            townName: '야탑1동',
+            x:63,
+            y:123,
+            data:{
+                short: [
+                    {date: '20150828', time: '0000', pop: 10, pty: 0, r06: 0, reh: 78, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 1, wav: -1, vec: 160, wsd: 2},
+                    {date: '20150828', time: '0300', pop: 10, pty: 0, r06: 0, reh: 82, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 121, wsd: 0},
+                    {date: '20150828', time: '0600', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 115, wsd: 1},
+                    {date: '20150828', time: '0900', pop: 10, pty: 0, r06: 0, reh: 72, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 158, wsd: 1},
+                    {date: '20150828', time: '1200', pop: 20, pty: 0, r06: 0, reh: 54, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 250, wsd: 2},
+                    {date: '20150828', time: '1500', pop: 20, pty: 0, r06: 0, reh: 49, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 29, uuu: 3, vvv: 0, wav: -1, vec: 266, wsd: 3},
+                    {date: '20150828', time: '1800', pop: 20, pty: 0, r06: 0, reh: 54, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 3, vvv: 0, wav: -1, vec: 270, wsd: 3},
+                    {date: '20150828', time: '2100', pop: 10, pty: 0, r06: 0, reh: 68, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 266, wsd: 2},
+                    {date: '20150829', time: '0000', pop: 10, pty: 0, r06: 0, reh: 77, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 125, wsd: 0},
+                    {date: '20150829', time: '0300', pop: 10, pty: 0, r06: 0, reh: 82, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 146, wsd: 0},
+                    {date: '20150829', time: '0600', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 106, wsd: 1},
+                    {date: '20150829', time: '0900', pop: 10, pty: 0, r06: 0, reh: 72, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 105, wsd: 0},
+                    {date: '20150829', time: '1200', pop: 10, pty: 0, r06: 0, reh: 54, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 288, wsd: 2},
+                    {date: '20150829', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150830', time: '0000', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 315, wsd: 1},
+                    {date: '20150830', time: '0300', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 310, wsd: 1},
+                    {date: '20150830', time: '0600', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 18, tmn: 17, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 151, wsd: 0},
+                    {date: '20150830', time: '0900', pop: 10, pty: 0, r06: 0, reh: 70, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 41, wsd: 0},
+                    {date: '20150830', time: '1200', pop: 20, pty: 0, r06: 0, reh: 56, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 269, wsd: 1},
+                    {date: '20150830', time: '1500', pop: 20, pty: 0, r06: 0, reh: 53, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 28, uuu: 1, vvv: 0, wav: -1, vec: 293, wsd: 2},
+                    {date: '20150830', time: '1800', pop: 20, pty: 0, r06: 0, reh: 63, s06: 0, sky: 3, t3h: 25, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 288, wsd: 2},
+                    {date: '20150830', time: '2100', pop: 10, pty: 0, r06: 0, reh: 79, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 1, vvv: -1, wav: -1, vec: 303, wsd: 1},
+                    {date: '20150831', time: '0000', pop: 10, pty: 0, r06: 0, reh: 84, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 6, wsd: 0},
+                    {date: '20150831', time: '0300', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 340, wsd: 0},
+                    {date: '20150831', time: '0600', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 72, wsd: 1},
+                    {date: '20150831', time: '0900', pop: 10, pty: 0, r06: 0, reh: 64, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 80, wsd: 1},
+                    {date: '20150831', time: '1200', pop: 10, pty: 0, r06: 0, reh: 55, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: -2, vvv: 0, wav: -1, vec: 107, wsd: 2},
+                    {date: '20150831', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150901', time: '0000', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 23, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 114, wsd: 2},
+                    {date: '20150901', time: '0300', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 22, tmn: 0, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 45, wsd: 2},
+                    {date: '20150901', time: '0600', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 21, tmn: 20, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 57, wsd: 2},
+                    {date: '20150901', time: '0900', pop: 20, pty: 0, r06: 0, reh: 63, s06: 0, sky: 3, t3h: 24, tmn: 0, tmx: 0, uuu: -2, vvv: -2, wav: -1, vec: 48, wsd: 3},
+                    {date: '20150901', time: '1200', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 65, wsd: 3},
+                    {date: '20150901', time: '1500', pop: 20, pty: 0, r06: 0, reh: 53, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 28, uuu: -2, vvv: -1, wav: -1, vec: 61, wsd: 3},
+                    {date: '20150901', time: '1800', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 64, wsd: 3},
+                    {date: '20150901', time: '2100', pop: 30, pty: 0, r06: 0, reh: 63, s06: 0, sky: 4, t3h: 23, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 59, wsd: 3},
+                ],
+                shortest: [],
+                current: [
+                    {date: '20150831', time: '0300', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '0400', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 18, wsd: 0},
+                    {date: '20150831', time: '0500', t1h: 19, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 63, wsd: 0},
+                    {date: '20150831', time: '0600', t1h: 19, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 94, pty: 0, lgt: 0, vec: 72, wsd: 0},
+                    {date: '20150831', time: '0700', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 89, pty: 0, lgt: 0, vec: 90, wsd: 0},
+                    {date: '20150831', time: '0800', t1h: 22, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 82, pty: 0, lgt: 0, vec: 90, wsd: 0},
+                    {date: '20150831', time: '0900', t1h: 24, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 74, pty: 0, lgt: 0, vec: 99, wsd: 0},
+                    {date: '20150831', time: '1000', t1h: 25, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 67, pty: 0, lgt: 0, vec: 98, wsd: 0},
+                    {date: '20150831', time: '1100', t1h: 27, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 60, pty: 0, lgt: 0, vec: 98, wsd: 0},
+                    {date: '20150831', time: '1200', t1h: 28, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 55, pty: 0, lgt: 0, vec: 96, wsd: 1},
+                    {date: '20150831', time: '1300', t1h: 29, rn1: 0, sky: 2, uuu: -1, vvv: 0, reh: 53, pty: 0, lgt: 0, vec: 85, wsd: 1},
+                    {date: '20150831', time: '1400', t1h: 30, rn1: 0, sky: 3, uuu: -1, vvv: 0, reh: 50, pty: 0, lgt: 0, vec: 103, wsd: 1}
+                ]
+            }
+        },
+        {
+            regionName: '경기도',
+            cityName: '성남시분당구',
+            townName: '야탑3동',
+            x:63,
+            y:123,
+            data:{
+                short: [
+                    {date: '20150828', time: '0000', pop: 10, pty: 0, r06: 0, reh: 78, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 1, wav: -1, vec: 160, wsd: 2},
+                    {date: '20150828', time: '0300', pop: 10, pty: 0, r06: 0, reh: 82, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 121, wsd: 0},
+                    {date: '20150828', time: '0600', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 115, wsd: 1},
+                    {date: '20150828', time: '0900', pop: 10, pty: 0, r06: 0, reh: 72, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 158, wsd: 1},
+                    {date: '20150828', time: '1200', pop: 20, pty: 0, r06: 0, reh: 54, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 250, wsd: 2},
+                    {date: '20150828', time: '1500', pop: 20, pty: 0, r06: 0, reh: 49, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 29, uuu: 3, vvv: 0, wav: -1, vec: 266, wsd: 3},
+                    {date: '20150828', time: '1800', pop: 20, pty: 0, r06: 0, reh: 54, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 3, vvv: 0, wav: -1, vec: 270, wsd: 3},
+                    {date: '20150828', time: '2100', pop: 10, pty: 0, r06: 0, reh: 68, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 266, wsd: 2},
+                    {date: '20150829', time: '0000', pop: 10, pty: 0, r06: 0, reh: 77, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 125, wsd: 0},
+                    {date: '20150829', time: '0300', pop: 10, pty: 0, r06: 0, reh: 82, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 146, wsd: 0},
+                    {date: '20150829', time: '0600', pop: 10, pty: 0, r06: 0, reh: 87, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 106, wsd: 1},
+                    {date: '20150829', time: '0900', pop: 10, pty: 0, r06: 0, reh: 72, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 105, wsd: 0},
+                    {date: '20150829', time: '1200', pop: 10, pty: 0, r06: 0, reh: 54, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 288, wsd: 2},
+                    {date: '20150829', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150829', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150830', time: '0000', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 315, wsd: 1},
+                    {date: '20150830', time: '0300', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 310, wsd: 1},
+                    {date: '20150830', time: '0600', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 18, tmn: 17, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 151, wsd: 0},
+                    {date: '20150830', time: '0900', pop: 10, pty: 0, r06: 0, reh: 70, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 41, wsd: 0},
+                    {date: '20150830', time: '1200', pop: 20, pty: 0, r06: 0, reh: 56, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: 1, vvv: 0, wav: -1, vec: 269, wsd: 1},
+                    {date: '20150830', time: '1500', pop: 20, pty: 0, r06: 0, reh: 53, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 28, uuu: 1, vvv: 0, wav: -1, vec: 293, wsd: 2},
+                    {date: '20150830', time: '1800', pop: 20, pty: 0, r06: 0, reh: 63, s06: 0, sky: 3, t3h: 25, tmn: 0, tmx: 0, uuu: 2, vvv: 0, wav: -1, vec: 288, wsd: 2},
+                    {date: '20150830', time: '2100', pop: 10, pty: 0, r06: 0, reh: 79, s06: 0, sky: 2, t3h: 22, tmn: 0, tmx: 0, uuu: 1, vvv: -1, wav: -1, vec: 303, wsd: 1},
+                    {date: '20150831', time: '0000', pop: 10, pty: 0, r06: 0, reh: 84, s06: 0, sky: 2, t3h: 20, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 6, wsd: 0},
+                    {date: '20150831', time: '0300', pop: 10, pty: 0, r06: 0, reh: 85, s06: 0, sky: 2, t3h: 19, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 340, wsd: 0},
+                    {date: '20150831', time: '0600', pop: 10, pty: 0, r06: 0, reh: 90, s06: 0, sky: 2, t3h: 18, tmn: 18, tmx: 0, uuu: 0, vvv: 0, wav: -1, vec: 72, wsd: 1},
+                    {date: '20150831', time: '0900', pop: 10, pty: 0, r06: 0, reh: 64, s06: 0, sky: 2, t3h: 23, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 80, wsd: 1},
+                    {date: '20150831', time: '1200', pop: 10, pty: 0, r06: 0, reh: 55, s06: 0, sky: 2, t3h: 27, tmn: 0, tmx: 0, uuu: -2, vvv: 0, wav: -1, vec: 107, wsd: 2},
+                    {date: '20150831', time: '1500', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '1800', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '2100', pop: 0, pty: 0, r06: 0, reh: 0, s06: 0, sky: 0, t3h: 0, tmn: 0, tmx: 0, uuu: 0, vvv: 0, wav: 0, vec: 0, wsd: 0},
+                    {date: '20150901', time: '0000', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 23, tmn: 0, tmx: 0, uuu: -1, vvv: 0, wav: -1, vec: 114, wsd: 2},
+                    {date: '20150901', time: '0300', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 22, tmn: 0, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 45, wsd: 2},
+                    {date: '20150901', time: '0600', pop: 20, pty: 0, r06: 0, reh: 73, s06: 0, sky: 3, t3h: 21, tmn: 20, tmx: 0, uuu: -1, vvv: -1, wav: -1, vec: 57, wsd: 2},
+                    {date: '20150901', time: '0900', pop: 20, pty: 0, r06: 0, reh: 63, s06: 0, sky: 3, t3h: 24, tmn: 0, tmx: 0, uuu: -2, vvv: -2, wav: -1, vec: 48, wsd: 3},
+                    {date: '20150901', time: '1200', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 27, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 65, wsd: 3},
+                    {date: '20150901', time: '1500', pop: 20, pty: 0, r06: 0, reh: 53, s06: 0, sky: 3, t3h: 28, tmn: 0, tmx: 28, uuu: -2, vvv: -1, wav: -1, vec: 61, wsd: 3},
+                    {date: '20150901', time: '1800', pop: 20, pty: 0, r06: 0, reh: 58, s06: 0, sky: 3, t3h: 26, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 64, wsd: 3},
+                    {date: '20150901', time: '2100', pop: 30, pty: 0, r06: 0, reh: 63, s06: 0, sky: 4, t3h: 23, tmn: 0, tmx: 0, uuu: -2, vvv: -1, wav: -1, vec: 59, wsd: 3},
+                ],
+                shortest: [],
+                current: [
+                    {date: '20150831', time: '0300', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 0, wsd: 0},
+                    {date: '20150831', time: '0400', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 18, wsd: 0},
+                    {date: '20150831', time: '0500', t1h: 19, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 63, wsd: 0},
+                    {date: '20150831', time: '0600', t1h: 19, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 94, pty: 0, lgt: 0, vec: 72, wsd: 0},
+                    {date: '20150831', time: '0700', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 89, pty: 0, lgt: 0, vec: 90, wsd: 0},
+                    {date: '20150831', time: '0800', t1h: 22, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 82, pty: 0, lgt: 0, vec: 90, wsd: 0},
+                    {date: '20150831', time: '0900', t1h: 24, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 74, pty: 0, lgt: 0, vec: 99, wsd: 0},
+                    {date: '20150831', time: '1000', t1h: 25, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 67, pty: 0, lgt: 0, vec: 98, wsd: 0},
+                    {date: '20150831', time: '1100', t1h: 27, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 60, pty: 0, lgt: 0, vec: 98, wsd: 0},
+                    {date: '20150831', time: '1200', t1h: 28, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 55, pty: 0, lgt: 0, vec: 96, wsd: 1},
+                    {date: '20150831', time: '1300', t1h: 29, rn1: 0, sky: 2, uuu: -1, vvv: 0, reh: 53, pty: 0, lgt: 0, vec: 85, wsd: 1},
+                    {date: '20150831', time: '1400', t1h: 30, rn1: 0, sky: 3, uuu: -1, vvv: 0, reh: 50, pty: 0, lgt: 0, vec: 103, wsd: 1}
+                ]
+            }
+        }
+    ],
     testData:{
         short:{
-            대분류: '',
-            중분류: '',
-            소분류: '',
-            x: 92,
-            y: 132,
-            data: [
-                {
-                    date: '20150825',
-                    time: '0300',
-                    강수확률: 50,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 82,
-                    하늘상태: 1,
-                    기온: 19.5,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '0600',
-                    강수확률: 30,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 73,
-                    하늘상태: 1,
-                    기온: 21.5,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '0900',
-                    강수확률: 20,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 60,
-                    하늘상태: 1,
-                    기온: 23.4,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '1200',
-                    강수확률: 50,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 85,
-                    하늘상태: 1,
-                    기온: 24.7,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '1500',
-                    강수확률: 100,
-                    강수형태: 1,
-                    강수량: 10,
-                    습도: 100,
-                    하늘상태: 4,
-                    기온: 26.1,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '1800',
-                    강수확률: 65,
-                    강수형태: 0,
-                    강수량: 10,
-                    습도: 85,
-                    하늘상태: 2,
-                    기온: 30.9,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '2100',
-                    강수확률: 50,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 70,
-                    하늘상태: 1,
-                    기온: 25.5,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                },
-                {
-                    date: '20150825',
-                    time: '2400',
-                    강수확률: 50,
-                    강수형태: 0,
-                    강수량: 0,
-                    습도: 70,
-                    하늘상태: 1,
-                    기온: 22.0,
-                    일최저기온: 18.5,
-                    일최고기온: 31.2
-                }
-            ]
-        },
 
-        shortest:{
-            대분류: '',
-            중분류: '',
-            소분류: '',
-            x: 92,
-            y: 132,
-            data: [
-                {
-                    date: '20150825',
-                    time: '0300',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '0600',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '0900',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '1200',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '1500',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '1800',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '2100',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                },
-                {
-                    date: '20150825',
-                    time: '2400',
-                    강수형태: 30,
-                    강수량: 1,
-                    하늘상태: 2,
-                    낙뢰: 1
-                }
-            ]
         },
         current:{
-            대분류: '',
-            중분류: '',
-            소분류: '',
-            x: 92,
-            y: 132,
-            data: [
-                {
-                    date: '20150825',
-                    time: '0300',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '0600',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '0900',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '1200',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '1500',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '1800',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '2100',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                },
-                {
-                    date: '20150825',
-                    time: '2400',
-                    현재기온: 28.5,
-                    강수량: 1,
-                    하늘상태: 1,
-                    습도: 70,
-                    강수형태: 0,
-                    낙뢰: 0,
-                    풍향: 0,
-                    풍속: 3
-                }
-            ]
+
         },
+        shortest:{
+
+        }
     }
 };
