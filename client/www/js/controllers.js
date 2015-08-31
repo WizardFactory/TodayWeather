@@ -14,6 +14,22 @@ angular.module('starter.controllers', [])
             }
         }
 
+        $scope.doRefresh = function() {
+            setTimeout(function() {
+                    // Stop the ion-refresher from spinning
+                    $scope.$broadcast('scroll.refreshComplete');
+                },
+                3000);
+            //$http.get('/new-items')
+            //    .success(function(newItems) {
+            //        $scope.items = newItems;
+            //    })
+            //    .finally(function() {
+            //        // Stop the ion-refresher from spinning
+            //        $scope.$broadcast('scroll.refreshComplete');
+            //    });
+        };
+
         $cordovaGeolocation.getCurrentPosition().then(function(position) {
             var lat  = position.coords.latitude;
             var long = position.coords.longitude;
@@ -30,6 +46,62 @@ angular.module('starter.controllers', [])
         }, function(err) {
             $scope.location = "error";
         });
+
+        $scope.temp = [
+            { id: 1, yesterday: 1, today: 16.2 },
+            { id: 2, yesterday: 2, today: 19.1 },
+            { id: 3, yesterday: 3, today: 18.5 },
+            { id: 4, yesterday: 4, today: 26.1 },
+            { id: 5, yesterday: 5, today: 22.4 },
+            { id: 6, yesterday: 6, today: 22.5 },
+            { id: 7, yesterday: 7, today: 32.2 },
+            { id: 8, yesterday: 8, today: 33.3 },
+            { id: 9, yesterday: 9, today: 18.9 },
+            { id: 10, yesterday: 10, today: 18.1 },
+            { id: 11, yesterday: 22.5, today: 16.2 },
+            { id: 12, yesterday: 32.2, today: 19.1 },
+            { id: 13, yesterday: 33.3, today: 5 },
+            { id: 14, yesterday: 18.9, today: 4 },
+            { id: 15, yesterday: 18.1, today: 4.1 },
+            { id: 16, yesterday: 16.2, today: 9 },
+            { id: 17, yesterday: 19.1, today: 8 },
+            { id: 18, yesterday: 18.5, today: 7 },
+            { id: 19, yesterday: 26.1, today: 6 },
+            { id: 20, yesterday: 22.4, today: 5 },
+            { id: 21, yesterday: 38.3, today: 4 },
+            { id: 22, yesterday: 32.2, today: 3 },
+            { id: 23, yesterday: 33.3, today: 2 },
+            { id: 24, yesterday: 18.9, today: 1 }
+        ];
+
+        $scope.changeTemp = function() {
+            $scope.temp = [
+                { id: 1, yesterday: 22.5, today: 1 },
+                { id: 2, yesterday: 32.2, today: 2 },
+                { id: 3, yesterday: 33.3, today: 3 },
+                { id: 4, yesterday: 18.9, today: 4 },
+                { id: 5, yesterday: 18.1, today: 5 },
+                { id: 6, yesterday: 16.2, today: 6 },
+                { id: 7, yesterday: 19.1, today: 7 },
+                { id: 8, yesterday: 18.5, today: 8 },
+                { id: 9, yesterday: 26.1, today: 9 },
+                { id: 10, yesterday: 22.4, today: 3.1 },
+                { id: 11, yesterday: 38.3, today: 16.2 },
+                { id: 12, yesterday: 32.2, today: 19.1 },
+                { id: 13, yesterday: 33.3, today: 18.5 },
+                { id: 14, yesterday: 18.9, today: 26.1 },
+                { id: 15, yesterday: 18.1, today: 22.4 },
+                { id: 16, yesterday: 9, today: 22.5 },
+                { id: 17, yesterday: 8, today: 32.2 },
+                { id: 18, yesterday: 7, today: 33.3 },
+                { id: 19, yesterday: 6, today: 18.9 },
+                { id: 20, yesterday: 5, today: 3.1 },
+                { id: 21, yesterday: 4, today: 3.1 },
+                { id: 22, yesterday: 3, today: 4.5 },
+                { id: 23, yesterday: 2, today: 5 },
+                { id: 24, yesterday: 1, today: 4 }
+            ];
+        };
     })
 
     .controller('ChatsCtrl', function($scope, Chats) {
