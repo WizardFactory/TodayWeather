@@ -1,6 +1,13 @@
 /*
  *
- * 
+ *  how to use ...
+ *
+ *  var town = require('./town');
+ *
+ *  town.getCoord(function(err, res){
+ *      if(err) console.log(err);
+ *      console.log(res);
+ *      });
  * */
 var mongoose = require('mongoose');
 
@@ -16,5 +23,5 @@ tSchema.statics = {
     }
 }
 
-mongoose.model('town', tSchema);
+module.exports = mongoose.model('town', tSchema);
 
