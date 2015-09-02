@@ -4,10 +4,10 @@ angular.module('starter.controllers', [])
         $scope.location = "Current Position Searching...";
         $scope.address = "";
         $scope.timeTable = [];
-        $scope.current;
+        $scope.currentWeather;
+        $scope.currentTime = new Date();
 
         /**
-         * It's unused now, need to update.
          * @param day
          * @param hours
          * @returns {*}
@@ -17,13 +17,14 @@ angular.module('starter.controllers', [])
                 return '';
             }
             switch (day) {
-                case 0: return '어제';
-                case 1: return '오늘';
-                case 2: return '내일';
-                case 3: return '모레';
+                case -2: return '그제';
+                case -1: return '어제';
+                case 0: return '오늘';
+                case 1: return '내일';
+                case 2: return '모레';
                 default :
                     console.error("Fail to get day string day="+day+" hours="+hours);
-                    return day;
+                    return '';
             }
         }
 
@@ -35,7 +36,7 @@ angular.module('starter.controllers', [])
          * @returns {String}
          */
         function getTimeString(positionHours, day, hours) {
-            if (positionHours === hours && day === 1) {
+            if (positionHours === hours && day === 0) {
                 return '지금';
             }
             return hours+'시';
@@ -149,6 +150,34 @@ angular.module('starter.controllers', [])
 
         /**
          *
+         * @param {String} str
+         * @returns {*}
+         */
+        function convertStringToDate(str) {
+            var y = str.substr(0,4),
+                m = str.substr(4,2) - 1,
+                d = str.substr(6,2);
+            var D = new Date(y,m,d);
+            return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
+        }
+
+        /**
+         *
+         * @param {Date} target
+         * @param {Date} current
+         * @returns {number}
+         */
+        function getDiffDays(target, current) {
+            if (!target || !current) {
+                console.log("target or current is invalid");
+                return 0;
+            }
+            var c = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+            return Math.ceil((target-c) / (1000 * 3600 * 24));
+        }
+
+        /**
+         *
          * @param {Object[]} shortForecastList
          * @param {Date} current
          * @returns {{timeTable: Array, chartTable: Array}}
@@ -161,12 +190,13 @@ angular.module('starter.controllers', [])
 
             shortForecastList.forEach(function (shortForecast) {
                 var tempObject = {};
-                var time = parseInt(shortForecast.시간.substr(0,2));
-                var day = getDayString(shortForecast.날짜.substr(6,2), time);
+                var time = parseInt(shortForecast.시간.slice(0,-2));
+                var diffDays = getDiffDays(convertStringToDate(shortForecast.날짜), current);
+                var day = getDayString(diffDays, time);
                 var isNight = time < 7 || time > 18;
 
                 tempObject.day = day;
-                tempObject.time = getTimeString(positionHours, day, time);
+                tempObject.time = getTimeString(positionHours, diffDays, time);
                 tempObject.t3h = shortForecast.기온;
                 tempObject.sky = parseSkyState(shortForecast.하늘상태, shortForecast.강수형태, shortForecast.낙뢰, isNight);
                 tempObject.pop = shortForecast.강수확률;
@@ -228,8 +258,8 @@ angular.module('starter.controllers', [])
          * @param {cbWeatherInfo} callback
          */
         function getWeatherInfo(addressArray, callback) {
-            //var url = 'town';
-            var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+            var url = 'town';
+            //var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
 
             if (addressArray[1].slice(-1) === '시') {
                 url += '/'+addressArray[1]+'/'+addressArray[2]+'/'+addressArray[3];
@@ -252,7 +282,6 @@ angular.module('starter.controllers', [])
                     callback(error);
                 });
         }
-
         /**
          * @callback cbWeatherInfo
          * @param {Error} error
@@ -326,7 +355,6 @@ angular.module('starter.controllers', [])
                     callback(err);
                 });
         }
-
         /**
          * @callback cbAddressFromGeolocation
          * @param {Error} error
@@ -334,11 +362,40 @@ angular.module('starter.controllers', [])
          */
 
         /**
-         * Todo make summary string
-         * @returns {string}
+         *
+         * @param {Object} current
+         * @param {Object} tempObject
+         * @returns {*}
          */
-        function makeSummary() {
-            return "어제보다 3도 높음";
+        function updateCurrentOnTempTable(current, tempObject) {
+            tempObject.t3h = current.t1h;
+            tempObject.sky = current.sky;
+            tempObject.tempIcon = decideTempIcon(current.t1h, current.tmx, current.tmn);
+            return tempObject;
+        }
+
+        /**
+         *
+         * @param {Object} current
+         * @param {Object} yesterday
+         * @returns {String}
+         */
+        function makeSummary(current, yesterday) {
+            var str = "어제";
+            var diffTemp = current.t1h - yesterday.t3h;
+
+            if (diffTemp == 0) {
+               return str += "와 동일";
+            }
+
+            str += "보다 " + Math.abs(diffTemp);
+            if (diffTemp < 0) {
+                str += "도 낮음";
+            }
+            else if (diffTemp > 0) {
+                str += "도 높음";
+            }
+            return str;
         }
 
         /**
@@ -368,11 +425,15 @@ angular.module('starter.controllers', [])
                         }
 
                         var currentForecast = parseCurrentTownWeather(weatherData.current);
-                        currentForecast.summary = makeSummary();
-                        $scope.current = currentForecast;
-                        console.log($scope.current);
+                        currentForecast.tmx = weatherData.short[0].최고기온;
+                        currentForecast.tmn = weatherData.short[0].최저기온;
+                        $scope.currentWeather = currentForecast;
+                        console.log($scope.currentWeather);
 
-                        var parsedWeather = parseShortTownWeather(weatherData.short, new Date());
+                        var parsedWeather = parseShortTownWeather(weatherData.short, $scope.currentTime);
+                        parsedWeather.timeTable[8] = updateCurrentOnTempTable(currentForecast, parsedWeather.timeTable[8]);
+
+                        $scope.currentWeather.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
                         $scope.timeTable = parsedWeather.timeTable;
                         $scope.temp = parsedWeather.chartTable;
                         console.log($scope.temp.length);
@@ -389,7 +450,7 @@ angular.module('starter.controllers', [])
 
         /**
          * @callback cbWeatherData
-         * @param {Error} error;
+         * @param {Error} error
          */
 
         $scope.doRefresh = function() {
@@ -408,6 +469,10 @@ angular.module('starter.controllers', [])
                 console.log(error.stack);
             }
         }), 100);
+
+        $timeout(function() {
+           $scope.currentTime = new Date();
+        }, 1000);
     })
 
     .controller('ChatsCtrl', function($scope, Chats) {

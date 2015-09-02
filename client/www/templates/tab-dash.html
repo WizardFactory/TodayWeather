@@ -16,18 +16,18 @@
                         <div class="col" style="padding: 0px; height: 100%">
                             <div class="row row-no-padding" style="height: 100%; display: table">
                                 <div class="col big-digit" style="width: 59%; height: 100%; display: table-cell; vertical-align: middle">
-                                    {{current.t1h}}
+                                    {{currentWeather.t1h}}
                                 </div>
                                 <div class="col" style="width: 1%"></div>
                                 <div class="col" style="width: 40%; height: 100%; display: table-cell; vertical-align: middle">
                                     <div style="height: 10%"></div>
-                                    <div class="row-no-padding big-temp-point" style="height: 20%" ng-if="current.t1h">
+                                    <div class="row-no-padding big-temp-point" style="height: 20%" ng-if="currentWeather.t1h">
                                         <img src="img/reddot.png">
                                     </div>
                                     <div style="height: 8%"></div>
                                     <div class="row-no-padding big-temp-sky-state" style="height: 60%"
-                                                ng-if="current.sky">
-                                        <img src="img/{{current.sky}}.png">
+                                                ng-if="currentWeather.sky">
+                                        <img src="img/{{currentWeather.sky}}.png">
                                     </div>
                                     <div style="height: 2%"></div>
                                 </div>
@@ -35,7 +35,7 @@
                         </div>
                     </div>
                     <div class="row row-no-padding region" style="height: 13%;">
-                        <p>{{current.summary}}</p>
+                        <p>{{currentWeather.summary}}</p>
                     </div>
                 </div>
             </div>
