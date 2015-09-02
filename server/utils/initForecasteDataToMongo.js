@@ -25,7 +25,7 @@ var bSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
     coord: {lon: Number, lat: Number},
     mData: {mCoord:{mx: Number, my: Number},
-            data : { current : Array, shrt : Array}
+            data : { current : Array, short : Array}
 	   }
 });
 
