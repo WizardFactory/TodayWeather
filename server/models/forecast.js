@@ -44,7 +44,7 @@ bSchema.statics = {
     },
     setShortData : function (currentObj, mCoord, cb){
 	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-	{$push: { "mData.data.short": { $each : currentObj}}}, 
+	{$push: { "mData.data.short": { $each : currentObj, $slice : 32}}}}, 
 	{safe: true, multi : true, upsert: true}, 
 	cb);
     }
