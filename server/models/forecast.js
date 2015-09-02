@@ -38,7 +38,7 @@ bSchema.statics = {
 //	});
 //	this.update({ "mData.mCoord" : mCoord },
 	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-	{$push: { "mData.data.current": { $each : currentObj}}}, 
+	{$push: { "mData.data.current": { $each : currentObj, $slice : 32}}}, 
 	{safe: true, multi : true, upsert: true}, 
 	cb);
     },
