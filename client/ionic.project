@@ -8,5 +8,11 @@
   "watchPatterns": [
     "www/**/*",
     "!www/lib/**/*"
+  ],
+  "proxies":[
+    {
+      "path":"/town",
+      "proxyUrl":"http://todayweather-wizardfactory.rhcloud.com/town"
+    }
   ]
 }
