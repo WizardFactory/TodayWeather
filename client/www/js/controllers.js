@@ -186,10 +186,10 @@ angular.module('starter.controllers', [])
          * @returns {{timeTable: Array, chartTable: Array}}
          */
         function parseShortTownWeather(shortForecastList, current) {
-            var timeTable = [];
-            var chartTable = [];
-            var count = 0;
+            var data = [];
             var positionHours = getPositionHours(current.getHours());
+            var max = null;
+            var min = null;
 
             shortForecastList.forEach(function (shortForecast) {
                 var tempObject = {};
@@ -204,18 +204,39 @@ angular.module('starter.controllers', [])
                 tempObject.sky = parseSkyState(shortForecast.하늘상태, shortForecast.강수형태, shortForecast.낙뢰, isNight);
                 tempObject.pop = shortForecast.강수확률;
                 tempObject.tempIcon = decideTempIcon(shortForecast.기온, shortForecast.최고기온, shortForecast.최저기온);
-
-                if (shortForecastList.length - count > 8) {
-                    chartTable.push({"id": count, "yesterday": tempObject.t3h, "today": 0});
+                // 오늘의 최고, 최저 온도 찾기
+                if (diffDays === 0) {
+                    if (max === null || max.t3h < tempObject.t3h) {
+                        max = tempObject;
+                    }
+                    if (min === null || min.t3h > tempObject.t3h) {
+                        min = tempObject;
+                    }
                 }
-
-                if (count >= 8) {
-                    timeTable.push(tempObject);
-
-                    chartTable[count - 8].today = tempObject.t3h;
-                }
-                count++;
+                data.push(tempObject);
             });
+
+            var timeTable = data.slice(8);
+            var chartTable = [
+                {
+                    name: 'yesterday',
+                    values: data.slice(0, shortForecastList.length - 8).map(function (d) {
+                        return { name: 'yesterday', value: d.t3h, min: false, max: false };
+                    })
+                },
+                {
+                    name: 'today',
+                    values: data.slice(8).map(function (d) {
+                        if (d === max) {
+                            return { name: 'today', value: d.t3h, min: false, max: true };
+                        }
+                        else if (d === min) {
+                            return { name: 'today', value: d.t3h, min: true, max: false };
+                        }
+                        return { name: 'today', value: d.t3h, min: false, max: false };
+                    })
+                }
+            ];
 
             return {timeTable: timeTable, chartTable: chartTable};
         }

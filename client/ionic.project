@@ -9,10 +9,10 @@
     "www/**/*",
     "!www/lib/**/*"
   ],
-  "proxies":[
+  "proxies": [
     {
-      "path":"/town",
-      "proxyUrl":"http://todayweather-wizardfactory.rhcloud.com/town"
+      "path": "/town",
+      "proxyUrl": "http://todayweather-wizardfactory.rhcloud.com/town"
     }
   ]
 }
