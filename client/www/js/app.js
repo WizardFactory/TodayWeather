@@ -124,15 +124,13 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                 var y = d3.scale.linear()
                     .range([height, 0]);
 
-                var color = d3.scale.category10();
-
                 var line = d3.svg.line()
                     .defined(function (d) {
                         return d.value != '';
                     })
-                    .interpolate("cardinal")
+                    .interpolate("monotone")
                     .x(function (d, i) {
-                        return x(i) + x.rangeBand() / 2
+                        return x.rangeBand() * i + x.rangeBand() / 2;
                     })
                     .y(function (d) {
                         return y(d.value);
@@ -140,27 +138,9 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
 
                 scope.$watch('temp', function (newVal) {
                     if (newVal) {
-                        var data = [];
-                        angular.forEach(scope.temp, function (value) {
-                            data.push(value);
-                        });
+                        var column = scope.temp;
 
-                        color.domain(d3.keys(data[0]).filter(function (key) {
-                            return key !== "id";
-                        }));
-
-                        var column = color.domain().map(function (name) {
-                            return {
-                                name: name,
-                                values: data.map(function (d) {
-                                    return {name: name, id: d.id, value: d[name]};
-                                })
-                            };
-                        });
-
-                        x.domain(d3.range(data.length));
-                        console.log(column[0].values[0]);
-
+                        x.domain(d3.range(scope.temp[0].values.length));
                         y.domain([
                             d3.min(column, function (c) {
                                 return d3.min(c.values, function (v) {
@@ -191,11 +171,8 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
 
                         // draw line
                         group_enter.append("path")
-                            .attr("class", "line")
-                            .attr("d", function(d) { return line(d.values); })
-                            .style("stroke", function(d) { return color(d.name); })
-                            .style("stroke-width", "1.5px")
-                            .style("fill", "none");
+                            .attr("class", function(d) { return "line line-"+d.name; })
+                            .attr("d", function(d) { return line(d.values); });
 
                         // update line
                         group.select('.line')
@@ -208,16 +185,21 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                         point.selectAll('circle')
                             .data(function(d) { return d.values; })
                             .enter().append('circle')
-                            .attr("cx", function(d, i) { return x(i) + x.rangeBand() / 2; })
+                            .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr("cy", function(d) { return y(d.value); })
-                            .attr("r", 5)
-                            .style("fill", function(d) { return color(d.name); });
+                            .attr("r", 8)
+                            .attr("class", function(d, i) {
+                                if (i === 8) {
+                                    return "circle-"+d.name;
+                                }
+                                return "circle-hidden";
+                            });
 
                         // update point
                         group.select('.line-point')
                             .selectAll('circle')
                             .data(function(d) { return d.values; })
-                            .attr("cx", function(d, i) { return x(i) + x.rangeBand() / 2; })
+                            .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr("cy", function(d) { return y(d.value); });
 
                         // draw value
@@ -227,19 +209,25 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                         value.selectAll('text')
                             .data(function(d) { return d.values; })
                             .enter().append('text')
-                            .attr("x", function(d, i) { return x(i) + x.rangeBand() / 2; })
+                            .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr("y", function(d) { return y(d.value); })
                             .attr('dy', -10)
                             .attr("text-anchor", "middle")
-                            .text(function(d) { return d.value; });
+                            .text(function(d) { return d.value + "˚"; })
+                            .attr("class", function(d, i) {
+                                if (d.min === true || d.max === true) {
+                                    return "text-" + d.name;
+                                }
+                                return "text-hidden";
+                            });
 
                         // update value
                         group.select('.line-value')
                             .selectAll('text')
                             .data(function(d) { return d.values; })
-                            .attr("x", function(d, i) { return x(i) + x.rangeBand() / 2; })
+                            .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr("y", function(d) { return y(d.value); })
-                            .text(function(d) { return d.value; });
+                            .text(function(d) { return d.value + "˚"; });
                     }
                 });
             }
