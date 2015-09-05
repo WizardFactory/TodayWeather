@@ -21,7 +21,8 @@ var bSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
     coord: {lon: Number, lat: Number},
     mData: {mCoord:{mx: Number, my: Number},
-            data : { current : Array, short : Array}
+            data: {current: Array, short: Array},
+	    cIdx: {type: Number, default: 0}
 	   }
 });
 
@@ -30,21 +31,26 @@ bSchema.statics = {
 	this.find({"town" : { "third" : third, "second" : second, "first" : first }})
 	.exec(cb);
     },
-    setCurrentData : function (currentObj, mCoord, cb){
-	// 삭제 예정
-//	this.find({ "mData.mCoord" : mCoord }, function(err, res){
-//	    if(err) console.log(err);
-//	    console.log(res.mData);
-//	});
-//	this.update({ "mData.mCoord" : mCoord },
-	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-	{$push: { "mData.data.current": { $each : currentObj, $slice : 32}}}, 
+    setShortData : function (currentObj, mCoord, cb){
+	// 40 is default array list length 
+	var nLen = currentObj.length;
+	var bLen = 40 - nLen;
+
+	if( bLen < 18 ) bLen = 17;
+
+	this.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+	{$push: { "mData.data.current": { $each : currentObj }}}, 
+	{safe: true, multi : true, upsert: true}, 
+	cb);
+
+	this.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+	{$pop : {'mData.data.current' : -bLen}, $set: {'mData.cIdx': bLen}}, 
 	{safe: true, multi : true, upsert: true}, 
 	cb);
     },
-    setShortData : function (currentObj, mCoord, cb){
+    setCurrentData : function (currentObj, mCoord, cb){
 	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-	{$push: { "mData.data.short": { $each : currentObj, $slice : 32}}}}, 
+	{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}}, 
 	{safe: true, multi : true, upsert: true}, 
 	cb);
     }
