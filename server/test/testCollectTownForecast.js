@@ -14,12 +14,22 @@ var fs = require('fs');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
+describe('unit test - get town forecast in lib/collect class', function() {
+    var ramMode = require('../controllers/controllerManagerRAM');
+    it('test ram mode for DB', function(done){
+        var mainLoop = new ramMode();
+
+        done();
+    })
+
+});
 
 describe('unit test - get town forecast in lib/collect class', function(){
 
     var listTown = [];
     var listIndex = 0;
 
+/*
     it('get xy list', function(){
         var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
         lineList.shift(); //  header remove
@@ -53,7 +63,8 @@ describe('unit test - get town forecast in lib/collect class', function(){
         }
         log.info(listTown);
     });
-/*
+*/
+    /*
     it('lib/collect : get towns SHORT info by using XY list', function(done){
         //var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
         var listXY = listTown;
@@ -61,7 +72,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
         var collection = new collect();
         assert.doesNotThrow(function(){
             //collection.getTownData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150815', '0500', function(err, dataList){
-            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.aleckim, '20150827', '1400', function(err, dataList){
+            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.aleckim, '20150828', '0200', function(err, dataList){
                 log.info('short data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
@@ -121,7 +132,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
         });
     });
 */
-
+/*
     it('lib/collect : get towns CURRENT info by using XY list', function(done){
         //var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
         var listXY = listTown;
@@ -153,7 +164,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
             });
         });
     });
-
+*/
 });
 
 describe('unit test - get middle range forecast in lib/collect class', function() {
