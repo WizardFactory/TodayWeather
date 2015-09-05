@@ -22,7 +22,7 @@ var bSchema = new mongoose.Schema({
     coord: {lon: Number, lat: Number},
     mData: {mCoord:{mx: Number, my: Number},
             data: {current: Array, short: Array},
-	    cIdx: {type: Number, default: 0}
+	    cCurr: {time: String, date: String}
 	   }
 });
 
@@ -32,21 +32,41 @@ bSchema.statics = {
 	.exec(cb);
     },
     setShortData : function (currentObj, mCoord, cb){
-	// 40 is default array list length 
-	var nLen = currentObj.length;
-	var bLen = 40 - nLen;
+	var self = this;
 
-	if( bLen < 18 ) bLen = 17;
+	self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
+	.exec(function(err, res){ 
+            var interval = 0;
+	    var dateInterval = 0;
+	    var length = 0;
 
-	this.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-	{$push: { "mData.data.current": { $each : currentObj }}}, 
-	{safe: true, multi : true, upsert: true}, 
-	cb);
+	    if(res.mData.cCurr == null || res.mData.cCurr == ""){
+	        interval = 0;
+		dateInterval = 0;
+	    }else{
+	        interval = currentObj[0].time - res.mData.oCurr.time / 300;
+	        dateInterval = currentObj[0].date - res.mData.currentObj[0].date;
+		interval = interval + (8 * dateInterval);
+	    }
+	    self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+	    {$pop : {'mData.data.short' : length - interval}, $addToSet : {'mData.cCurr.time' : currentObj[0].time, 'mData.cCurr.date' : currentObj[0].date}}, 
+	    {safe: true, multi : true, upsert: true}, 
+	    cb);
 
-	this.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-	{$pop : {'mData.data.current' : -bLen}, $set: {'mData.cIdx': bLen}}, 
-	{safe: true, multi : true, upsert: true}, 
-	cb);
+            self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+	    {$push : {'mData.data.short' : {$each : currentObj}}}, 
+	    {safe: true, multi : true, upsert: true}, 
+	    cb);
+
+	    // 40 is default array list length 
+            if( length > 40 ) {
+	        self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+    	        {$pop : {'mData.data.short' : -interval}}, 
+    	        {safe: true, multi : true, upsert: true}, 
+    	        cb);
+	    }
+	    console.log('interval : ' + interval);
+	});
     },
     setCurrentData : function (currentObj, mCoord, cb){
 	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
