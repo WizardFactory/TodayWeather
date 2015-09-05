@@ -1,7 +1,7 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $cordovaGeolocation, $timeout,
-                                     $interval, $http)
+    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicUser, $cordovaGeolocation,
+                                     $timeout, $interval, $http)
     {
         $scope.location = "Current Position Searching...";
         $scope.address = "";
@@ -499,17 +499,42 @@ angular.module('starter.controllers', [])
             if (!fullAddress) {
                 return false;
             }
-            $scope.address = getShortenAddress(fullAddress);
-            console.log($scope.address);
-            $scope.location = JSON.parse(localStorage.getItem("location"));
-            console.log($scope.location);
-            $scope.currentWeather = JSON.parse(localStorage.getItem("currentWeather"));
-            console.log($scope.currentWeather);
-            $scope.timeTable = JSON.parse(localStorage.getItem("timeTable"));
-            console.log($scope.timeTable);
-            $scope.temp = JSON.parse(localStorage.getItem("chartTable"));
-            console.log($scope.temp);
+            try {
+                $scope.address = getShortenAddress(fullAddress);
+                console.log($scope.address);
+                $scope.location = JSON.parse(localStorage.getItem("location"));
+                console.log($scope.location);
+                $scope.currentWeather = JSON.parse(localStorage.getItem("currentWeather"));
+                console.log($scope.currentWeather);
+                $scope.timeTable = JSON.parse(localStorage.getItem("timeTable"));
+                console.log($scope.timeTable);
+                $scope.temp = JSON.parse(localStorage.getItem("chartTable"));
+                console.log($scope.temp);
+            }
+            catch(error) {
+               return false;
+            }
         }
+
+        /**
+         * Identifies a user with the Ionic User service
+         */
+        function identifyUser() {
+            console.log('User: Identifying with User service');
+
+            var user = $ionicUser.get();
+            if(!user.user_id) {
+                user.user_id = $ionicUser.generateGUID();
+            }
+
+            // Identify your user with the Ionic User Service
+            $ionicUser.identify(user).then(function(){
+                $scope.identified = true;
+                console.log('Identified user ID ' + user.user_id);
+            });
+        }
+
+        identifyUser();
 
         $scope.address = "위치 찾는 중";
 
