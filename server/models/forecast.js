@@ -31,7 +31,7 @@ bSchema.statics = {
 	this.find({"town" : { "third" : third, "second" : second, "first" : first }})
 	.exec(cb);
     },
-    setCurrentData : function (currentObj, mCoord, cb){
+    setShortData : function (currentObj, mCoord, cb){
 	// 40 is default array list length 
 	var nLen = currentObj.length;
 	var bLen = 40 - nLen;
@@ -48,7 +48,7 @@ bSchema.statics = {
 	{safe: true, multi : true, upsert: true}, 
 	cb);
     },
-    setShortData : function (currentObj, mCoord, cb){
+    setCurrentData : function (currentObj, mCoord, cb){
 	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
 	{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}}, 
 	{safe: true, multi : true, upsert: true}, 

@@ -19,15 +19,13 @@ mongoose.set('debug', true);
 //
 var base = require('./forecast');
 
-var b = mongoose.model('base');
-
 //b.getData("서울특별시", "동대문구", "청량리동", function(err, res){
 //    if(err) console.log(err);
 //    console.log(res);
 //});
 //
 
-b.setCurrentData("1500", [{"test": "Test#1"}], {"mx":132, "my":93}, function(err, res){
+base.setCurrentData([{"test": "444"}, {"test": "555"}], {"mx":61, "my":127}, function(err, res){
     if(err) console.log(err);
     console.log(res);
 });
