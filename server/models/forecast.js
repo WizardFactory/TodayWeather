@@ -44,7 +44,7 @@ bSchema.statics = {
 	        interval = 0;
 		dateInterval = 0;
 	    }else{
-	        interval = currentObj[0].time - res.mData.oCurr.time / 300;
+	        interval = currentObj[0].time - res.mData.cCurr.time / 300;
 	        dateInterval = currentObj[0].date - res.mData.currentObj[0].date;
 		interval = interval + (8 * dateInterval);
 	    }
