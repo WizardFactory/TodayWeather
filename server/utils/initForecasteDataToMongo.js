@@ -25,9 +25,11 @@ var bSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
     coord: {lon: Number, lat: Number},
     mData: {mCoord:{mx: Number, my: Number},
-            data : { current : Array, short : Array}
+            data: {current: Array, short: Array},
+	    cIdx: {type: Number, default: 0}
 	   }
 });
+
 
 var bDoc = mongoose.model('base', bSchema);
 
