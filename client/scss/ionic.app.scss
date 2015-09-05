@@ -126,6 +126,47 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin: 0px;
 }
 
+/* chart style */
+.line-today {
+  stroke: #ffffff;
+  stroke-width: 3px;
+  fill: none;
+}
+
+.line-yesterday {
+  stroke: #d0d0d0;
+  stroke-width: 3px;
+  fill: none;
+}
+
+.circle-today {
+  stroke: #ffffff;
+  stroke-width: 3px;
+  fill: #ff0000;
+}
+
+.circle-yesterday {
+  stroke: #d0d0d0;
+  stroke-width: 3px;
+  fill: #d0d0d0;
+}
+
+.text-today {
+  fill: #ffffff;
+  font-family: 'Helvetica Neue Thin';
+  font-size: 20px;
+}
+
+.text-yesterday {
+  fill: #d0d0d0;
+  font-family: 'Helvetica Neue Thin';
+  font-size: 20px;
+}
+
+.circle-hidden, .text-hidden{
+  visibility: hidden;
+}
+
 //iphone 4
 @media only screen and (min-device-width: 320px)
     and (max-device-width: 480px)
