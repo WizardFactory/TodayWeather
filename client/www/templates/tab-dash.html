@@ -10,27 +10,32 @@
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 17%;"></div>
                     <div class="row row-no-padding region" style="height: 16%;">
-                        <p>서울, 잠실본동</p>
+                        <p>{{address}}</p>
                     </div>
                     <div class="row row-no-padding" style="height: 54%;">
                         <div class="col" style="padding: 0px; height: 100%">
                             <div class="row row-no-padding" style="height: 100%; display: table">
                                 <div class="col big-digit" style="width: 59%; height: 100%; display: table-cell; vertical-align: middle">
-                                    30
+                                    {{currentWeather.t1h}}
                                 </div>
                                 <div class="col" style="width: 1%"></div>
                                 <div class="col" style="width: 40%; height: 100%; display: table-cell; vertical-align: middle">
                                     <div style="height: 10%"></div>
-                                    <div class="row-no-padding big-temp-point" style="height: 20%"><img src="img/reddot.png"></div>
+                                    <div class="row-no-padding big-temp-point" style="height: 20%" ng-if="currentWeather.t1h">
+                                        <img src="img/reddot.png">
+                                    </div>
                                     <div style="height: 8%"></div>
-                                    <div class="row-no-padding big-temp-sky-state" style="height: 60%"><img src="img/SunWithCloud.png"></div>
+                                    <div class="row-no-padding big-temp-sky-state" style="height: 60%"
+                                                ng-if="currentWeather.sky">
+                                        <img src="img/{{currentWeather.sky}}.png">
+                                    </div>
                                     <div style="height: 2%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="row row-no-padding region" style="height: 13%;">
-                        <p>어제보다 3도 높음</p>
+                        <p>{{currentWeather.summary}}</p>
                     </div>
                 </div>
             </div>
@@ -39,10 +44,9 @@
                 <ion-scroll delegate-handle="chart" zooming="false" direction="x" has-bouncing="false"
                                     scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col" style="padding: 0; height: 100%; width: 1290px;">
-                        <div class="row row-no-padding" style="height: 50%;" ng-click="changeTemp();">
+                        <div class="row row-no-padding" style="height: 50%;">
                             <div ng-temp-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding" style="height: 2%;"></div>
                         <div class="row row-no-padding" style="height: 48%;">
                             <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <div class="row row-no-padding small-time" style="height: 16%;">
@@ -50,23 +54,24 @@
                                 </div>
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6)">
                                 <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p>{{value.hour}}</p>
+                                    <p>{{value.time}}</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img src="img/Temp-05.png"></div>
+                                    <div><img src="img/{{value.tempIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 16%;">
-                                    <p>{{value.temp}}˚</p>
+                                    <p>{{value.t3h}}˚</p>
                                 </div>
                                 <div class="row row-no-padding" style="height: 2%;"></div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img src="img/SunWithCloud.png"></div>
+                                    <div><img src="img/{{value.sky}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 16%;">
                                     <p>{{value.pop}}%</p>
                                 </div>
                             </div>
                         </div>
+                        <div class="row row-no-padding" style="height: 2%;"></div>
                     </div>
                 </ion-scroll>
             </div>

@@ -5,6 +5,8 @@
 
 var collectTown = require('../lib/collectTownForecast');
 var listKey = require('../config/keydata');
+var town = require('../models/town');
+var forecast = require('../models/forecast');
 
 function Manager(){
     var self = this;
@@ -55,12 +57,8 @@ Manager.prototype.getWorldTime = function(tzOffset) {
 
 Manager.prototype.getTownShortData = function(){
     var self = this;
+    var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-    /****************************************************************************
-     *   THIS IS FOR TEST.
-     ****************************************************************************/
-    var listTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-    /****************************************************************************/
     var currentDate = self.getWorldTime(+9);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -105,32 +103,29 @@ Manager.prototype.getTownShortData = function(){
         return;
     }
 
-    log.info('+++ GET SHORT INFO : ', dateString);
+    //    log.info('+++ GET SHORT INFO : ', dateString);
 
-    // TODO : get town list from DB.
+    town.getCoord(function(err, listTownDb){
+        if(err) console.log(err);
 
-    var collectShortInfo = new collectTown();
-    collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
+            if(err) console.log(err);
+            log.info('short data receive completed : %d\n', dataList.length);
 
-        log.info('short data receive completed : %d\n', dataList.length);
-
-        //log.info(dataList);
-        //log.info(dataList[0]);
-        for(var i in dataList){
-            for(var j in dataList[i].data){
-                log.info(dataList[i].data[j]);
+            for(var i = 0 ; i < listTownDb.length ; i ++){
+                forecast.setShortData(dataList[i].data, testListTownDb[i], function(err, res){
+                    if(err) console.log(err);
+                    console.log(res);
+                });
             }
-        }
-
-        // TODO: Store data to DB.
+        });
     });
-
 };
 
 Manager.prototype.getTownShortestData = function(){
     var self = this;
 
-    var listTownDb = [];
     var currentDate = self.getWorldTime(+9);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -160,39 +155,28 @@ Manager.prototype.getTownShortestData = function(){
 
     log.info('+++ GET SHORTEST INFO : ', dateString);
 
-    // TODO : get town list from DB.
-    /****************************************************************************
-     *   THIS IS FOR TEST.
-     ****************************************************************************/
-    listTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-    /****************************************************************************/
+    town.getCoord(function(err, listTownDb){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
 
-    var collectShortInfo = new collectTown();
-    collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
+            log.info('shortest data receive completed : %d\n', dataList.length);
 
-        log.info('shortest data receive completed : %d\n', dataList.length);
-
-        //log.info(dataList);
-        //log.info(dataList[0]);
-        for(var i in dataList){
-            for(var j in dataList[i].data){
-                log.info(dataList[i].data[j]);
+            //log.info(dataList);
+            //log.info(dataList[0]);
+            for(var i in dataList){
+                for(var j in dataList[i].data){
+                    log.info(dataList[i].data[j]);
+                }
             }
-        }
 
-        // TODO: Store data to DB.
+            // TODO: Store data to DB.
+        });
     });
-
 };
 
 Manager.prototype.getTownCurrentData = function(){
     var self = this;
 
-    /****************************************************************************
-     *   THIS IS FOR TEST.
-     ****************************************************************************/
-    var listTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-    /****************************************************************************/
     var currentDate = self.getWorldTime(+9);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -202,27 +186,23 @@ Manager.prototype.getTownCurrentData = function(){
     //log.info(currentDate);
     //log.info(hour, minute);
 
-
     log.info('+++ GET CURRENT INFO : ', dateString);
 
-    // TODO : get town list from DB.
+    town.getCoord(function(err, listTownDb){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
 
-    var collectShortInfo = new collectTown();
-    collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
+            log.info('shortest data receive completed : %d\n', dataList.length);
 
-        log.info('shortest data receive completed : %d\n', dataList.length);
-
-        //log.info(dataList);
-        //log.info(dataList[0]);
-        for(var i in dataList){
-            for(var j in dataList[i].data){
-                log.info(dataList[i].data[j]);
+            for(var i = 0 ; i < listTownDb.length ; i ++){
+                forecast.setCurrentData(dataList[i].data, listTownDb[i], function(err, res){
+                    if(err) console.log(err);
+                    console.log(res);
+                });
             }
-        }
+        });
 
-        // TODO: Store data to DB.
     });
-
 };
 
 Manager.prototype.startTownData = function(){

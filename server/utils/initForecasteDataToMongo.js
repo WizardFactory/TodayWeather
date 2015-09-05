@@ -10,22 +10,17 @@ var convert = require('./coordinate2xy');
 mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
-var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
+var lineList = fs.readFileSync('./utils/data/test.csv').toString().split('\n');
 lineList.shift(); //  header remove
 
 var schemaKeyList = ['first', 'second', 'third', 'long', 'latt'];
-
-//var bSchema = new mongoose.Schema({
-//    town: {first: String, second: String, third: String},
-//    coord: {lon: Number, lat: Number},
-//    mData: {mCoord:{mx: Number, my: Number}},
-//});
 
 var bSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
     coord: {lon: Number, lat: Number},
     mData: {mCoord:{mx: Number, my: Number},
-            data : { current : Array, short : Array}
+            data: {current: Array, short: Array},
+	    cCurr: {time: String, date: String}
 	   }
 });
 
