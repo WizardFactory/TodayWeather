@@ -452,7 +452,8 @@ angular.module('starter.controllers', [])
 
             getCurrentPosition(function(error, lat, long) {
                 if (error) {
-                    $scope.address = error.message;
+                    console.log(error);
+                    $scope.address = "현재 위치를 찾을 수 없습니다.";
                     return callback(error);
                 }
 
