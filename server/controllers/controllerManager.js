@@ -20,9 +20,9 @@ function Manager(){
     /****************************************************************************
      *   THIS IS FOR TEST.
      ****************************************************************************/
-    self.TIME_PERIOD.TOWN_SHORT = (1000*15);
-    self.TIME_PERIOD.TOWN_SHORTEST = (1000*10);
-    self.TIME_PERIOD.TOWN_CURRENT = (1000*10); //(1000*60*60)
+    self.TIME_PERIOD.TOWN_SHORT = (1000*5);
+    //self.TIME_PERIOD.TOWN_SHORTEST = (1000*10);
+    //self.TIME_PERIOD.TOWN_CURRENT = (1000*10); //(1000*60*60)
     /****************************************************************************/
 }
 
@@ -57,7 +57,7 @@ Manager.prototype.getWorldTime = function(tzOffset) {
 
 Manager.prototype.getTownShortData = function(){
     var self = this;
-    var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
+    //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
     var currentDate = self.getWorldTime(+9);
     var dateString = {
@@ -65,6 +65,8 @@ Manager.prototype.getTownShortData = function(){
         time: ''
     };
     var time = currentDate.slice(8, 12);
+    var meta = {};
+    meta.fName = 'getTownShortData';
 
     //log.info(currentDate);
     //log.info(time);
@@ -103,20 +105,42 @@ Manager.prototype.getTownShortData = function(){
         return;
     }
 
-    //    log.info('+++ GET SHORT INFO : ', dateString);
+    log.info('+++ GET SHORT INFO : ', dateString);
 
     town.getCoord(function(err, listTownDb){
-        if(err) console.log(err);
+        if(err){
+            log.error('** getTownShortData : ', err);
+            log.error(meta);
+            return;
+        }
+
+        log.info(listTownDb);
+        log.info('+++ COORD LIST : ', listTownDb.length);
 
         var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
-            if(err) console.log(err);
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.aleckim, dateString.date, dateString.time, function(err, dataList){
+            if(err){
+                log.error('** getTownShortData : ', err);
+                log.error(meta);
+                return;
+            }
+
             log.info('short data receive completed : %d\n', dataList.length);
+            //log.info(dataList);
+            //log.info(dataList[0]);
+            //for(var i=0 ; i<10 ; i++){
+            //    for(var j in dataList[i].data){
+            //        log.info(dataList[i].data[j]);
+            //    }
+            //}
 
             for(var i = 0 ; i < listTownDb.length ; i ++){
-                forecast.setShortData(dataList[i].data, testListTownDb[i], function(err, res){
-                    if(err) console.log(err);
-                    console.log(res);
+                forecast.setShortData(dataList[i].data, listTownDb[i], function(err, res){
+                    if(err){
+                        log.error('** getTownShortData : ', err);
+                        log.error(meta);
+                    }
+                    log.info(res);
                 });
             }
         });
@@ -190,14 +214,17 @@ Manager.prototype.getTownCurrentData = function(){
 
     town.getCoord(function(err, listTownDb){
         var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.pokers, dateString.date, dateString.time, function(err, dataList){
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.aleckim, dateString.date, dateString.time, function(err, dataList){
 
             log.info('shortest data receive completed : %d\n', dataList.length);
 
             for(var i = 0 ; i < listTownDb.length ; i ++){
                 forecast.setCurrentData(dataList[i].data, listTownDb[i], function(err, res){
-                    if(err) console.log(err);
-                    console.log(res);
+                    if(err){
+                        log.error('** getTownCurrentData : ', err);
+                        return;
+                    }
+                    log.info(res);
                 });
             }
         });
@@ -213,6 +240,7 @@ Manager.prototype.startTownData = function(){
         "use strict";
 
         self.getTownShortData();
+        clearInterval(self.loopTownShortID);
 
     }, self.TIME_PERIOD.TOWN_SHORT);
 
