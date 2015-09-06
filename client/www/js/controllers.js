@@ -3,13 +3,14 @@ angular.module('starter.controllers', [])
     .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicUser, $cordovaGeolocation,
                                      $timeout, $interval, $http)
     {
+        $scope.skipGuide = false;
         $scope.location = "Current Position Searching...";
         $scope.address = "";
         $scope.timeTable = [];
         $scope.currentWeather;
         $scope.currentTime = new Date();
 
-        fullAddress = "";
+        var fullAddress = "";
 
         /**
          * @param day
@@ -466,6 +467,7 @@ angular.module('starter.controllers', [])
                     if (error) {
                         return callback(error);
                     }
+                    $scope.address = getShortenAddress(fullAddress);
                     setWeatherData(weatherData);
                     return callback(undefined);
                 });
@@ -519,6 +521,7 @@ angular.module('starter.controllers', [])
         function loadStorage() {
             fullAddress = localStorage.getItem("fullAddress");
             if (!fullAddress) {
+                fullAddress = "대한민국 서울특별시 중구 명동";
                 return false;
             }
             try {
@@ -579,7 +582,20 @@ angular.module('starter.controllers', [])
             });
         };
 
+        $scope.onClickGuide = function() {
+            if(typeof(Storage) !== "undefined") {
+                localStorage.setItem("skipGuide", true);
+            }
+            $scope.skipGuide = true;
+        };
+
         $ionicPlatform.ready(function() {
+            if(typeof(Storage) !== "undefined") {
+                if (localStorage.getItem("skipGuide") !== null) {
+                    $scope.skipGuide = localStorage.getItem("skipGuide");
+                };
+            }
+
             if(typeof(Storage) !== "undefined" && loadStorage()) {
                 $timeout(function() {
                     $ionicScrollDelegate.$getByHandle('chart').scrollTo(285, 0, false);
