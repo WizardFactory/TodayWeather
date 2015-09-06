@@ -1,7 +1,7 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicUser, $cordovaGeolocation,
-                                     $timeout, $interval, $http)
+    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicUser, $ionicPopup,
+                                     $cordovaGeolocation, $timeout, $interval, $http)
     {
         $scope.skipGuide = false;
         $scope.location = "Current Position Searching...";
@@ -477,7 +477,7 @@ angular.module('starter.controllers', [])
             getCurrentPosition(function(error, lat, long) {
                 if (error) {
                     console.log(error);
-                    $scope.address = "현재 위치를 찾을 수 없습니다.";
+                    showAlert("에러", "현재 위치를 찾을 수 없습니다.");
                     return callback(error);
                 }
 
@@ -559,6 +559,16 @@ angular.module('starter.controllers', [])
                 console.log('Identified user ID ' + user.user_id);
             });
         }
+
+        function showAlert(title, msg) {
+            var alertPopup = $ionicPopup.alert({
+                title: title,
+                template: msg
+            });
+            alertPopup.then(function(res) {
+                console.log('alertPopup close');
+            });
+        };
 
         identifyUser();
 
