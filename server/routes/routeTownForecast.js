@@ -281,7 +281,7 @@ var getShort = function(req, res, next){
         /********************
          * TEST DATA
          ********************/
-        result = config;
+        //result = config;
         /********************/
 
         try{
@@ -294,8 +294,8 @@ var getShort = function(req, res, next){
             /********************
              * TEST DATA
              ********************/
-            requestTime.date = '20150830';
-            requestTime.time = '0300';
+            //requestTime.date = '20150830';
+            //requestTime.time = '0300';
             /********************/
 
             for(i = 0 ; i < listCurrent.length ; i++){
@@ -412,7 +412,7 @@ var getShortest = function(req, res, next){
         /********************
          * TEST DATA
          ********************/
-        result = config;
+        //result = config;
         /********************/
         try{
             var listShortest = result.mData.data.shortest;
@@ -469,7 +469,7 @@ var getCurrent = function(req, res, next){
         /********************
          * TEST DATA
          ********************/
-        result = config;
+        //result = config;
         /********************/
         try{
             var listCurrent = result.mData.data.current;

@@ -57,18 +57,16 @@ bSchema.statics = {
 
 		self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
 			.exec(function(err, res){
-				if(err || res === undefined){
+				if(err || res.mData === undefined || !Array.isArray(currentObj)){
 					log.error('[DB] setShortData : ', err);
-					log.error(res);
 					return;
 				}
 				var popCount = 0;
 				var dateString = '';
 				var timeString = '';
 
-				log.info('$$ err : ', err);
-				log.info('$$ res : ', res.toString());
-				log.info('$$ short : ', res.mData.data.short);
+				//log.info('$$ err : ', err);
+				//log.info('$$ short : ', res.mData.data.short);
 
 				for(var i = 0 in currentObj){
 					if((currentObj[i].date !== undefined) &&
@@ -81,8 +79,8 @@ bSchema.statics = {
 					}
 				}
 
-				log.info('dateString : ', parseInt(dateString));
-				log.info('timeString : ', parseInt(timeString));
+				//log.info('dateString : ', parseInt(dateString));
+				//log.info('timeString : ', parseInt(timeString));
 				log.info('len : ', res.mData.data.short.length);
 
 
@@ -91,8 +89,8 @@ bSchema.statics = {
 				//  1. db의 제일 마지막 데이터의 날짜가 현재 받은 데이터 리스트의 처음 데이터 날짜 보다 큰 경우,
 				//  2. db의 제일 마지막 데이터 날짜가 현재 받음 데이터의 처음 데이터 날짜와 같고, 현재 받은 데이터의 시간이 같거나 작은 경우
 				if(res.mData.data.short.length > 0 ) {
-					log.info('last date : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].date));
-					log.info('last time : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].time));
+					//log.info('last date : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].date));
+					//log.info('last time : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].time));
 
 					if(parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) > parseInt(dateString) ||
 						((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
@@ -103,37 +101,37 @@ bSchema.statics = {
 								res.mData.data.short[i].time === timeString) {
 								break;
 							}
-							log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+							//log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
 						}
 					}
 				}
 
-				if(res.mData.data.short.length > 0 ){
-				}
-
 				if(popCount > 0){
-					self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-						{$pop : {'mData.data.short' : popCount}},
-						{safe: true, multi : true, upsert: true},
-						cb);
+					for(var i=0 ; i< popCount ; i++){
+						self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+							{$pop : {'mData.data.short' : popCount}},
+							{safe: true, multi : true, upsert: true},
+							cb);
+					}
 
 					log.info('$$ setShortData : pop remove from last ', popCount);
 				}
 
-				log.info('$$ after pop : ', res.mData.data.short);
-
-				self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+				self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
 					{$push : {'mData.data.short' : {$each : currentObj}}},
 					{safe: true, multi : true, upsert: true},
 					cb);
+				log.info('+ : ', currentObj.length);
 
 				// 40 is default array list length
 				if(res.mData.data.short.length > 40 ) {
 					popCount = 40 - res.mData.data.short.length;
-					self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-						{$pop : {'mData.data.short' : -popCount}},
-						{safe: true, multi : true, upsert: true},
-						cb);
+					for(var i=0 ; i< popCount ; i++){
+						self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+							{$pop : {'mData.data.short' : -popCount}},
+							{safe: true, multi : true, upsert: true},
+							cb);
+					}
 					log.info('$$ setShortData : pop remove from first ', popCount);
 				}
 

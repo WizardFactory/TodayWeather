@@ -22,7 +22,7 @@ function Manager(){
      ****************************************************************************/
     self.TIME_PERIOD.TOWN_SHORT = (1000*5);
     //self.TIME_PERIOD.TOWN_SHORTEST = (1000*10);
-    //self.TIME_PERIOD.TOWN_CURRENT = (1000*10); //(1000*60*60)
+    self.TIME_PERIOD.TOWN_CURRENT = (1000*10); //(1000*60*60)
     /****************************************************************************/
 }
 
@@ -118,7 +118,7 @@ Manager.prototype.getTownShortData = function(){
         log.info('+++ COORD LIST : ', listTownDb.length);
 
         var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.aleckim, dateString.date, dateString.time, function(err, dataList){
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, listKey.keyString.hyunsoo, dateString.date, dateString.time, function(err, dataList){
             if(err){
                 log.error('** getTownShortData : ', err);
                 log.error(meta);
@@ -135,13 +135,15 @@ Manager.prototype.getTownShortData = function(){
             //}
 
             for(var i = 0 ; i < listTownDb.length ; i ++){
-                forecast.setShortData(dataList[i].data, listTownDb[i], function(err, res){
-                    if(err){
-                        log.error('** getTownShortData : ', err);
-                        log.error(meta);
-                    }
-                    log.info(res);
-                });
+                if(Array.isArray(dataList[i].data)) {
+                    forecast.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
+                        if (err) {
+                            log.error('** getTownShortData : ', err);
+                            log.error(meta);
+                        }
+                        //log.info(res);
+                    });
+                }
             }
         });
     });
@@ -207,6 +209,13 @@ Manager.prototype.getTownCurrentData = function(){
         time: currentDate.slice(8,10) + '00'
     };
 
+    // 아직 발표 전 시간 대라면 1시간을 뺀 시간을 가져온다.
+    if(parseInt(currentDate.slice(10,12)) < 35){
+        currentDate = self.getWorldTime(+8);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = currentDate.slice(8,10) + '00'
+    }
+
     //log.info(currentDate);
     //log.info(hour, minute);
 
@@ -214,18 +223,20 @@ Manager.prototype.getTownCurrentData = function(){
 
     town.getCoord(function(err, listTownDb){
         var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.aleckim, dateString.date, dateString.time, function(err, dataList){
+        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, listKey.keyString.hyunsoo, dateString.date, dateString.time, function(err, dataList){
 
-            log.info('shortest data receive completed : %d\n', dataList.length);
+            log.info('current data receive completed : %d\n', dataList.length);
 
             for(var i = 0 ; i < listTownDb.length ; i ++){
-                forecast.setCurrentData(dataList[i].data, listTownDb[i], function(err, res){
-                    if(err){
-                        log.error('** getTownCurrentData : ', err);
-                        return;
-                    }
-                    log.info(res);
-                });
+                if(Array.isArray(dataList[i].data)){
+                    forecast.setCurrentData(dataList[i].data, listTownDb[i], function(err, res){
+                        if(err){
+                            log.error('** getTownCurrentData : ', err);
+                            return;
+                        }
+                        //log.info(res);
+                    });
+                }
             }
         });
 
