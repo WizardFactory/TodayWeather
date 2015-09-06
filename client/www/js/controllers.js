@@ -192,9 +192,10 @@ angular.module('starter.controllers', [])
          * @param {Date} current
          * @returns {{timeTable: Array, chartTable: Array}}
          */
-        function parseShortTownWeather(shortForecastList, current) {
+        function parseShortTownWeather(shortForecastList, currentForecast, current) {
             var data = [];
             var positionHours = getPositionHours(current.getHours());
+            var prevDiffDays = null;
             var max = null;
             var min = null;
 
@@ -211,15 +212,30 @@ angular.module('starter.controllers', [])
                 tempObject.sky = parseSkyState(shortForecast.하늘상태, shortForecast.강수형태, shortForecast.낙뢰, isNight);
                 tempObject.pop = shortForecast.강수확률;
                 tempObject.tempIcon = decideTempIcon(shortForecast.기온, shortForecast.최고기온, shortForecast.최저기온);
-                // 오늘의 최고, 최저 온도 찾기
-                if (diffDays === 0) {
-                    if (max === null || max.t3h < tempObject.t3h) {
-                        max = tempObject;
-                    }
-                    if (min === null || min.t3h > tempObject.t3h) {
-                        min = tempObject;
-                    }
+                tempObject.tempInfo = "";
+
+                // 단기 예보의 현재(지금) 데이터를 currentForecast 정보로 업데이트
+                if (data.length === 16) {
+                    tempObject.t3h = currentForecast.t1h;
+                    tempObject.sky = currentForecast.sky;
+                    tempObject.tempIcon = decideTempIcon(currentForecast.t1h, currentForecast.tmx, currentForecast.tmn);
                 }
+
+                // 하루 기준의 최고, 최저 온도 찾기
+                if (prevDiffDays !== null && prevDiffDays !== diffDays) {
+                    max.tempInfo = "max";
+                    min.tempInfo = "min";
+                    max = null;
+                    min = null;
+                }
+                if (max === null || max.t3h < tempObject.t3h) {
+                    max = tempObject;
+                }
+                if (min === null || min.t3h > tempObject.t3h) {
+                    min = tempObject;
+                }
+                prevDiffDays = diffDays;
+
                 data.push(tempObject);
             });
 
@@ -228,19 +244,13 @@ angular.module('starter.controllers', [])
                 {
                     name: 'yesterday',
                     values: data.slice(0, shortForecastList.length - 8).map(function (d) {
-                        return { name: 'yesterday', value: d.t3h, min: false, max: false };
+                        return { name: 'yesterday', value: d };
                     })
                 },
                 {
                     name: 'today',
                     values: data.slice(8).map(function (d) {
-                        if (d === max) {
-                            return { name: 'today', value: d.t3h, min: false, max: true };
-                        }
-                        else if (d === min) {
-                            return { name: 'today', value: d.t3h, min: true, max: false };
-                        }
-                        return { name: 'today', value: d.t3h, min: false, max: false };
+                        return { name: 'today', value: d };
                     })
                 }
             ];
@@ -402,19 +412,6 @@ angular.module('starter.controllers', [])
         /**
          *
          * @param {Object} current
-         * @param {Object} tempObject
-         * @returns {*}
-         */
-        function updateCurrentOnTempTable(current, tempObject) {
-            tempObject.t3h = current.t1h;
-            tempObject.sky = current.sky;
-            tempObject.tempIcon = decideTempIcon(current.t1h, current.tmx, current.tmn);
-            return tempObject;
-        }
-
-        /**
-         *
-         * @param {Object} current
          * @param {Object} yesterday
          * @returns {String}
          */
@@ -445,9 +442,7 @@ angular.module('starter.controllers', [])
             currentForecast.tmx = weatherData.short[0].최고기온;
             currentForecast.tmn = weatherData.short[0].최저기온;
 
-            var parsedWeather = parseShortTownWeather(weatherData.short, $scope.currentTime);
-            parsedWeather.timeTable[8] = updateCurrentOnTempTable(currentForecast, parsedWeather.timeTable[8]);
-
+            var parsedWeather = parseShortTownWeather(weatherData.short, currentForecast, $scope.currentTime);
             currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
 
             $scope.currentWeather = currentForecast;
