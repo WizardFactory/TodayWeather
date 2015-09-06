@@ -18,62 +18,133 @@
 var mongoose = require('mongoose');
 
 var bSchema = new mongoose.Schema({
-    town: {first: String, second: String, third: String},
-    coord: {lon: Number, lat: Number},
-    mData: {mCoord:{mx: Number, my: Number},
-            data: {current: Array, short: Array},
-	    cCurr: {time: String, date: String}
-	   }
+	town: {
+		first: String,
+		second: String,
+		third: String
+	},
+	coord: {
+		lon: Number,
+		lat: Number
+	},
+	mData: {
+		mCoord:{
+			mx: Number,
+			my: Number
+		},
+		data: {
+			current: Array,
+			short: Array,
+			shortest: Array,
+			midForecast: Array,
+			midLand: Array,
+			midTemp: Array,
+			midSea: Array
+		},
+		cCurr: {
+			time: String,
+			date: String
+		}
+	}
 });
 
 bSchema.statics = {
-    getData : function (first, second, third, cb){
-	this.find({"town" : { "third" : third, "second" : second, "first" : first }})
-	.exec(cb);
-    },
-    setShortData : function (currentObj, mCoord, cb){
-	var self = this;
+	getData : function (first, second, third, cb){
+		this.find({"town" : { "third" : third, "second" : second, "first" : first }}).exec(cb);
+	},
+	setShortData : function (currentObj, mCoord, cb){
+		var self = this;
 
-	self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
-	.exec(function(err, res){ 
-            var interval = 0;
-	    var dateInterval = 0;
-	    var length = 0;
+		self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
+			.exec(function(err, res){
+				if(err || res === undefined){
+					log.error('[DB] setShortData : ', err);
+					log.error(res);
+					return;
+				}
+				var popCount = 0;
+				var dateString = '';
+				var timeString = '';
 
-	    if(res.mData.cCurr == null || res.mData.cCurr == ""){
-	        interval = 0;
-		dateInterval = 0;
-	    }else{
-	        interval = currentObj[0].time - res.mData.oCurr.time / 300;
-	        dateInterval = currentObj[0].date - res.mData.currentObj[0].date;
-		interval = interval + (8 * dateInterval);
-	    }
-	    self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-	    {$pop : {'mData.data.short' : length - interval}, $addToSet : {'mData.cCurr.time' : currentObj[0].time, 'mData.cCurr.date' : currentObj[0].date}}, 
-	    {safe: true, multi : true, upsert: true}, 
-	    cb);
+				log.info('$$ err : ', err);
+				log.info('$$ res : ', res.toString());
+				log.info('$$ short : ', res.mData.data.short);
 
-            self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-	    {$push : {'mData.data.short' : {$each : currentObj}}}, 
-	    {safe: true, multi : true, upsert: true}, 
-	    cb);
+				for(var i = 0 in currentObj){
+					if((currentObj[i].date !== undefined) &&
+						(currentObj[i].time !== undefined) &&
+						(currentObj[i].date !== '') &&
+						(currentObj[i].time !== '')){
+						dateString = currentObj[i].date;
+						timeString = currentObj[i].time;
+						break;
+					}
+				}
 
-	    // 40 is default array list length 
-            if( length > 40 ) {
-	        self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
-    	        {$pop : {'mData.data.short' : -interval}}, 
-    	        {safe: true, multi : true, upsert: true}, 
-    	        cb);
-	    }
-	    console.log('interval : ' + interval);
-	});
-    },
-    setCurrentData : function (currentObj, mCoord, cb){
-	this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-	{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}}, 
-	{safe: true, multi : true, upsert: true}, 
-	cb);
-    }
-}
+				log.info('dateString : ', parseInt(dateString));
+				log.info('timeString : ', parseInt(timeString));
+				log.info('len : ', res.mData.data.short.length);
+
+
+				// db의 제일 마지막 데이터의 날짜/시간 이현재 받은 데이터의 처음 데이터의 날짜/시가 보다 같거나 클때 삭제 해야 하는 데이터가 있다.
+				// 요약 :
+				//  1. db의 제일 마지막 데이터의 날짜가 현재 받은 데이터 리스트의 처음 데이터 날짜 보다 큰 경우,
+				//  2. db의 제일 마지막 데이터 날짜가 현재 받음 데이터의 처음 데이터 날짜와 같고, 현재 받은 데이터의 시간이 같거나 작은 경우
+				if(res.mData.data.short.length > 0 ) {
+					log.info('last date : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].date));
+					log.info('last time : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].time));
+
+					if(parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) > parseInt(dateString) ||
+						((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
+						(parseInt(res.mData.data.short[res.mData.data.short.length - 1].time) >= parseInt(timeString)))) {
+						for (var i = res.mData.data.short.length - 1; i >= 0; i--) {
+							popCount++;
+							if (res.mData.data.short[i].date === dateString &&
+								res.mData.data.short[i].time === timeString) {
+								break;
+							}
+							log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+						}
+					}
+				}
+
+				if(res.mData.data.short.length > 0 ){
+				}
+
+				if(popCount > 0){
+					self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+						{$pop : {'mData.data.short' : popCount}},
+						{safe: true, multi : true, upsert: true},
+						cb);
+
+					log.info('$$ setShortData : pop remove from last ', popCount);
+				}
+
+				log.info('$$ after pop : ', res.mData.data.short);
+
+				self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+					{$push : {'mData.data.short' : {$each : currentObj}}},
+					{safe: true, multi : true, upsert: true},
+					cb);
+
+				// 40 is default array list length
+				if(res.mData.data.short.length > 40 ) {
+					popCount = 40 - res.mData.data.short.length;
+					self.update({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my },
+						{$pop : {'mData.data.short' : -popCount}},
+						{safe: true, multi : true, upsert: true},
+						cb);
+					log.info('$$ setShortData : pop remove from first ', popCount);
+				}
+
+			});
+	},
+	setCurrentData : function (currentObj, mCoord, cb){
+		this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
+			{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}},
+			{safe: true, multi : true, upsert: true},
+			cb);
+	}
+};
 
 module.exports = mongoose.model('base', bSchema);

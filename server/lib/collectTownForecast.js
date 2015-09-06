@@ -401,7 +401,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
             r06: -1,    /* 6시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
             reh: -1,    /* 습도 : 1% , invalid : -1 */
             s06: -1,    /* 6시간 신적설 : 0미만(0) ~1cm(1) 1~4cm(5) 5~9cm(10) 10~19cm(20) 20cm~(100), invalid : -1 */
-            sky: -1,    /* 하늘 상태 : 맑음(1) 구름조금(2) 흐림(4) , invalid : -1 */
+            sky: -1,    /* 하늘 상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1 */
             t3h: -50,   /* 3시간 기온 : 0.1'c , invalid : -50 */
             tmn: -50,   /* 일 최저 기온 : 0.1'c , invalid : -50 */
             tmx: -50,   /* 일 최고 기온 : 0.1'c , invalid : -50 */

@@ -178,25 +178,37 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 /* chart style */
 .line-today {
   stroke: #ffffff;
-  stroke-width: 3px;
+  stroke-width: 2px;
   fill: none;
 }
 
 .line-yesterday {
   stroke: #d0d0d0;
-  stroke-width: 3px;
+  stroke-width: 1px;
   fill: none;
 }
 
 .circle-today {
   stroke: #ffffff;
-  stroke-width: 3px;
-  fill: #ff0000;
+  stroke-width: 1px;
+  fill: #ffffff;
 }
 
 .circle-yesterday {
   stroke: #d0d0d0;
-  stroke-width: 3px;
+  stroke-width: 1px;
+  fill: #d0d0d0;
+}
+
+.circle-today-current {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  fill: #ff0000;
+}
+
+.circle-yesterday-current {
+  stroke: #d0d0d0;
+  stroke-width: 2px;
   fill: #d0d0d0;
 }
 

@@ -16,12 +16,34 @@ lineList.shift(); //  header remove
 var schemaKeyList = ['first', 'second', 'third', 'long', 'latt'];
 
 var bSchema = new mongoose.Schema({
-    town: {first: String, second: String, third: String},
-    coord: {lon: Number, lat: Number},
-    mData: {mCoord:{mx: Number, my: Number},
-            data: {current: Array, short: Array},
-	    cCurr: {time: String, date: String}
-	   }
+    town: {
+        first: String,
+        second: String,
+        third: String
+    },
+    coord: {
+        lon: Number,
+        lat: Number
+    },
+    mData: {
+        mCoord:{
+            mx: Number,
+            my: Number
+        },
+        data: {
+            current: Array,
+            short: Array,
+            shortest: Array,
+            midForecast: Array,
+            midLand: Array,
+            midTemp: Array,
+            midSea: Array
+        },
+        cCurr: {
+            time: String,
+            date: String
+        }
+    }
 });
 
 var bDoc = mongoose.model('base', bSchema);
