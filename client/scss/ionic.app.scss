@@ -78,11 +78,11 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   letter-spacing: -2px;
 }
 
-.big-temp-point img{
+.big-temp-point img {
   width: 18px;
 }
 
-.big-temp-sky-state img{
+.big-temp-sky-state img {
   width: 56px;
 }
 
@@ -102,12 +102,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   display: table;
 }
 
-.small-image div{
+.small-image div {
   display: table-cell;
   vertical-align: middle;
 }
 
-.small-image div img{
+.small-image div img {
   width: 24px;
   margin: 0 auto;
   display: block;
@@ -117,13 +117,58 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   display: table;
 }
 
-.small-digit p{
+.small-digit p {
   display: table-cell;
   vertical-align: middle;
   font-family: 'Helvetica Neue Thin';
   text-align: center;
   font-size: 15px;
   margin: 0px;
+}
+
+.guide-content {
+  width: 100%;
+  height: 100%;
+  padding: 13px;
+  background-color: #231815;
+  opacity: 0.8;
+  color: white;
+  font-family: "Nanum Barun Gothic UltraLight";
+}
+
+.guide-row {
+  width: 100%;
+  display: table;
+  text-align: center;
+}
+
+.guide-col {
+  width: 50%;
+  display: table-cell;
+}
+
+.guide-col-left-top {
+  text-align: left;
+  vertical-align: top;
+}
+
+.guide-col-right-top {
+  text-align: right;
+  vertical-align: top;
+}
+
+.guide-col-left-middle {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.guide-col-right-middle {
+  text-align: right;
+  vertical-align: middle;
+}
+
+.guide-arrow {
+  width: 45px;
 }
 
 /* chart style */
