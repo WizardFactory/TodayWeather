@@ -278,6 +278,8 @@ var getShort = function(req, res, next){
             return;
         }
 
+        //log.info(result.toString());
+        //log.info(result.mData.data.short);
         /********************
          * TEST DATA
          ********************/

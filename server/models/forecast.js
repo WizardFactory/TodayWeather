@@ -50,7 +50,7 @@ var bSchema = new mongoose.Schema({
 
 bSchema.statics = {
 	getData : function (first, second, third, cb){
-		this.find({"town" : { "third" : third, "second" : second, "first" : first }}).exec(cb);
+		this.findOne({"town" : { "third" : third, "second" : second, "first" : first }}).exec(cb);
 	},
 	setShortData : function (currentObj, mCoord, cb){
 		var self = this;
@@ -139,7 +139,7 @@ bSchema.statics = {
 	},
 	setCurrentData : function (currentObj, mCoord, cb){
 		this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-			{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}},
+			{$push: { "mData.data.current": { $each : currentObj, $slice : -60}}},
 			{safe: true, multi : true, upsert: true},
 			cb);
 	}
