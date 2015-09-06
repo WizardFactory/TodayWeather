@@ -108,7 +108,7 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
-                var margin = {top: 20, right: 0, bottom: 20, left: 0},
+                var margin = {top: 30, right: 0, bottom: 10, left: 0},
                     width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
                     height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
 
@@ -119,21 +119,21 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
                 var x = d3.scale.ordinal()
-                    .rangeRoundBands([width, 0]);
+                    .rangeBands([width, 0]);
 
                 var y = d3.scale.linear()
                     .range([height, 0]);
 
                 var line = d3.svg.line()
                     .defined(function (d) {
-                        return d.value != '';
+                        return d.value.t3h != '';
                     })
-                    .interpolate("monotone")
+                    .interpolate("linear")
                     .x(function (d, i) {
                         return x.rangeBand() * i + x.rangeBand() / 2;
                     })
                     .y(function (d) {
-                        return y(d.value);
+                        return y(d.value.t3h);
                     });
 
                 scope.$watch('temp', function (newVal) {
@@ -144,12 +144,12 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                         y.domain([
                             d3.min(column, function (c) {
                                 return d3.min(c.values, function (v) {
-                                    return v.value;
+                                    return v.value.t3h;
                                 });
                             }),
                             d3.max(column, function (c) {
                                 return d3.max(c.values, function (v) {
-                                    return v.value;
+                                    return v.value.t3h;
                                 });
                             })
                         ]).nice();
@@ -186,13 +186,18 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .data(function(d) { return d.values; })
                             .enter().append('circle')
                             .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("cy", function(d) { return y(d.value); })
-                            .attr("r", 8)
+                            .attr("cy", function(d) { return y(d.value.t3h); })
+                            .attr("r", function(d, i) {
+                                if (i === 8) {
+                                    return 5;
+                                }
+                                return 2;
+                            })
                             .attr("class", function(d, i) {
                                 if (i === 8) {
-                                    return "circle-"+d.name;
+                                    return "circle-"+d.name+"-current";
                                 }
-                                return "circle-hidden";
+                                return "circle-"+d.name;
                             });
 
                         // update point
@@ -200,7 +205,7 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .selectAll('circle')
                             .data(function(d) { return d.values; })
                             .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("cy", function(d) { return y(d.value); });
+                            .attr("cy", function(d) { return y(d.value.t3h); });
 
                         // draw value
                         var value = group_enter.append('g')
@@ -210,12 +215,12 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .data(function(d) { return d.values; })
                             .enter().append('text')
                             .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("y", function(d) { return y(d.value); })
+                            .attr("y", function(d) { return y(d.value.t3h); })
                             .attr('dy', -10)
                             .attr("text-anchor", "middle")
-                            .text(function(d) { return d.value + "˚"; })
+                            .text(function(d) { return d.value.t3h + "˚"; })
                             .attr("class", function(d, i) {
-                                if (d.min === true || d.max === true) {
+                                if (d.name === "today" && (d.value.tempInfo === "min" || d.value.tempInfo === "max")) {
                                     return "text-" + d.name;
                                 }
                                 return "text-hidden";
@@ -226,8 +231,8 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .selectAll('text')
                             .data(function(d) { return d.values; })
                             .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("y", function(d) { return y(d.value); })
-                            .text(function(d) { return d.value + "˚"; });
+                            .attr("y", function(d) { return y(d.value.t3h); })
+                            .text(function(d) { return d.value.t3h + "˚"; });
                     }
                 });
             }
