@@ -66,17 +66,23 @@ angular.module('starter.controllers', [])
         function parseSkyState(sky, pty, lgt, isNight) {
             var skyIconName = "";
 
-            if (lgt) {
-                return skyIconName = "Lightning";
-            }
             switch (pty) {
                 case 1:
-                    return skyIconName = "Rain";
+                    skyIconName = "Rain";
+                    if (lgt) {
+                        skyIconName += "WithLightning";
+                    }
+                    return skyIconName;
                 case 2:
-                    return skyIconName = "Snow"; //Todo need RainWithSnow icon";
+                    return skyIconName = "RainWithSnow"; //Todo need RainWithSnow icon";
                 case 3:
                     return skyIconName = "Snow";
             }
+
+            if (lgt) {
+                return skyIconName = "Lightning";
+            }
+
             if (isNight) {
                skyIconName = "Moon";
             }
