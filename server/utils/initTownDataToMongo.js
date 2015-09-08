@@ -9,8 +9,8 @@ var convert = require('./coordinate2xy');
 mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
-//var lineList = fs.readFileSync('./utils/data/test.csv').toString().split('\n');
-var lineList = fs.readFileSync('./utils/data/part.csv').toString().split('\n');
+var lineList = fs.readFileSync('./utils/data/test.csv').toString().split('\n');
+//var lineList = fs.readFileSync('./utils/data/part.csv').toString().split('\n');
 lineList.shift(); // header remove
 
 var schemaKeyList = ['first', 'second', 'third', 'mCoord'];
