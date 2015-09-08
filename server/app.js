@@ -62,7 +62,8 @@ app.use('/', routes);
 app.use('/users', users);
 app.use('/town', townForecast);
 
-var manager = new controllerManager();
+
+global.manager = new controllerManager();
 manager.startManager();
 
 // catch 404 and forward to error handler

@@ -96,12 +96,18 @@ bSchema.statics = {
 						((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
 						(parseInt(res.mData.data.short[res.mData.data.short.length - 1].time) >= parseInt(timeString)))) {
 						for (var i = res.mData.data.short.length - 1; i >= 0; i--) {
-							popCount++;
 							if (res.mData.data.short[i].date === dateString &&
-								res.mData.data.short[i].time === timeString) {
+								res.mData.data.short[i].time === timeString){
+								popCount++;
 								break;
 							}
-							//log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+							if((parseInt(res.mData.data.short[i].date) === parseInt(dateString) &&
+								parseInt(res.mData.data.short[i].time) < parseInt(timeString)) ||
+								(parseInt(res.mData.data.short[i].date) < parseInt(dateString))){
+								break;
+							}
+							popCount++;
+							log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
 						}
 					}
 				}
@@ -134,7 +140,6 @@ bSchema.statics = {
 					}
 					log.info('$$ setShortData : pop remove from first ', popCount);
 				}
-
 			});
 	},
 	setCurrentData : function (currentObj, mCoord, cb){

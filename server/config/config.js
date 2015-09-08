@@ -6,6 +6,7 @@
 module.exports = {
     mode: 'local',
     db: {
+        mode: 'ram',
         path: 'mongodb://localhost/todayweather',
         options: {
             user: '',
@@ -64,6 +65,7 @@ module.exports = {
                 ],
                 shortest: [],
                 current: [
+
                     {date: '20150831', time: '0300', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 90, pty: 0, lgt: 0, vec: 360, wsd: 0},
                     {date: '20150831', time: '0400', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 91, pty: 0, lgt: 0, vec: 27, wsd: 0},
                     {date: '20150831', time: '0500', t1h: 20, rn1: 0, sky: 1, uuu: 0, vvv: 0, reh: 92, pty: 0, lgt: 0, vec: 135, wsd: 0},
