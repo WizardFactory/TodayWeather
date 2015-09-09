@@ -150,71 +150,76 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
 Manager.prototype.setShortData = function(coord, dataList){
     var self = this;
 
-    self.weatherDb.forEach(function(data, index){
-        if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
-            var listShort = data.mData.data.short;
-            var firstDate = 0;
-            var firstTime = 0;
-            var i=0;
-            var popCount = 0;
+    try{
+        self.weatherDb.forEach(function(data, index){
+            if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
+                var listShort = data.mData.data.short;
+                var firstDate = 0;
+                var firstTime = 0;
+                var i=0;
+                var popCount = 0;
 
-            // find first item based on date&time
-            for(var i = 0 in dataList){
-                if((dataList[i].date !== undefined) &&
-                    (dataList[i].time !== undefined) &&
-                    (dataList[i].date !== '') &&
-                    (dataList[i].time !== '')){
-                    firstDate = dataList[i].date;
-                    firstTime = dataList[i].time;
-                    break;
+                // find first item based on date&time
+                for(var i = 0 in dataList){
+                    if((dataList[i].date !== undefined) &&
+                        (dataList[i].time !== undefined) &&
+                        (dataList[i].date !== '') &&
+                        (dataList[i].time !== '')){
+                        firstDate = dataList[i].date;
+                        firstTime = dataList[i].time;
+                        break;
+                    }
+                    dataList.shift();
                 }
-                dataList.shift();
-            }
 
-            log.info('before len : ', listShort.length);
-            log.info('first date&time : ', firstDate, firstTime);
+                log.info('before len : ', listShort.length);
+                log.info('first date&time : ', firstDate, firstTime);
 
-            if(listShort.length > 0){
-                if(parseInt(listShort[listShort.length - 1].date) > parseInt(firstDate) ||
-                    ((parseInt(listShort[listShort.length - 1].date) === parseInt(firstDate)) &&
-                    (parseInt(listShort[listShort.length - 1].time) >= parseInt(firstTime)))) {
-                    for (i = listShort.length - 1; i >= 0; i--) {
-                        if (listShort[i].date === firstDate &&
-                            listShort[i].time === firstTime){
+                if(listShort.length > 0){
+                    if(parseInt(listShort[listShort.length - 1].date) > parseInt(firstDate) ||
+                        ((parseInt(listShort[listShort.length - 1].date) === parseInt(firstDate)) &&
+                        (parseInt(listShort[listShort.length - 1].time) >= parseInt(firstTime)))) {
+                        for (i = listShort.length - 1; i >= 0; i--) {
+                            if (listShort[i].date === firstDate &&
+                                listShort[i].time === firstTime){
+                                popCount++;
+                                break;
+                            }
+                            if((parseInt(listShort[i].date) === parseInt(firstDate) &&
+                                parseInt(listShort[i].time) < parseInt(firstTime)) ||
+                                (parseInt(listShort[i].date) < parseInt(firstTime))){
+                                break;
+                            }
                             popCount++;
-                            break;
+                            log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
                         }
-                        if((parseInt(listShort[i].date) === parseInt(firstDate) &&
-                            parseInt(listShort[i].time) < parseInt(firstTime)) ||
-                            (parseInt(listShort[i].date) < parseInt(firstTime))){
-                            break;
-                        }
-                        popCount++;
-                        log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
                     }
                 }
-            }
 
-            log.info('before pop : ', popCount);
-            for(i=0 ; i<popCount ; i++){
-                data.mData.data.short.pop();
-            }
-
-            log.info('after pop : ', data.mData.data.short.length);
-            for(i=0 ; i< dataList.length ; i++){
-                //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
-                data.mData.data.short.push(dataList[i]);
-            }
-
-            if(data.mData.data.short.length > 40){
-                for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
-                    data.mData.data.short.shift();
+                log.info('before pop : ', popCount);
+                for(i=0 ; i<popCount ; i++){
+                    data.mData.data.short.pop();
                 }
-                log.info('make 40 counts');
-            }
 
-        }
-    })
+                log.info('after pop : ', data.mData.data.short.length);
+                for(i=0 ; i< dataList.length ; i++){
+                    //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
+                    data.mData.data.short.push(dataList[i]);
+                }
+
+                if(data.mData.data.short.length > 40){
+                    for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
+                        data.mData.data.short.shift();
+                    }
+                    log.info('make 40 counts');
+                }
+
+            }
+        });
+    }
+    catch(e){
+        log.error('something wrong!!! : ', e);
+    }
 };
 
 Manager.prototype.setCurrentData = function(coord, dataList){
@@ -266,11 +271,15 @@ Manager.prototype.getWorldTime = function(tzOffset) {
     return result;
 };
 
-Manager.prototype.getTownShortData = function(){
+Manager.prototype.getTownShortData = function(baseTime){
     var self = this;
     //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-    var currentDate = self.getWorldTime(+9);
+    if(baseTime === undefined){
+        baseTime = 9;
+    }
+
+    var currentDate = self.getWorldTime(baseTime);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: ''
@@ -286,7 +295,7 @@ Manager.prototype.getTownShortData = function(){
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
     if(parseInt(time) < 300){
-        var temp = self.getWorldTime(-15);
+        var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0.8);
         dateString.time = '2300';
     }
@@ -573,7 +582,8 @@ Manager.prototype.startTownData = function(){
     var self = this;
 
     // When the server is about to start, it would get the first data immediately.
-    self.getTownShortData();
+    self.getTownShortData(-39);
+    self.getTownShortData(9);
     //self.getTownShortestData();
     self.getTownCurrentData();
 
@@ -581,7 +591,7 @@ Manager.prototype.startTownData = function(){
     self.loopTownShortID = setInterval(function() {
         "use strict";
 
-        self.getTownShortData();
+        self.getTownShortData(9);
 
     }, self.TIME_PERIOD.TOWN_SHORT);
 
