@@ -271,11 +271,15 @@ Manager.prototype.getWorldTime = function(tzOffset) {
     return result;
 };
 
-Manager.prototype.getTownShortData = function(){
+Manager.prototype.getTownShortData = function(baseTime){
     var self = this;
     //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-    var currentDate = self.getWorldTime(+9);
+    if(baseTime === undefined){
+        baseTime = 9;
+    }
+
+    var currentDate = self.getWorldTime(baseTime);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: ''
@@ -291,7 +295,7 @@ Manager.prototype.getTownShortData = function(){
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
     if(parseInt(time) < 300){
-        var temp = self.getWorldTime(-15);
+        var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0.8);
         dateString.time = '2300';
     }
@@ -578,7 +582,8 @@ Manager.prototype.startTownData = function(){
     var self = this;
 
     // When the server is about to start, it would get the first data immediately.
-    self.getTownShortData();
+    self.getTownShortData(-39);
+    self.getTownShortData(9);
     //self.getTownShortestData();
     self.getTownCurrentData();
 
@@ -586,7 +591,7 @@ Manager.prototype.startTownData = function(){
     self.loopTownShortID = setInterval(function() {
         "use strict";
 
-        self.getTownShortData();
+        self.getTownShortData(9);
 
     }, self.TIME_PERIOD.TOWN_SHORT);
 

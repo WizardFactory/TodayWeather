@@ -295,6 +295,7 @@ var getShort = function(req, res, next){
                 var i = 0;
                 var j = 0;
                 var requestTime = getTimeValue();
+                var tempList = [];
 
                 /********************
                  * TEST DATA
@@ -333,10 +334,38 @@ var getShort = function(req, res, next){
                         item.tmx = -100;
 
                         log.info('from current', item);
-                        resultList.push(JSON.parse(JSON.stringify(item)));
+                        tempList.push(JSON.parse(JSON.stringify(item)));
                     }
                 }
 
+                for (i = 0; i < listShort.length; i++) {
+                    var item = {};
+                    item.date = listShort[i].date;
+                    item.time = listShort[i].time;
+                    item.pop = listShort[i].pop;
+                    item.pty = listShort[i].pty;
+                    item.r06 = listShort[i].r06;
+                    item.reh = listShort[i].reh;
+                    item.s06 = listShort[i].s06;
+                    item.sky = listShort[i].sky;
+                    item.t3h = listShort[i].t3h;
+                    item.tmn = listShort[i].tmn;
+                    item.tmx = listShort[i].tmx;
+                    for(var j = 0 ; j < tempList.length ; j++) {
+                        if ((tempList[j].date === listShort[i].date) && (tempList[j].time === listShort[i].time)) {
+                            item.date = tempList[j].date;
+                            item.time = tempList[j].time;
+                            item.pty = tempList[j].pty;
+                            item.r06 = tempList[j].r06;
+                            item.reh = tempList[j].reh;
+                            item.sky = tempList[j].sky;
+                            item.t3h = tempList[j].t3h;
+                            break;
+                        }
+                    }
+                    resultList.push(item);
+                }
+                /*
                 for (i = 0; i < listShort.length; i++) {
                     var item = {};
                     // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
@@ -367,6 +396,7 @@ var getShort = function(req, res, next){
                         resultList.push(item);
                     }
                 }
+                */
 
                 //log.info(resultList);
                 req.short = resultList;
