@@ -17,7 +17,7 @@ router.use(function timestamp(req, res, next){
 function getTimeValue(){
     var i=0;
     var timeFunction = manager;
-    var currentDate = timeFunction.getWorldTime(-39);
+    var currentDate = timeFunction.getWorldTime(9);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: ''
@@ -303,14 +303,16 @@ var getShort = function(req, res, next){
                 //requestTime.time = '0300';
                 /********************/
 
+                log.info(requestTime);
                 for (i = 0; i < listCurrent.length; i++) {
                     var item = {};
+                    log.info('cur time : ', parseInt(listCurrent[i].date), parseInt(requestTime.date));
                     // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if (parseInt(listCurrent[i].date) >= parseInt(requestTime.date)) {
+                    if (parseInt(listCurrent[i].date) > parseInt(requestTime.date)) {
                         continue;
                     }
                     // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) >= parseInt(requestTime.time))) {
+                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) > parseInt(requestTime.time))) {
                         continue;
                     }
 
@@ -330,6 +332,7 @@ var getShort = function(req, res, next){
                         item.tmn = -100;
                         item.tmx = -100;
 
+                        log.info('from current', item);
                         resultList.push(JSON.parse(JSON.stringify(item)));
                     }
                 }
@@ -338,16 +341,16 @@ var getShort = function(req, res, next){
                     var item = {};
                     // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
                     if ((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
-                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) < parseInt(requestTime.time))) {
-                        resultList.forEach(function (entry, index) {
-                            // current 데이터를 이용해서 과거 정보를 넣었는데 이중 빠진 내용(강수확률 등의 정보는 여기에서 채워 넣는다)
-                            if (entry.date === listShort[i].date && entry.time === listShort[i].time) {
-                                entry.pop = listShort[i].pop;
-                                entry.s06 = listShort[i].s06;
-                                entry.tmn = listShort[i].tmn;
-                                entry.tmx = listShort[i].tmx;
+                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) <= parseInt(requestTime.time))) {
+                        for(var j = 0 ; j < resultList.length ; j++){
+                            if((resultList[j].date === listShort[i].date) && (resultList[j].time === listShort[i].time)){
+                                resultList[j].pop = listShort[i].pop;
+                                resultList[j].s06 = listShort[i].s06;
+                                resultList[j].tmn = listShort[i].tmn;
+                                resultList[j].tmx = listShort[i].tmx;
+                                break;
                             }
-                        })
+                        }
                     } else {
                         item.date = listShort[i].date;
                         item.time = listShort[i].time;

@@ -150,71 +150,76 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
 Manager.prototype.setShortData = function(coord, dataList){
     var self = this;
 
-    self.weatherDb.forEach(function(data, index){
-        if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
-            var listShort = data.mData.data.short;
-            var firstDate = 0;
-            var firstTime = 0;
-            var i=0;
-            var popCount = 0;
+    try{
+        self.weatherDb.forEach(function(data, index){
+            if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
+                var listShort = data.mData.data.short;
+                var firstDate = 0;
+                var firstTime = 0;
+                var i=0;
+                var popCount = 0;
 
-            // find first item based on date&time
-            for(var i = 0 in dataList){
-                if((dataList[i].date !== undefined) &&
-                    (dataList[i].time !== undefined) &&
-                    (dataList[i].date !== '') &&
-                    (dataList[i].time !== '')){
-                    firstDate = dataList[i].date;
-                    firstTime = dataList[i].time;
-                    break;
+                // find first item based on date&time
+                for(var i = 0 in dataList){
+                    if((dataList[i].date !== undefined) &&
+                        (dataList[i].time !== undefined) &&
+                        (dataList[i].date !== '') &&
+                        (dataList[i].time !== '')){
+                        firstDate = dataList[i].date;
+                        firstTime = dataList[i].time;
+                        break;
+                    }
+                    dataList.shift();
                 }
-                dataList.shift();
-            }
 
-            log.info('before len : ', listShort.length);
-            log.info('first date&time : ', firstDate, firstTime);
+                log.info('before len : ', listShort.length);
+                log.info('first date&time : ', firstDate, firstTime);
 
-            if(listShort.length > 0){
-                if(parseInt(listShort[listShort.length - 1].date) > parseInt(firstDate) ||
-                    ((parseInt(listShort[listShort.length - 1].date) === parseInt(firstDate)) &&
-                    (parseInt(listShort[listShort.length - 1].time) >= parseInt(firstTime)))) {
-                    for (i = listShort.length - 1; i >= 0; i--) {
-                        if (listShort[i].date === firstDate &&
-                            listShort[i].time === firstTime){
+                if(listShort.length > 0){
+                    if(parseInt(listShort[listShort.length - 1].date) > parseInt(firstDate) ||
+                        ((parseInt(listShort[listShort.length - 1].date) === parseInt(firstDate)) &&
+                        (parseInt(listShort[listShort.length - 1].time) >= parseInt(firstTime)))) {
+                        for (i = listShort.length - 1; i >= 0; i--) {
+                            if (listShort[i].date === firstDate &&
+                                listShort[i].time === firstTime){
+                                popCount++;
+                                break;
+                            }
+                            if((parseInt(listShort[i].date) === parseInt(firstDate) &&
+                                parseInt(listShort[i].time) < parseInt(firstTime)) ||
+                                (parseInt(listShort[i].date) < parseInt(firstTime))){
+                                break;
+                            }
                             popCount++;
-                            break;
+                            log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
                         }
-                        if((parseInt(listShort[i].date) === parseInt(firstDate) &&
-                            parseInt(listShort[i].time) < parseInt(firstTime)) ||
-                            (parseInt(listShort[i].date) < parseInt(firstTime))){
-                            break;
-                        }
-                        popCount++;
-                        log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
                     }
                 }
-            }
 
-            log.info('before pop : ', popCount);
-            for(i=0 ; i<popCount ; i++){
-                data.mData.data.short.pop();
-            }
-
-            log.info('after pop : ', data.mData.data.short.length);
-            for(i=0 ; i< dataList.length ; i++){
-                //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
-                data.mData.data.short.push(dataList[i]);
-            }
-
-            if(data.mData.data.short.length > 40){
-                for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
-                    data.mData.data.short.shift();
+                log.info('before pop : ', popCount);
+                for(i=0 ; i<popCount ; i++){
+                    data.mData.data.short.pop();
                 }
-                log.info('make 40 counts');
-            }
 
-        }
-    })
+                log.info('after pop : ', data.mData.data.short.length);
+                for(i=0 ; i< dataList.length ; i++){
+                    //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
+                    data.mData.data.short.push(dataList[i]);
+                }
+
+                if(data.mData.data.short.length > 40){
+                    for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
+                        data.mData.data.short.shift();
+                    }
+                    log.info('make 40 counts');
+                }
+
+            }
+        });
+    }
+    catch(e){
+        log.error('something wrong!!! : ', e);
+    }
 };
 
 Manager.prototype.setCurrentData = function(coord, dataList){
