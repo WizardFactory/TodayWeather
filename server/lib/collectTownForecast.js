@@ -149,9 +149,9 @@ function CollectData(options, callback){
     * we can get the notify by request event and will decide whether to retry or ignore this item
     */
     self.on('recvFail', function(listIndex){
-        log.error('receive fail[%d]', listIndex);
+        //log.error('receive fail[%d]', listIndex);
         if(self.resultList[listIndex].retryCount > 0){
-            log.error('try again:', listIndex);
+            //log.error('try again:', listIndex);
             //log.error('URL : ', self.resultList[listIndex].url);
             //log.error(self.resultList[listIndex].options);
 
@@ -164,6 +164,7 @@ function CollectData(options, callback){
             self.receivedCount++;
 
             log.error('ignore this: ', listIndex);
+            log.error('URL : ', self.resultList[listIndex].url);
 
             if(self.receivedCount === self.listCount){
                 self.emit('dataComplated');
@@ -228,7 +229,7 @@ CollectData.prototype.getUrl = function(dataType, key, date, time, data){
     try{
         // add additional data such as location info, code
         if(dataType <= self.DATA_TYPE.TOWN_SHORT){
-            url += '&base_date=' + date + '&base_time=' + time + '&nx=' + data.x + '&ny=' + data.y;
+            url += '&base_date=' + date + '&base_time=' + time + '&nx=' + data.mx + '&ny=' + data.my;
         }
         else if(dataType <= self.DATA_TYPE.MID_SEA){
             if(time !== '0600' && time !== '1800'){
@@ -295,8 +296,8 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
     req.get(url, null, function(err, response, body){
         var statusCode = response.statusCode;
         if(err) {
-            log.error(err);
-            log.error('#', meta);
+            //log.error(err);
+            //log.error('#', meta);
 
             self.emit('recvFail', index);
             if(callback){
@@ -306,8 +307,8 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
         }
 
         if(statusCode === 404 || statusCode === 403){
-            log.error('ERROR!!! StatusCode : ', statusCode);
-            log.error('#', meta);
+            //log.error('ERROR!!! StatusCode : ', statusCode);
+            //log.error('#', meta);
 
             self.emit('recvFail', index);
             if(callback){
@@ -369,7 +370,7 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
                 }
             }
             catch(e){
-                log.error('Error!!!', meta);
+                log.error('& Error!!!', meta);
                 self.emit('recvFail', index);
             }
             finally{

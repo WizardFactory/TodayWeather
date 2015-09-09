@@ -50,7 +50,7 @@ var bSchema = new mongoose.Schema({
 
 bSchema.statics = {
 	getData : function (first, second, third, cb){
-		this.find({"town" : { "third" : third, "second" : second, "first" : first }}).exec(cb);
+		this.findOne({"town" : { "third" : third, "second" : second, "first" : first }}).exec(cb);
 	},
 	setShortData : function (currentObj, mCoord, cb){
 		var self = this;
@@ -96,12 +96,18 @@ bSchema.statics = {
 						((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
 						(parseInt(res.mData.data.short[res.mData.data.short.length - 1].time) >= parseInt(timeString)))) {
 						for (var i = res.mData.data.short.length - 1; i >= 0; i--) {
-							popCount++;
 							if (res.mData.data.short[i].date === dateString &&
-								res.mData.data.short[i].time === timeString) {
+								res.mData.data.short[i].time === timeString){
+								popCount++;
 								break;
 							}
-							//log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+							if((parseInt(res.mData.data.short[i].date) === parseInt(dateString) &&
+								parseInt(res.mData.data.short[i].time) < parseInt(timeString)) ||
+								(parseInt(res.mData.data.short[i].date) < parseInt(dateString))){
+								break;
+							}
+							popCount++;
+							log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
 						}
 					}
 				}
@@ -134,12 +140,11 @@ bSchema.statics = {
 					}
 					log.info('$$ setShortData : pop remove from first ', popCount);
 				}
-
 			});
 	},
 	setCurrentData : function (currentObj, mCoord, cb){
 		this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
-			{$push: { "mData.data.short": { $each : currentObj, $slice : -60}}},
+			{$push: { "mData.data.current": { $each : currentObj, $slice : -60}}},
 			{safe: true, multi : true, upsert: true},
 			cb);
 	}

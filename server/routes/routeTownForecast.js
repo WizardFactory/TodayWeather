@@ -5,7 +5,6 @@
 
 var router = require('express').Router();
 var config = require('../config/config');
-var manager = require('../controllers/controllerManager');
 var dbForecast = require('../models/forecast');
 
 router.use(function timestamp(req, res, next){
@@ -17,7 +16,7 @@ router.use(function timestamp(req, res, next){
 
 function getTimeValue(){
     var i=0;
-    var timeFunction = new manager();
+    var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(-39);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -63,7 +62,7 @@ function getTimeValue(){
 
 function getTimeTable(){
     var i=0;
-    var timeFunction = new manager();
+    var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(-39);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -196,7 +195,7 @@ function getShortestFromDB(regionName, cityName, townName, callback){
     if(resultTown.regionName === undefined){
         resultTown = listTownData[2];
     }
-    var timeFunction = new manager();
+    var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(+9);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -234,7 +233,7 @@ function getCurrentFromDB(regionName, cityName, townName, callback){
     }
 
     index = (Date.now() %12);
-    var timeFunction = new manager();
+    var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(+9);
     var dateString = {
         date: currentDate.slice(0, 8),
@@ -271,105 +270,213 @@ var getShort = function(req, res, next){
 
     log.info('>', meta);
 
-    dbForecast.getData(regionName, cityName, townName, function(err, result){
-        if(err){
-            log.error('> getShort : failed to get data from DB');
-            log.error(meta);
-            return;
-        }
+    var getMethod;
 
-        /********************
-         * TEST DATA
-         ********************/
-        //result = config;
-        /********************/
+    if(config.db.mode === 'ram'){
+        manager.getWeatherDb(regionName, cityName, townName, function (err, result) {
+            if (err) {
+                log.error('> getShort : failed to get data from DB');
+                log.error(meta);
+                return;
+            }
 
-        try{
-            var listShort = result.mData.data.short;
-            var listCurrent = result.mData.data.current;
-            var i = 0;
-            var j = 0;
-            var requestTime = getTimeValue();
-
+            //log.info(result.toString());
+            //log.info(result.mData.data.short);
+            //log.info(result.mData.data.current);
             /********************
              * TEST DATA
              ********************/
-            //requestTime.date = '20150830';
-            //requestTime.time = '0300';
+            //result = config;
             /********************/
 
-            for(i = 0 ; i < listCurrent.length ; i++){
-                var item = {};
-                // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                if(parseInt(listCurrent[i].date) >= parseInt(requestTime.date)){
-                    continue;
-                }
-                // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                if((listCurrent[i].date ===requestTime.date) &&(parseInt(listCurrent[i].time) >= parseInt(requestTime.time))){
-                    continue;
+            try {
+                var listShort = result.mData.data.short;
+                var listCurrent = result.mData.data.current;
+                var i = 0;
+                var j = 0;
+                var requestTime = getTimeValue();
+
+                /********************
+                 * TEST DATA
+                 ********************/
+                //requestTime.date = '20150830';
+                //requestTime.time = '0300';
+                /********************/
+
+                for (i = 0; i < listCurrent.length; i++) {
+                    var item = {};
+                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
+                    if (parseInt(listCurrent[i].date) >= parseInt(requestTime.date)) {
+                        continue;
+                    }
+                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
+                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) >= parseInt(requestTime.time))) {
+                        continue;
+                    }
+
+                    if (listCurrent[i].time === '0000' || listCurrent[i].time === '0300' ||
+                        listCurrent[i].time === '0600' || listCurrent[i].time === '0900' ||
+                        listCurrent[i].time === '1200' || listCurrent[i].time === '1500' ||
+                        listCurrent[i].time === '1800' || listCurrent[i].time === '2100') {
+                        item.date = listCurrent[i].date;
+                        item.time = listCurrent[i].time;
+                        item.pop = -100;
+                        item.pty = listCurrent[i].pty;
+                        item.r06 = listCurrent[i].rn1;
+                        item.reh = listCurrent[i].reh;
+                        item.s06 = -1;
+                        item.sky = listCurrent[i].sky;
+                        item.t3h = listCurrent[i].t1h;
+                        item.tmn = -100;
+                        item.tmx = -100;
+
+                        resultList.push(JSON.parse(JSON.stringify(item)));
+                    }
                 }
 
-                if(listCurrent[i].time === '0000' || listCurrent[i].time === '0300' ||
-                    listCurrent[i].time === '0600' || listCurrent[i].time === '0900' ||
-                    listCurrent[i].time === '1200' || listCurrent[i].time === '1500' ||
-                    listCurrent[i].time === '1800' || listCurrent[i].time === '2100'){
-                    item.date = listCurrent[i].date;
-                    item.time = listCurrent[i].time;
-                    item.pop = -100;
-                    item.pty = listCurrent[i].pty;
-                    item.r06 = listCurrent[i].rn1;
-                    item.reh = listCurrent[i].reh;
-                    item.s06 = -1;
-                    item.sky = listCurrent[i].sky;
-                    item.t3h = listCurrent[i].t1h;
-                    item.tmn = -100;
-                    item.tmx = -100;
+                for (i = 0; i < listShort.length; i++) {
+                    var item = {};
+                    // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
+                    if ((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
+                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) < parseInt(requestTime.time))) {
+                        resultList.forEach(function (entry, index) {
+                            // current 데이터를 이용해서 과거 정보를 넣었는데 이중 빠진 내용(강수확률 등의 정보는 여기에서 채워 넣는다)
+                            if (entry.date === listShort[i].date && entry.time === listShort[i].time) {
+                                entry.pop = listShort[i].pop;
+                                entry.s06 = listShort[i].s06;
+                                entry.tmn = listShort[i].tmn;
+                                entry.tmx = listShort[i].tmx;
+                            }
+                        })
+                    } else {
+                        item.date = listShort[i].date;
+                        item.time = listShort[i].time;
+                        item.pop = listShort[i].pop;
+                        item.pty = listShort[i].pty;
+                        item.r06 = listShort[i].r06;
+                        item.reh = listShort[i].reh;
+                        item.s06 = listShort[i].s06;
+                        item.sky = listShort[i].sky;
+                        item.t3h = listShort[i].t3h;
+                        item.tmn = listShort[i].tmn;
+                        item.tmx = listShort[i].tmx;
 
-                    resultList.push(item);
+                        resultList.push(item);
+                    }
                 }
+
+                //log.info(resultList);
+                req.short = resultList;
+                next();
+            }
+            catch (e) {
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
+    else {
+        dbForecast.getData(regionName, cityName, townName, function (err, result) {
+            if (err) {
+                log.error('> getShort : failed to get data from DB');
+                log.error(meta);
+                return;
             }
 
-            for(i = 0 ; i < listShort.length ; i++){
-                var item = {};
-                // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
-                if((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
-                    (listShort[i].date === requestTime.date &&  parseInt(listShort[i].time) < parseInt(requestTime.time))){
-                    resultList.forEach(function(entry, i){
-                        // current 데이터를 이용해서 과거 정보를 넣었는데 이중 빠진 내용(강수확률 등의 정보는 여기에서 채워 넣는다)
-                        if(entry.date === listShort[i].date && entry.time === listShort[i].time){
-                            entry.pop = listShort[i].pop;
-                            entry.s06 = listShort[i].s06;
-                            entry.tmn = listShort[i].tmn;
-                            entry.tmx = listShort[i].tmx;
-                        }
-                    })
-                }else{
-                    item.date = listShort[i].date;
-                    item.time = listShort[i].time;
-                    item.pop = listShort[i].pop;
-                    item.pty = listShort[i].pty;
-                    item.r06 = listShort[i].r06;
-                    item.reh = listShort[i].reh;
-                    item.s06 = listShort[i].s06;
-                    item.sky = listShort[i].sky;
-                    item.t3h = listShort[i].t3h;
-                    item.tmn = listShort[i].tmn;
-                    item.tmx = listShort[i].tmx;
+            //log.info(result.toString());
+            //log.info(result.mData.data.short);
+            /********************
+             * TEST DATA
+             ********************/
+            //result = config;
+            /********************/
 
-                    resultList.push(item);
+            try {
+                var listShort = result.mData.data.short;
+                var listCurrent = result.mData.data.current;
+                var i = 0;
+                var j = 0;
+                var requestTime = getTimeValue();
+
+                /********************
+                 * TEST DATA
+                 ********************/
+                //requestTime.date = '20150830';
+                //requestTime.time = '0300';
+                /********************/
+
+                for (i = 0; i < listCurrent.length; i++) {
+                    var item = {};
+                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
+                    if (parseInt(listCurrent[i].date) >= parseInt(requestTime.date)) {
+                        continue;
+                    }
+                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
+                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) >= parseInt(requestTime.time))) {
+                        continue;
+                    }
+
+                    if (listCurrent[i].time === '0000' || listCurrent[i].time === '0300' ||
+                        listCurrent[i].time === '0600' || listCurrent[i].time === '0900' ||
+                        listCurrent[i].time === '1200' || listCurrent[i].time === '1500' ||
+                        listCurrent[i].time === '1800' || listCurrent[i].time === '2100') {
+                        item.date = listCurrent[i].date;
+                        item.time = listCurrent[i].time;
+                        item.pop = -100;
+                        item.pty = listCurrent[i].pty;
+                        item.r06 = listCurrent[i].rn1;
+                        item.reh = listCurrent[i].reh;
+                        item.s06 = -1;
+                        item.sky = listCurrent[i].sky;
+                        item.t3h = listCurrent[i].t1h;
+                        item.tmn = -100;
+                        item.tmx = -100;
+
+                        resultList.push(item);
+                    }
                 }
-            }
 
-            //log.info(resultList);
-            req.short = resultList;
-            next();
-        }
-        catch(e)
-        {
-            log.error('ERROE>>', meta);
-            next('route');
-        }
-    });
+                for (i = 0; i < listShort.length; i++) {
+                    var item = {};
+                    // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
+                    if ((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
+                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) < parseInt(requestTime.time))) {
+                        resultList.forEach(function (entry, i) {
+                            // current 데이터를 이용해서 과거 정보를 넣었는데 이중 빠진 내용(강수확률 등의 정보는 여기에서 채워 넣는다)
+                            if (entry.date === listShort[i].date && entry.time === listShort[i].time) {
+                                entry.pop = listShort[i].pop;
+                                entry.s06 = listShort[i].s06;
+                                entry.tmn = listShort[i].tmn;
+                                entry.tmx = listShort[i].tmx;
+                            }
+                        })
+                    } else {
+                        item.date = listShort[i].date;
+                        item.time = listShort[i].time;
+                        item.pop = listShort[i].pop;
+                        item.pty = listShort[i].pty;
+                        item.r06 = listShort[i].r06;
+                        item.reh = listShort[i].reh;
+                        item.s06 = listShort[i].s06;
+                        item.sky = listShort[i].sky;
+                        item.t3h = listShort[i].t3h;
+                        item.tmn = listShort[i].tmn;
+                        item.tmx = listShort[i].tmx;
+
+                        resultList.push(item);
+                    }
+                }
+
+                //log.info(resultList);
+                req.short = resultList;
+                next();
+            }
+            catch (e) {
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
     /****************************************************************************
      *   THIS IS FOR TEST.
      *****************************************************************************
@@ -401,31 +508,37 @@ var getShortest = function(req, res, next){
 
     log.info('>', meta);
 
-    dbForecast.getData(regionName, cityName, townName, function(err, result){
-        if(err){
+    if(config.db.mode === 'ram'){
+        next();
+    }
+    else{
+        dbForecast.getData(regionName, cityName, townName, function(err, result){
             if(err){
-                log.error('> getShortest : failed to get data from DB');
-                log.error(meta);
-                return;
+                if(err){
+                    log.error('> getShortest : failed to get data from DB');
+                    log.error(meta);
+                    next('route');
+                    return;
+                }
             }
-        }
-        /********************
-         * TEST DATA
-         ********************/
-        //result = config;
-        /********************/
-        try{
-            var listShortest = result.mData.data.shortest;
+            /********************
+             * TEST DATA
+             ********************/
+            //result = config;
+            /********************/
+            try{
+                var listShortest = result.mData.data.shortest;
 
-            //log.info(listShortest);
-            req.shortest = listShortest[listShortest.length - 1];
-            next();
-        }
-        catch(e){
-            log.error('ERROE>>', meta);
-            next('route');
-        }
-    });
+                //log.info(listShortest);
+                req.shortest = listShortest[listShortest.length - 1];
+                next();
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
 
     /****************************************************************************
      *   THIS IS FOR TEST.
@@ -458,31 +571,60 @@ var getCurrent = function(req, res, next){
 
     log.info('>', meta);
 
-    dbForecast.getData(regionName, cityName, townName, function(err, result){
-        if(err){
+    if(config.db.mode === 'ram'){
+        manager.getWeatherDb(regionName, cityName, townName, function(err, result){
             if(err){
-                log.error('> getShortest : failed to get data from DB');
-                log.error(meta);
-                return;
+                if(err){
+                    log.error('> getShortest : failed to get data from DB');
+                    log.error(meta);
+                    return;
+                }
             }
-        }
-        /********************
-         * TEST DATA
-         ********************/
-        //result = config;
-        /********************/
-        try{
-            var listCurrent = result.mData.data.current;
+            /********************
+             * TEST DATA
+             ********************/
+            //result = config;
+            /********************/
+            try{
+                var listCurrent = result.mData.data.current;
 
-            //log.info(listCurrent);
-            req.current = listCurrent[listCurrent.length - 1];
-            next();
-        }
-        catch(e){
-            log.error('ERROE>>', meta);
-            next('route');
-        }
-    });
+                //log.info(listCurrent);
+                req.current = listCurrent[listCurrent.length - 1];
+                next();
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
+    else{
+        dbForecast.getData(regionName, cityName, townName, function(err, result){
+            if(err){
+                if(err){
+                    log.error('> getShortest : failed to get data from DB');
+                    log.error(meta);
+                    return;
+                }
+            }
+            /********************
+             * TEST DATA
+             ********************/
+            //result = config;
+            /********************/
+            try{
+                var listCurrent = result.mData.data.current;
+
+                //log.info(listCurrent);
+                req.current = listCurrent[listCurrent.length - 1];
+                next();
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
 
     /****************************************************************************
      *   THIS IS FOR TEST.
