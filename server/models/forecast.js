@@ -55,92 +55,102 @@ bSchema.statics = {
 	setShortData : function (currentObj, mCoord, cb){
 		var self = this;
 
-		self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
-			.exec(function(err, res){
-				if(err || res.mData === undefined || !Array.isArray(currentObj)){
-					log.error('[DB] setShortData : ', err);
-					return;
+		var findQuery = self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
+			.exec();
+
+		var nextQuery = findQuery.then(function(res) {
+			//if(err || res.mData === undefined || !Array.isArray(currentObj)){
+			//	log.error('[DB] setShortData : ', err);
+			//	return;
+			//}
+			var popCount = 0;
+			var dateString = '';
+			var timeString = '';
+
+			//log.info('$$ err : ', err);
+			//log.info('$$ short : ', res.mData.data.short);
+
+			for (var i = 0 in currentObj) {
+				if ((currentObj[i].date !== undefined) &&
+					(currentObj[i].time !== undefined) &&
+					(currentObj[i].date !== '') &&
+					(currentObj[i].time !== '')) {
+					dateString = currentObj[i].date;
+					timeString = currentObj[i].time;
+					break;
 				}
-				var popCount = 0;
-				var dateString = '';
-				var timeString = '';
+			}
 
-				//log.info('$$ err : ', err);
-				//log.info('$$ short : ', res.mData.data.short);
-
-				for(var i = 0 in currentObj){
-					if((currentObj[i].date !== undefined) &&
-						(currentObj[i].time !== undefined) &&
-						(currentObj[i].date !== '') &&
-						(currentObj[i].time !== '')){
-						dateString = currentObj[i].date;
-						timeString = currentObj[i].time;
-						break;
-					}
-				}
-
-				//log.info('dateString : ', parseInt(dateString));
-				//log.info('timeString : ', parseInt(timeString));
-				log.info('len : ', res.mData.data.short.length);
+			//log.info('dateString : ', parseInt(dateString));
+			//log.info('timeString : ', parseInt(timeString));
+			log.info('len : ', res.mData.data.short.length);
 
 
-				// db의 제일 마지막 데이터의 날짜/시간 이현재 받은 데이터의 처음 데이터의 날짜/시가 보다 같거나 클때 삭제 해야 하는 데이터가 있다.
-				// 요약 :
-				//  1. db의 제일 마지막 데이터의 날짜가 현재 받은 데이터 리스트의 처음 데이터 날짜 보다 큰 경우,
-				//  2. db의 제일 마지막 데이터 날짜가 현재 받음 데이터의 처음 데이터 날짜와 같고, 현재 받은 데이터의 시간이 같거나 작은 경우
-				if(res.mData.data.short.length > 0 ) {
-					//log.info('last date : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].date));
-					//log.info('last time : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].time));
+			// db의 제일 마지막 데이터의 날짜/시간 이현재 받은 데이터의 처음 데이터의 날짜/시가 보다 같거나 클때 삭제 해야 하는 데이터가 있다.
+			// 요약 :
+			//  1. db의 제일 마지막 데이터의 날짜가 현재 받은 데이터 리스트의 처음 데이터 날짜 보다 큰 경우,
+			//  2. db의 제일 마지막 데이터 날짜가 현재 받음 데이터의 처음 데이터 날짜와 같고, 현재 받은 데이터의 시간이 같거나 작은 경우
+			if (res.mData.data.short.length > 0) {
+				//log.info('last date : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].date));
+				//log.info('last time : ', parseInt(res.mData.data.short[res.mData.data.short.length - 1].time));
 
-					if(parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) > parseInt(dateString) ||
-						((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
-						(parseInt(res.mData.data.short[res.mData.data.short.length - 1].time) >= parseInt(timeString)))) {
-						for (var i = res.mData.data.short.length - 1; i >= 0; i--) {
-							if (res.mData.data.short[i].date === dateString &&
-								res.mData.data.short[i].time === timeString){
-								popCount++;
-								break;
-							}
-							if((parseInt(res.mData.data.short[i].date) === parseInt(dateString) &&
-								parseInt(res.mData.data.short[i].time) < parseInt(timeString)) ||
-								(parseInt(res.mData.data.short[i].date) < parseInt(dateString))){
-								break;
-							}
+				if (parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) > parseInt(dateString) ||
+					((parseInt(res.mData.data.short[res.mData.data.short.length - 1].date) === parseInt(dateString)) &&
+					(parseInt(res.mData.data.short[res.mData.data.short.length - 1].time) >= parseInt(timeString)))) {
+					for (var i = res.mData.data.short.length - 1; i >= 0; i--) {
+						if (res.mData.data.short[i].date === dateString &&
+							res.mData.data.short[i].time === timeString) {
 							popCount++;
-							log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+							break;
 						}
+						if ((parseInt(res.mData.data.short[i].date) === parseInt(dateString) &&
+							parseInt(res.mData.data.short[i].time) < parseInt(timeString)) ||
+							(parseInt(res.mData.data.short[i].date) < parseInt(dateString))) {
+							break;
+						}
+						popCount++;
+						log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
 					}
 				}
+			}
 
-				if(popCount > 0){
-					for(var i=0 ; i< popCount ; i++){
-						self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
-							{$pop : {'mData.data.short' : popCount}},
-							{safe: true, multi : true, upsert: true},
-							cb);
-					}
+			return {'length' : res.mData.data.short.length, 'popCount' : popCount};
+		});
 
-					log.info('$$ setShortData : pop remove from last ', popCount);
-				}
+		// slice ==0일때 slice가 되지 않음, set 퀴리를 다시 함
+		var firstQuery = nextQuery.then(function(data){
+			log.info('## data ', data);
+			log.info('$$ setShortData : pop remove from last ', data.popCount);
+			var rest = data.length - data.popCount;
+			var firstQuery;
 
-				self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
-					{$push : {'mData.data.short' : {$each : currentObj}}},
-					{safe: true, multi : true, upsert: true},
-					cb);
-				log.info('+ : ', currentObj.length);
+			if (rest === 0) {
+				firstQuery = self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+					{$set: {'mData.data.short': []}})
+					.setOptions({safe: true, multi: true})
+					.exec(cb);
+			} else {
+				firstQuery = self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+					{$push: {'mData.data.short': {$each: [], $slice: rest}}})
+					.setOptions({safe: true, multi: true})
+					.exec(cb);
+			}
+			return firstQuery;
+		});
 
-				// 40 is default array list length
-				if(res.mData.data.short.length > 40 ) {
-					popCount = 40 - res.mData.data.short.length;
-					for(var i=0 ; i< popCount ; i++){
-						self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
-							{$pop : {'mData.data.short' : -popCount}},
-							{safe: true, multi : true, upsert: true},
-							cb);
-					}
-					log.info('$$ setShortData : pop remove from first ', popCount);
-				}
-			});
+		var secondQuery = firstQuery.then(function () {
+			self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+				{$push: {'mData.data.short': {$each: currentObj}}})
+				.setOptions({safe: true, multi: true, upsert: true})
+				.exec();
+		});
+
+		secondQuery.then(function () {
+			self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+				{$push: {'mData.data.short': {$each: [], $slice: -40}}})
+				.setOptions({safe: true, multi: true, upsert: true})
+				.exec(cb);
+		});
 	},
 	setCurrentData : function (currentObj, mCoord, cb){
 		this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
@@ -151,3 +161,4 @@ bSchema.statics = {
 };
 
 module.exports = mongoose.model('base', bSchema);
+
