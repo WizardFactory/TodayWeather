@@ -4,13 +4,29 @@ angular.module('starter.controllers', [])
                                      $timeout, $interval, $http)
     {
         $scope.skipGuide = false;
-        $scope.location = "Current Position Searching...";
-        $scope.address = "";
-        $scope.timeTable = [];
-        $scope.currentWeather;
-        $scope.currentTime = new Date();
 
+        //String
+        $scope.address = "";
+
+        //{time: Number, t1h: Number, sky: String, tmn: Number, tmx: Number, summary: String};
+        $scope.currentWeather;
+
+        //{day: String, time: Number, t3h: Number, sky: String, pop: Number, tempIcon: String, tempInfo: String}
+        $scope.timeTable = [];
+
+        //[ {name: String, values:[{name: String, value: Number}, ]},
+        //  {name: String, values:[{name: String, value: number}, ]} ]
+        $scope.temp;
+
+        //10월 8일(수) 12:23 AM
+        $scope.currentTimeString;
+
+        //String
         var fullAddress = "";
+        var currentTime = new Date();
+
+        //{"lat": Number, "long": Number};
+        var location;
 
         /**
          * @param day
@@ -27,6 +43,7 @@ angular.module('starter.controllers', [])
                 case 0: return '오늘';
                 case 1: return '내일';
                 case 2: return '모레';
+                case 3: return '글피';
                 default :
                     console.error("Fail to get day string day="+day+" hours="+hours);
                     return '';
@@ -189,6 +206,7 @@ angular.module('starter.controllers', [])
         /**
          *
          * @param {Object[]} shortForecastList
+         * @param {Date} currentForecast
          * @param {Date} current
          * @returns {{timeTable: Array, chartTable: Array}}
          */
@@ -243,7 +261,7 @@ angular.module('starter.controllers', [])
             var chartTable = [
                 {
                     name: 'yesterday',
-                    values: data.slice(0, shortForecastList.length - 8).map(function (d) {
+                    values: data.slice(0, data.length - 8).map(function (d) {
                         return { name: 'yesterday', value: d };
                     })
                 },
@@ -305,6 +323,10 @@ angular.module('starter.controllers', [])
         function getWeatherInfo(addressArray, callback) {
             //var url = 'town';
             var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+
+            if (!Array.isArray(addressArray) || addressArray.length === 0) {
+                return callback(error);
+            }
 
             if (addressArray[1].slice(-1) === '시') {
                 url += '/'+addressArray[1]+'/'+addressArray[2]+'/'+addressArray[3];
@@ -387,7 +409,7 @@ angular.module('starter.controllers', [])
             var url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
                         "&sensor=true";
             $http({method: 'GET', url: url}).
-                success(function (data, status, headers, config) {
+                success(function (data) {
                     if (data.status === 'OK') {
                         var address = findDongAddressFromGoogleGeoCodeResults(data.results);
                         console.log(address);
@@ -442,7 +464,7 @@ angular.module('starter.controllers', [])
             currentForecast.tmx = weatherData.short[0].최고기온;
             currentForecast.tmn = weatherData.short[0].최저기온;
 
-            var parsedWeather = parseShortTownWeather(weatherData.short, currentForecast, $scope.currentTime);
+            var parsedWeather = parseShortTownWeather(weatherData.short, currentForecast, currentTime);
             currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
 
             $scope.currentWeather = currentForecast;
@@ -481,9 +503,9 @@ angular.module('starter.controllers', [])
                     return callback(error);
                 }
 
-                $scope.location = {"lat": lat, "long": long};
-                localStorage.setItem("location", JSON.stringify($scope.location));
-                console.log($scope.location);
+                location = {"lat": lat, "long": long};
+                localStorage.setItem("location", JSON.stringify(location));
+                console.log(location);
 
                 getAddressFromGeolocation(lat, long, function (error, newFullAddress) {
                     if (error) {
@@ -521,14 +543,13 @@ angular.module('starter.controllers', [])
          */
         function loadStorage() {
             fullAddress = localStorage.getItem("fullAddress");
-            if (!fullAddress) {
-                fullAddress = "대한민국 서울특별시 중구 명동";
+            if (!fullAddress || fullAddress === 'undefined') {
                 return false;
             }
             try {
                 $scope.address = getShortenAddress(fullAddress);
                 console.log($scope.address);
-                $scope.location = JSON.parse(localStorage.getItem("location"));
+                location = JSON.parse(localStorage.getItem("location"));
                 console.log($scope.location);
                 $scope.currentWeather = JSON.parse(localStorage.getItem("currentWeather"));
                 console.log($scope.currentWeather);
@@ -540,6 +561,70 @@ angular.module('starter.controllers', [])
             catch(error) {
                return false;
             }
+        }
+
+        function loadGuideDate() {
+            fullAddress = "대한민국 하늘시 중구 구름동";
+            $scope.address = getShortenAddress(fullAddress);
+            $scope.currentWeather = {time: 7, t1h: 19, sky: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
+
+            var data = [];
+            data[0] = {day: "", time: "6시", t3h: 17, sky:"Cloud", pop: 10, tempIcon:"Temp-01"};
+            data[1] = {day: "", time: "9시", t3h: 21, sky:"Lightning", pop: 20, tempIcon:"Temp-02"};
+            data[2] = {day: "", time: "12시", t3h: 26, sky:"Moon", pop: 30, tempIcon:"Temp-03"};
+            data[3] = {day: "", time: "15시", t3h: 28, sky:"MoonWithCloud", pop: 40, tempIcon:"Temp-04"};
+            data[4] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-05"};
+            data[5] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-06"};
+            data[6] = {day: "어제", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-07"};
+            data[7] = {day: "", time: "3시", t3h: 16, sky:"Snow", pop: 80, tempIcon:"Temp-08"};
+            data[8] = {day: "", time: "6시", t3h: 15, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09"};
+            data[9] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-10"};
+            data[10] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+            data[11] = {day: "", time: "15시", t3h: 28, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+            data[12] = {day: "", time: "18시", t3h: 29, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+            data[13] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+            data[14] = {day: "오늘", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+            data[15] = {day: "", time: "3시", t3h: 15, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+            data[16] = {day: "", time: "지금", t3h: 14, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+            data[17] = {day: "", time: "9시", t3h: 21, sky:"Cloud", pop: 10, tempIcon:"Temp-09"};
+            data[18] = {day: "", time: "12시", t3h: 26, sky:"Lightning", pop: 20, tempIcon:"Temp-10"};
+            data[19] = {day: "", time: "15시", t3h: 29, sky:"Moon", pop: 30, tempIcon:"Temp-01"};
+            data[20] = {day: "", time: "18시", t3h: 28, sky:"MoonWithCloud", pop: 50, tempIcon:"Temp-04"};
+            data[21] = {day: "", time: "21시", t3h: 22, sky:"Rain", pop: 60, tempIcon:"Temp-05"};
+            data[22] = {day: "모레", time: "0시", t3h: 20, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+            data[23] = {day: "", time: "3시", t3h: 18, sky:"RainWithLightning", pop: 80, tempIcon:"Temp-07"};
+            data[24] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+            data[25] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
+            data[26] = {day: "", time: "12시", t3h: 27, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+            data[27] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+            data[28] = {day: "", time: "18시", t3h: 28, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+            data[29] = {day: "", time: "21시", t3h: 24, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+            data[30] = {day: "글피", time: "0시", t3h: 21, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+            data[31] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+            data[32] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+            data[33] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
+            data[34] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+            data[35] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+            data[36] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+            data[37] = {day: "", time: "21시", t3h: 23, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+            data[38] = {day: "글피", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+            data[39] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+
+            $scope.timeTable = data.slice(8);
+            $scope.temp = [
+                {
+                    name: 'yesterday',
+                    values: data.slice(0, data.length - 8).map(function (d) {
+                        return { name: 'yesterday', value: d };
+                    })
+                },
+                {
+                    name: 'today',
+                    values: data.slice(8).map(function (d) {
+                        return { name: 'today', value: d };
+                    })
+                }
+            ];
         }
 
         /**
@@ -560,9 +645,61 @@ angular.module('starter.controllers', [])
             });
         }
 
+        /**
+         *
+         * @param date
+         * @returns {string}
+         */
+        function convertTimeString(date) {
+            var timeString;
+            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
+            switch (date.getDay()) {
+                case 0: timeString += "(일) "; break;
+                case 1: timeString += "(월) "; break;
+                case 2: timeString += "(화) "; break;
+                case 3: timeString += "(수) "; break;
+                case 4: timeString += "(목) "; break;
+                case 5: timeString += "(금) "; break;
+                case 6: timeString += "(토) "; break;
+            }
+            if (date.getHours() < 12) {
+                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
+            }
+            else {
+                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
+            }
+
+            return timeString;
+        }
+
+        var bodyWidth;
+
+        function getTodayNowPosition() {
+            if (!bodyWidth) {
+               bodyWidth =  angular.element(document).find('body')[0].offsetWidth;
+                console.log("body width="+bodyWidth);
+            }
+            switch (bodyWidth) {
+                case 320:   //iphone 4,5
+                    return 374;
+                    break;
+                case 375:   //iphone 6
+                    return 374;
+                    break;
+                case 414:   //iphone 6+
+                    return 415;
+                    break;
+                case 360:   //s4, note3
+                default:
+                    return 368;
+                    break;
+            }
+        }
+
         identifyUser();
 
         $scope.address = "위치 찾는 중";
+        $scope.currentTimeString = convertTimeString(currentTime);
 
         $scope.doRefresh = function() {
             var refreshComplete = false;
@@ -574,7 +711,7 @@ angular.module('starter.controllers', [])
                 if (!refreshComplete || mustUpdate) {
                     console.log("Called refreshComplete");
                     $scope.$broadcast('scroll.refreshComplete');
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(285, 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
                     refreshComplete = true;
                 }
                 else {
@@ -594,12 +731,21 @@ angular.module('starter.controllers', [])
             if(typeof(Storage) !== "undefined") {
                 if (localStorage.getItem("skipGuide") !== null) {
                     $scope.skipGuide = localStorage.getItem("skipGuide");
-                };
+                }
+            }
+
+            //It starts first times
+            if (!$scope.skipGuide) {
+                loadGuideDate();
+                $timeout(function() {
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
+                },0);
+                return;
             }
 
             if(typeof(Storage) !== "undefined" && loadStorage()) {
                 $timeout(function() {
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(285, 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
                 },0);
             }
             else {
@@ -608,15 +754,16 @@ angular.module('starter.controllers', [])
                         console.log(error);
                         console.log(error.stack);
                     }
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(285, 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
                 });
             }
         });
 
         $interval(function() {
             var newDate = new Date();
-            if(newDate.getMinutes() != $scope.currentTime.getMinutes()) {
-                $scope.currentTime = newDate;
+            if(newDate.getMinutes() != currentTime.getMinutes()) {
+                currentTime = newDate;
+                $scope.currentTimeString =  convertTimeString(currentTime);
             }
         }, 1000);
     })
