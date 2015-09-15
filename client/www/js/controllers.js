@@ -160,17 +160,19 @@ angular.module('starter.controllers', [])
 
         /**
          *
-         * @param {Object} currentTownWeather
+         * @param {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
+         *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
+         *          wsd: Number} currentTownWeather
          * @returns {{}}
          */
         function parseCurrentTownWeather(currentTownWeather) {
             var currentForecast = {};
-            var time = parseInt(currentTownWeather.시간.substr(0,2));
+            var time = parseInt(currentTownWeather.time.substr(0,2));
             var isNight = time < 7 || time > 18;
-            currentForecast.time = parseInt(currentTownWeather.시간.substr(0,2));
-            currentForecast.t1h = currentTownWeather.기온;
-            currentForecast.sky = parseSkyState(currentForecast.하늘상태, currentTownWeather.강수형태,
-                        currentTownWeather.낙뢰, isNight);
+            currentForecast.time = parseInt(currentTownWeather.time.substr(0,2));
+            currentForecast.t1h = currentTownWeather.t1h;
+            currentForecast.sky = parseSkyState(currentForecast.sky, currentTownWeather.pty,
+                        currentTownWeather.lgt, isNight);
 
             return currentForecast;
         }
@@ -219,17 +221,17 @@ angular.module('starter.controllers', [])
 
             shortForecastList.forEach(function (shortForecast) {
                 var tempObject = {};
-                var time = parseInt(shortForecast.시간.slice(0,-2));
-                var diffDays = getDiffDays(convertStringToDate(shortForecast.날짜), current);
+                var time = parseInt(shortForecast.time.slice(0,-2));
+                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
                 var day = getDayString(diffDays, time);
                 var isNight = time < 7 || time > 18;
 
                 tempObject.day = day;
                 tempObject.time = getTimeString(positionHours, diffDays, time);
-                tempObject.t3h = shortForecast.기온;
-                tempObject.sky = parseSkyState(shortForecast.하늘상태, shortForecast.강수형태, shortForecast.낙뢰, isNight);
-                tempObject.pop = shortForecast.강수확률;
-                tempObject.tempIcon = decideTempIcon(shortForecast.기온, shortForecast.최고기온, shortForecast.최저기온);
+                tempObject.t3h = shortForecast.t3h;
+                tempObject.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
+                tempObject.pop = shortForecast.pop;
+                tempObject.tempIcon = decideTempIcon(shortForecast.t3h, shortForecast.tmx, shortForecast.tmn);
                 tempObject.tempInfo = "";
 
                 // 단기 예보의 현재(지금) 데이터를 currentForecast 정보로 업데이트
@@ -243,6 +245,8 @@ angular.module('starter.controllers', [])
                 if (prevDiffDays !== null && prevDiffDays !== diffDays) {
                     max.tempInfo = "max";
                     min.tempInfo = "min";
+
+                    //set null to find next item
                     max = null;
                     min = null;
                 }
@@ -256,6 +260,25 @@ angular.module('starter.controllers', [])
 
                 data.push(tempObject);
             });
+
+            if (data.length > 32) {
+               //cut
+                data.slice(0, 32);
+            }
+            else if (data.length < 32) {
+                var i;
+                for (i=0; data.length < 32; i++) {
+                    var tempObject = {};
+                    tempObject.day = "";
+                    tempObject.time = "";
+                    tempObject.t3h = data[data.length-1].t3h;
+                    tempObject.sky = "Sun";
+                    tempObject.pop = 0;
+                    tempObject.tempIcon = "Temp-01";
+                    tempObject.tempInfo = "";
+                    data.push(tempObject);
+                }
+            }
 
             var timeTable = data.slice(8);
             var chartTable = [
@@ -322,7 +345,8 @@ angular.module('starter.controllers', [])
          */
         function getWeatherInfo(addressArray, callback) {
             //var url = 'town';
-            var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+            //var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+            var url = 'http://d2ibo8bwl7ifj5.cloudfront.net/town';
 
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
                 return callback(error);
@@ -461,8 +485,8 @@ angular.module('starter.controllers', [])
          */
         function setWeatherData(weatherData) {
             var currentForecast = parseCurrentTownWeather(weatherData.current);
-            currentForecast.tmx = weatherData.short[0].최고기온;
-            currentForecast.tmn = weatherData.short[0].최저기온;
+            currentForecast.tmx = weatherData.short[0].tmx;
+            currentForecast.tmn = weatherData.short[0].tmn;
 
             var parsedWeather = parseShortTownWeather(weatherData.short, currentForecast, currentTime);
             currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
@@ -601,14 +625,14 @@ angular.module('starter.controllers', [])
             data[29] = {day: "", time: "21시", t3h: 24, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
             data[30] = {day: "글피", time: "0시", t3h: 21, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
             data[31] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
-            data[32] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
-            data[33] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
-            data[34] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-            data[35] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
-            data[36] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
-            data[37] = {day: "", time: "21시", t3h: 23, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-            data[38] = {day: "글피", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-            data[39] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+            //data[32] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+            //data[33] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
+            //data[34] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+            //data[35] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+            //data[36] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+            //data[37] = {day: "", time: "21시", t3h: 23, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+            //data[38] = {day: "글피", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+            //data[39] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
 
             $scope.timeTable = data.slice(8);
             $scope.temp = [
@@ -672,28 +696,36 @@ angular.module('starter.controllers', [])
             return timeString;
         }
 
-        var bodyWidth;
+        var colWidth;
 
-        function getTodayNowPosition() {
-            if (!bodyWidth) {
-               bodyWidth =  angular.element(document).find('body')[0].offsetWidth;
-                console.log("body width="+bodyWidth);
+        function getWidthPerCol() {
+            if (colWidth)  {
+                return colWidth;
             }
+
+            var bodyWidth =  angular.element(document).find('body')[0].offsetWidth;
+            console.log("body of width="+bodyWidth);
+
             switch (bodyWidth) {
                 case 320:   //iphone 4,5
-                    return 374;
+                    colWidth = 53;
                     break;
                 case 375:   //iphone 6
-                    return 374;
+                    colWidth = 53;
                     break;
                 case 414:   //iphone 6+
-                    return 415;
+                    colWidth =  59;
                     break;
                 case 360:   //s4, note3
                 default:
-                    return 368;
+                    colWidth = 52;
                     break;
             }
+            return colWidth;
+        }
+
+        function getTodayNowPosition(index) {
+            return getWidthPerCol()*index;
         }
 
         identifyUser();
@@ -711,7 +743,7 @@ angular.module('starter.controllers', [])
                 if (!refreshComplete || mustUpdate) {
                     console.log("Called refreshComplete");
                     $scope.$broadcast('scroll.refreshComplete');
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(7), 0, false);
                     refreshComplete = true;
                 }
                 else {
@@ -738,14 +770,14 @@ angular.module('starter.controllers', [])
             if (!$scope.skipGuide) {
                 loadGuideDate();
                 $timeout(function() {
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(7), 0, false);
                 },0);
                 return;
             }
 
             if(typeof(Storage) !== "undefined" && loadStorage()) {
                 $timeout(function() {
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(7), 0, false);
                 },0);
             }
             else {
@@ -754,7 +786,7 @@ angular.module('starter.controllers', [])
                         console.log(error);
                         console.log(error.stack);
                     }
-                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(), 0, false);
+                    $ionicScrollDelegate.$getByHandle('chart').scrollTo(getTodayNowPosition(7), 0, false);
                 });
             }
         });
