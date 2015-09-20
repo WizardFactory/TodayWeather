@@ -350,9 +350,9 @@ angular.module('starter.controllers', [])
          * @param {cbWeatherInfo} callback
          */
         function getWeatherInfo(addressArray, callback) {
-            var url = 'town';
+            //var url = 'town';
             //var url = 'http://d2ibo8bwl7ifj5.cloudfront.net/town';
-            //var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+            var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
 
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
                 return callback(error);
