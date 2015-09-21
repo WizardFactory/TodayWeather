@@ -169,12 +169,19 @@ Manager.prototype.setShortData = function(coord, dataList){
                         firstTime = dataList[i].time;
                         break;
                     }
-                    dataList.shift();
+                    popCount++;
+                    //dataList.shift();
+                }
+                if(popCount > 0){
+                    for(i=0 ; i<popCount ; i++){
+                        dataList.shift();
+                    }
                 }
 
                 log.info('before len : ', listShort.length);
                 log.info('first date&time : ', firstDate, firstTime);
 
+                popCount = 0;
                 if(listShort.length > 0){
                     if(parseInt(listShort[listShort.length - 1].date) > parseInt(firstDate) ||
                         ((parseInt(listShort[listShort.length - 1].date) === parseInt(firstDate)) &&
@@ -201,19 +208,24 @@ Manager.prototype.setShortData = function(coord, dataList){
                     data.mData.data.short.pop();
                 }
 
+                if(data.mData.data.short.length > 16){
+                    for(i=0 ; i< data.mData.data.short.length - 16 ; i++){
+                        data.mData.data.short.shift();
+                    }
+                }
+
                 log.info('after pop : ', data.mData.data.short.length);
                 for(i=0 ; i< dataList.length ; i++){
                     //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
                     data.mData.data.short.push(dataList[i]);
                 }
 
-                if(data.mData.data.short.length > 40){
-                    for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
-                        data.mData.data.short.shift();
-                    }
-                    log.info('make 40 counts');
-                }
-
+                //if(data.mData.data.short.length > 40){
+                //    for(i=0 ; i< 40 - data.mData.data.short.length ; i++) {
+                //        data.mData.data.short.shift();
+                //    }
+                //    log.info('make 40 counts');
+                //}
             }
         });
     }
@@ -234,7 +246,7 @@ Manager.prototype.setCurrentData = function(coord, dataList){
             }
 
             if(data.mData.data.current.length > 60){
-                for(var i = 0 ; i < 60 - data.mData.data.current.length ; i++){
+                for(var i = 0 ; i < data.mData.data.current.length - 60 ; i++){
                     data.mData.data.current.shift();
                 }
             }

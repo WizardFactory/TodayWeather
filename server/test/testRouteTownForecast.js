@@ -8,6 +8,7 @@ var config = require('../config/config');
 var collect = require('../lib/collectTownForecast');
 var Logger = require('../lib/log');
 var mongoose = require('mongoose');
+var forecast = require('../models/forecast');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -23,9 +24,40 @@ mongoose.connection.on('error', function(err) {
         process.exit(-1);
     }
 );
-var dbmodel = require('../controllers/test');
 
 describe('unit test - routeTownForecast class', function(){
+    /*
+    var orgArray = config.testTownData[0].data.short;
+    var xy = {mx: 62, my: 122};
+    //var test1 = orgArray.slice(0, 13);
+    //var test1 = orgArray.slice(1, 14);
+    var test1 = orgArray.slice(2, 15);
+    //var test1 = orgArray.slice(22, 35);
+
+    it('db', function(done){
+
+        log.info(test1);
+        log.info('test data len : ', test1.length);
+        forecast.setShortData(test1, xy, function (err, res) {
+            if (err) {
+                log.error('** getTownShortData : ', err);
+            }
+            //log.info(res);
+
+            done();
+        });
+    });
+
+    it('db1', function(done){
+        forecast.getData('경기도', '성남시분당구', '수내3동', function(err, res){
+            log.info('count : ', res.mData.data.short.length);
+            for(var i=0 in res.mData.data.short){
+                log.info(i , ' : ', res.mData.data.short[i]);
+            }
+            done();
+        });
+    });
+    */
 /*
     it('routes/routeTownForecast : get towns SHORT info', function(done) {
         var testdb = new dbmodel({
