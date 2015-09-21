@@ -218,13 +218,13 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .attr("y", function(d) { return y(d.value.t3h); })
                             .attr('dy', -10)
                             .attr("text-anchor", "middle")
-                            .text(function(d) { return d.value.t3h + "˚"; })
-                            .attr("class", function(d, i) {
-                                if (d.name === "today" && (d.value.tempInfo === "min" || d.value.tempInfo === "max")) {
-                                    return "text-" + d.name;
+                            .text(function(d) {
+                                if (d.name === "today" && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
+                                    return (d.value.tmn | d.value.tmx) + "˚";
                                 }
-                                return "text-hidden";
-                            });
+                                return "";
+                            })
+                            .attr("class", function(d, i) { return "text-today"; });
 
                         // update value
                         group.select('.line-value')
@@ -232,7 +232,12 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .data(function(d) { return d.values; })
                             .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr("y", function(d) { return y(d.value.t3h); })
-                            .text(function(d) { return d.value.t3h + "˚"; });
+                            .text(function(d) {
+                                if (d.name === "today" && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
+                                    return (d.value.tmn | d.value.tmx) + "˚";
+                                }
+                                return "";
+                            });
                     }
                 });
             }
