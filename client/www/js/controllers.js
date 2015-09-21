@@ -227,6 +227,10 @@ angular.module('starter.controllers', [])
                     //skip object
                     return true;
                 }
+                if (positionHours === 0 && diffDays <= -3) {
+                   //when current time is 0, skip all -3
+                    return true;
+                }
 
                 tempObject.day = day;
                 tempObject.time = getTimeString(positionHours, diffDays, time);
@@ -336,8 +340,8 @@ angular.module('starter.controllers', [])
          */
         function getWeatherInfo(addressArray, callback) {
             //var url = 'town';
-            var url = 'http://d2ibo8bwl7ifj5.cloudfront.net/town';
-            //var url = 'http://todayweather-wizardfactory.rhcloud.com/town';
+            var url = 'https://d2ibo8bwl7ifj5.cloudfront.net/town';
+            //var url = 'https://todayweather-wizardfactory.rhcloud.com/town';
 
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
                 return callback(error);
@@ -421,7 +425,7 @@ angular.module('starter.controllers', [])
          * @param {cbAddressFromGeolocation} callback
          */
         function getAddressFromGeolocation(lat, long, callback) {
-            var url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
                         "&sensor=true";
             $http({method: 'GET', url: url}).
                 success(function (data) {
