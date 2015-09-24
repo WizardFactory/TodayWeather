@@ -198,7 +198,7 @@ Manager.prototype.setShortData = function(coord, dataList){
                                 break;
                             }
                             popCount++;
-                            log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
+                            //log.info('remove : ' , listShort[i].date,' : ', listShort[i].time);
                         }
                     }
                 }
@@ -232,6 +232,8 @@ Manager.prototype.setShortData = function(coord, dataList){
     catch(e){
         log.error('something wrong!!! : ', e);
     }
+
+    return this;
 };
 
 Manager.prototype.setCurrentData = function(coord, dataList){
@@ -334,7 +336,7 @@ Manager.prototype.getTownShortData = function(baseTime){
     }
     else{
         log.error('unknown TimeString');
-        return;
+        return this;
     }
 
     /**************************************************
@@ -348,6 +350,7 @@ Manager.prototype.getTownShortData = function(baseTime){
     } else {
         key = listKey.keyString.aleckim;
     }
+    key = listKey.keyString.cert_key;
     /***************************************************/
 
     log.info('+++ GET SHORT INFO : ', dateString);
@@ -360,7 +363,7 @@ Manager.prototype.getTownShortData = function(baseTime){
             if(err){
                 log.error('** getTownShortData : ', err);
                 log.error(meta);
-                return;
+                return this;
             }
 
             /**************************************************
@@ -405,7 +408,7 @@ Manager.prototype.getTownShortData = function(baseTime){
             if(err){
                 log.error('** getTownShortData : ', err);
                 log.error(meta);
-                return;
+                return this;
             }
 
             log.info(listTownDb);
@@ -416,7 +419,7 @@ Manager.prototype.getTownShortData = function(baseTime){
                 if(err){
                     log.error('** getTownShortData : ', err);
                     log.error(meta);
-                    return;
+                    return this;
                 }
 
                 log.info('short data receive completed : %d\n', dataList.length);
@@ -442,6 +445,8 @@ Manager.prototype.getTownShortData = function(baseTime){
             });
         });
     }
+
+    return this;
 };
 
 Manager.prototype.getTownShortestData = function(){
@@ -486,6 +491,7 @@ Manager.prototype.getTownShortestData = function(){
     } else {
         key = listKey.keyString.aleckim;
     }
+    key = listKey.keyString.cert_key;
     /***************************************************/
     town.getCoord(function(err, listTownDb){
         var collectShortInfo = new collectTown();
@@ -537,6 +543,7 @@ Manager.prototype.getTownCurrentData = function(){
     } else {
         key = listKey.keyString.aleckim;
     }
+    key = listKey.keyString.cert_key;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -594,9 +601,25 @@ Manager.prototype.startTownData = function(){
     var self = this;
 
     // When the server is about to start, it would get the first data immediately.
-    self.getTownShortData(-39);
-    self.getTownShortData(9);
+    //self.getTownShortData(-45).getTownShortData(-21).getTownShortData(+3).getTownShortData(+9);
+    //self.getTownShortData(-21);
+    //self.getTownShortData(+3);
+    //self.getTownShortData(+9);
     //self.getTownShortestData();
+    var times = 0;
+    var loop = setInterval(function(){
+        if(times === 3){
+            self.getTownShortData(9);
+        }else{
+            self.getTownShortData(-45 + (24*times));
+        }
+        times+= 1;
+
+        if(times > 3){
+            clearInterval(loop);
+        }
+    }, 3* 60 * 1000);
+
     self.getTownCurrentData();
 
     // get short forecast once every three hours.
