@@ -58,7 +58,7 @@ bSchema.statics = {
 		var findQuery = self.findOne({ "mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my })
 			.exec();
 
-		var nextQuery = findQuery.then(function(res) {
+		findQuery.then(function(res) {
 			//if(err || res.mData === undefined || !Array.isArray(currentObj)){
 			//	log.error('[DB] setShortData : ', err);
 			//	return;
@@ -83,7 +83,7 @@ bSchema.statics = {
 
 			//log.info('dateString : ', parseInt(dateString));
 			//log.info('timeString : ', parseInt(timeString));
-			log.info('len : ', res.mData.data.short.length);
+			//log.info('len : ', res.mData.data.short.length);
 
 
 			// db의 제일 마지막 데이터의 날짜/시간 이현재 받은 데이터의 처음 데이터의 날짜/시가 보다 같거나 클때 삭제 해야 하는 데이터가 있다.
@@ -109,48 +109,45 @@ bSchema.statics = {
 							break;
 						}
 						popCount++;
-						log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
+						//log.info(res.mData.data.short[i].date, ' : ', dateString, ' | ', res.mData.data.short[i].time, ' : ', timeString)
 					}
 				}
 			}
 
-			return {'length' : res.mData.data.short.length, 'popCount' : popCount};
-		});
+			//return {'length' : res.mData.data.short.length, 'popCount' : popCount};
+			var rest = res.mData.data.short.length - popCount;
+			//log.info('## data ', rest);
+			//log.info('$$ setShortData : pop remove from last ', popCount);
+			return self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+				{$push: {'mData.data.short': {$each: [], $slice: rest}}})
+				.setOptions({safe: true, multi: true})
+				.exec(cb);
 
-		// slice ==0일때 slice가 되지 않음, set 퀴리를 다시 함
-		var firstQuery = nextQuery.then(function(data){
-			log.info('## data ', data);
-			log.info('$$ setShortData : pop remove from last ', data.popCount);
-			var rest = data.length - data.popCount;
-			var firstQuery;
-
-			if (rest === 0) {
-				firstQuery = self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
-					{$set: {'mData.data.short': []}})
-					.setOptions({safe: true, multi: true})
-					.exec(cb);
-			} else {
-				firstQuery = self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
-					{$push: {'mData.data.short': {$each: [], $slice: rest}}})
-					.setOptions({safe: true, multi: true})
-					.exec(cb);
-			}
-			return firstQuery;
-		});
-
-		var secondQuery = firstQuery.then(function () {
-			self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+		}).then(function(){
+			return self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
 				{$push: {'mData.data.short': {$each: currentObj}}})
 				.setOptions({safe: true, multi: true, upsert: true})
 				.exec();
-		});
-
-		secondQuery.then(function () {
-			self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+		}).then(function(){
+			return self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
 				{$push: {'mData.data.short': {$each: [], $slice: -40}}})
 				.setOptions({safe: true, multi: true, upsert: true})
 				.exec(cb);
 		});
+
+		//var secondQuery = firstQuery.then(function () {
+		//	self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+		//		{$push: {'mData.data.short': {$each: currentObj}}})
+		//		.setOptions({safe: true, multi: true, upsert: true})
+		//		.exec();
+		//});
+        //
+		//secondQuery.then(function () {
+		//	self.update({"mData.mCoord.mx": mCoord.mx, "mData.mCoord.my": mCoord.my},
+		//		{$push: {'mData.data.short': {$each: [], $slice: -40}}})
+		//		.setOptions({safe: true, multi: true, upsert: true})
+		//		.exec(cb);
+		//});
 	},
 	setCurrentData : function (currentObj, mCoord, cb){
 		this.update({ "mData.mCoord.mx" : mCoord.mx, "mData.mCoord.my" : mCoord.my },
