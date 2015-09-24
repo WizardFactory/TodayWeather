@@ -14,6 +14,18 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
+function getCurrentTimeValue(gmt){
+    var i=0;
+    var timeFunction = manager;
+    var currentDate = timeFunction.getWorldTime(gmt);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8, 10) + '00'
+    };
+
+    return dateString;
+}
+
 function getTimeValue(){
     var i=0;
     var timeFunction = manager;
@@ -134,6 +146,7 @@ function getTimeTable(){
     log.info(listResult);
     return listResult;
 }
+
 function getShortFromDB(regionName, cityName, townName, callback){
     var err = 0;
     var listTownData = config.testTownData;
@@ -338,8 +351,14 @@ var getShort = function(req, res, next){
                     }
                 }
 
+                var popCount = 0;
                 for (i = 0; i < listShort.length; i++) {
                     var item = {};
+                    if(listShort[i].date === requestTime.date && listShort[i].time === requestTime.time){
+                        // 현재시간 보다 이전의 데이터는 16개만 보내주기 위해서...
+                        popCount = i - 16;
+                    }
+
                     item.date = listShort[i].date;
                     item.time = listShort[i].time;
                     item.pop = listShort[i].pop;
@@ -365,38 +384,11 @@ var getShort = function(req, res, next){
                     }
                     resultList.push(item);
                 }
-                /*
-                for (i = 0; i < listShort.length; i++) {
-                    var item = {};
-                    // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
-                    if ((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
-                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) <= parseInt(requestTime.time))) {
-                        for(var j = 0 ; j < resultList.length ; j++){
-                            if((resultList[j].date === listShort[i].date) && (resultList[j].time === listShort[i].time)){
-                                resultList[j].pop = listShort[i].pop;
-                                resultList[j].s06 = listShort[i].s06;
-                                resultList[j].tmn = listShort[i].tmn;
-                                resultList[j].tmx = listShort[i].tmx;
-                                break;
-                            }
-                        }
-                    } else {
-                        item.date = listShort[i].date;
-                        item.time = listShort[i].time;
-                        item.pop = listShort[i].pop;
-                        item.pty = listShort[i].pty;
-                        item.r06 = listShort[i].r06;
-                        item.reh = listShort[i].reh;
-                        item.s06 = listShort[i].s06;
-                        item.sky = listShort[i].sky;
-                        item.t3h = listShort[i].t3h;
-                        item.tmn = listShort[i].tmn;
-                        item.tmx = listShort[i].tmx;
 
-                        resultList.push(item);
-                    }
+                if(popCount > 0){
+                    log.info('pop count : ', popCount);
+                    resultList = resultList.slice(popCount, resultList.length);
                 }
-                */
 
                 //log.info(resultList);
                 req.short = resultList;
@@ -418,6 +410,7 @@ var getShort = function(req, res, next){
 
             //log.info(result.toString());
             //log.info(result.mData.data.short);
+            //log.info(result.mData.data.current);
             /********************
              * TEST DATA
              ********************/
@@ -430,6 +423,7 @@ var getShort = function(req, res, next){
                 var i = 0;
                 var j = 0;
                 var requestTime = getTimeValue();
+                var tempList = [];
 
                 /********************
                  * TEST DATA
@@ -438,14 +432,16 @@ var getShort = function(req, res, next){
                 //requestTime.time = '0300';
                 /********************/
 
+                log.info(requestTime);
                 for (i = 0; i < listCurrent.length; i++) {
                     var item = {};
+                    log.info('cur time : ', parseInt(listCurrent[i].date), parseInt(requestTime.date));
                     // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if (parseInt(listCurrent[i].date) >= parseInt(requestTime.date)) {
+                    if (parseInt(listCurrent[i].date) > parseInt(requestTime.date)) {
                         continue;
                     }
                     // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) >= parseInt(requestTime.time))) {
+                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) > parseInt(requestTime.time))) {
                         continue;
                     }
 
@@ -465,39 +461,47 @@ var getShort = function(req, res, next){
                         item.tmn = -100;
                         item.tmx = -100;
 
-                        resultList.push(item);
+                        log.info('from current', item);
+                        tempList.push(JSON.parse(JSON.stringify(item)));
                     }
                 }
 
+                var popCount = 0;
                 for (i = 0; i < listShort.length; i++) {
                     var item = {};
-                    // 현재 시간 보다 작은 시간대의 short 데이터는 일부만 사용한다.
-                    if ((parseInt(listShort[i].date) < parseInt(requestTime.date)) ||
-                        (listShort[i].date === requestTime.date && parseInt(listShort[i].time) < parseInt(requestTime.time))) {
-                        resultList.forEach(function (entry, i) {
-                            // current 데이터를 이용해서 과거 정보를 넣었는데 이중 빠진 내용(강수확률 등의 정보는 여기에서 채워 넣는다)
-                            if (entry.date === listShort[i].date && entry.time === listShort[i].time) {
-                                entry.pop = listShort[i].pop;
-                                entry.s06 = listShort[i].s06;
-                                entry.tmn = listShort[i].tmn;
-                                entry.tmx = listShort[i].tmx;
-                            }
-                        })
-                    } else {
-                        item.date = listShort[i].date;
-                        item.time = listShort[i].time;
-                        item.pop = listShort[i].pop;
-                        item.pty = listShort[i].pty;
-                        item.r06 = listShort[i].r06;
-                        item.reh = listShort[i].reh;
-                        item.s06 = listShort[i].s06;
-                        item.sky = listShort[i].sky;
-                        item.t3h = listShort[i].t3h;
-                        item.tmn = listShort[i].tmn;
-                        item.tmx = listShort[i].tmx;
-
-                        resultList.push(item);
+                    if(listShort[i].date === requestTime.date && listShort[i].time === requestTime.time){
+                        // 현재시간 보다 이전의 데이터는 16개만 보내주기 위해서...
+                        popCount = i - 16;
                     }
+
+                    item.date = listShort[i].date;
+                    item.time = listShort[i].time;
+                    item.pop = listShort[i].pop;
+                    item.pty = listShort[i].pty;
+                    item.r06 = listShort[i].r06;
+                    item.reh = listShort[i].reh;
+                    item.s06 = listShort[i].s06;
+                    item.sky = listShort[i].sky;
+                    item.t3h = listShort[i].t3h;
+                    item.tmn = listShort[i].tmn;
+                    item.tmx = listShort[i].tmx;
+                    for(var j = 0 ; j < tempList.length ; j++) {
+                        if ((tempList[j].date === listShort[i].date) && (tempList[j].time === listShort[i].time)) {
+                            item.date = tempList[j].date;
+                            item.time = tempList[j].time;
+                            item.pty = tempList[j].pty;
+                            item.r06 = tempList[j].r06;
+                            item.reh = tempList[j].reh;
+                            item.sky = tempList[j].sky;
+                            item.t3h = tempList[j].t3h;
+                            break;
+                        }
+                    }
+                    resultList.push(item);
+                }
+
+                if(popCount > 0){
+                    resultList = resultList.slice((popCount-1), resultList.length);
                 }
 
                 //log.info(resultList);
@@ -620,9 +624,44 @@ var getCurrent = function(req, res, next){
             /********************/
             try{
                 var listCurrent = result.mData.data.current;
+                var listShort = result.mData.data.short;
+                var nowDate = getCurrentTimeValue(+9);
+                var acceptedDate = getCurrentTimeValue(+6);
+                var shortDate = getTimeValue();
+                var currentItem = listCurrent[listCurrent.length - 1];
+                var resultItem = {};
+
+                if((nowDate.date !== currentItem.date) ||
+                    (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
+                    // 데이터가 없다면 3시간 예보 데이터 사용.
+                    for(var i=0 ; i<listShort.length ; i++){
+                        if(shortDate.date === listShort[i].date && shortDate.time === listShort[i].time){
+                            resultItem.date = listShort[i].date;
+                            resultItem.time = listShort[i].time;
+                            resultItem.mx = listShort[i].mx;
+                            resultItem.my = listShort[i].my;
+                            resultItem.t1h = listShort[i].t3h;
+                            resultItem.rn1 = listShort[i].r06;
+                            resultItem.sky = listShort[i].sky;
+                            resultItem.uuu = listShort[i].uuu;
+                            resultItem.vvv = listShort[i].vvv;
+                            resultItem.reh = listShort[i].reh;
+                            resultItem.pty = listShort[i].pty;
+                            resultItem.lgt = 0;
+                            resultItem.vec = listShort[i].vec;
+                            resultItem.wsd = listShort[i].wsd;
+                            break;
+                        }
+                    }
+
+                }else{
+                    // 현재 시간으로 넣어준
+                    resultItem = currentItem;
+                }
+                resultItem.time = nowDate.time;
 
                 //log.info(listCurrent);
-                req.current = listCurrent[listCurrent.length - 1];
+                req.current = resultItem;
                 next();
             }
             catch(e){
@@ -647,9 +686,44 @@ var getCurrent = function(req, res, next){
             /********************/
             try{
                 var listCurrent = result.mData.data.current;
+                var listShort = result.mData.data.short;
+                var nowDate = getCurrentTimeValue(+9);
+                var acceptedDate = getCurrentTimeValue(+6);
+                var shortDate = getTimeValue();
+                var currentItem = listCurrent[listCurrent.length - 1];
+                var resultItem = {};
+
+                if((nowDate.date !== currentItem.date) ||
+                    (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
+                    // 데이터가 없다면 3시간 예보 데이터 사용.
+                    for(var i=0 ; i<listShort.length ; i++){
+                        if(shortDate.date === listShort[i].date && shortDate.time === listShort[i].time){
+                            resultItem.date = listShort[i].date;
+                            resultItem.time = listShort[i].time;
+                            resultItem.mx = listShort[i].mx;
+                            resultItem.my = listShort[i].my;
+                            resultItem.t1h = listShort[i].t3h;
+                            resultItem.rn1 = listShort[i].r06;
+                            resultItem.sky = listShort[i].sky;
+                            resultItem.uuu = listShort[i].uuu;
+                            resultItem.vvv = listShort[i].vvv;
+                            resultItem.reh = listShort[i].reh;
+                            resultItem.pty = listShort[i].pty;
+                            resultItem.lgt = 0;
+                            resultItem.vec = listShort[i].vec;
+                            resultItem.wsd = listShort[i].wsd;
+                            break;
+                        }
+                    }
+
+                }else{
+                    // 현재 시간으로 넣어준
+                    resultItem = currentItem;
+                }
+                resultItem.time = nowDate.time;
 
                 //log.info(listCurrent);
-                req.current = listCurrent[listCurrent.length - 1];
+                req.current = resultItem;
                 next();
             }
             catch(e){
