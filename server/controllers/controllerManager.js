@@ -62,6 +62,9 @@ Manager.prototype.makeTownlist = function(list){
                 midTemp: [],
                 midSea: []
             }
+        },
+        midData:{
+
         }
     };
 
@@ -236,6 +239,24 @@ Manager.prototype.setShortData = function(coord, dataList){
     return this;
 };
 
+Manager.prototype.setShortestData = function(coord, dataList){
+    var self = this;
+
+    self.weatherDb.forEach(function(data){
+        if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
+            dataList.forEach(function(item){
+                data.mData.data.shortest.push(JSON.parse(JSON.stringify(item)));
+            });
+
+            if(data.mData.data.shortest.length > 60){
+                for(var i = 0 ; i < data.mData.data.shortest.length - 60 ; i++){
+                    data.mData.data.shortest.shift();
+                }
+            }
+        }
+    });
+};
+
 Manager.prototype.setCurrentData = function(coord, dataList){
     var self = this;
 
@@ -310,7 +331,7 @@ Manager.prototype.getTownShortData = function(baseTime){
      */
     if(parseInt(time) < 300){
         var temp = self.getWorldTime(baseTime - 24);
-        dateString.date = temp.slice(0.8);
+        dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
     else if(parseInt(time) < 600) {
@@ -465,15 +486,7 @@ Manager.prototype.getTownShortestData = function(){
     //log.info(hour, minute);
 
     if(parseInt(minute) <= 30){
-        if(parseInt(hour) > 0){
-            var temp = (parseInt(hour) - 1);
-            dateString.time = temp.toString() + '30';
-        }
-        else{
-            currentDate = self.getWorldTime(-15);
-            dateString.date = currentDate.slice(0.8);
-            dateString.time = '2330';
-        }
+        dateString.time = hour + '00';
     }
     else{
         dateString.time = hour + '30';
@@ -493,23 +506,53 @@ Manager.prototype.getTownShortestData = function(){
     }
     key = listKey.keyString.cert_key;
     /***************************************************/
-    town.getCoord(function(err, listTownDb){
+
+    if(config.db.mode === 'ram'){
+        log.info('+++ GET SHORTEST : ', self.coordDb.length);
+
+        /**************************************************
+         * TEST CODE
+         ***************************************************/
+        //var index = this.currentCount % 100;
+        //this.currentCount++;
+        //var dataList = config.mData.data.current.slice(index, index+1);
+
         var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function(err, dataList){
+        collectShortInfo.requestData(self.coordDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function (err, dataList) {
 
             log.info('shortest data receive completed : %d\n', dataList.length);
 
-            //log.info(dataList);
-            //log.info(dataList[0]);
-            for(var i in dataList){
-                for(var j in dataList[i].data){
-                    log.info(dataList[i].data[j]);
+            for (var i = 0; i < self.coordDb.length; i++) {
+                if (Array.isArray(dataList[i].data)) {
+                    self.setShortestData(self.coordDb[i], dataList[i].data);
                 }
-            }
 
-            // TODO: Store data to DB.
+                /**************************************************
+                 * TEST CODE
+                 ***************************************************/
+                //self.setCurrentData(self.coordDb[i], dataList);
+            }
         });
-    });
+    }
+    else{
+        town.getCoord(function(err, listTownDb){
+            var collectShortInfo = new collectTown();
+            collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function(err, dataList){
+
+                log.info('shortest data receive completed : %d\n', dataList.length);
+
+                //log.info(dataList);
+                //log.info(dataList[0]);
+                for(var i in dataList){
+                    for(var j in dataList[i].data){
+                        log.info(dataList[i].data[j]);
+                    }
+                }
+
+                // TODO: Store data to DB.
+            });
+        });
+    }
 };
 
 Manager.prototype.getTownCurrentData = function(){
@@ -618,8 +661,9 @@ Manager.prototype.startTownData = function(){
         if(times > 3){
             clearInterval(loop);
         }
-    }, 3* 60 * 1000);
+    }, 3 * 1000);
 
+    self.getTownShortestData();
     self.getTownCurrentData();
 
     // get short forecast once every three hours.
@@ -630,14 +674,13 @@ Manager.prototype.startTownData = function(){
 
     }, self.TIME_PERIOD.TOWN_SHORT);
 
-    /*
+
     // get shortest forecast once every hours.
     self.loopTownShortestID = setInterval(function(){
         "use strict";
 
         self.getTownShortestData();
     }, self.TIME_PERIOD.TOWN_SHORTEST);
-    */
 
     // get shortest forecast once every hours.
     self.loopTownCurrentID = setInterval(function(){

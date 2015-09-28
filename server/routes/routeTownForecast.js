@@ -14,8 +14,25 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
+function getShortestTimeValue(gmt){
+    var timeFunction = manager;
+    var currentDate = timeFunction.getWorldTime(gmt);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: ''
+    };
+    var nowTime = parseInt(currentDate.slice(10,12));
+
+    if(nowTime >= 30){
+        dateString.time = currentDate.slice(8, 10) + '30';
+    }
+    else{
+        dateString.time = currentDate.slice(8, 10) + '00';
+    }
+    return dateString;
+}
+
 function getCurrentTimeValue(gmt){
-    var i=0;
     var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(gmt);
     var dateString = {
@@ -546,7 +563,38 @@ var getShortest = function(req, res, next){
     log.info('>', meta);
 
     if(config.db.mode === 'ram'){
-        next();
+        manager.getWeatherDb(regionName, cityName, townName, function(err, result){
+            if(err){
+                if(err){
+                    log.error('> getShortest : failed to get data from DB');
+                    log.error(meta);
+                    return;
+                }
+            }
+            /********************
+             * TEST DATA
+             ********************/
+            //result = config;
+            /********************/
+            log.info('get shortest data');
+            try{
+                var listShortest = result.mData.data.shortest;
+                var nowDate = getShortestTimeValue(+9);
+                var resultItem = {};
+
+                resultItem = listShortest[listShortest.length - 1];
+                resultItem.date = nowDate.date;
+                resultItem.time = nowDate.time;
+
+                //log.info(listShortest);
+                req.shortest = resultItem;
+                next();
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
     }
     else{
         dbForecast.getData(regionName, cityName, townName, function(err, result){
