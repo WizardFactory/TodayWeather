@@ -319,11 +319,20 @@ angular.module('starter.controllers', [])
                 console.log("Fail to split full address="+fullAddress);
                 return "";
             }
-            if (parsedAddress[1].slice(-1) === '도') {
+            if (parsedAddress.length === 5) {
+                //대한민국, 경기도, 성남시, 분당구, 수내동
                 parsedAddress.splice(0, 2);
             }
-            else if (parsedAddress[1].slice(-1) === '시') {
+            else if (parsedAddress.length === 4) {
+                //대한민국, 서울특별시, 송파구, 잠실동
                 parsedAddress.splice(0, 1);
+            }
+            else if (parsedAddress.length === 3) {
+                //대한민국,세종특별자치시, 금난면,
+                parsedAddress.splice(0, 1);
+            }
+            else {
+                console.log('Fail to get shorten from ='+fullAddress);
             }
             parsedAddress.splice(1, 1);
             parsedAddress.splice(2, 1);
@@ -344,16 +353,23 @@ angular.module('starter.controllers', [])
             //var url = 'https://todayweather-wizardfactory.rhcloud.com/town';
 
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
-                return callback(error);
+                return callback(new Error("addressArray is NOT array"));
             }
 
-            if (addressArray[1].slice(-1) === '시') {
-                url += '/'+addressArray[1]+'/'+addressArray[2]+'/'+addressArray[3];
-            }
-            else {
+            if (addressArray.length === 5) {
                 url += '/'+addressArray[1]+'/'+addressArray[2]+addressArray[3]+'/'+addressArray[4];
             }
-            console.log(url);
+            else if (addressArray.length === 4) {
+                url += '/'+addressArray[1]+'/'+addressArray[2]+'/'+addressArray[3];
+            }
+            else if (addressArray.length === 3) {
+                url += '/'+addressArray[1]+'/'+addressArray[1]+'/'+addressArray[2];
+            }
+            else {
+                var err = new Error("Fail to parse address array="+addressArray.toString());
+                console.log(err);
+                return callback(err);
+            }
 
             $http({method: 'GET', url: url})
                 .success(function(data) {
@@ -383,7 +399,11 @@ angular.module('starter.controllers', [])
                 enableHighAccuracy: false,
                 timeout : 5000
             }).then(function(position) {
-                    callback(undefined, position.coords.latitude, position.coords.longitude);
+                    //경기도,광주시,오포읍,37.36340556,127.2307667
+                    //callback(undefined, 37.363, 127.230);
+                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                    //callback(undefined, 36.51, 127.259);
+                    //callback(undefined, position.coords.latitude, position.coords.longitude);
 
                 }, function (error) {
                     console.log(error);
@@ -407,14 +427,16 @@ angular.module('starter.controllers', [])
             var length = 0;
             results.forEach(function (result) {
                 var lastChar = result.formatted_address.slice(-1);
-                if (lastChar === '동')  {
+                if (lastChar === '동' || lastChar === '읍' || lastChar === '면')  {
                     if(length < result.formatted_address.length) {
                         dongAddress = result.formatted_address;
                         length = result.formatted_address.length;
                     }
                 }
             });
-
+            if (dongAddress.length === 0) {
+                console.log("Fail to find index of dong from="+results);
+            }
             return dongAddress;
         }
 
@@ -431,6 +453,10 @@ angular.module('starter.controllers', [])
                 success(function (data) {
                     if (data.status === 'OK') {
                         var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                        if (!address || address.length === 0) {
+                            return callback(new Error("Fail to find dong address from "+data.results));
+                        }
+
                         console.log(address);
                         callback(undefined, address);
                     }
@@ -517,7 +543,6 @@ angular.module('starter.controllers', [])
 
             getCurrentPosition(function(error, lat, long) {
                 if (error) {
-                    console.log(error);
                     showAlert("에러", "현재 위치를 찾을 수 없습니다.");
                     return callback(error);
                 }
@@ -528,6 +553,7 @@ angular.module('starter.controllers', [])
 
                 getAddressFromGeolocation(lat, long, function (error, newFullAddress) {
                     if (error) {
+                        showAlert("에러", "현재 위치에 대한 정보를 찾을 수 없습니다.");
                         return callback(error);
                     }
 
