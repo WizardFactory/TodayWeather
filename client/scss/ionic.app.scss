@@ -205,7 +205,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   width: 60px;
 }
 
-/* chart style */
+/* time chart style */
 .line-today {
   stroke: #ffffff;
   stroke-width: 2px;
@@ -254,9 +254,11 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   font-size: 20px;
 }
 
-.circle-hidden, .text-hidden{
+.circle-hidden, .text-hidden {
   visibility: hidden;
 }
+
+/* day chart style */
 
 //iphone 4
 @media only screen and (min-device-width: 320px)
@@ -460,8 +462,15 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .main-content {
   width: 100%;
   height: 100%;
-  background-color: #22a1db;
   color: white;
+}
+
+.main-content.short-forcast {
+  background-color: #22a1db;
+}
+
+.main-content.mid-forcast {
+  background-color: #0fbe96;
 }
 //
 //.scroll-content {
