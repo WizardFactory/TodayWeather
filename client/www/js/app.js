@@ -103,7 +103,7 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
     })
-    .directive('ngTempChart', function() {
+    .directive('ngShortChart', function() {
         return {
             restrict: 'A',
             transclude: true,
@@ -112,11 +112,11 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                     width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
                     height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
 
-                var svg = d3.select(iElement[0]).append("svg")
-                    .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                var svg = d3.select(iElement[0]).append('svg')
+                    .attr('width', width + margin.left + margin.right)
+                    .attr('height', height + margin.top + margin.bottom)
+                    .append('g')
+                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
                 var x = d3.scale.ordinal()
                     .rangeBands([width, 0]);
@@ -128,7 +128,7 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                     .defined(function (d) {
                         return d.value.t3h != '';
                     })
-                    .interpolate("linear")
+                    .interpolate('linear')
                     .x(function (d, i) {
                         return x.rangeBand() * i + x.rangeBand() / 2;
                     })
@@ -136,18 +136,18 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                         return y(d.value.t3h);
                     });
 
-                scope.$watch('temp', function (newVal) {
+                scope.$watch('timeChart', function (newVal) {
                     if (newVal) {
-                        var column = scope.temp;
+                        var data = scope.timeChart;
 
-                        x.domain(d3.range(scope.temp[0].values.length));
+                        x.domain(d3.range(data[0].values.length));
                         y.domain([
-                            d3.min(column, function (c) {
+                            d3.min(data, function (c) {
                                 return d3.min(c.values, function (v) {
                                     return v.value.t3h;
                                 });
                             }),
-                            d3.max(column, function (c) {
+                            d3.max(data, function (c) {
                                 return d3.max(c.values, function (v) {
                                     return v.value.t3h;
                                 });
@@ -156,87 +156,87 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
 
                         var xAxis = d3.svg.axis()
                             .scale(x)
-                            .orient("bottom");
+                            .orient('bottom');
 
                         var yAxis = d3.svg.axis()
                             .scale(y)
-                            .orient("left");
+                            .orient('left');
 
-                        var group = svg.selectAll(".line_group")
-                            .data(column);
+                        var group = svg.selectAll('.line-group')
+                            .data(data);
 
                         var group_enter = group.enter()
-                            .append("g")
-                            .attr("class", "line_group");
+                            .append('g')
+                            .attr('class', 'line-group');
 
                         // draw line
-                        group_enter.append("path")
-                            .attr("class", function(d) { return "line line-"+d.name; })
-                            .attr("d", function(d) { return line(d.values); });
+                        group_enter.append('path')
+                            .attr('class', function(d) { return 'line line-'+d.name; })
+                            .attr('d', function(d) { return line(d.values); });
 
                         // update line
                         group.select('.line')
-                            .attr("d", function(d) { return line(d.values); });
+                            .attr('d', function(d) { return line(d.values); });
 
                         // draw point
-                        var point = group_enter.append("g")
-                            .attr("class", "line-point");
+                        var point = group_enter.append('g')
+                            .attr('class', 'line-point');
 
                         point.selectAll('circle')
                             .data(function(d) { return d.values; })
                             .enter().append('circle')
-                            .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("cy", function(d) { return y(d.value.t3h); })
-                            .attr("r", function(d, i) {
+                            .attr('cx', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
+                            .attr('cy', function(d) { return y(d.value.t3h); })
+                            .attr('r', function(d, i) {
                                 if (i === 8) {
                                     return 5;
                                 }
                                 return 2;
                             })
-                            .attr("class", function(d, i) {
+                            .attr('class', function(d, i) {
                                 if (i === 8) {
-                                    return "circle-"+d.name+"-current";
+                                    return 'circle-'+d.name+'-current';
                                 }
-                                return "circle-"+d.name;
+                                return 'circle-'+d.name;
                             });
 
                         // update point
                         group.select('.line-point')
                             .selectAll('circle')
                             .data(function(d) { return d.values; })
-                            .attr("cx", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("cy", function(d) { return y(d.value.t3h); });
+                            .attr('cx', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
+                            .attr('cy', function(d) { return y(d.value.t3h); });
 
                         // draw value
                         var value = group_enter.append('g')
-                            .attr('class','line-value');
+                            .attr('class', 'line-value');
 
                         value.selectAll('text')
                             .data(function(d) { return d.values; })
                             .enter().append('text')
-                            .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("y", function(d) { return y(d.value.t3h); })
+                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
+                            .attr('y', function(d) { return y(d.value.t3h); })
                             .attr('dy', -10)
-                            .attr("text-anchor", "middle")
+                            .attr('text-anchor', 'middle')
                             .text(function(d) {
-                                if (d.name === "today" && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
-                                    return (d.value.tmn | d.value.tmx) + "˚";
+                                if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
+                                    return (d.value.tmn | d.value.tmx) + '˚';
                                 }
-                                return "";
+                                return '';
                             })
-                            .attr("class", function(d, i) { return "text-today"; });
+                            .attr('class', function(d, i) { return 'text-today'; });
 
                         // update value
                         group.select('.line-value')
                             .selectAll('text')
                             .data(function(d) { return d.values; })
-                            .attr("x", function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr("y", function(d) { return y(d.value.t3h); })
+                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
+                            .attr('y', function(d) { return y(d.value.t3h); })
                             .text(function(d) {
-                                if (d.name === "today" && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
-                                    return (d.value.tmn | d.value.tmx) + "˚";
+                                if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
+                                    return (d.value.tmn | d.value.tmx) + '˚';
                                 }
-                                return "";
+                                return '';
                             });
                     }
                 });

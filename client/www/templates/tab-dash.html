@@ -5,7 +5,7 @@
                 refreshing-text="업데이트 중"
                 on-refresh="doRefresh()">
         </ion-refresher>
-        <div class="main-content">
+        <div class="main-content" ng-class="{'short-forcast':shortForecast===true, 'mid-forcast':shortForecast===false}">
             <div class="row row-no-padding" style="height: 5%;">
                 <p class="top-time">
                     {{currentTimeString}}
@@ -45,12 +45,12 @@
                     <div class="row row-no-padding" style="height: 7%;"></div>
                 </div>
             </div>
-            <div class="row row-no-padding" style="height: 61%;">
+            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===true" ng-click="shortForecast=!shortForecast">
                 <ion-scroll delegate-handle="chart" zooming="false" direction="x" has-bouncing="false"
                                     scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col chart" style="padding: 0; height: 100%;">
                         <div class="row row-no-padding" style="height: 53%;">
-                            <div ng-temp-chart style="width: 100%; height: 100%"></div>
+                            <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
                         <div class="row row-no-padding" style="height: 47%;">
                             <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
@@ -77,6 +77,21 @@
                                 </div>
                                 <div class="row row-no-padding" style="height: 1%;"></div>
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                            </div>
+                        </div>
+                    </div>
+                </ion-scroll>
+            </div>
+            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===false" ng-click="shortForecast=!shortForecast">
+                <ion-scroll delegate-handle="chart" zooming="false" direction="x" has-bouncing="false"
+                                    scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col chart" style="padding: 0; height: 100%;">
+                        <div class="row row-no-padding" style="height: 53%;">
+                            <div ng-mid-chart style="width: 100%; height: 100%"></div>
+                        </div>
+                        <div class="row row-no-padding" style="height: 47%;">
+                            <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
+                                <!-- Add Day Table -->
                             </div>
                         </div>
                     </div>
