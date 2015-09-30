@@ -325,7 +325,7 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
                 * If you want to know this, turn off comment below.
                 */
                  //log.info(result);
-                 //log.info(result.response);
+                 //log.info('> ', result.response);
                  //log.info(result.response.header[0]);
                  //log.info(result.response.header[0].resultCode[0]);
                  //log.info(result.response.body[0]);
@@ -714,16 +714,270 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     }
 };
 
-CollectData.prototype.organizeLandData = function(index, listData){
-    /* 추후 구현 */
+CollectData.prototype.organizeLandData = function(index, listData, options){
+    var self = this;
+    var i = 0;
+    var listItem = listData.response.body[0].items[0].item;
+    var listResult = [];
+
+    //log.info('currentData count : ' + listItem.length);
+    //log.info(listItem);
+
+    try{
+        var result = {};
+        var template = {
+            date: options.date,
+            time: options.time,
+            regId: 0, /* 예보 구역 코드 */
+            wf3Am: '', /* 3일 후 오전 날씨 예보 */
+            wf3Pm: '', /* 3일 후 오후 날씨 예보 */
+            wf4Am: '', /* 4일 후 오전날씨 예보 */
+            wf4Pm: '', /* 4일 후 오후 날씨 예보 */
+            wf5Am: '', /* 5일 후 오전 날씨 예보 */
+            wf5Pm: '', /* 5일 후 오후 날씨 예보 */
+            wf6Am: '', /* 6일 후 오전 날씨 예보 */
+            wf6Pm: '', /* 6일 후 오후 날씨 예보 */
+            wf7Am: '', /* 7일 후 오전 날씨 예보 */
+            wf7Pm: '', /* 7일 후 오후 날씨 예보 */
+            wf8: '', /* 8일 후 날씨 예보 */
+            wf9: '', /* 9일 후 날씨 예보 */
+            wf10: '' /* 10일 후 날씨 예보 */
+        };
+
+        listItem.forEach(function(item, i){
+            if(item.regId === undefined){
+                log.error('There is no data');
+                return;
+            }
+
+            result = template;
+            result.regId = item.regId;
+            result.wf3Am = item.wf3Am;
+            result.wf3Pm = item.wf3Pm;
+            result.wf4Am = item.wf4Am;
+            result.wf4Pm = item.wf4Pm;
+            result.wf5Am = item.wf5Am;
+            result.wf5Pm = item.wf5Pm;
+            result.wf6Am = item.wf6Am;
+            result.wf6Pm = item.wf6Pm;
+            result.wf7Am = item.wf7Am;
+            result.wf7Pm = item.wf7Pm;
+            result.wf8 = item.wf8;
+            result.wf9 = item.wf9;
+            result.wf10 = item.wf10;
+
+            var insertItem = JSON.parse(JSON.stringify(result));
+            listResult.push(insertItem);
+        });
+
+
+        //log.info('result count : ', listResult.length);
+        //for(i=0 ; i<listResult.length ; i++){
+        //    log.info(listResult[i]);
+        //}
+
+        self.emit('recvData', index, listResult);
+    }
+    catch(e){
+        log.error('Error!! organizeCurrentData : failed data organized');
+    }
 };
 
-CollectData.prototype.organizeTempData = function(index, listData){
-    /* 추후 구현 */
+CollectData.prototype.organizeTempData = function(index, listData, options){
+    var self = this;
+    var i = 0;
+    var listItem = listData.response.body[0].items[0].item;
+    var listResult = [];
+
+    //log.info('currentData count : ' + listItem.length);
+    //log.info(listItem);
+
+    try{
+        var result = {};
+        var template = {
+            date: options.date,
+            time: options.time,
+            regId: 0, /* 예보 구역 코드 */
+            taMin3: -100, /* 3일 후 예상 최저 기온 */
+            taMax3: -100, /* 3일 후 예상 최고 기온 */
+            taMin4: -100, /* 4일 후 예상 최저 기온 */
+            taMax4: -100, /* 4일 후 예상 최고 기온 */
+            taMin5: -100, /* 5일 후 예상 최저 기온 */
+            taMax5: -100, /* 5일 후 예상 최고 기온 */
+            taMin6: -100, /* 6일 후 예상 최저 기온 */
+            taMax6: -100, /* 6일 후 예상 최고 기온 */
+            taMin7: -100, /* 7일 후 예상 최저 기온 */
+            taMax7: -100, /* 7일 후 예상 최고 기온 */
+            taMin8: -100, /* 8일 후 예상 최저 기온 */
+            taMax8: -100, /* 8일 후 예상 최고 기온 */
+            taMin9: -100, /* 9일 후 예상 최저 기온 */
+            taMax9: -100, /* 9일 후 예상 최고 기온 */
+            taMin10: -100, /* 10일 후 예상 최저 기온 */
+            taMax10: -100 /* 10일 후 예상 최고 기온 */
+        };
+
+        listItem.forEach(function(item, i){
+            if(item.regId === undefined){
+                log.error('There is no data');
+                return;
+            }
+
+            result = template;
+            result.regId = item.regId;
+            result.taMin3 = parseInt(item.taMin3);
+            result.taMax3 = parseInt(item.taMax3);
+            result.taMin4 = parseInt(item.taMin4);
+            result.taMax4 = parseInt(item.taMax4);
+            result.taMin5 = parseInt(item.taMin5);
+            result.taMax5 = parseInt(item.taMax5);
+            result.taMin6 = parseInt(item.taMin6);
+            result.taMax6 = parseInt(item.taMax6);
+            result.taMin7 = parseInt(item.taMin7);
+            result.taMax7 = parseInt(item.taMax7);
+            result.taMin8 = parseInt(item.taMin8);
+            result.taMax8 = parseInt(item.taMax8);
+            result.taMin9 = parseInt(item.taMin9);
+            result.taMax9 = parseInt(item.taMax9);
+            result.taMin10 = parseInt(item.taMin10);
+            result.taMax10 = parseInt(item.taMax10);
+
+            var insertItem = JSON.parse(JSON.stringify(result));
+            listResult.push(insertItem);
+        });
+
+
+        //log.info('result count : ', listResult.length);
+        //for(i=0 ; i<listResult.length ; i++){
+        //    log.info(listResult[i]);
+        //}
+
+        self.emit('recvData', index, listResult);
+    }
+    catch(e){
+        log.error('Error!! organizeCurrentData : failed data organized');
+    }
 };
 
-CollectData.prototype.organizeSeaData = function(index, listData){
-    /* 추후 구현 */
+CollectData.prototype.organizeSeaData = function(index, listData, options){
+    var self = this;
+    var i = 0;
+    var listItem = listData.response.body[0].items[0].item;
+    var listResult = [];
+
+    //log.info('currentData count : ' + listItem.length);
+    //log.info(listItem);
+
+    try{
+        var result = {};
+        var template = {
+            date: options.date,
+            time: options.time,
+            regId: 0, /* 예보 구역 코드 */
+            wf3Am: '', /* 3일 후 오전 날씨 예보 */
+            wf3Pm: '', /* 3일 후 오후 날씨 예보 */
+            wf4Am: '', /* 4일 후 오전날씨 예보 */
+            wf4Pm: '', /* 4일 후 오후 날씨 예보 */
+            wf5Am: '', /* 5일 후 오전 날씨 예보 */
+            wf5Pm: '', /* 5일 후 오후 날씨 예보 */
+            wf6Am: '', /* 6일 후 오전 날씨 예보 */
+            wf6Pm: '', /* 6일 후 오후 날씨 예보 */
+            wf7Am: '', /* 7일 후 오전 날씨 예보 */
+            wf7Pm: '', /* 7일 후 오후 날씨 예보 */
+            wf8: '', /* 8일 후 날씨 예보 */
+            wf9: '', /* 9일 후 날씨 예보 */
+            wf10: '', /* 10일 후 날씨 예보 */
+            wh3AAm: -100, /* 3일 후 오전 최저 예상 파고(m) */
+            wh3APm: -100, /* 3일 후 오후 최저 예상 파고(m) */
+            wh3BAm: -100, /* 3일 후 오전 최고 예상 파고(m) */
+            wh3BPm: -100, /* 3일 후 오후 최고 예상 파고(m) */
+            wh4AAm: -100, /* 4일 후 오전 최저 예상 파고(m) */
+            wh4APm: -100, /* 4일 후 오후 최저 예상 파고(m) */
+            wh4BAm: -100, /* 4일 후 오전 최고 예상 파고(m) */
+            wh4BPm: -100, /* 4일 후 오후 최고 예상 파고(m) */
+            wh5AAm: -100, /* 5일 후 오전 최저 예상 파고(m) */
+            wh5APm: -100, /* 5일 후 오후 최저 예상 파고(m) */
+            wh5BAm: -100, /* 5일 후 오전 최고 예상 파고(m) */
+            wh5BPm: -100, /* 5일 후 오후 최고 예상 파고(m) */
+            wh6AAm: -100, /* 6일 후 오전 최저 예상 파고(m) */
+            wh6APm: -100, /* 6일 후 오후 최저 예상 파고(m) */
+            wh6BAm: -100, /* 6일 후 오전 최고 예상 파고(m) */
+            wh6BPm: -100, /* 6일 후 오후 최고 예상 파고(m) */
+            wh7AAm: -100, /* 7일 후 오전 최저 예상 파고(m) */
+            wh7APm: -100, /* 7일 후 오후 최저 예상 파고(m) */
+            wh7BAm: -100, /* 7일 후 오전 최고 예상 파고(m) */
+            wh7BPm: -100, /* 7일 후 오후 최고 예상 파고(m) */
+            wh8A: -100, /* 8일 후 최저 예상 파고(m) */
+            wh8B: -100, /* 8일 후 최고 예상 파고(m) */
+            wh9A: -100, /* 9일 후 최저 예상 파고(m) */
+            wh9B: -100, /* 9일 후 최고 예상 파고(m) */
+            wh10A: -100, /* 10일 후 최저 예상 파고(m) */
+            wh10B: -100 /* 10일 후 최고 예상 파고(m) */
+        };
+
+        listItem.forEach(function(item, i){
+            if(item.regId === undefined){
+                log.error('There is no data');
+                return;
+            }
+
+            result = template;
+            result.regId = item.regId;
+            result.wf3Am = item.wf3Am;
+            result.wf3Pm = item.wf3Pm;
+            result.wf4Am = item.wf4Am;
+            result.wf4Pm = item.wf4Pm;
+            result.wf5Am = item.wf5Am;
+            result.wf5Pm = item.wf5Pm;
+            result.wf6Am = item.wf6Am;
+            result.wf6Pm = item.wf6Pm;
+            result.wf7Am = item.wf7Am;
+            result.wf7Pm = item.wf7Pm;
+            result.wf8 = item.wf8;
+            result.wf9 = item.wf9;
+            result.wf10 = item.wf10;
+
+            result.wh3AAm = parseInt(item.wh3AAm);
+            result.wh3APm = parseInt(item.wh3APm);
+            result.wh3BAm = parseInt(item.wh3BAm);
+            result.wh3BPm = parseInt(item.wh3BPm);
+            result.wh4AAm = parseInt(item.wh3AAm);
+            result.wh4APm = parseInt(item.wh3APm);
+            result.wh4BAm = parseInt(item.wh3BAm);
+            result.wh4BPm = parseInt(item.wh3BPm);
+            result.wh5AAm = parseInt(item.wh3AAm);
+            result.wh5APm = parseInt(item.wh3APm);
+            result.wh5BAm = parseInt(item.wh3BAm);
+            result.wh5BPm = parseInt(item.wh3BPm);
+            result.wh6AAm = parseInt(item.wh3AAm);
+            result.wh6APm = parseInt(item.wh3APm);
+            result.wh6BAm = parseInt(item.wh3BAm);
+            result.wh6BPm = parseInt(item.wh3BPm);
+            result.wh7AAm = parseInt(item.wh3AAm);
+            result.wh7APm = parseInt(item.wh3APm);
+            result.wh7BAm = parseInt(item.wh3BAm);
+            result.wh7BPm = parseInt(item.wh3BPm);
+            result.wh8A = parseInt(item.wh8A);
+            result.wh8B = parseInt(item.wh8B);
+            result.wh9A = parseInt(item.wh9A);
+            result.wh9B = parseInt(item.wh9B);
+            result.wh10A = parseInt(item.wh10A);
+            result.wh10B = parseInt(item.wh10B);
+
+            var insertItem = JSON.parse(JSON.stringify(result));
+            listResult.push(insertItem);
+        });
+
+
+        //log.info('result count : ', listResult.length);
+        //for(i=0 ; i<listResult.length ; i++){
+        //    log.info(listResult[i]);
+        //}
+
+        self.emit('recvData', index, listResult);
+    }
+    catch(e){
+        log.error('Error!! organizeCurrentData : failed data organized');
+    }
 };
 
 CollectData.prototype.requestData = function(srcList, dataType, key, date, time, callback){
