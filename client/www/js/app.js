@@ -174,17 +174,19 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                             .attr('class', function(d) { return 'line line-'+d.name; })
                             .attr('d', function(d) { return line(d.values); });
 
-                        // update line
                         group.select('.line')
                             .attr('d', function(d) { return line(d.values); });
 
                         // draw point
-                        var point = group_enter.append('g')
-                            .attr('class', 'line-point');
-
-                        point.selectAll('circle')
+                        group_enter.append('g')
+                            .attr('class', 'line-point')
+                            .selectAll('circle')
                             .data(function(d) { return d.values; })
-                            .enter().append('circle')
+                            .enter().append('circle');
+
+                        group.select('.line-point')
+                            .selectAll('circle')
+                            .data(function(d) { return d.values; })
                             .attr('cx', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr('cy', function(d) { return y(d.value.t3h); })
                             .attr('r', function(d, i) {
@@ -200,20 +202,16 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                                 return 'circle-'+d.name;
                             });
 
-                        // update point
-                        group.select('.line-point')
-                            .selectAll('circle')
-                            .data(function(d) { return d.values; })
-                            .attr('cx', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('cy', function(d) { return y(d.value.t3h); });
-
                         // draw value
-                        var value = group_enter.append('g')
-                            .attr('class', 'line-value');
-
-                        value.selectAll('text')
+                        group_enter.append('g')
+                            .attr('class', 'line-value')
+                            .selectAll('text')
                             .data(function(d) { return d.values; })
-                            .enter().append('text')
+                            .enter().append('text');
+
+                        group.select('.line-value')
+                            .selectAll('text')
+                            .data(function(d) { return d.values; })
                             .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
                             .attr('y', function(d) { return y(d.value.t3h); })
                             .attr('dy', -10)
@@ -225,19 +223,124 @@ angular.module('starter', ['ionic','ionic.service.core','ionic.service.analytics
                                 return '';
                             })
                             .attr('class', function(d, i) { return 'text-today'; });
+                    }
+                });
+            }
+        };
+    })
+    .directive('ngMidChart', function() {
+        return {
+            restrict: 'A',
+            transclude: true,
+            link: function (scope, iElement) {
+                var margin = {top: 30, right: 0, bottom: 30, left: 0},
+                    width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
+                    height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
 
-                        // update value
-                        group.select('.line-value')
+                var svg = d3.select(iElement[0]).append('svg')
+                    .attr('width', width + margin.left + margin.right)
+                    .attr('height', height + margin.top + margin.bottom)
+                    .append('g')
+                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+                var x = d3.scale.ordinal()
+                    .rangeBands([0, width]);
+
+                var y = d3.scale.linear()
+                    .range([height, 0]);
+
+                scope.$watch('dayChart', function (newVal) {
+                    if (newVal) {
+                        var data = scope.dayChart;
+
+                        x.domain(d3.range(data[0].values.length));
+                        y.domain([
+                            d3.min(data[0].values, function (c) { return c.tmn; }),
+                            d3.max(data[0].values, function (c) { return c.tmx; })
+                        ]).nice();
+
+                        var xAxis = d3.svg.axis()
+                            .scale(x)
+                            .orient('bottom');
+
+                        var yAxis = d3.svg.axis()
+                            .scale(y)
+                            .orient('left');
+
+                        // draw bar
+                        var group = svg.selectAll('.bar-group')
+                            .data(data);
+
+                        group.enter()
+                            .append('g')
+                            .attr('class', 'bar-group')
+                            .selectAll('rect')
+                            .data(function(d) { return d.values; })
+                            .enter().append('rect');
+
+                        group.selectAll('rect')
+                            .data(function(d) { return d.values; })
+                            .attr('class', 'rect')
+                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2 - 1; })
+                            .attr('width', 2)
+                            .attr('y', function(d) { return y(d.tmx); })
+                            .attr('height', function(d) {
+                                return y(d.tmn) - y(d.tmx);
+                            });
+
+                        // draw max value
+                        var maxValue = svg.selectAll('.bar-max-value')
+                            .data(data);
+
+                        maxValue.enter()
+                            .append('g')
+                            .attr('class', 'bar-max-value')
                             .selectAll('text')
                             .data(function(d) { return d.values; })
+                            .enter().append('text');
+
+                        maxValue.selectAll('text')
+                            .data(function(d) { return d.values; })
+                            .attr('class', 'text')
                             .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('y', function(d) { return y(d.value.t3h); })
-                            .text(function(d) {
-                                if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
-                                    return (d.value.tmn | d.value.tmx) + '˚';
-                                }
-                                return '';
-                            });
+                            .attr('y', function(d) { return y(d.tmx); })
+                            .attr('dy', -10)
+                            .attr('text-anchor', 'middle')
+                            .text(function(d) { return d.tmx + '˚'; })
+                            .attr('class', 'text-today');
+
+                        // draw min value
+                        var minValue = svg.selectAll('.bar-min-value')
+                            .data(data);
+
+                        minValue.enter()
+                            .append('g')
+                            .attr('class', 'bar-min-value')
+                            .selectAll('text')
+                            .data(function(d) { return d.values; })
+                            .enter().append('text');
+
+                        minValue.selectAll('text')
+                            .data(function(d) { return d.values; })
+                            .attr('class', 'text')
+                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
+                            .attr('y', function(d) { return y(d.tmn); })
+                            .attr('dy', 20)
+                            .attr('text-anchor', 'middle')
+                            .text(function(d) { return d.tmn + '˚'; })
+                            .attr('class', 'text-today');
+
+                        // draw point
+                        var circle = svg.selectAll('circle')
+                            .data(data)
+                            .enter().append('circle');
+
+                        svg.selectAll('circle')
+                            .data(data)
+                            .attr('class', 'circle circle-today-current')
+                            .attr('cx', function(d, i) { return x.rangeBand() * 7 + x.rangeBand() / 2; })
+                            .attr('cy', function(d) { return y(d.temp); })
+                            .attr('r', 5);
                     }
                 });
             }
