@@ -662,7 +662,7 @@ var getCurrent = function(req, res, next){
                 if(err){
                     log.error('> getShortest : failed to get data from DB');
                     log.error(meta);
-                    return;
+                    next();
                 }
             }
             /********************
@@ -798,7 +798,180 @@ var getCurrent = function(req, res, next){
     /****************************************************************************/
 };
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent], function(req, res) {
+var getMid = function(req, res, next){
+    var meta = {};
+
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+
+    meta.method = 'getMid';
+    meta.region = regionName;
+    meta.city = cityName;
+
+    log.info('>', meta);
+
+    if(config.db.mode === 'ram'){
+        manager.getMidDb(regionName, cityName, function(err, result){
+            if(err){
+                if(err){
+                    log.error('> getMid : failed to get data from DB');
+                    log.error(meta);
+                    next();
+                }
+            }
+            try{
+                log.info('> Mid DATA : ', result);
+                req.midData = result;
+                next();
+
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
+    else{
+        next();
+    }
+};
+
+var getRegionSummary = function(req, res, next){
+    var meta = {};
+    var regionName = req.params.region;
+
+    meta.method = 'getRegionSummary';
+    meta.region = regionName;
+
+    log.info('>', meta);
+
+    if(config.db.mode === 'ram'){
+        manager.getRegionSummary(regionName, function(err, result){
+            if(err){
+                if(err){
+                    log.error('> getRegionSummary : failed to get data from DB');
+                    log.error(meta);
+                    next();
+                }
+            }
+            try{
+                log.info('> getRegionSummary DATA : ', result);
+                req.midData = result;
+                next();
+
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
+    else{
+        next();
+    }
+};
+
+var getSummary = function(req, res, next){
+    var meta = {};
+
+    meta.method = 'getSummary';
+
+    log.info('>', meta);
+
+    if(config.db.mode === 'ram'){
+        manager.getSummary(function(err, result){
+            if(err){
+                if(err){
+                    log.error('> getSummary : failed to get data from DB');
+                    log.error(meta);
+                    next();
+                }
+            }
+            try{
+                log.info('> getSummary DATA : ', result);
+                req.summary = result;
+                next();
+
+            }
+            catch(e){
+                log.error('ERROE>>', meta);
+                next('route');
+            }
+        });
+    }
+    else{
+        next();
+    }
+};
+
+router.get('/', [getSummary], function(req, res) {
+    var meta = {};
+
+    var result = {};
+
+    meta.method = '/';
+
+    log.info('##', meta);
+
+    if(req.summary){
+        result.summary = req.summary;
+    }
+
+    result.usage = [
+        '/{도,특별시,광역시} : response summarized weather information on matched region',
+        '/{도,특별시,광역시}/{시,군,구} : response summarized weather information on matched city',
+        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍} : response weather data for all three types such as short, shortest, current',
+        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/short : response only short information',
+        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/shortest : response only shortest information',
+        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/current : response only current information'
+    ];
+    res.json(result);
+});
+
+router.get('/:region', [getRegionSummary], function(req, res) {
+    var meta = {};
+
+    var result = {};
+    var regionName = req.params.region;
+
+    meta.method = '/:region';
+    meta.region = regionName;
+
+    log.info('##', meta);
+
+    result.regionName = regionName;
+
+    if(req.midData){
+        result.midData = req.midData;
+    }
+
+    res.json(result);
+});
+
+router.get('/:region/:city', [getMid], function(req, res) {
+    var meta = {};
+
+    var result = {};
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+
+    meta.method = '/:region/:city';
+    meta.region = regionName;
+    meta.city = cityName;
+
+    log.info('##', meta);
+
+    result.regionName = regionName;
+    result.cityName = cityName;
+
+    if(req.midData){
+        result.midData = req.midData;
+    }
+
+    res.json(result);
+});
+
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -825,6 +998,9 @@ router.get('/:region/:city/:town', [getShort, getShortest, getCurrent], function
     }
     if(req.current){
         result.current = req.current;
+    }
+    if(req.midData){
+        result.midData = req.midData;
     }
 
     res.json(result);
@@ -907,18 +1083,5 @@ router.get('/:region/:city/:town/current', getCurrent, function(req, res) {
     res.json(result);
 });
 
-router.get('/', function(req, res){
-    var result = {};
-
-    result.usage = [
-        '/{도,특별시,광역시} : response summarized weather information on matched region',
-        '/{도,특별시,광역시}/{시,군,구} : response summarized weather information on matched city',
-        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍} : response weather data for all three types such as short, shortest, current',
-        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/short : response only short information',
-        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/shortest : response only shortest information',
-        '/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/current : response only current information'
-    ];
-    res.json(result);
-});
 
 module.exports = router;

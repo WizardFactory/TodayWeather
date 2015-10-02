@@ -17,7 +17,11 @@ function Manager(){
     self.TIME_PERIOD = {
         TOWN_SHORT: (1000*60*60*3),
         TOWN_SHORTEST: (1000*60*60),
-        TOWN_CURRENT: (1000*60*60)
+        TOWN_CURRENT: (1000*60*60),
+        MID_FORECAST: (1000*60*60*12),
+        MID_LAND: (1000*60*60*12),
+        MID_TEMP: (1000*60*60*12),
+        MID_SEA: (1000*60*60*12)
     };
 
     /****************************************************************************
@@ -37,6 +41,13 @@ Manager.prototype.makeTownlist = function(list){
     var self = this;
     self.weatherDb = [];
     self.coordDb = [];
+    self.midForecast = {
+        midForecast: [],
+        midLand: [],
+        midTemp: [],
+        midSea: []
+    };
+    self.codeTable = [];
 
     var weatherData = {
         town: {
@@ -56,15 +67,8 @@ Manager.prototype.makeTownlist = function(list){
             data: {
                 current: [],
                 short: [],
-                shortest: [],
-                midForecast: [],
-                midLand: [],
-                midTemp: [],
-                midSea: []
+                shortest: []
             }
-        },
-        midData:{
-
         }
     };
 
@@ -121,13 +125,43 @@ Manager.prototype.makeTownlist = function(list){
 
     self.count = 0;
     self.currentCount = 0;
-
     //self.coordDb.forEach(function(item, i) {
     //    log.info(item);
     //});
     //self.weatherDb.forEach(function(item, i) {
     //    log.info(item);
     //});
+
+    self.codeList = fs.readFileSync('./utils/data/region.csv').toString().split('\n');
+    self.codeList.forEach(function(line){
+        var codeItem = {
+            first: '',
+            second: '',
+            regionName: '',
+            pointNumber: '',
+            cityCode : ''
+        };
+        line.split(',').forEach(function(item, i){
+            if(i === 0){
+                codeItem.first = item;
+            }else if(i===1){
+                codeItem.second = item;
+            }else if(i===2){
+                codeItem.regionName = item;
+            }else if(i===3){
+                codeItem.pointNumber = item;
+            }else if(i===4){
+                codeItem.cityCode = item;
+
+                self.codeTable.push(JSON.parse(JSON.stringify(codeItem)));
+            }
+        });
+    });
+
+    log.info('code table coutn : ', self.codeTable.length);
+    self.codeTable.forEach(function(item){
+        log.info(item);
+    });
 };
 
 Manager.prototype.getWeatherDb = function(region, city, town, cb){
@@ -148,6 +182,148 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
     if(cb !== undefined){
         cb(err, self.weatherDb[index]);
     }
+};
+
+Manager.prototype.getSummary = function(cb){
+    var self = this;
+
+    var err = 0;
+    var i=0;
+    var result = {};
+
+    log.info('getSummary');
+    for(i=0 ; i<self.midForecast.midForecast.length ; i++){
+        if('108' === self.midForecast.midForecast[i].data[0].pointNumber){
+            result = self.midForecast.midForecast[i].data[0];
+            break;
+        }
+    }
+
+    log.info(result);
+    if(cb != undefined){
+        cb(err, result);
+    }
+};
+
+Manager.prototype.getRegionSummary = function(region, cb){
+    var self = this;
+    var result = {
+        forecast:{}
+    };
+    var err = 0;
+    var currentCode = {};
+    var areaCode = '';
+
+    log.info('> getRegionSummary : ', region);
+
+    // Get Code data
+    for(var i=0 ; i<self.codeTable.length ; i++){
+        if(self.codeTable[i].first === region){
+            currentCode = self.codeTable[i];
+            break;
+        }
+    }
+    if(i >= self.codeTable.length){
+        return {};
+    }
+    // find forecast data matched with code
+    log.info('> pointNumber : ', currentCode.pointNumber);
+    for(i=0 ; i<self.midForecast.midForecast.length ; i++){
+        log.info('point number : ', self.midForecast.midForecast[i].data[0].pointNumber);
+        if(currentCode.pointNumber === self.midForecast.midForecast[i].data[0].pointNumber){
+            result.forecast = self.midForecast.midForecast[i].data[0];
+            break;
+        }
+    }
+
+    if(cb != undefined){
+        cb(err, result);
+    }
+
+};
+
+Manager.prototype.getMidDb = function(region, city, cb){
+    var self = this;
+    var result = {
+        forecast:{},
+        land: {},
+        temp: {}
+    };
+    var err = 0;
+    var currentCode = {};
+    var areaCode = '';
+    var i=0;
+
+    city = city.slice(0,3);
+    log.info('> getMidDb : ', region, city);
+    log.info(self.midForecast.midLand[0].data[0].regId);
+    // Get Code data
+    for(i=0 ; i<self.codeTable.length ; i++){
+        if(self.codeTable[i].first === region){
+            // 0~7번까지는 특별시 혹은 광역시
+            if(i<7){
+                currentCode = self.codeTable[i];
+                break;
+            }
+            else {
+                if(self.codeTable[i].second === city){
+                    currentCode = self.codeTable[i];
+                    break;
+                }
+            }
+        }
+    }
+    if(i >= self.codeTable.length){
+        return {};
+    }
+
+    // find forecast data matched with code
+    log.info('> pointNumber : ', currentCode.pointNumber);
+    for(i=0 ; i<self.midForecast.midForecast.length ; i++){
+        log.info('point number : ', self.midForecast.midForecast[i].data[0].pointNumber);
+        if(currentCode.pointNumber === self.midForecast.midForecast[i].data[0].pointNumber){
+            result.forecast = self.midForecast.midForecast[i].data[0];
+            break;
+        }
+    }
+
+    // find land forecast data matched with code
+    areaCode = currentCode.cityCode.slice(0, 3);
+    if(areaCode === '11B'){
+        areaCode = '11B00000';
+    }
+    else if(areaCode === '21F'){
+        areaCode = '11F10000';
+    }
+    else{
+        areaCode = currentCode.cityCode.slice(0, 4) + '0000';
+    }
+
+    log.info('> area Code : ', areaCode);
+    for(i=0 ; i<self.midForecast.midLand.length ; i++){
+        log.info('reg id : ', self.midForecast.midLand[i].data[0].regId);
+        if(areaCode === self.midForecast.midLand[i].data[0].regId){
+            result.land = self.midForecast.midLand[i].data[0];
+            break;
+        }
+    }
+
+    // find temperature data matched with code
+    log.info('> city Code : ', currentCode.cityCode);
+    for(i=0 ; i<self.midForecast.midTemp.length ; i++){
+        log.info('reg id : ', self.midForecast.midTemp[i].data[0].regId);
+        if(currentCode.cityCode === self.midForecast.midTemp[i].data[0].regId){
+            result.temp = self.midForecast.midTemp[i].data[0];
+            break;
+        }
+    }
+
+    log.info(result);
+
+    if(cb !== undefined){
+        cb(err, result);
+    }
+    return result;
 };
 
 Manager.prototype.setShortData = function(coord, dataList){
@@ -181,8 +357,8 @@ Manager.prototype.setShortData = function(coord, dataList){
                     }
                 }
 
-                log.info('before len : ', listShort.length);
-                log.info('first date&time : ', firstDate, firstTime);
+                //log.info('before len : ', listShort.length);
+                //log.info('first date&time : ', firstDate, firstTime);
 
                 popCount = 0;
                 if(listShort.length > 0){
@@ -206,7 +382,7 @@ Manager.prototype.setShortData = function(coord, dataList){
                     }
                 }
 
-                log.info('before pop : ', popCount);
+                //log.info('before pop : ', popCount);
                 for(i=0 ; i<popCount ; i++){
                     data.mData.data.short.pop();
                 }
@@ -217,7 +393,7 @@ Manager.prototype.setShortData = function(coord, dataList){
                     }
                 }
 
-                log.info('after pop : ', data.mData.data.short.length);
+                //log.info('after pop : ', data.mData.data.short.length);
                 for(i=0 ; i< dataList.length ; i++){
                     //data.mData.data.short.push(JSON.parse(JSON.stringify(dataList[i])));
                     data.mData.data.short.push(dataList[i]);
@@ -485,8 +661,10 @@ Manager.prototype.getTownShortestData = function(){
     //log.info(currentDate);
     //log.info(hour, minute);
 
-    if(parseInt(minute) <= 30){
-        dateString.time = hour + '00';
+    if(parseInt(minute) <= 40){
+        currentDate = self.getWorldTime(+8);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = currentDate.slice(8,10) + '30';
     }
     else{
         dateString.time = hour + '30';
@@ -640,6 +818,239 @@ Manager.prototype.getTownCurrentData = function(){
     }
 };
 
+// get breif middle range forecast data from data.org by using collectTownForecast.js
+Manager.prototype.getMidForecast = function(){
+    var self = this;
+
+    var currentDate = self.getWorldTime(+9);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(-15);
+        dateString.date = currentDate(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    var key = listKey.keyString.cert_key;
+
+    log.info('+++ GET MID Forecast : ', dateString);
+
+    if(config.db.mode === 'ram'){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listPointNumber, collectShortInfo.DATA_TYPE.MID_FORECAST, key, dateString.date, dateString.time, function(err, dataList){
+            if(err){
+                log.error("middle forecst data recdive faile");
+                return;
+            }
+            log.info('mid forecast data receive completed : %d\n', dataList.length);
+
+            //log.info(dataList);
+            log.info(dataList[0]);
+            for(var i in dataList){
+                for(var j in dataList[i].data){
+                    log.info(i, j, ' : ', dataList[i].data[j]);
+                }
+            }
+            self.midForecast.midForecast = [];
+            //self.midForecast.midForecast = dataList;
+            dataList.forEach(function(item){
+                self.midForecast.midForecast.push(JSON.parse(JSON.stringify(item)));
+            });
+
+            if(self.midForecast.midForecast.length > 20){
+                self.midForecast.midForecast.shift();
+            }
+        });
+    } else{
+        // TODO : get data and save to DB
+    }
+
+};
+
+// get middle range LAND forecast data from data.org by using collectTownForecast.js
+Manager.prototype.getMidLand = function(){
+    var self = this;
+
+    var currentDate = self.getWorldTime(+9);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(-15);
+        dateString.date = currentDate(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    var key = listKey.keyString.cert_key;
+
+    log.info('+++ GET MID LAND Forecast : ', dateString);
+
+    if(config.db.mode === 'ram'){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listAreaCode, collectShortInfo.DATA_TYPE.MID_LAND, key, dateString.date, dateString.time, function(err, dataList){
+            if(err){
+                log.error("middle land forecst data recdive faile");
+                return;
+            }
+            log.info('mid Land forecast data receive completed : %d\n', dataList.length);
+
+            //log.info(dataList);
+            log.info('H' + dataList[0]);
+            for(var i in dataList){
+                for(var j in dataList[i].data){
+                    log.info(i, j, ' : ', dataList[i].data[j]);
+                }
+            }
+            self.midForecast.midLand = [];
+            //self.midForecast.midLand = dataList;
+            dataList.forEach(function(item){
+                self.midForecast.midLand.push(JSON.parse(JSON.stringify(item)));
+            });
+
+            if(self.midForecast.midLand.length > 20){
+                self.midForecast.midLand.shift();
+            }
+        });
+    } else{
+        //
+    }
+
+};
+
+// get middle range temperature data from data.org by using collectTownForecast.js
+Manager.prototype.getMidTemp = function(){
+    var self = this;
+
+    var currentDate = self.getWorldTime(+9);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(-15);
+        dateString.date = currentDate(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    var key = listKey.keyString.cert_key;
+
+    log.info('+++ GET MID TEMP Forecast : ', dateString);
+
+    if(config.db.mode === 'ram'){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listCityCode, collectShortInfo.DATA_TYPE.MID_TEMP, key, dateString.date, dateString.time, function(err, dataList){
+            if(err){
+                log.error("middle TEMP forecst data recdive faile");
+                return;
+            }
+            log.info('mid TEMP forecast data receive completed : %d\n', dataList.length);
+
+            //log.info(dataList);
+            log.info(dataList[0]);
+            for(var i in dataList){
+                for(var j in dataList[i].data){
+                    log.info(i, j, ' : ', dataList[i].data[j]);
+                }
+            }
+
+            self.midForecast.midTemp = [];
+            //self.midForecast.midTemp = dataList;
+            dataList.forEach(function(item){
+                self.midForecast.midTemp.push(JSON.parse(JSON.stringify(item)));
+            });
+
+            if(self.midForecast.midTemp.length > 20){
+                self.midForecast.midTemp.shift();
+            }
+        });
+    } else{
+        //
+    }
+
+};
+
+// get middle range sea forecast data from data.org by using collectTownForecast.js
+Manager.prototype.getMidSea = function(){
+    var self = this;
+
+    var currentDate = self.getWorldTime(+9);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(-15);
+        dateString.date = currentDate(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    var key = listKey.keyString.cert_key;
+
+    log.info('+++ GET MID SEA Forecast : ', dateString);
+
+    if(config.db.mode === 'ram'){
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listSeaCode, collectShortInfo.DATA_TYPE.MID_SEA, key, dateString.date, dateString.time, function(err, dataList){
+            if(err){
+                log.error("middle SEA forecst data recdive faile");
+                return;
+            }
+            log.info('mid SEA forecast data receive completed : %d\n', dataList.length);
+
+            //log.info(dataList);
+            //log.info(dataList[0]);
+            //for(var i in dataList){
+            //    for(var j in dataList[i].data){
+            //        log.info(dataList[i].data[j]);
+            //    }
+            //}
+
+            //self.midForecast.midSea = dataList;
+            dataList.forEach(function(item){
+                self.midForecast.midSea.push(JSON.parse(JSON.stringify(item)));
+            });
+
+            if(self.midForecast.midSea.length > 20){
+                self.midForecast.midSea.shift();
+            }
+        });
+    } else{
+        //
+    }
+
+};
+
 Manager.prototype.startTownData = function(){
     var self = this;
 
@@ -649,7 +1060,12 @@ Manager.prototype.startTownData = function(){
     //self.getTownShortData(+3);
     //self.getTownShortData(+9);
     //self.getTownShortestData();
+    var periodValue = 3000;
     var times = 0;
+    if(config.mode === 'openshift'){
+        periodValue = 5 * 60 * 1000;
+    }
+
     var loop = setInterval(function(){
         if(times === 3){
             self.getTownShortData(9);
@@ -661,10 +1077,15 @@ Manager.prototype.startTownData = function(){
         if(times > 3){
             clearInterval(loop);
         }
-    }, 3 * 1000);
+    }, periodValue);
 
     self.getTownShortestData();
     self.getTownCurrentData();
+
+    self.getMidForecast();
+    self.getMidLand();
+    self.getMidTemp();
+    self.getMidSea();
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
@@ -688,6 +1109,34 @@ Manager.prototype.startTownData = function(){
 
         self.getTownCurrentData();
     }, self.TIME_PERIOD.TOWN_CURRENT);
+
+    // get middle range forecast once every 12 hours.
+    self.loopMidForecastID = setInterval(function(){
+        "use strict";
+
+        self.getMidForecast();
+    }, self.TIME_PERIOD.MID_FORECAST);
+
+    // get middle range land forecast once every 12 hours.
+    self.loopMidLandID = setInterval(function(){
+        "use strict";
+
+        self.getMidLand();
+    }, self.TIME_PERIOD.MID_LAND);
+
+    // get middle range temperature once every 12 hours.
+    self.loopMidTempID = setInterval(function(){
+        "use strict";
+
+        self.getMidTemp();
+    }, self.TIME_PERIOD.MID_TEMP);
+
+    // get middle range sea forecast  once every 12 hours.
+    self.loopMidSeaID = setInterval(function(){
+        "use strict";
+
+        self.getMidSea();
+    }, self.TIME_PERIOD.MID_SEA);
 };
 
 Manager.prototype.stopTownData = function(){
@@ -706,6 +1155,26 @@ Manager.prototype.stopTownData = function(){
     if(self.loopTownCurrentID !== undefined){
         clearInterval(self.loopTownCurrentID);
         self.loopTownCurrentID = undefined;
+    }
+
+    if(self.loopMidForecastID !== undefined){
+        clearInterval(self.loopMidForecastID);
+        self.loopMidForecastID = undefined;
+    }
+
+    if(self.loopMidLandID !== undefined){
+        clearInterval(self.loopMidLandID);
+        self.loopMidLandID = undefined;
+    }
+
+    if(self.loopMidTempID !== undefined){
+        clearInterval(self.loopMidTempID);
+        self.loopMidTempID = undefined;
+    }
+
+    if(self.loopMidSeaID !== undefined){
+        clearInterval(self.loopMidSeaID);
+        self.loopMidSeaID = undefined;
     }
 };
 

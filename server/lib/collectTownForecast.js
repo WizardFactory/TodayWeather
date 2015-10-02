@@ -64,30 +64,38 @@ function CollectData(options, callback){
 
     self.listCityCode = Object.freeze(
         [
-            {name: '서울', code: '11B10101'},
-            {name: '인천', code: '11B20201'},
-            {name: '수원', code: '11B20601'},
-            {name: '문산', code: '11B20305'},
-            {name: '춘천', code: '11D10301'},
-            {name: '원주', code: '11D10401'},
-            {name: '강릉', code: '11D20501'},
-            {name: '대전', code: '11C20401'},
-            {name: '서산', code: '11C20101'},
-            {name: '청주', code: '11C10301'},
-            {name: '광주', code: '11F20501'},
-            {name: '여수', code: '11F20401'},
-            {name: '전주', code: '11F10201'},
-            {name: '목포', code: '21F20801'},
-            {name: '부산', code: '11H20201'},
-            {name: '울산', code: '11H20101'},
-            {name: '창원', code: '11H20301'},
-            {name: '대구', code: '11H10701'},
-            {name: '안동', code: '11H10501'},
-            {name: '제주', code: '11G00201'},
-            {name: '서귀포', code: '11G00401'},
-            {name: '세종', code: '11C20404'},
-            {name: '포항', code: '11H10201'},
-            {name: '군산', code: '21F10501'}
+            {name: '서울', code: '11B10101'}, // 서울
+            {name: '인천', code: '11B20201'}, // 경기 서부
+                {name: '수원', code: '11B20601'}, // 경기 남부
+            {name: '문산', code: '11B20305'}, // 경기 북부
+
+            {name: '춘천', code: '11D10301'}, // 강원 서부
+            {name: '원주', code: '11D10401'}, // 강원 남서
+            {name: '강릉', code: '11D20501'}, // 강원 동부
+
+            {name: '대전', code: '11C20401'}, // 충남
+            {name: '서산', code: '11C20101'}, // 충남 서부
+
+            {name: '청주', code: '11C10301'}, // 충북
+            {name: '세종', code: '11C20404'}, // 충북 서부
+
+            {name: '광주', code: '11F20501'}, // 전남 북부
+            {name: '여수', code: '11F20401'}, // 전남 남부
+            {name: '목포', code: '21F20801'}, // 전남 서부
+
+            {name: '군산', code: '21F10501'}, // 전북 서부
+            {name: '전주', code: '11F10201'}, // 전북
+
+            {name: '부산', code: '11H20201'}, // 경남
+            {name: '울산', code: '11H20101'}, // 경남 동부
+            {name: '창원', code: '11H20301'}, // 경남 서부
+
+            {name: '대구', code: '11H10701'}, // 경북
+            {name: '안동', code: '11H10501'}, // 경북 북부
+            {name: '포항', code: '11H10201'}, // 경북 동부
+
+            {name: '제주', code: '11G00201'}, // 제주 북부
+            {name: '서귀포', code: '11G00401'} // 제주 남부
         ]
     );
 
@@ -160,7 +168,7 @@ function CollectData(options, callback){
         }
         else
         {
-            self.recvFailed = false;
+            self.recvFailed = true;
             self.receivedCount++;
 
             log.error('ignore this: ', listIndex);
@@ -697,7 +705,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
                 continue;
             }
             result = template;
-            result.wfsv = item.wfSv;
+            result.wfsv = item.wfSv[0];
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
         }
@@ -751,20 +759,20 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
             }
 
             result = template;
-            result.regId = item.regId;
-            result.wf3Am = item.wf3Am;
-            result.wf3Pm = item.wf3Pm;
-            result.wf4Am = item.wf4Am;
-            result.wf4Pm = item.wf4Pm;
-            result.wf5Am = item.wf5Am;
-            result.wf5Pm = item.wf5Pm;
-            result.wf6Am = item.wf6Am;
-            result.wf6Pm = item.wf6Pm;
-            result.wf7Am = item.wf7Am;
-            result.wf7Pm = item.wf7Pm;
-            result.wf8 = item.wf8;
-            result.wf9 = item.wf9;
-            result.wf10 = item.wf10;
+            result.regId = item.regId[0];
+            result.wf3Am = item.wf3Am[0];
+            result.wf3Pm = item.wf3Pm[0];
+            result.wf4Am = item.wf4Am[0];
+            result.wf4Pm = item.wf4Pm[0];
+            result.wf5Am = item.wf5Am[0];
+            result.wf5Pm = item.wf5Pm[0];
+            result.wf6Am = item.wf6Am[0];
+            result.wf6Pm = item.wf6Pm[0];
+            result.wf7Am = item.wf7Am[0];
+            result.wf7Pm = item.wf7Pm[0];
+            result.wf8 = item.wf8[0];
+            result.wf9 = item.wf9[0];
+            result.wf10 = item.wf10[0];
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -823,23 +831,23 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
             }
 
             result = template;
-            result.regId = item.regId;
-            result.taMin3 = parseInt(item.taMin3);
-            result.taMax3 = parseInt(item.taMax3);
-            result.taMin4 = parseInt(item.taMin4);
-            result.taMax4 = parseInt(item.taMax4);
-            result.taMin5 = parseInt(item.taMin5);
-            result.taMax5 = parseInt(item.taMax5);
-            result.taMin6 = parseInt(item.taMin6);
-            result.taMax6 = parseInt(item.taMax6);
-            result.taMin7 = parseInt(item.taMin7);
-            result.taMax7 = parseInt(item.taMax7);
-            result.taMin8 = parseInt(item.taMin8);
-            result.taMax8 = parseInt(item.taMax8);
-            result.taMin9 = parseInt(item.taMin9);
-            result.taMax9 = parseInt(item.taMax9);
-            result.taMin10 = parseInt(item.taMin10);
-            result.taMax10 = parseInt(item.taMax10);
+            result.regId = item.regId[0];
+            result.taMin3 = parseInt(item.taMin3[0]);
+            result.taMax3 = parseInt(item.taMax3[0]);
+            result.taMin4 = parseInt(item.taMin4[0]);
+            result.taMax4 = parseInt(item.taMax4[0]);
+            result.taMin5 = parseInt(item.taMin5[0]);
+            result.taMax5 = parseInt(item.taMax5[0]);
+            result.taMin6 = parseInt(item.taMin6[0]);
+            result.taMax6 = parseInt(item.taMax6[0]);
+            result.taMin7 = parseInt(item.taMin7[0]);
+            result.taMax7 = parseInt(item.taMax7[0]);
+            result.taMin8 = parseInt(item.taMin8[0]);
+            result.taMax8 = parseInt(item.taMax8[0]);
+            result.taMin9 = parseInt(item.taMin9[0]);
+            result.taMax9 = parseInt(item.taMax9[0]);
+            result.taMin10 = parseInt(item.taMin10[0]);
+            result.taMax10 = parseInt(item.taMax10[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -921,47 +929,47 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             }
 
             result = template;
-            result.regId = item.regId;
-            result.wf3Am = item.wf3Am;
-            result.wf3Pm = item.wf3Pm;
-            result.wf4Am = item.wf4Am;
-            result.wf4Pm = item.wf4Pm;
-            result.wf5Am = item.wf5Am;
-            result.wf5Pm = item.wf5Pm;
-            result.wf6Am = item.wf6Am;
-            result.wf6Pm = item.wf6Pm;
-            result.wf7Am = item.wf7Am;
-            result.wf7Pm = item.wf7Pm;
-            result.wf8 = item.wf8;
-            result.wf9 = item.wf9;
-            result.wf10 = item.wf10;
+            result.regId = item.regId[0];
+            result.wf3Am = item.wf3Am[0];
+            result.wf3Pm = item.wf3Pm[0];
+            result.wf4Am = item.wf4Am[0];
+            result.wf4Pm = item.wf4Pm[0];
+            result.wf5Am = item.wf5Am[0];
+            result.wf5Pm = item.wf5Pm[0];
+            result.wf6Am = item.wf6Am[0];
+            result.wf6Pm = item.wf6Pm[0];
+            result.wf7Am = item.wf7Am[0];
+            result.wf7Pm = item.wf7Pm[0];
+            result.wf8 = item.wf8[0];
+            result.wf9 = item.wf9[0];
+            result.wf10 = item.wf10[0];
 
-            result.wh3AAm = parseInt(item.wh3AAm);
-            result.wh3APm = parseInt(item.wh3APm);
-            result.wh3BAm = parseInt(item.wh3BAm);
-            result.wh3BPm = parseInt(item.wh3BPm);
-            result.wh4AAm = parseInt(item.wh3AAm);
-            result.wh4APm = parseInt(item.wh3APm);
-            result.wh4BAm = parseInt(item.wh3BAm);
-            result.wh4BPm = parseInt(item.wh3BPm);
-            result.wh5AAm = parseInt(item.wh3AAm);
-            result.wh5APm = parseInt(item.wh3APm);
-            result.wh5BAm = parseInt(item.wh3BAm);
-            result.wh5BPm = parseInt(item.wh3BPm);
-            result.wh6AAm = parseInt(item.wh3AAm);
-            result.wh6APm = parseInt(item.wh3APm);
-            result.wh6BAm = parseInt(item.wh3BAm);
-            result.wh6BPm = parseInt(item.wh3BPm);
-            result.wh7AAm = parseInt(item.wh3AAm);
-            result.wh7APm = parseInt(item.wh3APm);
-            result.wh7BAm = parseInt(item.wh3BAm);
-            result.wh7BPm = parseInt(item.wh3BPm);
-            result.wh8A = parseInt(item.wh8A);
-            result.wh8B = parseInt(item.wh8B);
-            result.wh9A = parseInt(item.wh9A);
-            result.wh9B = parseInt(item.wh9B);
-            result.wh10A = parseInt(item.wh10A);
-            result.wh10B = parseInt(item.wh10B);
+            result.wh3AAm = parseInt(item.wh3AAm[0]);
+            result.wh3APm = parseInt(item.wh3APm[0]);
+            result.wh3BAm = parseInt(item.wh3BAm[0]);
+            result.wh3BPm = parseInt(item.wh3BPm[0]);
+            result.wh4AAm = parseInt(item.wh3AAm[0]);
+            result.wh4APm = parseInt(item.wh3APm[0]);
+            result.wh4BAm = parseInt(item.wh3BAm[0]);
+            result.wh4BPm = parseInt(item.wh3BPm[0]);
+            result.wh5AAm = parseInt(item.wh3AAm[0]);
+            result.wh5APm = parseInt(item.wh3APm[0]);
+            result.wh5BAm = parseInt(item.wh3BAm[0]);
+            result.wh5BPm = parseInt(item.wh3BPm[0]);
+            result.wh6AAm = parseInt(item.wh3AAm[0]);
+            result.wh6APm = parseInt(item.wh3APm[0]);
+            result.wh6BAm = parseInt(item.wh3BAm[0]);
+            result.wh6BPm = parseInt(item.wh3BPm[0]);
+            result.wh7AAm = parseInt(item.wh3AAm[0]);
+            result.wh7APm = parseInt(item.wh3APm[0]);
+            result.wh7BAm = parseInt(item.wh3BAm[0]);
+            result.wh7BPm = parseInt(item.wh3BPm[0]);
+            result.wh8A = parseInt(item.wh8A[0]);
+            result.wh8B = parseInt(item.wh8B[0]);
+            result.wh9A = parseInt(item.wh9A[0]);
+            result.wh9B = parseInt(item.wh9B[0]);
+            result.wh10A = parseInt(item.wh10A[0]);
+            result.wh10B = parseInt(item.wh10B[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
