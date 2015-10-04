@@ -111,8 +111,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   width: 40px;
 }
 
-.chart {
+.timeChart {
   width: 1248px; //52px per col
+}
+
+.weeklyChart {
+  width: 676px; //52px per col
 }
 
 .small-time {
@@ -290,8 +294,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 40px;
   }
 
-  .chart {
+  .timeChart {
     width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 689px; //53px per col
   }
 
   .small-time p {
@@ -334,8 +342,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 52px;
   }
 
-  .chart {
+  .timeChart {
     width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 689px; //53px per col
   }
 
   .small-time p {
@@ -374,8 +386,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 58px;
   }
 
-  .chart {
+  .timeChart {
     width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 689px; //53px per col
   }
 
   .small-time p {
@@ -418,8 +434,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 72px;
   }
 
-  .chart {
+  .timeChart {
     width: 1416px; // 59px per col
+  }
+
+  .weeklyChart {
+    width: 767px; //59px per col
   }
 
   .small-time p {
@@ -439,8 +459,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 320px) and (device-height: 640px)
     and (device-aspect-ratio: 320/640)
 {
-  .chart {
+  .timeChart {
     width: 1272px; //53 px per col
+  }
+
+  .weeklyChart {
+    width: 689px; //53px per col
   }
 }
 

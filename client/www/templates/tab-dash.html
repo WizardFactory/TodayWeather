@@ -46,9 +46,9 @@
                 </div>
             </div>
             <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===true" ng-click="shortForecast=!shortForecast">
-                <ion-scroll delegate-handle="chart" zooming="false" direction="x" has-bouncing="false"
+                <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                                     scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col chart" style="padding: 0; height: 100%;">
+                    <div class="col timeChart" style="padding: 0; height: 100%;">
                         <div class="row row-no-padding" style="height: 53%;">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
@@ -83,15 +83,38 @@
                 </ion-scroll>
             </div>
             <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===false" ng-click="shortForecast=!shortForecast">
-                <ion-scroll delegate-handle="chart" zooming="false" direction="x" has-bouncing="false"
+                <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                                     scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col chart" style="padding: 0; height: 100%;">
+                    <div class="col weeklyChart" style="padding: 0; height: 100%;">
                         <div class="row row-no-padding" style="height: 53%;">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
                         </div>
                         <div class="row row-no-padding" style="height: 47%;">
                             <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
-                                <!-- Add Day Table -->
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p> </p>
+                                </div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                                <div class="row row-no-padding" style="height: 3%;"></div>
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p>{{value.week}}</p>
+                                </div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.sky}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.pop}}<small>%</small></p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 2%;"></div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.humidityIcon}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.reh}}<small>%</small></p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 1%;"></div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+
                             </div>
                         </div>
                     </div>
