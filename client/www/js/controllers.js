@@ -4,6 +4,11 @@ angular.module('starter.controllers', [])
                                      $cordovaGeolocation, $timeout, $interval, $http)
     {
         $scope.skipGuide = false;
+        if(typeof(Storage) !== "undefined") {
+            if (localStorage.getItem("skipGuide") !== null) {
+                $scope.skipGuide = localStorage.getItem("skipGuide");
+            }
+        }
         $scope.shortForecast = true;
 
         //String
@@ -822,12 +827,6 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-            if(typeof(Storage) !== "undefined") {
-                if (localStorage.getItem("skipGuide") !== null) {
-                    $scope.skipGuide = localStorage.getItem("skipGuide");
-                }
-            }
-
             //It starts first times
             if (!$scope.skipGuide) {
                 loadGuideDate();
