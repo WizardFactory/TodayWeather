@@ -439,7 +439,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
             midData.dailyData[j].taMin = result.temp.taMin9;
             midData.dailyData[j].taMax = result.temp.taMax9;
         }
-        else if(i = == 7){
+        else if(i === 7){
             midData.dailyData[j].taMin = result.temp.taMin10;
             midData.dailyData[j].taMax = result.temp.taMax10;
         }
