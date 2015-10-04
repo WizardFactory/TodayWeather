@@ -158,10 +158,10 @@ Manager.prototype.makeTownlist = function(list){
         });
     });
 
-    log.info('code table coutn : ', self.codeTable.length);
-    self.codeTable.forEach(function(item){
-        log.info(item);
-    });
+    log.info('code table count : ', self.codeTable.length);
+    //self.codeTable.forEach(function(item){
+    //    log.info(item);
+    //});
 };
 
 Manager.prototype.getWeatherDb = function(region, city, town, cb){
@@ -242,6 +242,15 @@ Manager.prototype.getRegionSummary = function(region, cb){
 
 };
 
+Manager.prototype.getMatchedData = function(code, dataList){
+    for(var i in dataList){
+        if(code === dataList[i].regId){
+            return dataList[i];
+        }
+    }
+    return {};
+};
+
 Manager.prototype.getMidDb = function(region, city, cb){
     var self = this;
     var result = {
@@ -249,6 +258,11 @@ Manager.prototype.getMidDb = function(region, city, cb){
         land: {},
         temp: {}
     };
+    var midData = {
+        forecast: {},
+        dailyData: []
+    };
+
     var err = 0;
     var currentCode = {};
     var areaCode = '';
@@ -282,7 +296,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
     for(i=0 ; i<self.midForecast.midForecast.length ; i++){
         log.info('point number : ', self.midForecast.midForecast[i].data[0].pointNumber);
         if(currentCode.pointNumber === self.midForecast.midForecast[i].data[0].pointNumber){
-            result.forecast = self.midForecast.midForecast[i].data[0];
+            midData.forecast = self.midForecast.midForecast[i].data[0];
             break;
         }
     }
@@ -300,30 +314,181 @@ Manager.prototype.getMidDb = function(region, city, cb){
     }
 
     log.info('> area Code : ', areaCode);
-    for(i=0 ; i<self.midForecast.midLand.length ; i++){
-        log.info('reg id : ', self.midForecast.midLand[i].data[0].regId);
-        if(areaCode === self.midForecast.midLand[i].data[0].regId){
-            result.land = self.midForecast.midLand[i].data[0];
+    // 가장 최근(오늘)데이터를 가져온다
+    var todayData = self.midForecast.midLand[self.midForecast.midLand.length - 1].data;
+    for(i=0 ; i<todayData.length ; i++){
+        //log.info('reg id : ', todayData[i].regId);
+        if(areaCode === todayData[i].regId){
+            result.land = todayData[i];
             break;
+        }
+    }
+
+    for(i=0 ; i<8 ; i++){
+        // 3일 후의 날짜를 계산한 다음 데이터를 가져와서 결과에 넣어 준다
+        var currentDate = self.getWorldTime(9+ 72 + (i * 24));
+        var item = {
+            date: currentDate.slice(0, 8)
+        };
+        if(i===0){
+            item.wfAm = result.land.wf3Am;
+            item.wfPm = result.land.wf3Pm;
+        }else if(i === 1){
+            item.wfAm = result.land.wf4Am;
+            item.wfPm = result.land.wf4Pm;
+        }
+        else if(i === 2){
+            item.wfAm = result.land.wf5Am;
+            item.wfPm = result.land.wf5Pm;
+        }
+        else if(i === 3){
+            item.wfAm = result.land.wf6Am;
+            item.wfPm = result.land.wf6Pm;
+        }
+        else if(i === 4){
+            item.wfAm = result.land.wf7Am;
+            item.wfPm = result.land.wf7Pm;
+        }
+        else if(i === 5){
+            item.wfAm = result.land.wf8;
+            item.wfPm = result.land.wf8;
+        }
+        else if(i === 6){
+            item.wfAm = result.land.wf9;
+            item.wfPm = result.land.wf9;
+        }
+        else if(i === 7){
+            item.wfAm = result.land.wf10;
+            item.wfPm = result.land.wf10;
+        }
+        else{
+            log.error('there is no information');
+        }
+
+        midData.dailyData.push(JSON.parse(JSON.stringify(item)));
+    }
+
+    //log.info('get today data, go next : ', self.midForecast.midLand.length);
+    // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
+    for(i = 11 ; i > 0 ; i--){
+        var currentDate = self.getWorldTime(9 - (i * 24));
+        var targetDate = self.getWorldTime(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
+        var item = {
+            date: targetDate.slice(0, 8)
+        };
+        currentDate = currentDate.slice(0, 8) + '1800';
+
+        //log.info('find previous data : ', currentDate);
+        for(var j=0 in self.midForecast.midLand){
+            if(currentDate === self.midForecast.midLand[j].date){
+                var matchedDay = self.midForecast.midLand[j].data;
+                var matchedData = self.getMatchedData(areaCode, matchedDay);
+
+                item.wfAm = matchedData.wf3Am;
+                item.wfPm = matchedData.wf3Pm;
+                midData.dailyData.push(JSON.parse(JSON.stringify(item)));
+            }
         }
     }
 
     // find temperature data matched with code
     log.info('> city Code : ', currentCode.cityCode);
-    for(i=0 ; i<self.midForecast.midTemp.length ; i++){
-        log.info('reg id : ', self.midForecast.midTemp[i].data[0].regId);
-        if(currentCode.cityCode === self.midForecast.midTemp[i].data[0].regId){
-            result.temp = self.midForecast.midTemp[i].data[0];
+    todayData = self.midForecast.midTemp[self.midForecast.midTemp.length - 1].data;
+    for(i=0 ; i<todayData.length ; i++){
+        //log.info('reg id : ', todayData[i].regId);
+        if(currentCode.cityCode === todayData[i].regId){
+            result.temp = todayData[i];
             break;
         }
     }
 
-    log.info(result);
+    // temp값도 날짜별로 결과 오브젝트에 넣자..
+    for(i=0 ;i < 8 ; i++){
+        var currentDate = self.getWorldTime(9 + 72 + (i * 24));
+        currentDate = currentDate.slice(0, 8);
+        for(var j in midData.dailyData){
+            if(currentDate === midData.dailyData[j].date){
+                break;
+            }
+        }
+
+        if(i===0){
+            midData.dailyData[j].taMin = result.temp.taMin3;
+            midData.dailyData[j].taMax = result.temp.taMax3;
+        }else if(i === 1){
+            midData.dailyData[j].taMin = result.temp.taMin4;
+            midData.dailyData[j].taMax = result.temp.taMax4;
+        }
+        else if(i === 2){
+            midData.dailyData[j].taMin = result.temp.taMin5;
+            midData.dailyData[j].taMax = result.temp.taMax5;
+        }
+        else if(i === 3){
+            midData.dailyData[j].taMin = result.temp.taMin6;
+            midData.dailyData[j].taMax = result.temp.taMax6;
+        }
+        else if(i === 4){
+            midData.dailyData[j].taMin = result.temp.taMin7;
+            midData.dailyData[j].taMax = result.temp.taMax7;
+        }
+        else if(i === 5){
+            midData.dailyData[j].taMin = result.temp.taMin8;
+            midData.dailyData[j].taMax = result.temp.taMax8;
+        }
+        else if(i === 6){
+            midData.dailyData[j].taMin = result.temp.taMin9;
+            midData.dailyData[j].taMax = result.temp.taMax9;
+        }
+        else if(i = == 7){
+            midData.dailyData[j].taMin = result.temp.taMin10;
+            midData.dailyData[j].taMax = result.temp.taMax10;
+        }
+        else{
+            log.error('there is no information');
+        }
+    }
+
+    //log.info('get today data, go next : ', self.midForecast.midTemp.length);
+    // 여기도 land와 마찬가지로 11일 전의 데이터부터 뒤져서 예전 예보 정보를 넣자..
+    for(i = 11 ; i > 0 ; i--){
+        var currentDate = self.getWorldTime(9 - (i * 24));
+        var targetDay = self.getWorldTime(9 + 72 - (i * 24));
+        targetDay = targetDay.slice(0, 8);
+        for(var x in midData.dailyData){
+            if(targetDay === midData.dailyData[x].date){
+                break;
+            }
+        }
+        currentDate = currentDate.slice(0, 8) + '1800';
+        //log.info('find previous data : ', currentDate);
+        for(var j=0 in self.midForecast.midTemp){
+            if(currentDate === self.midForecast.midTemp[j].date){
+                var matchedDay = self.midForecast.midTemp[j].data;
+                var matchedData = self.getMatchedData(currentCode.cityCode, matchedDay);
+
+                midData.dailyData[x].taMin = matchedData.taMin3;
+                midData.dailyData[x].taMax = matchedData.taMax3;
+            }
+        }
+    }
+
+    log.info('result >> ', midData);
+
+    midData.dailyData.sort(function(a, b){
+        if(a.date > b.date){
+            return 1;
+        }
+
+        if(a.date < b.date){
+            return -1;
+        }
+        return 0;
+    });
 
     if(cb !== undefined){
-        cb(err, result);
+        cb(err, midData);
     }
-    return result;
+    return midData;
 };
 
 Manager.prototype.setShortData = function(coord, dataList){
@@ -819,10 +984,10 @@ Manager.prototype.getTownCurrentData = function(){
 };
 
 // get breif middle range forecast data from data.org by using collectTownForecast.js
-Manager.prototype.getMidForecast = function(){
+Manager.prototype.getMidForecast = function(gmt){
     var self = this;
 
-    var currentDate = self.getWorldTime(+9);
+    var currentDate = self.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8,10) + '00'
@@ -830,7 +995,7 @@ Manager.prototype.getMidForecast = function(){
 
     if(parseInt(dateString.time) < 800){
         currentDate = self.getWorldTime(-15);
-        dateString.date = currentDate(0, 8);
+        dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
     else if(parseInt(dateString.time) < 2000){
@@ -865,10 +1030,6 @@ Manager.prototype.getMidForecast = function(){
             dataList.forEach(function(item){
                 self.midForecast.midForecast.push(JSON.parse(JSON.stringify(item)));
             });
-
-            if(self.midForecast.midForecast.length > 20){
-                self.midForecast.midForecast.shift();
-            }
         });
     } else{
         // TODO : get data and save to DB
@@ -877,10 +1038,10 @@ Manager.prototype.getMidForecast = function(){
 };
 
 // get middle range LAND forecast data from data.org by using collectTownForecast.js
-Manager.prototype.getMidLand = function(){
+Manager.prototype.getMidLand = function(gmt){
     var self = this;
 
-    var currentDate = self.getWorldTime(+9);
+    var currentDate = self.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8,10) + '00'
@@ -888,13 +1049,20 @@ Manager.prototype.getMidLand = function(){
 
     if(parseInt(dateString.time) < 800){
         currentDate = self.getWorldTime(-15);
-        dateString.date = currentDate(0, 8);
+        dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
     else if(parseInt(dateString.time) < 2000){
         dateString.time = '0600';
     }
     else {
+        dateString.time = '1800';
+    }
+
+    // check wehter today or prevous day
+    var today = self.getWorldTime(9);
+    today = today.slice(0, 8);
+    if(today > dateString.date){
         dateString.time = '1800';
     }
 
@@ -912,21 +1080,33 @@ Manager.prototype.getMidLand = function(){
             log.info('mid Land forecast data receive completed : %d\n', dataList.length);
 
             //log.info(dataList);
-            log.info('H' + dataList[0]);
-            for(var i in dataList){
-                for(var j in dataList[i].data){
-                    log.info(i, j, ' : ', dataList[i].data[j]);
-                }
-            }
-            self.midForecast.midLand = [];
+            //for(var i in dataList){
+            //    for(var j in dataList[i].data){
+            //        log.info(i, j, ' : ', dataList[i].data[j]);
+            //    }
+            //}
+            var dataFormat = {
+                date: dateString.date + dateString.time,
+                data: []
+            };
+            //self.midForecast.midLand = [];
             //self.midForecast.midLand = dataList;
             dataList.forEach(function(item){
-                self.midForecast.midLand.push(JSON.parse(JSON.stringify(item)));
+                dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
+            self.midForecast.midLand.push(dataFormat);
 
-            if(self.midForecast.midLand.length > 20){
+            if(self.midForecast.midLand.length > 26){
                 self.midForecast.midLand.shift();
             }
+
+            //log.info(self.midForecast.midLand);
+            //log.info('### Get LAND : ', self.midForecast.midLand[self.midForecast.midLand.length - 1].date);
+            //for(var i in self.midForecast.midLand){
+            //    for(var j in self.midForecast.midLand[i].data){
+            //        log.info(i,j, ' : ', self.midForecast.midLand[i].data[j]);
+            //    }
+            //}
         });
     } else{
         //
@@ -935,10 +1115,10 @@ Manager.prototype.getMidLand = function(){
 };
 
 // get middle range temperature data from data.org by using collectTownForecast.js
-Manager.prototype.getMidTemp = function(){
+Manager.prototype.getMidTemp = function(gmt){
     var self = this;
 
-    var currentDate = self.getWorldTime(+9);
+    var currentDate = self.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8,10) + '00'
@@ -946,13 +1126,20 @@ Manager.prototype.getMidTemp = function(){
 
     if(parseInt(dateString.time) < 800){
         currentDate = self.getWorldTime(-15);
-        dateString.date = currentDate(0, 8);
+        dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
     else if(parseInt(dateString.time) < 2000){
         dateString.time = '0600';
     }
     else {
+        dateString.time = '1800';
+    }
+
+    // check wehter today or prevous day
+    var today = self.getWorldTime(9);
+    today = today.slice(0, 8);
+    if(today > dateString.date){
         dateString.time = '1800';
     }
 
@@ -970,22 +1157,35 @@ Manager.prototype.getMidTemp = function(){
             log.info('mid TEMP forecast data receive completed : %d\n', dataList.length);
 
             //log.info(dataList);
-            log.info(dataList[0]);
-            for(var i in dataList){
-                for(var j in dataList[i].data){
-                    log.info(i, j, ' : ', dataList[i].data[j]);
-                }
-            }
+            //log.info(dataList[0]);
+            //for(var i in dataList){
+            //    for(var j in dataList[i].data){
+            //        log.info(i, j, ' : ', dataList[i].data[j]);
+            //    }
+            //}
 
-            self.midForecast.midTemp = [];
+            var dataFormat = {
+                date: dateString.date + dateString.time,
+                data: []
+            };
+            //self.midForecast.midTemp = [];
             //self.midForecast.midTemp = dataList;
             dataList.forEach(function(item){
-                self.midForecast.midTemp.push(JSON.parse(JSON.stringify(item)));
+                dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
+            self.midForecast.midTemp.push(dataFormat);
 
-            if(self.midForecast.midTemp.length > 20){
+            if(self.midForecast.midTemp.length > 26){
                 self.midForecast.midTemp.shift();
             }
+
+            //log.info(self.midForecast.midTemp);
+            //log.info('### Get TEMP : ', self.midForecast.midTemp[self.midForecast.midTemp.length - 1].date);
+            //for(var i in self.midForecast.midTemp){
+            //    for(var j in self.midForecast.midTemp[i].data){
+            //        log.info(i,j, ' : ', self.midForecast.midTemp[i].data[j]);
+            //    }
+            //}
         });
     } else{
         //
@@ -994,10 +1194,10 @@ Manager.prototype.getMidTemp = function(){
 };
 
 // get middle range sea forecast data from data.org by using collectTownForecast.js
-Manager.prototype.getMidSea = function(){
+Manager.prototype.getMidSea = function(gmt){
     var self = this;
 
-    var currentDate = self.getWorldTime(+9);
+    var currentDate = self.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8,10) + '00'
@@ -1005,7 +1205,7 @@ Manager.prototype.getMidSea = function(){
 
     if(parseInt(dateString.time) < 800){
         currentDate = self.getWorldTime(-15);
-        dateString.date = currentDate(0, 8);
+        dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
     else if(parseInt(dateString.time) < 2000){
@@ -1036,14 +1236,28 @@ Manager.prototype.getMidSea = function(){
             //    }
             //}
 
+            var dataFormat = {
+                date: dateString.date + dateString.time,
+                data: []
+            };
+            //self.midForecast.midSea = [];
             //self.midForecast.midSea = dataList;
             dataList.forEach(function(item){
-                self.midForecast.midSea.push(JSON.parse(JSON.stringify(item)));
+                dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
+            self.midForecast.midSea.push(dataFormat);
 
-            if(self.midForecast.midSea.length > 20){
+            if(self.midForecast.midSea.length > 26){
                 self.midForecast.midSea.shift();
             }
+
+            //log.info(self.midForecast.midTemp);
+            //log.info('### Get SEA : ', self.midForecast.midSea[self.midForecast.midSea.length - 1].date);
+            //for(var i in self.midForecast.midSea){
+            //    for(var j in self.midForecast.midSea[i].data){
+            //        log.info(i,j, ' : ', self.midForecast.midSea[i].data[j]);
+            //    }
+            //}
         });
     } else{
         //
@@ -1061,9 +1275,12 @@ Manager.prototype.startTownData = function(){
     //self.getTownShortData(+9);
     //self.getTownShortestData();
     var periodValue = 3000;
+    var midPeriod = 3000;
     var times = 0;
+    var midTimes = 11;
     if(config.mode === 'openshift'){
         periodValue = 5 * 60 * 1000;
+        midPeriod = 30 * 1000;
     }
 
     var loop = setInterval(function(){
@@ -1082,10 +1299,18 @@ Manager.prototype.startTownData = function(){
     self.getTownShortestData();
     self.getTownCurrentData();
 
-    self.getMidForecast();
-    self.getMidLand();
-    self.getMidTemp();
-    self.getMidSea();
+    var midLoop = setInterval(function(){
+        self.getMidLand(9 - (midTimes * 24));
+        self.getMidTemp(9 - (midTimes * 24));
+        midTimes-=1;
+
+        if(midTimes < 0 ){
+            clearInterval(midLoop);
+        }
+    }, midPeriod);
+
+    self.getMidForecast(9);
+    self.getMidSea(9);
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
