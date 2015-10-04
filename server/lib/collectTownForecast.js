@@ -397,7 +397,6 @@ CollectData.prototype.organizeShortData = function(index, listData){
     var listResult = [];
 
     //log.info('shortData count : ' + listItem.length);
-    var temperMap = new Map(); // key : date, value : temp { tmn : '', tmx : '' }
 
     try{
         var result = {};
@@ -421,39 +420,6 @@ CollectData.prototype.organizeShortData = function(index, listData){
             vec: -1,    /* 풍향 : 0 , invalid : -1 */
             wsd: -1     /* 풍속 : 1 , invalid : -1 */
         };
-
-        for(i=0 ; i < listItem.length ; i++){
-            var item = listItem[i];
-
-            if((item.fcstDate === undefined)
-                && (item.fcstTime === undefined)
-                && (item.fcstValue === undefined)){
-                log.error('organizeShortData : There is not forecast date');
-                continue;
-            }
-            var temper = {
-                tmn: -50,
-                tmx: -50
-            }
-
-            if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
-                if(temperMap.has(item.fcstDate[0])){
-                    var o = temperMap.get(item.fcstDate[0]);
-                    if(item.fcstTime[0] === '0600'){
-                        if(item.category[0] === 'TMN') o.tmn = parseInt(item.fcstValue[0]);
-                    } else if(item.fcstTime[0] === '1500'){
-                        if(item.category[0] === 'TMX') o.tmx = parseInt(item.fcstValue[0]);
-                    }
-                }else{
-                    if(item.fcstTime[0] === '0600'){
-                        if(item.category[0] === 'TMN') temper.tmn = parseInt(item.fcstValue[0]);
-                    } else if(item.fcstTime[0] === '1500'){
-                        if(item.category[0] === 'TMX') temper.tmx = parseInt(item.fcstValue[0]);
-                    }
-                    temperMap.set(item.fcstDate[0], temper);
-                }
-            }
-        }
 
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
@@ -498,9 +464,8 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 else if(item.category[0] === 'S06') {result.s06 = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'T3H') {result.t3h = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'TMN') {result.tmn = temperMap.get(result.date).tmn;}
-                else if(item.category[0] === 'TMX') {result.tmx = temperMap.get(result.date).tmx;}
-                //else if(item.category[0] === 'TMX') {result.tmx = parseInt(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMN') {result.tmn = parseInt(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMX') {result.tmx = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'UUU') {result.uuu = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'VVV') {result.vvv = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'WAV') {result.wav = parseInt(item.fcstValue[0]);}
