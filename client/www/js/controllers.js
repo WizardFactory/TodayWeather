@@ -745,7 +745,7 @@ angular.module('starter.controllers', [])
                 }
             });
             if (dongAddress.length === 0) {
-                console.log("Fail to find index of dong from="+results);
+                console.log("Fail to find index of dong from="+results[0].formatted_address);
             }
             return dongAddress;
         }
@@ -758,13 +758,13 @@ angular.module('starter.controllers', [])
          */
         function getAddressFromGeolocation(lat, long, callback) {
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
-                        "&sensor=true";
+                        "&sensor=true&language=ko";
             $http({method: 'GET', url: url}).
                 success(function (data) {
                     if (data.status === 'OK') {
                         var address = findDongAddressFromGoogleGeoCodeResults(data.results);
                         if (!address || address.length === 0) {
-                            return callback(new Error("Fail to find dong address from "+data.results));
+                            return callback(new Error("Fail to find dong address from "+data.results[0].formatted_address));
                         }
 
                         console.log(address);
