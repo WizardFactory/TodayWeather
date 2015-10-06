@@ -443,162 +443,179 @@ angular.module('starter.controllers', [])
                 console.log("midData is undefined");
                 midData = {
                     "forecast": {
-                        "date": "20151002",
-                        "time": "0600",
+                        "date": "20151005",
+                        "time": "1800",
                         "pointNumber": "109",
                         "cnt": 0,
-                        "wfsv": "이번 예보기간 전반에는 고기압의 영향으로 대체로 맑겠고, 후반에는 고기압의 가장자리에 들어 구름많겠습니다.     \n기온은 평년(최저기온 : 8~11도, 최고기온 : 20~22도)과 비슷하거나 조금 높겠습니다.\n강수량은 평년(1~3mm)보다 적겠습니다.  \n서해중부해상의 물결은 0.5~2.5m로 일겠습니다."
+                        "wfsv": "기압골의 영향으로 10일에 비가 오겠으며, 그 밖의 날에는 고기압의 가장자리에 들어 가끔 구름많겠습니다.     \n기온은 평년(최저기온 : 7~11도, 최고기온 : 20~22도)과 비슷하겠습니다. \n강수량은 평년(0~3mm)과 비슷하겠습니다.  \n서해중부해상의 물결은 10일과 11일에는 1.0~2.5m로 일겠고, 그 밖의 날은 0.5~2.0m로 일겠습니다."
                     },
-                    "land": {
+                    "dailyData": [{
+                        "date": "20150928",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 15,
+                        "taMax": 28
+                    }, {
+                        "date": "20150929",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 15,
+                        "taMax": 27
+                    }, {
+                        "date": "20150930",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 16,
+                        "taMax": 25
+                    }, {
+                        "date": "20151001",
+                        "wfAm": "흐리고 비",
+                        "wfPm": "흐리고 비",
+                        "taMin": 17,
+                        "taMax": 22
+                    }, {
                         "date": "20151002",
-                        "time": "0600",
-                        "regId": "11B00000",
-                        "wf3Am": "구름조금",
-                        "wf3Pm": "구름많음",
-                        "wf4Am": "구름조금",
-                        "wf4Pm": "맑음",
-                        "wf5Am": "맑음",
-                        "wf5Pm": "구름조금",
-                        "wf6Am": "구름조금",
-                        "wf6Pm": "구름조금",
-                        "wf7Am": "구름많음",
-                        "wf7Pm": "구름많음",
-                        "wf8": "구름많음",
-                        "wf9": "구름많음",
-                        "wf10": "구름많음",
-                        "pf8Am": "구름많음",
-                        "pf8Pm": "구름많음",
-                        "pf7Am": "구름조금",
-                        "pf7Pm": "구름조금",
-                        "pf6Am": "구름조금",
-                        "pf6Pm": "구름조금",
-                        "pf5Am": "구름조금",
-                        "pf5Pm": "구름조금",
-                        "pf4Am": "구름조금",
-                        "pf4Pm": "구름조금",
-                        "pf3Am": "구름많음",
-                        "pf3Pm": "구름많음",
-                        "pf2Am": "흐리고 비",
-                        "pf2Pm": "흐리고 비",
-                        "pf1Am": "구름조금",
-                        "pf1Pm": "구름조금",
-                        "pf0Am": "구름많음",
-                        "pf0Pm": "구름많음",
-                        "wf1Am": "구름조금",
-                        "wf1Pm": "구름조금",
-                        "wf2Am": "구름조금",
-                        "wf2Pm": "구름조금"
-                    },
-                    "temp": {
-                        "date": "20151002",
-                        "time": "0600",
-                        "regId": "11B20601",
-                        "taMin3": 12,
-                        "taMax3": 23,
-                        "taMin4": 12,
-                        "taMax4": 23,
-                        "taMin5": 12,
-                        "taMax5": 23,
-                        "taMin6": 12,
-                        "taMax6": 22,
-                        "taMin7": 12,
-                        "taMax7": 22,
-                        "taMin8": 12,
-                        "taMax8": 23,
-                        "taMin9": 12,
-                        "taMax9": 23,
-                        "taMin10": 12,
-                        "taMax10": 23,
-                        "ptaMin8": 18,
-                        "ptaMax8": 27,
-                        "ptaMin7": 18,
-                        "ptaMax7": 28,
-                        "ptaMin6": 16,
-                        "ptaMax6": 28,
-                        "ptaMin5": 15,
-                        "ptaMax5": 28,
-                        "ptaMin4": 15,
-                        "ptaMax4": 27,
-                        "ptaMin3": 16,
-                        "ptaMax3": 25,
-                        "ptaMin2": 17,
-                        "ptaMax2": 22,
-                        "ptaMin1": 12,
-                        "ptaMax1": 21,
-                        "ptaMin0": 15,
-                        "ptaMax0": 22,
-                        "taMin1": 12,
-                        "taMax1": 22,
-                        "taMin2": 11,
-                        "taMax2": 24
-                    }
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 12,
+                        "taMax": 21
+                    }, {
+                        "date": "20151003",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름조금",
+                        "taMin": 15,
+                        "taMax": 22
+                    }, {
+                        "date": "20151004",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 12,
+                        "taMax": 22
+                    }, {
+                        "date": "20151005",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름많음",
+                        "taMin": 11,
+                        "taMax": 24
+                    }, {
+                        "date": "20151006",
+                        "wfAm": "맑음",
+                        "wfPm": "맑음",
+                        "taMin": 11,
+                        "taMax": 25
+                    }, {
+                        "date": "20151007",
+                        "wfAm": "맑음",
+                        "wfPm": "구름조금",
+                        "taMin": 12,
+                        "taMax": 25
+                    }, {
+                        "date": "20151008",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 13,
+                        "taMax": 23
+                    }, {
+                        "date": "20151009",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 13,
+                        "taMax": 23
+                    }, {
+                        "date": "20151010",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 12,
+                        "taMax": 21
+                    }, {
+                        "date": "20151011",
+                        "wfAm": "구름많고 비",
+                        "wfPm": "흐리고 비",
+                        "taMin": 11,
+                        "taMax": 18
+                    }, {
+                        "date": "20151012",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 10,
+                        "taMax": 19
+                    }, {
+                        "date": "20151013",
+                        "wfAm": "구름많음",
+                        "wfPm": "구름많음",
+                        "taMin": 10,
+                        "taMax": 21
+                    }, {
+                        "date": "20151014",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 10,
+                        "taMax": 21
+                    }, {
+                        "date": "20151015",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 10,
+                        "taMax": 22
+                    }, {
+                        "date": "20151016",
+                        "wfAm": "구름조금",
+                        "wfPm": "구름조금",
+                        "taMin": 10,
+                        "taMax": 22
+                    }]
+                }
+            }
+
+            var tmpDayTable = [];
+            midData.dailyData.forEach(function(dayInfo) {
+                var data = {};
+
+                data.date = dayInfo.date;
+                if (getDiffDays(convertStringToDate(data.date), currentTime) == 0) {
+                    data.week = "오늘";
+                }
+                else {
+                    data.week = dayToString(convertStringToDate(data.date).getDay());
+                }
+
+                var skyAm = convertMidSkyString(dayInfo.wfAm);
+                var skyPm = convertMidSkyString(dayInfo.wfPm);
+                data.sky = getHighPrioritySky(skyAm, skyPm);
+                data.tmx = dayInfo.taMax;
+                data.tmn = dayInfo.taMin;
+                data.humidityIcon = "Humidity-00";
+                tmpDayTable.push(data);
+            });
+
+            console.log(tmpDayTable);
+
+            var index = 0;
+            for (var i=0; i<tmpDayTable.length; i++) {
+                var tmpDate = dailyInfoList[0].date;
+                console.log(tmpDate);
+                if (tmpDayTable[i].date === tmpDate) {
+                    index = i;
+                    break;
                 }
             }
 
             //{week: "목", sky:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
-            var tmpDayTable = [];
             dailyInfoList.forEach(function (dayInfo) {
-                var data = {};
-                if (getDiffDays(convertStringToDate(dayInfo.date), currentTime) == 0) {
-                    data.week = "오늘";
+                var data;
+                if (tmpDayTable[index].date === dayInfo.date) {
+                    data = tmpDayTable[index];
+                    data.sky = dayInfo.sky;
+                    data.pop = dayInfo.pop;
+                    data.reh = dayInfo.reh;
+                    data.humidityIcon = decideHumidityIcon(data.reh);
+                    index++;
                 }
                 else {
-                    data.week = dayToString(convertStringToDate(dayInfo.date).getDay());
+                    console.log("Date was mismatched index:"+index+" date:"+tmpDayTable[index].date+
+                                " dayInfo.date="+dayInfo.date);
                 }
-                data.sky = dayInfo.sky;
-                data.pop = dayInfo.pop;
-                data.reh = dayInfo.reh;
-                data.humidityIcon = decideHumidityIcon(data.reh);
-                data.tmx = dayInfo.tmx;
-                data.tmn = dayInfo.tmn;
-                tmpDayTable.push(data);
             });
-
-            var day = currentTime.getDay() + 2;
-            var skyAm;
-            var skyPm;
-
-            day = (day+1)%7;
-            skyAm = convertMidSkyString(midData.land.wf3Am);
-            skyPm = convertMidSkyString(midData.land.wf3Pm);
-            tmpDayTable.push({week: dayToString(day), sky: getHighPrioritySky(skyAm, skyPm), tmx: midData.temp.taMax3,
-                        tmn: midData.temp.taMin3, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            skyAm = convertMidSkyString(midData.land.wf4Am);
-            skyPm = convertMidSkyString(midData.land.wf4Pm);
-            tmpDayTable.push({week: dayToString(day), sky: getHighPrioritySky(skyAm, skyPm), tmx: midData.temp.taMax4,
-                        tmn: midData.temp.taMin4, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            skyAm = convertMidSkyString(midData.land.wf5Am);
-            skyPm = convertMidSkyString(midData.land.wf5Pm);
-            tmpDayTable.push({week: dayToString(day), sky: getHighPrioritySky(skyAm, skyPm), tmx: midData.temp.taMax5,
-                        tmn: midData.temp.taMin5, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            skyAm = convertMidSkyString(midData.land.wf6Am);
-            skyPm = convertMidSkyString(midData.land.wf6Pm);
-            tmpDayTable.push({week: dayToString(day), sky: getHighPrioritySky(skyAm, skyPm), tmx: midData.temp.taMax6,
-                        tmn: midData.temp.taMin6, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            skyAm = convertMidSkyString(midData.land.wf7Am);
-            skyPm = convertMidSkyString(midData.land.wf7Pm);
-            tmpDayTable.push({week: dayToString(day), sky: getHighPrioritySky(skyAm, skyPm), tmx: midData.temp.taMax7,
-                        tmn: midData.temp.taMin7, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            tmpDayTable.push({week: dayToString(day), sky: convertMidSkyString(midData.land.wf8), tmx: midData.temp.taMax8,
-                        tmn: midData.temp.taMin8, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            tmpDayTable.push({week: dayToString(day), sky: convertMidSkyString(midData.land.wf9), tmx: midData.temp.taMax9,
-                        tmn: midData.temp.taMin9, humidityIcon: "Humidity-00"});
-
-            day = (day+1)%7;
-            tmpDayTable.push({week: dayToString(day), sky: convertMidSkyString(midData.land.wf10), tmx: midData.temp.taMax10,
-                        tmn: midData.temp.taMin10, humidityIcon: "Humidity-00"});
 
             return tmpDayTable;
         }
@@ -707,8 +724,7 @@ angular.module('starter.controllers', [])
          */
         function getCurrentPosition(callback) {
             $cordovaGeolocation.getCurrentPosition({
-                enableHighAccuracy: false,
-                timeout : 5000
+                timeout : 3000
             }).then(function(position) {
                     //경기도,광주시,오포읍,37.36340556,127.2307667
                     //callback(undefined, 37.363, 127.230);
