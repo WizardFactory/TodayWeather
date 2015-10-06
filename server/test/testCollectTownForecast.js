@@ -54,7 +54,38 @@ describe('unit test - get town forecast in lib/collect class', function(){
         log.info(listTown);
     });
 */
-/*
+
+    //it('lib/collect : get towns SHORT info by using XY list', function(done){
+    //    var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //    //var listXY = listTown;
+    //
+    //    var collection = new collect();
+    //    assert.doesNotThrow(function(){
+    //        //collection.getTownData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150815', '0500', function(err, dataList){
+    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.aleckim, '20151005', '0800', function(err, dataList){
+    //            log.info('short data receive completed : %d\n', dataList.length);
+    //
+    //            for(var i in dataList) {
+    //                for (var j in dataList[i].data) {
+    //                    log.info(dataList[i].data[j]);
+    //                }
+    //            }
+    //
+    //            assert.equal(dataList.length, listXY.length, 'check receive count');
+    //
+    //            assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
+    //            assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
+    //            assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
+    //
+    //            assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
+    //            assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
+    //            assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
+    //
+    //            done();
+    //        });
+    //    });
+    //});
+
     it('lib/collect : get towns SHORT info by using XY list', function(done){
         var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
         //var listXY = listTown;
@@ -62,17 +93,49 @@ describe('unit test - get town forecast in lib/collect class', function(){
         var collection = new collect();
         assert.doesNotThrow(function(){
             //collection.getTownData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150815', '0500', function(err, dataList){
-            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.aleckim, '20150908', '0800', function(err, dataList){
+            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.aleckim, '20151005', '0800', function(err, dataList){
                 log.info('short data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
-                for(var i in dataList){
-                    for(var j in dataList[i].data){
-                        log.info(dataList[i].data[j]);
+                //for(var i in dataList){
+                //    for(var j in dataList[i].data){
+                //        log.info(dataList[i].data[j]);
+                //    }
+                //}
+                var temperMap = new Map();
+
+                for(var i = 0 ; i < dataList.length ; i ++){
+                    var itemList = dataList[i].data;
+                    for(var i in itemList){
+                        var item = itemList[i];
+                        if(temperMap.has(item.date)){
+                            var o = temperMap.get(item.date);
+                            if(item.time === '0600') o.tmn = item.tmn;
+                            else if(item.time === '1500') o.tmx = item.tmx;
+                        }else{
+                            var temper = {
+                                tmx : -50,
+                                tmn : -50
+                            }
+                            if(item.time === '0600') temper.tmn = item.tmn;
+                            else if(item.time === '1500') temper.tmx = item.tmx;
+                            temperMap.set(item.date, temper);
+                        }
                     }
                 }
 
+                for(var i in dataList){
+                    for(var j in dataList[i].data){
+                        if(temperMap.has(dataList[i].data[j].date)){
+                            var data = dataList[i].data[j];
+                            var temper = temperMap.get(dataList[i].data[j].date);
+                            data.tmx = temper.tmx;
+                            data.tmn = temper.tmn;
+                        }
+                        log.info(dataList[i].data[j]);
+                    }
+                }
 
                 assert.equal(dataList.length, listXY.length, 'check receive count');
 
@@ -88,39 +151,36 @@ describe('unit test - get town forecast in lib/collect class', function(){
             });
         });
     });
-*/
 
-    it('lib/collect : get towns SHORTEST info by using XY list', function(done){
-        var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
-        //var listXY = listTown;
-
-        var collection = new collect();
-        assert.doesNotThrow(function(){
-            collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORTEST, keydata.keyString.sooyeon, '20150926', '1630', function(err, dataList){
-                log.info('shortest data receive completed : %d\n', dataList.length);
-
-                //log.info(dataList);
-                //log.info(dataList[0]);
-                for(var i in dataList){
-                    for(var j in dataList[i].data){
-                        log.info(dataList[i].data[j]);
-                    }
-                }
-
-                assert.equal(dataList.length, listXY.length, 'check receive count');
-
-                assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
-                assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
-                assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
-
-                assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
-                assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
-                assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
-
-                done();
-            });
-        });
-    });
+    //it('lib/collect : get towns SHORTEST info by using XY list', function(done){
+    //    var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //    //var listXY = listTown;
+    //
+    //    var collection = new collect();
+    //    assert.doesNotThrow(function(){
+    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORTEST, keydata.keyString.sooyeon, '20151005', '1500', function(err, dataList){
+    //            log.info('shortest data receive completed : %d\n', dataList.length);
+    //
+    //            //log.info(dataList);
+    //            //log.info(dataList[0]);
+    //            for(var i in dataList){
+    //                for(var j in dataList[i].data){
+    //                    log.info(dataList[i].data[j]);
+    //                }
+    //            }
+    //
+    //            assert.equal(dataList.length, listXY.length, 'check receive count');
+    //
+    //            assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
+    //            assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
+    //            assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
+    //
+    //            assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
+    //            assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
+    //            assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
+    //
+    //            done();
+    //        });
 
 /*
     it('lib/collect : get towns CURRENT info by using XY list', function(done){
