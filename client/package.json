@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -9,7 +9,7 @@
   "bugs": {
     "url": "http://github.com/WizardFactory/TodayWeather/issues"
   },
-  "license" : "MIT",
+  "license": "MIT",
   "dependencies": {
     "gulp": "^3.5.6",
     "gulp-sass": "^1.3.3",
@@ -19,17 +19,22 @@
   },
   "devDependencies": {
     "bower": "^1.3.3",
+    "cordova-config-utils": "^1.0.3",
     "gulp-util": "^2.2.14",
     "shelljs": "^0.3.0"
   },
   "cordovaPlugins": [
     "cordova-plugin-device",
     "cordova-plugin-console",
-    "cordova-plugin-whitelist",
     "cordova-plugin-splashscreen",
     "com.ionic.keyboard",
     "cordova-plugin-geolocation",
-    "cordova-plugin-statusbar"
+    "cordova-plugin-statusbar",
+    {
+      "locator": "https://github.com/apache/cordova-plugin-whitelist.git",
+      "id": "cordova-plugin-whitelist"
+    },
+    "ionic-plugin-deploy"
   ],
   "cordovaPlatforms": [
     "android",
