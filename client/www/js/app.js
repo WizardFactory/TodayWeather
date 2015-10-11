@@ -425,7 +425,12 @@ angular.module('starter', [
                         .data(data)
                         .attr('class', 'circle circle-today-current')
                         .attr('cx', function (d, i) {
-                            return x.rangeBand() * 7 + x.rangeBand() / 2;
+                            for (var i = 0; i < d.values.length; i++) {
+                                if (d.values[i].week === "오늘") {
+                                    return x.rangeBand() * i + x.rangeBand() / 2;
+                                }
+                            }
+                            return 0;
                         })
                         .attr('cy', function (d) {
                             return y(d.temp);
