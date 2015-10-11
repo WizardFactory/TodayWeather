@@ -41,6 +41,62 @@ angular.module('starter.controllers', [])
         //{"lat": Number, "long": Number};
         var location;
 
+        var deploy = new Ionic.Deploy();
+        // "dev" is the channel tag for the Dev channel.
+        //deploy.setChannel("Dev");
+
+        // Update app code with new release from Ionic Deploy
+        function doUpdate() {
+            var progressString = "";
+            progressString = "업데이트 시작";
+            $scope.currentWeather.summary = progressString;
+            deploy.update().then(function(res) {
+                progressString = '최신버젼으로 업데이트 되었습니다! ' + res;
+                $scope.currentWeather.summary = progressString;
+            }, function(err) {
+                progressString = '업데이트 실패 '+ err;
+                $scope.currentWeather.summary = progressString;
+            }, function(prog) {
+                progressString = '업데이트중 '+ prog +'%';
+                $scope.currentWeather.summary = progressString;
+            });
+        }
+
+        // A confirm dialog
+        function showConfirm(title, template, callback) {
+            var confirmPopup = $ionicPopup.confirm({
+                title: title,
+                template: template
+            });
+            confirmPopup.then(function(res) {
+                if(res) {
+                    console.log('You are sure');
+                } else {
+                    console.log('You are not sure');
+                }
+                callback(res);
+            });
+        }
+
+        // Check Ionic Deploy for new code
+        function checkForUpdates() {
+            console.log('Ionic Deploy: Checking for updates');
+            deploy.info().then(function(deployInfo) {
+                console.log(deployInfo);
+            }, function() {}, function() {});
+
+            deploy.check().then(function(hasUpdate) {
+                console.log('Ionic Deploy: Update available: ' + hasUpdate);
+                showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
+                  if (res)   {
+                      doUpdate();
+                  }
+                });
+            }, function(err) {
+                console.error('Ionic Deploy: Unable to check for updates', err);
+            });
+        }
+
         /**
          * @param day
          * @param hours
@@ -1173,6 +1229,8 @@ angular.module('starter.controllers', [])
                     $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
                 });
             }
+
+            checkForUpdates();
         });
 
         $interval(function() {
