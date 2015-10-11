@@ -1,6 +1,6 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicUser, $ionicPopup,
+    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
                                      $cordovaGeolocation, $timeout, $interval, $http)
     {
         $scope.skipGuide = false;
@@ -1036,16 +1036,20 @@ angular.module('starter.controllers', [])
         function identifyUser() {
             console.log('User: Identifying with User service');
 
-            var user = $ionicUser.get();
-            if(!user.user_id) {
-                user.user_id = $ionicUser.generateGUID();
+            // kick off the platform web client
+            Ionic.io();
+
+            // this will give you a fresh user or the previously saved 'current user'
+            var user = Ionic.User.current();
+
+            // if the user doesn't have an id, you'll need to give it one.
+            if (!user.id) {
+                user.id = Ionic.User.anonymousId();
+                // user.id = 'your-custom-user-id';
             }
 
-            // Identify your user with the Ionic User Service
-            $ionicUser.identify(user).then(function(){
-                $scope.identified = true;
-                console.log('Identified user ID ' + user.user_id);
-            });
+            //persist the user
+            user.save();
         }
 
         /**
