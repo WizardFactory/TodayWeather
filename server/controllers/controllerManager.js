@@ -721,7 +721,6 @@ Manager.prototype.getTownShortData = function(baseTime){
         log.info('+++ COORD LIST : ', self.coordDb.length);
 
         var collectShortInfo = new collectTown();
-        var temperMap = new Map(); // key : date , value : { tmx : -50 , tmn : 50 }
         collectShortInfo.requestData(self.coordDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, key, dateString.date, dateString.time, function(err, dataList){
             if(err){
                 log.error('** getTownShortData : ', err);
@@ -754,37 +753,6 @@ Manager.prototype.getTownShortData = function(baseTime){
             //        log.info(dataList[i].data[j]);
             //    }
             //}
-            for(var i = 0 ; i < dataList.length ; i ++){
-                var itemList = dataList[i].data;
-                for(var i in itemList){
-                    var item = itemList[i];
-                    if(temperMap.has(item.date)){
-                        var o = temperMap.get(item.date);
-                        if(item.time === '0600') o.tmn = item.tmn;
-                        else if(item.time === '1500') o.tmx = item.tmx;
-                    }else{
-                        var temper = {
-                            tmx : -50,
-                            tmn : -50
-                        }
-                        if(item.time === '0600') temper.tmn = item.tmn;
-                        else if(item.time === '1500') temper.tmx = item.tmx;
-                        temperMap.set(item.date, temper);
-                    }
-                }
-            }
-
-            for(var i in dataList){
-                for(var j in dataList[i].data){
-                    if(temperMap.has(dataList[i].data[j].date)){
-                        var item = dataList[i].data[j];
-                        var temper = temperMap.get(item.date);
-                        item.tmx = temper.tmx;
-                        item.tmn = temper.tmn;
-                    }
-                    //log.info(dataList[i].data[j]);
-                }
-            }
 
             for(var i = 0 ; i < self.coordDb.length ; i ++){
                  if(Array.isArray(dataList[i].data)) {
@@ -824,37 +792,6 @@ Manager.prototype.getTownShortData = function(baseTime){
                 //        log.info(dataList[i].data[j]);
                 //    }
                 //}
-                for(var i = 0 ; i < dataList.length ; i ++){
-                    var itemList = dataList[i].data;
-                    for(var i in itemList){
-                        var item = itemList[i];
-                        if(temperMap.has(item.date)){
-                            var o = temperMap.get(item.date);
-                            if(item.time === '0600') o.tmn = item.tmn;
-                            else if(item.time === '1500') o.tmx = item.tmx;
-                        }else{
-                            var temper = {
-                                tmx : -50,
-                                tmn : -50
-                            }
-                            if(item.time === '0600') temper.tmn = item.tmn;
-                            else if(item.time === '1500') temper.tmx = item.tmx;
-                            temperMap.set(item.date, temper);
-                        }
-                    }
-                }
-
-                for(var i in dataList){
-                    for(var j in dataList[i].data){
-                        if(temperMap.has(dataList[i].data[j].date)){
-                            var item = dataList[i].data[j];
-                            var temper = temperMap.get(item.date);
-                            item.tmx = temper.tmx;
-                            item.tmn = temper.tmn;
-                        }
-                        //log.info(dataList[i].data[j]);
-                    }
-                }
 
                 for(var i = 0 ; i < listTownDb.length ; i ++){
                     if(Array.isArray(dataList[i].data)) {
