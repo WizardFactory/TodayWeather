@@ -6,7 +6,7 @@ var mongoose = require('mongoose');
 var config = require('../config/config');
 
 mongoose.connect(config.db.path, config.db.options);
-mongoose.set('debug', true);
+//mongoose.set('debug', true);
 
 //var town = require('./town');
 //
@@ -17,7 +17,8 @@ mongoose.set('debug', true);
 //    console.log(res);
 //});
 //
-var base = require('./forecast');
+//var base = require('./forecast');
+var short = require('./short');
 
 //b.getData("서울특별시", "동대문구", "청량리동", function(err, res){
 //    if(err) console.log(err);
@@ -25,7 +26,16 @@ var base = require('./forecast');
 //});
 //
 
-base.setCurrentData([{"test": "444"}, {"test": "555"}], {"mx":61, "my":127}, function(err, res){
-    if(err) console.log(err);
+var shortList = config.testTownData[0].data.short;
+
+//var shortSlice = shortList.slice(0, 20);
+var shortSlice = shortList.slice(5, 25);
+short.setShortData(shortSlice,{"mx":57, "my":128}, function(err, res){
+    if(err) console.log(err)
     console.log(res);
 });
+
+//short.getShortData("경기도", "고양시덕양구", "성사2동", function(err, res){
+//    if(err) console.log(err);
+//    console.log(res);
+//});
