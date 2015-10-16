@@ -83,4 +83,4 @@ currentSchema.statics = {
     }
 };
 
-module.exports = mogoose.model('current', currentSchema);
+module.exports = mongoose.model('current', currentSchema);
