@@ -101,6 +101,7 @@ angular.module('starter', [
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
+                var duration = 1000;
                 var margin = {top: 30, right: 0, bottom: 10, left: 0},
                     width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
                     height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
@@ -117,10 +118,14 @@ angular.module('starter', [
                 var y = d3.scale.linear()
                     .range([height, 0]);
 
-                var line = d3.svg.line()
-                    .defined(function (d) {
-                        return d.value.t3h != '';
+                var initLine = d3.svg.line()
+                    .interpolate('linear')
+                    .x(function (d, i) {
+                        return x.rangeBand() * i + x.rangeBand() / 2;
                     })
+                    .y(height);
+
+                var line = d3.svg.line()
                     .interpolate('linear')
                     .x(function (d, i) {
                         return x.rangeBand() * i + x.rangeBand() / 2;
@@ -129,93 +134,138 @@ angular.module('starter', [
                         return y(d.value.t3h);
                     });
 
+                var chart = function () {
+                    var data = scope.timeChart;
+
+                    x.domain(d3.range(data[0].values.length));
+                    y.domain([
+                        d3.min(data, function (c) {
+                            return d3.min(c.values, function (v) {
+                                return v.value.t3h;
+                            });
+                        }),
+                        d3.max(data, function (c) {
+                            return d3.max(c.values, function (v) {
+                                return v.value.t3h;
+                            });
+                        })
+                    ]).nice();
+
+                    var xAxis = d3.svg.axis()
+                        .scale(x)
+                        .orient('bottom');
+
+                    var yAxis = d3.svg.axis()
+                        .scale(y)
+                        .orient('left');
+
+                    var group = svg.selectAll('.line-group')
+                        .data(data);
+
+                    var group_enter = group.enter()
+                        .append('g')
+                        .attr('class', 'line-group');
+
+                    // draw line
+                    group_enter.append('path')
+                        .attr('class', function (d) {
+                            return 'line line-' + d.name;
+                        })
+                        .attr('d', function (d) {
+                            return line(d.values);
+                        });
+
+                    group.select('.line')
+                        .attr('d', function (d) {
+                            return initLine(d.values);
+                        })
+                        .transition()
+                        .duration(duration)
+                        .attr('d', function (d) {
+                            return line(d.values);
+                        });
+
+                    // draw point
+                    group_enter.append('g')
+                        .attr('class', 'line-point')
+                        .selectAll('circle')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .enter().append('circle');
+
+                    group.select('.line-point')
+                        .selectAll('circle')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('cx', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .attr('cy', height)
+                        .attr('r', function (d, i) {
+                            if (i === 8) {
+                                return 5;
+                            }
+                            return 2;
+                        })
+                        .attr('class', function (d, i) {
+                            if (i === 8) {
+                                return 'circle-' + d.name + '-current';
+                            }
+                            return 'circle-' + d.name;
+                        })
+                        .transition()
+                        .duration(duration)
+                        .attr('cy', function (d) {
+                            return y(d.value.t3h);
+                        });
+
+                    // draw value
+                    group_enter.append('g')
+                        .attr('class', 'line-value')
+                        .selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .enter().append('text');
+
+                    group.select('.line-value')
+                        .selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .attr('y', height)
+                        .attr('dy', -10)
+                        .attr('text-anchor', 'middle')
+                        .text(function (d) {
+                            if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
+                                return (d.value.tmn | d.value.tmx) + '˚';
+                            }
+                            return '';
+                        })
+                        .attr('class', function (d, i) {
+                            return 'text-today';
+                        })
+                        .transition()
+                        .duration(duration)
+                        .attr('y', function (d) {
+                            return y(d.value.t3h);
+                        });
+                }
+
                 scope.$watch('timeChart', function (newVal) {
                     if (newVal) {
-                        var data = scope.timeChart;
+                        chart();
+                    }
+                });
 
-                        x.domain(d3.range(data[0].values.length));
-                        y.domain([
-                            d3.min(data, function (c) {
-                                return d3.min(c.values, function (v) {
-                                    return v.value.t3h;
-                                });
-                            }),
-                            d3.max(data, function (c) {
-                                return d3.max(c.values, function (v) {
-                                    return v.value.t3h;
-                                });
-                            })
-                        ]).nice();
-
-                        var xAxis = d3.svg.axis()
-                            .scale(x)
-                            .orient('bottom');
-
-                        var yAxis = d3.svg.axis()
-                            .scale(y)
-                            .orient('left');
-
-                        var group = svg.selectAll('.line-group')
-                            .data(data);
-
-                        var group_enter = group.enter()
-                            .append('g')
-                            .attr('class', 'line-group');
-
-                        // draw line
-                        group_enter.append('path')
-                            .attr('class', function(d) { return 'line line-'+d.name; })
-                            .attr('d', function(d) { return line(d.values); });
-
-                        group.select('.line')
-                            .attr('d', function(d) { return line(d.values); });
-
-                        // draw point
-                        group_enter.append('g')
-                            .attr('class', 'line-point')
-                            .selectAll('circle')
-                            .data(function(d) { return d.values; })
-                            .enter().append('circle');
-
-                        group.select('.line-point')
-                            .selectAll('circle')
-                            .data(function(d) { return d.values; })
-                            .attr('cx', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('cy', function(d) { return y(d.value.t3h); })
-                            .attr('r', function(d, i) {
-                                if (i === 8) {
-                                    return 5;
-                                }
-                                return 2;
-                            })
-                            .attr('class', function(d, i) {
-                                if (i === 8) {
-                                    return 'circle-'+d.name+'-current';
-                                }
-                                return 'circle-'+d.name;
-                            });
-
-                        // draw value
-                        group_enter.append('g')
-                            .attr('class', 'line-value')
-                            .selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .enter().append('text');
-
-                        group.select('.line-value')
-                            .selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('y', function(d) { return y(d.value.t3h); })
-                            .attr('dy', -10)
-                            .attr('text-anchor', 'middle')
-                            .text(function(d) {
-                                if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
-                                    return (d.value.tmn | d.value.tmx) + '˚';
-                                }
-                                return '';
-                            })
-                            .attr('class', function(d, i) { return 'text-today'; });
+                scope.$watch('shortForecast', function (newVal) {
+                    if (newVal === true) {
+                        chart();
                     }
                 });
             }
@@ -226,6 +276,7 @@ angular.module('starter', [
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
+                var duration = 1000;
                 var margin = {top: 30, right: 0, bottom: 30, left: 0},
                     width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
                     height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
@@ -242,98 +293,163 @@ angular.module('starter', [
                 var y = d3.scale.linear()
                     .range([height, 0]);
 
+                var chart = function () {
+                    var data = scope.dayChart;
+
+                    x.domain(d3.range(data[0].values.length));
+                    y.domain([
+                        d3.min(data[0].values, function (c) {
+                            return c.tmn;
+                        }),
+                        d3.max(data[0].values, function (c) {
+                            return c.tmx;
+                        })
+                    ]).nice();
+
+                    var xAxis = d3.svg.axis()
+                        .scale(x)
+                        .orient('bottom');
+
+                    var yAxis = d3.svg.axis()
+                        .scale(y)
+                        .orient('left');
+
+                    // draw bar
+                    var group = svg.selectAll('.bar-group')
+                        .data(data);
+
+                    group.enter()
+                        .append('g')
+                        .attr('class', 'bar-group')
+                        .selectAll('rect')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .enter().append('rect');
+
+                    group.selectAll('rect')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('class', 'rect')
+                        .attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                        })
+                        .attr('width', 2)
+                        .attr("y", function (d) {
+                            return y(d.tmn);
+                        })
+                        .attr("height", 0)
+                        .transition()
+                        .duration(duration)
+                        .attr('y', function (d) {
+                            return y(d.tmx);
+                        })
+                        .attr('height', function (d) {
+                            return y(d.tmn) - y(d.tmx);
+                        });
+
+                    // draw max value
+                    var maxValue = svg.selectAll('.bar-max-value')
+                        .data(data);
+
+                    maxValue.enter()
+                        .append('g')
+                        .attr('class', 'bar-max-value')
+                        .selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .enter().append('text');
+
+                    maxValue.selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('class', 'text')
+                        .attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .attr('y', function (d) {
+                            return y(d.tmn);
+                        })
+                        .attr('dy', -10)
+                        .attr('text-anchor', 'middle')
+                        .text(function (d) {
+                            return d.tmx + '˚';
+                        })
+                        .attr('class', 'text-today')
+                        .transition()
+                        .duration(duration)
+                        .attr('y', function (d) {
+                            return y(d.tmx);
+                        });
+
+                    // draw min value
+                    var minValue = svg.selectAll('.bar-min-value')
+                        .data(data);
+
+                    minValue.enter()
+                        .append('g')
+                        .attr('class', 'bar-min-value')
+                        .selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .enter().append('text');
+
+                    minValue.selectAll('text')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('class', 'text')
+                        .attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .attr('y', function (d) {
+                            return y(d.tmn);
+                        })
+                        .attr('dy', 20)
+                        .attr('text-anchor', 'middle')
+                        .text(function (d) {
+                            return d.tmn + '˚';
+                        })
+                        .attr('class', 'text-today');
+
+                    // draw point
+                    var circle = svg.selectAll('circle')
+                        .data(data)
+                        .enter().append('circle');
+
+                    svg.selectAll('circle')
+                        .data(data)
+                        .attr('class', 'circle circle-today-current')
+                        .attr('cx', function (d, i) {
+                            for (var i = 0; i < d.values.length; i++) {
+                                if (d.values[i].week === "오늘") {
+                                    return x.rangeBand() * i + x.rangeBand() / 2;
+                                }
+                            }
+                            return 0;
+                        })
+                        .attr('cy', function (d) {
+                            return y(d.temp);
+                        })
+                        .attr('r', 0)
+                        .transition()
+                        .delay(duration)
+                        .attr('r', 5);
+                }
+
                 scope.$watch('dayChart', function (newVal) {
                     if (newVal) {
-                        var data = scope.dayChart;
+                        chart();
+                    }
+                });
 
-                        x.domain(d3.range(data[0].values.length));
-                        y.domain([
-                            d3.min(data[0].values, function (c) { return c.tmn; }),
-                            d3.max(data[0].values, function (c) { return c.tmx; })
-                        ]).nice();
-
-                        var xAxis = d3.svg.axis()
-                            .scale(x)
-                            .orient('bottom');
-
-                        var yAxis = d3.svg.axis()
-                            .scale(y)
-                            .orient('left');
-
-                        // draw bar
-                        var group = svg.selectAll('.bar-group')
-                            .data(data);
-
-                        group.enter()
-                            .append('g')
-                            .attr('class', 'bar-group')
-                            .selectAll('rect')
-                            .data(function(d) { return d.values; })
-                            .enter().append('rect');
-
-                        group.selectAll('rect')
-                            .data(function(d) { return d.values; })
-                            .attr('class', 'rect')
-                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2 - 1; })
-                            .attr('width', 2)
-                            .attr('y', function(d) { return y(d.tmx); })
-                            .attr('height', function(d) {
-                                return y(d.tmn) - y(d.tmx);
-                            });
-
-                        // draw max value
-                        var maxValue = svg.selectAll('.bar-max-value')
-                            .data(data);
-
-                        maxValue.enter()
-                            .append('g')
-                            .attr('class', 'bar-max-value')
-                            .selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .enter().append('text');
-
-                        maxValue.selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .attr('class', 'text')
-                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('y', function(d) { return y(d.tmx); })
-                            .attr('dy', -10)
-                            .attr('text-anchor', 'middle')
-                            .text(function(d) { return d.tmx + '˚'; })
-                            .attr('class', 'text-today');
-
-                        // draw min value
-                        var minValue = svg.selectAll('.bar-min-value')
-                            .data(data);
-
-                        minValue.enter()
-                            .append('g')
-                            .attr('class', 'bar-min-value')
-                            .selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .enter().append('text');
-
-                        minValue.selectAll('text')
-                            .data(function(d) { return d.values; })
-                            .attr('class', 'text')
-                            .attr('x', function(d, i) { return x.rangeBand() * i + x.rangeBand() / 2; })
-                            .attr('y', function(d) { return y(d.tmn); })
-                            .attr('dy', 20)
-                            .attr('text-anchor', 'middle')
-                            .text(function(d) { return d.tmn + '˚'; })
-                            .attr('class', 'text-today');
-
-                        // draw point
-                        var circle = svg.selectAll('circle')
-                            .data(data)
-                            .enter().append('circle');
-
-                        svg.selectAll('circle')
-                            .data(data)
-                            .attr('class', 'circle circle-today-current')
-                            .attr('cx', function(d, i) { return x.rangeBand() * 7 + x.rangeBand() / 2; })
-                            .attr('cy', function(d) { return y(d.temp); })
-                            .attr('r', 5);
+                scope.$watch('shortForecast', function (newVal) {
+                    if (newVal === false) {
+                        chart();
                     }
                 });
             }

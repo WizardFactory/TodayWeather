@@ -87,11 +87,13 @@ angular.module('starter.controllers', [])
 
             deploy.check().then(function(hasUpdate) {
                 console.log('Ionic Deploy: Update available: ' + hasUpdate);
-                showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
-                  if (res)   {
-                      doUpdate();
-                  }
-                });
+                if (hasUpdate) {
+                    showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
+                        if (res)   {
+                            doUpdate();
+                        }
+                    });
+                }
             }, function(err) {
                 console.error('Ionic Deploy: Unable to check for updates', err);
             });
