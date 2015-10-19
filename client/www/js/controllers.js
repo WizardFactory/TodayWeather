@@ -1,7 +1,7 @@
 angular.module('starter.controllers', [])
 
     .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
-                                     $cordovaGeolocation, $timeout, $interval, $http)
+                                     $cordovaGeolocation, $timeout, $interval, $http, $q)
     {
         $scope.skipGuide = false;
         if(typeof(Storage) !== "undefined") {
@@ -32,7 +32,7 @@ angular.module('starter.controllers', [])
         $scope.currentTimeString;
 
         //String
-        var fullAddress = "";
+        var fullAddress = null;
         var currentTime = new Date();
 
         //{date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
@@ -45,41 +45,10 @@ angular.module('starter.controllers', [])
         // "dev" is the channel tag for the Dev channel.
         //deploy.setChannel("Dev");
 
-        // Update app code with new release from Ionic Deploy
-        function doUpdate() {
-            var progressString = "";
-            progressString = "업데이트 시작";
-            $scope.currentWeather.summary = progressString;
-            deploy.update().then(function(res) {
-                progressString = '최신버젼으로 업데이트 되었습니다! ' + res;
-                $scope.currentWeather.summary = progressString;
-            }, function(err) {
-                progressString = '업데이트 실패 '+ err;
-                $scope.currentWeather.summary = progressString;
-            }, function(prog) {
-                progressString = '업데이트중 '+ prog +'%';
-                $scope.currentWeather.summary = progressString;
-            });
-        }
-
-        // A confirm dialog
-        function showConfirm(title, template, callback) {
-            var confirmPopup = $ionicPopup.confirm({
-                title: title,
-                template: template
-            });
-            confirmPopup.then(function(res) {
-                if(res) {
-                    console.log('You are sure');
-                } else {
-                    console.log('You are not sure');
-                }
-                callback(res);
-            });
-        }
-
         // Check Ionic Deploy for new code
         function checkForUpdates() {
+            var deferred = $q.defer();
+
             console.log('Ionic Deploy: Checking for updates');
             deploy.info().then(function(deployInfo) {
                 console.log(deployInfo);
@@ -90,13 +59,32 @@ angular.module('starter.controllers', [])
                 if (hasUpdate) {
                     showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
                         if (res)   {
-                            doUpdate();
+                            // Update app code with new release from Ionic Deploy
+                            $scope.currentWeather.summary = '업데이트 시작';
+                            deploy.update().then(function (res) {
+                                $scope.currentWeather.summary = '최신버젼으로 업데이트 되었습니다! ' + res;
+                                deferred.resolve();
+                            }, function (err) {
+                                $scope.currentWeather.summary = '업데이트 실패 ' + err;
+                                deferred.reject();
+                            }, function (prog) {
+                                $scope.currentWeather.summary = '업데이트중 ' + prog + '%';
+                            });
+                        }
+                        else {
+                            deferred.reject();
                         }
                     });
                 }
+                else {
+                    deferred.resolve();
+                }
             }, function(err) {
                 console.error('Ionic Deploy: Unable to check for updates', err);
+                deferred.reject();
             });
+
+            return deferred.promise;
         }
 
         /**
@@ -776,30 +764,24 @@ angular.module('starter.controllers', [])
          * @param {Object} data
          */
 
-        /**
-         *
-         * @param {cbCurrentPosition} callback
-         */
-        function getCurrentPosition(callback) {
+        function getCurrentPosition() {
+            var deferred = $q.defer();
+
             $cordovaGeolocation.getCurrentPosition({
                 timeout : 3000
             }).then(function(position) {
-                    //경기도,광주시,오포읍,37.36340556,127.2307667
-                    //callback(undefined, 37.363, 127.230);
-                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                    //callback(undefined, 36.51, 127.259);
-                    callback(undefined, position.coords.latitude, position.coords.longitude);
-                }, function (error) {
-                    console.log(error);
-                    callback(error);
-                });
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //deferred.resolve({latitude: 36.51, longitude: 127.259});
+                deferred.resolve(position.coords);
+            }, function (error) {
+                console.log(error);
+                deferred.reject();
+            });
+
+            return deferred.promise;
         }
-        /**
-         * @callback cbCurrentPosition
-         * @param {Error} error
-         * @param {Number} latitude
-         * @param {Number} longitude
-         */
 
         /**
          * It's supporting only korean lang
@@ -828,37 +810,31 @@ angular.module('starter.controllers', [])
          *
          * @param {Number} lat
          * @param {Number} long
-         * @param {cbAddressFromGeolocation} callback
          */
-        function getAddressFromGeolocation(lat, long, callback) {
+        function getAddressFromGeolocation(lat, long) {
+            var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
                         "&sensor=true&language=ko";
-            $http({method: 'GET', url: url}).
-                success(function (data) {
-                    if (data.status === 'OK') {
-                        var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                        if (!address || address.length === 0) {
-                            return callback(new Error("Fail to find dong address from "+data.results[0].formatted_address));
-                        }
 
-                        console.log(address);
-                        callback(undefined, address);
+            $http({method: 'GET', url: url}).success(function (data) {
+                if (data.status === 'OK') {
+                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                    if (!address || address.length === 0) {
+                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
                     }
-                    else {
+                    console.log(address);
+                    deferred.resolve(address);
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
 
-                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                        callback(new Error(data.status));
-                    }
-                }).
-                error(function (err) {
-                    callback(err);
-                });
+            return deferred.promise;
         }
-        /**
-         * @callback cbAddressFromGeolocation
-         * @param {Error} error
-         * @param {String} address
-         */
 
         /**
          *
@@ -915,70 +891,76 @@ angular.module('starter.controllers', [])
             console.log($scope.timeChart);
         }
 
-        /**
-         *
-         * @param {cbWeatherData} callback
-         */
-        function updateWeatherData(callback) {
+        function updateWeatherData() {
+            var deferred = $q.defer();
+
             if(fullAddress)  {
                 getWeatherInfo(splitAddress(fullAddress), function (error, weatherData) {
-                    if (error) {
-                        return callback(error);
+                    // 1: resolved, 2: rejected
+                    if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
+                        return;
                     }
-                    $scope.address = getShortenAddress(fullAddress);
-                    setWeatherData(weatherData);
-                    return callback(undefined);
+                    if (!error) {
+                        $scope.address = getShortenAddress(fullAddress);
+                        setWeatherData(weatherData);
+                        deferred.notify();
+                    }
                 });
             }
 
-            getCurrentPosition(function(error, lat, long) {
-                if (error) {
-                    showAlert("에러", "현재 위치를 찾을 수 없습니다.");
-                    return callback(error);
-                }
-
-                location = {"lat": lat, "long": long};
+            getCurrentPosition().then(function (coords) {
+                location = {"lat": coords.latitude, "long": coords.longitude};
                 localStorage.setItem("location", JSON.stringify(location));
                 console.log(location);
 
-                getAddressFromGeolocation(lat, long, function (error, newFullAddress) {
-                    if (error) {
-                        showAlert("에러", "현재 위치에 대한 정보를 찾을 수 없습니다.");
-                        return callback(error);
-                    }
-
-                    if (fullAddress === newFullAddress) {
+                getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
+                    if (fullAddress === address) {
                         console.log("Already updated current position weather data");
-                        return callback(undefined);
+                        deferred.resolve();
                     }
-                    fullAddress = newFullAddress;
-                    console.log(fullAddress);
+                    else {
+                        fullAddress = address;
+                        console.log(fullAddress);
 
-                    localStorage.setItem("fullAddress", newFullAddress);
-                    $scope.address = getShortenAddress(newFullAddress);
+                        localStorage.setItem("fullAddress", fullAddress);
+                        $scope.address = getShortenAddress(fullAddress);
 
-                    getWeatherInfo(splitAddress(newFullAddress), function (error, weatherData) {
-                        if (error) {
-                            return callback(error);
-                        }
-                        setWeatherData(weatherData);
-                        return callback(undefined, true);
-                    });
+                        getWeatherInfo(splitAddress(fullAddress), function (error, weatherData) {
+                            if (error) {
+                                deferred.reject();
+                            }
+                            else {
+                                $scope.address = getShortenAddress(fullAddress);
+                                setWeatherData(weatherData);
+                                deferred.notify();
+                                deferred.resolve();
+                            }
+                        });
+                    }
+                }, function (err) {
+                    showAlert("에러", "현재 위치에 대한 정보를 찾을 수 없습니다.");
+                    deferred.reject();
                 });
+            }, function () {
+                showAlert("에러", "현재 위치를 찾을 수 없습니다.");
+                deferred.reject();
             });
+
+            return deferred.promise;
         }
-        /**
-         * @callback cbWeatherData
-         * @param {Error} error
-         */
 
         /**
          *
          * @returns {boolean}
          */
         function loadStorage() {
+            if (typeof(Storage) === "undefined") {
+                return false;
+            }
+
             fullAddress = localStorage.getItem("fullAddress");
             if (!fullAddress || fullAddress === 'undefined') {
+                fullAddress = null;
                 return false;
             }
             try {
@@ -998,7 +980,7 @@ angular.module('starter.controllers', [])
             }
         }
 
-        function loadGuideDate() {
+        function loadGuideData() {
             fullAddress = "대한민국 하늘시 중구 구름동";
             $scope.address = getShortenAddress(fullAddress);
             $scope.currentWeather = {time: 7, t1h: 19, sky: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
@@ -1172,28 +1154,33 @@ angular.module('starter.controllers', [])
             });
         }
 
+        function showConfirm(title, template, callback) {
+            var confirmPopup = $ionicPopup.confirm({
+                title: title,
+                template: template
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log('You are sure');
+                } else {
+                    console.log('You are not sure');
+                }
+                callback(res);
+            });
+        }
+
         identifyUser();
 
         $scope.address = "위치 찾는 중";
         $scope.currentTimeString = convertTimeString(currentTime);
 
         $scope.doRefresh = function() {
-            var refreshComplete = false;
-            updateWeatherData(function(error, mustUpdate) {
-                if (error) {
-                    console.log(error);
-                    console.log(error.stack);
-                }
-                if (!refreshComplete || mustUpdate) {
-                    console.log("Called refreshComplete");
-                    $scope.$broadcast('scroll.refreshComplete');
-                    $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                    $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
-                    refreshComplete = true;
-                }
-                else {
-                    console.log("Skip refreshComplete");
-                }
+            updateWeatherData().finally(function (res) {
+                $scope.$broadcast('scroll.refreshComplete');
+            }, function (msg) {
+                //update weather data
+                $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
+                $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
             });
         };
 
@@ -1205,34 +1192,31 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-            //It starts first times
-            if (!$scope.skipGuide) {
-                loadGuideDate();
-                $timeout(function() {
-                    $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                    $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
-                },0);
-                return;
-            }
-
-            if(typeof(Storage) !== "undefined" && loadStorage()) {
+            //set default data or lastest saved data
+            var isExist = loadStorage();
+            if (isExist === false) {
+                loadGuideData();
                 $timeout(function() {
                     $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
                     $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
                 },0);
             }
-            else {
-                updateWeatherData(function(error) {
-                    if (error) {
-                        console.log(error);
-                        console.log(error.stack);
-                    }
-                    $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                    $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
-                });
-            }
 
-            checkForUpdates();
+            checkForUpdates().finally(function (res) {
+                loadWeatherData();
+            });
+
+            var loadWeatherData = function () {
+                if (isExist === true) {
+                    updateWeatherData().finally(function (res) {
+                        //resolve or reject
+                    }, function (msg) {
+                        //update weather data
+                        $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
+                        $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
+                    });
+                }
+            };
         });
 
         $interval(function() {
