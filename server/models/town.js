@@ -9,11 +9,16 @@
  *      console.log(res);
  *      });
  * */
+
+"use strict";
+
 var mongoose = require('mongoose');
 
 var tSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
-    mCoord: {mx: Number, my: Number}
+    mCoord: {mx: Number, my: Number},
+    gCoord: {lat: Number, lon: Number},
+    areaCode: String
 });
 
 tSchema.statics = {
@@ -21,7 +26,7 @@ tSchema.statics = {
         this.distinct("mCoord")
 	.exec(cb);
     }
-}
+};
 
 module.exports = mongoose.model('town', tSchema);
 
