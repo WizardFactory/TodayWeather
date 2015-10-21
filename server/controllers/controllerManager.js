@@ -10,6 +10,7 @@ var forecast = require('../models/forecast');
 var fs = require('fs');
 var config = require('../config/config');
 var convert = require('../utils/coordinate2xy');
+var convertGeocode = require('../utils/convertGeocode');
 
 function Manager(){
     var self = this;
@@ -102,6 +103,7 @@ Manager.prototype.makeTownlist = function(list){
                 weatherData.mData.mCoord.mx = conv.getLocation().x;
                 weatherData.mData.mCoord.my = conv.getLocation().y;
 
+                log.info('mx:', weatherData.mData.mCoord.mx, 'my:',weatherData.mData.mCoord.my);
                 self.weatherDb.push(JSON.parse(JSON.stringify(weatherData)));
 
                 for(var i=0 ; i < self.coordDb.length ; i++){
@@ -171,17 +173,41 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
     for(var index = 0 ; index < self.weatherDb.length; index++){
         var item = self.weatherDb[index];
         if(item.town.first === region && item.town.second === city && item.town.third === town){
-            break;
+            if(cb !== undefined){
+                cb(err, self.weatherDb[index]);
+            }
+            return;
         }
     }
 
-    if(index === self.weatherDb.length){
-        err = 1;
-    }
+    convertGeocode(region, city,town, function(errCode, result){
+        if(errCode){
+            log.error('can not get mx, my');
+            if(cb !== undefined){
+                err = 1;
+                cb(err, self.weatherDb[index]);
+            }
+            return;
+        }
+        for(var index = 0 ; index < self.weatherDb.length; index++){
+            var item = self.weatherDb[index];
+            log.info('>> ', item.mData.mCoord.mx, item.mData.mCoord.my);
+            if(item.mData.mCoord.mx === result.mx && item.mData.mCoord.my === result.my){
+                if(cb !== undefined){
+                    cb(err, self.weatherDb[index]);
+                }
+                return;
+            }
+        }
 
-    if(cb !== undefined){
-        cb(err, self.weatherDb[index]);
-    }
+        if(index === self.weatherDb.length){
+            err = 1;
+        }
+
+        if(cb !== undefined){
+            cb(err, self.weatherDb[index]);
+        }
+    });
 };
 
 Manager.prototype.getSummary = function(cb){
