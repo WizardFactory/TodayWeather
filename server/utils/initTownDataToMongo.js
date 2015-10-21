@@ -1,6 +1,5 @@
-/*
- *
- * 
+/**
+ * Created by kay
  * */
 
 "use strict";
@@ -13,7 +12,6 @@ mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
 var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
-
 // header remove
 lineList.shift();
 
@@ -21,17 +19,6 @@ lineList.shift();
 lineList = lineList.slice(0, lineList.length-1);
 
 var tDoc = require('../models/town');
-
-//삭제 예정 
-function queryAllEntries () {
-    tDoc.aggregate(
-        {$group: {oppArray: {$push: {
-            first:'$first'
-            }}
-        }}, function(err, qDocList) {
-            process.exit(0);
-        });
-}
 
 function createDocRecurse (err) {
     if (err) {
@@ -59,20 +46,19 @@ function createDocRecurse (err) {
                 doc.mCoord.my = conv.getLocation().y;
             }
             else {
-               console.log("Invaild coord lon="+doc.gCoord.lon+ " lat="+doc.gCoord.lat);
+                console.log("Invaild coord lon="+doc.gCoord.lon+ " lat="+doc.gCoord.lat);
             }
         });
-        //console.log(doc);
         doc.save(createDocRecurse);
     } else {
-        queryAllEntries();
+        process.exit(0);
     }
 }
 
 createDocRecurse(null);
+
 tDoc.find({},function(err,docs){
     if (err) {throw err;}
     console.log(docs.length);
     mongoose.disconnect();
 });
-
