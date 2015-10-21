@@ -1,7 +1,9 @@
-/*
- *
- * 
+/**
+ * Created by kay
  * */
+
+"use strict";
+
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
@@ -9,30 +11,14 @@ var convert = require('./coordinate2xy');
 mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
-var lineList = fs.readFileSync('./utils/data/test.csv').toString().split('\n');
-//var lineList = fs.readFileSync('./utils/data/part.csv').toString().split('\n');
-lineList.shift(); // header remove
+var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
+// header remove
+lineList.shift();
 
-var schemaKeyList = ['first', 'second', 'third', 'mCoord'];
+//remove last blank line
+lineList = lineList.slice(0, lineList.length-1);
 
-var tSchema = new mongoose.Schema({
-    town: {first: String, second: String, third: String},
-    mCoord: {mx: Number, my: Number}
-});
-
-
-var tDoc = mongoose.model('town', tSchema);
-
-//삭제 예정 
-function queryAllEntries () {
-    tDoc.aggregate(
-        {$group: {oppArray: {$push: {
-            first:'$first',
-            }}
-        }}, function(err, qDocList) {
-            process.exit(0);
-        });
-}
+var tDoc = require('../models/town');
 
 function createDocRecurse (err) {
     if (err) {
@@ -42,27 +28,37 @@ function createDocRecurse (err) {
     if (lineList.length) {
         var line = lineList.shift();
         var doc = new tDoc();
-	var tempCoord = {lon:0, lat:0};
-        line.split(',').forEach(function (entry, i) {
-             if(i == 0) doc.town.first = entry;
-             else if(i == 1) doc.town.second = entry;
-             else if(i == 2) doc.town.third = entry;
-             else if(i == 3) tempCoord.lat = entry;
-             else if(i == 4) tempCoord.lon = entry;
 
-             //first mx, my data is lon, lat then changed 
-	     if(tempCoord.lon != null && tempCoord.lat != null){
-		 var conv = new convert(tempCoord, {}).toLocation();
-		 doc.mCoord.mx = conv.getLocation().x;
-		 doc.mCoord.my = conv.getLocation().y;
-	     }
-//             console.log(doc);
-//             console.log(tempCoord);
+        //remove enter
+        line = line.replace(/\r/g, "");
+        line.split(',').forEach(function (entry, i) {
+            if(i === 0) {doc.town.first = entry; }
+            else if(i === 1) {doc.town.second = entry;}
+            else if(i === 2) {doc.town.third = entry;}
+            else if(i === 3) {doc.gCoord.lat = entry;}
+            else if(i === 4) {doc.gCoord.lon = entry;}
+            else if(i === 5) {doc.areaCode = entry;}
+
+            //first mx, my data is lon, lat then changed
+            if(doc.gCoord.lon !== null && doc.gCoord.lat !== null){
+                var conv = new convert(doc.gCoord, {}).toLocation();
+                doc.mCoord.mx = conv.getLocation().x;
+                doc.mCoord.my = conv.getLocation().y;
+            }
+            else {
+                console.log("Invaild coord lon="+doc.gCoord.lon+ " lat="+doc.gCoord.lat);
+            }
         });
         doc.save(createDocRecurse);
     } else {
-        queryAllEntries();
+        process.exit(0);
     }
 }
 
 createDocRecurse(null);
+
+tDoc.find({},function(err,docs){
+    if (err) {throw err;}
+    console.log(docs.length);
+    mongoose.disconnect();
+});

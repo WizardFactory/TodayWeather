@@ -69,8 +69,7 @@ currentSchema.statics = {
                             self.update({
                                 "town.third": elem.town.third,
                                 "town.second": elem.town.second,
-                                "town.first": elem.town.first
-                                ,
+                                "town.first": elem.town.first,
                                 'currentData.date': currentData.date,
                                 'currentData.time': currentData.time
                             }, {'currentData': currentData}, {upsert: false}, cb);
