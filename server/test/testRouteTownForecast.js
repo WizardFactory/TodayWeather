@@ -8,22 +8,22 @@ var config = require('../config/config');
 var collect = require('../lib/collectTownForecast');
 var Logger = require('../lib/log');
 var mongoose = require('mongoose');
-var forecast = require('../models/forecast');
+//var forecast = require('../models/forecast');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
-var db = mongoose.connect(config.db.path, config.db.options, function(err, seo) {
-    if (err) {
-        console.error('Could not connect to MongoDB!');
-        console.log(err);
-    }
-
-});
-mongoose.connection.on('error', function(err) {
-        console.error('MongoDB connection error: ' + err);
-        process.exit(-1);
-    }
-);
+//var db = mongoose.connect(config.db.path, config.db.options, function(err, seo) {
+//    if (err) {
+//        console.error('Could not connect to MongoDB!');
+//        console.log(err);
+//    }
+//
+//});
+//mongoose.connection.on('error', function(err) {
+//        console.error('MongoDB connection error: ' + err);
+//        process.exit(-1);
+//    }
+//);
 
 describe('unit test - routeTownForecast class', function(){
     /*

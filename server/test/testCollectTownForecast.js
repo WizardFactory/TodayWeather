@@ -10,7 +10,7 @@ var collect = require('../lib/collectTownForecast');
 var Logger = require('../lib/log');
 var convert = require('../utils/coordinate2xy');
 var fs = require('fs');
-
+var convertGeocode = require('../utils/convertGeocode');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -54,7 +54,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
         log.info(listTown);
     });
 */
-
+/*
     it('lib/collect : get towns SHORT info by using XY list', function(done){
         var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
         //var listXY = listTown;
@@ -85,7 +85,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
             });
         });
     });
-
+*/
 
     //it('lib/collect : get towns SHORTEST info by using XY list', function(done){
     //    var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
@@ -236,4 +236,24 @@ describe('unit test - get middle range forecast in lib/collect class', function(
         });
     });
 */
+});
+
+describe('unit test - test geocode ', function() {
+    it('utils/convertGeocode : test to get gegcode properly', function(done){
+        var first = '경기도';
+        var second = '성남시';
+        var third = '수내3동';
+
+        convertGeocode(first, second, third, function(err, result){
+            if(err) {
+                log.error('failed to get geocode');
+                done();
+                return;
+            }
+
+            log.info(result);
+
+            done();
+        });
+    });
 });

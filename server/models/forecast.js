@@ -2,8 +2,8 @@
  * Created by kay on 2015-10-08.
  */
 
-var current = require('current');
-var short = require('short');
+var current = require('./current');
+var short = require('./short');
 
 var MODEL = {};
 MODEL.TOWN = 1;
