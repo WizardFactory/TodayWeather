@@ -1,7 +1,7 @@
-/*
- *
- * 
+/**
+ * Created by kay
  * */
+
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
@@ -10,10 +10,7 @@ mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
 var lineList = fs.readFileSync('./utils/data/test.csv').toString().split('\n');
-//var lineList = fs.readFileSync('./utils/data/part.csv').toString().split('\n');
 lineList.shift(); // header remove
-
-var schemaKeyList = ['first', 'second', 'third', 'mCoord'];
 
 var tSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
@@ -22,17 +19,6 @@ var tSchema = new mongoose.Schema({
 
 
 var tDoc = mongoose.model('town', tSchema);
-
-//삭제 예정 
-function queryAllEntries () {
-    tDoc.aggregate(
-        {$group: {oppArray: {$push: {
-            first:'$first',
-            }}
-        }}, function(err, qDocList) {
-            process.exit(0);
-        });
-}
 
 function createDocRecurse (err) {
     if (err) {
@@ -51,17 +37,15 @@ function createDocRecurse (err) {
              else if(i == 4) tempCoord.lon = entry;
 
              //first mx, my data is lon, lat then changed 
-	     if(tempCoord.lon != null && tempCoord.lat != null){
-		 var conv = new convert(tempCoord, {}).toLocation();
-		 doc.mCoord.mx = conv.getLocation().x;
-		 doc.mCoord.my = conv.getLocation().y;
-	     }
-//             console.log(doc);
-//             console.log(tempCoord);
+             if(tempCoord.lon != null && tempCoord.lat != null){
+                 var conv = new convert(tempCoord, {}).toLocation();
+                 doc.mCoord.mx = conv.getLocation().x;
+                 doc.mCoord.my = conv.getLocation().y;
+             }
         });
         doc.save(createDocRecurse);
     } else {
-        queryAllEntries();
+        process.exit(0);
     }
 }
 
