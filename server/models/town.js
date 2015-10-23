@@ -22,9 +22,11 @@ var tSchema = new mongoose.Schema({
 });
 
 tSchema.statics = {
-    getCoord : function(cb){
-        this.distinct("mCoord")
-	.exec(cb);
+    getCoord : function(cb) {
+        this.distinct("mCoord").exec(cb);
+    },
+    getCode : function(cb) {
+        this.distinct('areaCode').exec(cb);
     }
 };
 
