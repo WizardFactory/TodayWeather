@@ -173,16 +173,16 @@ describe('unit test - get middle range forecast in lib/collect class', function(
         });
     });
 */
-/*
+
     it('lib/collect : get Middle range LAND info by using XY list', function(done){
 
         var collection = new collect();
         assert.doesNotThrow(function(){
-            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.pokers, '20150926', '0600', function(err, dataList){
+            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.aleckim, '20150926', '0600', function(err, dataList){
                 log.info('current data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
-                log.info(dataList[0]);
+                //log.info(dataList[0]);
                 for(var i in dataList){
                     for(var j in dataList[i].data){
                         log.info(dataList[i].data[j]);
@@ -193,7 +193,7 @@ describe('unit test - get middle range forecast in lib/collect class', function(
             });
         });
     });
-*/
+
 /*
     it('lib/collect : get Middle range TEMP info by using XY list', function(done){
 
@@ -238,7 +238,7 @@ describe('unit test - get middle range forecast in lib/collect class', function(
 */
 });
 
-describe('unit test - test geocode ', function() {
+/*describe('unit test - test geocode ', function() {
     it('utils/convertGeocode : test to get gegcode properly', function(done){
         var first = '경기도';
         var second = '성남시';
@@ -257,3 +257,4 @@ describe('unit test - test geocode ', function() {
         });
     });
 });
+    */
