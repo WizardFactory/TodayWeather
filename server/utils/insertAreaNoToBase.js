@@ -5,7 +5,7 @@
 "use strict";
 
 var fs = require('fs');
-var indexList = fs.readFileSync('./data/areaCodeKma.csv').toString().split('\n');
+var indexList = fs.readFileSync('./data/areaNoKma.csv').toString().split('\n');
 var baseList = fs.readFileSync('./data/base.csv').toString().split('\n');
 
 function addAreaCodeToBase() {
