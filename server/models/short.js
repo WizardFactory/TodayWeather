@@ -73,8 +73,7 @@ shortSchema.statics = {
                             self.update({
                                 'town.third': elem.town.third,
                                 'town.second': elem.town.second,
-                                'town.first': elem.town.first
-                                ,
+                                'town.first': elem.town.first,
                                 'shortData.date': shortData.date,
                                 'shortData.time': shortData.time
                             }, {'shortData': shortData}, {upsert: false}, cb);
