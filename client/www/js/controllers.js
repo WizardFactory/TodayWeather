@@ -1,7 +1,7 @@
 angular.module('starter.controllers', [])
 
     .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
-                                     $cordovaGeolocation, $timeout, $interval, $http, $q)
+                                     $timeout, $interval, $http, $q)
     {
         $scope.skipGuide = false;
         if(typeof(Storage) !== "undefined") {
@@ -393,10 +393,8 @@ angular.module('starter.controllers', [])
                 }
 
                 data.push(tempObject);
-                if (data.length >= 32) {
-                    return false;
-                }
-                return true;
+
+                return data.length < 32;
             });
 
             if (data.length < 32) {
@@ -616,9 +614,13 @@ angular.module('starter.controllers', [])
             var tmpDayTable = [];
             midData.dailyData.forEach(function(dayInfo) {
                 var data = {};
-
                 data.date = dayInfo.date;
-                if (getDiffDays(convertStringToDate(data.date), currentTime) == 0) {
+
+                var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
+                if (diffDays < -7 || diffDays > 10) {
+                    return;
+                }
+                if (diffDays == 0) {
                     data.week = "오늘";
                 }
                 else {
@@ -761,25 +763,23 @@ angular.module('starter.controllers', [])
         /**
          * @callback cbWeatherInfo
          * @param {Error} error
-         * @param {Object} data
+         * @param {Object} weatherData
          */
 
         function getCurrentPosition() {
             var deferred = $q.defer();
 
-            $cordovaGeolocation.getCurrentPosition({
-                timeout : 3000
-            }).then(function(position) {
+            navigator.geolocation.getCurrentPosition(function(position) {
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
                 //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
                 //deferred.resolve({latitude: 36.51, longitude: 127.259});
+
                 deferred.resolve(position.coords);
-            }, function (error) {
+            }, function(error) {
                 console.log(error);
                 deferred.reject();
-            });
-
+            },{timeout:3000});
             return deferred.promise;
         }
 
@@ -885,6 +885,8 @@ angular.module('starter.controllers', [])
             localStorage.setItem("currentWeather", JSON.stringify(currentForecast));
             localStorage.setItem("timeTable", JSON.stringify(parsedWeather.timeTable));
             localStorage.setItem("timeChart", JSON.stringify(parsedWeather.timeChart));
+            localStorage.setItem("dayTable", JSON.stringify($scope.dayTable));
+            localStorage.setItem("dayChart", JSON.stringify($scope.dayChart));
 
             console.log($scope.currentWeather);
             console.log($scope.timeChart.length);
@@ -938,7 +940,11 @@ angular.module('starter.controllers', [])
                         });
                     }
                 }, function (err) {
-                    showAlert("에러", "현재 위치에 대한 정보를 찾을 수 없습니다.");
+                    var str = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                    if ($ionicPlatform.isAndroid()) {
+                        str += " WIFI와 위치정보를 켜주세요.";
+                    }
+                    showAlert("에러", str);
                     deferred.reject();
                 });
             }, function () {
@@ -974,6 +980,10 @@ angular.module('starter.controllers', [])
                 console.log($scope.timeTable);
                 $scope.timeChart = JSON.parse(localStorage.getItem("timeChart"));
                 console.log($scope.timeChart);
+                $scope.dayTable = JSON.parse(localStorage.getItem("dayTable"));
+                console.log($scope.dayTable);
+                $scope.dayChart = JSON.parse(localStorage.getItem("dayChart"));
+                console.log($scope.dayChart);
             }
             catch(error) {
                return false;
@@ -1180,7 +1190,7 @@ angular.module('starter.controllers', [])
             }, function (msg) {
                 //update weather data
                 $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
+                $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(5), 0, false);
             });
         };
 
@@ -1198,7 +1208,7 @@ angular.module('starter.controllers', [])
                 loadGuideData();
                 $timeout(function() {
                     $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                    $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
+                    $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(5), 0, false);
                 },0);
             }
 
@@ -1213,7 +1223,7 @@ angular.module('starter.controllers', [])
                     }, function (msg) {
                         //update weather data
                         $ionicScrollDelegate.$getByHandle('timeChart').scrollTo(getTodayNowPosition(7), 0, false);
-                        $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(7), 0, false);
+                        $ionicScrollDelegate.$getByHandle('weeklyChart').scrollTo(getTodayNowPosition(5), 0, false);
                     });
                 }
             };
