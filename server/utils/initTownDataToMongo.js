@@ -11,7 +11,7 @@ var convert = require('./coordinate2xy');
 mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
-var lineList = fs.readFileSync('./data/base.csv').toString().split('\n');
+var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
 // header remove
 lineList.shift();
 
