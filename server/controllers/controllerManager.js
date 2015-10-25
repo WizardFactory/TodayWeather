@@ -6,7 +6,9 @@
 var collectTown = require('../lib/collectTownForecast');
 var listKey = require('../config/keydata');
 var town = require('../models/town');
-var forecast = require('../models/forecast');
+//var forecast = require('../models/forecast');
+var short = require('../models/short');
+var current = require('../models/current');
 var fs = require('fs');
 var config = require('../config/config');
 var convert = require('../utils/coordinate2xy');
@@ -821,12 +823,12 @@ Manager.prototype.getTownShortData = function(baseTime){
 
                 for(var i = 0 ; i < listTownDb.length ; i ++){
                     if(Array.isArray(dataList[i].data)) {
-                        forecast.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
+                        short.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
                             if (err) {
                                 log.error('** getTownShortData : ', err);
                                 log.error(meta);
                             }
-                            //log.info(res);
+                            log.info(res);
                         });
                     }
                 }
@@ -994,12 +996,12 @@ Manager.prototype.getTownCurrentData = function(){
 
                 for (var i = 0; i < listTownDb.length; i++) {
                     if (Array.isArray(dataList[i].data)) {
-                        forecast.setCurrentData(dataList[i].data, listTownDb[i], function (err, res) {
+                        current.setCurrentData(dataList[i].data, listTownDb[i], function (err, res) {
                             if (err) {
                                 log.error('** getTownCurrentData : ', err);
                                 return;
                             }
-                            //log.info(res);
+                            log.info(res);
                         });
                     }
                 }
@@ -1322,21 +1324,21 @@ Manager.prototype.startTownData = function(){
         }
     }, periodValue);
 
-    self.getTownShortestData();
-    self.getTownCurrentData();
-
-    var midLoop = setInterval(function(){
-        self.getMidLand(9 - (midTimes * 24));
-        self.getMidTemp(9 - (midTimes * 24));
-        midTimes-=1;
-
-        if(midTimes < 0 ){
-            clearInterval(midLoop);
-        }
-    }, midPeriod);
-
-    self.getMidForecast(9);
-    self.getMidSea(9);
+    //self.getTownShortestData();
+    //self.getTownCurrentData();
+    //
+    //var midLoop = setInterval(function(){
+    //    self.getMidLand(9 - (midTimes * 24));
+    //    self.getMidTemp(9 - (midTimes * 24));
+    //    midTimes-=1;
+    //
+    //    if(midTimes < 0 ){
+    //        clearInterval(midLoop);
+    //    }
+    //}, midPeriod);
+    //
+    //self.getMidForecast(9);
+    //self.getMidSea(9);
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
