@@ -1,6 +1,6 @@
 angular.module('starter.controllers', [])
 
-    .controller('DashCtrl', function($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
+    .controller('ForecastCtrl', function ($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
                                      $timeout, $interval, $http, $q)
     {
         $scope.skipGuide = false;
@@ -1238,7 +1238,7 @@ angular.module('starter.controllers', [])
         }, 1000);
     })
 
-    .controller('ChatsCtrl', function($scope, Chats) {
+    .controller('SearchCtrl', function ($scope, Chats) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
