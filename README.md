@@ -52,6 +52,11 @@ install www/lib
 $ bower install
 ```
 
+hook up with IONIC.IO
+```bash
+$ ionic io init
+```
+
 sass preprocessing - it makes www/css/ionic.app.css
 
 ```bash
