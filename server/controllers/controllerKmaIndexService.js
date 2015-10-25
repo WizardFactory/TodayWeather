@@ -348,7 +348,9 @@ KmaIndexService.prototype.saveLifeIndex = function(townObject, data) {
 
     LifeIndexKma.find({areaNo: data.areaNo}, function(err, fsnList) {
         if (fsnList.length === 0) {
-            var kmaIndex = new LifeIndexKma({town: townObject.town, mCoord: townObject.mCoord, fsn: data.fsn});
+            var kmaIndex = new LifeIndexKma({town: townObject.town, mCoord: townObject.mCoord, areaNo: data.areaNo,
+                        fsn: data.fsn});
+
             kmaIndex.save(function (err) {
                 if (err) {
                     log.error(err);
