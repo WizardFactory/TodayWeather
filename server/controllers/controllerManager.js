@@ -396,7 +396,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     //log.info('get today data, go next : ', self.midForecast.midLand.length);
     // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
-    for(i = 11 ; i > 0 ; i--){
+    for(i = 10 ; i > 0 ; i--){
         var currentDate = self.getWorldTime(9 - (i * 24));
         var targetDate = self.getWorldTime(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
         var item = {
@@ -476,7 +476,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     //log.info('get today data, go next : ', self.midForecast.midTemp.length);
     // 여기도 land와 마찬가지로 11일 전의 데이터부터 뒤져서 예전 예보 정보를 넣자..
-    for(i = 11 ; i > 0 ; i--){
+    for(i = 10 ; i > 0 ; i--){
         var currentDate = self.getWorldTime(9 - (i * 24));
         var targetDay = self.getWorldTime(9 + 72 - (i * 24));
         targetDay = targetDay.slice(0, 8);
