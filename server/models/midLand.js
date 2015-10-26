@@ -7,8 +7,7 @@ var mongoose = require('mongoose');
 var midLandSchema = mongoose.Schema({
     town: {
         first: String,
-        second: String,
-        third: String
+        second: String
     },
     regId : String,
     midLandData : {
@@ -32,8 +31,8 @@ var midLandSchema = mongoose.Schema({
 });
 
 midLandSchema.statics = {
-    getLandData : function(first, second, third, cb){
-        this.find({"town" : { "first" : first, "second" : second, "third" : third}})
+    getLandData : function(first, second, cb){
+        this.find({"town" : { "first" : first, "second" : second }})
             .sort({"midLandData.date" : -1, "midLandData.time" : -1}).limit(1).exec(cb);
     },
     setLandData : function(landData, regId, cb){

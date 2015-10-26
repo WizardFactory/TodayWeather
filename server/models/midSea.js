@@ -5,10 +5,8 @@
 var mongoose = require('mongoose');
 
 var midSeaSchema = mongoose.Schema({
-    town: {
-        first: String,
-        second: String,
-        third: String
+    sea: {
+        location: String
     },
     regId: String,
     midSeaData: {
@@ -58,10 +56,9 @@ var midSeaSchema = mongoose.Schema({
 });
 
 midSeaSchema.statics = {
-    getSeaData: function(first, second, third, cb){
-        this.find({"town" : { "first" : first, "second" : second, "third" : third}})
-            .sort({"midLandData.date" : -1, "midLandData.time" : -1}).limit(1).exec(cb);
-
+    getSeaData: function(first, cb){
+        this.find({"sea" : { "first" : location }})
+            .sort({"midSeaData.date" : -1, "midSeaData.time" : -1}).limit(1).exec(cb);
     },
     setSeaData: function(seaData, regId, cb){
         var self = this;
@@ -74,9 +71,7 @@ midSeaSchema.statics = {
             self.update({'regId' : regId, 'midSeaData.date' : seaData.date, 'midSeaData.time' : seaData.time},
                 {
                     'regId' : regId,
-                    'town.third': res.town.third,
-                    'town.second': res.town.second,
-                    'town.first': res.town.first,
+                    'sea.location': res.sea.location,
                     'midSeaData' : seaData
                 },
                 {upsert:true}, cb);

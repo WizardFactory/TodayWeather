@@ -37,7 +37,7 @@ function createDocRecurse (err) {
             else if(i === 2) {doc.town.third = entry;}
             else if(i === 3) {doc.gCoord.lat = entry;}
             else if(i === 4) {doc.gCoord.lon = entry;}
-            else if(i === 5) {doc.areaCode = entry;}
+            else if(i === 5) {doc.areaNo = entry;}
 
             //first mx, my data is lon, lat then changed
             if(doc.gCoord.lon !== null && doc.gCoord.lat !== null){
@@ -51,14 +51,14 @@ function createDocRecurse (err) {
         });
         doc.save(createDocRecurse);
     } else {
-        process.exit(0);
+        console.log('Finish');
+        tDoc.find({},function(err,docs){
+            if (err) {throw err;}
+            console.log(docs.length);
+            mongoose.disconnect();
+        });
     }
 }
 
 createDocRecurse(null);
 
-tDoc.find({},function(err,docs){
-    if (err) {throw err;}
-    console.log(docs.length);
-    mongoose.disconnect();
-});
