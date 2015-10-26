@@ -14,7 +14,8 @@
   "scripts": {
     "start": "node ./bin/www",
     "test": "mocha",
-    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo"
+    "initdata": "node ./utils/initTownDataToMongo"
+//    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo"
   },
   "dependencies": {
     "body-parser": "~1.13.1",
