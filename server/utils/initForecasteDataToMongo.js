@@ -1,6 +1,5 @@
-/*
- * 
- *
+/**
+ * Created by kay
  * */
 
 var mongoose = require('mongoose');
@@ -13,55 +12,95 @@ var fs = require('fs');
 var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
 lineList.shift(); //  header remove
 
-var schemaKeyList = ['first', 'second', 'third', 'long', 'latt'];
-
 var bSchema = new mongoose.Schema({
-    town: {first: String, second: String, third: String},
-    coord: {lon: Number, lat: Number},
-    mData: {mCoord:{mx: Number, my: Number}},
+    town: {
+        first: String,
+        second: String,
+        third: String
+    },
+    mCoord:{
+        mx: Number,
+        my: Number
+    }
 });
 
-var bDoc = mongoose.model('base', bSchema);
+var mSchema = new mongoose.Schema({
+    town: {
+        first: String,
+        second: String,
+        third: String
+    },
+    regId : String
+});
 
-//삭제 예정 
-function queryAllEntries () {
-    bDoc.aggregate(
-        {$group: {oppArray: {$push: {
-            first:'$first',
-            }}
-        }}, function(err, qDocList) {
-            process.exit(0);
-        });
+var forecastNameList = ['short', 'current'];
+var midNameList = ['midLand', 'midTemp', 'midSea'];
+//var collectionNameList = ['town', 'short', 'current'];
+var bDoc = null;
+var mDoc = null;
+
+function setCollectionName(name){
+    bDoc = mongoose.model(name, bSchema);
+    //bDoc.toObject({retainKeyOrder: true});
 }
 
-function createDocRecurse (err) {
-    if (err) {
-        console.log(err);
-        process.exit(1);
-    }
-    if (lineList.length) {
-        var line = lineList.shift();
+function setMidCollectionNane(name){
+    mDoc = mongoose.model(name, mSchema);
+}
+
+function createDoc(){
+    lineList.forEach(function(line, idx){
+        var tempCoord = {lon: 0 , lat: 0};
         var doc = new bDoc();
         line.split(',').forEach(function (entry, i) {
              if(i == 0) doc.town.first = entry;
              else if(i == 1) doc.town.second = entry;
              else if(i == 2) doc.town.third = entry;
-             else if(i == 3) doc.coord.lat = entry;
-             else if(i == 4) doc.coord.lon = entry;
+             else if(i == 3) tempCoord.lat = entry;
+             else if(i == 4) tempCoord.lon = entry;
 
-	     if(doc.coord.lon != null && doc.coord.lat != null){
-		 var tempCoord = {lon: doc.coord.lon, lat: doc.coord.lat};
-
-		 var conv = new convert(tempCoord, {}).toLocation();
-		 doc.mData.mCoord.mx = conv.getLocation().x;
-		 doc.mData.mCoord.my = conv.getLocation().y;
-	     }
+             if(tempCoord.lon != null && tempCoord.lat != null){
+                 var conv = new convert(tempCoord, {}).toLocation();
+                 doc.mCoord.mx = conv.getLocation().x;
+                 doc.mCoord.my = conv.getLocation().y;
+             }
 //             console.log(doc);
         });
-        doc.save(createDocRecurse);
-    } else {
-        queryAllEntries();
-    }
+
+        doc.save(function(err){
+            if(err) process.exit(1);
+            if(idx + 1 == lineList.length) process.exit(0);
+        });
+    });
 }
 
-createDocRecurse(null);
+function createMidDoc(){
+    lineList.forEach(function(line, idx){
+        var doc = new mDoc();
+        line.split(',').forEach(function(entry, i){
+            if(i == 0) doc.town.first = entry;
+            else if(i == 1) doc.town.second = entry;
+            else if(i == 2) doc.town.third = entry;
+            else if(i == 3) doc.regId = entry;
+        });
+
+        doc.save(function(err){
+            if(err) process.exit(1);
+            if(idx + 1 == lineList.length) process.exit(0);
+        });
+    });
+}
+
+function run(){
+    forecastNameList.forEach(function(name, idx){
+        setCollectionName(name);
+        createDoc();
+    });
+
+    midNameList.forEach(function(name, idx){
+        setMidCollectionNane(name);
+        createMidDoc();
+    });
+}
+
+run();

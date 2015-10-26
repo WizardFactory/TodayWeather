@@ -1,7 +1,13 @@
+/**
+ *
+ */
+
+'use strict';
+
 var express = require('express');
 var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
+//var favicon = require('serve-favicon');
+//var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
@@ -19,17 +25,29 @@ var Logger = require('./lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
 // Bootstrap db connection
-var db = mongoose.connect(config.db.path, config.db.options, function(err) {
-  if (err) {
-    console.error('Could not connect to MongoDB!');
-    console.log(err);
-  }
-});
-mongoose.connection.on('error', function(err) {
-      console.error('MongoDB connection error: ' + err);
-      process.exit(-1);
+var db;
+if(config.mode === 'local'){
+  db = mongoose.connect(config.db.path, config.db.options, function(err) {
+    if (err) {
+      console.error('Could not connect to MongoDB!');
+      console.log(err);
     }
-);
+  });
+  mongoose.connection.on('error', function(err) {
+        console.error('MongoDB connection error: ' + err);
+        process.exit(-1);
+      }
+  );
+}
+else{
+  var connectInfo = process.env.OPENSHIFT_MONGODB_DB_URL;
+  db = mongoose.connect(connectInfo, function(err){
+    if(err){
+      console.error('could net connect to MongoDB');
+      console.error(err);
+    }
+  });
+}
 
 var app = express();
 
@@ -50,8 +68,13 @@ app.use('/', routes);
 app.use('/users', users);
 app.use('/town', townForecast);
 
-var manager = new controllerManager();
+
+global.manager = new controllerManager();
 manager.startManager();
+
+var taskKmaIndexService = new (require('./controllers/controllerKmaIndexService'))();
+taskKmaIndexService.setProviderKey((require('./config/keydata')).keyString.cert_key);
+taskKmaIndexService.start();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -65,7 +88,7 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
-  app.use(function(err, req, res, next) {
+  app.use(function(err, req, res) {
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
@@ -76,7 +99,7 @@ if (app.get('env') === 'development') {
 
 // production error handler
 // no stacktraces leaked to user
-app.use(function(err, req, res, next) {
+app.use(function(err, req, res) {
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,

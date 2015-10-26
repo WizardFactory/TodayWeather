@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "app_id": "",
+  "app_id": "e7078f7c",
   "gulpStartupTasks": [
     "sass",
     "watch"
@@ -8,5 +8,11 @@
   "watchPatterns": [
     "www/**/*",
     "!www/lib/**/*"
+  ],
+  "proxies": [
+    {
+      "path": "/town",
+      "proxyUrl": "http://d2ibo8bwl7ifj5.cloudfront.net/town"
+    }
   ]
 }

@@ -1,20 +1,32 @@
 {
-  "name": "server",
+  "name": "TodayWeather",
   "version": "0.0.1",
+  "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WizardFactory/TodayWeather.git"
+  },
+  "bugs": {
+    "url": "http://github.com/WizardFactory/TodayWeather/issues"
+  },
+  "license": "MIT",
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "test" : "mocha",
-    "initdata" : "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo"
+    "test": "mocha",
+    "initdata": "node ./utils/initTownDataToMongo"
+//    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo"
   },
   "dependencies": {
     "body-parser": "~1.13.1",
+    "compress": "^0.99.0",
+    "compression": "^1.5.2",
     "cookie-parser": "~1.3.5",
     "debug": "~2.2.0",
     "express": "~4.13.0",
     "jade": "~1.11.0",
     "jwt-simple": "^0.3.0",
-    "mongoose": "^4.0.8",
+    "mongoose": "^4.1.8",
     "morgan": "~1.6.1",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",

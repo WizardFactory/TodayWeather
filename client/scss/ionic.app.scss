@@ -27,8 +27,8 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 @font-face {
-  font-family: "Helvetica Neue Thin";
-  src: url("../fonts/HelveticaNeue-Thin.otf") format("opentype");
+  font-family: "helvetica neue light";
+  src: url("../fonts/HelveticaNeueLTPro-Lt.otf") format("opentype");
   font-weight: normal;
   font-style: normal;
 }
@@ -36,6 +36,13 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @font-face {
   font-family: "Nanum Barun Gothic UltraLight";
   src: url("../fonts/NanumBarunGothicUltraLight.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Nanum Barun Gothic Light";
+  src: url("../fonts/NanumBarunGothicLight.woff") format("woff");
   font-weight: normal;
   font-style: normal;
 }
@@ -56,7 +63,13 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .row + .row {
-   margin-top: 0px;
+   margin-top: 0;
+}
+
+.top-time {
+  padding: 5px;
+  text-align: left;
+  font-family: 'Nanum Barun Gothic Light';
 }
 
 .region {
@@ -67,23 +80,43 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   display: table-cell;
   vertical-align: middle;
   text-align: center;
-  margin: 0px;
-  font-size: 20px;
+  margin: 0;
+  font-size: 26px;
+}
+
+.region-sum {
+  display: table;
+}
+
+.region-sum p {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  margin: 0;
+  font-size: 21px;
 }
 
 .big-digit {
-  font-family: 'Helvetica Neue UltraLight';
+  font-family: 'helvetica neue ultralight';
   text-align: right;
-  font-size: 100px;
-  letter-spacing: -2px;
+  font-size: 89px;
+  letter-spacing: -3px;
 }
 
-.big-temp-point img{
-  width: 18px;
+.big-temp-point img {
+  width: 14px;
 }
 
-.big-temp-sky-state img{
-  width: 56px;
+.big-temp-sky-state img {
+  width: 40px;
+}
+
+.timeChart {
+  width: 1248px; //52px per col
+}
+
+.weeklyChart {
+  width: 936px; //52px per col * 18
 }
 
 .small-time {
@@ -93,21 +126,22 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .small-time p {
   display: table-cell;
   vertical-align: middle;
+  font-family: 'Nanum Barun Gothic Light';
   text-align: center;
   font-size: 14px;
-  margin: 0px;
+  margin: 0;
 }
 
 .small-image {
   display: table;
 }
 
-.small-image div{
+.small-image div {
   display: table-cell;
   vertical-align: middle;
 }
 
-.small-image div img{
+.small-image div img {
   width: 24px;
   margin: 0 auto;
   display: block;
@@ -117,13 +151,120 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   display: table;
 }
 
-.small-digit p{
+.small-digit p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'Helvetica Neue Thin';
+  font-family: 'helvetica neue light';
   text-align: center;
   font-size: 15px;
-  margin: 0px;
+  margin: 0;
+}
+
+.guide-content {
+  width: 100%;
+  height: 100%;
+  padding: 13px;
+  background-color: #231815;
+  opacity: 0.8;
+  color: white;
+  font-family: "Nanum Barun Gothic UltraLight";
+}
+
+.guide-row {
+  width: 100%;
+  display: table;
+  text-align: center;
+}
+
+.guide-col {
+  width: 50%;
+  display: table-cell;
+}
+
+.guide-col-left-top {
+  text-align: left;
+  vertical-align: top;
+}
+
+.guide-col-right-top {
+  text-align: right;
+  vertical-align: top;
+}
+
+.guide-col-left-middle {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.guide-col-right-middle {
+  text-align: right;
+  vertical-align: middle;
+}
+
+.guide-img-top {
+  width: 30px;
+}
+
+.guide-img {
+  width: 60px;
+}
+
+/* time chart style */
+.line-today {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  fill: none;
+}
+
+.line-yesterday {
+  stroke: #d0d0d0;
+  stroke-width: 1px;
+  fill: none;
+}
+
+.circle-today {
+  stroke: #ffffff;
+  stroke-width: 1px;
+  fill: #ffffff;
+}
+
+.circle-yesterday {
+  stroke: #d0d0d0;
+  stroke-width: 1px;
+  fill: #d0d0d0;
+}
+
+.circle-today-current {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  fill: #ff0000;
+}
+
+.circle-yesterday-current {
+  stroke: #d0d0d0;
+  stroke-width: 2px;
+  fill: #d0d0d0;
+}
+
+.text-today {
+  fill: #ffffff;
+  font-family: 'helvetica neue light';
+  font-size: 20px;
+}
+
+.text-yesterday {
+  fill: #d0d0d0;
+  font-family: 'helvetica neue light';
+  font-size: 20px;
+}
+
+.circle-hidden, .text-hidden {
+  visibility: hidden;
+}
+
+/* day chart style */
+.rect {
+  fill: #ffffff;
 }
 
 //iphone 4
@@ -136,8 +277,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     font-size: 20px;
   }
 
+  .region-sum p {
+    font-size: 18px;
+  }
+
   .big-digit {
-    font-size: 94px;
+    font-size: 89px;
     letter-spacing: -3px;
   }
 
@@ -146,7 +291,15 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-temp-sky-state img{
-    width: 52px;
+    width: 40px;
+  }
+
+  .timeChart {
+    width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 954px; //53px per col *18
   }
 
   .small-time p {
@@ -163,7 +316,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 //iphone 5
-//this is default.
 @media only screen and (min-device-width: 320px)
     and (max-device-width: 568px)
     and (-webkit-min-device-pixel-ratio: 2)
@@ -173,17 +325,29 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     font-size: 20px;
   }
 
+  .region-sum p {
+    font-size: 18px;
+  }
+
   .big-digit {
-    font-size: 110px;
+    font-size: 100px;
     letter-spacing: -2px;
   }
 
   .big-temp-point img{
-    width: 18px;
+    width: 14px;
   }
 
   .big-temp-sky-state img{
-    width: 62px;
+    width: 52px;
+  }
+
+  .timeChart {
+    width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 954px; //53px per col * 18
   }
 
   .small-time p {
@@ -210,16 +374,24 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-digit {
-    font-size: 128px;
+    font-size: 115px;
     letter-spacing: -3px;
   }
 
   .big-temp-point img{
-    width: 22px;
+    width: 16px;
   }
 
   .big-temp-sky-state img{
-    width: 68px;
+    width: 58px;
+  }
+
+  .timeChart {
+    width: 1272px; //53px per col
+  }
+
+  .weeklyChart {
+    width: 954px; //53px per col * 18
   }
 
   .small-time p {
@@ -245,17 +417,29 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     font-size: 28px;
   }
 
+  .region-sum p {
+    font-size: 23px;
+  }
+
   .big-digit {
-    font-size: 150px;
+    font-size: 135px;
     letter-spacing: -6px;
   }
 
   .big-temp-point img{
-    width: 24px;
+    width: 18px;
   }
 
   .big-temp-sky-state img{
-    width: 78px;
+    width: 72px;
+  }
+
+  .timeChart {
+    width: 1416px; // 59px per col
+  }
+
+  .weeklyChart {
+    width: 1062px; //59px per col * 18
   }
 
   .small-time p {
@@ -272,40 +456,50 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 /* SS S3 */
-//@media screen and (device-width: 320px) and (device-height: 640px) and (-webkit-device-pixel-ratio: 2) {
-//
-//}
+@media screen and (device-width: 320px) and (device-height: 640px)
+    and (device-aspect-ratio: 320/640)
+{
+  .timeChart {
+    width: 1272px; //53 px per col
+  }
+
+  .weeklyChart {
+    width: 954px; //53px per col * 18
+  }
+}
 
 /* SS Galaxy Note3, S5, S4, S6 */
+//It's default
 @media screen and (device-width: 360px) and (device-height: 640px)
-    and (-webkit-device-pixel-ratio: 3)
     and (device-aspect-ratio: 360/640)
 {
-   .region p {
-    font-size: 26px;
-  }
-
   .big-digit {
-    font-size: 128px;
-    letter-spacing: -3px;
+    font-size: 118px;
   }
 
-  .big-temp-point img{
-    width: 22px;
+  .big-temp-point img {
+    width: 18px;
   }
 
-  .big-temp-sky-state img{
-    width: 68px;
+  .big-temp-sky-state img {
+    width: 54px;
   }
 }
 
 .main-content {
   width: 100%;
   height: 100%;
-  background-color: #22a1db;
   color: white;
 }
 
+.main-content.short-forcast {
+  background-color: #22a1db;
+}
+
+.main-content.mid-forcast {
+  background-color: #0fbe96;
+}
+//
 //.scroll-content {
 //  background: url("../img/screen-dash.png");
 //  background-size: cover;
