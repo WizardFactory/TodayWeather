@@ -9,6 +9,8 @@ var town = require('../models/town');
 //var forecast = require('../models/forecast');
 var short = require('../models/short');
 var current = require('../models/current');
+var midLand = require('../models/midLand');
+var midTemp = require('../models/midTemp');
 var fs = require('fs');
 var config = require('../config/config');
 var convert = require('../utils/coordinate2xy');
@@ -1137,7 +1139,22 @@ Manager.prototype.getMidLand = function(gmt){
             //}
         });
     } else{
-        //
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listAreaCode, collectShortInfo.DATA_TYPE.MID_LAND, key, dateString.date, dateString.time, function(err, dataList) {
+            if (err) {
+                log.error("middle land forecst data recdive faile");
+                return;
+            }
+            log.info('mid Land forecast data receive completed : %d\n', dataList.length);
+
+            dataList.forEach(function(item){
+                //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
+                midLand.setLandData(item.data[0], item.data[0].regId, function(err, res){
+                    if(err) log.error(err);
+                    log.info(res);
+                });
+            });
+        });
     }
 
 };
@@ -1216,7 +1233,22 @@ Manager.prototype.getMidTemp = function(gmt){
             //}
         });
     } else{
-        //
+        var collectShortInfo = new collectTown();
+        collectShortInfo.requestData(collectShortInfo.listCityCode, collectShortInfo.DATA_TYPE.MID_TEMP, key, dateString.date, dateString.time, function(err, dataList){
+            if (err) {
+                log.error("middle land forecst data recdive faile");
+                return;
+            }
+            log.info('mid Temp forecast data receive completed : %d\n', dataList.length);
+
+            dataList.forEach(function(item){
+                //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
+                midTemp.setTempData(item.data[0], item.data[0].regId, function(err, res){
+                    if(err) log.error(err);
+                    log.info(res);
+                });
+            });
+        });
     }
 
 };
@@ -1324,21 +1356,21 @@ Manager.prototype.startTownData = function(){
         }
     }, periodValue);
 
-    //self.getTownShortestData();
-    //self.getTownCurrentData();
-    //
-    //var midLoop = setInterval(function(){
-    //    self.getMidLand(9 - (midTimes * 24));
-    //    self.getMidTemp(9 - (midTimes * 24));
-    //    midTimes-=1;
-    //
-    //    if(midTimes < 0 ){
-    //        clearInterval(midLoop);
-    //    }
-    //}, midPeriod);
-    //
-    //self.getMidForecast(9);
-    //self.getMidSea(9);
+    self.getTownShortestData();
+    self.getTownCurrentData();
+
+    var midLoop = setInterval(function(){
+        self.getMidLand(9 - (midTimes * 24));
+        self.getMidTemp(9 - (midTimes * 24));
+        midTimes-=1;
+
+        if(midTimes < 0 ){
+            clearInterval(midLoop);
+        }
+    }, midPeriod);
+
+    self.getMidForecast(9);
+    self.getMidSea(9);
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
