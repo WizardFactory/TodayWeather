@@ -417,6 +417,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
                 item.wfAm = matchedData.wf3Am;
                 item.wfPm = matchedData.wf3Pm;
                 midData.dailyData.push(JSON.parse(JSON.stringify(item)));
+                break;
             }
         }
     }
@@ -434,12 +435,18 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     // temp값도 날짜별로 결과 오브젝트에 넣자..
     for(i=0 ;i < 8 ; i++){
+        var notFound = 1;
         var currentDate = self.getWorldTime(9 + 72 + (i * 24));
         currentDate = currentDate.slice(0, 8);
         for(var j in midData.dailyData){
             if(currentDate === midData.dailyData[j].date){
+                notFound = 0;
                 break;
             }
+        }
+
+        if(notFound){
+            continue;
         }
 
         if(i===0){
@@ -484,11 +491,18 @@ Manager.prototype.getMidDb = function(region, city, cb){
         var currentDate = self.getWorldTime(9 - (i * 24));
         var targetDay = self.getWorldTime(9 + 72 - (i * 24));
         targetDay = targetDay.slice(0, 8);
+        var notFound = 1;
         for(var x in midData.dailyData){
             if(targetDay === midData.dailyData[x].date){
+                notFound = 0;
                 break;
             }
         }
+        if(notFound){
+            continue;
+        }
+
+        var targetDate = currentDate;
         currentDate = currentDate.slice(0, 8) + '1800';
         //log.info('find previous data : ', currentDate);
         for(var j=0 in self.midForecast.midTemp){
@@ -498,6 +512,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
                 midData.dailyData[x].taMin = matchedData.taMin3;
                 midData.dailyData[x].taMax = matchedData.taMax3;
+                break;
             }
         }
     }
@@ -1115,6 +1130,7 @@ Manager.prototype.getMidLand = function(gmt){
             //        log.info(i, j, ' : ', dataList[i].data[j]);
             //    }
             //}
+            var isNotExist = 1;
             var dataFormat = {
                 date: dateString.date + dateString.time,
                 data: []
@@ -1124,10 +1140,20 @@ Manager.prototype.getMidLand = function(gmt){
             dataList.forEach(function(item){
                 dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
-            self.midForecast.midLand.push(dataFormat);
 
-            if(self.midForecast.midLand.length > 26){
-                self.midForecast.midLand.shift();
+            self.midForecast.midLand.forEach(function(item){
+                if(item.date == dataFormat.date){
+                    isNotExist = 0;
+                    log.error('Land data> it is already existed : ', dataFormat.date);
+                }
+            });
+
+            if(isNotExist) {
+                self.midForecast.midLand.push(dataFormat);
+
+                if (self.midForecast.midLand.length > 26) {
+                    self.midForecast.midLand.shift();
+                }
             }
 
             //log.info(self.midForecast.midLand);
@@ -1209,6 +1235,7 @@ Manager.prototype.getMidTemp = function(gmt){
             //    }
             //}
 
+            var isNotExist = 1;
             var dataFormat = {
                 date: dateString.date + dateString.time,
                 data: []
@@ -1218,10 +1245,20 @@ Manager.prototype.getMidTemp = function(gmt){
             dataList.forEach(function(item){
                 dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
-            self.midForecast.midTemp.push(dataFormat);
 
-            if(self.midForecast.midTemp.length > 26){
-                self.midForecast.midTemp.shift();
+            self.midForecast.midTemp.forEach(function(item){
+                if(item.date == dataFormat.date){
+                    isNotExist = 0;
+                    log.error('Temp Data> it is already existed : ', dataFormat.date);
+                }
+            });
+
+            if(isNotExist){
+                self.midForecast.midTemp.push(dataFormat);
+
+                if(self.midForecast.midTemp.length > 26){
+                    self.midForecast.midTemp.shift();
+                }
             }
 
             //log.info(self.midForecast.midTemp);
@@ -1399,28 +1436,28 @@ Manager.prototype.startTownData = function(){
     self.loopMidForecastID = setInterval(function(){
         "use strict";
 
-        self.getMidForecast();
+        self.getMidForecast(9);
     }, self.TIME_PERIOD.MID_FORECAST);
 
     // get middle range land forecast once every 12 hours.
     self.loopMidLandID = setInterval(function(){
         "use strict";
 
-        self.getMidLand();
+        self.getMidLand(9);
     }, self.TIME_PERIOD.MID_LAND);
 
     // get middle range temperature once every 12 hours.
     self.loopMidTempID = setInterval(function(){
         "use strict";
 
-        self.getMidTemp();
+        self.getMidTemp(9);
     }, self.TIME_PERIOD.MID_TEMP);
 
     // get middle range sea forecast  once every 12 hours.
     self.loopMidSeaID = setInterval(function(){
         "use strict";
 
-        self.getMidSea();
+        self.getMidSea(9);
     }, self.TIME_PERIOD.MID_SEA);
 };
 
