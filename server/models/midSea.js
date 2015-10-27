@@ -59,7 +59,6 @@ midSeaSchema.statics = {
     getSeaData: function(first, cb){
         this.find({"sea" : { "first" : location }})
             .sort({"midSeaData.date" : -1, "midSeaData.time" : -1}).limit(1).exec(cb);
-
     },
     setSeaData: function(seaData, regId, cb){
         var self = this;
