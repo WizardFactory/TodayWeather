@@ -17,6 +17,7 @@ var users = require('./routes/users');
 
 var townForecast = require('./routes/routeTownForecast');
 var controllerManager = require('./controllers/controllerManager');
+var controllerShortRss = require('./controllers/controllerShortRss');
 /*
 * wizard factory's modules
 */
@@ -71,6 +72,9 @@ app.use('/town', townForecast);
 
 global.manager = new controllerManager();
 manager.startManager();
+
+global.ShortRss = new controllerShortRss();
+ShortRss.StartShortRss();
 
 var taskKmaIndexService = new (require('./controllers/controllerKmaIndexService'))();
 taskKmaIndexService.setProviderKey((require('./config/keydata')).keyString.cert_key);

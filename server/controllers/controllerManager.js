@@ -6,7 +6,9 @@
 var collectTown = require('../lib/collectTownForecast');
 var listKey = require('../config/keydata');
 var town = require('../models/town');
-var forecast = require('../models/forecast');
+//var forecast = require('../models/forecast');
+var short = require('../models/short');
+var current = require('../models/current');
 var fs = require('fs');
 var config = require('../config/config');
 var convert = require('../utils/coordinate2xy');
@@ -396,7 +398,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     //log.info('get today data, go next : ', self.midForecast.midLand.length);
     // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
-    for(i = 11 ; i > 0 ; i--){
+    for(i = 10 ; i > 0 ; i--){
         var currentDate = self.getWorldTime(9 - (i * 24));
         var targetDate = self.getWorldTime(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
         var item = {
@@ -476,7 +478,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     //log.info('get today data, go next : ', self.midForecast.midTemp.length);
     // 여기도 land와 마찬가지로 11일 전의 데이터부터 뒤져서 예전 예보 정보를 넣자..
-    for(i = 11 ; i > 0 ; i--){
+    for(i = 10 ; i > 0 ; i--){
         var currentDate = self.getWorldTime(9 - (i * 24));
         var targetDay = self.getWorldTime(9 + 72 - (i * 24));
         targetDay = targetDay.slice(0, 8);
@@ -821,12 +823,12 @@ Manager.prototype.getTownShortData = function(baseTime){
 
                 for(var i = 0 ; i < listTownDb.length ; i ++){
                     if(Array.isArray(dataList[i].data)) {
-                        forecast.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
+                        short.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
                             if (err) {
                                 log.error('** getTownShortData : ', err);
                                 log.error(meta);
                             }
-                            //log.info(res);
+                            log.info(res);
                         });
                     }
                 }
@@ -994,12 +996,12 @@ Manager.prototype.getTownCurrentData = function(){
 
                 for (var i = 0; i < listTownDb.length; i++) {
                     if (Array.isArray(dataList[i].data)) {
-                        forecast.setCurrentData(dataList[i].data, listTownDb[i], function (err, res) {
+                        current.setCurrentData(dataList[i].data, listTownDb[i], function (err, res) {
                             if (err) {
                                 log.error('** getTownCurrentData : ', err);
                                 return;
                             }
-                            //log.info(res);
+                            log.info(res);
                         });
                     }
                 }
@@ -1322,21 +1324,21 @@ Manager.prototype.startTownData = function(){
         }
     }, periodValue);
 
-    self.getTownShortestData();
-    self.getTownCurrentData();
-
-    var midLoop = setInterval(function(){
-        self.getMidLand(9 - (midTimes * 24));
-        self.getMidTemp(9 - (midTimes * 24));
-        midTimes-=1;
-
-        if(midTimes < 0 ){
-            clearInterval(midLoop);
-        }
-    }, midPeriod);
-
-    self.getMidForecast(9);
-    self.getMidSea(9);
+    //self.getTownShortestData();
+    //self.getTownCurrentData();
+    //
+    //var midLoop = setInterval(function(){
+    //    self.getMidLand(9 - (midTimes * 24));
+    //    self.getMidTemp(9 - (midTimes * 24));
+    //    midTimes-=1;
+    //
+    //    if(midTimes < 0 ){
+    //        clearInterval(midLoop);
+    //    }
+    //}, midPeriod);
+    //
+    //self.getMidForecast(9);
+    //self.getMidSea(9);
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
