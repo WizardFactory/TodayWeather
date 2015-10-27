@@ -163,8 +163,13 @@ function CollectData(options, callback){
             //log.error('URL : ', self.resultList[listIndex].url);
             //log.error(self.resultList[listIndex].options);
 
-            self.resultList[listIndex].retryCount--;
-            self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
+            setTimeout(function(){
+                self.resultList[listIndex].retryCount--;
+                self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
+            }, 2000);
+
+            //self.resultList[listIndex].retryCount--;
+            //self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
         }
         else
         {
