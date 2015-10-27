@@ -1356,21 +1356,21 @@ Manager.prototype.startTownData = function(){
         }
     }, periodValue);
 
-    //self.getTownShortestData();
-    //self.getTownCurrentData();
-    //
-    //var midLoop = setInterval(function(){
-    //    self.getMidLand(9 - (midTimes * 24));
-    //    self.getMidTemp(9 - (midTimes * 24));
-    //    midTimes-=1;
-    //
-    //    if(midTimes < 0 ){
-    //        clearInterval(midLoop);
-    //    }
-    //}, midPeriod);
-    //
-    //self.getMidForecast(9);
-    //self.getMidSea(9);
+    self.getTownShortestData();
+    self.getTownCurrentData();
+
+    var midLoop = setInterval(function(){
+        self.getMidLand(9 - (midTimes * 24));
+        self.getMidTemp(9 - (midTimes * 24));
+        midTimes-=1;
+
+        if(midTimes < 0 ){
+            clearInterval(midLoop);
+        }
+    }, midPeriod);
+
+    self.getMidForecast(9);
+    self.getMidSea(9);
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
