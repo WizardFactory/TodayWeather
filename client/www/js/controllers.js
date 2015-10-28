@@ -941,14 +941,15 @@ angular.module('starter.controllers', [])
                     }
                 }, function (err) {
                     var str = "현재 위치에 대한 정보를 찾을 수 없습니다.";
-                    if ($ionicPlatform.isAndroid()) {
-                        str += " WIFI와 위치정보를 켜주세요.";
-                    }
                     showAlert("에러", str);
                     deferred.reject();
                 });
             }, function () {
-                showAlert("에러", "현재 위치를 찾을 수 없습니다.");
+                var str = '현재 위치를 찾을 수 없습니다.';
+                if (ionic.Platform.isAndroid()) {
+                    str += '<br>WIFI와 위치정보를 켜주세요.';
+                }
+                showAlert("에러", str);
                 deferred.reject();
             });
 
