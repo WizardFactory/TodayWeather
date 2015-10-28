@@ -17,6 +17,7 @@
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {
+    "async": "^1.4.2",
     "body-parser": "~1.13.1",
     "compress": "^0.99.0",
     "compression": "^1.5.2",

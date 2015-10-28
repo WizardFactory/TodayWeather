@@ -18,7 +18,9 @@ var tSchema = new mongoose.Schema({
     town: {first: String, second: String, third: String},
     mCoord: {mx: Number, my: Number},
     gCoord: {lat: Number, lon: Number},
-    areaNo: String
+    areaNo: String,
+    tmCoord:{x: Number, y: Number},
+    kecoStationName: String
 });
 
 tSchema.statics = {
