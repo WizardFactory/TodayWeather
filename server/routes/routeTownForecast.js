@@ -407,7 +407,79 @@ var getShort = function(req, res, next){
                     resultList = resultList.slice(popCount, resultList.length);
                 }
 
-                //log.info(resultList);
+                /********************************************************************
+                 * START : To merge the RSS data to result.
+                 ********************************************************************/
+                var rssData = townRss.getTownRssDb(result.mData.mCoord.mx, result.mData.mCoord.my).shortData;
+                if(rssData.length > 1){
+                    var lastDate = 0;
+                    log.info(rssData);
+                    resultList.forEach(function(item){
+                        // resultList의 short데이터 중 제일 마지막 리스트 즉 제일 미래의 시간을 기억해둔다
+                        if(parseInt(lastDate) < parseInt('' + item.date + item.time)){
+                            lastDate = '' + item.date + item.time;
+                            log.info('change last date:', lastDate);
+                        }
+
+                        // 현재 이후의 데이터는 RSS DATA 에서 같은 날짜의 데이터가 있으면 RSS의 데이터로 overwrite하자
+                        if(parseInt('' + item.date + item.time) > parseInt('' + requestTime.date + requestTime.time)){
+                            for(i=0 ; i < rssData.length ; i++){
+                                if(parseInt('' + item.date + item.time) === parseInt(rssData[i].date)){
+                                    //item.date = rssData[i].date.slice(0, 8);
+                                    //item.time = rssData[i].date.slice(8, 12);
+                                    item.pop = rssData[i].pop;
+                                    item.pty = rssData[i].pty;
+                                    item.r06 = rssData[i].r06;
+                                    item.reh = rssData[i].reh;
+                                    item.s06 = rssData[i].s06;
+                                    item.sky = rssData[i].sky;
+                                    item.t3h = rssData[i].temp;
+                                    if(item.time === '0600' && rssData[i].tmn != -999) {
+                                        item.tmn = rssData[i].tmn;
+                                    }
+                                    if(item.time === '1500' && rssData[i].tmn != -999){
+                                        item.tmx = rssData[i].tmx;
+                                    }
+                                    log.info('updated', item);
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    // 이제 RSS 데이터에 resultList의 가장 미래의 데이터보다 큰 값이 있으면 resultList뒤에다 붙여 주자
+                    rssData.forEach(function(rssItem){
+                        if(lastDate < rssItem.date){
+                            var item = {};
+                            item.date = rssItem.date.slice(0, 8);
+                            item.time = rssItem.date.slice(8, 12);
+                            item.pop = rssItem.pop;
+                            item.pty = rssItem.pty;
+                            item.r06 = rssItem.r06;
+                            item.reh = rssItem.reh;
+                            item.s06 = rssItem.s06;
+                            item.sky = rssItem.sky;
+                            item.t3h = rssItem.temp;
+                            if(item.time === '0600' && rssItem.tmn != -999){
+                                item.tmn = rssItem.tmn;
+                            } else{
+                                item.tmn = 0;
+                            }
+                            if(item.time === '1500' && rssItem.tmx != -999){
+                                item.tmx = rssItem.tmx;
+                            }else{
+                                item.tmx = 0;
+                            }
+
+                            log.info('push data>', item);
+                            resultList.push(item);
+                        }
+                    });
+                }
+                /********************************************************************
+                 * END :
+                 ********************************************************************/
+                log.info(resultList);
                 req.short = resultList;
                 next();
             }
