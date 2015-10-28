@@ -76,9 +76,16 @@ manager.startManager();
 global.ShortRss = new controllerShortRss();
 ShortRss.StartShortRss();
 
+var keyBox = require('./config/keydata').keyString;
+
 var taskKmaIndexService = new (require('./controllers/controllerKmaIndexService'))();
-taskKmaIndexService.setProviderKey((require('./config/keydata')).keyString.cert_key);
+taskKmaIndexService.setProviderKey(keyBox.cert_key);
 taskKmaIndexService.start();
+
+var keco = new (require('./controllers/kecoController.js'))();
+keco.setServiceKey(keyBox.kmaLifeIndex);
+keco.setDaumApiKey(keyBox.daum_key);
+keco.start();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
