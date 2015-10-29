@@ -73,8 +73,8 @@ app.use('/town', townForecast);
 global.manager = new controllerManager();
 manager.startManager();
 
-global.ShortRss = new controllerShortRss();
-ShortRss.StartShortRss();
+global.townRss = new controllerShortRss();
+townRss.StartShortRss();
 
 var keyBox = require('./config/keydata').keyString;
 

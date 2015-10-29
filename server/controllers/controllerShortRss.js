@@ -28,10 +28,17 @@ function TownRss(){
     self.addrGrid = 'http://www.kma.go.kr/wid/queryDFS.jsp';
     self.addrZond = 'http://www.kma.go.kr/wid/queryDFSRSS.jsp';
 
+    self.TIME_PERIOD_TOWN_RSS = (1000*60*60*3);
+    self.SUCCESS = 0;
+    self.ERROR = -1;
+    self.RETRY = -2;
+
     events.EventEmitter.call(this);
 
-    self.on('recvFail', function(index){
-        // TODO : retry
+    self.on('recvFail', function(index, item){
+        setTimeout(function(){
+            self.getData(index, item);
+        }, 60 * 1000);
     });
 
     self.on('recvSuccess', function(index){
@@ -134,7 +141,6 @@ TownRss.prototype.loadList = function(){
         log.info('town count : ', self.townRssDb.length);
 
     } else{
-        // TODO : load town data from DB.
          town.getCoord(function(err, coordList){
              self.coordDb = coordList;
          });
@@ -153,7 +159,6 @@ TownRss.prototype.loadList = function(){
 TownRss.prototype.getShortRss = function(index, url, callback){
     var self = this;
     var meta = {};
-    var errNo = 0;
 
     meta.method = 'getShortRss';
     meta.url = url;
@@ -164,15 +169,14 @@ TownRss.prototype.getShortRss = function(index, url, callback){
         if(err){
             log.error('failed to req (%d)', index);
             if(callback){
-                callback(-1);
+                callback(self.RETRY);
             }
             return;
         }
         if(statusCode === 404 || statusCode === 403){
             log.error('ERROR!!! StatusCode : ', statusCode);
             if(callback){
-                errNo = -1;
-                callback(errNo);
+                callback(self.RETRY);
             }
             return;
         }
@@ -182,20 +186,19 @@ TownRss.prototype.getShortRss = function(index, url, callback){
             if(err){
                 log.error('>>ERROR : failed to converto to json');
                 if(callback){
-                    callback(-1);
+                    callback(self.ERROR);
                 }
             }
             try{
                 //log.info(result)
                 if(callback){
-                    callback(errNo, result);
+                    callback(self.SUCCESS, result);
                 }
             }
             catch(e) {
                 log.error('>>ERROR : get exception error in xml2json');
-                errNo = -1;
                 if(callback){
-                    callback(errNo);
+                    callback(self.ERROR);
                 }
             }
         });
@@ -248,17 +251,17 @@ TownRss.prototype.convertWeaterString = function(string){
     /* ① E(동) ② N(북) ③ NE(북동) ④ NW(북서) ⑤ S(남) ⑥ SE(남동) ⑦ SW(남서) ⑧ W(서) */
     switch(string){
         case '맑음':
-        case 'clear':
+        case 'Clear':
         case '동':
         case 'E':
             return 1;
         case '구름 조금':
-        case 'Patly Cloudy':
+        case 'Partly Cloudy':
         case '북':
         case 'N':
             return 2;
         case '구름 많음':
-        case 'Mostly':
+        case 'Mostly Cloudy':
         case '북동':
         case 'NE':
             return 3;
@@ -286,6 +289,7 @@ TownRss.prototype.convertWeaterString = function(string){
         case 'W':
             return 8;
         default:
+            log.info('convert : ', string);
             return -1;
     }
 };
@@ -376,13 +380,13 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
 
         //log.info(dataList);
         if(callback){
-            callback(0, {mCoord: coord, shortData: dataList});
+            callback(self.SUCCESS, {mCoord: coord, shortData: dataList});
         }
     }
     catch(e){
         log.error('parse error! (%d)', index);
         if(callback){
-            callback(-1);
+            callback(self.ERROR);
         }
     }
 };
@@ -428,6 +432,10 @@ TownRss.prototype.saveShortRss = function(index, newData){
                     }
                     return 0;
                 });
+
+                if(self.townRssDb[i].shortData.length > 60){
+
+                }
                 log.info('R> ', self.townRssDb[i].shortData);
             }
         }
@@ -435,6 +443,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
         if(isNewCoord){
             self.townRssDb.push(newData);
         }
+
     }
     else{
         shortRssDb.find({mCoord: newData.mCoord}, function(err, list){
@@ -503,11 +512,13 @@ TownRss.prototype.saveShortRss = function(index, newData){
 TownRss.prototype.getTownRssDb = function(mx, my){
     var self = this;
 
-    self.townRssDb.forEach(function(townData){
-        if(townData.mCoord.mx === mx && townData.mCoord.my === my){
-            return townData;
+    //log.info('search : ', mx, my);
+    for(var i in self.townRssDb){
+        if(self.townRssDb[i].mCoord.mx === mx && self.townRssDb[i].mCoord.my === my){
+            return self.townRssDb[i];
         }
-    });
+    }
+    return {};
 };
 
 /*
@@ -522,6 +533,37 @@ TownRss.prototype.makeUrl = function(mx, my){
 };
 
 /*
+ * @param item
+ * @param index
+ */
+TownRss.prototype.getData = function(index, item){
+    var self = this;
+    var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
+    self.getShortRss(index, url, function(err, RssData){
+        if(err){
+            log.err('failed to get rss (%d)', index);
+            if(err == self.RETRY){
+                self.emit('recvFail', index, item);
+            }
+            return;
+        }
+
+        self.parseShortRss(index, RssData, function(err, result){
+            if(err){
+                log.error('failed to parse short rss(%d)', index);
+                return;
+            }
+            self.saveShortRss(index, result, function(err){
+                if(err){
+                    log.error('failed to save the data to DB');
+                    return;
+                }
+            });
+        });
+    });
+};
+
+/*
  *
  */
 TownRss.prototype.mainTask = function(){
@@ -529,35 +571,11 @@ TownRss.prototype.mainTask = function(){
     var gridList = [];
 
 
-    if(config.db.mode === 'ram'){
-        gridList = self.coordDb;
-    }else{
-
-    }
+    gridList = self.coordDb;
 
     self.receivedCount = 0;
     gridList.forEach(function(item, index){
-        var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
-        self.getShortRss(index, url, function(err, RssData){
-            if(err){
-                log.err('failed to get rss (%d)', index);
-                self.emit('recvFail', index);
-                return;
-            }
-
-            self.parseShortRss(index, RssData, function(err, result){
-                if(err){
-                    log.error('failed to parse short rss(%d)', index);
-                    return;
-                }
-                self.saveShortRss(index, result, function(err){
-                    if(err){
-                        log.error('failed to save the data to DB');
-                        return;
-                    }
-                });
-            });
-        });
+        self.getData(index, item);
     });
 };
 
@@ -566,6 +584,13 @@ TownRss.prototype.StartShortRss = function(){
 
     self.loadList();
     self.mainTask();
+
+    self.loopTownRssID = setInterval(function() {
+        "use strict";
+
+        self.mainTask();
+
+    }, self.TIME_PERIOD_TOWN_RSS);
 };
 
 module.exports = TownRss;
