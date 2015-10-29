@@ -79,7 +79,7 @@ townRss.StartShortRss();
 var keyBox = require('./config/keydata').keyString;
 
 var taskKmaIndexService = new (require('./controllers/controllerKmaIndexService'))();
-taskKmaIndexService.setProviderKey(keyBox.cert_key);
+taskKmaIndexService.setServiceKey(keyBox.cert_key);
 taskKmaIndexService.start();
 
 var keco = new (require('./controllers/kecoController.js'))();
