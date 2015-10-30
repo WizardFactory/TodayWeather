@@ -78,7 +78,7 @@ townRss.StartShortRss();
 
 var keyBox = require('./config/keydata').keyString;
 
-var taskKmaIndexService = new (require('./controllers/controllerKmaIndexService'))();
+var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
 taskKmaIndexService.start();
 

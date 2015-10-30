@@ -60,6 +60,15 @@ function convertDateToYYYMMDD(date) {
     return year+month+day;
 }
 
+function convertDateToHHMM(date) {
+    //I don't know why one more create Date object by aleckim
+    var d = new Date(date);
+    var hh = '' + (d.getHours()+1);
+    if (hh.length < 2)  {hh = '0'+hh; }
+
+    return hh+'00';
+}
+
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
  * Winter 동파, Ultrv 자외선, Airpollution 대기 확산
@@ -78,12 +87,52 @@ function KmaIndexService() {
         urlPath: 'getFsnLifeList'
     };
 
+    this.rot = {
+        nextTime: null,
+        areaIndex: 0,
+        offerMonth: {start: 2, end: 10}, //3~11
+        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+        urlPath: 'getRotLifeList'
+    };
+
     this.sensorytem = {
         nextTime: null,
         areaIndex: 0,
         offerMonth: {start: 10, end: 3}, //3~11
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getSensorytemLifeList'
+    };
+
+     this.frostbite = {
+        nextTime: null,
+        areaIndex: 0,
+        offerMonth: {start: 11, end: 1}, //12~2
+        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+        urlPath: 'getFrostbiteLifeList'
+    };
+
+    this.heat = {
+        nextTime: null,
+        areaIndex: 0,
+        offerMonth: {start: 5, end: 8}, //6~9
+        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+        urlPath: 'getHeatLifeList'
+    };
+
+    this.dspls = {
+        nextTime: null,
+        areaIndex: 0,
+        offerMonth: {start: 5, end: 8}, //6~9
+        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+        urlPath: 'getDsplsLifeList'
+    };
+
+    this.winter = {
+        nextTime: null,
+        areaIndex: 0,
+        offerMonth: {start: 11, end: 1},
+        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+        urlPath: 'getWinterLifeList'
     };
 
     this.ultrv = {
@@ -94,13 +143,14 @@ function KmaIndexService() {
         urlPath: 'getUltrvLifeList'
     };
 
-    this.dspls = {
+    this.airpollution = {
         nextTime: null,
         areaIndex: 0,
-        offerMonth: {start: 5, end: 8},
+        offerMonth: {start: 10, end: 4},
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getDsplsLifeList'
+        urlPath: 'getAirpollutionLifeList'
     };
+
 }
 
 /**
@@ -221,17 +271,74 @@ KmaIndexService.prototype.getUrl = function (indexName, areaNo, svcKey) {
     return url;
 };
 
+/**
+ "IndexModel": {
+    "code": "A01_2", "areaNo": 5013062000, "date": 2015101818, "today": "", "tomorrow": 55,"theDayAfterTomorrow": 55
+  }
+ * @param parsedData
+ * @param indexModel
+ * @private
+ */
+KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexModel) {
+
+    var lastUpdateDate = ''+indexModel.date;
+
+    var today = convertStringToDate(lastUpdateDate);
+    var tomorrowStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
+    var tdatStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
+
+
+    if (indexModel.today !== "") {
+        parsedData.data.push({date: lastUpdateDate.substr(0,8), value: indexModel.today});
+    }
+    else {
+        log.silly('skip invalid data of today');
+    }
+
+    parsedData.data.push({date: tomorrowStr, value: indexModel.tomorrow});
+    parsedData.data.push({date: tdatStr, value: indexModel.theDayAfterTomorrow});
+};
+
+/**
+ "IndexModel":{"code":"A02","areaNo":5013062000,"date":2015103018,
+    "h3":0,"h6":0,"h9":0,"h12":0,"h15":0,"h18":0,"h21":0,"h24":0,"h27":0,"h30":0,"h33":0,"h36":0,"h39":0,"h42":0,
+    "h45":0,"h48":1,"h51":3,"h54":3,"h57":"","h60":"","h63":"","h66":""}
+ * @param parsedData
+ * @param indexModel
+ * @private
+ */
+KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexModel) {
+    var lastUpdateDate = ''+indexModel.date;
+
+    var startTime = convertStringToDate(lastUpdateDate);
+
+    for (var i=3;i<67;i+=3) {
+        var propertyName = 'h'+i;
+        startTime.setHours(startTime.getHours()+3);
+
+        if (indexModel[propertyName] === '') {
+            log.silly('skip invalid data');
+            continue;
+        }
+
+        var data = {date: convertDateToYYYMMDD(startTime),
+                    time: convertDateToHHMM(startTime),
+                    value: indexModel[propertyName]};
+
+        log.silly(data);
+        parsedData.data.push(data);
+    }
+};
+
 /* jshint ignore:start */
 /**
  *
-    "Response": {
+     "Response": {
         "Header": {
             "SuccessYN": "Y", "ReturnCode": "00","ErrMsg": "" },
         "Body": {
             "@xsi.type": "idxBody",
-            "IndexModel": {
-                "code": "A01_2", "areaNo": 5013062000, "date": 2015101818, "today": "", "tomorrow": 55,
-                "theDayAfterTomorrow": 55}}}
+            "IndexModel": {}}}
     return - {*|{error: Error, data: {areaNo: String, $indexName: {}}}
 
  * @param indexName
@@ -274,15 +381,12 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var lastUpdateDate = ''+indexModel.date;
     var parsedData = {lastUpdateDate: lastUpdateDate, data: []};
 
-    var today = convertStringToDate(lastUpdateDate);
-    var tomorrowStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
-    var tdatStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
-
-    if (indexModel.today !== "") {
-        parsedData.data.push({date: lastUpdateDate.substr(0,8), value: indexModel.today});
+    if (indexName === 'fsn' || indexName === 'ultrv') {
+        this._parseDailyLifeIndex(parsedData, indexModel);
     }
-    parsedData.data.push({date: tomorrowStr, value: indexModel.tomorrow});
-    parsedData.data.push({date: tdatStr, value: indexModel.theDayAfterTomorrow});
+    else {
+        this._parseHourlyLifeIndex(parsedData, indexModel);
+    }
 
     var result = {areaNo: areaNo};
     result[indexName]  = parsedData;
@@ -472,7 +576,7 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
     //RotLife
     //HeatLife
     //AirpollutionLife
-    var list = ['ultrv', 'sensorytem', 'dspls', 'fsn'];
+    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
     async.mapSeries(list,
         function(indexName, cb) {
             self.taskLifeIndex(indexName, function (err, results) {
@@ -497,6 +601,7 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
 KmaIndexService.prototype.start = function() {
     log.info('start KMA INDEX SERVICE');
     this.loadAreaList();
+    this.setNextGetTime('rot', new Date());
     this.setNextGetTime('sensorytem', new Date());
     this.setNextGetTime('dspls', new Date());
     this.setNextGetTime('fsn', new Date());
