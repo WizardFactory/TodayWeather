@@ -218,10 +218,10 @@ angular.module('starter.controllers', [])
         }
 
         /**
-         *
-         * @param {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
+         * {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
-         *          wsd: Number} currentTownWeather
+         *          wsd: Number}
+         * @param {Object} currentTownWeather
          * @returns {{}}
          */
         function parseCurrentTownWeather(currentTownWeather) {
@@ -304,7 +304,7 @@ angular.module('starter.controllers', [])
                 if(shortForecast.tmx != -50 && shortForecast.tmx != 0) {
                     dayInfo.tmx = shortForecast.tmx;
                 }
-                //sometims, t3h over tmx;
+                //sometimes, t3h over tmx;
                 if (shortForecast.t3h > dayInfo.tmx) {
                     dayInfo.tmx = shortForecast.t3h;
                 }
@@ -385,10 +385,17 @@ angular.module('starter.controllers', [])
                 }
 
                 // 하루 기준의 최고, 최저 온도 찾기
+                // t3h를 tmx, tmn로 대처함
                 if (shortForecast.tmx !== 0) {
+                    if (tempObject.t3h < shortForecast.tmx) {
+                        tempObject.t3h = shortForecast.tmx;
+                    }
                     tempObject.tmx = shortForecast.tmx;
                 }
                 else if (shortForecast.tmn !== 0) {
+                    if (tempObject.tmn < tempObject.t3h) {
+                        tempObject.t3h = tempObject.tmn;
+                    }
                     tempObject.tmn = shortForecast.tmn;
                 }
 
@@ -482,7 +489,7 @@ angular.module('starter.controllers', [])
             return sky1;
         }
 
-        function parseMidTownWeather(midData, dailyInfoList, currentTime) {
+        function parseMidTownWeather(midData, dailyInfoList, currentTime, currentWeather) {
             if (!midData) {
                 console.log("midData is undefined");
                 midData = {
@@ -630,8 +637,14 @@ angular.module('starter.controllers', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.sky = getHighPrioritySky(skyAm, skyPm);
-                data.tmx = dayInfo.taMax;
-                data.tmn = dayInfo.taMin;
+                if (diffDays === 0) {
+                    data.tmx = currentWeather.t1h>dayInfo.taMax?currentWeather.t1h:dayInfo.taMax;
+                    data.tmn = currentWeather.t1h<dayInfo.taMin?currentWeather.t1h:dayInfo.taMin;
+                }
+                else {
+                    data.tmx = dayInfo.taMax;
+                    data.tmn = dayInfo.taMin;
+                }
                 data.humidityIcon = "Humidity-00";
                 tmpDayTable.push(data);
             });
@@ -762,8 +775,6 @@ angular.module('starter.controllers', [])
         }
         /**
          * @callback cbWeatherInfo
-         * @param {Error} error
-         * @param {Object} weatherData
          */
 
         function getCurrentPosition() {
@@ -876,7 +887,7 @@ angular.module('starter.controllers', [])
             $scope.timeTable = parsedWeather.timeTable;
             $scope.timeChart = parsedWeather.timeChart;
 
-            $scope.dayTable = parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime);
+            $scope.dayTable = parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
             $scope.dayChart = [{
                 values: $scope.dayTable,
                 temp: $scope.currentWeather.t1h
@@ -897,12 +908,12 @@ angular.module('starter.controllers', [])
             var deferred = $q.defer();
 
             if(fullAddress)  {
-                getWeatherInfo(splitAddress(fullAddress), function (error, weatherData) {
+                getWeatherInfo(splitAddress(fullAddress), function (err, weatherData) {
                     // 1: resolved, 2: rejected
                     if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                         return;
                     }
-                    if (!error) {
+                    if (!err) {
                         $scope.address = getShortenAddress(fullAddress);
                         setWeatherData(weatherData);
                         deferred.notify();
