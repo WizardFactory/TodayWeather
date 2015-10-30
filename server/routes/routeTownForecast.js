@@ -875,7 +875,10 @@ var getMid = function(req, res, next){
 
     var regionName = req.params.region;
     var cityName = req.params.city;
-
+    var townName = '';
+    if(req.params.town != undefined){
+        townName = req.params.town;
+    }
     meta.method = 'getMid';
     meta.region = regionName;
     meta.city = cityName;
@@ -885,14 +888,62 @@ var getMid = function(req, res, next){
     if(config.db.mode === 'ram'){
         manager.getMidDb(regionName, cityName, function(err, result){
             if(err){
-                if(err){
-                    log.error('> getMid : failed to get data from DB');
-                    log.error(meta);
-                    next();
-                }
+                log.error('> getMid : failed to get data from DB');
+                log.error(meta);
+                next();
             }
             try{
                 log.info('> Mid DATA : ', result);
+
+                if(townName != ''){
+                    /**********************************************************
+                     *  START : Get current data and merge it
+                     **********************************************************/
+                    manager.getWeatherDb(regionName, cityName, townName, function(err, townDb){
+                        if(err){
+                            log.error('> getShortest : failed to get data from DB');
+                            log.error(meta);
+                            next();
+                        }
+
+                        try{
+                            var listCurrent = townDb.mData.data.current;
+                            log.info('current>', townDb);
+
+                            result.dailyData.forEach(function(item){
+                                var max = 0;
+                                var min = 100;
+                                var count = 0;
+                                listCurrent.forEach(function(curItem){
+                                    if(item.date == curItem.date){
+                                        count += 1;
+                                        if(curItem.t1h > max){
+                                            max = curItem.t1h;
+                                        }
+                                        if(curItem.t1h < min){
+                                            min = curItem.t1h;
+                                        }
+                                    }
+                                });
+
+                                if(count > 23){
+                                    log.info('replace:', item.date, item.taMax, item.taMin);
+                                    item.taMax = max;
+                                    item.taMin = min;
+                                    count = 0;
+                                }
+                            });
+
+                        }catch(e){
+                            log.error('Second Phase ERROE>>', meta);
+                            next();
+                        }
+                    });
+                    /**********************************************************
+                     *  END
+                     **********************************************************/
+                }
+
                 req.midData = result;
                 next();
 
