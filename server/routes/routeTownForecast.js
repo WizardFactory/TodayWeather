@@ -1075,6 +1075,13 @@ router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid], 
         result.midData = req.midData;
     }
 
+    //add life index of kma info
+    var LifeIndexKmaController  = require('../controllers/lifeIndexKmaController');
+    LifeIndexKmaController.appendData({first: regionName, second: cityName, third: townName}, result.short,
+                result.midData, function (err) {
+
+    });
+
     res.json(result);
 });
 

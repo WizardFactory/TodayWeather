@@ -18,39 +18,39 @@ var lSchema = new mongoose.Schema({
         my: Number
     },
     areaNo: String,
-    fsn: {
+    fsn: { /* 식중독 food poisoning */
         lastUpdateDate: String,
         data: [ {date: String, value: Number} ] //daily
     },
-    ultrv: {
+    ultrv: { /*자외선 ultraviolet rays*/
         lastUpdateDate: String,
         data: [ {date: String, value: Number}] //daily
     },
-    rot: {
+    rot: { /* 부패 rot */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] // 3hours
     },
-    sensorytem: {
+    sensorytem: { /* feels like temperature */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] // 3hours
     },
-    frostbite: {
+    frostbite: { /* 동상 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    heat: {
+    heat: { /* 열 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    dspls: {
+    dspls: { /* 불쾌 displeasure */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    winter: {
+    winter: {  /* 동파 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    airpollution: {
+    airpollution: { /* 확산 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number}] //3hours
     }
