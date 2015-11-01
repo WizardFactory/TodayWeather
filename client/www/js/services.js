@@ -44,10 +44,10 @@ angular.module('starter.services', [])
     })
     .factory('WeatherUtil', function () {
         /**
-         *
-         * @param {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
+         * {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
-         *          wsd: Number} currentTownWeather
+         *          wsd: Number}
+         * @param {Object} currentTownWeather
          * @returns {{}}
          */
         function parseCurrentTownWeather(currentTownWeather) {
@@ -163,10 +163,17 @@ angular.module('starter.services', [])
                 }
 
                 // 하루 기준의 최고, 최저 온도 찾기
+                // t3h를 tmx, tmn로 대처함
                 if (shortForecast.tmx !== 0) {
+                    if (tempObject.t3h < shortForecast.tmx) {
+                        tempObject.t3h = shortForecast.tmx;
+                    }
                     tempObject.tmx = shortForecast.tmx;
                 }
                 else if (shortForecast.tmn !== 0) {
+                    if (tempObject.tmn < tempObject.t3h) {
+                        tempObject.t3h = tempObject.tmn;
+                    }
                     tempObject.tmn = shortForecast.tmn;
                 }
 
@@ -209,7 +216,7 @@ angular.module('starter.services', [])
             return {timeTable: timeTable, timeChart: timeChart};
         }
 
-        function parseMidTownWeather(midData, dailyInfoList, currentTime) {
+        function parseMidTownWeather(midData, dailyInfoList, currentTime, currentWeather) {
             var tmpDayTable = [];
             midData.dailyData.forEach(function (dayInfo) {
                 var data = {};
@@ -229,8 +236,14 @@ angular.module('starter.services', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.sky = getHighPrioritySky(skyAm, skyPm);
-                data.tmx = dayInfo.taMax;
-                data.tmn = dayInfo.taMin;
+                if (diffDays === 0) {
+                    data.tmx = currentWeather.t1h > dayInfo.taMax ? currentWeather.t1h : dayInfo.taMax;
+                    data.tmn = currentWeather.t1h < dayInfo.taMin ? currentWeather.t1h : dayInfo.taMin;
+                }
+                else {
+                    data.tmx = dayInfo.taMax;
+                    data.tmn = dayInfo.taMin;
+                }
                 data.humidityIcon = "Humidity-00";
                 tmpDayTable.push(data);
             });
