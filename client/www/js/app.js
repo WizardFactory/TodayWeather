@@ -51,22 +51,22 @@ angular.module('starter', [
 
             // Each tab has its own nav history stack:
 
-            .state('tab.dash', {
-                url: '/dash',
+            .state('tab.forecast', {
+                url: '/forecast',
                 views: {
-                    'tab-dash': {
-                        templateUrl: 'templates/tab-dash.html',
-                        controller: 'DashCtrl'
+                    'tab-forecast': {
+                        templateUrl: 'templates/tab-forecast.html',
+                        controller: 'ForecastCtrl'
                     }
                 }
             })
 
-            .state('tab.chats', {
-                url: '/chats',
+            .state('tab.search', {
+                url: '/search',
                 views: {
-                    'tab-chats': {
-                        templateUrl: 'templates/tab-chats.html',
-                        controller: 'ChatsCtrl'
+                    'tab-search': {
+                        templateUrl: 'templates/tab-search.html',
+                        controller: 'SearchCtrl'
                     }
                 }
             })
@@ -91,7 +91,7 @@ angular.module('starter', [
             });
 
         // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('/tab/dash');
+        $urlRouterProvider.otherwise('/tab/forecast');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
@@ -102,37 +102,40 @@ angular.module('starter', [
             transclude: true,
             link: function (scope, iElement) {
                 var duration = 1000;
-                var margin = {top: 30, right: 0, bottom: 10, left: 0},
-                    width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
+                var margin = {top: 30, right: 0, bottom: 10, left: 0};
+                var width, height, x, y;
+                var svg, initLine, line;
+
+                // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
+                // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
+                scope.$watch('$hasTabs', function(val) {
+                    width = iElement[0].getBoundingClientRect().width - margin.left - margin.right;
                     height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
+                    x = d3.scale.ordinal().rangeBands([width, 0]);
+                    y = d3.scale.linear().range([height, 0]);
 
-                var svg = d3.select(iElement[0]).append('svg')
-                    .attr('width', width + margin.left + margin.right)
-                    .attr('height', height + margin.top + margin.bottom)
-                    .append('g')
-                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                    svg = d3.select(iElement[0]).append('svg')
+                        .attr('width', width + margin.left + margin.right)
+                        .attr('height', height + margin.top + margin.bottom)
+                        .append('g')
+                        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-                var x = d3.scale.ordinal()
-                    .rangeBands([width, 0]);
+                    initLine = d3.svg.line()
+                        .interpolate('linear')
+                        .x(function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .y(height);
 
-                var y = d3.scale.linear()
-                    .range([height, 0]);
-
-                var initLine = d3.svg.line()
-                    .interpolate('linear')
-                    .x(function (d, i) {
-                        return x.rangeBand() * i + x.rangeBand() / 2;
-                    })
-                    .y(height);
-
-                var line = d3.svg.line()
-                    .interpolate('linear')
-                    .x(function (d, i) {
-                        return x.rangeBand() * i + x.rangeBand() / 2;
-                    })
-                    .y(function (d) {
-                        return y(d.value.t3h);
-                    });
+                    line = d3.svg.line()
+                        .interpolate('linear')
+                        .x(function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .y(function (d) {
+                            return y(d.value.t3h);
+                        });
+                });
 
                 var chart = function () {
                     var data = scope.timeChart;
