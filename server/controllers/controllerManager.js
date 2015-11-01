@@ -281,6 +281,9 @@ Manager.prototype.getMatchedData = function(code, dataList){
     return {};
 };
 
+/*
+ * 추후 이 method는 route로 빼야 할듯....
+ */
 Manager.prototype.getMidDb = function(region, city, cb){
     var self = this;
     var result = {
@@ -654,8 +657,8 @@ Manager.prototype.setCurrentData = function(coord, dataList){
                 data.mData.data.current.push(JSON.parse(JSON.stringify(item)));
             }
 
-            if(data.mData.data.current.length > 60){
-                for(var i = 0 ; i < data.mData.data.current.length - 60 ; i++){
+            if(data.mData.data.current.length > 170){
+                for(var i = 0 ; i < data.mData.data.current.length - 170 ; i++){
                     data.mData.data.current.shift();
                 }
             }
@@ -943,10 +946,10 @@ Manager.prototype.getTownShortestData = function(){
     }
 };
 
-Manager.prototype.getTownCurrentData = function(){
+Manager.prototype.getTownCurrentData = function(gmt){
     var self = this;
 
-    var currentDate = self.getWorldTime(+9);
+    var currentDate = self.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8,10) + '00'
@@ -954,7 +957,7 @@ Manager.prototype.getTownCurrentData = function(){
 
     // 아직 발표 전 시간 대라면 1시간을 뺀 시간을 가져온다.
     if(parseInt(currentDate.slice(10,12)) < 35){
-        currentDate = self.getWorldTime(+8);
+        currentDate = self.getWorldTime(gmt - 1);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = currentDate.slice(8,10) + '00'
     }
@@ -1093,7 +1096,7 @@ Manager.prototype.getMidLand = function(gmt){
     };
 
     if(parseInt(dateString.time) < 800){
-        currentDate = self.getWorldTime(-15);
+        currentDate = self.getWorldTime(gmt - 24);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
@@ -1196,7 +1199,7 @@ Manager.prototype.getMidTemp = function(gmt){
     };
 
     if(parseInt(dateString.time) < 800){
-        currentDate = self.getWorldTime(-15);
+        currentDate = self.getWorldTime(gmt - 24);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
@@ -1301,7 +1304,7 @@ Manager.prototype.getMidSea = function(gmt){
     };
 
     if(parseInt(dateString.time) < 800){
-        currentDate = self.getWorldTime(-15);
+        currentDate = self.getWorldTime(gmt - 24);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = '1800';
     }
@@ -1375,6 +1378,7 @@ Manager.prototype.startTownData = function(){
     var midPeriod = 3000;
     var times = 0;
     var midTimes = 11;
+    var curTimes = 48;
     if(config.mode === 'openshift'){
         periodValue = 5 * 60 * 1000;
         midPeriod = 30 * 1000;
@@ -1394,9 +1398,21 @@ Manager.prototype.startTownData = function(){
     }, periodValue);
 
     self.getTownShortestData();
-    self.getTownCurrentData();
+
+    var curloop = setInterval(function(){
+
+        self.getTownCurrentData(9 - curTimes);
+
+        curTimes -= 1;
+
+        if(curTimes < 0){
+            clearInterval(curloop);
+        }
+    }, (periodValue/2));
+    //self.getTownCurrentData(+9);
 
     var midLoop = setInterval(function(){
+        log.info('mid : ', midTimes,(midTimes * 24));
         self.getMidLand(9 - (midTimes * 24));
         self.getMidTemp(9 - (midTimes * 24));
         midTimes-=1;
@@ -1429,7 +1445,7 @@ Manager.prototype.startTownData = function(){
     self.loopTownCurrentID = setInterval(function(){
         "use strict";
 
-        self.getTownCurrentData();
+        self.getTownCurrentData(+9);
     }, self.TIME_PERIOD.TOWN_CURRENT);
 
     // get middle range forecast once every 12 hours.
