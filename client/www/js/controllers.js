@@ -336,6 +336,8 @@ angular.module('starter.controllers', [])
 
         function updateWeatherData() {
             var deferred = $q.defer();
+            var preUpdate = false;
+            var addressUpdate = false;
 
             if(fullAddress)  {
                 getWeatherInfo(splitAddress(fullAddress), function (err, weatherData) {
@@ -344,9 +346,13 @@ angular.module('starter.controllers', [])
                         return;
                     }
                     if (!err) {
+                        preUpdate = true;
                         $scope.address = getShortenAddress(fullAddress);
                         setWeatherData(weatherData);
                         deferred.notify();
+                    }
+                    if (addressUpdate === true) {
+                        deferred.resolve();
                     }
                 });
             }
@@ -358,8 +364,11 @@ angular.module('starter.controllers', [])
 
                 getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
                     if (fullAddress === address) {
-                        console.log("Already updated current position weather data");
-                        deferred.resolve();
+                        addressUpdate = true;
+                        if (preUpdate === true) {
+                            console.log("Already updated current position weather data");
+                            deferred.resolve();
+                        }
                     }
                     else {
                         fullAddress = address;
@@ -426,6 +435,7 @@ angular.module('starter.controllers', [])
                 console.log($scope.dayTable);
                 $scope.dayChart = JSON.parse(localStorage.getItem("dayChart"));
                 console.log($scope.dayChart);
+                return true;
             }
             catch(error) {
                return false;

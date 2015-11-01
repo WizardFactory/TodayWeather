@@ -532,8 +532,8 @@ angular.module('starter.services', [])
             parseShortTownWeather: function (shortForecastList, currentForecast, current, dailyInfoList) {
                 return parseShortTownWeather(shortForecastList, currentForecast, current, dailyInfoList);
             },
-            parseMidTownWeather: function (midData, dailyInfoList, currentTime) {
-                return parseMidTownWeather(midData, dailyInfoList, currentTime);
+            parseMidTownWeather: function (midData, dailyInfoList, currentTime, currentForecast) {
+                return parseMidTownWeather(midData, dailyInfoList, currentTime, currentForecast);
             },
             dayToString: function (day) {
                 return dayToString(day);
