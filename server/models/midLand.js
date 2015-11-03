@@ -12,27 +12,51 @@ var midLandSchema = mongoose.Schema({
     midLandData : {
         date: String,
         time: String,
-        regId: String, /* 예보 구역 코드 */
-        wf3Am: String, /* 3일 후 오전 날씨 예보 */
-        wf3Pm: String, /* 3일 후 오후 날씨 예보 */
-        wf4Am: String, /* 4일 후 오전날씨 예보 */
-        wf4Pm: String, /* 4일 후 오후 날씨 예보 */
-        wf5Am: String, /* 5일 후 오전 날씨 예보 */
-        wf5Pm: String, /* 5일 후 오후 날씨 예보 */
-        wf6Am: String, /* 6일 후 오전 날씨 예보 */
-        wf6Pm: String, /* 6일 후 오후 날씨 예보 */
-        wf7Am: String, /* 7일 후 오전 날씨 예보 */
-        wf7Pm: String, /* 7일 후 오후 날씨 예보 */
-        wf8: String, /* 8일 후 날씨 예보 */
-        wf9: String, /* 9일 후 날씨 예보 */
-        wf10: String /* 10일 후 날씨 예보 */
+        regId: String,
+        wf3Am: String,
+        wf3Pm: String,
+        wf4Am: String,
+        wf4Pm: String,
+        wf5Am: String,
+        wf5Pm: String,
+        wf6Am: String,
+        wf6Pm: String,
+        wf7Am: String,
+        wf7Pm: String,
+        wf8: String,
+        wf9: String,
+        wf10: String
     }
 });
 
+var config = require('../config/config');
 midLandSchema.statics = {
     getLandData : function(first, cb){
-        this.find({"town" : { "first" : first }})
-            .sort({"midLandData.date" : -1, "midLandData.time" : -1}).limit(25).exec(cb);
+        //var currentList = current.getCurrentDataForCal(169, first, second, cb); // 168 + 1
+        var currentList = config.testTownData[0].data.current
+        var pastObj = {};
+        var nowDate = currentList[0].date;
+        var tempAmSky = 0;
+        var tempPmSky = 0;
+        var midObj = currentList.shift();
+
+
+        currentList.forEach(function(elem, idx){
+            if(nowDate != elem.date){
+                pastObj['wp'+ (idx + 1) / 3 +'Am'] = tempAmSky;
+                pastObj['wp'+ (idx + 1) / 3 +'Pm'] = tempPmSky;
+                tempAmSky = 0;
+                tempPmSky = 0;
+                return;
+            }
+            if(elem.time <= 0600){
+                tempAmSky = tempAmSky + elem.sky;
+            }else{
+                tempPmSky = tempPmSky + elem.sky
+            }
+        });
+
+        return Object.defineProperties(midObj, pastObj);
     },
     setLandData : function(landData, regId, cb){
         var self = this;
