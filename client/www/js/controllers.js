@@ -1,3 +1,4 @@
+
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $ionicPlatform, $ionicScrollDelegate, $ionicPopup,
@@ -10,6 +11,7 @@ angular.module('starter.controllers', [])
             }
         }
         $scope.shortForecast = true;
+        $scope.forecastType = 'short'; //mid, detail
 
         //String
         $scope.address = "";
@@ -82,7 +84,7 @@ angular.module('starter.controllers', [])
                     deferred.resolve();
                 }
             }, function(err) {
-                console.error('Ionic Deploy: Unable to check for updates', err);
+                console.log('Ionic Deploy: Unable to check for updates', err);
                 deferred.reject();
             });
 
@@ -310,14 +312,22 @@ angular.module('starter.controllers', [])
 
             dailyInfoArray = WeatherUtil.parsePreShortTownWeather(weatherData.short);
 
+            /*
+            parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
+             */
             var parsedWeather = WeatherUtil.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
             currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
 
-            $scope.currentWeather = currentForecast;
             $scope.timeTable = parsedWeather.timeTable;
             $scope.timeChart = parsedWeather.timeChart;
 
+            /*
+            parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
+             */
             $scope.dayTable = WeatherUtil.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
+
+            $scope.currentWeather = currentForecast;
+
             $scope.dayChart = [{
                 values: $scope.dayTable,
                 temp: $scope.currentWeather.t1h
@@ -532,25 +542,6 @@ angular.module('starter.controllers', [])
             }];
         }
 
-        /**
-         *
-         * @param date
-         * @returns {string}
-         */
-        function convertTimeString(date) {
-            var timeString;
-            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
-            timeString += "(" + WeatherUtil.dayToString(date.getDay()) + ") ";
-
-            if (date.getHours() < 12) {
-                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
-            }
-            else {
-                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
-            }
-            return timeString;
-        }
-
         function getWidthPerCol() {
             if (colWidth)  {
                 return colWidth;
@@ -609,7 +600,7 @@ angular.module('starter.controllers', [])
         identifyUser();
 
         $scope.address = "위치 찾는 중";
-        $scope.currentTimeString = convertTimeString(currentTime);
+        $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
 
         $scope.doRefresh = function() {
             updateWeatherData().finally(function (res) {
@@ -660,7 +651,7 @@ angular.module('starter.controllers', [])
             var newDate = new Date();
             if(newDate.getMinutes() != currentTime.getMinutes()) {
                 currentTime = newDate;
-                $scope.currentTimeString =  convertTimeString(currentTime);
+                $scope.currentTimeString =  WeatherUtil.convertTimeString(currentTime);
             }
         }, 1000);
     })
@@ -678,6 +669,75 @@ angular.module('starter.controllers', [])
         $scope.remove = function(chat) {
             Chats.remove(chat);
         };
+    })
+
+    .controller('SettingCtrl', function($scope, $interval, $ionicAnalytics, $ionicPlatform, $cordovaInAppBrowser
+                , WeatherUtil) {
+        // With the new view caching in Ionic, Controllers are only called
+        // when they are recreated or on app start, instead of every page change.
+        // To listen for when this page is active (for example, to refresh data),
+        // listen for the $ionicView.enter event:
+        //
+        //$scope.$on('$ionicView.enter', function(e) {
+        //});
+
+        $scope.version  = '0.0.0';
+
+        var currentTime = new Date();
+
+        $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
+
+        var deploy = new Ionic.Deploy();
+        deploy.info().then(function(deployInfo) {
+            console.log(deployInfo);
+            $scope.version = deployInfo.binary_version;
+        }, function() {}, function() {});
+
+        $scope.openMarket = function(){
+            var src = '';
+            if (ionic.Platform.isIOS()) {
+                src = 'https://itunes.apple.com/us/app/todayweather/id1041700694';
+            }
+            else if (ionic.Platform.isAndroid()) {
+                src = 'https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather';
+            }
+            else {
+                src = 'https://www.facebook.com/TodayWeather.WF';
+            }
+            var options = {
+                location: 'yes',
+                clearcache: 'yes',
+                toolbar: 'no'
+            };
+            $cordovaInAppBrowser.open(src, '_blank', options)
+                .then(function(event) {
+                    console.log(event);
+                    // success
+                })
+                .catch(function(event) {
+                    console.log('error');
+                    console.log(event);
+                    // error
+                });
+        };
+
+        $interval(function() {
+            var newDate = new Date();
+            if(newDate.getMinutes() != currentTime.getMinutes()) {
+                currentTime = newDate;
+                $scope.currentTimeString =  convertTimeString(currentTime);
+            }
+        }, 1000);
+
+        $ionicPlatform.ready(function() {
+
+            console.log($ionicAnalytics.globalProperties);
+            console.log(ionic.Platform);
+        });
+    })
+
+    .controller('TabCtrl', function($scope){
+
     })
 
     .controller('ChatDetailCtrl', function($scope, $stateParams, Chats) {
