@@ -3,7 +3,6 @@
  */
 
 var mongoose = require('mongoose');
-var fs = require('fs');
 var current = require('./current');
 var modelUtil = require('./modelUtil');
 var config = require('../config/config');
@@ -43,34 +42,35 @@ var taList = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin
 
 midTempSchema.statics = {
     getTempData : function(first, second, cb){
-        var tempList = config.testTownData[0].data.current
-        var currentList = [];
-        tempList.forEach(function(elem, idx){
-            var t = {};
-            t.currentData = elem;
-            currentList.push(t);
-        });
+        //var tempList = config.testTownData[0].data.current
+        //var currentList = [];
+        //tempList.forEach(function(elem, idx){
+        //    var t = {};
+        //    t.currentData = elem;
+        //    currentList.push(t);
+        //});
         var self = this;
         var util = new modelUtil();
         var regId = util.getCode(first, second);
-        current.getCurrentDataForCal(169, regId, function (err, curren) { // 168 + 1
+        current.getCurrentDataForCal(169, regId, function (err, currentList) { // 168 + 1
             var beforeObj = {};
             var tempMax = Number.MIN_VALUE;
             var tempMin = Number.MAX_VALUE;
             var tempDate = currentList[0].currentData.date;
             var dateCnt = 1;
 
+            currentList.shift();
             currentList.forEach(function(elem, idx){
-                if((idx + 1) != currentList.length && currentList[(idx + 1)].currentData.date !== tempDate){
-                    if(dateCnt % 3 == 0){
-                        beforeObj['tbMin'+ (idx + 1) / 3 ] = tempMin; // tb == temperature before..
-                        beforeObj['tbMax'+ (idx + 1) / 3 ] = tempMax;
+                if((idx + 1) != currentList.length){
+                    if(currentList[(idx + 1)].currentData.date !== tempDate){
+                        beforeObj['tbMin'+ dateCnt] = tempMin; // tb == temperature before..
+                        beforeObj['tbMax'+ dateCnt] = tempMax;
                         tempMax = Number.MIN_VALUE;
                         tempMin = Number.MAX_VALUE;
                         tempDate = currentList[(idx + 1)].currentData.date;
+                        dateCnt ++;
                         return;
                     }
-                    dateCnt ++;
                 }
 
                 if(tempMax < elem.currentData.t1h) tempMax = elem.currentData.t1h;
@@ -80,7 +80,7 @@ midTempSchema.statics = {
                 .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec();
 
             midList.then(function(res){
-                if(res === null) return;
+                if(res == null || res == []) return;
                 //var resObj = res[0];
                 var resObj = {};
                 Object.defineProperty(resObj, 'town', { value : res[0].town, enumerable: true });

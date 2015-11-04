@@ -3,11 +3,11 @@
  */
 
 var mongoose = require('mongoose');
+var config = require('../config/config');
+var current = require('./current');
+var modelUtil = require('./modelUtil');
 
 var midLandSchema = mongoose.Schema({
-    town: {
-        first: String
-    },
     regId : String,
     midLandData : {
         date: String,
@@ -29,34 +29,95 @@ var midLandSchema = mongoose.Schema({
     }
 });
 
-var config = require('../config/config');
+var noWfList = ['date', 'time', 'regId'];
+var wfList = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf6Pm',
+    'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10'];
+
 midLandSchema.statics = {
-    getLandData : function(first, cb){
-        //var currentList = current.getCurrentDataForCal(169, first, second, cb); // 168 + 1
-        var currentList = config.testTownData[0].data.current
-        var pastObj = {};
-        var nowDate = currentList[0].date;
-        var tempAmSky = 0;
-        var tempPmSky = 0;
-        var midObj = currentList.shift();
+    getLandData : function(first, second, cb){
+        //var tempList = config.testTownData[0].data.current
+        //var currentList = [];
+        //tempList.forEach(function(elem, idx){
+        //    var t = {};
+        //    t.currentData = elem;
+        //    currentList.push(t);
+        //});
+        var self = this;
+        var util = new modelUtil();
+        var regId = util.getCode(first, second);
+        current.getCurrentDataForCal(169, regId, function (err, currentList) { // 168 + 1
+            var pastObj = {};
+            var tempAmSky = 0, tempPmSky = 0;
+            var tempAmRain = false, tempPmRain = false;
+            var tempDate = currentList[0].currentData.date;
+            var dateCnt = 1;
+            var timeCnt = 1;
 
+            function averageValueToSky (average, rain){
+                var resultSky = '';
+                if(average <= 1) resultSky = '맑음';
+                else if(average <= 2) resultSky = '구름조금';
+                else if(average <= 3) resultSky = '구름많음';
+                else resultSky = '흐림';
 
-        currentList.forEach(function(elem, idx){
-            if(nowDate != elem.date){
-                pastObj['wp'+ (idx + 1) / 3 +'Am'] = tempAmSky;
-                pastObj['wp'+ (idx + 1) / 3 +'Pm'] = tempPmSky;
-                tempAmSky = 0;
-                tempPmSky = 0;
-                return;
+                if(rain){
+                    if(average <= 2) resultSky = '구름많음';
+                    resultSky += ' 비';
+                }
+                return resultSky;
             }
-            if(elem.time <= 0600){
-                tempAmSky = tempAmSky + elem.sky;
-            }else{
-                tempPmSky = tempPmSky + elem.sky
-            }
+
+            currentList.shift();
+            currentList.forEach(function(elem, idx) {
+                if ((idx + 1) != currentList.length) {
+                    if (currentList[(idx + 1)].currentData.date !== tempDate) {
+                        // pastObj prop name, length...
+                        pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.ceil(tempAmRain % timeCnt), tempAmRain);
+                        pastObj['wp'+dateCnt+'Pm'] = averageValueToSky(Math.ceil(tempPmRain % timeCnt), tempPmRain);
+                        tempAmSky = tempPmSky = 0;
+                        tempAmRain = tempPmRain = 0;
+                        timeCnt = 1;
+                        tempDate = currentList[(idx + 1)].currentData.date;
+                        dateCnt++;
+                        return;
+                    }
+                }
+
+                if(elem.currentData.time <= '1200') {
+                    tempAmSky = tempAmSky + elem.currentData.sky;
+                    tempAmRain = tempAmRain || !!parseInt(elem.currentData.pty) || !!parseInt(elem.currentData.lgt);
+                } else {
+                    tempPmSky = tempPmSky + elem.currentData.sky;
+                    tempPmRain = tempPmRain || !!parseInt(elem.currentData.pty) || !!parseInt(elem.currentData.lgt);
+                }
+                timeCnt++;
+            });
+
+            var regId = util.getCodeWithFirst(first, second);
+            var midQuery = self.find({"regId" : regId })
+                .sort({"midLandData.date" : -1, "midLandData.time" : -1}).limit(1).exec();
+
+            midQuery.then(function(res){
+                if(res == null || res == []) return;
+                var resObj = {};
+                Object.defineProperty(resObj, 'town', { value : {
+                    value : { first : first, second : second }
+                }, enumerable: true });
+                Object.defineProperty(resObj, 'regId', { value : regId, enumerable: true });
+                var tempObj = { midLandData : {} };
+                noWfList.forEach(function(elem, idx){
+                    tempObj.midLandData[elem] = res[0].midLandData[elem];
+                });
+                for(var prop in pastObj){
+                    tempObj.midLandData[prop] = pastObj[prop];
+                }
+                wfList.forEach(function(elem, idx){
+                    tempObj.midLandData[elem] = res[0].midLandData[elem];
+                });
+                Object.defineProperty(resObj, 'midLandData', {value : tempObj.midLandData, enumerable: true});
+                cb(null, resObj);
+            });
         });
-
-        return Object.defineProperties(midObj, pastObj);
     },
     setLandData : function(landData, regId, cb){
         var self = this;
@@ -64,12 +125,11 @@ midLandSchema.statics = {
         var findQuery = self.findOne({"regId": regId}).exec();
 
         findQuery.then(function(res){
-            if(res == null) return;
+            if(res == null || res == []) return;
 
             self.update({'regId' : regId, 'midLandData.date' : landData.date, 'midLandData.time' : landData.time},
                 {
                     'regId' : regId,
-                    'town.first': res.town.first,
                     'midLandData' : landData
                 },
                 {upsert : true}, cb);

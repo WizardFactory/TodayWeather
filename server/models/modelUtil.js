@@ -68,7 +68,7 @@ MidTownToCode.prototype.getTown = function (first, second) {
     }
 
     for(var i = 0 ; i < self.genMidTownList.length ; i++){
-        if(self.genMidTownList[i].first == first && self.genMidTownList[i].second == second){
+        if(self.genMidTownList[i].first == first && self.genMidTownList[i].second == second.slice(0, 3)){
             for(var j = 0 ; j < self.codeTownList.length ; j ++){
                 if(self.codeTownList[j].code == self.genMidTownList[i].code){
                     return self.codeTownList[j];
@@ -77,6 +77,43 @@ MidTownToCode.prototype.getTown = function (first, second) {
         }
     }
 }
+
+MidTownToCode.prototype.getCodeWithFirst = function(first, second){
+    var self = this;
+    if(self.genMidTownList == [] || self.genMidTownList.length == 0){
+        self.initList();
+    }
+    var second = second || '';
+    var sliceLength = 0;
+    switch(first){
+        case '서울특별시' :
+        case '경기도' :
+        case '인천광역시' :
+        case '제주특별자치도' :
+            sliceLength = 3;
+            break;
+        case '광주광역시' :
+        case '대구광역시' :
+        case '대전광역시' :
+        case '부산광역시' :
+        case '울산광역시' :
+            sliceLength = 4;
+            break;
+        default :
+            for(var i = 0 ; i < self.genMidTownList.length ; i++){
+                if(self.genMidTownList[i].first == first && self.genMidTownList[i].second == second.slice(0, 3)){
+                    return self.genMidTownList[i].code.slice(0,4) + "0000";
+                }
+            }
+    }
+    for(var i = 0 ; i < self.codeTownList.length ; i++){
+        if(self.codeTownList[i].first == first){
+            var codeTemp = self.codeTownList[i].code.slice(0, sliceLength) + "00000"
+            return codeTemp.slice(0, 8);
+        }
+    }
+}
+
 MidTownToCode.prototype.getCode  =  function(first, second){
     var self = this;
     if(self.genMidTownList == [] || self.genMidTownList.length == 0){
@@ -84,7 +121,7 @@ MidTownToCode.prototype.getCode  =  function(first, second){
     }
 
     for(var i = 0 ; i < self.genMidTownList.length ; i++){
-        if(self.genMidTownList[i].first == first && self.genMidTownList[i].second == second){
+        if(self.genMidTownList[i].first == first && self.genMidTownList[i].second == second.slice(0, 3)){
             return self.genMidTownList[i].code;
         }
     }
