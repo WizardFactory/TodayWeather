@@ -31,6 +31,7 @@ angular.module('starter', [
                 StatusBar.hide();
                 ionic.Platform.fullScreen();
             }
+
         });
     })
 
@@ -46,7 +47,8 @@ angular.module('starter', [
             .state('tab', {
                 url: '/tab',
                 abstract: true,
-                templateUrl: 'templates/tabs.html'
+                templateUrl: 'templates/tabs.html',
+                controller: "TabCtrl"
             })
 
             // Each tab has its own nav history stack:
@@ -60,7 +62,6 @@ angular.module('starter', [
                     }
                 }
             })
-
             .state('tab.search', {
                 url: '/search',
                 views: {
@@ -70,22 +71,12 @@ angular.module('starter', [
                     }
                 }
             })
-            .state('tab.chat-detail', {
-                url: '/chats/:chatId',
+            .state('tab.setting', {
+                url: '/setting',
                 views: {
-                    'tab-chats': {
-                        templateUrl: 'templates/chat-detail.html',
-                        controller: 'ChatDetailCtrl'
-                    }
-                }
-            })
-
-            .state('tab.account', {
-                url: '/account',
-                views: {
-                    'tab-account': {
-                        templateUrl: 'templates/tab-account.html',
-                        controller: 'AccountCtrl'
+                    'tab-setting': {
+                        templateUrl: 'templates/tab-setting.html',
+                        controller: 'SettingCtrl'
                     }
                 }
             });
@@ -266,7 +257,7 @@ angular.module('starter', [
                     }
                 });
 
-                scope.$watch('shortForecast', function (newVal) {
+                scope.$watch('forecastType', function (newVal) {
                     if (newVal === true) {
                         chart();
                     }
@@ -450,7 +441,7 @@ angular.module('starter', [
                     }
                 });
 
-                scope.$watch('shortForecast', function (newVal) {
+                scope.$watch('forecastType', function (newVal) {
                     if (newVal === false) {
                         chart();
                     }

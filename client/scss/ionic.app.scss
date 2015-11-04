@@ -15,7 +15,12 @@ $royal:                           #886aea !default;
 $dark:                            #444 !default;
 */
 
-$calm:                            #22a1db !default;
+$calm:                            #22a1db !default; //dashboard color, short forecast
+$balanced:                        #0fbe96 !default; //mid forecast
+$energized:                       #ea9623 !default; //setting
+$positive:                        #8dc63f !default; //detail weather
+$assertive:                       #ec72a8 !default; //city search
+
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
@@ -267,6 +272,36 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   fill: #ffffff;
 }
 
+.detail-image {
+  display: table;
+}
+
+.detail-image div {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.detail-image div img {
+  width: 40px;
+  margin: 0 auto;
+  display: block;
+}
+
+.detail-text {
+  display: table;
+}
+
+.detail-text p {
+  display: table-cell;
+  vertical-align: middle;
+  font-family: "Nanum Barun Gothic UltraLight";
+  padding-top: 10px;
+  font-size: 18px;
+  padding-left: 5px;
+  color: #ffffff;
+  margin: 0;
+}
+
 //iphone 4
 @media only screen and (min-device-width: 320px)
     and (max-device-width: 480px)
@@ -492,20 +527,31 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   color: white;
 }
 
-.main-content.short-forcast {
+.main-content.short-forecast {
   background-color: #22a1db;
 }
 
-.main-content.mid-forcast {
+.main-content.mid-forecast {
   background-color: #0fbe96;
 }
+
+.main-content.detail-forecast {
+  background-color: #8dc63f;
+}
+
+.main-content.setting {
+  background-color: #ea9623;
+}
+
 //
 //.scroll-content {
 //  background: url("../img/screen-dash.png");
 //  background-size: cover;
 //}
 
-.tabs {
-  border: 0;
-  background-size: 0;
+.tabs-calm .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
 }
+
