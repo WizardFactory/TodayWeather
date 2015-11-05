@@ -32,7 +32,7 @@ function convertStringToDate(str) {
         d = str.substr(6,2),
         h = str.substr(8,2);
     if (h!== '') {
-        h = str.substr(8,2)-1;
+        h = str.substr(8,2);
     }
     else {
         h = '0';
@@ -480,7 +480,9 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
 
         //If you wants save perfect, have to use promise
         lifeIndexList.forEach(function (lifeIndex) {
-            if (lifeIndex[indexName].lastUpdateDate === data[indexName].lastUpdateDate) {
+            if (lifeIndex[indexName].lastUpdateDate === data[indexName].lastUpdateDate
+                        && lifeIndex[indexName].data.length !== 0)
+            {
                 log.debug(indexName+' life index has not updated yet');
                 return;
             }

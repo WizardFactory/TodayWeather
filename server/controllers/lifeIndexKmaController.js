@@ -69,6 +69,13 @@ LifeIndexKmaController.appendData = function (town, shortList, midList, callback
             if (indexData[k] && indexData[k].lastUpdateDate) {
 
                 log.debug('add ' + k + ' data to list');
+
+                /*lifeIndexKma에서 lastUpdateDate만 있고 data는 저장안된 경우가 있음*/
+                if (indexData[k].data.length === 0) {
+                    log.warn(k+' data is empty');
+                    continue;
+                }
+
                 if (indexData[k].data[0].time) {
                     if (shortList) {
                         ret = self._addIndexDataToList(shortList, indexData[k].data, k);
