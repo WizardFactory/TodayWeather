@@ -1027,6 +1027,29 @@ var getSummary = function(req, res, next){
     }
 };
 
+var getLifeIndexKma = function(req, res, next) {
+     //add life index of kma info
+    var LifeIndexKmaController  = require('../controllers/lifeIndexKmaController');
+    LifeIndexKmaController.appendData({first: req.params.region, second: req.params.city, third: req.params.town},
+                req.short, req.midData, function (err) {
+            next();
+    });
+};
+
+var getKeco = function (req, res, next) {
+    if (!req.current)  {
+        log.error(new Error("Fail to find current weather"));
+        next();
+    }
+
+    var KecoController = require('../controllers/kecoController');
+    KecoController.appendData({first: req.params.region, second: req.params.city, third: req.params.town}, req.current,
+                function (err) {
+        next();
+    });
+
+};
+
 router.get('/', [getSummary], function(req, res) {
     var meta = {};
 
@@ -1071,7 +1094,7 @@ router.get('/:region', [getRegionSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city', [getMid], function(req, res) {
+router.get('/:region/:city', [getMid, getLifeIndexKma], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1094,7 +1117,8 @@ router.get('/:region/:city', [getMid], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid], function(req, res) {
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getLifeIndexKma, getKeco],
+            function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1126,17 +1150,10 @@ router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid], 
         result.midData = req.midData;
     }
 
-    //add life index of kma info
-    var LifeIndexKmaController  = require('../controllers/lifeIndexKmaController');
-    LifeIndexKmaController.appendData({first: regionName, second: cityName, third: townName}, result.short,
-                result.midData, function (err) {
-
-    });
-
     res.json(result);
 });
 
-router.get('/:region/:city/:town/short', getShort, function(req, res) {
+router.get('/:region/:city/:town/short', [getShort, getLifeIndexKma], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1188,7 +1205,7 @@ router.get('/:region/:city/:town/shortest', getShortest, function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city/:town/current', getCurrent, function(req, res) {
+router.get('/:region/:city/:town/current', [getCurrent, getKeco], function(req, res) {
     var meta = {};
 
     var result = {};

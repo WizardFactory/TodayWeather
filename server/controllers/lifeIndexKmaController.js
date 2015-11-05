@@ -70,10 +70,14 @@ LifeIndexKmaController.appendData = function (town, shortList, midList, callback
 
                 log.debug('add ' + k + ' data to list');
                 if (indexData[k].data[0].time) {
-                    ret = self._addIndexDataToList(shortList, indexData[k].data, k);
+                    if (shortList) {
+                        ret = self._addIndexDataToList(shortList, indexData[k].data, k);
+                    }
                 }
                 else {
-                    ret = self._addIndexDataToList(midList, indexData[k].data, k);
+                    if (midList) {
+                        ret = self._addIndexDataToList(midList, indexData[k].data, k);
+                    }
                 }
             }
         }

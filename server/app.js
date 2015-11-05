@@ -82,10 +82,11 @@ var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
 taskKmaIndexService.start();
 
-var keco = new (require('./controllers/kecoController.js'))();
-keco.setServiceKey(keyBox.kmaLifeIndex);
+var keco = new (require('./lib/kecoRequester.js'))();
+keco.setServiceKey(keyBox.pokers);
 keco.setDaumApiKey(keyBox.daum_key);
-keco.start();
+//client요청이 있을때 실행함
+//keco.start();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
