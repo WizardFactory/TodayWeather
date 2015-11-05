@@ -13,14 +13,14 @@
                     {{currentTimeString}}
                 </p>
             </div>
-            <div class="row row-no-padding" style="height: 32%;">
+            <div class="row row-no-padding current-content">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 14%;"></div>
                     <div class="row row-no-padding region" style="height: 16%;">
                         <p>{{address}}</p>
                     </div>
                     <div class="row row-no-padding" style="height: 3%;"></div>
-                    <div class="row row-no-padding" style="height: 44%;">
+                    <div class="row row-no-padding" style="height: 50%;">
                         <div class="col" style="padding: 0; height: 100%">
                             <div class="row row-no-padding" style="height: 100%; display: table">
                                 <div class="col big-digit"
@@ -43,22 +43,20 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row row-no-padding" style="height: 5%;"></div>
+                    <div class="row row-no-padding" style="height: 6%;"></div>
                     <div class="row row-no-padding region-sum" style="height: 13%;">
                         <p>{{currentWeather.summary}}</p>
                     </div>
-                    <div class="row row-no-padding" style="height: 7%;"></div>
                 </div>
             </div>
-            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='short'"
-                 ng-click="forecastType='mid'">
+            <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="forecastType='mid'">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col timeChart" style="padding: 0; height: 100%;">
-                        <div class="row row-no-padding" style="height: 64%;">
+                        <div class="row row-no-padding chart-content">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding" style="height: 36%;">
+                        <div class="row row-no-padding table-content">
                             <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <div class="row row-no-padding small-time" style="height: 15%;">
                                     <p>{{value.day}}</p>
@@ -88,15 +86,15 @@
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='mid'"
+            <div class="row row-no-padding extend-content" ng-show="forecastType==='mid'"
                  ng-click="forecastType='detail'">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col weeklyChart" style="padding: 0; height: 100%;">
-                        <div class="row row-no-padding" style="height: 64%;">
+                        <div class="row row-no-padding chart-content">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding" style="height: 36%;">
+                        <div class="row row-no-padding table-content">
                             <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
                                 <div class="row row-no-padding small-time" style="height: 15%;">
                                     <p></p>
@@ -128,7 +126,7 @@
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='detail'"
+            <div class="row row-no-padding extend-content" ng-show="forecastType==='detail'"
                  ng-click="forecastType='short'">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 10%"></div>
@@ -154,7 +152,7 @@
                                             <div><img src="img/PM10.png" style="width: 40px"></div>
                                         </div>
                                         <div class="col col-33 detail-text"><p>{{currentWeather.pm10Str}}</p>
-                                            <p>{{currentWeather.pm10Value}}</p>
+                                            <p>{{currentWeather.pm10Value}}㎍/㎥</p>
                                         </div>
                                     </div>
                                 </li>
@@ -173,7 +171,9 @@
                                         <div class="col col-33 detail-image">
                                             <div><img src="img/Wind.png" width="40px"></div>
                                         </div>
-                                        <div class="col col-33 detail-text"><p>{{currentWeather.wsd}}</p></div>
+                                        <div class="col col-33 detail-text">
+                                            <p>{{currentWeather.wsd}}<small>m/s</small></p>
+                                        </div>
                                     </div>
                                 </li>
                             </ul>
