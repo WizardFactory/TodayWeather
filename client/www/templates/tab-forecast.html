@@ -6,7 +6,8 @@
                 on-refresh="doRefresh()">
         </ion-refresher>
         <div class="main-content"
-             ng-class="{'short-forcast':shortForecast===true, 'mid-forcast':shortForecast===false}">
+             ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
+             <!--ng-class="{'short-forcast':shortForecast===true, 'mid-forcast':shortForecast===false}">-->
             <div class="row row-no-padding" style="height: 5%;">
                 <p class="top-time">
                     {{currentTimeString}}
@@ -49,15 +50,15 @@
                     <div class="row row-no-padding" style="height: 7%;"></div>
                 </div>
             </div>
-            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===true"
-                 ng-click="shortForecast=!shortForecast">
+            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='short'"
+                 ng-click="forecastType='mid'">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col timeChart" style="padding: 0; height: 100%;">
-                        <div class="row row-no-padding" style="height: 53%;">
+                        <div class="row row-no-padding" style="height: 64%;">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding" style="height: 47%;">
+                        <div class="row row-no-padding" style="height: 36%;">
                             <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <div class="row row-no-padding small-time" style="height: 15%;">
                                     <p>{{value.day}}</p>
@@ -82,22 +83,20 @@
                                         <small>%</small>
                                     </p>
                                 </div>
-                                <div class="row row-no-padding" style="height: 1%;"></div>
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                             </div>
                         </div>
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===false"
-                 ng-click="shortForecast=!shortForecast">
+            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='mid'"
+                 ng-click="forecastType='detail'">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col weeklyChart" style="padding: 0; height: 100%;">
-                        <div class="row row-no-padding" style="height: 53%;">
+                        <div class="row row-no-padding" style="height: 64%;">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding" style="height: 47%;">
+                        <div class="row row-no-padding" style="height: 36%;">
                             <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
                                 <div class="row row-no-padding small-time" style="height: 15%;">
                                     <p></p>
@@ -124,15 +123,64 @@
                                         <small>%</small>
                                     </p>
                                 </div>
-                                <div class="row row-no-padding" style="height: 1%;"></div>
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-
                             </div>
                         </div>
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding" style="height: 2%;"></div>
+            <div class="row row-no-padding" style="height: 61%;" ng-show="forecastType==='detail'"
+                 ng-click="forecastType='short'">
+                <div class="col" style="height: 100%">
+                    <div class="row row-no-padding" style="height: 10%"></div>
+                    <div class="row row-no-padding" style="height: 80%">
+                        <div class="col col-10"></div>
+                        <div class="col col-80" style="height: 100%;">
+                            <ul class="list" style="background-color: #8dc63f; color: #ffffff; height: 100%">
+                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                    <div class="row row-no-padding">
+                                        <div class="col col-33 detail-text"><p>체감온도</p></div>
+                                        <div class="col col-33 detail-image">
+                                            <div><img src="img/SensoryTem.png"></div>
+                                        </div>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.sensorytemStr}}</p>
+                                            <p>{{currentWeather.sensorytem}}</p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                    <div class="row row-no-padding">
+                                        <div class="col col-33 detail-text"><p>미세먼지</p></div>
+                                        <div class="col col-33 detail-image">
+                                            <div><img src="img/PM10.png" style="width: 40px"></div>
+                                        </div>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.pm10Str}}</p>
+                                            <p>{{currentWeather.pm10Value}}</p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                    <div class="row row-no-padding">
+                                        <div class="col col-33 detail-text"><p>자외선</p></div>
+                                        <div class="col col-33 detail-image">
+                                            <div><img src="img/Ultrv.png" width="40px"></div>
+                                        </div>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
+                                    </div>
+                                </li>
+                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                    <div class="row row-no-padding">
+                                        <div class="col col-33 detail-text"><p>바람</p></div>
+                                        <div class="col col-33 detail-image">
+                                            <div><img src="img/Wind.png" width="40px"></div>
+                                        </div>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.wsd}}</p></div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </ion-content>
     <div class="guide-content" ng-if="!skipGuide" ng-click="onClickGuide()">

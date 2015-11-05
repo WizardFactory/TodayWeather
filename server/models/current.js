@@ -4,6 +4,7 @@
 
 
 var mongoose = require('mongoose');
+var modelUtil = require('./modelUtil');
 
 var currentSchema = new mongoose.Schema({
     town: {
@@ -16,28 +17,34 @@ var currentSchema = new mongoose.Schema({
         my : Number
     },
     currentData : {
-        date: String, // get½Ã sort¿ë
+        date: String, // getì‹œ sortìš©
         time: String,
         mx: {type : Number, default : -1},
         my: {type : Number, default : -1},
-        t1h: {type : Number, default : -50}, /* ±â¿Â : 0.1'c , invalid : -50 */
-        rn1: {type : Number, default : -1}, /* 1½Ã°£ °­¼ö·® : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
-        sky: {type : Number, default : -1}, /* ÇÏ´Ã»óÅÂ: ¸¼À½(1) ±¸¸§Á¶±İ(2) ±¸¸§¸¹À½(3) Èå¸²(4), invalid : -1 */
-        uuu: {type : Number, default : -100}, /* µ¿¼­¹Ù¶÷¼ººĞ : 0.1m/s, invalid : -100 */
-        vvv: {type : Number, default : -100}, /* ³²ºÏ¹Ù¶÷¼ººĞ : 0.1m/s, invalid : -100 */
-        reh: {type : Number, default : -1}, /* ½Àµµ: 1%, invalid : -1 */
-        pty: {type : Number, default : -1}, /* °­¼öÇüÅÂ : ¾øÀ½(0) ºñ(1) ºñ/´«(2) ´«(3), invalid : -1 */
-        lgt: {type : Number, default : -1}, /* ³«·Ú : ¾øÀ½(0) ÀÖÀ½(1), invalid : -1 */
-        vec: {type : Number, default : -1}, /* Ç³Çâ : 0, invalid : -1 */
-        wsd: {type : Number, default : -1} /* Ç³¼Ó : 4¹Ì¸¸(¾àÇÏ´Ù) 4~9(¾à°£°­ÇÔ) 9~14(°­ÇÔ) 14ÀÌ»ó(¸Å¿ì°­ÇÔ), invalid : -1 */
+        t1h: {type : Number, default : -50}, /* ê¸°ì˜¨ : 0.1'c , invalid : -50 */
+        rn1: {type : Number, default : -1}, /* 1ì‹œê°„ ê°•ìˆ˜ëŸ‰ : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+        sky: {type : Number, default : -1}, /* í•˜ëŠ˜ìƒíƒœ: ë§‘ìŒ(1) êµ¬ë¦„ì¡°ê¸ˆ(2) êµ¬ë¦„ë§ìŒ(3) íë¦¼(4), invalid : -1 */
+        uuu: {type : Number, default : -100}, /* ë™ì„œë°”ëŒì„±ë¶„ : 0.1m/s, invalid : -100 */
+        vvv: {type : Number, default : -100}, /* ë‚¨ë¶ë°”ëŒì„±ë¶„ : 0.1m/s, invalid : -100 */
+        reh: {type : Number, default : -1}, /* ìŠµë„: 1%, invalid : -1 */
+        pty: {type : Number, default : -1}, /* ê°•ìˆ˜í˜•íƒœ : ì—†ìŒ(0) ë¹„(1) ë¹„/ëˆˆ(2) ëˆˆ(3), invalid : -1 */
+        lgt: {type : Number, default : -1}, /* ë‚™ë¢° : ì—†ìŒ(0) ìˆìŒ(1), invalid : -1 */
+        vec: {type : Number, default : -1}, /* í’í–¥ : 0, invalid : -1 */
+        wsd: {type : Number, default : -1} /* í’ì† : 4ë¯¸ë§Œ(ì•½í•˜ë‹¤) 4~9(ì•½ê°„ê°•í•¨) 9~14(ê°•í•¨) 14ì´ìƒ(ë§¤ìš°ê°•í•¨), invalid : -1 */
     }
 });
 
 currentSchema.statics = {
     getCurrentData : function(first, second, third, cb){
         this.find({"town" : { "first" : first , "second" : second, "third" : third}})
-            // limit config ·Î »©±â
+            // limit config ë¡œ ë¹¼ê¸°
             .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(40).exec(cb);
+    },
+    getCurrentDataForCal: function (num, regId, cb){
+        var util = new modelUtil();
+        var town = util.getCodeWithRegId(regId);
+        this.find({"town" : { "first" : town.first , "second" : town.second, "third" : town.third}})
+            .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(num).exec(cb);
     },
     setCurrentData : function(currentList, mCoord, cb){
         var self = this;

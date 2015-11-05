@@ -64,6 +64,8 @@ function convertGeocode(first, second, third, callback){
                 geocode.lon = parseFloat(result.GeocodeResponse.result[0].geometry[0].location[0].lng[0]);
 
                 log.info('lat:', geocode.lat, 'lon:', geocode.lon);
+                resultXY.lat = geocode.lat;
+                resultXY.lon = geocode.lon;
 
                 var conv = new convert(geocode, {}).toLocation();
                 resultXY.mx = conv.getLocation().x;

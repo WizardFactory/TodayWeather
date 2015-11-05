@@ -44,6 +44,22 @@ angular.module('starter.services', [])
     })
     .factory('WeatherUtil', function () {
         /**
+         *
+         * @param pm10Grade
+         * @returns {*}
+         */
+        function parsePm10Grade(pm10Grade) {
+            switch (pm10Grade) {
+                case 1: return '좋음';
+                case 2: return '보통';
+                case 3: return '나쁨';
+                case 4: return '매우 나쁨';
+            }
+            return '-';
+        }
+        /**
+         * wsd : 풍속 4~8 약간 강, 9~13 강, 14~ 매우강
+         * pm10Value, pm10Grade
          * {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
          *          wsd: Number}
@@ -59,6 +75,10 @@ angular.module('starter.services', [])
             currentForecast.t1h = currentTownWeather.t1h;
             currentForecast.sky = parseSkyState(currentForecast.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
+            currentForecast.wsd = currentTownWeather.wsd;
+            currentForecast.pm10Value = currentTownWeather.pm10Value;
+            currentForecast.pm10Grade = currentTownWeather.pm10Grade;
+            currentForecast.pm10Str = parsePm10Grade(currentTownWeather.pm10Grade);
             return currentForecast;
         }
 
@@ -105,8 +125,26 @@ angular.module('starter.services', [])
             return dailyTemp;
         }
 
+        function parseSensoryTem(sensoryTem) {
+            if (sensoryTem >= 0 ) {
+                return '';
+            }
+            else if ( -10 < sensoryTem < 0) {
+                return '관심';
+            }
+            else if ( -25 < sensoryTem <= -10) {
+                return '주의';
+            }
+            else if ( -45 < sensoryTem <= -25) {
+                return '경고';
+            }
+            else if (sensoryTem <= -45) {
+                return '위험';
+            }
+            return '';
+        }
         /**
-         * r06 6시간 강수량, s06 6시간 신적설,
+         * r06 6시간 강수량, s06 6시간 신적설, Sensorytem 체감온도, 부패, 동상가능, 열, 불쾌, 동파가능, 대기확산
          * @param {Object[]} shortForecastList
          * @param {Date} currentForecast
          * @param {Date} current
@@ -177,6 +215,11 @@ angular.module('starter.services', [])
                     tempObject.tmn = shortForecast.tmn;
                 }
 
+                if (diffDays === 0 && time === positionHours) {
+                    currentForecast.sensorytem = shortForecast.sensorytem;
+                    currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
+                }
+
                 data.push(tempObject);
 
                 return data.length < 32;
@@ -216,6 +259,22 @@ angular.module('starter.services', [])
             return {timeTable: timeTable, timeChart: timeChart};
         }
 
+        function parseUltrv(ultrv) {
+            if (0 <= ultrv  && ultrv <= 2) return '낮음';
+            else if(3 <= ultrv && ultrv <= 5) return '보통';
+            else if(6 <= ultrv && ultrv <= 7) return '높음';
+            else if(8 <= ultrv && ultrv <= 10) return '매우 높음';
+            else if(11 <= ultrv) return '위험';
+            return '';
+        }
+        /**
+         * 식중독, ultra 자외선,
+         * @param midData
+         * @param dailyInfoList
+         * @param currentTime
+         * @param currentWeather
+         * @returns {Array}
+         */
         function parseMidTownWeather(midData, dailyInfoList, currentTime, currentWeather) {
             var tmpDayTable = [];
             midData.dailyData.forEach(function (dayInfo) {
@@ -243,6 +302,11 @@ angular.module('starter.services', [])
                 else {
                     data.tmx = dayInfo.taMax;
                     data.tmn = dayInfo.taMin;
+                }
+
+                if (diffDays === 0) {
+                    currentWeather.ultrv = dayInfo.ultrv;
+                    currentWeather.ultrvStr = parseUltrv(dayInfo.ultrvStr);
                 }
                 data.humidityIcon = "Humidity-00";
                 tmpDayTable.push(data);
@@ -522,6 +586,26 @@ angular.module('starter.services', [])
             return tempIconName;
         }
 
+        /**
+         *
+         * @param date
+         * @returns {string}
+         */
+        function convertTimeString(date) {
+            var timeString;
+            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
+            timeString += "("+dayToString(date.getDay()) +") ";
+
+            if (date.getHours() < 12) {
+                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
+            }
+            else {
+                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
+            }
+
+            return timeString;
+        }
+
         return {
             parseCurrentTownWeather: function (currentTownWeather) {
                 return parseCurrentTownWeather(currentTownWeather);
@@ -532,11 +616,14 @@ angular.module('starter.services', [])
             parseShortTownWeather: function (shortForecastList, currentForecast, current, dailyInfoList) {
                 return parseShortTownWeather(shortForecastList, currentForecast, current, dailyInfoList);
             },
-            parseMidTownWeather: function (midData, dailyInfoList, currentTime) {
-                return parseMidTownWeather(midData, dailyInfoList, currentTime);
+            parseMidTownWeather: function (midData, dailyInfoList, currentTime, currentForecast) {
+                return parseMidTownWeather(midData, dailyInfoList, currentTime, currentForecast);
             },
             dayToString: function (day) {
                 return dayToString(day);
+            },
+            convertTimeString: function(date) {
+                return convertTimeString(date);
             }
         };
     })

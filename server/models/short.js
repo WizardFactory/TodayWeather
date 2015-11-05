@@ -19,20 +19,20 @@ var shortSchema = new mongoose.Schema({
         time : String,
         mx : {type : Number, default : -1},
         my : {type : Number, default : -1},
-        pop: {type : Number, default : -1},    /* °­¼ö È®·ü : 1% ´ÜÀ§, invalid : -1 */
-        pty: {type : Number, default : -1},    /* °­¼ö ÇüÅÂ : ¾øÀ½(0) ºñ(1) ºñ/´«(2) ´«(3) , invalid : -1 */
-        r06: {type : Number, default : -1},    /* 6½Ã°£ °­¼ö·® : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
-        reh: {type : Number, default : -1},    /* ½Àµµ : 1% , invalid : -1 */
-        s06: {type : Number, default : -1},    /* 6½Ã°£ ½ÅÀû¼³ : 0¹Ì¸¸(0) ~1cm(1) 1~4cm(5) 5~9cm(10) 10~19cm(20) 20cm~(100), invalid : -1 */
-        sky: {type : Number, default : -1},    /* ÇÏ´Ã »óÅÂ : ¸¼À½(1) ±¸¸§Á¶±Ý(2) ±¸¸§¸¹À½(3) Èå¸²(4) , invalid : -1 */
-        t3h: {type : Number, default : -50},   /* 3½Ã°£ ±â¿Â : 0.1'c , invalid : -50 */
-        tmn: {type : Number, default : -50},   /* ÀÏ ÃÖÀú ±â¿Â : 0.1'c , invalid : -50 */
-        tmx: {type : Number, default : -50},   /* ÀÏ ÃÖ°í ±â¿Â : 0.1'c , invalid : -50 */
-        uuu: {type : Number, default : -100},  /* Ç³¼Ó(µ¿¼­¼ººÐ) : 0.1m/s µ¿Ç³(+Ç¥±â) ¼­Ç³(-Ç¥±â), invalid : -100 */
-        vvv: {type : Number, default : -100},  /* Ç³¼Ó(³²ºÏ¼ººÐ) : 0.1m/s ºÏÇ³(+Ç¥±â) ³²Ç³(-Ç¥±â), invalid : -100 */
-        wav: {type : Number, default : -1},    /* ÆÄ°í : 0.1m , invalid : -1 */
-        vec: {type : Number, default : -1},    /* Ç³Çâ : 0 , invalid : -1 */
-        wsd: {type : Number, default : -1}     /* Ç³¼Ó : 1 , invalid : -1 */
+        pop: {type : Number, default : -1},    /* ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ : 1% ï¿½ï¿½ï¿½ï¿½, invalid : -1 */
+        pty: {type : Number, default : -1},    /* ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½(0) ï¿½ï¿½(1) ï¿½ï¿½/ï¿½ï¿½(2) ï¿½ï¿½(3) , invalid : -1 */
+        r06: {type : Number, default : -1},    /* 6ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+        reh: {type : Number, default : -1},    /* ï¿½ï¿½ï¿½ï¿½ : 1% , invalid : -1 */
+        s06: {type : Number, default : -1},    /* 6ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ : 0ï¿½Ì¸ï¿½(0) ~1cm(1) 1~4cm(5) 5~9cm(10) 10~19cm(20) 20cm~(100), invalid : -1 */
+        sky: {type : Number, default : -1},    /* ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½(1) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(2) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(3) ï¿½å¸²(4) , invalid : -1 */
+        t3h: {type : Number, default : -50},   /* 3ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ : 0.1'c , invalid : -50 */
+        tmn: {type : Number, default : -50},   /* ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ : 0.1'c , invalid : -50 */
+        tmx: {type : Number, default : -50},   /* ï¿½ï¿½ ï¿½Ö°ï¿½ ï¿½ï¿½ï¿½ : 0.1'c , invalid : -50 */
+        uuu: {type : Number, default : -100},  /* Ç³ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) : 0.1m/s ï¿½ï¿½Ç³(+Ç¥ï¿½ï¿½) ï¿½ï¿½Ç³(-Ç¥ï¿½ï¿½), invalid : -100 */
+        vvv: {type : Number, default : -100},  /* Ç³ï¿½ï¿½(ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½) : 0.1m/s ï¿½ï¿½Ç³(+Ç¥ï¿½ï¿½) ï¿½ï¿½Ç³(-Ç¥ï¿½ï¿½), invalid : -100 */
+        wav: {type : Number, default : -1},    /* ï¿½Ä°ï¿½ : 0.1m , invalid : -1 */
+        vec: {type : Number, default : -1},    /* Ç³ï¿½ï¿½ : 0 , invalid : -1 */
+        wsd: {type : Number, default : -1}     /* Ç³ï¿½ï¿½ : 1 , invalid : -1 */
     }
 });
 
