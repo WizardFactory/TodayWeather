@@ -672,7 +672,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SettingCtrl', function($scope, $interval, $ionicAnalytics, $ionicPlatform, $cordovaInAppBrowser
-                , WeatherUtil) {
+                , $ionicPopup, WeatherUtil) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -721,6 +721,16 @@ angular.module('starter.controllers', [])
                 });
         };
 
+        $scope.openInfo = function () {
+            var msg = '기상정보 : 기상청 <br> 대기오염정보 : 환경부/한국환경공단 <br> 인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.';
+            var alertPopup = $ionicPopup.alert({
+                title: 'TodayWeather',
+                template: msg
+            });
+            alertPopup.then(function(res) {
+                console.log('alertPopup close');
+            });
+        };
         $interval(function() {
             var newDate = new Date();
             if(newDate.getMinutes() != currentTime.getMinutes()) {
