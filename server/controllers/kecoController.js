@@ -17,16 +17,21 @@ arpltnController._appendFromDb = function(town, current, callback) {
             log.error(err);
             return callback(err);
         }
-        if (!arpltnData) {
-            err = new Error('Fail to find arpltn '+town.toString());
-            log.error(err);
-            return callback(err);
+        try {
+            if (!arpltnData) {
+                err = new Error('Fail to find arpltn ' + town.toString());
+                log.error(err);
+                return callback(err);
+            }
+
+            log.debug(arpltnData.toString());
+
+            current.arpltn = arpltnData.arpltn;
+            return callback(err, arpltnData);
         }
-
-        log.debug(arpltnData.toString());
-
-        current.arpltn = arpltnData.arpltn;
-        return callback(err, arpltnData);
+        catch(e) {
+            callback(e);
+        }
     });
 };
 
@@ -141,6 +146,7 @@ arpltnController.appendData = function(town, current, callback) {
     var self = this;
     this._appendFromDb(town, current, function(err, arpltn) {
         if (err) {
+            log.error(err);
             return self._appendFromKeco(town, current, callback);
         }
         return callback(err, arpltn);

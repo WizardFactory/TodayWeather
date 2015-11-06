@@ -62,34 +62,45 @@ LifeIndexKmaController.appendData = function (town, shortList, midList, callback
             return callback(err);
         }
 
-        var ret = false;
-        log.debug(indexData.toString());
+        try {
+            if (!indexData) {
+                err = new Error('Fail to find indexData '+town.toString());
+                log.error(err);
+                return callback(err);
+            }
 
-        for(var k in indexData) {
-            if (indexData[k] && indexData[k].lastUpdateDate) {
+            var ret = false;
+            log.debug(indexData.toString());
 
-                log.debug('add ' + k + ' data to list');
+            for (var k in indexData) {
+                if (indexData[k] && indexData[k].lastUpdateDate) {
 
-                /*lifeIndexKma에서 lastUpdateDate만 있고 data는 저장안된 경우가 있음*/
-                if (indexData[k].data.length === 0) {
-                    log.warn(k+' data is empty');
-                    continue;
-                }
+                    log.debug('add ' + k + ' data to list');
 
-                if (indexData[k].data[0].time) {
-                    if (shortList) {
-                        ret = self._addIndexDataToList(shortList, indexData[k].data, k);
+                    /*lifeIndexKma에서 lastUpdateDate만 있고 data는 저장안된 경우가 있음*/
+                    if (indexData[k].data.length === 0) {
+                        log.warn(k + ' data is empty');
+                        continue;
                     }
-                }
-                else {
-                    if (midList) {
-                        ret = self._addIndexDataToList(midList, indexData[k].data, k);
+
+                    if (indexData[k].data[0].time) {
+                        if (shortList) {
+                            ret = self._addIndexDataToList(shortList, indexData[k].data, k);
+                        }
+                    }
+                    else {
+                        if (midList) {
+                            ret = self._addIndexDataToList(midList, indexData[k].data, k);
+                        }
                     }
                 }
             }
-        }
 
-        callback(undefined, ret);
+            callback(undefined, ret);
+        }
+        catch(e) {
+            callback(e);
+        }
     });
 };
 

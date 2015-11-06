@@ -80,7 +80,8 @@ var keyBox = require('./config/keydata').keyString;
 
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
-taskKmaIndexService.start();
+//client요청이 있을때 실행함
+//taskKmaIndexService.start();
 
 var keco = new (require('./lib/kecoRequester.js'))();
 keco.setServiceKey(keyBox.pokers);
