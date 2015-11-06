@@ -1029,11 +1029,20 @@ var getSummary = function(req, res, next){
 
 var getLifeIndexKma = function(req, res, next) {
      //add life index of kma info
-    var LifeIndexKmaController  = require('../controllers/lifeIndexKmaController');
-    LifeIndexKmaController.appendData({first: req.params.region, second: req.params.city, third: req.params.town},
-                req.short, req.midData, function (err) {
-            next();
-    });
+    try {
+        var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
+        LifeIndexKmaController.appendData({first: req.params.region, second: req.params.city, third: req.params.town},
+            req.short, req.midData, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
+    }
+    catch(e) {
+        log.error('ERROE>>', meta);
+        next();
+    }
 };
 
 var getKeco = function (req, res, next) {
@@ -1042,12 +1051,24 @@ var getKeco = function (req, res, next) {
         next();
     }
 
-    var KecoController = require('../controllers/kecoController');
-    KecoController.appendData({first: req.params.region, second: req.params.city, third: req.params.town}, req.current,
-                function (err) {
+    try {
+        var KecoController = require('../controllers/kecoController');
+        KecoController.appendData({
+                first: req.params.region,
+                second: req.params.city,
+                third: req.params.town
+            }, req.current,
+            function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
+    }
+    catch(e) {
+        log.error('ERROE>>', meta);
         next();
-    });
-
+    }
 };
 
 router.get('/', [getSummary], function(req, res) {
