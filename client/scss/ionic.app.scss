@@ -86,7 +86,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   vertical-align: middle;
   text-align: center;
   margin: 0;
-  font-size: 26px;
+  font-size: 23px;
 }
 
 .region-sum {
@@ -104,7 +104,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .big-digit {
   font-family: 'helvetica neue ultralight';
   text-align: right;
-  font-size: 89px;
+  font-size: 86px;
   letter-spacing: -3px;
 }
 
@@ -302,31 +302,81 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin: 0;
 }
 
+.main-content {
+  width: 100%;
+  height: 100%;
+  color: white;
+}
+
+.main-content.short-forecast {
+  background-color: #22a1db;
+}
+
+.main-content.mid-forecast {
+  background-color: #0fbe96;
+}
+
+.main-content.detail-forecast {
+  background-color: #8dc63f;
+}
+
+.main-content.setting {
+  background-color: #ea9623;
+}
+
+.current-content {
+  height: 25%;
+}
+
+.extend-content {
+  height: 70%;
+}
+
+.chart-content {
+  height: 58%;
+}
+
+.table-content {
+  height: 42%;
+}
+
 //iphone 4
 @media only screen and (min-device-width: 320px)
     and (max-device-width: 480px)
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 320/480)
 {
-  .region  p {
-    font-size: 20px;
+  .main-content {
+    height: 431px;
   }
 
-  .region-sum p {
+  .current-content {
+    height: 25%;
+  }
+
+  .extend-content {
+    height: 70%;
+  }
+
+  .region  p {
     font-size: 18px;
   }
 
+  .region-sum p {
+    font-size: 17px;
+  }
+
   .big-digit {
-    font-size: 89px;
+    font-size: 62px;
     letter-spacing: -3px;
   }
 
   .big-temp-point img{
-    width: 14px;
+    width: 10px;
   }
 
   .big-temp-sky-state img{
-    width: 40px;
+    width: 32px;
   }
 
   .timeChart {
@@ -335,6 +385,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .weeklyChart {
     width: 954px; //53px per col *18
+  }
+
+  .chart-content {
+    height: 55%;
+  }
+
+  .table-content {
+    height: 45%;
   }
 
   .small-time p {
@@ -356,6 +414,18 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 320/568)
 {
+  .main-content {
+    height: 519px;
+  }
+
+  .current-content {
+    height: 25%;
+  }
+
+  .extend-content {
+    height: 68%;
+  }
+
   .region p {
     font-size: 20px;
   }
@@ -365,7 +435,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-digit {
-    font-size: 100px;
+    font-size: 90px;
     letter-spacing: -2px;
   }
 
@@ -374,7 +444,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-temp-sky-state img{
-    width: 52px;
+    width: 48px;
   }
 
   .timeChart {
@@ -383,6 +453,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .weeklyChart {
     width: 954px; //53px per col * 18
+  }
+
+  .chart-content {
+    height: 60%;
+  }
+
+  .table-content {
+    height: 40%;
   }
 
   .small-time p {
@@ -404,21 +482,33 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 375/667)
 {
+  .main-content {
+    height: 578px;
+  }
+
+  .current-content {
+    height: 25%;
+  }
+
+  .extend-content {
+    height: 68%;
+  }
+
    .region p {
-    font-size: 26px;
+    font-size: 22px;
   }
 
   .big-digit {
-    font-size: 115px;
+    font-size: 105px;
     letter-spacing: -3px;
   }
 
   .big-temp-point img{
-    width: 16px;
+    width: 14px;
   }
 
   .big-temp-sky-state img{
-    width: 58px;
+    width: 52px;
   }
 
   .timeChart {
@@ -427,6 +517,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .weeklyChart {
     width: 954px; //53px per col * 18
+  }
+
+  .chart-content {
+    height: 60%;
+  }
+
+  .table-content {
+    height: 40%;
   }
 
   .small-time p {
@@ -448,6 +546,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 3)
     and (device-aspect-ratio: 414/736)
 {
+  .main-content {
+    height: 687px;
+  }
+
   .region p {
     font-size: 28px;
   }
@@ -457,7 +559,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-digit {
-    font-size: 135px;
+    font-size: 130px;
     letter-spacing: -6px;
   }
 
@@ -466,7 +568,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-temp-sky-state img{
-    width: 72px;
+    width: 64px;
   }
 
   .timeChart {
@@ -494,6 +596,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 320px) and (device-height: 640px)
     and (device-aspect-ratio: 320/640)
 {
+  .main-content {
+    height: 591px;
+  }
+
   .timeChart {
     width: 1272px; //53 px per col
   }
@@ -508,39 +614,21 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 360px) and (device-height: 640px)
     and (device-aspect-ratio: 360/640)
 {
+  .main-content {
+    height: 591px;
+  }
+
   .big-digit {
-    font-size: 118px;
+    font-size: 100px;
   }
 
   .big-temp-point img {
-    width: 18px;
+    width: 14px;
   }
 
   .big-temp-sky-state img {
-    width: 54px;
+    width: 52px;
   }
-}
-
-.main-content {
-  width: 100%;
-  height: 100%;
-  color: white;
-}
-
-.main-content.short-forecast {
-  background-color: #22a1db;
-}
-
-.main-content.mid-forecast {
-  background-color: #0fbe96;
-}
-
-.main-content.detail-forecast {
-  background-color: #8dc63f;
-}
-
-.main-content.setting {
-  background-color: #ea9623;
 }
 
 //
@@ -550,6 +638,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 //}
 
 .tabs-calm .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
+}
+
+.tabs-dark .tabs {
   //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
  // border-top:1px solid rgba(255,255,255,0.6);
