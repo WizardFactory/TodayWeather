@@ -25,7 +25,7 @@ arpltnController._appendFromDb = function(town, current, callback) {
 
         log.debug(arpltnData.toString());
 
-        current.arpltn = arpltnData;
+        current.arpltn = arpltnData.arpltn;
         return callback(err, arpltnData);
     });
 };
