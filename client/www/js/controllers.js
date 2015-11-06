@@ -290,16 +290,37 @@ angular.module('starter.controllers', [])
             var diffTemp = current.t1h - yesterday.t3h;
 
             if (diffTemp == 0) {
-               return str += "와 동일";
+               str += "와 동일";
+            }
+            else {
+                str += "보다 " + Math.abs(diffTemp);
+                if (diffTemp < 0) {
+                    str += "도 낮음";
+                }
+                else if (diffTemp > 0) {
+                    str += "도 높음";
+                }
             }
 
-            str += "보다 " + Math.abs(diffTemp);
-            if (diffTemp < 0) {
-                str += "도 낮음";
+            //current.arpltn = {};
+            //current.arpltn.pm10Value = 80;
+            //current.arpltn.pm10Str = '나쁨';
+            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Value >= 80) {
+                str += ', ' + '미세먼지 ' + current.arpltn.pm10Str;
             }
-            else if (diffTemp > 0) {
-                str += "도 높음";
+
+            //current.ultrv = 6;
+            //current.ultrvStr = '높음';
+            if (current.ultrv && current.ultrv >= 6) {
+                str += ', ' + '자외선 ' + current.ultrvStr;
             }
+
+            //current.sensorytmp = -10;
+            //current.sensorytmeStr = '관심';
+            if (current.sensorytem && current.sensorytem <= -10) {
+                str += ', ' + '체감온도 ' + current.sensorytemStr;
+            }
+
             return str;
         }
 
@@ -316,7 +337,6 @@ angular.module('starter.controllers', [])
             parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
              */
             var parsedWeather = WeatherUtil.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
-            currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
 
             $scope.timeTable = parsedWeather.timeTable;
             $scope.timeChart = parsedWeather.timeChart;
@@ -326,6 +346,7 @@ angular.module('starter.controllers', [])
              */
             $scope.dayTable = WeatherUtil.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
 
+            currentForecast.summary = makeSummary(currentForecast, parsedWeather.timeTable[0]);
             $scope.currentWeather = currentForecast;
 
             $scope.dayChart = [{
