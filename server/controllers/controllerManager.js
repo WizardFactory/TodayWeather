@@ -412,7 +412,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
         currentDate = currentDate.slice(0, 8) + '1800';
 
         //log.info('find previous data : ', currentDate);
-        for(var j=0 in self.midForecast.midLand){
+        for(var j in self.midForecast.midLand){
             if(currentDate === self.midForecast.midLand[j].date){
                 var matchedDay = self.midForecast.midLand[j].data;
                 var matchedData = self.getMatchedData(areaCode, matchedDay);
@@ -508,7 +508,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
         var targetDate = currentDate;
         currentDate = currentDate.slice(0, 8) + '1800';
         //log.info('find previous data : ', currentDate);
-        for(var j=0 in self.midForecast.midTemp){
+        for(var j in self.midForecast.midTemp){
             if(currentDate === self.midForecast.midTemp[j].date){
                 var matchedDay = self.midForecast.midTemp[j].data;
                 var matchedData = self.getMatchedData(currentCode.cityCode, matchedDay);
@@ -552,7 +552,7 @@ Manager.prototype.setShortData = function(coord, dataList){
                 var popCount = 0;
 
                 // find first item based on date&time
-                for(var i = 0 in dataList){
+                for(var i in dataList){
                     if((dataList[i].date !== undefined) &&
                         (dataList[i].time !== undefined) &&
                         (dataList[i].date !== '') &&
@@ -652,7 +652,7 @@ Manager.prototype.setCurrentData = function(coord, dataList){
     self.weatherDb.forEach(function(data, index){
         if(data.mData.mCoord.mx === coord.mx && data.mData.mCoord.my === coord.my){
 
-            for(var i=0 in dataList){
+            for(var i in dataList){
                 var item = dataList[i];
                 data.mData.data.current.push(JSON.parse(JSON.stringify(item)));
             }

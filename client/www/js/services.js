@@ -48,12 +48,18 @@ angular.module('starter.services', [])
          * @param pm10Grade
          * @returns {*}
          */
-        function parsePm10Grade(pm10Grade) {
-            switch (pm10Grade) {
-                case 1: return '좋음';
-                case 2: return '보통';
-                case 3: return '나쁨';
-                case 4: return '매우 나쁨';
+        function parsePm10Grade(pm10Value) {
+            if (pm10Value <= 30) {
+                return '좋음';
+            }
+            else if (pm10Value <= 80) {
+                return '보통';
+            }
+            else if (pm10Value <= 150) {
+                return '나쁨';
+            }
+            else if (pm10Value > 150) {
+                return '매우 나쁨';
             }
             return '-';
         }
@@ -76,9 +82,9 @@ angular.module('starter.services', [])
             currentForecast.sky = parseSkyState(currentForecast.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
             currentForecast.wsd = currentTownWeather.wsd;
-            currentForecast.pm10Value = currentTownWeather.pm10Value;
-            currentForecast.pm10Grade = currentTownWeather.pm10Grade;
-            currentForecast.pm10Str = parsePm10Grade(currentTownWeather.pm10Grade);
+            currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
+            currentForecast.pm10Grade = currentTownWeather.arpltn.pm10Grade;
+            currentForecast.pm10Str = parsePm10Grade(currentTownWeather.arpltn.pm10Value);
             return currentForecast;
         }
 
