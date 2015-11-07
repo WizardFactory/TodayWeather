@@ -140,8 +140,7 @@
                                         <div class="col col-33 detail-image">
                                             <div><img src="img/SensoryTem.png"></div>
                                         </div>
-                                        <div class="col col-33 detail-text"><p>{{currentWeather.sensorytemStr}}</p>
-                                            <p>{{currentWeather.sensorytem}}</p>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.sensorytemStr}} {{currentWeather.sensorytem}}˚</p>
                                         </div>
                                     </div>
                                 </li>
@@ -151,8 +150,8 @@
                                         <div class="col col-33 detail-image">
                                             <div><img src="img/PM10.png" style="width: 40px"></div>
                                         </div>
-                                        <div class="col col-33 detail-text"><p>{{currentWeather.pm10Str}}</p>
-                                            <p>{{currentWeather.pm10Value}}㎍/㎥</p>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.pm10Str}}
+                                            <small>{{currentWeather.pm10Value}}㎍/㎥</small></p>
                                         </div>
                                     </div>
                                 </li>
