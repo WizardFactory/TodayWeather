@@ -174,7 +174,7 @@ describe('unit test - get middle range forecast in lib/collect class', function(
 */
 
     it('lib/collect : get Middle range LAND info by using XY list', function(done){
-
+        this.timeout(10*1000);
         var collection = new collect();
         assert.doesNotThrow(function(){
             collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, 'pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F%2FPS1pchRtnCa%2BSBLwlVt%2FrHwb44YC4ksQWcdEg%3D%3D', '20150926', '0600', function(err, dataList){
