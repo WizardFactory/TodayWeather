@@ -2,4 +2,4 @@ sudo: required
 language: node_js
 node_js:
   - "0.10"
-script: cd ./WizardFactory/TodayWeather/server && npm install && npm test
+script: cd server && npm install && npm test
