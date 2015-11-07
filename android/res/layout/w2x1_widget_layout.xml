@@ -1,0 +1,239 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bg_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="5dip"
+    android:background="@drawable/bg_round_black_box">
+
+    <LinearLayout
+        android:id="@+id/msg_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="#ffffff"
+            android:text="@string/msg_do_not_widget_data_plz_update"/>
+    </LinearLayout>
+
+    <!-- main weather content -->
+    <RelativeLayout
+        android:id="@+id/weather_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <!-- weather -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_gravity="center_vertical|start"
+            android:gravity="center_vertical|start">
+
+            <!-- current location -->
+            <TextView
+                android:id="@+id/location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start|bottom"
+                android:gravity="start|bottom"
+                android:textSize="10sp"
+                android:textColor="#ffffff"/>
+
+            <!-- current temperature and sky -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/current_temperature"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start"
+                    android:gravity="start"
+                    android:includeFontPadding="false"
+                    android:textStyle="bold"
+                    android:textSize="38sp"
+                    android:textColor="#ffffff"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:layout_gravity="start|center_vertical"
+                    android:paddingTop="8dip">
+
+                    <ImageView
+                        android:id="@+id/reddot"
+                        android:layout_width="7dip"
+                        android:layout_height="7dip"
+                        android:layout_gravity="start|center_vertical"/>
+
+                    <ImageView
+                        android:id="@+id/current_sky"
+                        android:layout_width="21dip"
+                        android:layout_height="21dip"
+                        android:layout_gravity="bottom"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- show today temperature compaere with yesterday temperature-->
+            <TextView
+                android:id="@+id/cmp_yesterday_temperature"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start|top"
+                android:gravity="start|top"
+                android:textSize="9sp"
+                android:textColor="#ffffff"/>
+        </LinearLayout>
+
+        <!-- max / min temperature -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:gravity="center">
+
+            <!-- today max / min temperature -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_gravity="center"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/today_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:textSize="9sp"
+                    android:textColor="#ffffff"/>
+
+                <LinearLayout
+                    android:id="@+id/bg_today"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dip"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/today_high_temperature"
+                        android:layout_width="0dip"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#59515c"/>
+
+                    <TextView
+                        android:id="@+id/today_separator_temperature"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#59515c"/>
+
+                    <TextView
+                        android:id="@+id/today_low_temperature"
+                        android:layout_width="0dip"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#59515c"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- yesterday max / min temperature -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dip"
+                android:orientation="vertical"
+                android:layout_gravity="center"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/yesterday_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:textSize="9sp"
+                    android:textColor="#a09b9b"/>
+
+                <LinearLayout
+                    android:id="@+id/bg_yesterday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dip"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/yesterday_high_temperature"
+                        android:layout_width="0dip"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#484749"/>
+
+                    <TextView
+                        android:id="@+id/yesterday_separator_temperature"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#59515c"/>
+
+                    <TextView
+                        android:id="@+id/yesterday_low_temperature"
+                        android:layout_width="0dip"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_horizontal|top"
+                        android:gravity="center"
+                        android:textStyle="bold"
+                        android:textSize="9sp"
+                        android:textColor="#484749"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </RelativeLayout>
+</FrameLayout>
