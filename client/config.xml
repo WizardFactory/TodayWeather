@@ -67,13 +67,19 @@
         <splash height="1024" src="resources/ios/splash/Default-Portrait~ipad.png" width="768" />
         <splash height="960" src="resources/ios/splash/Default@2x~iphone.png" width="640" />
         <splash height="480" src="resources/ios/splash/Default~iphone.png" width="320" />
-        <config-file platform="ios" target="*-Info.plist" parent="NSAppTransportSecurity">
+        <config-file parent="NSAppTransportSecurity" platform="ios" target="*-Info.plist">
             <dict>
-                <key>NSAllowsArbitraryLoads</key><true/>
+                <key>NSAllowsArbitraryLoads</key>
+                <true />
             </dict>
         </config-file>
     </platform>
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />
     <plugin name="cordova-plugin-whitelist" spec="https://github.com/apache/cordova-plugin-whitelist.git" />
     <allow-navigation href="*" />
+    <preference name="xwalkVersion" value="14+" />
+    <preference name="xwalkCommandLine" value="--disable-pull-to-refresh-effect" />
+    <preference name="xwalkMode" value="embedded" />
+    <preference name="xwalkMultipleApk" value="true" />
+    <plugin name="cordova-plugin-inappbrowser" spec="~1.0.1" />
 </widget>
