@@ -34,7 +34,8 @@
       "locator": "https://github.com/apache/cordova-plugin-whitelist.git",
       "id": "cordova-plugin-whitelist"
     },
-    "ionic-plugin-deploy"
+    "ionic-plugin-deploy",
+    "cordova-plugin-inappbrowser"
   ],
   "cordovaPlatforms": [
     "android",
