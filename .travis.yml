@@ -2,3 +2,6 @@ sudo: required
 language: node_js
 node_js:
   - "0.10"
+env:
+  - TEST_SERVER=WizardFactory/TodayWeather/server
+script: cd $TEST_DIR && npm install && npm test
