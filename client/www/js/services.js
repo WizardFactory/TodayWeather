@@ -45,10 +45,10 @@ angular.module('starter.services', [])
     .factory('WeatherUtil', function () {
         /**
          *
-         * @param pm10Grade
+         * @param pm10Value
          * @returns {*}
          */
-        function parsePm10Grade(pm10Value) {
+        function parsePm10Value(pm10Value) {
             if (pm10Value <= 30) {
                 return '좋음';
             }
@@ -82,9 +82,12 @@ angular.module('starter.services', [])
             currentForecast.sky = parseSkyState(currentForecast.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
             currentForecast.wsd = currentTownWeather.wsd;
-            currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
-            currentForecast.pm10Grade = currentTownWeather.arpltn.pm10Grade;
-            currentForecast.pm10Str = parsePm10Grade(currentTownWeather.arpltn.pm10Value);
+
+            if (currentTownWeather.arpltn && currentTownWeather.arpltn.pm10Value) {
+                currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
+                currentForecast.pm10Grade = currentTownWeather.arpltn.pm10Grade;
+                currentForecast.pm10Str = parsePm10Value(currentTownWeather.arpltn.pm10Value);
+            }
             return currentForecast;
         }
 
@@ -312,7 +315,7 @@ angular.module('starter.services', [])
 
                 if (diffDays === 0) {
                     currentWeather.ultrv = dayInfo.ultrv;
-                    currentWeather.ultrvStr = parseUltrv(dayInfo.ultrvStr);
+                    currentWeather.ultrvStr = parseUltrv(dayInfo.ultrv);
                 }
                 data.humidityIcon = "Humidity-00";
                 tmpDayTable.push(data);
@@ -323,7 +326,7 @@ angular.module('starter.services', [])
             var index = 0;
             for (var i = 0; i < tmpDayTable.length; i++) {
                 var tmpDate = dailyInfoList[0].date;
-                console.log(tmpDate);
+                //console.log(tmpDate);
                 if (tmpDayTable[i].date === tmpDate) {
                     index = i;
                     break;
@@ -612,7 +615,44 @@ angular.module('starter.services', [])
             return timeString;
         }
 
+        /**
+         *
+         * @param addressArray
+         * @returns {{first: string, second: string, third: string}}
+         */
+        function getTownFromFullAddress(addressArray) {
+            var town = {first: '', second: '', third: ''};
+            if (!Array.isArray(addressArray) || addressArray.length === 0) {
+                console.log('addressArray is invalid');
+                return town;
+            }
+
+            if (addressArray.length === 5) {
+                town.first = addressArray[1];
+                town.second = addressArray[2]+addressArray[3];
+                town.third = addressArray[4];
+            }
+            else if (addressArray.length === 4) {
+                town.first = addressArray[1];
+                town.second = addressArray[2];
+                town.third = addressArray[3];
+            }
+            else if (addressArray.length === 3) {
+                town.first = addressArray[1];
+                town.second = addressArray[1];
+                town.third = addressArray[2];
+            }
+            else {
+                var err = new Error("Fail to parse address array="+addressArray.toString());
+                console.log(err);
+            }
+            return town;
+        }
+
         return {
+            getTownFromFullAddress: function (addressArray) {
+                return getTownFromFullAddress(addressArray);
+            },
             parseCurrentTownWeather: function (currentTownWeather) {
                 return parseCurrentTownWeather(currentTownWeather);
             },
@@ -630,6 +670,15 @@ angular.module('starter.services', [])
             },
             convertTimeString: function(date) {
                 return convertTimeString(date);
+            },
+            parseSensoryTem: function (sensoryTem) {
+                return parseSensoryTem(sensoryTem);
+            },
+            parseUltrv: function (ultrv) {
+                return parseUltrv(ultrv);
+            },
+            parsePm10Value: function (pm10value) {
+               return parsePm10Value(pm10value);
             }
         };
     })
