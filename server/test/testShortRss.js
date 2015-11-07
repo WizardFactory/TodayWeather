@@ -5,7 +5,7 @@
 
 var assert  = require('assert');
 var config = require('../config/config');
-var keydata = require('../config/keydata');
+//var keydata = require('../config/keydata');
 var collect = require('../lib/collectTownForecast');
 var Logger = require('../lib/log');
 var convert = require('../utils/coordinate2xy');
