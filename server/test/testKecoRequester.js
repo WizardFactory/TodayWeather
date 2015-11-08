@@ -10,7 +10,7 @@ global.log  = new Logger(__dirname + "/debug.log");
 var assert  = require('assert');
 var Keco  = require('../lib/kecoRequester.js');
 
-describe('unit test - keco controller', function() {
+describe('unit test - keco requester', function() {
     var keco;
     var list;
 
