@@ -8,10 +8,6 @@ var modelUtil = require('./modelUtil');
 var config = require('../config/config');
 
 var midTempSchema = mongoose.Schema({
-    town: {
-        first: String,
-        second: String
-    },
     regId : String,
     midTempData :{
         date: String,
@@ -76,7 +72,7 @@ midTempSchema.statics = {
                 if(tempMax < elem.currentData.t1h) tempMax = elem.currentData.t1h;
                 if(tempMin > elem.currentData.t1h) tempMin = elem.currentData.t1h;
             });
-            var midList = self.find({"town.first" : first, "town.second" : second })
+            var midList = self.find({"regId" : regId})
                 .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec();
 
             midList.then(function(res){
@@ -104,37 +100,16 @@ midTempSchema.statics = {
     setTempData : function(tempData, regId, cb){
         var self = this;
 
-        var findQuery = self.find({"regId": regId}).exec();
+        var findQuery = self.findOne({"regId": regId}).exec();
 
         findQuery.then(function(res){
-            if(res == null) return ;
-
-            console.log('res length : ' + res.length);
-            res.forEach(function(elem, idx){
-                if(elem == null) return ;
-
-                var isInsertQuery = self.findOne({ 'regId' : regId, 'town.second' : elem.town.second, 'town.first' : elem.town.first
-                    , 'midTempData.date' : tempData.date, 'midTempData.time' : tempData.time}).exec();
-
-                isInsertQuery.then(function(value){
-                    if(value == null){
-                        self.update({ 'regId' : regId, 'town.second' : elem.town.second, 'town.first' : elem.town.first
-                    , 'midTempData.date' : tempData.date, 'midTempData.time' : tempData.time},
-                            {
-                                'regId' : regId,
-                                'town.second': elem.town.second,
-                                'town.first': elem.town.first,
-                                'midTempData' : tempData
-                            },
-                            {upsert: true}, cb);
-                    } else {
-                        self.update({ 'regId' : regId, 'town.second' : elem.town.second, 'town.first' : elem.town.first
-                    , 'midTempData.date' : tempData.date, 'midTempData.time' : tempData.time},
-                            {'midTempData' : tempData},
-                            {upsert: false}, cb);
-                    }
-                });
-            });
+            //console.log('res length : ' + res.length);
+            self.update({'regId' : regId, 'midTempData.date' : tempData.date, 'midTempData.time': tempData.time},
+                {
+                'regId' : regId,
+                'midTempData' : tempData
+                },
+                {upsert : true}, cb);
         });
     }
 };
