@@ -4,6 +4,7 @@
 
 var mongoose = require('mongoose');
 var config = require('../config/config');
+var targetName = './utils/data/region.csv';
 
 mongoose.connect(config.db.path, config.db.options);
 
@@ -46,7 +47,7 @@ var midLandList = [
     {name: '제주도', code: '11G00000'}
 ];
 
-var midTempList = fs.readFileSync('./utils/data/region.csv').toString().split('\r\n');
+var midTempList = fs.readFileSync(targetName).toString().split('\r\n');
 
 //var midNameList = ['midLand', 'midTemp', 'midSea'];
 var midLandDoc = mongoose.model('midLand', midLandSchema);

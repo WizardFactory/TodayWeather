@@ -19,7 +19,7 @@ describe('unit test - keco controller', function() {
         assert.equal(keco._currentSidoIndex, 0, '');
     });
     it('set key', function () {
-        var key = require('../config/keydata.js').keyString.kay;
+        var key = require('../config/config').keyString.test_normal;
         keco.setServiceKey(key);
         assert.equal(key, keco.getServiceKey(), '');
     });
@@ -115,36 +115,36 @@ describe('unit test - keco controller', function() {
    //     });
    //});
 
-    it('add msrstn info to town', function(done) {
-        this.timeout(60*1000*10); //10min
-
-        var mongoose = require('mongoose');
-        mongoose.connect('localhost/todayweather', function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-                console.log(err);
-                done();
-            }
-        });
-        mongoose.connection.on('error', function(err) {
-            console.error('MongoDB connection error: ' + err);
-            done();
-        });
-
-        keco.setDaumApiKey(require('../config/keydata.js').keyString.daum_key);
-
-        keco.addMsrstnInfoToTown(function (err, result) {
-            if (err) {
-                console.log(err);
-            }
-            else {
-                console.log(result);
-            }
-
-            mongoose.disconnect();
-            done();
-        });
-    });
+    //it('add msrstn info to town', function(done) {
+    //    this.timeout(60*1000*10); //10min
+    //
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //            done();
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //        done();
+    //    });
+    //
+    //    keco.setDaumApiKey(require('../config/config').keyString.daum_key);
+    //
+    //    keco.addMsrstnInfoToTown(function (err, result) {
+    //        if (err) {
+    //            console.log(err);
+    //        }
+    //        else {
+    //            console.log(result);
+    //        }
+    //
+    //        mongoose.disconnect();
+    //        done();
+    //    });
+    //});
 
     //it('get All data from keco', function(done) {
     //    this.timeout(60*1000); //1min
