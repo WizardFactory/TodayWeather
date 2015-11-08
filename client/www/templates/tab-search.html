@@ -17,11 +17,11 @@
                                     <img src="img/Search.png">
                                 </div>
                                 <div class="col col-60 item-input-inset">
-                                    <input type="text" placeholder="도시명을 입력하세요" ng-model="$parent.city"
-                                           ng-change="changeCity()">
+                                    <input type="text" placeholder="도시명을 입력하세요" ng-model="$parent.searchWord"
+                                           ng-change="changeSearchWord()">
                                 </div>
                                 <div class="col col-20 bg-white">
-                                    <button class="button button-clear" ng-click="cancleSearch()">
+                                    <button class="button button-clear" ng-click="cancleSearchWord()">
                                         취소
                                     </button>
                                 </div>
@@ -31,11 +31,19 @@
                 </div>
                 <div class="col-10"></div>
             </div>
-            <div class="row" style="height: 60%" ng-show="city===undefined">
+            <div class="row" style="height: 75%">
                 <div class="col-10"></div>
-                <div class="col-80">
-                    <ul class="list">
-                        <li class="item city-content" ng-repeat="city in citylist" ng-click="selectCity(city)">
+                <ion-scroll class="col-80" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                            style="width: 100%; height: 100%">
+                    <ul class="list" ng-show="searchWord!==undefined">
+                        <li class="item city-content" ng-repeat="result in searchResults" ng-click="selectResult(result)">
+                            <div class="row row-no-padding">
+                                <div class="col">{{result.first}},{{result.second}},{{result.third}}</div>
+                            </div>
+                        </li>
+                    </ul>
+                    <ul class="list" ng-show="searchWord===undefined">
+                        <li class="item city-content" ng-repeat="city in cityList" ng-click="selectCity(city)">
                             <div class="row row-no-padding">
                                 <div class="col col-80">{{city.address}}</div>
                                 <div class="col col-20"></div>
@@ -45,50 +53,10 @@
                             </div>
                         </li>
                     </ul>
-                </div>
-                <div class="col-10"></div>
-            </div>
-            <div class="row" style="height: 60%" ng-show="city!==undefined">
-                <div class="col-10"></div>
-                <ion-scroll class="col-80" zooming="false" direction="y" has-bouncing="false"
-                            scrollbar-y="false" style="width: 100%; height: 100%">
-                    <ul class="list">
-                        <li class="item city-content" ng-repeat="city in cities" ng-click="selectCity(city)">
-                            <div class="row row-no-padding">
-                                <div class="col">{{city.first}},{{city.second}},{{city.third}}</div>
-                            </div>
-                        </li>
-                    </ul>
                 </ion-scroll>
                 <div class="col-10"></div>
             </div>
-
-            <!--<div class="row" style="height: 60%">-->
-                <!--<div class="col-10"></div>-->
-                <!--<ion-scroll class="col-80" zooming="false" direction="y" has-bouncing="false"-->
-                            <!--scrollbar-y="false" style="width: 100%; height: 100%">-->
-                    <!--<ul class="list" ng-show="city!==undefined" style="background-color: coral">-->
-                        <!--<li class="item city-content" ng-repeat="city in cities" ng-click="selectCity(city)">-->
-                            <!--<div class="row row-no-padding">-->
-                                <!--<div class="col">{{city.first}},{{city.second}},{{city.third}}</div>-->
-                            <!--</div>-->
-                        <!--</li>-->
-                    <!--</ul>-->
-                    <!--<ul class="list" ng-show="city===undefined" style="background-color: steelblue">-->
-                        <!--<li class="item city-content" ng-repeat="city in citylist" ng-click="selectCity(city)">-->
-                            <!--<div class="row row-no-padding">-->
-                                <!--<div class="col col-80">{{city.address}}</div>-->
-                                <!--<div class="col col-20"></div>-->
-                                <!--&lt;!&ndash;<button class="button button-energized">&ndash;&gt;-->
-                                <!--&lt;!&ndash;<i class="ion-ios-download-outline"></i>&ndash;&gt;-->
-                                <!--&lt;!&ndash;</button>&ndash;&gt;-->
-                            <!--</div>-->
-                        <!--</li>-->
-                    <!--</ul>-->
-                <!--</ion-scroll>-->
-                <!--<div class="col-10"></div>-->
-            <!--</div>-->
-            <div class="row" style="height: 20%"></div>
+            <div class="row" style="height: 5%"></div>
         </div>
     </ion-content>
 </ion-view>

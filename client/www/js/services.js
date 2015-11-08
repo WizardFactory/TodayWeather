@@ -176,10 +176,10 @@ angular.module('starter.services', [])
         obj.loadTowns = function() {
             var that = this;
             $http.get('data/town.json')
-                .then(function(res){
+                .then(function (res) {
                     that.towns = res.data;
                 });
-            };
+        };
 
         //endregion
 
@@ -188,7 +188,7 @@ angular.module('starter.services', [])
     .factory('WeatherService', function () {
 
     })
-    .factory('WeatherUtil', function () {
+    .factory('WeatherUtil', function ($q, $http) {
         var obj = {};
 
         //region Function
@@ -482,6 +482,46 @@ angular.module('starter.services', [])
                 tempIconName += parseInt(reh / 10) * 10;
             }
             return tempIconName;
+        }
+
+        /**
+         * It's supporting only korean lang
+         * @param {Object[]} results
+         * @returns {string}
+         */
+        function findDongAddressFromGoogleGeoCodeResults(results) {
+            var dongAddress = "";
+            var length = 0;
+
+            results.forEach(function (result) {
+                var lastChar = result.formatted_address.slice(-1);
+                if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
+                    if(length < result.formatted_address.length) {
+                        dongAddress = result.formatted_address;
+                        length = result.formatted_address.length;
+                    }
+                }
+            });
+
+            if (dongAddress.length === 0) {
+                console.log("Fail to find index of dong from="+results[0].formatted_address);
+            }
+            return dongAddress;
+        }
+
+        /**
+         *
+         * @param {Object[]} results
+         * @returns {string}
+         */
+        function findLocationFromGoogleGeoCodeResults(results) {
+            var location = {};
+
+            results.forEach(function (result) {
+                location.lat = result.geometry.location.lat;
+                location.long = result.geometry.location.lng;
+            });
+            return location;
         }
 
         //endregion
@@ -810,6 +850,61 @@ angular.module('starter.services', [])
                 console.log(err);
             }
             return town;
+        };
+
+        /**
+         *
+         * @param {String} address
+         */
+        obj.getAddressToGeolocation = function (address) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
+
+            $http({method: 'GET', url: url}).success(function (data) {
+                if (data.status === 'OK') {
+                    var location = findLocationFromGoogleGeoCodeResults(data.results);
+                    console.log(location);
+                    deferred.resolve(location);
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
+        };
+
+        /**
+         *
+         * @param {Number} lat
+         * @param {Number} long
+         */
+        obj.getAddressFromGeolocation = function (lat, long) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
+                "&sensor=true&language=ko";
+
+            $http({method: 'GET', url: url}).success(function (data) {
+                if (data.status === "OK") {
+                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                    if (!address || address.length === 0) {
+                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
+                    }
+                    console.log(address);
+                    deferred.resolve(address);
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
         };
 
         //endregion

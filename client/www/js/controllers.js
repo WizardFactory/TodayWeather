@@ -214,59 +214,6 @@ angular.module('starter.controllers', [])
         }
 
         /**
-         * It's supporting only korean lang
-         * @param {Object[]} results
-         * @returns {string}
-         */
-        function findDongAddressFromGoogleGeoCodeResults(results) {
-            var dongAddress = "";
-            var length = 0;
-            results.forEach(function (result) {
-                var lastChar = result.formatted_address.slice(-1);
-                if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
-                    if(length < result.formatted_address.length) {
-                        dongAddress = result.formatted_address;
-                        length = result.formatted_address.length;
-                    }
-                }
-            });
-            if (dongAddress.length === 0) {
-                console.log("Fail to find index of dong from="+results[0].formatted_address);
-            }
-            return dongAddress;
-        }
-
-        /**
-         *
-         * @param {Number} lat
-         * @param {Number} long
-         */
-        function getAddressFromGeolocation(lat, long) {
-            var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
-                        "&sensor=true&language=ko";
-
-            $http({method: 'GET', url: url}).success(function (data) {
-                if (data.status === "OK") {
-                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                    if (!address || address.length === 0) {
-                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
-                    }
-                    console.log(address);
-                    deferred.resolve(address);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
-
-            return deferred.promise;
-        }
-
-        /**
          *
          * @param {Object} current
          * @param {Object} yesterday
@@ -392,7 +339,7 @@ angular.module('starter.controllers', [])
                 //localStorage.setItem("location", JSON.stringify(location));
                 console.log(location);
 
-                getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
+                WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
                     if (fullAddress === address) {
                         addressUpdate = true;
                         if (preUpdate === true) {
@@ -516,8 +463,6 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
 
-            WeatherInfo.loadCities();
-            WeatherInfo.loadTowns();
             city = WeatherInfo.getCityOfIndex(0);
             if (city) {
                 fullAddress = city.address;
@@ -560,36 +505,47 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $ionicPlatform, $ionicAnalytics, $q, $http, WeatherInfo, WeatherUtil) {
-        $scope.selectedCountry = null;
-        $scope.city = undefined;
-        $scope.cities = [];
-        $scope.citylist = [];
+        $scope.searchWord = undefined;
+        $scope.searchResults = [];
+        $scope.cityList = WeatherInfo.cities;
+        var towns = WeatherInfo.towns;
+        var city = {};
 
-        //$scope.citylist = WeatherInfo.cities;
-        $scope.changeCity = function() {
-            var towns = WeatherInfo.towns;
-            $scope.cities = towns.filter(function (town) {
-                if (town.first.indexOf($scope.city) >= 0 || town.second.indexOf($scope.city) >= 0
-                    || town.third.indexOf($scope.city) >= 0) {
+        $scope.changeSearchWord = function() {
+            if ($scope.searchWord === "") {
+                $scope.searchWord = undefined;
+                $scope.searchResults = [];
+                return;
+            }
+
+            $scope.searchResults = towns.filter(function (town) {
+                if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
+                    || town.third.indexOf($scope.searchWord) >= 0) {
                     return true;
                 }
                 return false;
             });
         };
 
-        $scope.cancleSearch = function() {
-            $scope.city = undefined;
-            $scope.cities = [];
+        $scope.cancleSearchWord = function() {
+            $scope.searchWord = undefined;
+            $scope.searchResults = [];
         };
 
-        var data = {};
-        $scope.selectCity = function(city) {
-            var address = city.first+"+"+city.second+"+"+city.third;
-            getAddressToGeolocation(address).then(function (location) {
-                getAddressFromGeolocation(location.lat, location.long).then(function (address) {
-                    data.currentPosition = false;
-                    data.address = address;
-                    data.location = location;
+        $scope.selectResult = function(city) {
+            var address = city.first;
+            if (city.second !== "") {
+                address += "+" + city.second;
+            }
+            if (city.third !== "") {
+                address += "+" + city.third;
+            }
+
+            WeatherUtil.getAddressToGeolocation(address).then(function (location) {
+                WeatherUtil.getAddressFromGeolocation(location.lat, location.long).then(function (address) {
+                    city.currentPosition = false;
+                    city.address = address;
+                    city.location = location;
 
                     getWeatherInfo(splitAddress(address), function (error, weatherData) {
                         if (error) {
@@ -607,8 +563,8 @@ angular.module('starter.controllers', [])
             }, function (err) {
                 //deferred.reject();
             });
-            $scope.city = undefined;
-            $scope.cities = [];
+            $scope.searchWord = undefined;
+            $scope.searchResults = [];
         };
 
         /**
@@ -736,14 +692,14 @@ angular.module('starter.controllers', [])
 
             //data.address = fullAddress;
             //data.location = location;
-            data.currentWeather = currentForecast;
-            data.timeTable = parsedWeather.timeTable;
-            data.timeChart = parsedWeather.timeChart;
-            data.dayTable = $scope.dayTable;
-            data.dayChart = $scope.dayChart;
-            WeatherInfo.addCity(data);
-            WeatherInfo.saveCities();
-            $scope.citylist = WeatherInfo.cities;
+            city.currentWeather = currentForecast;
+            city.timeTable = parsedWeather.timeTable;
+            city.timeChart = parsedWeather.timeChart;
+            city.dayTable = $scope.dayTable;
+            city.dayChart = $scope.dayChart;
+            //WeatherInfo.addCity(city);
+            //WeatherInfo.saveCities();
+            $scope.cityList.push(city);
             //localStorage.setItem("currentWeather", JSON.stringify(currentForecast));
             //localStorage.setItem("timeTable", JSON.stringify(parsedWeather.timeTable));
             //localStorage.setItem("timeChart", JSON.stringify(parsedWeather.timeChart));
@@ -755,108 +711,10 @@ angular.module('starter.controllers', [])
             console.log($scope.timeChart);
         }
 
-        /**
-         *
-         * @param {Object[]} results
-         * @returns {string}
-         */
-        function findLocationFromGoogleGeoCodeResults(results) {
-            var location = {};
-            results.forEach(function (result) {
-                location.lat = result.geometry.location.lat;
-                location.long = result.geometry.location.lng;
-            });
-            return location;
-        }
-
-        /**
-         *
-         * @param {String} address
-         */
-        function getAddressToGeolocation(address) {
-            var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
-
-            $http({method: 'GET', url: url}).success(function (data) {
-                if (data.status === 'OK') {
-                    var location = findLocationFromGoogleGeoCodeResults(data.results);
-                    console.log(location);
-                    deferred.resolve(location);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
-
-            return deferred.promise;
-        }
-
-        /**
-         * It's supporting only korean lang
-         * @param {Object[]} results
-         * @returns {string}
-         */
-        function findDongAddressFromGoogleGeoCodeResults(results) {
-            var dongAddress = "";
-            var length = 0;
-            results.forEach(function (result) {
-                var lastChar = result.formatted_address.slice(-1);
-                if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
-                    if(length < result.formatted_address.length) {
-                        dongAddress = result.formatted_address;
-                        length = result.formatted_address.length;
-                    }
-                }
-            });
-            if (dongAddress.length === 0) {
-                console.log("Fail to find index of dong from="+results[0].formatted_address);
-            }
-            return dongAddress;
-        }
-
-        /**
-         *
-         * @param {Number} lat
-         * @param {Number} long
-         */
-        function getAddressFromGeolocation(lat, long) {
-            var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
-                "&sensor=true&language=ko";
-
-            $http({method: 'GET', url: url}).success(function (data) {
-                if (data.status === "OK") {
-                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                    if (!address || address.length === 0) {
-                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
-                    }
-                    console.log(address);
-                    deferred.resolve(address);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
-
-            return deferred.promise;
-        }
-
         $ionicPlatform.ready(function() {
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
-            $scope.citylist = WeatherInfo.cities;
         });
-
-        var init = function() {
-            $scope.citylist = WeatherInfo.cities;
-        };
-        init();
     })
 
     .controller('SettingCtrl', function($scope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $cordovaInAppBrowser) {
