@@ -72,15 +72,18 @@ midLandSchema.statics = {
                 // idx + 1 == currentList.length
                 if ((idx + 1) != currentList.length) {
                     if (currentList[(idx + 1)].currentData.date !== tempDate) {
-                        pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.ceil(tempAmRain % timeCnt), tempAmRain); // weather past ...
-                        pastObj['wp'+dateCnt+'Pm'] = averageValueToSky(Math.ceil(tempPmRain % timeCnt), tempPmRain);
+                        pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.round(tempAmRain % timeCnt), tempAmRain); // weather past ...
+                        pastObj['wp'+dateCnt+'Pm'] = averageValueToSky(Math.round(tempPmRain % timeCnt), tempPmRain);
                         tempAmSky = tempPmSky = 0;
-                        tempAmRain = tempPmRain = 0;
+                        tempAmRain = tempPmRain = false;
                         timeCnt = 1;
                         tempDate = currentList[(idx + 1)].currentData.date;
                         dateCnt++;
                         return;
                     }
+                } else {
+                    pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.round(tempAmRain % timeCnt), tempAmRain); // weather past ...
+                    pastObj['wp'+dateCnt+'Pm'] = averageValueToSky(Math.round(tempPmRain % timeCnt), tempPmRain);
                 }
 
                 if(elem.currentData.time <= '1200') {

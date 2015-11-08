@@ -69,6 +69,9 @@ midTempSchema.statics = {
                         dateCnt ++;
                         return;
                     }
+                }else{
+                    beforeObj['tbMin'+ dateCnt] = tempMin; // tb == temperature before..
+                    beforeObj['tbMax'+ dateCnt] = tempMax;
                 }
 
                 if(tempMax < elem.currentData.t1h) tempMax = elem.currentData.t1h;

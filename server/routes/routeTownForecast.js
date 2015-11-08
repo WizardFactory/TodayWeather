@@ -6,6 +6,8 @@
 var router = require('express').Router();
 var config = require('../config/config');
 var dbForecast = require('../models/forecast');
+var dbCurrent = require('../models/current');
+var dbShort = require('../models/short');
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
@@ -791,65 +793,70 @@ var getCurrent = function(req, res, next){
         });
     }
     else{
-        dbForecast.getData(regionName, cityName, townName, function(err, result){
+        console.log('test');
+        dbCurrent.getOneCurrentData(regionName, cityName, townName, function(err, result){
             if(err){
-                if(err){
-                    log.error('> getShortest : failed to get data from DB');
-                    log.error(meta);
-                    return;
-                }
+                log.error('> getCurrent : failed to get data from DB');
+                log.error(meta);
+                next();
             }
             /********************
              * TEST DATA
              ********************/
             //result = config;
             /********************/
-            try{
-                var listCurrent = result.mData.data.current;
-                var listShort = result.mData.data.short;
+            //try{
+                console.log('in try');
+                var currentItem = result[0].currentData;
+                console.log(currentItem);
                 var nowDate = getCurrentTimeValue(+9);
                 var acceptedDate = getCurrentTimeValue(+6);
-                var shortDate = getTimeValue();
-                var currentItem = listCurrent[listCurrent.length - 1];
                 var resultItem = {};
 
+                log.info('nowDate : ' + nowDate.date + " , nowTime : " + nowDate.time);
+                log.info('acceptDate : ' + acceptedDate.date + " , acceptTime : " + acceptedDate.time);
                 if((nowDate.date !== currentItem.date) ||
                     (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
                     // 데이터가 없다면 3시간 예보 데이터 사용.
-                    for(var i=0 ; i<listShort.length ; i++){
-                        if(shortDate.date === listShort[i].date && shortDate.time === listShort[i].time){
-                            resultItem.date = listShort[i].date;
-                            resultItem.time = listShort[i].time;
-                            resultItem.mx = listShort[i].mx;
-                            resultItem.my = listShort[i].my;
-                            resultItem.t1h = listShort[i].t3h;
-                            resultItem.rn1 = listShort[i].r06;
-                            resultItem.sky = listShort[i].sky;
-                            resultItem.uuu = listShort[i].uuu;
-                            resultItem.vvv = listShort[i].vvv;
-                            resultItem.reh = listShort[i].reh;
-                            resultItem.pty = listShort[i].pty;
-                            resultItem.lgt = 0;
-                            resultItem.vec = listShort[i].vec;
-                            resultItem.wsd = listShort[i].wsd;
-                            break;
+                    dbShort.getOneShortData(regionName, cityName, townName, function(err, shortRes){
+                         if(err){
+                            log.error('> getCurrentest : failed to get data from DB');
+                            log.error(meta);
+                            return;
                         }
-                    }
 
+                        resultItem.date = shortRes[0].shortData.date;
+                        resultItem.time = shortRes[0].shortData.time;
+                        resultItem.mx = shortRes[0].shortData.mx;
+                        resultItem.my = shortRes[0].shortData.my;
+                        resultItem.t1h = shortRes[0].shortData.t3h;
+                        resultItem.rn1 = shortRes[0].shortData.r06;
+                        resultItem.sky = shortRes[0].shortData.sky;
+                        resultItem.uuu = shortRes[0].shortData.uuu;
+                        resultItem.vvv = shortRes[0].shortData.vvv;
+                        resultItem.reh = shortRes[0].shortData.reh;
+                        resultItem.pty = shortRes[0].shortData.pty;
+                        resultItem.lgt = 0;
+                        resultItem.vec = shortRes[0].shortData.vec;
+
+                        resultItem.time = nowDate.time;
+                        return ;
+                    });
                 }else{
                     // 현재 시간으로 넣어준
-                    resultItem = currentItem;
                 }
                 resultItem.time = nowDate.time;
+                resultItem = currentItem;
 
                 //log.info(listCurrent);
+                log.info('$$$$$$$$$$current ...' + resultItem);
                 req.current = resultItem;
                 next();
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next('route');
-            }
+            //}
+            //catch(e){
+            //    log.error('ERROE>>', meta);
+            //    next('route');
+            //}
         });
     }
 
