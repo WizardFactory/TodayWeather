@@ -14,7 +14,7 @@ function arpltnController() {
 arpltnController._appendFromDb = function(town, current, callback) {
     arpltn.findOne({town:town}, function (err, arpltnData) {
         if (err) {
-            log.error(err);
+            log.warn(err);
             return callback(err);
         }
         try {
@@ -135,7 +135,6 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             if (err) {
                 log.warn(err);
             }
-            callback(err, arpltn);
         });
 
         callback(err, arpltn);
@@ -146,7 +145,7 @@ arpltnController.appendData = function(town, current, callback) {
     var self = this;
     this._appendFromDb(town, current, function(err, arpltn) {
         if (err) {
-            log.error(err);
+            log.debug(err);
             return self._appendFromKeco(town, current, callback);
         }
         return callback(err, arpltn);

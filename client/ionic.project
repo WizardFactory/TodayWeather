@@ -14,5 +14,12 @@
       "path": "/town",
       "proxyUrl": "http://d2ibo8bwl7ifj5.cloudfront.net/town"
     }
+  ],
+  "browsers": [
+    {
+      "platform": "android",
+      "browser": "crosswalk",
+      "version": "12.41.296.5"
+    }
   ]
 }

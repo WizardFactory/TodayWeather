@@ -168,27 +168,16 @@ angular.module('starter.controllers', [])
          */
         function getWeatherInfo(addressArray, callback) {
             //var url = 'town';
+            //var url = 'https://todayweather1-wizardfactory.rhcloud.com/town';
+            //var url = 'https://todayweather2-wizardfactory.rhcloud.com/town';
             var url = 'https://d2ibo8bwl7ifj5.cloudfront.net/town';
-            //var url = 'http://todayweather1-wizardfactory.rhcloud.com/town';
 
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
                 return callback(new Error("addressArray is NOT array"));
             }
 
-            if (addressArray.length === 5) {
-                url += '/'+addressArray[1]+'/'+addressArray[2]+addressArray[3]+'/'+addressArray[4];
-            }
-            else if (addressArray.length === 4) {
-                url += '/'+addressArray[1]+'/'+addressArray[2]+'/'+addressArray[3];
-            }
-            else if (addressArray.length === 3) {
-                url += '/'+addressArray[1]+'/'+addressArray[1]+'/'+addressArray[2];
-            }
-            else {
-                var err = new Error("Fail to parse address array="+addressArray.toString());
-                console.log(err);
-                return callback(err);
-            }
+            var town = WeatherUtil.getTownFromFullAddress(addressArray);
+            url += '/'+town.first+'/'+town.second+'/'+town.third;
 
             console.log(url);
 

@@ -69,10 +69,10 @@ midLandSchema.statics = {
 
             currentList.shift();
             currentList.forEach(function(elem, idx) {
+                // idx + 1 == currentList.length
                 if ((idx + 1) != currentList.length) {
                     if (currentList[(idx + 1)].currentData.date !== tempDate) {
-                        // pastObj prop name, length...
-                        pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.ceil(tempAmRain % timeCnt), tempAmRain);
+                        pastObj['wp'+dateCnt+'Am'] = averageValueToSky(Math.ceil(tempAmRain % timeCnt), tempAmRain); // weather past ...
                         pastObj['wp'+dateCnt+'Pm'] = averageValueToSky(Math.ceil(tempPmRain % timeCnt), tempPmRain);
                         tempAmSky = tempPmSky = 0;
                         tempAmRain = tempPmRain = 0;
@@ -125,8 +125,6 @@ midLandSchema.statics = {
         var findQuery = self.findOne({"regId": regId}).exec();
 
         findQuery.then(function(res){
-            if(res == null || res == []) return;
-
             self.update({'regId' : regId, 'midLandData.date' : landData.date, 'midLandData.time' : landData.time},
                 {
                     'regId' : regId,

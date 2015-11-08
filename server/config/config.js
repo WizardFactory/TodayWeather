@@ -4,9 +4,9 @@
 'use strict';
 
 module.exports = {
-    mode: 'local',
+    mode: 'local', //openshift, local
     db: {
-        mode: 'ram',
+        mode: 'ram', //ram, db, app
         path: 'mongodb://localhost/todayweather',
         options: {
             user: '',

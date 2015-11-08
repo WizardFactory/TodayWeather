@@ -63,7 +63,7 @@ function convertDateToYYYMMDD(date) {
 function convertDateToHHMM(date) {
     //I don't know why one more create Date object by aleckim
     var d = new Date(date);
-    var hh = '' + (d.getHours()+1);
+    var hh = '' + (d.getHours());
     if (hh.length < 2)  {hh = '0'+hh; }
 
     return hh+'00';
@@ -480,8 +480,8 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
 
         //If you wants save perfect, have to use promise
         lifeIndexList.forEach(function (lifeIndex) {
-            if (lifeIndex[indexName].lastUpdateDate === data[indexName].lastUpdateDate
-                        && lifeIndex[indexName].data.length !== 0)
+            if (lifeIndex[indexName].lastUpdateDate === data[indexName].lastUpdateDate &&
+                lifeIndex[indexName].data.length !== 0)
             {
                 log.debug(indexName+' life index has not updated yet');
                 return;
@@ -498,6 +498,40 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
     });
 };
 
+KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, town, callback) {
+    var self = this;
+
+    async.waterfall([
+        function(cb) {
+            self.getLifeIndex(indexName, town.areaNo, function(err, body){
+                cb(err, body);
+            });
+        },
+        function(rcv, cb) {
+            var ret = self.parseLifeIndex(indexName, rcv);
+            cb(ret.error, ret.data);
+        },
+        function(data, cb) {
+            if (!data) {
+                log.debug('it means skip of ' + indexName);
+                return cb();
+            }
+            self.saveLifeIndex(indexName, town, data, function (err) {
+                //todo : need to check save
+                if (err) {
+                    log.error(err);
+                }
+            });
+
+            cb(undefined, data[indexName]);
+        }
+    ], function(err, result) {
+        if(err) {
+            log.error(err);
+        }
+        return callback(err, {area: town, indexData: result});
+    });
+};
 /**
  * townList를 돌면서, kma의 데이터를 가지고 와서, parsing하고 save한다, 중간에 오류가 발생하면,
  * town에 대한 index를 저장해서 다음에 index부터 시작한다
@@ -521,30 +555,8 @@ KmaIndexService.prototype.taskLifeIndex = function (indexName, callback) {
 
     async.mapSeries(list,
         function(area, cBack) {
-            async.waterfall([
-                function(cb) {
-                    self.getLifeIndex(indexName, area.areaNo, function(err, body){
-                        cb(err, body);
-                    });
-                },
-                function(rcv, cb) {
-                    var ret = self.parseLifeIndex(indexName, rcv);
-                    cb(ret.error, ret.data);
-                },
-                function(data, cb) {
-                    if (!data) {
-                        //it means skip
-                        return cb();
-                    }
-                    self.saveLifeIndex(indexName, area, data, function (err) {
-                        cb(err);
-                    });
-                }
-            ], function(err) {
-                if(err) {
-                    log.error(err);
-                }
-                return cBack(err, {area: area});
+            self.getLifeIndexByIndexNameAreaNo(indexName, area, function (err, data) {
+                cBack(err, data.area);
             });
         },
         function(err, results) {
@@ -559,6 +571,75 @@ KmaIndexService.prototype.taskLifeIndex = function (indexName, callback) {
             self[indexName].areaIndex = 0;
             callback(err, results);
         });
+};
+
+KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
+    log.info("LOAD town info " +townInfo.toString());
+
+    Town.find({town: townInfo}, function(err, townList) {
+        if (err)  {
+            log.error("Fail to load townlist");
+            return err;
+        }
+        if (!townList) {
+            err = new Error("Fail to find town "+ townInfo.toString());
+        }
+
+        var retTown;
+
+        townList.every(function (town) {
+           if (!town.areaNo || town.areaNo === '')  {
+               log.warn("town didn't have areaNo");
+               return true;
+           }
+            retTown = town;
+            return false;
+        });
+
+        if (!retTown) {
+            err = new Error("Fail to find areaNo "+ townInfo.toString());
+            return callback(err);
+        }
+
+        log.debug("areaNo="+retTown.areaNo);
+        callback(undefined, retTown);
+    });
+};
+
+KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
+    log.info("Called KMA Index service By Town");
+    if (!this.serviceKey) {
+        return log.error("You have to set KEY first!");
+    }
+
+    var self = this;
+    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
+
+    //findAreaNo from town
+    this.findAreaByTown(townInfo, function (err, town) {
+        if (err) {
+            return callback(err);
+        }
+
+        async.mapSeries(list,
+            function(indexName, cb) {
+                self.getLifeIndexByIndexNameAreaNo(indexName, town, function (err, data) {
+                   cb(err, {indexName:indexName, data: data.indexData});
+                });
+            },
+            function(err, results) {
+                if(err) {
+                    log.error(err);
+                    return callback(err);
+                }
+                log.silly(results);
+                var lifeIndexKma = {town: townInfo, mCoord: town.mCoord, areaNo: town.areaNo};
+                results.forEach(function(result) {
+                    lifeIndexKma[result.indexName] = result.data;
+                });
+                return callback(undefined, lifeIndexKma);
+            });
+    });
 };
 
 /**
