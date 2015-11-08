@@ -55,6 +55,7 @@ angular.module('starter', [
 
             .state('tab.forecast', {
                 url: '/forecast',
+                cache: false,
                 views: {
                     'tab-forecast': {
                         templateUrl: 'templates/tab-forecast.html',
@@ -64,6 +65,7 @@ angular.module('starter', [
             })
             .state('tab.search', {
                 url: '/search',
+                cache: false,
                 views: {
                     'tab-search': {
                         templateUrl: 'templates/tab-search.html',
@@ -73,6 +75,7 @@ angular.module('starter', [
             })
             .state('tab.setting', {
                 url: '/setting',
+                cache: false,
                 views: {
                     'tab-setting': {
                         templateUrl: 'templates/tab-setting.html',
