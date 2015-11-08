@@ -152,7 +152,7 @@ describe('unit test - requester of kma index service class', function() {
 
         var result = reqLifeIndex.parseLifeIndex('rot', data);
 
-        assert.equal(result.data.rot.data[0].time, '2200', '');
+        assert.equal(result.data.rot.data[0].time, '2100', '');
     });
 
     it ('parse daily life index', function () {
