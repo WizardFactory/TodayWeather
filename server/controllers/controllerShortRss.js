@@ -459,7 +459,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
                         log.error('fail to save');
                     }
                 });
-                log.info('> add new item:', newData);
+                log.silly('> add new item:', newData);
                 return;
             }
 
@@ -586,7 +586,6 @@ TownRss.prototype.StartShortRss = function(){
     self.mainTask();
 
     self.loopTownRssID = setInterval(function() {
-        "use strict";
 
         self.mainTask();
 

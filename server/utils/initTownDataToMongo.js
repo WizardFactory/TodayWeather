@@ -7,11 +7,12 @@
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
+var targetName = './utils/data/part.csv';
 
 mongoose.connect(config.db.path, config.db.options);
 
 var fs = require('fs');
-var lineList = fs.readFileSync('./utils/data/base.csv').toString().split('\n');
+var lineList = fs.readFileSync(targetName).toString().split('\n');
 // header remove
 lineList.shift();
 

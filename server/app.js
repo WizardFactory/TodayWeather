@@ -23,32 +23,23 @@ var controllerShortRss = require('./controllers/controllerShortRss');
 */
 var config = require('./config/config');
 var Logger = require('./lib/log');
-global.log  = new Logger(__dirname + "/debug.log");
+
+if (process.env.NODE_ENV === 'production') {
+    global.log  = new Logger();
+}
+else {
+    global.log  = new Logger(__dirname + "/debug.log");
+}
 
 // Bootstrap db connection
-var db;
-if(config.mode === 'local'){
-  db = mongoose.connect(config.db.path, config.db.options, function(err) {
+log.info(config.db.path);
+
+mongoose.connect(config.db.path, function(err) {
     if (err) {
-      console.error('Could not connect to MongoDB!');
-      console.log(err);
+        log.error('Could not connect to MongoDB! ' + config.db.path);
+        log.error(err);
     }
-  });
-  mongoose.connection.on('error', function(err) {
-        console.error('MongoDB connection error: ' + err);
-        process.exit(-1);
-      }
-  );
-}
-else{
-  var connectInfo = process.env.OPENSHIFT_MONGODB_DB_URL;
-  db = mongoose.connect(connectInfo, function(err){
-    if(err){
-      console.error('could net connect to MongoDB');
-      console.error(err);
-    }
-  });
-}
+});
 
 var app = express();
 
@@ -69,14 +60,15 @@ app.use('/', routes);
 app.use('/users', users);
 app.use('/town', townForecast);
 
-
 global.manager = new controllerManager();
-manager.startManager();
-
 global.townRss = new controllerShortRss();
-townRss.StartShortRss();
 
-var keyBox = require('./config/keydata').keyString;
+if (config.mode === 'gather' || config.mode === 'local') {
+    manager.startManager();
+    townRss.StartShortRss();
+}
+
+var keyBox = require('./config/config').keyString;
 
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
@@ -95,6 +87,22 @@ app.use(function(req, res, next) {
   err.status = 404;
   next(err);
 });
+
+
+if (config.mode === 'gather') {
+    setInterval(
+        function() {
+            var req = require('request');
+            var url = 'http://'+ config.ipAddress + ':' + config.port;
+            log.info('keep alive : ' + url);
+            req(url, function (err, response, body) {
+                if (err) { log.error(err);
+                }
+                log.silly(body);
+            });
+        },
+        1000*60); //check 1 min
+}
 
 // error handlers
 

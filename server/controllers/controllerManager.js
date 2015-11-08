@@ -4,7 +4,6 @@
 "use strict";
 
 var collectTown = require('../lib/collectTownForecast');
-var listKey = require('../config/keydata');
 var town = require('../models/town');
 //var forecast = require('../models/forecast');
 var short = require('../models/short');
@@ -753,14 +752,14 @@ Manager.prototype.getTownShortData = function(baseTime){
     * TEST CODE : KEY change
     ***************************************************/
     var key = '';
-    if(parseInt(dateString.time) < 800){
-        key = listKey.keyString.pokers;
-    } else if(parseInt(dateString.time) < 1700) {
-        key = listKey.keyString.pokers11;
-    } else {
-        key = listKey.keyString.aleckim;
-    }
-    key = listKey.keyString.cert_key;
+    //if(parseInt(dateString.time) < 800){
+    //    key = listKey.keyString.pokers;
+    //} else if(parseInt(dateString.time) < 1700) {
+    //    key = listKey.keyString.pokers11;
+    //} else {
+    //    key = listKey.keyString.aleckim;
+    //}
+    key = config.keyString.cert_key;
     /***************************************************/
 
     log.info('+++ GET SHORT INFO : ', dateString);
@@ -821,7 +820,7 @@ Manager.prototype.getTownShortData = function(baseTime){
                 return this;
             }
 
-            log.info(listTownDb);
+            log.silly(listTownDb);
             log.info('+++ COORD LIST : ', listTownDb.length);
 
             var collectShortInfo = new collectTown();
@@ -848,7 +847,7 @@ Manager.prototype.getTownShortData = function(baseTime){
                                 log.error('** getTownShortData : ', err);
                                 log.error(meta);
                             }
-                            log.info(res);
+                            log.silly(res);
                         });
                     }
                 }
@@ -888,14 +887,15 @@ Manager.prototype.getTownShortestData = function(){
      * TEST CODE : KEY change
      ***************************************************/
     var key = '';
-    if(parseInt(dateString.time) < 800){
-        key = listKey.keyString.sooyeon;
-    } else if(parseInt(dateString.time) < 1700) {
-        key = listKey.keyString.pokers11;
-    } else {
-        key = listKey.keyString.aleckim;
-    }
-    key = listKey.keyString.cert_key;
+    //if(parseInt(dateString.time) < 800){
+    //    key = listKey.keyString.sooyeon;
+    //} else if(parseInt(dateString.time) < 1700) {
+    //    key = listKey.keyString.pokers11;
+    //} else {
+    //    key = listKey.keyString.aleckim;
+    //}
+
+    key = config.keyString.cert_key;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -936,7 +936,7 @@ Manager.prototype.getTownShortestData = function(){
                 //log.info(dataList[0]);
                 for(var i in dataList){
                     for(var j in dataList[i].data){
-                        log.info(dataList[i].data[j]);
+                        log.silly(dataList[i].data[j]);
                     }
                 }
 
@@ -970,14 +970,14 @@ Manager.prototype.getTownCurrentData = function(gmt){
      * TEST CODE : KEY change
      ***************************************************/
     var key = '';
-    if(parseInt(dateString.time) < 800){
-        key = listKey.keyString.sooyeon;
-    } else if(parseInt(dateString.time) < 1700) {
-        key = listKey.keyString.hyunsoo;
-    } else {
-        key = listKey.keyString.aleckim;
-    }
-    key = listKey.keyString.cert_key;
+    //if(parseInt(dateString.time) < 800){
+    //    key = listKey.keyString.sooyeon;
+    //} else if(parseInt(dateString.time) < 1700) {
+    //    key = listKey.keyString.hyunsoo;
+    //} else {
+    //    key = listKey.keyString.aleckim;
+    //}
+    key = config.keyString.cert_key;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -1021,7 +1021,7 @@ Manager.prototype.getTownCurrentData = function(gmt){
                                 log.error('** getTownCurrentData : ', err);
                                 return;
                             }
-                            log.info(res);
+                            log.silly(res);
                         });
                     }
                 }
@@ -1053,7 +1053,7 @@ Manager.prototype.getMidForecast = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = listKey.keyString.cert_key;
+    var key = config.keyString.cert_key;
 
     log.info('+++ GET MID Forecast : ', dateString);
 
@@ -1070,7 +1070,7 @@ Manager.prototype.getMidForecast = function(gmt){
             log.info(dataList[0]);
             for(var i in dataList){
                 for(var j in dataList[i].data){
-                    log.info(i, j, ' : ', dataList[i].data[j]);
+                    log.silly(i, j, ' : ', dataList[i].data[j]);
                 }
             }
             self.midForecast.midForecast = [];
@@ -1114,7 +1114,7 @@ Manager.prototype.getMidLand = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = listKey.keyString.cert_key;
+    var key = config.keyString.cert_key;
 
     log.info('+++ GET MID LAND Forecast : ', dateString);
 
@@ -1179,8 +1179,9 @@ Manager.prototype.getMidLand = function(gmt){
             dataList.forEach(function(item){
                 //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
                 midLand.setLandData(item.data[0], item.data[0].regId, function(err, res){
-                    if(err) log.error(err);
-                    log.info(res);
+                    if(err) { log.error(err);
+                    }
+                    log.silly(res);
                 });
             });
         });
@@ -1217,7 +1218,7 @@ Manager.prototype.getMidTemp = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = listKey.keyString.cert_key;
+    var key = config.keyString.cert_key;
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
 
@@ -1284,8 +1285,9 @@ Manager.prototype.getMidTemp = function(gmt){
             dataList.forEach(function(item){
                 //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
                 midTemp.setTempData(item.data[0], item.data[0].regId, function(err, res){
-                    if(err) log.error(err);
-                    log.info(res);
+                    if(err) { log.error(err);
+                    }
+                    log.silly(res);
                 });
             });
         });
@@ -1315,7 +1317,7 @@ Manager.prototype.getMidSea = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = listKey.keyString.cert_key;
+    var key = config.keyString.cert_key;
 
     log.info('+++ GET MID SEA Forecast : ', dateString);
 
@@ -1379,7 +1381,7 @@ Manager.prototype.startTownData = function(){
     var times = 0;
     var midTimes = 11;
     var curTimes = 48;
-    if(config.mode === 'openshift'){
+    if(config.mode === 'gather'){
         periodValue = 5 * 60 * 1000;
         midPeriod = 30 * 1000;
     }
@@ -1427,8 +1429,6 @@ Manager.prototype.startTownData = function(){
 
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
-        "use strict";
-
         self.getTownShortData(9);
 
     }, self.TIME_PERIOD.TOWN_SHORT);
@@ -1436,43 +1436,31 @@ Manager.prototype.startTownData = function(){
 
     // get shortest forecast once every hours.
     self.loopTownShortestID = setInterval(function(){
-        "use strict";
-
         self.getTownShortestData();
     }, self.TIME_PERIOD.TOWN_SHORTEST);
 
     // get shortest forecast once every hours.
     self.loopTownCurrentID = setInterval(function(){
-        "use strict";
-
         self.getTownCurrentData(+9);
     }, self.TIME_PERIOD.TOWN_CURRENT);
 
     // get middle range forecast once every 12 hours.
     self.loopMidForecastID = setInterval(function(){
-        "use strict";
-
         self.getMidForecast(9);
     }, self.TIME_PERIOD.MID_FORECAST);
 
     // get middle range land forecast once every 12 hours.
     self.loopMidLandID = setInterval(function(){
-        "use strict";
-
         self.getMidLand(9);
     }, self.TIME_PERIOD.MID_LAND);
 
     // get middle range temperature once every 12 hours.
     self.loopMidTempID = setInterval(function(){
-        "use strict";
-
         self.getMidTemp(9);
     }, self.TIME_PERIOD.MID_TEMP);
 
     // get middle range sea forecast  once every 12 hours.
     self.loopMidSeaID = setInterval(function(){
-        "use strict";
-
         self.getMidSea(9);
     }, self.TIME_PERIOD.MID_SEA);
 };
