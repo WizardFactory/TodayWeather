@@ -17,9 +17,9 @@ $dark:                            #444 !default;
 
 $calm:                            #22a1db !default; //dashboard color, short forecast
 $balanced:                        #0fbe96 !default; //mid forecast
-$energized:                       #ea9623 !default; //setting
 $positive:                        #8dc63f !default; //detail weather
 $assertive:                       #ec72a8 !default; //city search
+$energized:                       #ea9623 !default; //setting
 
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
@@ -732,4 +732,8 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
  // border-top:1px solid rgba(255,255,255,0.6);
+}
+
+.tabs-dark .tabs {
+  background-color: inherit !important;
 }
