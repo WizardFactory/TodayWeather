@@ -320,6 +320,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   background-color: #8dc63f;
 }
 
+.main-content.search {
+  background-color: #ec72a8;
+}
+
 .main-content.setting {
   background-color: #ea9623;
 }
@@ -338,6 +342,40 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .table-content {
   height: 42%;
+}
+
+/* search */
+.search-content {
+  vertical-align: middle;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+  color: white;
+}
+
+.search-content img{
+  width: 40px;
+}
+
+.search-content input {
+  padding: 5px;
+  background-color: transparent;
+  color: white;
+  font-size: 18px;;
+}
+
+.search-content .bg-white {
+  background-color: white;
+}
+
+.city-content {
+  vertical-align: middle;
+  text-align: center;
+  margin: 5px 0px;
+  padding: 0;
+  background-color: transparent;
+  color: white;
 }
 
 //iphone 4

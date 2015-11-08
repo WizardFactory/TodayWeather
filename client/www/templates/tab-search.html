@@ -1,19 +1,94 @@
-<ion-view view-title="Chats">
+<ion-view hide-nav-bar="true">
     <ion-content>
-        <ion-list>
-            <ion-item class="item-remove-animate item-avatar item-icon-right" ng-repeat="chat in chats"
-                      type="item-text-wrap" href="#/tab/chats/{{chat.id}}">
-                <img ng-src="{{chat.face}}">
+        <div class="main-content search">
+            <div class="row row-no-padding" style="height: 5%;">
+                <p class="top-time">
+                    {{currentTimeString}}
+                </p>
+            </div>
+            <div class="row" style="height: 5%"></div>
+            <div class="row" style="height: 10%">
+                <div class="col-10"></div>
+                <div class="col-80">
+                    <ul class="list">
+                        <li class="item search-content">
+                            <div class="row row-no-padding">
+                                <div class="col col-20 bg-white">
+                                    <img src="img/Search.png">
+                                </div>
+                                <div class="col col-60 item-input-inset">
+                                    <input type="text" placeholder="도시명을 입력하세요" ng-model="$parent.city"
+                                           ng-change="changeCity()">
+                                </div>
+                                <div class="col col-20 bg-white">
+                                    <button class="button button-clear" ng-click="cancleSearch()">
+                                        취소
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-10"></div>
+            </div>
+            <div class="row" style="height: 60%" ng-show="city===undefined">
+                <div class="col-10"></div>
+                <div class="col-80">
+                    <ul class="list">
+                        <li class="item city-content" ng-repeat="city in citylist" ng-click="selectCity(city)">
+                            <div class="row row-no-padding">
+                                <div class="col col-80">{{city.address}}</div>
+                                <div class="col col-20"></div>
+                                <!--<button class="button button-energized">-->
+                                <!--<i class="ion-ios-download-outline"></i>-->
+                                <!--</button>-->
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-10"></div>
+            </div>
+            <div class="row" style="height: 60%" ng-show="city!==undefined">
+                <div class="col-10"></div>
+                <ion-scroll class="col-80" zooming="false" direction="y" has-bouncing="false"
+                            scrollbar-y="false" style="width: 100%; height: 100%">
+                    <ul class="list">
+                        <li class="item city-content" ng-repeat="city in cities" ng-click="selectCity(city)">
+                            <div class="row row-no-padding">
+                                <div class="col">{{city.first}},{{city.second}},{{city.third}}</div>
+                            </div>
+                        </li>
+                    </ul>
+                </ion-scroll>
+                <div class="col-10"></div>
+            </div>
 
-                <h2>{{chat.name}}</h2>
-
-                <p>{{chat.lastText}}</p>
-                <i class="icon ion-chevron-right icon-accessory"></i>
-
-                <ion-option-button class="button-assertive" ng-click="remove(chat)">
-                    Delete
-                </ion-option-button>
-            </ion-item>
-        </ion-list>
+            <!--<div class="row" style="height: 60%">-->
+                <!--<div class="col-10"></div>-->
+                <!--<ion-scroll class="col-80" zooming="false" direction="y" has-bouncing="false"-->
+                            <!--scrollbar-y="false" style="width: 100%; height: 100%">-->
+                    <!--<ul class="list" ng-show="city!==undefined" style="background-color: coral">-->
+                        <!--<li class="item city-content" ng-repeat="city in cities" ng-click="selectCity(city)">-->
+                            <!--<div class="row row-no-padding">-->
+                                <!--<div class="col">{{city.first}},{{city.second}},{{city.third}}</div>-->
+                            <!--</div>-->
+                        <!--</li>-->
+                    <!--</ul>-->
+                    <!--<ul class="list" ng-show="city===undefined" style="background-color: steelblue">-->
+                        <!--<li class="item city-content" ng-repeat="city in citylist" ng-click="selectCity(city)">-->
+                            <!--<div class="row row-no-padding">-->
+                                <!--<div class="col col-80">{{city.address}}</div>-->
+                                <!--<div class="col col-20"></div>-->
+                                <!--&lt;!&ndash;<button class="button button-energized">&ndash;&gt;-->
+                                <!--&lt;!&ndash;<i class="ion-ios-download-outline"></i>&ndash;&gt;-->
+                                <!--&lt;!&ndash;</button>&ndash;&gt;-->
+                            <!--</div>-->
+                        <!--</li>-->
+                    <!--</ul>-->
+                <!--</ion-scroll>-->
+                <!--<div class="col-10"></div>-->
+            <!--</div>-->
+            <div class="row" style="height: 20%"></div>
+        </div>
     </ion-content>
 </ion-view>
