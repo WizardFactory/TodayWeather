@@ -3,6 +3,7 @@
  */
 
 var mongoose = require("mongoose");
+var current = require('./current');
 
 var shortSchema = new mongoose.Schema({
     town: {
@@ -19,27 +20,123 @@ var shortSchema = new mongoose.Schema({
         time : String,
         mx : {type : Number, default : -1},
         my : {type : Number, default : -1},
-        pop: {type : Number, default : -1},    /* ���� Ȯ�� : 1% ����, invalid : -1 */
-        pty: {type : Number, default : -1},    /* ���� ���� : ����(0) ��(1) ��/��(2) ��(3) , invalid : -1 */
-        r06: {type : Number, default : -1},    /* 6�ð� ������ : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
-        reh: {type : Number, default : -1},    /* ���� : 1% , invalid : -1 */
-        s06: {type : Number, default : -1},    /* 6�ð� ������ : 0�̸�(0) ~1cm(1) 1~4cm(5) 5~9cm(10) 10~19cm(20) 20cm~(100), invalid : -1 */
-        sky: {type : Number, default : -1},    /* �ϴ� ���� : ����(1) ��������(2) ��������(3) �帲(4) , invalid : -1 */
-        t3h: {type : Number, default : -50},   /* 3�ð� ��� : 0.1'c , invalid : -50 */
-        tmn: {type : Number, default : -50},   /* �� ���� ��� : 0.1'c , invalid : -50 */
-        tmx: {type : Number, default : -50},   /* �� �ְ� ��� : 0.1'c , invalid : -50 */
-        uuu: {type : Number, default : -100},  /* ǳ��(��������) : 0.1m/s ��ǳ(+ǥ��) ��ǳ(-ǥ��), invalid : -100 */
-        vvv: {type : Number, default : -100},  /* ǳ��(���ϼ���) : 0.1m/s ��ǳ(+ǥ��) ��ǳ(-ǥ��), invalid : -100 */
-        wav: {type : Number, default : -1},    /* �İ� : 0.1m , invalid : -1 */
-        vec: {type : Number, default : -1},    /* ǳ�� : 0 , invalid : -1 */
-        wsd: {type : Number, default : -1}     /* ǳ�� : 1 , invalid : -1 */
+        pop: {type : Number, default : -1},
+        pty: {type : Number, default : -1},
+        r06: {type : Number, default : -1},
+        reh: {type : Number, default : -1},
+        s06: {type : Number, default : -1},
+        sky: {type : Number, default : -1},
+        t3h: {type : Number, default : -50},
+        tmn: {type : Number, default : -50},
+        tmx: {type : Number, default : -50},
+        uuu: {type : Number, default : -100},
+        vvv: {type : Number, default : -100},
+        wav: {type : Number, default : -1},
+        vec: {type : Number, default : -1},
+        wsd: {type : Number, default : -1}
     }
 });
+
+Date.prototype.format = (function(f){
+    if(!this.valueOf()) return " ";
+
+    var d = this;
+    var reg = /(yyyy|MM|dd|HH|mm|ss)/gi;
+    return f.replace(reg, function($1){
+        switch($1){
+            case "yyyy":return d.getFullYear();
+            case "MM":return (d.getMonth()+1).zf(2);
+            case "dd": return d.getDate().zf(2);
+            case "HH": return d.getHours().zf(2);
+            case "mm": return d.getMinutes().zf(2);
+            case "ss": return d.getSeconds().zf(2);
+            default : return $1;
+        }
+    });
+});
+
+String.prototype.string = function(len){var s = '', i = 0; while (i++ < len) { s += this; } return s;};
+String.prototype.zf = function(len){return "0".string(len - this.length) + this;};
+Number.prototype.zf = function(len){return this.toString().zf(len);};
+
+function getNextTime(date, time, next){
+    var d = new Date();
+    var temp = '';
+    var result = { date: '', time: '' };
+    d.setFullYear(date.slice(0, 4));
+    d.setMonth(date.slice(4, 6) - 1);
+    d.setDate(date.slice(6, 8));
+    d.setHours(time.slice(0, 2));
+    d.setMinutes(time.slice(2, 4));
+    d.setHours(d.getHours() + next);
+    temp = d.format('yyyyMMddHHmm');
+    result.date = temp.slice(0, 8);
+    result.time = temp.slice(8, 12);
+    return result;
+}
 
 shortSchema.statics = {
     getShortData : function (first, second, third, cb) {
         this.find({"town" : { "first" : first, "second" : second, "third" : third}})
             .sort({"shortData.date" : -1, "shortData.time" : -1}).limit(40).exec(cb);
+    },
+    getOneShortData : function(first, second, third, cb){
+        this.find({"town" : { "first" : first, "second" : second, "third" : third}})
+            .sort({"shortData.date" : -1, "shortData.time" : -1}).limit(1).exec(cb);
+    },
+    getShortDataWithTime : function(town, date, time, cb){
+        var self = this;
+        var mixList = [];
+
+        //var query = self.find({"town" : { "first" : town.first, "second" : town.second, "third" : town.third},
+        //    "shortData.date" : {$lt : date}/*, "shortData.time" : {$lt : time}*/})
+        //    .sort({"shortData.date" : -1, "shortData.time" : -1}).limit(40).exec(cb);
+        var timeList = [];
+        current.getCurrentDataWithTime(town, date, function(err, res){
+            var query = self.find({"town" : { "first" : town.first, "second" : town.second, "third" : town.third},
+                "shortData.date" : {$gte : date}/*, "shortData.time" : {$lt : time}*/})
+                .sort({"shortData.date" : -1, "shortData.time" : -1}).limit(40).exec();
+
+            query.then(function(result){ // date >= now
+                if(result == null) return ;
+
+                var tempList = [];
+                for(var i = 0 ; i < result.length ; i ++){
+                    if(i == (result.length - 1)) {
+                        tempList.push(result[i]);
+                        break;
+                    }
+                    var delta = Math.round((result[i + 1].shortData.t3h - result[i].shortData.t3h) / 3);
+                    var afterObj = JSON.parse(JSON.stringify(result[i]));
+                    var time = afterObj.shortData.time;
+                    var nextTime = getNextTime(date, time, 1);
+                    afterObj.shortData.date = nextTime.date;
+                    afterObj.shortData.time = nextTime.time;
+                    afterObj.shortData.t1h = result[i].shortData.t3h + delta;
+                    var afterAfterObj = JSON.parse(JSON.stringify(result[i]));
+                    nextTime = getNextTime(date, time, 2);
+                    afterAfterObj.shortData.date = nextTime.date;
+                    afterAfterObj.shortData.time = nextTime.time;
+                    afterAfterObj.shortData.t1h = result[i].shortData.t3h + delta + delta;
+                    tempList.push(result[i]);
+                    tempList.push(afterObj);
+                    tempList.push(afterAfterObj);
+                }
+
+                //time....
+                mixList.push.apply(mixList, tempList);
+                var j = 0;
+                for(var i = (mixList.length-1) ; i < 0 ; i ++){
+                    console.log(mixList.shortData.t1h);
+                    if(mixList[i].shortData.date == res[j].currentData.date){
+                        if(mixList[i].shortData.time > res[j].currentData.time){
+                            //pop
+                        }
+                    }
+                }
+                mixList.push.apply(mixList, res); // date <= now
+            });
+        });
     },
     setShortData : function (shortList, mCoord, cb){
         var self = this;

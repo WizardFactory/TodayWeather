@@ -35,6 +35,15 @@ mongoose.connect(config.db.path, config.db.options);
 //    console.log(res);
 //});
 
+var current = require('./current');
+var config = require('../config/config');
+
+var currentList = config.testTownData[0].data.current;
+current.setCurrentData(currentList, {mx : 93, my: 132}, function(err, res){
+    if(err) console.log(err);
+    console.log(res);
+});
+
 //short.getShortData("경기도", "고양시덕양구", "성사2동", function(err, res){
 //    if(err) console.log(err);
 //    console.log(res);
@@ -66,8 +75,28 @@ mongoose.connect(config.db.path, config.db.options);
 //console.log(t.getCodeWithFirst('강원도', '강릉시'));
 //console.log(t.getCodeWithFirst('울산광역시'));
 
-var midLand = require('./midLand');
-midLand.getLandData('강원도', '강릉시', function(err, res){
-    if(err) return;
-    console.log(res);
-});
+//var midLand = require('./midLand');
+//midLand.getLandData('강원도', '강릉시', function(err, res){
+//    if(err) return;
+//    console.log(res);
+//});
+
+//var current = require('./short');
+//
+//var town = {first : '강원도', second : '강릉시', third : '강남동'};
+//current.getShortDataWithTime(town, '20151101', '', function(err, res){
+//    if(err) console.log(err);
+//    var list = [];
+//    list.push.apply(list, res);
+//    list.forEach(function(elem, idx){
+//        console.log('idx : ' + idx);
+//        console.log(elem);
+//    });
+//});
+
+//var forecast = ('./forecast');
+//current.getOneShortData('강원도', '강릉시', '강남동', function(err, res){
+//    if(err) console.log(err);
+//    console.log(res);
+//});
+

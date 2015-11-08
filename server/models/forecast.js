@@ -4,13 +4,21 @@
 
 var current = require('./current');
 var short = require('./short');
+var midLand = require('./midLand');
+var midTemp = require('./midTemp');
 
-var MODEL = {};
-MODEL.TOWN = 1;
-MODEL.CURRENT = 2;
-
-function setModel(modelCategory){
-    if(modelCategory === 1){ // TOWN
-    }
+function Forecast(){
 }
+
+Forecast.getCurrentData = function(first, second, third, cb){
+    current.getCurrentData(first, second, third, cb);
+};
+Forecast.getOneCurrentData = function(first, second, third, cb){
+    current.getOneCurrentData(first, second, third, cb);
+};
+
+Forecast.getOneShortData = function(first, second, third, cb){
+    short.getOneShortData(first, second, third, cb);
+}
+module.exports = Forecast;
 

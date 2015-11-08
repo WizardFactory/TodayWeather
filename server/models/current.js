@@ -4,6 +4,7 @@
 
 
 var mongoose = require('mongoose');
+var short = require('./short');
 var modelUtil = require('./modelUtil');
 
 var currentSchema = new mongoose.Schema({
@@ -40,6 +41,15 @@ currentSchema.statics = {
             // limit config 로 빼기
             .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(40).exec(cb);
     },
+    getOneCurrentData : function(first, second, third, cb){
+        this.find({"town" : { "first" : first , "second" : second, "third" : third}})
+            .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(1).exec(cb);
+    },
+    getCurrentDataWithTime : function(town, date, cb){
+        this.find({"town" : { "first" : town.first , "second" : town.second, "third" : town.third},
+            "currentData.date" : {$lte : date}/*, "currentData.time" : {$lt : time}*/})
+            .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(40).exec(cb);
+    },
     getCurrentDataForCal: function (num, regId, cb){
         var util = new modelUtil();
         var town = util.getCodeWithRegId(regId);
@@ -49,7 +59,7 @@ currentSchema.statics = {
     setCurrentData : function(currentList, mCoord, cb){
         var self = this;
 
-        var findQuery = self.findOne({ "currentData.mx": mCoord.mx, "currentData.my": mCoord.my}).exec();
+        var findQuery = self.find({ "mCoord.mx": mCoord.mx, "mCoord.my": mCoord.my}).exec();
 
         findQuery.then(function(findRes){
             if(findRes === null) return ;
