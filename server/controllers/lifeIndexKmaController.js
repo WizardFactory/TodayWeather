@@ -54,9 +54,9 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
 };
 
 LifeIndexKmaController._appendFromKma = function (town, callback){
-    var keyBox = require('../config/keydata').keyString;
+    var keyBox = require('../config/config').keyString;
     var lifeIndexKma = new (require('../lib/lifeIndexKmaRequester'))();
-    lifeIndexKma.setServiceKey(keyBox.pokers);
+    lifeIndexKma.setServiceKey(keyBox.cert_key);
     lifeIndexKma.getLifeIndexByTown(town, callback);
 };
 

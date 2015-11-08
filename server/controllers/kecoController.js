@@ -37,9 +37,9 @@ arpltnController._appendFromDb = function(town, current, callback) {
 
 arpltnController._appendFromKeco = function(town, current, callback) {
 
-    var keyBox = require('../config/keydata').keyString;
+    var keyBox = require('../config/config').keyString;
     var keco = new (require('../lib/kecoRequester.js'))();
-    keco.setServiceKey(keyBox.pokers);
+    keco.setServiceKey(keyBox.normal);
     keco.setDaumApiKey(keyBox.daum_key);
 
     var async = require('async');

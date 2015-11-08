@@ -175,29 +175,28 @@ describe('unit test - requester of kma index service class', function() {
         assert.equal(result, ultraIndex, '');
     });
 
-    it ('get LifeIndex By Town', function (done) {
-        this.timeout(10*1000);
-        var mongoose = require('mongoose');
-        mongoose.connect('localhost/todayweather', function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-                console.log(err);
-                done();
-            }
-        });
-        mongoose.connection.on('error', function(err) {
-            console.error('MongoDB connection error: ' + err);
-            done();
-        });
-
-        var town = {third: '구미동', second: '성남시분당구', first: '경기도'};
-        reqLifeIndex.getLifeIndexByTown(town, function(err, data) {
-            if (err) console.log(err);
-            console.log(data);
-            //console.log(data.rot.data);
-            done();
-        });
-    });
+    //it ('get LifeIndex By Town', function (done) {
+    //    this.timeout(10*1000);
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //            done();
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //    var town = {third: '구미동', second: '성남시분당구', first: '경기도'};
+    //    reqLifeIndex.getLifeIndexByTown(town, function(err, data) {
+    //        if (err) console.log(err);
+    //        console.log(data);
+    //        //console.log(data.rot.data);
+    //        done();
+    //    });
+    //});
 
     //it ('save life index', function (done) {
     //    var mongoose = require('mongoose');

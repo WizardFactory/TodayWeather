@@ -2,10 +2,11 @@
  * Created by User on 2015-10-23.
  */
 
+'use strict';
+
 var mongoose = require('mongoose');
 var current = require('./current');
 var modelUtil = require('./modelUtil');
-var config = require('../config/config');
 
 var midTempSchema = mongoose.Schema({
     regId : String,
@@ -38,6 +39,7 @@ var taList = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin
 
 midTempSchema.statics = {
     getTempData : function(first, second, cb){
+        //var config = require('../config/config');
         //var tempList = config.testTownData[0].data.current
         //var currentList = [];
         //tempList.forEach(function(elem, idx){
@@ -103,7 +105,7 @@ midTempSchema.statics = {
         var findQuery = self.findOne({"regId": regId}).exec();
 
         findQuery.then(function(res){
-            //console.log('res length : ' + res.length);
+            //log.debug('res length : ' + res.length);
             self.update({'regId' : regId, 'midTempData.date' : tempData.date, 'midTempData.time': tempData.time},
                 {
                 'regId' : regId,

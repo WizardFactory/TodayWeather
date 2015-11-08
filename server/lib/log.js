@@ -8,6 +8,20 @@ var winston = require('winston');
 //silly, debug, verbose, info, warn, error
 
 module.exports = function(filename) {
+    var transports = [];
+    transports.push(new winston.transports.Console({
+                level      : 'info',
+                colorize   : true
+            }));
+
+    if (filename) {
+        transports.push(new winston.transports.File({
+                level      : 'error',
+                json       : false,
+                filename   : filename
+            }));
+    }
+
     var logger = new winston.Logger({
         levels: {
             silly: 0,
@@ -19,7 +33,7 @@ module.exports = function(filename) {
             data: 6,
             help: 7,
             warn: 8,
-            error: 9,
+            error: 9
         },
         colors: {
             silly: 'magenta',
@@ -31,19 +45,9 @@ module.exports = function(filename) {
             data: 'grey',
             help: 'cyan',
             warn: 'yellow',
-            error: 'red',
+            error: 'red'
         },
-        transports: [
-            new winston.transports.Console({
-                level      : 'info',
-                colorize   : true
-            }),
-            new winston.transports.File({
-                level      : 'error',
-                json       : false,
-                filename   : filename
-            })
-        ]
+        transports: transports
     });
     logger.exitOnError = false;
     return logger;

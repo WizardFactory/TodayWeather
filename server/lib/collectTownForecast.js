@@ -614,10 +614,11 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             //log.info(item);
-            if((item.baseDate === undefined)
-                && (item.baseTime === undefined)
-                && (item.obsrValue === undefined)){
-                log.info(item);
+            if((item.baseDate === undefined) &&
+                        (item.baseTime === undefined) &&
+                        (item.obsrValue === undefined))
+            {
+                log.silly(item);
                 log.error('organizeCurrentData : There is not forecast date');
                 continue;
             }
@@ -705,7 +706,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
             var item = listItem[i];
             //log.info(item);
             if(item.wfSv === undefined){
-                log.info(item);
+                log.silly(item);
                 log.error('organizeForecastData : There is not forecast date');
                 continue;
             }

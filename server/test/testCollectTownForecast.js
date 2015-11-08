@@ -5,7 +5,7 @@
 
 var assert  = require('assert');
 var config = require('../config/config');
-var keydata = require('../config/keydata');
+var keydata = require('../config/config');
 var collect = require('../lib/collectTownForecast');
 var Logger = require('../lib/log');
 var convert = require('../utils/coordinate2xy');
@@ -175,10 +175,10 @@ describe('unit test - get middle range forecast in lib/collect class', function(
 */
 
     it('lib/collect : get Middle range LAND info by using XY list', function(done){
-
+        this.timeout(10*1000);
         var collection = new collect();
         assert.doesNotThrow(function(){
-            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.aleckim, '20150926', '0600', function(err, dataList){
+            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.test_cert, '20150926', '0600', function(err, dataList){
                 log.info('current data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
