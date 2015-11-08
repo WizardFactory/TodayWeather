@@ -1029,10 +1029,16 @@ var getSummary = function(req, res, next){
 
 var getLifeIndexKma = function(req, res, next) {
      //add life index of kma info
+    if (!req.short && !req.midData) {
+        var err = new Error("Fail to find short, mid weather");
+        log.error(err);
+        next();
+    }
+
     try {
         var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
-        LifeIndexKmaController.appendData({first: req.params.region, second: req.params.city, third: req.params.town},
-            req.short, req.midData, function (err) {
+        LifeIndexKmaController.appendData({third: req.params.town, second: req.params.city, first: req.params.region},
+            req.short, req.midData.dailyData, function (err) {
                 if (err) {
                     log.error(err);
                 }
@@ -1040,23 +1046,26 @@ var getLifeIndexKma = function(req, res, next) {
             });
     }
     catch(e) {
-        log.error('ERROE>>', meta);
+        if (e) {
+            log.error(e);
+        }
         next();
     }
 };
 
 var getKeco = function (req, res, next) {
     if (!req.current)  {
-        log.error(new Error("Fail to find current weather"));
+        var err = new Error("Fail to find current weather");
+        log.warn(err);
         next();
     }
 
     try {
         var KecoController = require('../controllers/kecoController');
         KecoController.appendData({
-                first: req.params.region,
+                third: req.params.town,
                 second: req.params.city,
-                third: req.params.town
+                first: req.params.region
             }, req.current,
             function (err) {
                 if (err) {
@@ -1066,7 +1075,9 @@ var getKeco = function (req, res, next) {
             });
     }
     catch(e) {
-        log.error('ERROE>>', meta);
+        if (e) {
+            log.warn(e);
+        }
         next();
     }
 };

@@ -228,6 +228,12 @@ angular.module('starter.services', [])
                     currentForecast.sensorytem = shortForecast.sensorytem;
                     currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
                 }
+                if (diffDays === 0 && time === positionHours + 3) {
+                   if (!currentForecast.sensorytem) {
+                       currentForecast.sensorytem = shortForecast.sensorytem;
+                       currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
+                   }
+                }
 
                 data.push(tempObject);
 
@@ -274,7 +280,7 @@ angular.module('starter.services', [])
             else if(6 <= ultrv && ultrv <= 7) return '높음';
             else if(8 <= ultrv && ultrv <= 10) return '매우 높음';
             else if(11 <= ultrv) return '위험';
-            return '';
+            return '-';
         }
         /**
          * 식중독, ultra 자외선,
