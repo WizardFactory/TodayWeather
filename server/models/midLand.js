@@ -34,11 +34,11 @@ var wfList = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf
     'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10'];
 
 midLandSchema.statics = {
-    getOneLandData : function(first, second, cb){
+    getOneLandData : function(first, second, nowDate, cb){
         var self = this;
         var modelUtil = new ModelUtil();
-        var regId = modelUtil.getCode(first, second);
-        self.find({"regId" : regId})
+        var regId = modelUtil.getCodeWithFirst(first, second);
+        self.find({"regId" : regId, "midLandData.date" : nowDate})
             .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec(cb);
     },
     getLandData : function(first, second, cb){

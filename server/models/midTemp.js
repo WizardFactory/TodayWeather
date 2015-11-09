@@ -38,11 +38,11 @@ var taList = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin
     'taMin7', 'taMax7', 'taMin8', 'taMax8', 'taMin9', 'taMax9', 'taMin10', 'taMax10'];
 
 midTempSchema.statics = {
-    getOneTempData : function(first, second, cb){
+    getOneTempData : function(first, second, nowDate, cb){
         var self = this;
         var modelUtil = new ModelUtil();
         var regId = modelUtil.getCode(first, second);
-        self.find({"regId" : regId})
+        self.find({"regId" : regId, "midTempData.date" : nowDate})
             .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec(cb);
     },
     getTempData : function(first, second, cb){

@@ -986,32 +986,37 @@ var getMid = function(req, res, next){
         var cityName = req.params.city;
         var nowDate = getCurrentTimeValue(+9);
         var beforeWeekDate = dateUtil.getNextDate(nowDate.date, nowDate.time, -7);
+        var oneDayAfterDate = dateUtil.getNextDate(nowDate.date, nowDate.time, 1);
+        var twoDayAfterDate = dateUtil.getNextDate(nowDate.date, nowDate.time, 2);
+        var result = {
+            dailyData : []
+        };
         var resultList = [];
 
-
-
-        dbMidTemp.getOneTempData(regionName, cityName, function(err, TempRes){
+        log.silly('before week ' + beforeWeekDate.date);
+        log.silly('one day ' + oneDayAfterDate.date + ' time ' + oneDayAfterDate.time);
+        log.silly('two day ' + twoDayAfterDate.date + ' time ' + twoDayAfterDate.time);
+        dbMidTemp.getOneTempData(regionName, cityName, nowDate.date, function(err, tempRes){
             if(err){
                 log.error('> getMid : failed to get data from *Temp DB');
                 log.error(meta);
                 next();
             }
 
-            if(TempRes === null || TempRes === []) next();
+            if(tempRes === null || tempRes === []) next();
 
-            dbMidLand.getOneLandData(regionName, cityName, function(err, LandRes){
+            dbMidLand.getOneLandData(regionName, cityName, nowDate.date, function(err, landRes){
                 if(err){
                     log.error('> getMid : failed to get data from *Land DB');
                     log.error(meta);
                     next();
                 }
 
-                if(LandRes === null || LandRes === []) next();
+                if(landRes === null || landRes === []) next();
 
                 var regId = modelUtil.getCode(regionName, cityName);
                 var town = modelUtil.getCodeWithRegId(regId);
-                log.info('regId : ' + regId);
-                log.info('townData : ' + town);
+                log.silly('regId : ' + regId);
                 dbCurrent.getCurrentDataWithSpecificDate(town, beforeWeekDate.date, nowDate.date, function(err, currentRes){
                     if(err){
                         log.error('> getMid : failed to get data from *Current DB');
@@ -1019,8 +1024,7 @@ var getMid = function(req, res, next){
                         next();
                     }
 
-                    log.info(town);
-                    log.info('current length : ' + currentRes.length);
+                    log.silly(town);
                     if(currentRes === null || currentRes === []) next();
 
                     function averageValueToSky (average, rain){
@@ -1039,7 +1043,6 @@ var getMid = function(req, res, next){
 
                     var avCnt = 1;
                     var tempDate = currentRes[0].currentData.date;
-                    var avT1h = 0; // 기온
                     var avRn1 = 0; // 강수량
                     var amSky = 0, amRain = false, amCnt = 1;
                     var pmSky = 0, pmRain = false, pmCnt = 1;
@@ -1049,14 +1052,12 @@ var getMid = function(req, res, next){
                     var taMax = Number.MIN_VALUE;
                     var taMin = Number.MAX_VALUE;
 
-                    log.info('tempDate : ' + tempDate);
                     for(var i = 0 ; i < currentRes.length ; i ++){
                         var item = {};
                         var currentTemp = currentRes[i];
                         if((i + 1) !== currentRes.length){
                             if(currentRes[(i + 1)].currentData.date !== tempDate){
                                 item.date = tempDate;
-                                item.taT1h = Math.round(avT1h / avCnt);
                                 item.taRn1 = Math.round(avRn1 / avCnt);
                                 item.taReh = Math.round(avReh / avCnt);
                                 item.taPty = Math.round(avPty / avCnt);
@@ -1067,13 +1068,12 @@ var getMid = function(req, res, next){
                                 item.taMin = taMin;
                                 resultList.push(item);
                                 taMax = Number.MIN_VALUE, taMin = Number.MAX_VALUE; //value initialize
-                                avT1h = 0, avRn1 = 0, amSky = 0, amRain = false, amCnt = 1, pmSky = 0, pmRain = false, pmCnt = 1, avReh = 0, avPty = 0, avWsd = 0, avCnt = 1;
+                                avRn1 = 0, amSky = 0, amRain = false, amCnt = 1, pmSky = 0, pmRain = false, pmCnt = 1, avReh = 0, avPty = 0, avWsd = 0, avCnt = 1;
                                 tempDate = currentRes[(i + 1)].currentData.date;
                                 continue;
                             }
                         } else {
                             item.date = currentRes[i].currentData.date;
-                            item.taT1h = Math.round(avT1h / avCnt);
                             item.taRn1 = Math.round(avRn1 / avCnt);
                             item.taReh = Math.round(avReh / avCnt);
                             item.taPty = Math.round(avPty / avCnt);
@@ -1084,7 +1084,6 @@ var getMid = function(req, res, next){
                             item.taMin = taMin;
                             resultList.push(item);
                         }
-                        avT1h = avT1h + (currentTemp.currentData.t1h == -50 ? 0 : currentTemp.currentData.t1h);
                         avRn1 = avRn1 + (currentTemp.currentData.rn1 == -1 ? 0 : currentTemp.currentData.rn1);
                         avReh = avReh + (currentTemp.currentData.reh == -1 ? 0 : currentTemp.currentData.reh);
                         avPty = avPty + (currentTemp.currentData.pty == -1 ? 0 : currentTemp.currentData.pty);
@@ -1104,8 +1103,108 @@ var getMid = function(req, res, next){
                         avCnt ++;
                     }
 
-                    req.midData.dailyData = resultList;
-                    next();
+                    resultList.push({'end current' : ' test'});
+                    dbShort.getShortDataWithSpecificDate(town, oneDayAfterDate.date, twoDayAfterDate.date, function(err, shortRes){
+                        if(err){
+                            log.error('> getMid : failed to get data from *Current DB');
+                            log.error(meta);
+                            next();
+                        }
+
+                        if(shortRes === null || shortRes === []) next();
+                        log.info('short length ' + shortRes.length);
+                        var avCnt = 1;
+                        var tempDate = shortRes[0].shortData.date;
+                        var avRn1 = 0; // 강수량
+                        var amSky = 0, amRain = false, amCnt = 1;
+                        var pmSky = 0, pmRain = false, pmCnt = 1;
+                        var avReh = 0; // 습도
+                        var avPty = 0; // 강수형태
+                        var avWsd = 0; // 풍속
+                        var taMax = Number.MIN_VALUE;
+                        var taMin = Number.MAX_VALUE;
+
+                        for(var i = 0 ; i < shortRes.length ; i ++){
+                            var item = {};
+                            var shortItem = shortRes[i];
+                            if((i + 1) !== shortRes.length){
+                                if(shortRes[(i + 1)].shortData.date !== tempDate){
+                                    item.date = tempDate;
+                                    item.taRn1 = Math.round(avRn1 / avCnt);
+                                    item.taReh = Math.round(avReh / avCnt);
+                                    item.taPty = Math.round(avPty / avCnt);
+                                    item.wfAm = averageValueToSky(Math.round(amSky / amCnt), amRain); // stirng..
+                                    item.wfPm = averageValueToSky(Math.round(pmSky / pmCnt), pmRain); // stirng..
+                                    item.taWsd = Math.round(avWsd / avCnt);
+                                    item.taMax = taMax;
+                                    item.taMin = taMin;
+                                    resultList.push(item);
+                                    taMax = Number.MIN_VALUE, taMin = Number.MAX_VALUE; //value initialize
+                                    avRn1 = 0, amSky = 0, amRain = false, amCnt = 1, pmSky = 0, pmRain = false, pmCnt = 1, avReh = 0, avPty = 0, avWsd = 0, avCnt = 1;
+                                    tempDate = shortRes[(i + 1)].shortData.date;
+                                    log.info('push list in short');
+                                    console.log(item);
+                                    continue;
+                                }
+                            } else {
+                                item.date = shortRes[i].shortData.date;
+                                item.taRn1 = Math.round(avRn1 / avCnt);
+                                item.taReh = Math.round(avReh / avCnt);
+                                item.taPty = Math.round(avPty / avCnt);
+                                item.wfAm = averageValueToSky(Math.round(amSky / amCnt), amRain); // stirng..
+                                item.wfPm = averageValueToSky(Math.round(pmSky / pmCnt), pmRain); // stirng..
+                                item.taWsd = Math.round(avWsd / avCnt);
+                                item.taMax = taMax;
+                                item.taMin = taMin;
+                                resultList.push(item);
+                                log.info('end ;; push list in short');
+                                console.log(item);
+                            }
+                            avRn1 = avRn1 + (shortItem.shortData.r06 == -1 ? 0 : shortItem.shortData.r06);
+                            avReh = avReh + (shortItem.shortData.reh == -1 ? 0 : shortItem.shortData.reh);
+                            avPty = avPty + (shortItem.shortData.pty == -1 ? 0 : shortItem.shortData.pty);
+                            avWsd = avWsd + (shortItem.shortData.wsd == -1 ? 0 : shortItem.shortData.wsd);
+                            if(taMax < shortItem.shortData.t3h) taMax = (shortItem.shortData.t3h == 0 ? taMax : shortItem.shortData.t3h);
+                            if(taMin > shortItem.shortData.t3h) taMin = (shortItem.shortData.t3h == 0 ? taMin : shortItem.shortData.t3h);
+
+                            if(shortItem.shortData.time <= '1200') {
+                                amSky = amSky + (shortItem.shortData.sky == -1? 0 : shortItem.shortData.sky);
+                                amRain = amRain || !!parseInt(shortItem.shortData.pty);
+                                amCnt ++;
+                            } else {
+                                pmSky = pmSky + (shortItem.shortData.sky == -1? 0 : shortItem.shortData.sky);
+                                pmRain = pmRain || !!parseInt(shortItem.shortData.pty);
+                                pmCnt ++;
+                            }
+                            avCnt ++;
+                        }
+
+                        log.info('land length ' + landRes.length);
+                        log.info('temp length ' + tempRes.length);
+
+                        var landTemp = landRes[0].midLandData;
+                        var tempTemp = tempRes[0].midTempData;
+
+                        for(var i = 0 ; i < 7 ; i++){
+                            var item = {};
+                            var day = i+3;
+                            item.date = dateUtil.getNextDate(nowDate.date, nowDate.time, day).date;
+                            if(day > 7){
+                                item.wfAm = landTemp['wf'+day];
+                                item.wfPm = landTemp['wf'+day];
+                            }else{
+                                item.wfAm = landTemp['wf'+day+'Am'];
+                                item.wfPm = landTemp['wf'+day+'Pm'];
+                            }
+                            item.taMin = tempTemp['taMin'+day];
+                            item.taMax = tempTemp['taMax'+day];
+                            resultList.push(item);
+                        }
+
+                        result.dailyData = resultList;
+                        req.midData = result;
+                        next();
+                    });
                 });
             });
         });
