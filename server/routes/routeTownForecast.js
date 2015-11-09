@@ -1104,7 +1104,7 @@ var getMid = function(req, res, next){
                         avCnt ++;
                     }
 
-                    req.midData = resultList;
+                    req.midData.dailyData = resultList;
                     next();
                 });
             });
