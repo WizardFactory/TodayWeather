@@ -8,7 +8,10 @@ var config = require('../config/config');
 var dbForecast = require('../models/forecast');
 var dbCurrent = require('../models/current');
 var dbShort = require('../models/short');
+var dbMidTemp = require('../models/midTemp');
+var dbMidLand = require('../models/midLand');
 var DateUtil = require('../models/dateUtil');
+var ModelUtil = require('../models/modelUtil');
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
@@ -976,7 +979,136 @@ var getMid = function(req, res, next){
         });
     }
     else{
-        next();
+        var dateUtil = new DateUtil();
+        var modelUtil = new ModelUtil();
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var nowDate = getCurrentTimeValue(+9);
+        var beforeWeekDate = dateUtil.getNextDate(nowDate.date, nowDate.time, -7);
+        var resultList = [];
+
+
+
+        dbMidTemp.getOneTempData(regionName, cityName, function(err, TempRes){
+            if(err){
+                log.error('> getMid : failed to get data from *Temp DB');
+                log.error(meta);
+                next();
+            }
+
+            if(TempRes === null || TempRes === []) next();
+
+            dbMidLand.getOneLandData(regionName, cityName, function(err, LandRes){
+                if(err){
+                    log.error('> getMid : failed to get data from *Land DB');
+                    log.error(meta);
+                    next();
+                }
+
+                if(LandRes === null || LandRes === []) next();
+
+                var regId = modelUtil.getCode(regionName, cityName);
+                var town = modelUtil.getCodeWithRegId(regId);
+                log.info('regId : ' + regId);
+                log.info('townData : ' + town);
+                dbCurrent.getCurrentDataWithSpecificDate(town, beforeWeekDate.date, nowDate.date, function(err, currentRes){
+                    if(err){
+                        log.error('> getMid : failed to get data from *Current DB');
+                        log.error(meta);
+                        next();
+                    }
+
+                    log.info(town);
+                    log.info('current length : ' + currentRes.length);
+                    if(currentRes === null || currentRes === []) next();
+
+                    function averageValueToSky (average, rain){
+                        var resultSky = '';
+                        if(average <= 1) resultSky = '맑음';
+                        else if(average <= 2) resultSky = '구름조금';
+                        else if(average <= 3) resultSky = '구름많음';
+                        else resultSky = '흐림';
+
+                        if(rain){
+                            if(average <= 2) resultSky = '구름많음';
+                            resultSky += ' 비';
+                        }
+                        return resultSky;
+                    }
+
+                    var avCnt = 1;
+                    var tempDate = currentRes[0].currentData.date;
+                    var avT1h = 0; // 기온
+                    var avRn1 = 0; // 강수량
+                    var amSky = 0, amRain = false, amCnt = 1;
+                    var pmSky = 0, pmRain = false, pmCnt = 1;
+                    var avReh = 0; // 습도
+                    var avPty = 0; // 강수형태
+                    var avWsd = 0; // 풍속
+                    var taMax = Number.MIN_VALUE;
+                    var taMin = Number.MAX_VALUE;
+
+                    log.info('tempDate : ' + tempDate);
+                    for(var i = 0 ; i < currentRes.length ; i ++){
+                        var item = {};
+                        var currentTemp = currentRes[i];
+                        if((i + 1) !== currentRes.length){
+                            if(currentRes[(i + 1)].currentData.date !== tempDate){
+                                item.date = tempDate;
+                                item.taT1h = Math.round(avT1h / avCnt);
+                                item.taRn1 = Math.round(avRn1 / avCnt);
+                                item.taReh = Math.round(avReh / avCnt);
+                                item.taPty = Math.round(avPty / avCnt);
+                                item.wfAm = averageValueToSky(Math.round(amSky / amCnt), amRain); // stirng..
+                                item.wfPm = averageValueToSky(Math.round(pmSky / pmCnt), pmRain); // stirng..
+                                item.taWsd = Math.round(avWsd / avCnt);
+                                item.taMax = taMax;
+                                item.taMin = taMin;
+                                resultList.push(item);
+                                taMax = Number.MIN_VALUE, taMin = Number.MAX_VALUE; //value initialize
+                                avT1h = 0, avRn1 = 0, amSky = 0, amRain = false, amCnt = 1, pmSky = 0, pmRain = false, pmCnt = 1, avReh = 0, avPty = 0, avWsd = 0, avCnt = 1;
+                                tempDate = currentRes[(i + 1)].currentData.date;
+                                continue;
+                            }
+                        } else {
+                            item.date = currentRes[i].currentData.date;
+                            item.taT1h = Math.round(avT1h / avCnt);
+                            item.taRn1 = Math.round(avRn1 / avCnt);
+                            item.taReh = Math.round(avReh / avCnt);
+                            item.taPty = Math.round(avPty / avCnt);
+                            item.wfAm = averageValueToSky(Math.round(amSky / amCnt), amRain); // stirng..
+                            item.wfPm = averageValueToSky(Math.round(pmSky / pmCnt), pmRain); // stirng..
+                            item.taWsd = Math.round(avWsd / avCnt);
+                            item.taMax = taMax;
+                            item.taMin = taMin;
+                            resultList.push(item);
+                        }
+                        avT1h = avT1h + (currentTemp.currentData.t1h == -50 ? 0 : currentTemp.currentData.t1h);
+                        avRn1 = avRn1 + (currentTemp.currentData.rn1 == -1 ? 0 : currentTemp.currentData.rn1);
+                        avReh = avReh + (currentTemp.currentData.reh == -1 ? 0 : currentTemp.currentData.reh);
+                        avPty = avPty + (currentTemp.currentData.pty == -1 ? 0 : currentTemp.currentData.pty);
+                        avWsd = avWsd + (currentTemp.currentData.wsd == -1 ? 0 : currentTemp.currentData.wsd);
+                        if(taMax < currentTemp.currentData.t1h) taMax = currentTemp.currentData.t1h;
+                        if(taMin > currentTemp.currentData.t1h) taMin = currentTemp.currentData.t1h;
+
+                        if(currentTemp.currentData.time <= '1200') {
+                            amSky = amSky + (currentTemp.currentData.sky == -1? 0 : currentTemp.currentData.sky);
+                            amRain = amRain || !!parseInt(currentTemp.currentData.pty) || !!parseInt(currentTemp.currentData.lgt);
+                            amCnt ++;
+                        } else {
+                            pmSky = pmSky + (currentTemp.currentData.sky == -1? 0 : currentTemp.currentData.sky);
+                            pmRain = pmRain || !!parseInt(currentTemp.currentData.pty) || !!parseInt(currentTemp.currentData.lgt);
+                            pmCnt ++;
+                        }
+                        avCnt ++;
+                    }
+
+                    req.midData = resultList;
+                    next();
+                });
+            });
+        });
     }
 };
 

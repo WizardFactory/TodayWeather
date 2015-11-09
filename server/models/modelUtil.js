@@ -43,7 +43,7 @@ var MidTownToCode = function() {
     ];
 
     self.initList = function(){
-        var midTownList = fs.readFileSync('../utils/data/region.csv').toString().split('\r\n');
+        var midTownList = fs.readFileSync('./utils/data/region.csv').toString().split('\r\n');
         var midTown = {
             first : '',
             second : '',
