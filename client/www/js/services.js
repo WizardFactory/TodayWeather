@@ -21,32 +21,16 @@ angular.module('starter.services', [])
             return false;
         };
 
-        //obj.removeCity = function (city) {
-        //    var that = this;
-        //
-        //    var index = that.indexOf(city);
-        //    if (index !== -1) {
-        //        that.cities.splice(index, 1);
-        //        return true;
-        //    }
-        //    return false;
-        //};
+        obj.removeCity = function (index) {
+            var that = this;
 
-        //obj.getCity = function (address) {
-        //    var that = this;
-        //    var city = that.cities.filter(function (value) {
-        //            if (value.currentPosition === false && value.address === address) {
-        //                return true;
-        //            }
-        //            return false;
-        //        }
-        //    );
-        //
-        //    if (city.length === 0) {
-        //        return null;
-        //    }
-        //    return city;
-        //};
+            if (index !== -1) {
+                that.cities.splice(index, 1);
+                that.saveCities();
+                return true;
+            }
+            return false;
+        };
 
         obj.updateCity = function (index, weatherData) {
             var that = this;
@@ -103,12 +87,6 @@ angular.module('starter.services', [])
                 }
             }
             return -1;
-        };
-
-        obj.setCityIndex = function (city) {
-            var that = this;
-
-            that.cityIndex = that.indexOf(city);
         };
 
         obj.loadCities = function() {
@@ -222,7 +200,6 @@ angular.module('starter.services', [])
             var that = this;
             localStorage.setItem("cities", JSON.stringify(that.cities));
         };
-
 
         obj.updateCities = function() {
             var that = this;
