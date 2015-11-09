@@ -345,38 +345,56 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 /* search */
-.search-content {
-  vertical-align: middle;
-  text-align: center;
-  margin: 0;
+.search-icon {
+  background-color: white;
   padding: 0;
-  background-color: transparent;
-  color: white;
+  width: 15%;
 }
 
-.search-content img{
-  width: 40px;
+.search-icon img {
+  width: 100%;
+}
+
+.search-content {
+  display: table;
+  margin: auto;
+  background-color: transparent;
+  color: white;
 }
 
 .search-content input {
-  padding: 5px;
-  background-color: transparent;
-  color: white;
-  font-size: 18px;;
-}
-
-.search-content .bg-white {
-  background-color: white;
-}
-
-.city-content {
-  vertical-align: middle;
-  text-align: center;
-  margin: 5px 0px;
+  display: table-cell;
+  border: 0;
   padding: 0;
   background-color: transparent;
   color: white;
+  font-size: 22px;;
 }
+
+.search-content img{
+  display: table-cell;
+  vertical-align: middle;
+  width: 90%;
+}
+
+.search-content p {
+  display: table-cell;
+  vertical-align: middle;
+  padding-top: 6px;
+  padding-left: 4px;
+  color: white;
+  font-family: "Nanum Barun Gothic UltraLight";
+  font-size: 20px;
+}
+
+//.city-content {
+//  vertical-align: middle;
+//  text-align: center;
+//  margin: 5px 0px;
+//  padding: 0;
+//  background-color: transparent;
+//  color: white;
+//}
 
 //iphone 4
 @media only screen and (min-device-width: 320px)
@@ -628,6 +646,11 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   .small-digit p {
     font-size: 16px;
   }
+
+  .search-icon {
+    width: 12%;
+  }
+
 }
 
 /* SS S3 */
@@ -687,3 +710,26 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
  // border-top:1px solid rgba(255,255,255,0.6);
 }
 
+.tabs-balanced .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
+}
+
+.tabs-energized .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
+}
+
+.tabs-positive .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
+}
+
+.tabs-assertive .tabs {
+  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+ // border-top:1px solid rgba(255,255,255,0.6);
+}
