@@ -35,14 +35,14 @@ mongoose.connect(config.db.path, config.db.options);
 //    console.log(res);
 //});
 
-var current = require('./current');
-var config = require('../config/config');
-
-var currentList = config.testTownData[0].data.current;
-current.setCurrentData(currentList, {mx : 93, my: 132}, function(err, res){
-    if(err) console.log(err);
-    console.log(res);
-});
+//var current = require('./current');
+//var config = require('../config/config');
+//
+//var currentList = config.testTownData[0].data.current;
+//current.setCurrentData(currentList, {mx : 93, my: 132}, function(err, res){
+//    if(err) console.log(err);
+//    console.log(res);
+//});
 
 //short.getShortData("경기도", "고양시덕양구", "성사2동", function(err, res){
 //    if(err) console.log(err);
@@ -100,3 +100,9 @@ current.setCurrentData(currentList, {mx : 93, my: 132}, function(err, res){
 //    console.log(res);
 //});
 
+var short = require('./short');
+
+short.getOneShortDataWithTime('강원도', '강릉시', '강남동', '20151108', '1700', function(err, res){
+    if(err) console.log(err);
+    console.log(res[0].shortData);
+});
