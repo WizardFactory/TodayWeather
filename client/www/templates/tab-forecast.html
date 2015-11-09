@@ -49,7 +49,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="forecastType='mid'">
+            <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col timeChart" style="padding: 0; height: 100%;">
@@ -87,7 +87,7 @@
                 </ion-scroll>
             </div>
             <div class="row row-no-padding extend-content" ng-show="forecastType==='mid'"
-                 ng-click="forecastType='detail'">
+                 ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col weeklyChart" style="padding: 0; height: 100%;">
@@ -127,7 +127,7 @@
                 </ion-scroll>
             </div>
             <div class="row row-no-padding extend-content" ng-show="forecastType==='detail'"
-                 ng-click="forecastType='short'">
+                 ng-click="changeForecastType()">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 10%"></div>
                     <div class="row row-no-padding" style="height: 80%">

@@ -2,7 +2,8 @@
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate, $ionicPopup,
-                                          $q, $http, $timeout, WeatherInfo, WeatherUtil) {
+                                          $q, $http, $timeout, WeatherInfo, WeatherUtil, $rootScope) {
+
         $scope.skipGuide = false;
         if(typeof(Storage) !== "undefined") {
             if (localStorage.getItem("skipGuide") !== null) {
@@ -43,10 +44,30 @@ angular.module('starter.controllers', [])
 
         var city;
 
+        $scope.$on('$ionicView.beforeEnter', function() {
+            $rootScope.viewColor = '#22a1db';
+        });
+
+        $scope.changeForecastType = function() {
+            if ($scope.forecastType === 'short') {
+                $scope.forecastType = 'mid';
+                $rootScope.viewColor = '#0fbe96';
+                $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayNowPosition(5), 0, false);
+            }
+            else if ($scope.forecastType === 'mid') {
+                $scope.forecastType = 'detail';
+                $rootScope.viewColor = '#8dc63f';
+            }
+            else if ($scope.forecastType === 'detail') {
+                $scope.forecastType = 'short';
+                $rootScope.viewColor = '#22a1db';
+                $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayNowPosition(7), 0, false);
+            }
+        };
+
         var deploy = new Ionic.Deploy();
         // "dev" is the channel tag for the Dev channel.
         //deploy.setChannel("Dev");
-
         // Check Ionic Deploy for new code
         function checkForUpdates() {
             var deferred = $q.defer();
@@ -504,7 +525,10 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SearchCtrl', function ($scope, $ionicPlatform, $ionicAnalytics, $q, $http, WeatherInfo, WeatherUtil) {
+    .controller('SearchCtrl', function ($scope, $ionicPlatform, $ionicAnalytics, $q, $http, WeatherInfo, WeatherUtil,$rootScope) {
+        $scope.$on('$ionicView.beforeEnter', function() {
+            $rootScope.viewColor = '#ec72a8';
+        });
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = WeatherInfo.cities;
@@ -717,7 +741,11 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SettingCtrl', function($scope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $cordovaInAppBrowser) {
+    .controller('SettingCtrl', function($scope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $cordovaInAppBrowser, $rootScope) {
+        $scope.$on('$ionicView.beforeEnter', function() {
+            $rootScope.viewColor = '#ea9623';
+        });
+
         $scope.version  = "0.0.0";
 
         var deploy = new Ionic.Deploy();
