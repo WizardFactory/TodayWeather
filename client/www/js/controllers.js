@@ -93,40 +93,6 @@ angular.module('starter.controllers', [])
             user.save();
         }
 
-        /**
-         * It's supporting only korean lang
-         * return only city namd and dong name
-         * @param {String} fullAddress
-         * @returns {string}
-         */
-        function getShortenAddress(fullAddress) {
-            var parsedAddress = WeatherUtil.convertAddressArray(fullAddress);
-            if (!parsedAddress || parsedAddress.length < 2) {
-                console.log("Fail to split full address="+fullAddress);
-                return "";
-            }
-            if (parsedAddress.length === 5) {
-                //대한민국, 경기도, 성남시, 분당구, 수내동
-                parsedAddress.splice(0, 2);
-            }
-            else if (parsedAddress.length === 4) {
-                //대한민국, 서울특별시, 송파구, 잠실동
-                parsedAddress.splice(0, 1);
-            }
-            else if (parsedAddress.length === 3) {
-                //대한민국,세종특별자치시, 금난면,
-                parsedAddress.splice(0, 1);
-            }
-            else {
-                console.log("Fail to get shorten from ="+fullAddress);
-            }
-            parsedAddress.splice(1, 1);
-            parsedAddress.splice(2, 1);
-
-            console.log(parsedAddress.toString());
-            return parsedAddress.toString();
-        }
-
         function loadWeatherData() {
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
             if (cityData === null) {
@@ -134,7 +100,7 @@ angular.module('starter.controllers', [])
                 return;
             }
 
-            $scope.address = getShortenAddress(cityData.address);
+            $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             console.log($scope.address);
             $scope.currentWeather = cityData.currentWeather;
             console.log($scope.currentWeather);
@@ -375,9 +341,25 @@ angular.module('starter.controllers', [])
                                         WeatherInfo, WeatherUtil) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
-        $scope.cityList = WeatherInfo.cities;
+        $scope.cityList = [];
         $scope.isLoading = false;
         var towns = WeatherInfo.towns;
+
+        WeatherInfo.cities.forEach(function (city) {
+            var address = WeatherUtil.getShortenAddress(city.address).split(",");
+            var todayData = city.dayTable.filter(function (data) {
+                return (data.week === "오늘");
+            });
+
+            var data = {
+                address: address,
+                sky: city.currentWeather.sky,
+                t1h: city.currentWeather.t1h,
+                tmn: todayData[0].tmn,
+                tmx: todayData[0].tmx
+            };
+            $scope.cityList.push(data);
+        });
 
         $scope.$on('$ionicView.beforeEnter', function() {
             $rootScope.viewColor = '#ec72a8';
@@ -394,11 +376,6 @@ angular.module('starter.controllers', [])
                 return !!(town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
                 || town.third.indexOf($scope.searchWord) >= 0);
             });
-        };
-
-        $scope.cancleSearchWord = function() {
-            $scope.searchWord = undefined;
-            $scope.searchResults = [];
         };
 
         $scope.selectResult = function(result) {
@@ -448,8 +425,8 @@ angular.module('starter.controllers', [])
             });
         };
 
-        $scope.selectCity = function(city) {
-            WeatherInfo.setCityIndex(city);
+        $scope.selectCity = function(index) {
+            WeatherInfo.cityIndex = index;
             $location.path('/tab/forecast');
         };
 

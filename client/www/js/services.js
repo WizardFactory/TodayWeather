@@ -936,7 +936,43 @@ angular.module('starter.services', [])
                 splitAddress = fullAddress.split(" ");
             }
             return splitAddress;
-        }
+        };
+
+        /**
+         * It's supporting only korean lang
+         * return only city namd and dong name
+         * @param {String} fullAddress
+         * @returns {string}
+         */
+        obj.getShortenAddress = function (fullAddress) {
+            var that = this;
+            var parsedAddress = that.convertAddressArray(fullAddress);
+
+            if (!parsedAddress || parsedAddress.length < 2) {
+                console.log("Fail to split full address="+fullAddress);
+                return "";
+            }
+            if (parsedAddress.length === 5) {
+                //대한민국, 경기도, 성남시, 분당구, 수내동
+                parsedAddress.splice(0, 2);
+            }
+            else if (parsedAddress.length === 4) {
+                //대한민국, 서울특별시, 송파구, 잠실동
+                parsedAddress.splice(0, 1);
+            }
+            else if (parsedAddress.length === 3) {
+                //대한민국, 세종특별자치시, 금난면,
+                parsedAddress.splice(0, 1);
+            }
+            else {
+                console.log("Fail to get shorten from ="+fullAddress);
+            }
+            parsedAddress.splice(1, 1);
+            parsedAddress.splice(2, 1);
+
+            console.log(parsedAddress.toString());
+            return parsedAddress.toString();
+        };
 
         /**
          *
