@@ -18,6 +18,18 @@ angular.module('starter', [
 
             $ionicAnalytics.register();
 
+            if (ionic.Platform.isIOS()) {
+                window.setTimeout(function() {
+                    applewatch.init(function (appIdentifier) {
+                        applewatch.addListener("RequestWeather", function (messageObject) {
+                            console.log("RequestWeather");
+                        });
+                    }, function (err) {
+                        console.log('Failed to initialize apple-watch', err);
+                    }, "group.net.wizardfactory.todayweather");
+                }, 1000);
+            }
+
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
             // for form inputs)
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {

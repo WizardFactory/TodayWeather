@@ -199,6 +199,7 @@ angular.module('starter.controllers', [])
             url += "/"+town.first+"/"+town.second+"/"+town.third;
 
             console.log(url);
+            setUserDefaults({"TownWeatherUrl": url});
 
             $http({method: 'GET', url: url})
                 .success(function(data) {
@@ -309,6 +310,42 @@ angular.module('starter.controllers', [])
                 temp: $scope.currentWeather.t1h
             }];
 
+            setUserDefaults({"Temperature": String(currentForecast.t1h)});
+            setUserDefaults({"WeatherComment": currentForecast.summary});
+            setUserDefaults({"WeatherImage": currentForecast.sky});
+
+            var yesterDay;
+            var findToday = false;
+
+            var timeString = "";
+            timeString += currentTime.getFullYear();
+            if(currentTime.getMonth()<9) {
+                timeString += '0';
+            }
+            timeString += currentTime.getMonth()+1;
+            if(currentTime.getDate()<10) {
+                timeString += '0';
+            }
+            timeString += currentTime.getDate();
+
+            dailyInfoArray.forEach(function(dailyInfo){
+                if(dailyInfo.date === timeString) {
+                    findToday = true;
+                    setUserDefaults({"TodayMaxTemp": String(dailyInfo.tmx)});
+                    setUserDefaults({"TodayMinTemp": String(dailyInfo.tmn)});
+                    setUserDefaults({"YesterdayMaxTemp": String(yesterDay.tmx)});
+                    setUserDefaults({"YesterdayMinTemp": String(yesterDay.tmn)});
+                }
+
+                if(findToday) {
+                    setUserDefaults({"TomorrowMaxTemp": String(dailyInfo.tmx)});
+                    setUserDefaults({"TomorrowMinTemp": String(dailyInfo.tmn)});
+                    findToday = false;
+                }
+
+                yesterDay = dailyInfo;
+            });
+
             city.address = fullAddress;
             city.location = location;
             city.currentWeather = currentForecast;
@@ -328,6 +365,14 @@ angular.module('starter.controllers', [])
             console.log($scope.timeChart);
         }
 
+        function setUserDefaults(obj) {
+            applewatch.sendUserDefaults(function() {
+                console.log("Succeeded to sendUserDefaults(4)");
+            }, function() {
+                console.log("Failed to sendUserDefault");
+            }, obj, "group.net.wizardfactory.todayweather");
+        }
+
         function updateWeatherData() {
             var deferred = $q.defer();
             var preUpdate = false;
@@ -342,6 +387,7 @@ angular.module('starter.controllers', [])
                     if (!err) {
                         preUpdate = true;
                         $scope.address = getShortenAddress(fullAddress);
+                        setUserDefaults({"Location": $scope.address});
                         setWeatherData(weatherData);
                         deferred.notify();
                     }
@@ -381,6 +427,7 @@ angular.module('starter.controllers', [])
                             }
                             else {
                                 $scope.address = getShortenAddress(fullAddress);
+                                setUserDefaults({"Location": $scope.address});
                                 setWeatherData(weatherData);
                                 deferred.notify();
                                 deferred.resolve();

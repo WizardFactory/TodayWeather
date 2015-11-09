@@ -1,0 +1,159 @@
+<ion-view hide-nav-bar="true">
+    <ion-content delegate-handle="body" overflow-scroll="true">
+        <ion-refresher
+                pulling-text="위치,날씨정보"
+                refreshing-text="업데이트 중"
+                on-refresh="doRefresh()">
+        </ion-refresher>
+        <div class="main-content"
+             ng-class="{'short-forcast':shortForecast===true, 'mid-forcast':shortForecast===false}">
+            <div class="row row-no-padding" style="height: 5%;">
+                <p class="top-time">
+                    {{currentTimeString}}
+                </p>
+            </div>
+            <div class="row row-no-padding" style="height: 32%;">
+                <div class="col" style="height: 100%">
+                    <div class="row row-no-padding" style="height: 14%;"></div>
+                    <div class="row row-no-padding region" style="height: 16%;">
+                        <p>{{address}}</p>
+                    </div>
+                    <div class="row row-no-padding" style="height: 3%;"></div>
+                    <div class="row row-no-padding" style="height: 44%;">
+                        <div class="col" style="padding: 0; height: 100%">
+                            <div class="row row-no-padding" style="height: 100%; display: table">
+                                <div class="col big-digit"
+                                     style="width: 59%; height: 100%; display: table-cell; vertical-align: middle">
+                                    {{currentWeather.t1h}}
+                                </div>
+                                <div class="col" style="width: 1%"></div>
+                                <div class="col"
+                                     style="width: 40%; height: 100%; display: table-cell; vertical-align: middle">
+                                    <div class="row-no-padding" style="height: 10%"></div>
+                                    <div class="row-no-padding big-temp-point" style="height: 30%"
+                                         ng-if="currentWeather.t1h">
+                                        <img src="img/reddot.png">
+                                    </div>
+                                    <div class="row-no-padding big-temp-sky-state" style="height: 60%"
+                                         ng-if="currentWeather.sky">
+                                        <img src="img/{{currentWeather.sky}}-Big.png">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row row-no-padding" style="height: 5%;"></div>
+                    <div class="row row-no-padding region-sum" style="height: 13%;">
+                        <p>{{currentWeather.summary}}</p>
+                    </div>
+                    <div class="row row-no-padding" style="height: 7%;"></div>
+                </div>
+            </div>
+            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===true"
+                 ng-click="shortForecast=!shortForecast">
+                <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
+                            scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col timeChart" style="padding: 0; height: 100%;">
+                        <div class="row row-no-padding" style="height: 53%;">
+                            <div ng-short-chart style="width: 100%; height: 100%"></div>
+                        </div>
+                        <div class="row row-no-padding" style="height: 47%;">
+                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p>{{value.day}}</p>
+                                </div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                                <div class="row row-no-padding" style="height: 3%;"></div>
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p>{{value.time}}</p>
+                                </div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.tempIcon}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.t3h}}˚</p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 2%;"></div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.sky}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.pop}}
+                                        <small>%</small>
+                                    </p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 1%;"></div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                            </div>
+                        </div>
+                    </div>
+                </ion-scroll>
+            </div>
+            <div class="row row-no-padding" style="height: 61%;" ng-show="shortForecast===false"
+                 ng-click="shortForecast=!shortForecast">
+                <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
+                            scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col weeklyChart" style="padding: 0; height: 100%;">
+                        <div class="row row-no-padding" style="height: 53%;">
+                            <div ng-mid-chart style="width: 100%; height: 100%"></div>
+                        </div>
+                        <div class="row row-no-padding" style="height: 47%;">
+                            <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p></p>
+                                </div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                                <div class="row row-no-padding" style="height: 3%;"></div>
+                                <div class="row row-no-padding small-time" style="height: 15%;">
+                                    <p>{{value.week}}</p>
+                                </div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.sky}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.pop}}
+                                        <small>%</small>
+                                    </p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 2%;"></div>
+                                <div class="row row-no-padding small-image" style="height: 15%;">
+                                    <div><img src="img/{{value.humidityIcon}}.png"></div>
+                                </div>
+                                <div class="row row-no-padding small-digit" style="height: 15%;">
+                                    <p>{{value.reh}}
+                                        <small>%</small>
+                                    </p>
+                                </div>
+                                <div class="row row-no-padding" style="height: 1%;"></div>
+                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+
+                            </div>
+                        </div>
+                    </div>
+                </ion-scroll>
+            </div>
+            <div class="row row-no-padding" style="height: 2%;"></div>
+        </div>
+    </ion-content>
+    <div class="guide-content" ng-if="!skipGuide" ng-click="onClickGuide()">
+        <div class="guide-row" style="height: 15%;">
+            <div class="guide-col guide-col-right-top">
+                <span>현재 위치 및</span><br/>
+                <span>업데이트</span>
+            </div>
+            <div class="guide-col guide-col-left-top">
+                <img src="img/DownGuide.png" class="guide-img-top">
+            </div>
+        </div>
+        <div class="guide-row" style="height: 85%;">
+            <div class="guide-col guide-col-left-middle">
+                <span>어제 날씨</span><br/>
+                <img src="img/LeftGuide.png" class="guide-img">
+            </div>
+            <div class="guide-col guide-col-right-middle">
+                <span>내일 날씨</span><br/>
+                <img src="img/RightGuide.png" class="guide-img">
+            </div>
+        </div>
+    </div>
+</ion-view>
