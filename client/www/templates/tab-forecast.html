@@ -7,13 +7,12 @@
         </ion-refresher>
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
-             <!--ng-class="{'short-forcast':shortForecast===true, 'mid-forcast':shortForecast===false}">-->
             <div class="row row-no-padding" style="height: 5%;">
                 <p class="top-time">
                     {{currentTimeString}}
                 </p>
             </div>
-            <div class="row row-no-padding current-content">
+            <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 14%;"></div>
                     <div class="row row-no-padding region" style="height: 16%;">

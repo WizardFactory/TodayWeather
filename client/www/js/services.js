@@ -1,9 +1,11 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($http) {
+    .factory('WeatherInfo', function ($http, WeatherUtil) {
         var obj = {
             cities: [],
-            towns: []
+            towns: [],
+            cityIndex: 0, // 최초 지역은 현재 위치가 보여지도록 함
+            loadIndex: -1 // 초기 로드 중인 city index
         };
 
         //region APIs
@@ -11,29 +13,68 @@ angular.module('starter.services', [])
         obj.addCity = function (city) {
             var that = this;
 
-            if (that.getCity(city.address) === null) {
+            if (that.indexOf(city) === -1) {
                 that.cities.push(city);
+                that.saveCities();
                 return true;
             }
             return false;
         };
 
-        obj.removeCity = function (address) {
-            var that = this;
-            var city = that.getCity(address);
+        //obj.removeCity = function (city) {
+        //    var that = this;
+        //
+        //    var index = that.indexOf(city);
+        //    if (index !== -1) {
+        //        that.cities.splice(index, 1);
+        //        return true;
+        //    }
+        //    return false;
+        //};
 
-            if (city !== null) {
-                that.cities.splice(that.cities.indexOf(city), 1);
+        //obj.getCity = function (address) {
+        //    var that = this;
+        //    var city = that.cities.filter(function (value) {
+        //            if (value.currentPosition === false && value.address === address) {
+        //                return true;
+        //            }
+        //            return false;
+        //        }
+        //    );
+        //
+        //    if (city.length === 0) {
+        //        return null;
+        //    }
+        //    return city;
+        //};
+
+        obj.updateCity = function (index, weatherData) {
+            var that = this;
+            var city = that.cities[index];
+
+            if (weatherData.address) {
+                city.address = weatherData.address;
             }
-        };
+            if (weatherData.location) {
+                city.location = weatherData.location;
+            }
+            if (weatherData.currentWeather) {
+                city.currentWeather = weatherData.currentWeather;
+            }
+            if (weatherData.timeTable) {
+                city.timeTable = weatherData.timeTable;
+            }
+            if (weatherData.timeChart) {
+                city.timeChart = weatherData.timeChart;
+            }
+            if (weatherData.dayTable) {
+                city.dayTable = weatherData.dayTable;
+            }
+            if (weatherData.dayChart) {
+                city.dayChart = weatherData.dayChart;
+            }
 
-        obj.getCity = function (address) {
-            var that = this;
-            var city = that.cities.filter(function (value) {
-                    return (typeof value.address === address);
-                }
-            );
-            return city;
+            that.saveCities();
         };
 
         obj.getCityOfIndex = function (index) {
@@ -50,15 +91,24 @@ angular.module('starter.services', [])
             return that.cities.length;
         };
 
-        obj.indexOf = function (address) {
+        obj.indexOf = function (city) {
             var that = this;
 
             for (var i = 0; i < that.cities.length; i += 1) {
-                if (that.cities[i].address === address) {
+                if (that.cities[i].currentPosition === true && city.currentPosition === true) {
+                    return i;
+                }
+                if (that.cities[i].address === city.address) {
                     return i;
                 }
             }
             return -1;
+        };
+
+        obj.setCityIndex = function (city) {
+            var that = this;
+
+            that.cityIndex = that.indexOf(city);
         };
 
         obj.loadCities = function() {
@@ -173,6 +223,20 @@ angular.module('starter.services', [])
             localStorage.setItem("cities", JSON.stringify(that.cities));
         };
 
+
+        obj.updateCities = function() {
+            var that = this;
+            var city = that.cities[++that.loadIndex];
+
+            if (city) {
+                WeatherUtil.getWeatherInfo(city.address).then(function (weatherData) {
+                    var city = WeatherUtil.convertWeatherData(weatherData);
+                    that.updateCity(that.loadIndex, city);
+                    that.updateCities();
+                });
+            }
+        };
+
         obj.loadTowns = function() {
             var that = this;
             $http.get('data/town.json')
@@ -184,9 +248,6 @@ angular.module('starter.services', [])
         //endregion
 
         return obj;
-    })
-    .factory('WeatherService', function () {
-
     })
     .factory('WeatherUtil', function ($q, $http) {
         var obj = {};
@@ -485,6 +546,51 @@ angular.module('starter.services', [])
         }
 
         /**
+         *
+         * @param {Object} current
+         * @param {Object} yesterday
+         * @returns {String}
+         */
+        function makeSummary(current, yesterday) {
+            var str = "어제";
+            var diffTemp = current.t1h - yesterday.t3h;
+
+            if (diffTemp == 0) {
+                str += "와 동일";
+            }
+            else {
+                str += "보다 " + Math.abs(diffTemp);
+                if (diffTemp < 0) {
+                    str += "도 낮음";
+                }
+                else if (diffTemp > 0) {
+                    str += "도 높음";
+                }
+            }
+
+            //current.arpltn = {};
+            //current.arpltn.pm10Value = 80;
+            //current.arpltn.pm10Str = "나쁨";
+            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Value >= 80) {
+                str += ", " + "미세먼지 " + current.arpltn.pm10Str;
+            }
+
+            //current.ultrv = 6;
+            //current.ultrvStr = "높음";
+            if (current.ultrv && current.ultrv >= 6) {
+                str += ", " + "자외선 " + current.ultrvStr;
+            }
+
+            //current.sensorytmp = -10;
+            //current.sensorytmeStr = "관심";
+            if (current.sensorytem && current.sensorytem <= -10) {
+                str += ", " + "체감온도 " + current.sensorytemStr;
+            }
+
+            return str;
+        }
+
+        /**
          * It's supporting only korean lang
          * @param {Object[]} results
          * @returns {string}
@@ -515,7 +621,7 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         function findLocationFromGoogleGeoCodeResults(results) {
-            var location = {};
+            var location = {}; //{"lat": Number, "long": Number};
 
             results.forEach(function (result) {
                 location.lat = result.geometry.location.lat;
@@ -562,7 +668,7 @@ angular.module('starter.services', [])
          * @returns {Array}
          */
         obj.parsePreShortTownWeather = function (shortForecastList) {
-            //It's the same type of dailyInfoArray
+            // {date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
             var dailyTemp = [];
 
             shortForecastList.forEach(function (shortForecast) {
@@ -820,6 +926,20 @@ angular.module('starter.services', [])
 
         /**
          *
+         * @param {String} fullAddress 대한민국 천하도 강남시 하늘구 가내동 33-2, 대한민국 서울특별시 라임구 마라동
+         * @returns {String[]}
+         */
+        obj.convertAddressArray = function (fullAddress) {
+            var splitAddress = [];
+
+            if (fullAddress && fullAddress.split) {
+                splitAddress = fullAddress.split(" ");
+            }
+            return splitAddress;
+        }
+
+        /**
+         *
          * @param addressArray
          * @returns {{first: string, second: string, third: string}}
          */
@@ -905,6 +1025,102 @@ angular.module('starter.services', [])
             });
 
             return deferred.promise;
+        };
+
+        obj.getCurrentPosition = function () {
+            var deferred = $q.defer();
+
+            navigator.geolocation.getCurrentPosition(function(position) {
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //deferred.resolve({latitude: 36.51, longitude: 127.259});
+
+                deferred.resolve(position.coords);
+            }, function(error) {
+                console.log(error);
+                deferred.reject();
+            },{timeout:3000});
+
+            return deferred.promise;
+        };
+
+        /**
+         *
+         * @param {String} address
+         * @param {cbWeatherInfo} callback
+         */
+        obj.getWeatherInfo = function (address) {
+            var that = this;
+            var deferred = $q.defer();
+
+            //var url = "town";
+            //var url = "https://todayweather1-wizardfactory.rhcloud.com/town";
+            //var url = "https://todayweather2-wizardfactory.rhcloud.com/town";
+            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
+            var addressArray = that.convertAddressArray(address);
+
+            if (addressArray.length === 0) {
+                deferred.reject("address is empty");
+                return deferred.promise;
+            }
+
+            var town = that.getTownFromFullAddress(addressArray);
+            url += "/" + town.first + "/" + town.second + "/" + town.third;
+
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function(data) {
+                    console.log(data);
+                    deferred.resolve(data);
+                })
+                .error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        };
+
+        /**
+         *
+         * @param weatherData
+         */
+        obj.convertWeatherData = function (weatherData) {
+            var that = this;
+            var data = {};
+            var currentTime = new Date();
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+            var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short);
+
+            /*
+             parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
+             */
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
+            console.log(shortTownWeather);
+
+            /*
+             parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
+             */
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
+            console.log(midTownWeather);
+
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+
+            data.currentWeather = currentForecast;
+            data.timeTable = shortTownWeather.timeTable;
+            data.timeChart = shortTownWeather.timeChart;
+            data.dayTable = midTownWeather;
+            data.dayChart = [{
+                values: midTownWeather,
+                temp: currentForecast.t1h
+            }];
+
+            return data;
         };
 
         //endregion
