@@ -353,10 +353,12 @@ angular.module('starter.controllers', [])
 
             var data = {
                 address: address,
+                currentPosition: city.currentPosition,
                 sky: city.currentWeather.sky,
                 t1h: city.currentWeather.t1h,
                 tmn: todayData[0].tmn,
-                tmx: todayData[0].tmx
+                tmx: todayData[0].tmx,
+                delete: false
             };
             $scope.cityList.push(data);
         });
@@ -365,7 +367,7 @@ angular.module('starter.controllers', [])
             $rootScope.viewColor = '#ec72a8';
         });
         
-        $scope.changeSearchWord = function() {
+        $scope.OnChangeSearchWord = function() {
             if ($scope.searchWord === "") {
                 $scope.searchWord = undefined;
                 $scope.searchResults = [];
@@ -378,7 +380,7 @@ angular.module('starter.controllers', [])
             });
         };
 
-        $scope.selectResult = function(result) {
+        $scope.OnSelectResult = function(result) {
             $scope.searchWord = undefined;
             $scope.searchResults = [];
             $scope.isLoading = true;
@@ -410,7 +412,7 @@ angular.module('starter.controllers', [])
                             });
                         }
                         else {
-                            WeatherInfo.setCityIndex(city);
+                            WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
                             $location.path('/tab/forecast');
                         }
                         $scope.isLoading = false;
@@ -425,9 +427,26 @@ angular.module('starter.controllers', [])
             });
         };
 
-        $scope.selectCity = function(index) {
+        $scope.OnSwipeCity = function(city) {
+            // 현재 위치인 경우에는 삭제되면 안됨
+            if (city.currentPosition === false) {
+                city.delete = !city.delete;
+            }
+        };
+
+        $scope.OnSelectCity = function(index) {
             WeatherInfo.cityIndex = index;
             $location.path('/tab/forecast');
+        };
+
+        $scope.OnDeleteCity = function(index) {
+            $scope.cityList.splice(index, 1);
+            WeatherInfo.removeCity(index);
+
+            if (WeatherInfo.cityIndex === WeatherInfo.getCityCount()) {
+                WeatherInfo.cityIndex = 0;
+            }
+            return false; //OnSelectCity가 호출되지 않도록 이벤트 막음
         };
 
         $ionicPlatform.ready(function() {
