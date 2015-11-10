@@ -45,10 +45,15 @@ currentSchema.statics = {
         this.find({"town" : { "first" : first , "second" : second, "third" : third}})
             .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(1).exec(cb);
     },
-    getCurrentDataWithTime : function(town, date, cb){
+    getCurrentDataWithDate : function(town, date, cb){
         this.find({"town" : { "first" : town.first , "second" : town.second, "third" : town.third},
             "currentData.date" : {$lte : date}/*, "currentData.time" : {$lt : time}*/})
             .sort({"currentData.date" : -1, "currentData.time" : -1}).limit(40).exec(cb);
+    },
+    getCurrentDataWithSpecificDate : function(town, startDate, endDate, cb){
+        this.find({"town" : { "first" : town.first , "second" : town.second, "third" : town.third},
+            "currentData.date" : {$gte : startDate, $lte: endDate}})
+            .sort({"currentData.date" : 1, "currentData.time" : 1}).exec(cb);
     },
     getCurrentDataForCal: function (num, regId, cb){
         var util = new modelUtil();
