@@ -29,6 +29,7 @@
     "cordova-plugin-splashscreen",
     "com.ionic.keyboard",
     "cordova-plugin-geolocation",
+    "cordova-plugin-apple-watch",
     "cordova-plugin-statusbar",
     {
       "locator": "https://github.com/apache/cordova-plugin-whitelist.git",

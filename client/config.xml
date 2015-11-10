@@ -72,6 +72,29 @@
                 <key>NSAllowsArbitraryLoads</key>
                 <true />
             </dict>
+            <dict>
+                <key>NSExceptionDomains</key>
+                <dict>
+                    <key>amazonaws.com</key>
+                    <dict>
+                        <key>NSThirdPartyExceptionMinimumTLSVersion</key>
+                        <string>TLSv1.0</string>
+                        <key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
+                        <false/>
+                        <key>NSIncludesSubdomains</key>
+                        <true/>
+                    </dict>
+                    <key>amazonaws.com.cn</key>
+                    <dict>
+                        <key>NSThirdPartyExceptionMinimumTLSVersion</key>
+                        <string>TLSv1.0</string>
+                        <key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
+                        <false/>
+                        <key>NSIncludesSubdomains</key>
+                        <true/>
+                    </dict>
+                </dict>
+            </dict>
         </config-file>
     </platform>
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />

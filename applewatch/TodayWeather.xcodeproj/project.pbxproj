@@ -1,0 +1,1341 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+/* Begin PBXBuildFile section */
+		052C695E93D8446FAA898638 /* UNIJsonNode.m in Sources */ = {isa = PBXBuildFile; fileRef = C9D89426F4064DDE8129B2A9 /* UNIJsonNode.m */; };
+		0612109B64B945F69A10C142 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = E5EE7017A7E949E293F083EB /* crc32.c */; };
+		0B89D60CA6234E2384299974 /* gzread.c in Sources */ = {isa = PBXBuildFile; fileRef = 49678C1EC4254B4FAC6D9EB6 /* gzread.c */; };
+		0C53010C2E82437AACB919CB /* MMWormholeSession.m in Sources */ = {isa = PBXBuildFile; fileRef = D13A3EFC4AF048168D13636B /* MMWormholeSession.m */; };
+		0DF643E8FDEB44189DFBBB1F /* MMWormholeSessionContextTransiting.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EF456A8C30F4C938CC910F1 /* MMWormholeSessionContextTransiting.m */; };
+		132A3E5B14A541A887620050 /* UNIBaseRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = E6372F11992848D98777D1F7 /* UNIBaseRequest.m */; };
+		1A1496A0EAC74C42BD783202 /* compress.c in Sources */ = {isa = PBXBuildFile; fileRef = 01BDECB1E6DC4338AEC5A0F8 /* compress.c */; };
+		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
+		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
+		1FBAEF5D258540BEB5E97A82 /* gzwrite.c in Sources */ = {isa = PBXBuildFile; fileRef = 9B6BA601D05F487D87F5A114 /* gzwrite.c */; };
+		25328E74AE0748A18539CBFE /* UNIHTTPJsonResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = 867ED27ADE6A42F5A6AC6BD9 /* UNIHTTPJsonResponse.m */; };
+		25C39587E0494BEA8B9153D1 /* DownloadManager.m in Sources */ = {isa = PBXBuildFile; fileRef = F5E590BA288C48AAB6B172B5 /* DownloadManager.m */; };
+		26DD9123D2B648BA9E6DE7E8 /* UNIHTTPStringResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = E5454794B8E1417C8E2D3C0A /* UNIHTTPStringResponse.m */; };
+		288765FD0DF74451002DB57D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 288765FC0DF74451002DB57D /* CoreGraphics.framework */; };
+		2A91F15922764BE198FA72BA /* unzip.c in Sources */ = {isa = PBXBuildFile; fileRef = 132AAAEA28DA46F9AE3F0938 /* unzip.c */; };
+		2AAA1120EA3B43BFAAB91CEC /* UNIHTTPResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = A90A82654B264FAAA88895B8 /* UNIHTTPResponse.m */; };
+		2D567416A0BB4A32ACEF0563 /* IonicKeyboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 4FDF9CA9DC474584B3F44D4B /* IonicKeyboard.m */; };
+		2EA82C3A1BF183FB00173F56 /* InterfaceController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2EA82C391BF183FB00173F56 /* InterfaceController.m */; };
+		2EA82C3C1BF183FB00173F56 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C3B1BF183FB00173F56 /* Assets.xcassets */; };
+		2EA82C411BF183FB00173F56 /* TodayWeather WatchKit 1 App.app in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C401BF183FB00173F56 /* TodayWeather WatchKit 1 App.app */; };
+		2EA82C471BF183FB00173F56 /* Interface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C451BF183FB00173F56 /* Interface.storyboard */; };
+		2EA82C491BF183FB00173F56 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C481BF183FB00173F56 /* Assets.xcassets */; };
+		2EA82C4D1BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 2EA82C361BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2EA82C6A1BF1879800173F56 /* Cloud.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C5B1BF1879800173F56 /* Cloud.png */; };
+		2EA82C6B1BF1879800173F56 /* Lightning.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C5C1BF1879800173F56 /* Lightning.png */; };
+		2EA82C6C1BF1879800173F56 /* Moon.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C5D1BF1879800173F56 /* Moon.png */; };
+		2EA82C6D1BF1879800173F56 /* MoonWithCloud.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C5E1BF1879800173F56 /* MoonWithCloud.png */; };
+		2EA82C6E1BF1879800173F56 /* Rain.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C5F1BF1879800173F56 /* Rain.png */; };
+		2EA82C6F1BF1879800173F56 /* RainWithLightning.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C601BF1879800173F56 /* RainWithLightning.png */; };
+		2EA82C701BF1879800173F56 /* RainWithSnow.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C611BF1879800173F56 /* RainWithSnow.png */; };
+		2EA82C711BF1879800173F56 /* reddot.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C621BF1879800173F56 /* reddot.png */; };
+		2EA82C721BF1879800173F56 /* Snow.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C631BF1879800173F56 /* Snow.png */; };
+		2EA82C731BF1879800173F56 /* Sun.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C641BF1879800173F56 /* Sun.png */; };
+		2EA82C741BF1879800173F56 /* SunRising.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C651BF1879800173F56 /* SunRising.png */; };
+		2EA82C751BF1879800173F56 /* SunSet.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C661BF1879800173F56 /* SunSet.png */; };
+		2EA82C761BF1879800173F56 /* SunWithCloud.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C671BF1879800173F56 /* SunWithCloud.png */; };
+		2EA82C771BF1879800173F56 /* Wind.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C681BF1879800173F56 /* Wind.png */; };
+		2EA82C781BF1879800173F56 /* WindWithCloud.png in Resources */ = {isa = PBXBuildFile; fileRef = 2EA82C691BF1879800173F56 /* WindWithCloud.png */; };
+		2EC7D64B8BF84C7B8A660981 /* Download.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E69D75C9E334C9D96024470 /* Download.m */; };
+		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
+		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
+		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
+		305D5FD1115AB8F900A74A75 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 305D5FD0115AB8F900A74A75 /* MobileCoreServices.framework */; };
+		3088BBBD154F3926009F9C59 /* Default-Landscape@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBB7154F3926009F9C59 /* Default-Landscape@2x~ipad.png */; };
+		3088BBBE154F3926009F9C59 /* Default-Landscape~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBB8154F3926009F9C59 /* Default-Landscape~ipad.png */; };
+		3088BBBF154F3926009F9C59 /* Default-Portrait@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBB9154F3926009F9C59 /* Default-Portrait@2x~ipad.png */; };
+		3088BBC0154F3926009F9C59 /* Default-Portrait~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBBA154F3926009F9C59 /* Default-Portrait~ipad.png */; };
+		3088BBC1154F3926009F9C59 /* Default@2x~iphone.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBBB154F3926009F9C59 /* Default@2x~iphone.png */; };
+		3088BBC2154F3926009F9C59 /* Default~iphone.png in Resources */ = {isa = PBXBuildFile; fileRef = 3088BBBC154F3926009F9C59 /* Default~iphone.png */; };
+		308D05371370CCF300D202BF /* icon-72.png in Resources */ = {isa = PBXBuildFile; fileRef = 308D052E1370CCF300D202BF /* icon-72.png */; };
+		308D05381370CCF300D202BF /* icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 308D052F1370CCF300D202BF /* icon.png */; };
+		308D05391370CCF300D202BF /* icon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 308D05301370CCF300D202BF /* icon@2x.png */; };
+		30B4F30019D5E07200D9F7D8 /* Default-667h.png in Resources */ = {isa = PBXBuildFile; fileRef = 30B4F2FD19D5E07200D9F7D8 /* Default-667h.png */; };
+		30B4F30119D5E07200D9F7D8 /* Default-736h.png in Resources */ = {isa = PBXBuildFile; fileRef = 30B4F2FE19D5E07200D9F7D8 /* Default-736h.png */; };
+		30B4F30219D5E07200D9F7D8 /* Default-Landscape-736h.png in Resources */ = {isa = PBXBuildFile; fileRef = 30B4F2FF19D5E07200D9F7D8 /* Default-Landscape-736h.png */; };
+		30C1856619D5FC0A00212699 /* icon-60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 30C1856519D5FC0A00212699 /* icon-60@3x.png */; };
+		30FC414916E50CA1004E6F35 /* icon-72@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 30FC414816E50CA1004E6F35 /* icon-72@2x.png */; };
+		34F0DE3ABECF440CBAA1E06A /* infback.c in Sources */ = {isa = PBXBuildFile; fileRef = 866D82F846C249F6B9C95D75 /* infback.c */; };
+		3D12E45B3CE44EE39DE0E0DE /* trees.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE4BE12C6247D39A8D26AA /* trees.c */; };
+		3E35828404B743AAB2F1E88E /* gzlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 5CD7FF34A3B840338CFFEB3B /* gzlib.c */; };
+		3E8A0C1441DF42E3B6639D6F /* MMWormhole.m in Sources */ = {isa = PBXBuildFile; fileRef = 190DE634E83E4A73A49D1196 /* MMWormhole.m */; };
+		3FDF0BE026CA4D949CC279E4 /* UNIHTTPRequestWithBody.m in Sources */ = {isa = PBXBuildFile; fileRef = 75C5D9E74D874C5A8B38F2D3 /* UNIHTTPRequestWithBody.m */; };
+		426043510C93448D9A1874A4 /* IonicConstant.m in Sources */ = {isa = PBXBuildFile; fileRef = A121A79AE50C4F4D801E6242 /* IonicConstant.m */; };
+		45EB302FBAB54DC2B9F4DB2F /* UNIHTTPRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 148F67A015FC49AAA3FB5D67 /* UNIHTTPRequest.m */; };
+		49371531CC18454296E27F14 /* ioapi.c in Sources */ = {isa = PBXBuildFile; fileRef = 16C5A105CD744208A266962B /* ioapi.c */; };
+		5B1594DD16A7569C00FEF299 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5B1594DC16A7569C00FEF299 /* AssetsLibrary.framework */; };
+		5E3AD554EEC4411EBDE03DE0 /* MMWormholeFileTransiting.m in Sources */ = {isa = PBXBuildFile; fileRef = 06C5796FA0034E34897CDBBF /* MMWormholeFileTransiting.m */; };
+		6335196A4A324423B50481C4 /* MMWormholeSessionFileTransiting.h in Sources */ = {isa = PBXBuildFile; fileRef = 7111F96117604CBBAB80E5B8 /* MMWormholeSessionFileTransiting.h */; };
+		6698A57F8A5E4F8DB6E55487 /* UNIHTTPClientHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 5C3E6B3A63324FC2B994370B /* UNIHTTPClientHelper.m */; };
+		6A9119223FD248878EB287FD /* MMWormholeTransiting.h in Sources */ = {isa = PBXBuildFile; fileRef = FE439A9BE6444A38934F85B0 /* MMWormholeTransiting.h */; };
+		70F33945F2CF4C7BA393B93A /* deflate.c in Sources */ = {isa = PBXBuildFile; fileRef = 54FAD000BD0F4B0C8E7373D4 /* deflate.c */; };
+		79FBA55498DE4742BDFA200C /* CDVStatusBar.m in Sources */ = {isa = PBXBuildFile; fileRef = C94C4DEB35ED4D10AFD8FA30 /* CDVStatusBar.m */; };
+		7A9C4FDFF8734609978860DE /* adler32.c in Sources */ = {isa = PBXBuildFile; fileRef = F1DFC64863274A7FA47BFDE0 /* adler32.c */; };
+		7E7966DE1810823500FA85AD /* icon-40.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D41810823500FA85AD /* icon-40.png */; };
+		7E7966DF1810823500FA85AD /* icon-40@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D51810823500FA85AD /* icon-40@2x.png */; };
+		7E7966E01810823500FA85AD /* icon-50.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D61810823500FA85AD /* icon-50.png */; };
+		7E7966E11810823500FA85AD /* icon-50@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D71810823500FA85AD /* icon-50@2x.png */; };
+		7E7966E21810823500FA85AD /* icon-60.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D81810823500FA85AD /* icon-60.png */; };
+		7E7966E31810823500FA85AD /* icon-60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966D91810823500FA85AD /* icon-60@2x.png */; };
+		7E7966E41810823500FA85AD /* icon-76.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DA1810823500FA85AD /* icon-76.png */; };
+		7E7966E51810823500FA85AD /* icon-76@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DB1810823500FA85AD /* icon-76@2x.png */; };
+		7E7966E61810823500FA85AD /* icon-small.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DC1810823500FA85AD /* icon-small.png */; };
+		7E7966E71810823500FA85AD /* icon-small@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E7966DD1810823500FA85AD /* icon-small@2x.png */; };
+		8BE9A3F9B5EA4038BC1E8527 /* CDVViewController+SplashScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C20C6E4A91D41E08A5151F0 /* CDVViewController+SplashScreen.m */; };
+		8D51FEE9FC34487EB838E610 /* Base64.m in Sources */ = {isa = PBXBuildFile; fileRef = 78354310391B43D3AC03030F /* Base64.m */; };
+		8F9F3C11051046D48E7416DE /* CDVInAppBrowser.m in Sources */ = {isa = PBXBuildFile; fileRef = BDAFF066A75740968674EF6F /* CDVInAppBrowser.m */; };
+		9141F6EA12BB448390E6F381 /* MMWormholeCoordinatedFileTransiting.m in Sources */ = {isa = PBXBuildFile; fileRef = 726DB501BFBD4F8E8FF4CE0D /* MMWormholeCoordinatedFileTransiting.m */; };
+		92839CD36EEF41329E640D9E /* MMWormholeSessionContextTransiting.h in Sources */ = {isa = PBXBuildFile; fileRef = 68F7B12E53ED4C97B8AF5E42 /* MMWormholeSessionContextTransiting.h */; };
+		94F4B37D3C1148BAA3950F0B /* uncompr.c in Sources */ = {isa = PBXBuildFile; fileRef = 612B6B04382F4548B4B8AB50 /* uncompr.c */; };
+		9B3A4F76BA204B7ABABFB4F2 /* MMWormholeSession.h in Sources */ = {isa = PBXBuildFile; fileRef = 60E914EB46AF4365AB8DD4AF /* MMWormholeSession.h */; };
+		A21886271BDC4C439239B13E /* gzclose.c in Sources */ = {isa = PBXBuildFile; fileRef = 5BD8F958632A4F3F865D993C /* gzclose.c */; };
+		AC654E3C60814698818FF5F3 /* SSZipArchive.m in Sources */ = {isa = PBXBuildFile; fileRef = 919AF6768D0047FD87F6A06F /* SSZipArchive.m */; };
+		B278C22F09084570881B0A5E /* UNIUrlConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = A005FAE3D5A542118E526C3E /* UNIUrlConnection.m */; };
+		BA2FEC90E4A24A43865F5251 /* CDVLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = A45C2AEED54C460C8121E742 /* CDVLogger.m */; };
+		BC22988755E445B29662822A /* CDVDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 91EF5BC70C72469887B6AA77 /* CDVDevice.m */; };
+		BC7B7C71544346F4BA0FC692 /* UNIHTTPBinaryResponse.m in Sources */ = {isa = PBXBuildFile; fileRef = FFD9AB7EFAA34CEBB42ADCBF /* UNIHTTPBinaryResponse.m */; };
+		BF3854491EAF4552B25FDED7 /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = B064637F5BF34CAEB0108716 /* zutil.c */; };
+		C5C7FE0818534EBC86A15FBC /* IonicDeploy.m in Sources */ = {isa = PBXBuildFile; fileRef = D835E185CFBE4A72A185EB16 /* IonicDeploy.m */; };
+		C9256070B8D64EC88FB59D05 /* inftrees.c in Sources */ = {isa = PBXBuildFile; fileRef = 5A947CFC1D174E2E86195993 /* inftrees.c */; };
+		D4A0D8761607E02300AEF8BB /* Default-568h@2x~iphone.png in Resources */ = {isa = PBXBuildFile; fileRef = D4A0D8751607E02300AEF8BB /* Default-568h@2x~iphone.png */; };
+		D5C80913B72F46C3A9F61C28 /* CDVSplashScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = E91E88049B0646EFAE027214 /* CDVSplashScreen.m */; };
+		DBDB2D5629BC4813B86913A5 /* inffast.c in Sources */ = {isa = PBXBuildFile; fileRef = 250E1794172844D69A6A9BEE /* inffast.c */; };
+		DE9FED07DABC4E1D8906C391 /* UIWebViewExtension.m in Sources */ = {isa = PBXBuildFile; fileRef = 11812E41AB214F118EE5B92B /* UIWebViewExtension.m */; };
+		E005EE83C1C24269BD1C8515 /* MMWormholeSessionMessageTransiting.m in Sources */ = {isa = PBXBuildFile; fileRef = 44DC17F035C94A7FBC06E293 /* MMWormholeSessionMessageTransiting.m */; };
+		E15DBC549C2D46E5AB916F70 /* UNISimpleRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = F3E7210282E5452BA4BAEF47 /* UNISimpleRequest.m */; };
+		E332628044454DF0B52FCEBC /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0594CD1D4B1D49F4A59231D0 /* CoreLocation.framework */; };
+		E4E16179E3E149B58734590A /* MMWormholeSessionFileTransiting.m in Sources */ = {isa = PBXBuildFile; fileRef = EB99A7063E654B018F38678F /* MMWormholeSessionFileTransiting.m */; };
+		E8136CFF03EE443396AA9C9D /* CDVLocation.m in Sources */ = {isa = PBXBuildFile; fileRef = D9F9EB8120154EAF9C45C733 /* CDVLocation.m */; };
+		EAF2F183E2854481B101D0FF /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F54849EB15641A48FCC96BB /* WatchConnectivity.framework */; };
+		F07ECB7F047B46AAAFDA11AA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CD5A10E4B4C40A29308BD99 /* Foundation.framework */; };
+		F3F41D75150841619C32F1AE /* UNIRest.m in Sources */ = {isa = PBXBuildFile; fileRef = 0FD884CCAAA74E438CBA0DC9 /* UNIRest.m */; };
+		F499A5E0A8844B9ABD065A43 /* zip.c in Sources */ = {isa = PBXBuildFile; fileRef = 2EA41A34814242F6BD4B96FC /* zip.c */; };
+		FA4E2BF4A343420B986713B1 /* MMWormholeSessionMessageTransiting.h in Sources */ = {isa = PBXBuildFile; fileRef = A4C3650C83294FFE8AD00B4E /* MMWormholeSessionMessageTransiting.h */; };
+		FBCCB91E660E4C5183FB235D /* UNIBodyRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = 6AE6FFAADD424C6FBF047044 /* UNIBodyRequest.m */; };
+		FD3B5B55AAF44DB8A8179A72 /* inflate.c in Sources */ = {isa = PBXBuildFile; fileRef = 50186475C0BA4946AB92996F /* inflate.c */; };
+		FD8F8E94747C46BDA63FB69A /* AppleWatch.m in Sources */ = {isa = PBXBuildFile; fileRef = F0329E9BF70A417D8F868F4C /* AppleWatch.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2EA82C421BF183FB00173F56 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2EA82C3F1BF183FB00173F56;
+			remoteInfo = "TodayWeather WatchKit 1 App";
+		};
+		2EA82C4B1BF183FB00173F56 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2EA82C351BF183FB00173F56;
+			remoteInfo = "TodayWeather WatchKit 1 Extension";
+		};
+		301BF534109A57CC0062928A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = D2AAC07E0554694100DB518D;
+			remoteInfo = CordovaLib;
+		};
+		301BF550109A68C00062928A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = D2AAC07D0554694100DB518D;
+			remoteInfo = CordovaLib;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2EA82C541BF183FB00173F56 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2EA82C4D1BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		01BDECB1E6DC4338AEC5A0F8 /* compress.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = compress.c; path = "ionic-plugin-deploy/compress.c"; sourceTree = "<group>"; };
+		0594CD1D4B1D49F4A59231D0 /* CoreLocation.framework */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		06C5796FA0034E34897CDBBF /* MMWormholeFileTransiting.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeFileTransiting.m; path = "cordova-plugin-apple-watch/MMWormholeFileTransiting.m"; sourceTree = "<group>"; };
+		07373D01BE6C4D2193C22AD3 /* UNIBaseRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIBaseRequest.h; path = "ionic-plugin-deploy/UNIBaseRequest.h"; sourceTree = "<group>"; };
+		0BE1ABC84B9A40C9B545E8FD /* UNISimpleRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNISimpleRequest.h; path = "ionic-plugin-deploy/UNISimpleRequest.h"; sourceTree = "<group>"; };
+		0FD884CCAAA74E438CBA0DC9 /* UNIRest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIRest.m; path = "ionic-plugin-deploy/UNIRest.m"; sourceTree = "<group>"; };
+		114056A23F1C42B999F4AB92 /* IonicConstant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IonicConstant.h; path = "ionic-plugin-deploy/IonicConstant.h"; sourceTree = "<group>"; };
+		11812E41AB214F118EE5B92B /* UIWebViewExtension.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UIWebViewExtension.m; path = com.ionic.keyboard/UIWebViewExtension.m; sourceTree = "<group>"; };
+		132AAAEA28DA46F9AE3F0938 /* unzip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = unzip.c; path = "ionic-plugin-deploy/unzip.c"; sourceTree = "<group>"; };
+		148F67A015FC49AAA3FB5D67 /* UNIHTTPRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPRequest.m; path = "ionic-plugin-deploy/UNIHTTPRequest.m"; sourceTree = "<group>"; };
+		16C5A105CD744208A266962B /* ioapi.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = ioapi.c; path = "ionic-plugin-deploy/ioapi.c"; sourceTree = "<group>"; };
+		190DE634E83E4A73A49D1196 /* MMWormhole.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormhole.m; path = "cordova-plugin-apple-watch/MMWormhole.m"; sourceTree = "<group>"; };
+		198E4C79C35E4C4292F2AA47 /* Download.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Download.h; path = "ionic-plugin-deploy/Download.h"; sourceTree = "<group>"; };
+		1C20C6E4A91D41E08A5151F0 /* CDVViewController+SplashScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "CDVViewController+SplashScreen.m"; path = "cordova-plugin-splashscreen/CDVViewController+SplashScreen.m"; sourceTree = "<group>"; };
+		1D3623240D0F684500981E51 /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		1D3623250D0F684500981E51 /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		1D6058910D05DD3D006BFB54 /* TodayWeather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodayWeather.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDE4BE12C6247D39A8D26AA /* trees.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = trees.c; path = "ionic-plugin-deploy/trees.c"; sourceTree = "<group>"; };
+		209F2DE5C330484498F03063 /* DownloadManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DownloadManager.h; path = "ionic-plugin-deploy/DownloadManager.h"; sourceTree = "<group>"; };
+		22AA4C108A7C4601A57046BA /* MMWormhole.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormhole.h; path = "cordova-plugin-apple-watch/MMWormhole.h"; sourceTree = "<group>"; };
+		250E1794172844D69A6A9BEE /* inffast.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = inffast.c; path = "ionic-plugin-deploy/inffast.c"; sourceTree = "<group>"; };
+		288765FC0DF74451002DB57D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		28CE0B32E27A4327913A6609 /* MMWormholeCoordinatedFileTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeCoordinatedFileTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeCoordinatedFileTransiting.h"; sourceTree = "<group>"; };
+		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		2EA41A34814242F6BD4B96FC /* zip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = zip.c; path = "ionic-plugin-deploy/zip.c"; sourceTree = "<group>"; };
+		2EA82C361BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "TodayWeather WatchKit 1 Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2EA82C381BF183FB00173F56 /* InterfaceController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InterfaceController.h; sourceTree = "<group>"; };
+		2EA82C391BF183FB00173F56 /* InterfaceController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = InterfaceController.m; sourceTree = "<group>"; };
+		2EA82C3B1BF183FB00173F56 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2EA82C3D1BF183FB00173F56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2EA82C401BF183FB00173F56 /* TodayWeather WatchKit 1 App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TodayWeather WatchKit 1 App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2EA82C461BF183FB00173F56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Interface.storyboard; sourceTree = "<group>"; };
+		2EA82C481BF183FB00173F56 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2EA82C4A1BF183FB00173F56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2EA82C551BF1840900173F56 /* TodayWeather.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = TodayWeather.entitlements; path = TodayWeather/TodayWeather.entitlements; sourceTree = "<group>"; };
+		2EA82C561BF1842700173F56 /* TodayWeather WatchKit 1 Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "TodayWeather WatchKit 1 Extension.entitlements"; sourceTree = "<group>"; };
+		2EA82C571BF1843B00173F56 /* TodayWeather WatchKit 1 App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "TodayWeather WatchKit 1 App.entitlements"; sourceTree = "<group>"; };
+		2EA82C5B1BF1879800173F56 /* Cloud.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Cloud.png; sourceTree = "<group>"; };
+		2EA82C5C1BF1879800173F56 /* Lightning.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Lightning.png; sourceTree = "<group>"; };
+		2EA82C5D1BF1879800173F56 /* Moon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Moon.png; sourceTree = "<group>"; };
+		2EA82C5E1BF1879800173F56 /* MoonWithCloud.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = MoonWithCloud.png; sourceTree = "<group>"; };
+		2EA82C5F1BF1879800173F56 /* Rain.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Rain.png; sourceTree = "<group>"; };
+		2EA82C601BF1879800173F56 /* RainWithLightning.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RainWithLightning.png; sourceTree = "<group>"; };
+		2EA82C611BF1879800173F56 /* RainWithSnow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = RainWithSnow.png; sourceTree = "<group>"; };
+		2EA82C621BF1879800173F56 /* reddot.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = reddot.png; sourceTree = "<group>"; };
+		2EA82C631BF1879800173F56 /* Snow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Snow.png; sourceTree = "<group>"; };
+		2EA82C641BF1879800173F56 /* Sun.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Sun.png; sourceTree = "<group>"; };
+		2EA82C651BF1879800173F56 /* SunRising.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SunRising.png; sourceTree = "<group>"; };
+		2EA82C661BF1879800173F56 /* SunSet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SunSet.png; sourceTree = "<group>"; };
+		2EA82C671BF1879800173F56 /* SunWithCloud.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SunWithCloud.png; sourceTree = "<group>"; };
+		2EA82C681BF1879800173F56 /* Wind.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Wind.png; sourceTree = "<group>"; };
+		2EA82C691BF1879800173F56 /* WindWithCloud.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = WindWithCloud.png; sourceTree = "<group>"; };
+		2FC6FC76332F470EB67D3B41 /* Base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Base64.h; path = "ionic-plugin-deploy/Base64.h"; sourceTree = "<group>"; };
+		301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CordovaLib.xcodeproj; path = CordovaLib/CordovaLib.xcodeproj; sourceTree = "<group>"; };
+		301BF56E109A69640062928A /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; path = www; sourceTree = SOURCE_ROOT; };
+		302D95EE14D2391D003F00A1 /* MainViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
+		302D95EF14D2391D003F00A1 /* MainViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MainViewController.m; sourceTree = "<group>"; };
+		302D95F014D2391D003F00A1 /* MainViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MainViewController.xib; sourceTree = "<group>"; };
+		305D5FD0115AB8F900A74A75 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
+		3088BBB7154F3926009F9C59 /* Default-Landscape@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Landscape@2x~ipad.png"; sourceTree = "<group>"; };
+		3088BBB8154F3926009F9C59 /* Default-Landscape~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Landscape~ipad.png"; sourceTree = "<group>"; };
+		3088BBB9154F3926009F9C59 /* Default-Portrait@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Portrait@2x~ipad.png"; sourceTree = "<group>"; };
+		3088BBBA154F3926009F9C59 /* Default-Portrait~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Portrait~ipad.png"; sourceTree = "<group>"; };
+		3088BBBB154F3926009F9C59 /* Default@2x~iphone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x~iphone.png"; sourceTree = "<group>"; };
+		3088BBBC154F3926009F9C59 /* Default~iphone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default~iphone.png"; sourceTree = "<group>"; };
+		308D052E1370CCF300D202BF /* icon-72.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-72.png"; sourceTree = "<group>"; };
+		308D052F1370CCF300D202BF /* icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon.png; sourceTree = "<group>"; };
+		308D05301370CCF300D202BF /* icon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon@2x.png"; sourceTree = "<group>"; };
+		30B4F2FD19D5E07200D9F7D8 /* Default-667h.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-667h.png"; sourceTree = "<group>"; };
+		30B4F2FE19D5E07200D9F7D8 /* Default-736h.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-736h.png"; sourceTree = "<group>"; };
+		30B4F2FF19D5E07200D9F7D8 /* Default-Landscape-736h.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-Landscape-736h.png"; sourceTree = "<group>"; };
+		30C1856519D5FC0A00212699 /* icon-60@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-60@3x.png"; sourceTree = "<group>"; };
+		30FC414816E50CA1004E6F35 /* icon-72@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-72@2x.png"; sourceTree = "<group>"; };
+		32CA4F630368D1EE00C91783 /* TodayWeather-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TodayWeather-Prefix.pch"; sourceTree = "<group>"; };
+		32CE9EDAE05A4F7F81289E33 /* CDVLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVLogger.h; path = "cordova-plugin-console/CDVLogger.h"; sourceTree = "<group>"; };
+		3404C3B7EA3F416A9787887C /* IonicKeyboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IonicKeyboard.h; path = com.ionic.keyboard/IonicKeyboard.h; sourceTree = "<group>"; };
+		3E67848F70ED4B29BFD6B248 /* CDVStatusBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVStatusBar.h; path = "cordova-plugin-statusbar/CDVStatusBar.h"; sourceTree = "<group>"; };
+		3E69D75C9E334C9D96024470 /* Download.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Download.m; path = "ionic-plugin-deploy/Download.m"; sourceTree = "<group>"; };
+		3F54849EB15641A48FCC96BB /* WatchConnectivity.framework */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		3F9F5ABE92C147F6987DD5E9 /* CDVInAppBrowser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVInAppBrowser.h; path = "cordova-plugin-inappbrowser/CDVInAppBrowser.h"; sourceTree = "<group>"; };
+		44DC17F035C94A7FBC06E293 /* MMWormholeSessionMessageTransiting.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeSessionMessageTransiting.m; path = "cordova-plugin-apple-watch/MMWormholeSessionMessageTransiting.m"; sourceTree = "<group>"; };
+		49678C1EC4254B4FAC6D9EB6 /* gzread.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = gzread.c; path = "ionic-plugin-deploy/gzread.c"; sourceTree = "<group>"; };
+		4FDF9CA9DC474584B3F44D4B /* IonicKeyboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = IonicKeyboard.m; path = com.ionic.keyboard/IonicKeyboard.m; sourceTree = "<group>"; };
+		50186475C0BA4946AB92996F /* inflate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = inflate.c; path = "ionic-plugin-deploy/inflate.c"; sourceTree = "<group>"; };
+		54FAD000BD0F4B0C8E7373D4 /* deflate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = deflate.c; path = "ionic-plugin-deploy/deflate.c"; sourceTree = "<group>"; };
+		5A947CFC1D174E2E86195993 /* inftrees.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = inftrees.c; path = "ionic-plugin-deploy/inftrees.c"; sourceTree = "<group>"; };
+		5B1594DC16A7569C00FEF299 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
+		5BD8F958632A4F3F865D993C /* gzclose.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = gzclose.c; path = "ionic-plugin-deploy/gzclose.c"; sourceTree = "<group>"; };
+		5C3E6B3A63324FC2B994370B /* UNIHTTPClientHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPClientHelper.m; path = "ionic-plugin-deploy/UNIHTTPClientHelper.m"; sourceTree = "<group>"; };
+		5CD7FF34A3B840338CFFEB3B /* gzlib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = gzlib.c; path = "ionic-plugin-deploy/gzlib.c"; sourceTree = "<group>"; };
+		5F3C594FB795495385333E22 /* crypt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = crypt.h; path = "ionic-plugin-deploy/crypt.h"; sourceTree = "<group>"; };
+		60E914EB46AF4365AB8DD4AF /* MMWormholeSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeSession.h; path = "cordova-plugin-apple-watch/MMWormholeSession.h"; sourceTree = "<group>"; };
+		612B6B04382F4548B4B8AB50 /* uncompr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = uncompr.c; path = "ionic-plugin-deploy/uncompr.c"; sourceTree = "<group>"; };
+		61CD60407AF648DD88D779FD /* inftrees.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inftrees.h; path = "ionic-plugin-deploy/inftrees.h"; sourceTree = "<group>"; };
+		63275E4F14CE41E782F60CD2 /* UNIHTTPClientHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPClientHelper.h; path = "ionic-plugin-deploy/UNIHTTPClientHelper.h"; sourceTree = "<group>"; };
+		64573B7B1F0F41CF8F3B57AB /* UNIHTTPJsonResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPJsonResponse.h; path = "ionic-plugin-deploy/UNIHTTPJsonResponse.h"; sourceTree = "<group>"; };
+		68F7B12E53ED4C97B8AF5E42 /* MMWormholeSessionContextTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeSessionContextTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeSessionContextTransiting.h"; sourceTree = "<group>"; };
+		6AE2B618ABE143A881AA829E /* CDVSplashScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVSplashScreen.h; path = "cordova-plugin-splashscreen/CDVSplashScreen.h"; sourceTree = "<group>"; };
+		6AE6FFAADD424C6FBF047044 /* UNIBodyRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIBodyRequest.m; path = "ionic-plugin-deploy/UNIBodyRequest.m"; sourceTree = "<group>"; };
+		6D202989EB9D47E5A6036972 /* ioapi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ioapi.h; path = "ionic-plugin-deploy/ioapi.h"; sourceTree = "<group>"; };
+		7111F96117604CBBAB80E5B8 /* MMWormholeSessionFileTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeSessionFileTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeSessionFileTransiting.h"; sourceTree = "<group>"; };
+		726DB501BFBD4F8E8FF4CE0D /* MMWormholeCoordinatedFileTransiting.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeCoordinatedFileTransiting.m; path = "cordova-plugin-apple-watch/MMWormholeCoordinatedFileTransiting.m"; sourceTree = "<group>"; };
+		72A52C9413634C8093A1AD8E /* zutil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zutil.h; path = "ionic-plugin-deploy/zutil.h"; sourceTree = "<group>"; };
+		75C5D9E74D874C5A8B38F2D3 /* UNIHTTPRequestWithBody.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPRequestWithBody.m; path = "ionic-plugin-deploy/UNIHTTPRequestWithBody.m"; sourceTree = "<group>"; };
+		78354310391B43D3AC03030F /* Base64.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Base64.m; path = "ionic-plugin-deploy/Base64.m"; sourceTree = "<group>"; };
+		7C028614D40A4910932B8D0D /* Unirest-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = "Unirest-Prefix.pch"; path = "ionic-plugin-deploy/Unirest-Prefix.pch"; sourceTree = "<group>"; };
+		7E7966D41810823500FA85AD /* icon-40.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-40.png"; sourceTree = "<group>"; };
+		7E7966D51810823500FA85AD /* icon-40@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-40@2x.png"; sourceTree = "<group>"; };
+		7E7966D61810823500FA85AD /* icon-50.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-50.png"; sourceTree = "<group>"; };
+		7E7966D71810823500FA85AD /* icon-50@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-50@2x.png"; sourceTree = "<group>"; };
+		7E7966D81810823500FA85AD /* icon-60.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-60.png"; sourceTree = "<group>"; };
+		7E7966D91810823500FA85AD /* icon-60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-60@2x.png"; sourceTree = "<group>"; };
+		7E7966DA1810823500FA85AD /* icon-76.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-76.png"; sourceTree = "<group>"; };
+		7E7966DB1810823500FA85AD /* icon-76@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-76@2x.png"; sourceTree = "<group>"; };
+		7E7966DC1810823500FA85AD /* icon-small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-small.png"; sourceTree = "<group>"; };
+		7E7966DD1810823500FA85AD /* icon-small@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-small@2x.png"; sourceTree = "<group>"; };
+		7EF456A8C30F4C938CC910F1 /* MMWormholeSessionContextTransiting.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeSessionContextTransiting.m; path = "cordova-plugin-apple-watch/MMWormholeSessionContextTransiting.m"; sourceTree = "<group>"; };
+		811D541A398C402D8E195E56 /* deflate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = deflate.h; path = "ionic-plugin-deploy/deflate.h"; sourceTree = "<group>"; };
+		866D82F846C249F6B9C95D75 /* infback.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = infback.c; path = "ionic-plugin-deploy/infback.c"; sourceTree = "<group>"; };
+		867ED27ADE6A42F5A6AC6BD9 /* UNIHTTPJsonResponse.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPJsonResponse.m; path = "ionic-plugin-deploy/UNIHTTPJsonResponse.m"; sourceTree = "<group>"; };
+		86C60AE01A5A4A67BAA36921 /* UNIHTTPResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPResponse.h; path = "ionic-plugin-deploy/UNIHTTPResponse.h"; sourceTree = "<group>"; };
+		876FBBF0B670493AAE37CC40 /* zconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zconf.h; path = "ionic-plugin-deploy/zconf.h"; sourceTree = "<group>"; };
+		8C5D9A25E53B4277A982309B /* trees.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = trees.h; path = "ionic-plugin-deploy/trees.h"; sourceTree = "<group>"; };
+		8C977FE16C5145D28BE992FB /* CDVLocation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVLocation.h; path = "cordova-plugin-geolocation/CDVLocation.h"; sourceTree = "<group>"; };
+		8D1107310486CEB800E47090 /* TodayWeather-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "TodayWeather-Info.plist"; path = "../TodayWeather-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
+		8D3F0C64C72449C0A365E429 /* CDVViewController+SplashScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "CDVViewController+SplashScreen.h"; path = "cordova-plugin-splashscreen/CDVViewController+SplashScreen.h"; sourceTree = "<group>"; };
+		919AF6768D0047FD87F6A06F /* SSZipArchive.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SSZipArchive.m; path = "ionic-plugin-deploy/SSZipArchive.m"; sourceTree = "<group>"; };
+		91EF5BC70C72469887B6AA77 /* CDVDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVDevice.m; path = "cordova-plugin-device/CDVDevice.m"; sourceTree = "<group>"; };
+		987ED3789D7A4F87BEE03E99 /* SSZipArchive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SSZipArchive.h; path = "ionic-plugin-deploy/SSZipArchive.h"; sourceTree = "<group>"; };
+		9B6BA601D05F487D87F5A114 /* gzwrite.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = gzwrite.c; path = "ionic-plugin-deploy/gzwrite.c"; sourceTree = "<group>"; };
+		9CA433A6F21E4F2D92987D81 /* UNIHTTPStringResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPStringResponse.h; path = "ionic-plugin-deploy/UNIHTTPStringResponse.h"; sourceTree = "<group>"; };
+		9CD5A10E4B4C40A29308BD99 /* Foundation.framework */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		A005FAE3D5A542118E526C3E /* UNIUrlConnection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIUrlConnection.m; path = "ionic-plugin-deploy/UNIUrlConnection.m"; sourceTree = "<group>"; };
+		A042444EF9904CBC9E7BAE0C /* zip.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zip.h; path = "ionic-plugin-deploy/zip.h"; sourceTree = "<group>"; };
+		A121A79AE50C4F4D801E6242 /* IonicConstant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = IonicConstant.m; path = "ionic-plugin-deploy/IonicConstant.m"; sourceTree = "<group>"; };
+		A2B2C08A1729448FBA246476 /* IonicDeploy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IonicDeploy.h; path = "ionic-plugin-deploy/IonicDeploy.h"; sourceTree = "<group>"; };
+		A45C2AEED54C460C8121E742 /* CDVLogger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVLogger.m; path = "cordova-plugin-console/CDVLogger.m"; sourceTree = "<group>"; };
+		A4C3650C83294FFE8AD00B4E /* MMWormholeSessionMessageTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeSessionMessageTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeSessionMessageTransiting.h"; sourceTree = "<group>"; };
+		A90A82654B264FAAA88895B8 /* UNIHTTPResponse.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPResponse.m; path = "ionic-plugin-deploy/UNIHTTPResponse.m"; sourceTree = "<group>"; };
+		B064637F5BF34CAEB0108716 /* zutil.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = zutil.c; path = "ionic-plugin-deploy/zutil.c"; sourceTree = "<group>"; };
+		B779A5D3C8E249CCBE4139F6 /* AppleWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppleWatch.h; path = "cordova-plugin-apple-watch/AppleWatch.h"; sourceTree = "<group>"; };
+		BA6E1E1A39BE485DBEFEE713 /* UNIHTTPRequestWithBody.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPRequestWithBody.h; path = "ionic-plugin-deploy/UNIHTTPRequestWithBody.h"; sourceTree = "<group>"; };
+		BA78B65BFA1F44BFAD919943 /* unzip.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = unzip.h; path = "ionic-plugin-deploy/unzip.h"; sourceTree = "<group>"; };
+		BDAFF066A75740968674EF6F /* CDVInAppBrowser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVInAppBrowser.m; path = "cordova-plugin-inappbrowser/CDVInAppBrowser.m"; sourceTree = "<group>"; };
+		BF5DFBA238C1496DB0B19A66 /* inffast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inffast.h; path = "ionic-plugin-deploy/inffast.h"; sourceTree = "<group>"; };
+		C57D016170F841AA857F8133 /* UIWebViewExtension.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UIWebViewExtension.h; path = com.ionic.keyboard/UIWebViewExtension.h; sourceTree = "<group>"; };
+		C94C4DEB35ED4D10AFD8FA30 /* CDVStatusBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVStatusBar.m; path = "cordova-plugin-statusbar/CDVStatusBar.m"; sourceTree = "<group>"; };
+		C9D89426F4064DDE8129B2A9 /* UNIJsonNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIJsonNode.m; path = "ionic-plugin-deploy/UNIJsonNode.m"; sourceTree = "<group>"; };
+		CF376AA3C7EE4D7480319EA7 /* inflate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inflate.h; path = "ionic-plugin-deploy/inflate.h"; sourceTree = "<group>"; };
+		D13A3EFC4AF048168D13636B /* MMWormholeSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeSession.m; path = "cordova-plugin-apple-watch/MMWormholeSession.m"; sourceTree = "<group>"; };
+		D2416E6B5B944B9E8061FFEE /* gzguts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzguts.h; path = "ionic-plugin-deploy/gzguts.h"; sourceTree = "<group>"; };
+		D4A0D8751607E02300AEF8BB /* Default-568h@2x~iphone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x~iphone.png"; sourceTree = "<group>"; };
+		D556540C20114BA6BEB70E5D /* MMWormholeFileTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeFileTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeFileTransiting.h"; sourceTree = "<group>"; };
+		D646677D12F64708907FAE6E /* crc32.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = crc32.h; path = "ionic-plugin-deploy/crc32.h"; sourceTree = "<group>"; };
+		D835E185CFBE4A72A185EB16 /* IonicDeploy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = IonicDeploy.m; path = "ionic-plugin-deploy/IonicDeploy.m"; sourceTree = "<group>"; };
+		D9F9EB8120154EAF9C45C733 /* CDVLocation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVLocation.m; path = "cordova-plugin-geolocation/CDVLocation.m"; sourceTree = "<group>"; };
+		DA0423EC42DB4FEB8DCF3153 /* UNIHTTPRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPRequest.h; path = "ionic-plugin-deploy/UNIHTTPRequest.h"; sourceTree = "<group>"; };
+		E202119595664F2F95AFA293 /* UNIUrlConnection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIUrlConnection.h; path = "ionic-plugin-deploy/UNIUrlConnection.h"; sourceTree = "<group>"; };
+		E26236BB08D44674B2A037FD /* UNIHTTPBinaryResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIHTTPBinaryResponse.h; path = "ionic-plugin-deploy/UNIHTTPBinaryResponse.h"; sourceTree = "<group>"; };
+		E2FE8E1C1E5B4B9B87ABE080 /* inffixed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inffixed.h; path = "ionic-plugin-deploy/inffixed.h"; sourceTree = "<group>"; };
+		E5454794B8E1417C8E2D3C0A /* UNIHTTPStringResponse.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPStringResponse.m; path = "ionic-plugin-deploy/UNIHTTPStringResponse.m"; sourceTree = "<group>"; };
+		E5EE7017A7E949E293F083EB /* crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = crc32.c; path = "ionic-plugin-deploy/crc32.c"; sourceTree = "<group>"; };
+		E6372F11992848D98777D1F7 /* UNIBaseRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIBaseRequest.m; path = "ionic-plugin-deploy/UNIBaseRequest.m"; sourceTree = "<group>"; };
+		E91E88049B0646EFAE027214 /* CDVSplashScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CDVSplashScreen.m; path = "cordova-plugin-splashscreen/CDVSplashScreen.m"; sourceTree = "<group>"; };
+		EB87FDF21871DA7A0020F90C /* merges */ = {isa = PBXFileReference; lastKnownFileType = folder; name = merges; path = ../../merges; sourceTree = "<group>"; };
+		EB87FDF31871DA8E0020F90C /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; name = www; path = ../../www; sourceTree = "<group>"; };
+		EB87FDF41871DAF40020F90C /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../../config.xml; sourceTree = "<group>"; };
+		EB99A7063E654B018F38678F /* MMWormholeSessionFileTransiting.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MMWormholeSessionFileTransiting.m; path = "cordova-plugin-apple-watch/MMWormholeSessionFileTransiting.m"; sourceTree = "<group>"; };
+		F0329E9BF70A417D8F868F4C /* AppleWatch.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppleWatch.m; path = "cordova-plugin-apple-watch/AppleWatch.m"; sourceTree = "<group>"; };
+		F1DFC64863274A7FA47BFDE0 /* adler32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = unknown; name = adler32.c; path = "ionic-plugin-deploy/adler32.c"; sourceTree = "<group>"; };
+		F27612A679E54278A98E1961 /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zlib.h; path = "ionic-plugin-deploy/zlib.h"; sourceTree = "<group>"; };
+		F3E7210282E5452BA4BAEF47 /* UNISimpleRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNISimpleRequest.m; path = "ionic-plugin-deploy/UNISimpleRequest.m"; sourceTree = "<group>"; };
+		F5E590BA288C48AAB6B172B5 /* DownloadManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DownloadManager.m; path = "ionic-plugin-deploy/DownloadManager.m"; sourceTree = "<group>"; };
+		F7EF873628D2473D9353D074 /* UNIJsonNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIJsonNode.h; path = "ionic-plugin-deploy/UNIJsonNode.h"; sourceTree = "<group>"; };
+		F840E1F0165FE0F500CFE078 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = TodayWeather/config.xml; sourceTree = "<group>"; };
+		FD37CCC6BB834131BA25B3B7 /* ARCHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARCHelper.h; path = "ionic-plugin-deploy/ARCHelper.h"; sourceTree = "<group>"; };
+		FD672BDA685A4178995CD105 /* CDVDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDVDevice.h; path = "cordova-plugin-device/CDVDevice.h"; sourceTree = "<group>"; };
+		FDE8A7F6FC19489C9FB454B5 /* UNIRest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIRest.h; path = "ionic-plugin-deploy/UNIRest.h"; sourceTree = "<group>"; };
+		FE439A9BE6444A38934F85B0 /* MMWormholeTransiting.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MMWormholeTransiting.h; path = "cordova-plugin-apple-watch/MMWormholeTransiting.h"; sourceTree = "<group>"; };
+		FE56D175EF1340398FECD30C /* UNIBodyRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UNIBodyRequest.h; path = "ionic-plugin-deploy/UNIBodyRequest.h"; sourceTree = "<group>"; };
+		FFD9AB7EFAA34CEBB42ADCBF /* UNIHTTPBinaryResponse.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UNIHTTPBinaryResponse.m; path = "ionic-plugin-deploy/UNIHTTPBinaryResponse.m"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D60588F0D05DD3D006BFB54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5B1594DD16A7569C00FEF299 /* AssetsLibrary.framework in Frameworks */,
+				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
+				288765FD0DF74451002DB57D /* CoreGraphics.framework in Frameworks */,
+				305D5FD1115AB8F900A74A75 /* MobileCoreServices.framework in Frameworks */,
+				E332628044454DF0B52FCEBC /* CoreLocation.framework in Frameworks */,
+				F07ECB7F047B46AAAFDA11AA /* Foundation.framework in Frameworks */,
+				EAF2F183E2854481B101D0FF /* WatchConnectivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2EA82C331BF183FB00173F56 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		080E96DDFE201D6D7F000001 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				302D95EE14D2391D003F00A1 /* MainViewController.h */,
+				302D95EF14D2391D003F00A1 /* MainViewController.m */,
+				302D95F014D2391D003F00A1 /* MainViewController.xib */,
+				1D3623240D0F684500981E51 /* AppDelegate.h */,
+				1D3623250D0F684500981E51 /* AppDelegate.m */,
+			);
+			name = Classes;
+			path = TodayWeather/Classes;
+			sourceTree = SOURCE_ROOT;
+		};
+		19C28FACFE9D520D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1D6058910D05DD3D006BFB54 /* TodayWeather.app */,
+				2EA82C361BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex */,
+				2EA82C401BF183FB00173F56 /* TodayWeather WatchKit 1 App.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
+			isa = PBXGroup;
+			children = (
+				2EA82C551BF1840900173F56 /* TodayWeather.entitlements */,
+				EB87FDF41871DAF40020F90C /* config.xml */,
+				EB87FDF31871DA8E0020F90C /* www */,
+				EB87FDF21871DA7A0020F90C /* merges */,
+				EB87FDF11871DA420020F90C /* Staging */,
+				301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */,
+				080E96DDFE201D6D7F000001 /* Classes */,
+				307C750510C5A3420062BCA9 /* Plugins */,
+				29B97315FDCFA39411CA2CEA /* Other Sources */,
+				29B97317FDCFA39411CA2CEA /* Resources */,
+				2EA82C371BF183FB00173F56 /* TodayWeather WatchKit 1 Extension */,
+				2EA82C441BF183FB00173F56 /* TodayWeather WatchKit 1 App */,
+				29B97323FDCFA39411CA2CEA /* Frameworks */,
+				19C28FACFE9D520D11CA2CBB /* Products */,
+			);
+			name = CustomTemplate;
+			sourceTree = "<group>";
+		};
+		29B97315FDCFA39411CA2CEA /* Other Sources */ = {
+			isa = PBXGroup;
+			children = (
+				32CA4F630368D1EE00C91783 /* TodayWeather-Prefix.pch */,
+				29B97316FDCFA39411CA2CEA /* main.m */,
+			);
+			name = "Other Sources";
+			path = TodayWeather;
+			sourceTree = "<group>";
+		};
+		29B97317FDCFA39411CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				308D052D1370CCF300D202BF /* icons */,
+				308D05311370CCF300D202BF /* splash */,
+				8D1107310486CEB800E47090 /* TodayWeather-Info.plist */,
+			);
+			name = Resources;
+			path = TodayWeather/Resources;
+			sourceTree = "<group>";
+		};
+		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5B1594DC16A7569C00FEF299 /* AssetsLibrary.framework */,
+				288765FC0DF74451002DB57D /* CoreGraphics.framework */,
+				305D5FD0115AB8F900A74A75 /* MobileCoreServices.framework */,
+				0594CD1D4B1D49F4A59231D0 /* CoreLocation.framework */,
+				9CD5A10E4B4C40A29308BD99 /* Foundation.framework */,
+				3F54849EB15641A48FCC96BB /* WatchConnectivity.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		2EA82C371BF183FB00173F56 /* TodayWeather WatchKit 1 Extension */ = {
+			isa = PBXGroup;
+			children = (
+				2EA82C561BF1842700173F56 /* TodayWeather WatchKit 1 Extension.entitlements */,
+				2EA82C381BF183FB00173F56 /* InterfaceController.h */,
+				2EA82C391BF183FB00173F56 /* InterfaceController.m */,
+				2EA82C3B1BF183FB00173F56 /* Assets.xcassets */,
+				2EA82C3D1BF183FB00173F56 /* Info.plist */,
+			);
+			path = "TodayWeather WatchKit 1 Extension";
+			sourceTree = "<group>";
+		};
+		2EA82C441BF183FB00173F56 /* TodayWeather WatchKit 1 App */ = {
+			isa = PBXGroup;
+			children = (
+				2EA82C5A1BF1873300173F56 /* images */,
+				2EA82C571BF1843B00173F56 /* TodayWeather WatchKit 1 App.entitlements */,
+				2EA82C451BF183FB00173F56 /* Interface.storyboard */,
+				2EA82C481BF183FB00173F56 /* Assets.xcassets */,
+				2EA82C4A1BF183FB00173F56 /* Info.plist */,
+			);
+			path = "TodayWeather WatchKit 1 App";
+			sourceTree = "<group>";
+		};
+		2EA82C5A1BF1873300173F56 /* images */ = {
+			isa = PBXGroup;
+			children = (
+				2EA82C5B1BF1879800173F56 /* Cloud.png */,
+				2EA82C5C1BF1879800173F56 /* Lightning.png */,
+				2EA82C5D1BF1879800173F56 /* Moon.png */,
+				2EA82C5E1BF1879800173F56 /* MoonWithCloud.png */,
+				2EA82C5F1BF1879800173F56 /* Rain.png */,
+				2EA82C601BF1879800173F56 /* RainWithLightning.png */,
+				2EA82C611BF1879800173F56 /* RainWithSnow.png */,
+				2EA82C621BF1879800173F56 /* reddot.png */,
+				2EA82C631BF1879800173F56 /* Snow.png */,
+				2EA82C641BF1879800173F56 /* Sun.png */,
+				2EA82C651BF1879800173F56 /* SunRising.png */,
+				2EA82C661BF1879800173F56 /* SunSet.png */,
+				2EA82C671BF1879800173F56 /* SunWithCloud.png */,
+				2EA82C681BF1879800173F56 /* Wind.png */,
+				2EA82C691BF1879800173F56 /* WindWithCloud.png */,
+			);
+			name = images;
+			sourceTree = "<group>";
+		};
+		301BF52E109A57CC0062928A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				301BF535109A57CC0062928A /* libCordova.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		307C750510C5A3420062BCA9 /* Plugins */ = {
+			isa = PBXGroup;
+			children = (
+				BDAFF066A75740968674EF6F /* CDVInAppBrowser.m */,
+				3F9F5ABE92C147F6987DD5E9 /* CDVInAppBrowser.h */,
+				91EF5BC70C72469887B6AA77 /* CDVDevice.m */,
+				FD672BDA685A4178995CD105 /* CDVDevice.h */,
+				A45C2AEED54C460C8121E742 /* CDVLogger.m */,
+				32CE9EDAE05A4F7F81289E33 /* CDVLogger.h */,
+				E91E88049B0646EFAE027214 /* CDVSplashScreen.m */,
+				1C20C6E4A91D41E08A5151F0 /* CDVViewController+SplashScreen.m */,
+				6AE2B618ABE143A881AA829E /* CDVSplashScreen.h */,
+				8D3F0C64C72449C0A365E429 /* CDVViewController+SplashScreen.h */,
+				4FDF9CA9DC474584B3F44D4B /* IonicKeyboard.m */,
+				11812E41AB214F118EE5B92B /* UIWebViewExtension.m */,
+				3404C3B7EA3F416A9787887C /* IonicKeyboard.h */,
+				C57D016170F841AA857F8133 /* UIWebViewExtension.h */,
+				D9F9EB8120154EAF9C45C733 /* CDVLocation.m */,
+				8C977FE16C5145D28BE992FB /* CDVLocation.h */,
+				F0329E9BF70A417D8F868F4C /* AppleWatch.m */,
+				190DE634E83E4A73A49D1196 /* MMWormhole.m */,
+				726DB501BFBD4F8E8FF4CE0D /* MMWormholeCoordinatedFileTransiting.m */,
+				06C5796FA0034E34897CDBBF /* MMWormholeFileTransiting.m */,
+				60E914EB46AF4365AB8DD4AF /* MMWormholeSession.h */,
+				D13A3EFC4AF048168D13636B /* MMWormholeSession.m */,
+				68F7B12E53ED4C97B8AF5E42 /* MMWormholeSessionContextTransiting.h */,
+				7EF456A8C30F4C938CC910F1 /* MMWormholeSessionContextTransiting.m */,
+				7111F96117604CBBAB80E5B8 /* MMWormholeSessionFileTransiting.h */,
+				EB99A7063E654B018F38678F /* MMWormholeSessionFileTransiting.m */,
+				A4C3650C83294FFE8AD00B4E /* MMWormholeSessionMessageTransiting.h */,
+				44DC17F035C94A7FBC06E293 /* MMWormholeSessionMessageTransiting.m */,
+				FE439A9BE6444A38934F85B0 /* MMWormholeTransiting.h */,
+				B779A5D3C8E249CCBE4139F6 /* AppleWatch.h */,
+				22AA4C108A7C4601A57046BA /* MMWormhole.h */,
+				28CE0B32E27A4327913A6609 /* MMWormholeCoordinatedFileTransiting.h */,
+				D556540C20114BA6BEB70E5D /* MMWormholeFileTransiting.h */,
+				C94C4DEB35ED4D10AFD8FA30 /* CDVStatusBar.m */,
+				3E67848F70ED4B29BFD6B248 /* CDVStatusBar.h */,
+				A121A79AE50C4F4D801E6242 /* IonicConstant.m */,
+				D835E185CFBE4A72A185EB16 /* IonicDeploy.m */,
+				3E69D75C9E334C9D96024470 /* Download.m */,
+				F5E590BA288C48AAB6B172B5 /* DownloadManager.m */,
+				919AF6768D0047FD87F6A06F /* SSZipArchive.m */,
+				16C5A105CD744208A266962B /* ioapi.c */,
+				132AAAEA28DA46F9AE3F0938 /* unzip.c */,
+				2EA41A34814242F6BD4B96FC /* zip.c */,
+				F1DFC64863274A7FA47BFDE0 /* adler32.c */,
+				01BDECB1E6DC4338AEC5A0F8 /* compress.c */,
+				E5EE7017A7E949E293F083EB /* crc32.c */,
+				54FAD000BD0F4B0C8E7373D4 /* deflate.c */,
+				5BD8F958632A4F3F865D993C /* gzclose.c */,
+				5CD7FF34A3B840338CFFEB3B /* gzlib.c */,
+				49678C1EC4254B4FAC6D9EB6 /* gzread.c */,
+				9B6BA601D05F487D87F5A114 /* gzwrite.c */,
+				866D82F846C249F6B9C95D75 /* infback.c */,
+				250E1794172844D69A6A9BEE /* inffast.c */,
+				50186475C0BA4946AB92996F /* inflate.c */,
+				5A947CFC1D174E2E86195993 /* inftrees.c */,
+				1EDE4BE12C6247D39A8D26AA /* trees.c */,
+				612B6B04382F4548B4B8AB50 /* uncompr.c */,
+				B064637F5BF34CAEB0108716 /* zutil.c */,
+				78354310391B43D3AC03030F /* Base64.m */,
+				5C3E6B3A63324FC2B994370B /* UNIHTTPClientHelper.m */,
+				148F67A015FC49AAA3FB5D67 /* UNIHTTPRequest.m */,
+				75C5D9E74D874C5A8B38F2D3 /* UNIHTTPRequestWithBody.m */,
+				0FD884CCAAA74E438CBA0DC9 /* UNIRest.m */,
+				A005FAE3D5A542118E526C3E /* UNIUrlConnection.m */,
+				E6372F11992848D98777D1F7 /* UNIBaseRequest.m */,
+				6AE6FFAADD424C6FBF047044 /* UNIBodyRequest.m */,
+				F3E7210282E5452BA4BAEF47 /* UNISimpleRequest.m */,
+				FFD9AB7EFAA34CEBB42ADCBF /* UNIHTTPBinaryResponse.m */,
+				867ED27ADE6A42F5A6AC6BD9 /* UNIHTTPJsonResponse.m */,
+				A90A82654B264FAAA88895B8 /* UNIHTTPResponse.m */,
+				E5454794B8E1417C8E2D3C0A /* UNIHTTPStringResponse.m */,
+				C9D89426F4064DDE8129B2A9 /* UNIJsonNode.m */,
+				114056A23F1C42B999F4AB92 /* IonicConstant.h */,
+				A2B2C08A1729448FBA246476 /* IonicDeploy.h */,
+				198E4C79C35E4C4292F2AA47 /* Download.h */,
+				209F2DE5C330484498F03063 /* DownloadManager.h */,
+				987ED3789D7A4F87BEE03E99 /* SSZipArchive.h */,
+				FD37CCC6BB834131BA25B3B7 /* ARCHelper.h */,
+				5F3C594FB795495385333E22 /* crypt.h */,
+				6D202989EB9D47E5A6036972 /* ioapi.h */,
+				BA78B65BFA1F44BFAD919943 /* unzip.h */,
+				A042444EF9904CBC9E7BAE0C /* zip.h */,
+				D646677D12F64708907FAE6E /* crc32.h */,
+				811D541A398C402D8E195E56 /* deflate.h */,
+				D2416E6B5B944B9E8061FFEE /* gzguts.h */,
+				BF5DFBA238C1496DB0B19A66 /* inffast.h */,
+				E2FE8E1C1E5B4B9B87ABE080 /* inffixed.h */,
+				CF376AA3C7EE4D7480319EA7 /* inflate.h */,
+				61CD60407AF648DD88D779FD /* inftrees.h */,
+				8C5D9A25E53B4277A982309B /* trees.h */,
+				876FBBF0B670493AAE37CC40 /* zconf.h */,
+				F27612A679E54278A98E1961 /* zlib.h */,
+				72A52C9413634C8093A1AD8E /* zutil.h */,
+				2FC6FC76332F470EB67D3B41 /* Base64.h */,
+				63275E4F14CE41E782F60CD2 /* UNIHTTPClientHelper.h */,
+				DA0423EC42DB4FEB8DCF3153 /* UNIHTTPRequest.h */,
+				BA6E1E1A39BE485DBEFEE713 /* UNIHTTPRequestWithBody.h */,
+				7C028614D40A4910932B8D0D /* Unirest-Prefix.pch */,
+				FDE8A7F6FC19489C9FB454B5 /* UNIRest.h */,
+				E202119595664F2F95AFA293 /* UNIUrlConnection.h */,
+				07373D01BE6C4D2193C22AD3 /* UNIBaseRequest.h */,
+				FE56D175EF1340398FECD30C /* UNIBodyRequest.h */,
+				0BE1ABC84B9A40C9B545E8FD /* UNISimpleRequest.h */,
+				E26236BB08D44674B2A037FD /* UNIHTTPBinaryResponse.h */,
+				64573B7B1F0F41CF8F3B57AB /* UNIHTTPJsonResponse.h */,
+				86C60AE01A5A4A67BAA36921 /* UNIHTTPResponse.h */,
+				9CA433A6F21E4F2D92987D81 /* UNIHTTPStringResponse.h */,
+				F7EF873628D2473D9353D074 /* UNIJsonNode.h */,
+			);
+			name = Plugins;
+			path = TodayWeather/Plugins;
+			sourceTree = SOURCE_ROOT;
+		};
+		308D052D1370CCF300D202BF /* icons */ = {
+			isa = PBXGroup;
+			children = (
+				30C1856519D5FC0A00212699 /* icon-60@3x.png */,
+				7E7966D41810823500FA85AD /* icon-40.png */,
+				7E7966D51810823500FA85AD /* icon-40@2x.png */,
+				7E7966D61810823500FA85AD /* icon-50.png */,
+				7E7966D71810823500FA85AD /* icon-50@2x.png */,
+				7E7966D81810823500FA85AD /* icon-60.png */,
+				7E7966D91810823500FA85AD /* icon-60@2x.png */,
+				7E7966DA1810823500FA85AD /* icon-76.png */,
+				7E7966DB1810823500FA85AD /* icon-76@2x.png */,
+				7E7966DC1810823500FA85AD /* icon-small.png */,
+				7E7966DD1810823500FA85AD /* icon-small@2x.png */,
+				30FC414816E50CA1004E6F35 /* icon-72@2x.png */,
+				308D052E1370CCF300D202BF /* icon-72.png */,
+				308D052F1370CCF300D202BF /* icon.png */,
+				308D05301370CCF300D202BF /* icon@2x.png */,
+			);
+			path = icons;
+			sourceTree = "<group>";
+		};
+		308D05311370CCF300D202BF /* splash */ = {
+			isa = PBXGroup;
+			children = (
+				30B4F2FD19D5E07200D9F7D8 /* Default-667h.png */,
+				30B4F2FE19D5E07200D9F7D8 /* Default-736h.png */,
+				30B4F2FF19D5E07200D9F7D8 /* Default-Landscape-736h.png */,
+				D4A0D8751607E02300AEF8BB /* Default-568h@2x~iphone.png */,
+				3088BBB7154F3926009F9C59 /* Default-Landscape@2x~ipad.png */,
+				3088BBB8154F3926009F9C59 /* Default-Landscape~ipad.png */,
+				3088BBB9154F3926009F9C59 /* Default-Portrait@2x~ipad.png */,
+				3088BBBA154F3926009F9C59 /* Default-Portrait~ipad.png */,
+				3088BBBB154F3926009F9C59 /* Default@2x~iphone.png */,
+				3088BBBC154F3926009F9C59 /* Default~iphone.png */,
+			);
+			path = splash;
+			sourceTree = "<group>";
+		};
+		EB87FDF11871DA420020F90C /* Staging */ = {
+			isa = PBXGroup;
+			children = (
+				F840E1F0165FE0F500CFE078 /* config.xml */,
+				301BF56E109A69640062928A /* www */,
+			);
+			name = Staging;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D6058900D05DD3D006BFB54 /* TodayWeather */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "TodayWeather" */;
+			buildPhases = (
+				304B58A110DAC018002A0835 /* Copy www directory */,
+				1D60588D0D05DD3D006BFB54 /* Resources */,
+				1D60588E0D05DD3D006BFB54 /* Sources */,
+				1D60588F0D05DD3D006BFB54 /* Frameworks */,
+				2EA82C541BF183FB00173F56 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				301BF551109A68C00062928A /* PBXTargetDependency */,
+				2EA82C4C1BF183FB00173F56 /* PBXTargetDependency */,
+			);
+			name = TodayWeather;
+			productName = TodayWeather;
+			productReference = 1D6058910D05DD3D006BFB54 /* TodayWeather.app */;
+			productType = "com.apple.product-type.application";
+		};
+		2EA82C351BF183FB00173F56 /* TodayWeather WatchKit 1 Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2EA82C531BF183FB00173F56 /* Build configuration list for PBXNativeTarget "TodayWeather WatchKit 1 Extension" */;
+			buildPhases = (
+				2EA82C321BF183FB00173F56 /* Sources */,
+				2EA82C331BF183FB00173F56 /* Frameworks */,
+				2EA82C341BF183FB00173F56 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2EA82C431BF183FB00173F56 /* PBXTargetDependency */,
+			);
+			name = "TodayWeather WatchKit 1 Extension";
+			productName = "TodayWeather WatchKit 1 Extension";
+			productReference = 2EA82C361BF183FB00173F56 /* TodayWeather WatchKit 1 Extension.appex */;
+			productType = "com.apple.product-type.watchkit-extension";
+		};
+		2EA82C3F1BF183FB00173F56 /* TodayWeather WatchKit 1 App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2EA82C521BF183FB00173F56 /* Build configuration list for PBXNativeTarget "TodayWeather WatchKit 1 App" */;
+			buildPhases = (
+				2EA82C3E1BF183FB00173F56 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "TodayWeather WatchKit 1 App";
+			productName = "TodayWeather WatchKit 1 App";
+			productReference = 2EA82C401BF183FB00173F56 /* TodayWeather WatchKit 1 App.app */;
+			productType = "com.apple.product-type.application.watchapp";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29B97313FDCFA39411CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 510;
+				TargetAttributes = {
+					1D6058900D05DD3D006BFB54 = {
+						DevelopmentTeam = T9X5DG29UJ;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+					2EA82C351BF183FB00173F56 = {
+						CreatedOnToolsVersion = 7.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+					2EA82C3F1BF183FB00173F56 = {
+						CreatedOnToolsVersion = 7.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "TodayWeather" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+				en,
+				es,
+				de,
+				se,
+				Base,
+			);
+			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 301BF52E109A57CC0062928A /* Products */;
+					ProjectRef = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				1D6058900D05DD3D006BFB54 /* TodayWeather */,
+				2EA82C351BF183FB00173F56 /* TodayWeather WatchKit 1 Extension */,
+				2EA82C3F1BF183FB00173F56 /* TodayWeather WatchKit 1 App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		301BF535109A57CC0062928A /* libCordova.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libCordova.a;
+			remoteRef = 301BF534109A57CC0062928A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1D60588D0D05DD3D006BFB54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7E7966E41810823500FA85AD /* icon-76.png in Resources */,
+				7E7966DF1810823500FA85AD /* icon-40@2x.png in Resources */,
+				308D05371370CCF300D202BF /* icon-72.png in Resources */,
+				30B4F30119D5E07200D9F7D8 /* Default-736h.png in Resources */,
+				308D05381370CCF300D202BF /* icon.png in Resources */,
+				308D05391370CCF300D202BF /* icon@2x.png in Resources */,
+				302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */,
+				7E7966E01810823500FA85AD /* icon-50.png in Resources */,
+				7E7966E31810823500FA85AD /* icon-60@2x.png in Resources */,
+				7E7966E61810823500FA85AD /* icon-small.png in Resources */,
+				3088BBBD154F3926009F9C59 /* Default-Landscape@2x~ipad.png in Resources */,
+				3088BBBE154F3926009F9C59 /* Default-Landscape~ipad.png in Resources */,
+				3088BBBF154F3926009F9C59 /* Default-Portrait@2x~ipad.png in Resources */,
+				7E7966E71810823500FA85AD /* icon-small@2x.png in Resources */,
+				3088BBC0154F3926009F9C59 /* Default-Portrait~ipad.png in Resources */,
+				30B4F30019D5E07200D9F7D8 /* Default-667h.png in Resources */,
+				7E7966DE1810823500FA85AD /* icon-40.png in Resources */,
+				3088BBC1154F3926009F9C59 /* Default@2x~iphone.png in Resources */,
+				7E7966E21810823500FA85AD /* icon-60.png in Resources */,
+				3088BBC2154F3926009F9C59 /* Default~iphone.png in Resources */,
+				D4A0D8761607E02300AEF8BB /* Default-568h@2x~iphone.png in Resources */,
+				30B4F30219D5E07200D9F7D8 /* Default-Landscape-736h.png in Resources */,
+				30C1856619D5FC0A00212699 /* icon-60@3x.png in Resources */,
+				7E7966E11810823500FA85AD /* icon-50@2x.png in Resources */,
+				7E7966E51810823500FA85AD /* icon-76@2x.png in Resources */,
+				30FC414916E50CA1004E6F35 /* icon-72@2x.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2EA82C341BF183FB00173F56 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2EA82C411BF183FB00173F56 /* TodayWeather WatchKit 1 App.app in Resources */,
+				2EA82C3C1BF183FB00173F56 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2EA82C3E1BF183FB00173F56 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2EA82C731BF1879800173F56 /* Sun.png in Resources */,
+				2EA82C6B1BF1879800173F56 /* Lightning.png in Resources */,
+				2EA82C491BF183FB00173F56 /* Assets.xcassets in Resources */,
+				2EA82C781BF1879800173F56 /* WindWithCloud.png in Resources */,
+				2EA82C751BF1879800173F56 /* SunSet.png in Resources */,
+				2EA82C6F1BF1879800173F56 /* RainWithLightning.png in Resources */,
+				2EA82C6D1BF1879800173F56 /* MoonWithCloud.png in Resources */,
+				2EA82C761BF1879800173F56 /* SunWithCloud.png in Resources */,
+				2EA82C6C1BF1879800173F56 /* Moon.png in Resources */,
+				2EA82C711BF1879800173F56 /* reddot.png in Resources */,
+				2EA82C6A1BF1879800173F56 /* Cloud.png in Resources */,
+				2EA82C471BF183FB00173F56 /* Interface.storyboard in Resources */,
+				2EA82C721BF1879800173F56 /* Snow.png in Resources */,
+				2EA82C741BF1879800173F56 /* SunRising.png in Resources */,
+				2EA82C771BF1879800173F56 /* Wind.png in Resources */,
+				2EA82C6E1BF1879800173F56 /* Rain.png in Resources */,
+				2EA82C701BF1879800173F56 /* RainWithSnow.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		304B58A110DAC018002A0835 /* Copy www directory */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy www directory";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "NODEJS_PATH=/usr/local/bin; NVM_NODE_PATH=~/.nvm/versions/node/`nvm version 2>/dev/null`/bin; N_NODE_PATH=`find /usr/local/n/versions/node/* -maxdepth 0 -type d 2>/dev/null | tail -1`/bin; XCODE_NODE_PATH=`xcode-select --print-path`/usr/share/xcs/Node/bin; PATH=$NODEJS_PATH:$NVM_NODE_PATH:$N_NODE_PATH:$XCODE_NODE_PATH:$PATH && node cordova/lib/copy-www-build-step.js";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D60588E0D05DD3D006BFB54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
+				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
+				302D95F114D2391D003F00A1 /* MainViewController.m in Sources */,
+				8F9F3C11051046D48E7416DE /* CDVInAppBrowser.m in Sources */,
+				BC22988755E445B29662822A /* CDVDevice.m in Sources */,
+				BA2FEC90E4A24A43865F5251 /* CDVLogger.m in Sources */,
+				D5C80913B72F46C3A9F61C28 /* CDVSplashScreen.m in Sources */,
+				8BE9A3F9B5EA4038BC1E8527 /* CDVViewController+SplashScreen.m in Sources */,
+				2D567416A0BB4A32ACEF0563 /* IonicKeyboard.m in Sources */,
+				DE9FED07DABC4E1D8906C391 /* UIWebViewExtension.m in Sources */,
+				E8136CFF03EE443396AA9C9D /* CDVLocation.m in Sources */,
+				FD8F8E94747C46BDA63FB69A /* AppleWatch.m in Sources */,
+				3E8A0C1441DF42E3B6639D6F /* MMWormhole.m in Sources */,
+				9141F6EA12BB448390E6F381 /* MMWormholeCoordinatedFileTransiting.m in Sources */,
+				5E3AD554EEC4411EBDE03DE0 /* MMWormholeFileTransiting.m in Sources */,
+				9B3A4F76BA204B7ABABFB4F2 /* MMWormholeSession.h in Sources */,
+				0C53010C2E82437AACB919CB /* MMWormholeSession.m in Sources */,
+				92839CD36EEF41329E640D9E /* MMWormholeSessionContextTransiting.h in Sources */,
+				0DF643E8FDEB44189DFBBB1F /* MMWormholeSessionContextTransiting.m in Sources */,
+				6335196A4A324423B50481C4 /* MMWormholeSessionFileTransiting.h in Sources */,
+				E4E16179E3E149B58734590A /* MMWormholeSessionFileTransiting.m in Sources */,
+				FA4E2BF4A343420B986713B1 /* MMWormholeSessionMessageTransiting.h in Sources */,
+				E005EE83C1C24269BD1C8515 /* MMWormholeSessionMessageTransiting.m in Sources */,
+				6A9119223FD248878EB287FD /* MMWormholeTransiting.h in Sources */,
+				79FBA55498DE4742BDFA200C /* CDVStatusBar.m in Sources */,
+				426043510C93448D9A1874A4 /* IonicConstant.m in Sources */,
+				C5C7FE0818534EBC86A15FBC /* IonicDeploy.m in Sources */,
+				2EC7D64B8BF84C7B8A660981 /* Download.m in Sources */,
+				25C39587E0494BEA8B9153D1 /* DownloadManager.m in Sources */,
+				AC654E3C60814698818FF5F3 /* SSZipArchive.m in Sources */,
+				49371531CC18454296E27F14 /* ioapi.c in Sources */,
+				2A91F15922764BE198FA72BA /* unzip.c in Sources */,
+				F499A5E0A8844B9ABD065A43 /* zip.c in Sources */,
+				7A9C4FDFF8734609978860DE /* adler32.c in Sources */,
+				1A1496A0EAC74C42BD783202 /* compress.c in Sources */,
+				0612109B64B945F69A10C142 /* crc32.c in Sources */,
+				70F33945F2CF4C7BA393B93A /* deflate.c in Sources */,
+				A21886271BDC4C439239B13E /* gzclose.c in Sources */,
+				3E35828404B743AAB2F1E88E /* gzlib.c in Sources */,
+				0B89D60CA6234E2384299974 /* gzread.c in Sources */,
+				1FBAEF5D258540BEB5E97A82 /* gzwrite.c in Sources */,
+				34F0DE3ABECF440CBAA1E06A /* infback.c in Sources */,
+				DBDB2D5629BC4813B86913A5 /* inffast.c in Sources */,
+				FD3B5B55AAF44DB8A8179A72 /* inflate.c in Sources */,
+				C9256070B8D64EC88FB59D05 /* inftrees.c in Sources */,
+				3D12E45B3CE44EE39DE0E0DE /* trees.c in Sources */,
+				94F4B37D3C1148BAA3950F0B /* uncompr.c in Sources */,
+				BF3854491EAF4552B25FDED7 /* zutil.c in Sources */,
+				8D51FEE9FC34487EB838E610 /* Base64.m in Sources */,
+				6698A57F8A5E4F8DB6E55487 /* UNIHTTPClientHelper.m in Sources */,
+				45EB302FBAB54DC2B9F4DB2F /* UNIHTTPRequest.m in Sources */,
+				3FDF0BE026CA4D949CC279E4 /* UNIHTTPRequestWithBody.m in Sources */,
+				F3F41D75150841619C32F1AE /* UNIRest.m in Sources */,
+				B278C22F09084570881B0A5E /* UNIUrlConnection.m in Sources */,
+				132A3E5B14A541A887620050 /* UNIBaseRequest.m in Sources */,
+				FBCCB91E660E4C5183FB235D /* UNIBodyRequest.m in Sources */,
+				E15DBC549C2D46E5AB916F70 /* UNISimpleRequest.m in Sources */,
+				BC7B7C71544346F4BA0FC692 /* UNIHTTPBinaryResponse.m in Sources */,
+				25328E74AE0748A18539CBFE /* UNIHTTPJsonResponse.m in Sources */,
+				2AAA1120EA3B43BFAAB91CEC /* UNIHTTPResponse.m in Sources */,
+				26DD9123D2B648BA9E6DE7E8 /* UNIHTTPStringResponse.m in Sources */,
+				052C695E93D8446FAA898638 /* UNIJsonNode.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2EA82C321BF183FB00173F56 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2EA82C3A1BF183FB00173F56 /* InterfaceController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2EA82C431BF183FB00173F56 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2EA82C3F1BF183FB00173F56 /* TodayWeather WatchKit 1 App */;
+			targetProxy = 2EA82C421BF183FB00173F56 /* PBXContainerItemProxy */;
+		};
+		2EA82C4C1BF183FB00173F56 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2EA82C351BF183FB00173F56 /* TodayWeather WatchKit 1 Extension */;
+			targetProxy = 2EA82C4B1BF183FB00173F56 /* PBXContainerItemProxy */;
+		};
+		301BF551109A68C00062928A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CordovaLib;
+			targetProxy = 301BF550109A68C00062928A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		2EA82C451BF183FB00173F56 /* Interface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2EA82C461BF183FB00173F56 /* Base */,
+			);
+			name = Interface.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		1D6058940D05DD3E006BFB54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "TodayWeather/TodayWeather-Prefix.pch";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					CoreFoundation,
+					"-weak_framework",
+					UIKit,
+					"-weak_framework",
+					AVFoundation,
+					"-weak_framework",
+					CoreMedia,
+					"-weak-lSystem",
+					"-ObjC",
+				);
+				PRODUCT_NAME = TodayWeather;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1D6058950D05DD3E006BFB54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
+				COPY_PHASE_STRIP = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "TodayWeather/TodayWeather-Prefix.pch";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					CoreFoundation,
+					"-weak_framework",
+					UIKit,
+					"-weak_framework",
+					AVFoundation,
+					"-weak_framework",
+					CoreMedia,
+					"-weak-lSystem",
+					"-ObjC",
+				);
+				PRODUCT_NAME = TodayWeather;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		2EA82C4E1BF183FB00173F56 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_ENTITLEMENTS = "TodayWeather WatchKit 1 Extension/TodayWeather WatchKit 1 Extension.entitlements";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "TodayWeather WatchKit 1 Extension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		2EA82C4F1BF183FB00173F56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_ENTITLEMENTS = "TodayWeather WatchKit 1 Extension/TodayWeather WatchKit 1 Extension.entitlements";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "TodayWeather WatchKit 1 Extension/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SKIP_INSTALL = YES;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		2EA82C501BF183FB00173F56 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_ENTITLEMENTS = "TodayWeather WatchKit 1 App/TodayWeather WatchKit 1 App.entitlements";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = TodayWeather_WatchKit_1_Extension;
+				INFOPLIST_FILE = "TodayWeather WatchKit 1 App/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				"TARGETED_DEVICE_FAMILY[sdk=iphonesimulator*]" = "1,4";
+			};
+			name = Debug;
+		};
+		2EA82C511BF183FB00173F56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_ENTITLEMENTS = "TodayWeather WatchKit 1 App/TodayWeather WatchKit 1 App.entitlements";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = TodayWeather_WatchKit_1_Extension;
+				INFOPLIST_FILE = "TodayWeather WatchKit 1 App/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				"TARGETED_DEVICE_FAMILY[sdk=iphonesimulator*]" = "1,4";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C01FCF4F08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(TARGET_BUILD_DIR)/usr/local/lib/include\"",
+					"\"$(OBJROOT)/UninstalledProducts/include\"",
+					"\"$(BUILT_PRODUCTS_DIR)\"",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					CoreFoundation,
+					"-weak_framework",
+					UIKit,
+					"-weak_framework",
+					AVFoundation,
+					"-weak_framework",
+					CoreMedia,
+					"-weak-lSystem",
+					"-ObjC",
+				);
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		C01FCF5008A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(TARGET_BUILD_DIR)/usr/local/lib/include\"",
+					"\"$(OBJROOT)/UninstalledProducts/include\"",
+					"\"$(BUILT_PRODUCTS_DIR)\"",
+					"\"$(OBJROOT)/UninstalledProducts/$(PLATFORM_NAME)/include\"",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				OTHER_LDFLAGS = (
+					"-weak_framework",
+					CoreFoundation,
+					"-weak_framework",
+					UIKit,
+					"-weak_framework",
+					AVFoundation,
+					"-weak_framework",
+					CoreMedia,
+					"-weak-lSystem",
+					"-ObjC",
+				);
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "TodayWeather" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D6058940D05DD3E006BFB54 /* Debug */,
+				1D6058950D05DD3E006BFB54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2EA82C521BF183FB00173F56 /* Build configuration list for PBXNativeTarget "TodayWeather WatchKit 1 App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2EA82C501BF183FB00173F56 /* Debug */,
+				2EA82C511BF183FB00173F56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2EA82C531BF183FB00173F56 /* Build configuration list for PBXNativeTarget "TodayWeather WatchKit 1 Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2EA82C4E1BF183FB00173F56 /* Debug */,
+				2EA82C4F1BF183FB00173F56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "TodayWeather" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4F08A954540054247B /* Debug */,
+				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}
