@@ -95,7 +95,7 @@ angular.module('starter.controllers', [])
 
         function setUserDefaults(obj) {
             applewatch.sendUserDefaults(function() {
-                console.log("Succeeded to sendUserDefaults(4)");
+                console.log(obj);
             }, function() {
                 console.log("Failed to sendUserDefault");
             }, obj, "group.net.wizardfactory.todayweather");
@@ -124,30 +124,27 @@ angular.module('starter.controllers', [])
             console.log($scope.dayChart);
 
             // To share weather information for apple watch.
-            setUserDefaults({"Location": $scope.address});
-            setUserDefaults({"Temperature":String(cityData.currentWeather.t1h)});
-            setUserDefaults({"WeatherComment":cityData.currentWeather.summary});
-            setUserDefaults({"WeatherImage":cityData.currentWeather.sky});
+            setUserDefaults({"Location": $scope.address||"하늘시, 구름동"});
+            setUserDefaults({"Temperature":String(cityData.currentWeather.t1h)||"33"});
+            setUserDefaults({"WeatherComment":cityData.currentWeather.summary||"어제과 같음"});
+            setUserDefaults({"WeatherImage":cityData.currentWeather.sky||"Snow"});
+
+            setUserDefaults({"TodayMaxTemp": "99"});
+            setUserDefaults({"TodayMinTemp": "0"});
+            setUserDefaults({"YesterdayMaxTemp": "99"});
+            setUserDefaults({"YesterdayMinTemp": "0"});
+            setUserDefaults({"TomorrowMaxTemp": "99"});
+            setUserDefaults({"TomorrowMinTemp": "0"});
 
             for(var i=0;i<$scope.dayTable.length;i++) {
-                var bFindToday = false;
-                var dailyInfo = $scope.dayTable[i];
-
-                if (bFindToday) {
-                    setUserDefaults({"TomorrowMaxTemp": String(dailyInfo.tmx)});
-                    setUserDefaults({"TomorrowMinTemp": String(dailyInfo.tmn)});
+                if ($scope.dayTable[i].week === "오늘") {
+                    setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i-1].tmx||99)});
+                    setUserDefaults({"TodayMinTemp": String($scope.dayTable[i-1].tmn||0)});
+                    setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx||99)});
+                    setUserDefaults({"YesterdayMinTemp": String($scope.dayTable[i].tmn||0)});
+                    setUserDefaults({"TomorrowMaxTemp": String($scope.dayTable[i+1].tmx||99)});
+                    setUserDefaults({"TomorrowMinTemp": String($scope.dayTable[i+1].tmn||0)});
                     break;
-                }
-
-                if (dailyInfo.week === "오늘") {
-                    setUserDefaults({"TodayMaxTemp": String(dailyInfo.tmx)});
-                    setUserDefaults({"TodayMinTemp": String(dailyInfo.tmn)});
-                    setUserDefaults({"YesterdayMaxTemp": String(yesterDay.tmx)});
-                    setUserDefaults({"YesterdayMinTemp": String(yesterDay.tmn)});
-
-                    bFindToday = true;
-                } else {
-                    var yesterDay = dailyInfo;
                 }
             }
 
