@@ -152,6 +152,9 @@ angular.module('starter.controllers', [])
                 if (addressUpdate === true) {
                     deferred.resolve();
                 }
+                else {
+                    $scope.address = "위치 찾는 중";
+                }
             }, function (err) {
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
@@ -283,6 +286,7 @@ angular.module('starter.controllers', [])
 
         $scope.doRefresh = function() {
             updateWeatherData(true).finally(function (res) {
+                $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                 $scope.$broadcast("scroll.refreshComplete");
             });
         };
@@ -330,7 +334,9 @@ angular.module('starter.controllers', [])
 
             loadWeatherData();
             checkForUpdates().finally(function (res) {
-                updateWeatherData(false);
+                updateWeatherData(false).finally(function (res) {
+                    $scope.address = WeatherUtil.getShortenAddress(cityData.address);
+                });
             });
         });
 
