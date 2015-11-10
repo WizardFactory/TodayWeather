@@ -93,12 +93,22 @@ angular.module('starter.controllers', [])
             user.save();
         }
 
+        function setUserDefaults(obj) {
+            applewatch.sendUserDefaults(function() {
+                console.log("Succeeded to sendUserDefaults(4)");
+            }, function() {
+                console.log("Failed to sendUserDefault");
+            }, obj, "group.net.wizardfactory.todayweather");
+        }
+
         function loadWeatherData() {
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
             if (cityData === null) {
                 console.log("fail to getCityOfIndex");
                 return;
             }
+
+            console.log("start");
 
             $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             console.log($scope.address);
@@ -112,6 +122,36 @@ angular.module('starter.controllers', [])
             console.log($scope.dayTable);
             $scope.dayChart = cityData.dayChart;
             console.log($scope.dayChart);
+
+            // To share weather information for apple watch.
+            setUserDefaults({"Location": $scope.address});
+            setUserDefaults({"Temperature":String(cityData.currentWeather.t1h)});
+            setUserDefaults({"WeatherComment":cityData.currentWeather.summary});
+            setUserDefaults({"WeatherImage":cityData.currentWeather.sky});
+
+            for(var i=0;i<$scope.dayTable.length;i++) {
+                var bFindToday = false;
+                var dailyInfo = $scope.dayTable[i];
+
+                if (bFindToday) {
+                    setUserDefaults({"TomorrowMaxTemp": String(dailyInfo.tmx)});
+                    setUserDefaults({"TomorrowMinTemp": String(dailyInfo.tmn)});
+                    break;
+                }
+
+                if (dailyInfo.week === "오늘") {
+                    setUserDefaults({"TodayMaxTemp": String(dailyInfo.tmx)});
+                    setUserDefaults({"TodayMinTemp": String(dailyInfo.tmn)});
+                    setUserDefaults({"YesterdayMaxTemp": String(yesterDay.tmx)});
+                    setUserDefaults({"YesterdayMinTemp": String(yesterDay.tmn)});
+
+                    bFindToday = true;
+                } else {
+                    var yesterDay = dailyInfo;
+                }
+            }
+
+            // end for apple watch
 
             $timeout(function() {
                 $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayNowPosition(7), 0, false);
