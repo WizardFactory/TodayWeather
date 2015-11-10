@@ -1,6 +1,6 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($http, WeatherUtil) {
+    .factory('WeatherInfo', function ($q, $http, WeatherUtil) {
         var obj = {
             cities: [],
             towns: [],
@@ -210,8 +210,8 @@ angular.module('starter.services', [])
             var city = that.cities[++that.loadIndex];
 
             if (city) {
-                WeatherUtil.getWeatherInfo(city.address).then(function (weatherData) {
-                    var city = WeatherUtil.convertWeatherData(weatherData);
+                WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
+                    var city = WeatherUtil.convertWeatherData(weatherDatas);
                     that.updateCity(that.loadIndex, city);
                     that.updateCities();
                 });
@@ -220,10 +220,17 @@ angular.module('starter.services', [])
 
         obj.loadTowns = function() {
             var that = this;
+            var deferred = $q.defer();
+
             $http.get('data/town.json')
                 .then(function (res) {
                     that.towns = res.data;
+                    deferred.resolve();
+                }, function (err) {
+                    deferred.reject();
                 });
+
+            return deferred.promise;
         };
 
         //endregion
@@ -555,6 +562,11 @@ angular.module('starter.services', [])
             if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Value >= 80) {
                 str += ", " + "미세먼지 " + current.arpltn.pm10Str;
             }
+            else {
+                if (current.pm10Value && current.pm10Value >= 80) {
+                    str += ', ' + '미세먼지 ' + current.pm10Str;
+                }
+            }
 
             //current.ultrv = 6;
             //current.ultrvStr = "높음";
@@ -609,6 +621,220 @@ angular.module('starter.services', [])
                 location.long = result.geometry.location.lng;
             });
             return location;
+        }
+
+        function getWeatherInfo (town) {
+            var deferred = $q.defer();
+            //var url = "town";
+            //var url = "https://todayweather1-wizardfactory.rhcloud.com/town";
+            //var url = "https://todayweather2-wizardfactory.rhcloud.com/town";
+            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
+            url += "/" + town.first + "/" + town.second + "/" + town.third;
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function (data) {
+                    console.log(data);
+                    deferred.resolve({data: data});
+                })
+                .error(function (error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getSensorytemLifeInfo (town) {
+            var deferred = $q.defer();
+
+            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
+            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
+            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
+            url += "/" + "getSensorytemLifeList";
+            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
+            url += "&AreaNo=" + town.areaNo;
+            url += "&_type=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function(data) {
+                    console.log(data);
+                    try {
+                        var senTemp = data.Response.Body.IndexModel.h3;
+                        console.log("senTemp=" + senTemp);
+                        deferred.resolve({senTemp: senTemp});
+                    }
+                    catch(e){
+                        console.log(e);
+                        deferred.reject(e);
+                    }
+                })
+                .error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getUltrvLifeInfo (town) {
+            var deferred = $q.defer();
+
+            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
+            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
+            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
+            url += "/" + "getUltrvLifeList";
+            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
+            url += "&AreaNo=" + town.areaNo;
+            url += "&_type=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function(data) {
+                    console.log(data);
+                    try {
+                        var ultrv = data.Response.Body.IndexModel.today;
+                        if (!ultrv) {
+                            ultrv = data.Response.Body.IndexModel.tomorrow;
+                        }
+                        console.log("ultrv=" + ultrv);
+                        deferred.resolve({ultrv: ultrv});
+                    }
+                    catch(e){
+                        console.log(e);
+                        deferred.reject(e);
+                    }
+                })
+                .error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getTmPointFromWgs84(y, x) {
+            var deferred = $q.defer();
+
+            var url = "https://apis.daum.net/local/geo/transcoord";
+            url += "?apiKey=" + "[DAUM_SERVICE_KEY]";
+            url += "&fromCoord=WGS84";
+            url += "&x=" + x;
+            url += "&y=" + y;
+            url += "&toCoord=TM";
+            url += "&output=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function (data) {
+                    console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getNearbyMsrstn(my, mx)  {
+            var deferred = $q.defer();
+
+            var DOMAIN_ARPLTN_KECO = "http://openapi.airkorea.or.kr/openapi/services/rest";
+            var PATH_MSRSTN_INFO_INQIRE_SVC = "MsrstnInfoInqireSvc";
+            var NEAR_BY_MSRSTN_LIST = "getNearbyMsrstnList";
+            var url = DOMAIN_ARPLTN_KECO + "/" + PATH_MSRSTN_INFO_INQIRE_SVC + "/" + NEAR_BY_MSRSTN_LIST;
+            url += "?ServiceKey=" + "[SERVICE_KEY]";
+            url += "&tmY=" + my;
+            url += "&tmX=" + mx;
+            url += "&pageNo=" + 1;
+            url += "&numOfRows=" + 999;
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function (data) {
+                    //console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getMsrstnAcctoRltmMesureDnsty(stationName) {
+            var deferred = $q.defer();
+
+            var url = "http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc" + "/getMsrstnAcctoRltmMesureDnsty";
+            url += "?ServiceKey=" + "[SERVICE_KEY]";
+            url += "&stationName=" + stationName;
+            url += "&dataTerm=DAILY";
+            url += "&pageNo=" + 1;
+            url += "&numOfRows=" + 999;
+            console.log(url);
+
+            $http({method: 'GET', url: url})
+                .success(function (data) {
+                    //console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getPm10Info(town) {
+            var deferred = $q.defer();
+
+            getTmPointFromWgs84(town.lat, town.long).then(function (point) {
+                getNearbyMsrstn(point.y, point.x).then(function (data) {
+                    var ret = xml2json.parser(data);
+                    //console.log(ret);
+                    var stationname = ret.response.body.items.item[0].stationname;
+                    console.log(stationname);
+
+                    getMsrstnAcctoRltmMesureDnsty(stationname).then(function (data) {
+                        var ret = xml2json.parser(data);
+                        //console.log(ret);
+                        var pm10value = ret.response.body.items.item[0].pm10value;
+                        console.log(pm10value);
+                        deferred.resolve({pm10value: pm10value});
+                    }, function (err) {
+                        console.log(err);
+                        deferred.reject(err);
+                    });
+                }, function (err) {
+                    console.log(err);
+                    deferred.reject(err);
+                });
+            }, function (err) {
+                console.log(err);
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
         }
 
         //endregion
@@ -1067,50 +1293,55 @@ angular.module('starter.services', [])
          * @param {String} address
          * @param {cbWeatherInfo} callback
          */
-        obj.getWeatherInfo = function (address) {
+        obj.getWeatherInfo = function (address, towns) {
             var that = this;
-            var deferred = $q.defer();
-
-            //var url = "town";
-            //var url = "https://todayweather1-wizardfactory.rhcloud.com/town";
-            //var url = "https://todayweather2-wizardfactory.rhcloud.com/town";
-            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
             var addressArray = that.convertAddressArray(address);
+            var townAddress = that.getTownFromFullAddress(addressArray);
 
-            if (addressArray.length === 0) {
+            var town = towns.filter(function (town) {
+                return !!(town.first === townAddress.first && town.second === townAddress.second
+                && town.third === townAddress.third);
+            })[0];
+
+            if (town === undefined) {
+                var deferred = $q.defer();
                 deferred.reject("address is empty");
                 return deferred.promise;
             }
 
-            var town = that.getTownFromFullAddress(addressArray);
-            url += "/" + town.first + "/" + town.second + "/" + town.third;
+            var promises = [];
+            promises.push(getWeatherInfo(town));
+            promises.push(getSensorytemLifeInfo(town));
+            promises.push(getUltrvLifeInfo(town));
+            promises.push(getPm10Info(town));
 
-            console.log(url);
-
-            $http({method: 'GET', url: url})
-                .success(function(data) {
-                    console.log(data);
-                    deferred.resolve(data);
-                })
-                .error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get weatherInfo");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
-
-            return deferred.promise;
+            return $q.all(promises);
         };
 
         /**
          *
          * @param weatherData
          */
-        obj.convertWeatherData = function (weatherData) {
+        obj.convertWeatherData = function (weatherDatas) {
             var that = this;
             var data = {};
             var currentTime = new Date();
+            var weatherData, senTemp, ultrv, pm10value;
+            weatherDatas.forEach(function (data) {
+                if (data.hasOwnProperty("data")) {
+                    weatherData = data.data;
+                }
+                else if (data.hasOwnProperty("senTemp")) {
+                    senTemp = data.senTemp;
+                }
+                else if (data.hasOwnProperty("ultrv")) {
+                    ultrv = data.ultrv;
+                }
+                else if (data.hasOwnProperty("pm10value")) {
+                    pm10value = data.pm10value;
+                }
+            });
+
             var currentForecast = that.parseCurrentTownWeather(weatherData.current);
             var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short);
 
@@ -1127,6 +1358,19 @@ angular.module('starter.services', [])
             console.log(midTownWeather);
 
             currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+
+            if(senTemp) {
+                currentForecast.sensorytem = senTemp;
+                currentForecast.sensorytemStr = parseSensoryTem(senTemp);
+            }
+            if (ultrv) {
+                currentForecast.ultrv = ultrv;
+                currentForecast.ultrvStr = parseUltrv(ultrv);
+            }
+            if (pm10value) {
+                currentForecast.pm10Value = pm10value;
+                currentForecast.pm10Str = parsePm10Value(pm10value);
+            }
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;

@@ -175,13 +175,13 @@ angular.module('starter.controllers', [])
                 addressUpdate = true;
             }
 
-            WeatherUtil.getWeatherInfo(cityData.address).then(function (weatherData) {
+            WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                     return;
                 }
                 preUpdate = true;
-                var city = WeatherUtil.convertWeatherData(weatherData);
+                var city = WeatherUtil.convertWeatherData(weatherDatas);
                 WeatherInfo.updateCity(WeatherInfo.cityIndex, city);
                 loadWeatherData();
                 deferred.notify();
@@ -215,8 +215,8 @@ angular.module('starter.controllers', [])
                             }
                         }
                         else {
-                            WeatherUtil.getWeatherInfo(address).then(function (weatherData) {
-                                var city = WeatherUtil.convertWeatherData(weatherData);
+                            WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                                var city = WeatherUtil.convertWeatherData(weatherDatas);
                                 city.address = address;
                                 city.location = {"lat": coords.latitude, "long": coords.longitude};
                                 WeatherInfo.updateCity(WeatherInfo.cityIndex, city);
@@ -369,10 +369,14 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
 
-            loadWeatherData();
-            checkForUpdates().finally(function (res) {
-                updateWeatherData(false).finally(function (res) {
-                    $scope.address = WeatherUtil.getShortenAddress(cityData.address);
+            WeatherInfo.loadCities();
+            WeatherInfo.loadTowns().then(function () {
+                WeatherInfo.updateCities();
+                loadWeatherData();
+                checkForUpdates().finally(function (res) {
+                    updateWeatherData(false).finally(function (res) {
+                        $scope.address = WeatherUtil.getShortenAddress(cityData.address);
+                    });
                 });
             });
         });
@@ -438,8 +442,8 @@ angular.module('starter.controllers', [])
 
             WeatherUtil.getAddressToGeolocation(address).then(function (location) {
                 WeatherUtil.getAddressFromGeolocation(location.lat, location.long).then(function (address) {
-                    WeatherUtil.getWeatherInfo(address).then(function (weatherData) {
-                        var city = WeatherUtil.convertWeatherData(weatherData);
+                    WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                        var city = WeatherUtil.convertWeatherData(weatherDatas);
                         city.currentPosition = false;
                         city.address = address;
                         city.location = location;
@@ -578,10 +582,11 @@ angular.module('starter.controllers', [])
             }
         }, 1000);
 
-        $ionicPlatform.ready(function() {
-            WeatherInfo.loadTowns();
-            WeatherInfo.loadCities();
-            WeatherInfo.updateCities();
-        });
+        //$ionicPlatform.ready(function() {
+        //    WeatherInfo.loadCities();
+        //    WeatherInfo.loadTowns().then(function () {
+        //        WeatherInfo.updateCities();
+        //    });
+        //});
     });
 
