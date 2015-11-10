@@ -1,0 +1,58 @@
+<ion-view hide-nav-bar="true">
+    <ion-content>
+        <div class="main-content setting">
+            <div class="row row-no-padding" style="height: 5%;">
+                <p class="top-time">
+                    {{currentTimeString}}
+                </p>
+            </div>
+            <div class="row" style="height: 15%"></div>
+            <div class="row" style="height: 10%">
+                <div class="col" style="height: 10%; text-align: center;">
+                    <h3 style="color: #ffffff">TodayWeather</h3>
+                </div>
+            </div>
+            <div class="row" style="height: 50%">
+                <div class="col-10"></div>
+                <div class="col">
+                    <ul class="list">
+                        <!--<label class="item item-input item-select"  style="background-color: inherit; color: inherit">-->
+                            <!--<div class="input-label" style="color: inherit">-->
+                                <!--일간날씨-->
+                            <!--</div>-->
+                            <!--<select style="background-color: inherit; color: inherit">-->
+                                <!--<option selected>내일까지 표시</option>-->
+                                <!--<option>모레까지 표시</option>-->
+                            <!--</select>-->
+                        <!--</label>-->
+                        <!--<label class="item item-input item-select" style="background-color: inherit; color: inherit">-->
+                            <!--<div class="input-label" style="background-color: inherit; color: inherit">-->
+                                <!--주간날씨-->
+                            <!--</div>-->
+                            <!--<select style="background-color: inherit; color: inherit">-->
+                                <!--<option selected>7일까지 표시</option>-->
+                                <!--<option>10일까지 표시</option>-->
+                            <!--</select>-->
+                        <!--</label>-->
+                        <li class="item" style="background-color: inherit; color: inherit">
+                            <div class="row row-no-padding">
+                                <div class="col col-80">버전</div>
+                                <div class="col col-20">{{version}}</div>
+                                <!--<button class="button button-energized">-->
+                                <!--<i class="ion-ios-download-outline"></i>-->
+                                <!--</button>-->
+                            </div>
+                        </li>
+                        <li class="item"  ng-click="openMarket()" style="background-color: inherit; color: inherit">평가하기
+                            <!--<img src="img/setting-review.png" style="width: 30px">-->
+                        </li>
+                        <li class="item"  ng-click="openInfo()" style="background-color: inherit; color: inherit">정보
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-10"></div>
+            </div>
+            <div class="row" style="height: 20%"></div>
+        </div>
+    </ion-content>
+</ion-view>
