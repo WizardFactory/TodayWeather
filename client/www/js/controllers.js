@@ -93,12 +93,22 @@ angular.module('starter.controllers', [])
             user.save();
         }
 
+        function setUserDefaults(obj) {
+            applewatch.sendUserDefaults(function() {
+                console.log(obj);
+            }, function() {
+                console.log("Failed to sendUserDefault");
+            }, obj, "group.net.wizardfactory.todayweather");
+        }
+
         function loadWeatherData() {
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
             if (cityData === null) {
                 console.log("fail to getCityOfIndex");
                 return;
             }
+
+            console.log("start");
 
             $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             console.log($scope.address);
@@ -112,6 +122,33 @@ angular.module('starter.controllers', [])
             console.log($scope.dayTable);
             $scope.dayChart = cityData.dayChart;
             console.log($scope.dayChart);
+
+            // To share weather information for apple watch.
+            setUserDefaults({"Location": $scope.address||"하늘시, 구름동"});
+            setUserDefaults({"Temperature":String(cityData.currentWeather.t1h)||"33"});
+            setUserDefaults({"WeatherComment":cityData.currentWeather.summary||"어제과 같음"});
+            setUserDefaults({"WeatherImage":cityData.currentWeather.sky||"Snow"});
+
+            setUserDefaults({"TodayMaxTemp": "99"});
+            setUserDefaults({"TodayMinTemp": "0"});
+            setUserDefaults({"YesterdayMaxTemp": "99"});
+            setUserDefaults({"YesterdayMinTemp": "0"});
+            setUserDefaults({"TomorrowMaxTemp": "99"});
+            setUserDefaults({"TomorrowMinTemp": "0"});
+
+            for(var i=0;i<$scope.dayTable.length;i++) {
+                if ($scope.dayTable[i].week === "오늘") {
+                    setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i-1].tmx||99)});
+                    setUserDefaults({"TodayMinTemp": String($scope.dayTable[i-1].tmn||0)});
+                    setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx||99)});
+                    setUserDefaults({"YesterdayMinTemp": String($scope.dayTable[i].tmn||0)});
+                    setUserDefaults({"TomorrowMaxTemp": String($scope.dayTable[i+1].tmx||99)});
+                    setUserDefaults({"TomorrowMinTemp": String($scope.dayTable[i+1].tmn||0)});
+                    break;
+                }
+            }
+
+            // end for apple watch
 
             $timeout(function() {
                 $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayNowPosition(7), 0, false);
