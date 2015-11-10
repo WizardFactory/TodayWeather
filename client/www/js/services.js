@@ -13,7 +13,7 @@ angular.module('starter.services', [])
         obj.addCity = function (city) {
             var that = this;
 
-            if (that.indexOf(city) === -1) {
+            if (that.getIndexOfCity(city) === -1) {
                 that.cities.push(city);
                 that.saveCities();
                 return true;
@@ -61,6 +61,24 @@ angular.module('starter.services', [])
             that.saveCities();
         };
 
+        obj.getIndexOfCity = function (city) {
+            var that = this;
+
+            for (var i = 0; i < that.cities.length; i += 1) {
+                if (that.cities[i].currentPosition === true) {
+                    if (city.currentPosition === true) {
+                        return i;
+                    }
+                }
+                else {
+                    if (that.cities[i].address === city.address) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        };
+
         obj.getCityOfIndex = function (index) {
             var that = this;
 
@@ -73,20 +91,6 @@ angular.module('starter.services', [])
         obj.getCityCount = function () {
             var that = this;
             return that.cities.length;
-        };
-
-        obj.indexOf = function (city) {
-            var that = this;
-
-            for (var i = 0; i < that.cities.length; i += 1) {
-                if (that.cities[i].currentPosition === true && city.currentPosition === true) {
-                    return i;
-                }
-                if (that.cities[i].address === city.address) {
-                    return i;
-                }
-            }
-            return -1;
         };
 
         obj.loadCities = function() {
