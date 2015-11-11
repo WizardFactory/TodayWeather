@@ -40,6 +40,11 @@ ionic clear and reinstall plugins and platforms
 $ ionic state reset
 ```
 
+add crosswalk browser for android
+```bash
+ionic browser add crosswalk
+```
+
 install gulp and bower
 
 ```bash
