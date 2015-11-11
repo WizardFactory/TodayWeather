@@ -632,7 +632,7 @@ angular.module('starter.services', [])
             url += "/" + town.first + "/" + town.second + "/" + town.third;
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data) {
                     console.log(data);
                     deferred.resolve({data: data});
@@ -660,7 +660,7 @@ angular.module('starter.services', [])
             url += "&_type=json";
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function(data) {
                     console.log(data);
                     try {
@@ -670,7 +670,8 @@ angular.module('starter.services', [])
                     }
                     catch(e){
                         console.log(e);
-                        deferred.reject(e);
+                        deferred.resolve({senTemp: undefined});
+                        //deferred.reject(e);
                     }
                 })
                 .error(function(error) {
@@ -678,7 +679,8 @@ angular.module('starter.services', [])
                         error = new Error("Fail to get weatherInfo");
                     }
                     console.log(error);
-                    deferred.reject(error);
+                    deferred.resolve({senTemp: undefined});
+                    //deferred.reject(error);
                 });
 
             return deferred.promise;
@@ -696,7 +698,7 @@ angular.module('starter.services', [])
             url += "&_type=json";
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function(data) {
                     console.log(data);
                     try {
@@ -709,7 +711,8 @@ angular.module('starter.services', [])
                     }
                     catch(e){
                         console.log(e);
-                        deferred.reject(e);
+                        deferred.resolve({ultrv: undefined});
+                        //deferred.reject(e);
                     }
                 })
                 .error(function(error) {
@@ -717,7 +720,8 @@ angular.module('starter.services', [])
                         error = new Error("Fail to get weatherInfo");
                     }
                     console.log(error);
-                    deferred.reject(error);
+                    deferred.resolve({ultrv: undefined});
+                    //deferred.reject(error);
                 });
 
             return deferred.promise;
@@ -735,7 +739,7 @@ angular.module('starter.services', [])
             url += "&output=json";
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data) {
                     console.log(data);
                     deferred.resolve(data);
@@ -764,7 +768,7 @@ angular.module('starter.services', [])
             url += "&numOfRows=" + 999;
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data) {
                     //console.log(data);
                     deferred.resolve(data);
@@ -790,7 +794,7 @@ angular.module('starter.services', [])
             url += "&numOfRows=" + 999;
             console.log(url);
 
-            $http({method: 'GET', url: url})
+            $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data) {
                     //console.log(data);
                     deferred.resolve(data);
@@ -823,15 +827,18 @@ angular.module('starter.services', [])
                         deferred.resolve({pm10value: pm10value});
                     }, function (err) {
                         console.log(err);
-                        deferred.reject(err);
+                        deferred.resolve({pm10value: undefined});
+                        //deferred.reject(err);
                     });
                 }, function (err) {
                     console.log(err);
-                    deferred.reject(err);
+                    deferred.resolve({pm10value: undefined});
+                    //deferred.reject(err);
                 });
             }, function (err) {
                 console.log(err);
-                deferred.reject(err);
+                deferred.resolve({pm10value: undefined});
+                //deferred.reject(err);
             });
 
             return deferred.promise;
@@ -1223,7 +1230,7 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
-            $http({method: 'GET', url: url}).success(function (data) {
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === 'OK') {
                     var location = findLocationFromGoogleGeoCodeResults(data.results);
                     console.log(location);
@@ -1250,7 +1257,7 @@ angular.module('starter.services', [])
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
                 "&sensor=true&language=ko";
 
-            $http({method: 'GET', url: url}).success(function (data) {
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === "OK") {
                     var address = findDongAddressFromGoogleGeoCodeResults(data.results);
                     if (!address || address.length === 0) {
