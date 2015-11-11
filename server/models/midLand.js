@@ -5,7 +5,7 @@
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var current = require('./current');
-var modelUtil = require('./modelUtil');
+var ModelUtil = require('./modelUtil');
 
 var midLandSchema = mongoose.Schema({
     regId : String,
@@ -34,6 +34,13 @@ var wfList = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf
     'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10'];
 
 midLandSchema.statics = {
+    getOneLandData : function(first, second, nowDate, cb){
+        var self = this;
+        var modelUtil = new ModelUtil();
+        var regId = modelUtil.getCodeWithFirst(first, second);
+        self.find({"regId" : regId, "midLandData.date" : nowDate})
+            .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec(cb);
+    },
     getLandData : function(first, second, cb){
         //var tempList = config.testTownData[0].data.current
         //var currentList = [];
@@ -43,7 +50,7 @@ midLandSchema.statics = {
         //    currentList.push(t);
         //});
         var self = this;
-        var util = new modelUtil();
+        var util = new ModelUtil();
         var regId = util.getCode(first, second);
         current.getCurrentDataForCal(169, regId, function (err, currentList) { // 168 + 1
             var pastObj = {};

@@ -53,16 +53,16 @@ mongoose.connect(config.db.path, config.db.options);
 //    if(err) console.log(err);
 //    console.log(res);
 //});
-//var midTemp = require('./midTemp');
+var midTemp = require('./midTemp');
 //
 //var first = config.testTownData[0].regionName;
 //var second = config.testTownData[0].cityName;
 //var third = config.testTownData[0].townName;
 //
-//midTemp.getTempData('강원도', '강릉시', function(err, res){
-//    if(err) return;
-//    console.log(res);
-//});
+midTemp.getTempData('강원도', '강릉시', function(err, res){
+    if(err) return;
+    console.log(res);
+});
 
 //var current = require('./current');
 //current.getCurrentDataForCal(1, '11D20501', function(err, res){
@@ -75,11 +75,11 @@ mongoose.connect(config.db.path, config.db.options);
 //console.log(t.getCodeWithFirst('강원도', '강릉시'));
 //console.log(t.getCodeWithFirst('울산광역시'));
 
-//var midLand = require('./midLand');
-//midLand.getLandData('강원도', '강릉시', function(err, res){
-//    if(err) return;
-//    console.log(res);
-//});
+var midLand = require('./midLand');
+midLand.getLandData('강원도', '강릉시', function(err, res){
+    if(err) return;
+    console.log(res);
+});
 
 //var current = require('./short');
 //
@@ -100,9 +100,9 @@ mongoose.connect(config.db.path, config.db.options);
 //    console.log(res);
 //});
 
-var short = require('./short');
-
-short.getOneShortDataWithTime('강원도', '강릉시', '강남동', '20151108', '1700', function(err, res){
-    if(err) console.log(err);
-    console.log(res[0].shortData);
-});
+//var short = require('./short');
+//
+//short.getOneShortDataWithTime('강원도', '강릉시', '강남동', '20151108', '1700', function(err, res){
+//    if(err) console.log(err);
+//    console.log(res[0].shortData);
+//});
