@@ -124,30 +124,34 @@ angular.module('starter.controllers', [])
             console.log($scope.dayChart);
 
             // To share weather information for apple watch.
-            setUserDefaults({"Location": $scope.address||"하늘시, 구름동"});
-            setUserDefaults({"Temperature":String(cityData.currentWeather.t1h)||"33"});
-            setUserDefaults({"WeatherComment":cityData.currentWeather.summary||"어제과 같음"});
-            setUserDefaults({"WeatherImage":cityData.currentWeather.sky||"Snow"});
+            if (ionic.Platform.isIOS()) {
+                var shortestAddress = $scope.address.split(",")[1];
+                if (!shortestAddress) {$scope.address.split(",")[0];
+                }
+                setUserDefaults({"Location": shortestAddress || "구름동"});
+                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h) || "33"});
+                setUserDefaults({"WeatherComment": cityData.currentWeather.summary || "어제과 같음"});
+                setUserDefaults({"WeatherImage": cityData.currentWeather.sky || "Snow"});
 
-            setUserDefaults({"TodayMaxTemp": "99"});
-            setUserDefaults({"TodayMinTemp": "0"});
-            setUserDefaults({"YesterdayMaxTemp": "99"});
-            setUserDefaults({"YesterdayMinTemp": "0"});
-            setUserDefaults({"TomorrowMaxTemp": "99"});
-            setUserDefaults({"TomorrowMinTemp": "0"});
+                setUserDefaults({"TodayMaxTemp": "99"});
+                setUserDefaults({"TodayMinTemp": "0"});
+                setUserDefaults({"YesterdayMaxTemp": "99"});
+                setUserDefaults({"YesterdayMinTemp": "0"});
+                setUserDefaults({"TomorrowMaxTemp": "99"});
+                setUserDefaults({"TomorrowMinTemp": "0"});
 
-            for(var i=0;i<$scope.dayTable.length;i++) {
-                if ($scope.dayTable[i].week === "오늘") {
-                    setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i-1].tmx||99)});
-                    setUserDefaults({"TodayMinTemp": String($scope.dayTable[i-1].tmn||0)});
-                    setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx||99)});
-                    setUserDefaults({"YesterdayMinTemp": String($scope.dayTable[i].tmn||0)});
-                    setUserDefaults({"TomorrowMaxTemp": String($scope.dayTable[i+1].tmx||99)});
-                    setUserDefaults({"TomorrowMinTemp": String($scope.dayTable[i+1].tmn||0)});
-                    break;
+                for (var i = 0; i < $scope.dayTable.length; i++) {
+                    if ($scope.dayTable[i].week === "오늘") {
+                        setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i - 1].tmx || 99)});
+                        setUserDefaults({"TodayMinTemp": String($scope.dayTable[i - 1].tmn || 0)});
+                        setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx || 99)});
+                        setUserDefaults({"YesterdayMinTemp": String($scope.dayTable[i].tmn || 0)});
+                        setUserDefaults({"TomorrowMaxTemp": String($scope.dayTable[i + 1].tmx || 99)});
+                        setUserDefaults({"TomorrowMinTemp": String($scope.dayTable[i + 1].tmn || 0)});
+                        break;
+                    }
                 }
             }
-
             // end for apple watch
 
             $timeout(function() {
