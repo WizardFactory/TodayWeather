@@ -73,3 +73,41 @@ build and run application for iOS
 ```bash
 $ ionic run ios
 ```
+
+release mobile application
+
+check version config.xml, package.json
+
+build
+```bash
+$ cordova plugin rm cordova-plugin-console
+$ ionic build --release android
+$ ionic build --release ios
+```
+import android widget
+
+copy widget files
+```bash
+$ cd platforms/android/src/net/wizardfactory/todayweather/
+$ cp ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
+$ cp -af ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
+$ cd platforms/android/res/drawable-xhdpi
+$ cp ../../../../../android/res/drawable-xhdpi/* ./
+$ cd platforms/android/res
+$ cp -af ../../../../android/res/layout ./
+$ cp ../../../../android/res/xml/w2x1_widget_provider.xml xml/
+```  
+
+overwrite strings.xml
+```bash
+$ cd platforms/android/res
+$ cp ../../../../android/res/values/strings.xml values/strings.xml 
+```
+
+add activity and service for widget
+set android:minSdkVersion to 14
+```bash
+$ vimdiff vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
+```
+
+
