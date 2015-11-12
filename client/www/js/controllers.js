@@ -304,7 +304,7 @@ angular.module('starter.controllers', [])
             });
         }
 
-        $scope.$on('$ionicView.beforeEnter', function() {
+        $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#22a1db';
         });
 
@@ -414,7 +414,7 @@ angular.module('starter.controllers', [])
             $scope.cityList.push(data);
         });
 
-        $scope.$on('$ionicView.beforeEnter', function() {
+        $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ec72a8';
         });
         
@@ -515,7 +515,7 @@ angular.module('starter.controllers', [])
             $scope.version = deployInfo.binary_version;
         }, function() {}, function() {});
 
-        $scope.$on('$ionicView.beforeEnter', function() {
+        $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ea9623';
         });
 
