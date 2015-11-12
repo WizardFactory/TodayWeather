@@ -893,18 +893,18 @@ angular.module('starter.services', [])
                     dayInfo = dailyTemp[dailyTemp.length - 1];
                     dayInfo.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
-                if (shortForecast.tmx != -50 && shortForecast.tmx != 0) {
+                if (!(shortForecast.tmx === -50 || shortForecast.tmx === 0)) {
                     dayInfo.tmx = shortForecast.tmx;
                 }
                 //sometimes, t3h over tmx;
-                if (shortForecast.t3h > dayInfo.tmx) {
+                if (dayInfo.tmx && (shortForecast.t3h > dayInfo.tmx)) {
                     dayInfo.tmx = shortForecast.t3h;
                 }
 
-                if (shortForecast.tmn != -50 && shortForecast.tmn != 0) {
+                if (!(shortForecast.tmn === -50 || shortForecast.tmn === 0)) {
                     dayInfo.tmn = shortForecast.tmn;
                 }
-                if (shortForecast.t3h < dayInfo.tmn) {
+                if (dayInfo.tmn && (shortForecast.t3h < dayInfo.tmn)) {
                     dayInfo.tmn = shortForecast.t3h;
                 }
 
@@ -1106,6 +1106,10 @@ angular.module('starter.services', [])
                     data.sky = dayInfo.sky;
                     data.pop = dayInfo.pop;
                     data.reh = dayInfo.reh;
+                    if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
+                    }
+                    if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
+                    }
                     data.humidityIcon = decideHumidityIcon(data.reh);
                     index++;
                 }
