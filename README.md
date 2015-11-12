@@ -142,6 +142,7 @@ $ ionic upload
 ```
 
 android
+
 ```bash
 $ ionic build --release android
 $ cp platforms/android/build/outputs/apk/android-armv7-release-unsigned.apk ./
@@ -150,7 +151,8 @@ $ ~/Library/Android/sdk/build-tools/VERSION/zipalign android-armv7-release-unsig
 ```
 
 ios
+
 1. run xcode
 2. general -> device : iPhone, check Hide status bar
 3. connect iPhone by USB
-4. Menu -> Product -> Archives
+4. Menu -> Product -> Archive
