@@ -133,3 +133,24 @@ $ cp -rf ../../../applewatch/TodayWeather\ WatchKit\ 1\ Extension ./
 6. 실제 watch를 이용하여 테스트할 경우에는 target project를 watch app으로 변경하고, WatchKit1 App의 Build Settings의 Deployment에서 iOS Deployment Target을 iOS 8.2로 변경합니다.
 7. App group에 문제가 발생할 경우 메인 project의 App Group을 한번 껐다켜고 4번 과정을 다시 실행한다.
 8. 프로젝트를 모두 복사한게 아니므로 이미지 파일은 watch app 폴더에서 확인하고, Xcode IDE의 프로젝트 디렉토리로 드래그 해야한다. - Copy items if needed 를 체크한다.
+
+### Publishing
+
+ionic deploy
+```bash
+$ ionic upload
+```
+
+android
+```bash
+$ ionic build --release android
+$ cp platforms/android/build/outputs/apk/android-armv7-release-unsigned.apk ./
+$ jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore my-release-key.keystore android-armv7-release-unsigned.apk alias_name
+$ ~/Library/Android/sdk/build-tools/VERSION/zipalign android-armv7-release-unsigned.apk TodayWeather_V0.00.00.apk
+```
+
+ios
+1. run xcode
+2. general -> device : iPhone, check Hide status bar
+3. connect iPhone by USB
+4. Menu -> Product -> Archives
