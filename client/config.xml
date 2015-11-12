@@ -69,36 +69,8 @@
         <splash height="480" src="resources/ios/splash/Default~iphone.png" width="320" />
         <config-file parent="NSAppTransportSecurity" platform="ios" target="*-Info.plist">
             <dict>
-                <key>NSExceptionDomains</key>
-                <dict>
-                    <key>amazonaws.com</key>
-                    <dict>
-                        <key>NSThirdPartyExceptionMinimumTLSVersion</key>
-                        <string>TLSv1.0</string>
-                        <key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-                        <false/>
-                        <key>NSIncludesSubdomains</key>
-                        <true/>
-                    </dict>
-                    <key>amazonaws.com.cn</key>
-                    <dict>
-                        <key>NSThirdPartyExceptionMinimumTLSVersion</key>
-                        <string>TLSv1.0</string>
-                        <key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-                        <false/>
-                        <key>NSIncludesSubdomains</key>
-                        <true/>
-                    </dict>
-                    <key>cloudfront.net</key>
-                    <dict>
-                        <key>NSThirdPartyExceptionMinimumTLSVersion</key>
-                        <string>TLSv1.0</string>
-                        <key>NSThirdPartyExceptionRequiresForwardSecrecy</key>
-                        <false/>
-                        <key>NSIncludesSubdomains</key>
-                        <true/>
-                    </dict>
-                </dict>
+                <key>NSAllowsArbitraryLoads</key>
+                <true/>
             </dict>
         </config-file>
     </platform>
