@@ -3,7 +3,7 @@ language: node_js
 node_js:
   - "0.10"
 script:
- - cd /home/travis/build/neoqmin/TodayWeather
+ - cd ..
  - cd server
  - npm test
  - cd ..
