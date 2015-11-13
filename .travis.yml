@@ -23,8 +23,6 @@ before_install:
   - cd ..
   - cd client
   - npm install
-  - cd ./node_modules/protractor-ci
-  - npm install
 
 before_script:
   - echo "before_script"
