@@ -1,5 +1,72 @@
-extends layout
 
-block content
-  h1= title
-  p Welcome to #{title}
+doctype html
+html(lang='en')
+    head
+        meta(charset='UTF-8')
+        title TodayWeather - WizardFactory
+        style.
+            @import url(http://fonts.googleapis.com/css?family=Noto+Sans);
+            * {
+                margin : 0;
+                padding : 0;
+            }
+            html, body {
+                height: 100%;
+                font-family: 'Helvetica Bold', 'Noto Sans', sans-serif;
+            }
+            h1{
+                text-align: center;
+                font-size:4em;
+            }
+            .outer {
+                padding:0 40px 0 40px;
+            }
+            .git img{
+                -webkit-filter:blur(6px)
+            }
+            #content {
+                height : 800px;
+            }
+            #imgside {
+                width: 40%;
+                height: 100%;
+                float:left;
+            }
+            #textside {
+                padding-top:20%;
+                color:white;
+                font-size:2em;
+            }
+    body
+        .outer
+            #content.skrollable.skrollable-between(data-0='background-color:rgba(50,50,50, 0.5);', data-400='background-color:rgba(40,170,225, 0.5);', style='background-color: rgba(40, 170, 225, 0.5);')
+                div(style='padding-top:20%;')
+                    h1 TodayWeather
+                    div(style='text-align:center') 어제보다 오늘의 날씨는?
+        .outer
+            #content.skrollable.skrollable-between(data-400='background-color:rgba(40,170,225, 0.5);', data-1200='background-color:rgba(15,190,150, 0.5);', style='background-color: rgba(40, 170, 225, 0.5);')
+                #imgside
+                    img(src='/img/1-02.png', style='height:600px;')
+                #textside
+                    | 그래프로 한눈에 알수있는 어제와 오늘
+                    br
+                    |  그리고 내일의 날씨 비교가 가능하고
+        .outer
+            #content.skrollable.skrollable-between(data-1200='background-color:rgba(15, 190, 150, 0.5);', data-2000='background-color:rgba(15,190,150, 0.5);', style='background-color: rgba(40, 170, 225, 0.5);')
+                #imgside
+                    img(src='/img/1-01.png', style='height:600px;')
+                #textside
+                    | 날마다의 최고 최저 온도를
+                    br
+                    |  주별로 확인 할 수 있습니다.
+        .outer
+            #content
+                div(style='padding-top:15%')
+                    img(src='img/facebook.png', style='width:100%', align='center')
+        script(src='lib/skrollr.min.js')
+        script.
+            var s = skrollr.init({
+                render : function(data){
+                    console.log(data.curTop);
+                }
+            });
