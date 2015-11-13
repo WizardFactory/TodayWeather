@@ -1,7 +1,7 @@
 var config = {
     seleniumAddress: 'http://localhost:4444/wd/hub',
     specs: ['defaults.js'],
-    config['capabilities'] = {
+    capabilities: {
         browserName: 'phantomjs'
     },
     files: [
