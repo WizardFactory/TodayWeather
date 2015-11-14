@@ -1,19 +1,53 @@
-<ion-view view-title="Chats">
-    <ion-content>
-        <ion-list>
-            <ion-item class="item-remove-animate item-avatar item-icon-right" ng-repeat="chat in chats"
-                      type="item-text-wrap" href="#/tab/chats/{{chat.id}}">
-                <img ng-src="{{chat.face}}">
-
-                <h2>{{chat.name}}</h2>
-
-                <p>{{chat.lastText}}</p>
-                <i class="icon ion-chevron-right icon-accessory"></i>
-
-                <ion-option-button class="button-assertive" ng-click="remove(chat)">
-                    Delete
-                </ion-option-button>
-            </ion-item>
-        </ion-list>
+<ion-view hide-nav-bar="true" style="background-color: inherit;">
+    <ion-content style="background-color: inherit;" scroll="false">
+        <div class="main-content search">
+            <div class="row row-no-padding" style="height: 5%;">
+                <p class="top-time">
+                    {{currentTimeString}}
+                </p>
+            </div>
+            <div class="list list-inset" style="background-color: transparent;">
+                <div class="item row" style="background-color: inherit;">
+                    <div class="search-icon">
+                        <img src="img/Search.png">
+                    </div>
+                    <div class="search-content" style="width: 82%; margin-left: 5%">
+                        <input type="text" placeholder="도시명을 입력하세요" ng-model="$parent.searchWord"
+                               ng-change="OnChangeSearchWord()">
+                    </div>
+                </div>
+            </div>
+            <ion-scroll class="city-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false">
+                <div class="list list-inset" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;" ng-show="searchWord!==undefined">
+                    <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
+                        <div class="row">
+                            <div class="col search-content" style="text-align: left;"><p>{{result.first}} {{result.second}} {{result.third}}</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="list list-inset" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;" ng-show="searchWord===undefined">
+                    <div class="item" style="background-color: inherit;" ng-repeat="city in cityList"
+                         ng-click="OnSelectCity($index)" on-swipe-left="OnSwipeCity(city)" on-swipe-right="OnSwipeCity(city)">
+                        <div class="row">
+                            <div class="col search-content" style="text-align: left; width: 40%;"><p>{{city.address[0]}}<br>{{city.address[1]}}</p></div>
+                            <div class="col search-content" style="width: 20%"><img src="img/{{city.sky}}-Big.png"></div>
+                            <div class="col search-content" style="width: 20%;">
+                                <p style="font-size: 32px; padding-top: 18px; font-family: 'helvetica neue light';">{{city.t1h}}˚</p>
+                            </div>
+                            <div class="col search-content" style="width: 20%;" ng-show="city.delete===false">
+                                <p style="font-size: 32px; padding-top: 18px; font-family: 'helvetica neue light';">
+                                    <span style="font-size: 16px">{{city.tmn}}˚/{{city.tmx}}˚</span>
+                                </p>
+                            </div>
+                            <button class="button button-energized" style="width: 20%;" ng-show="city.delete===true" ng-click="OnDeleteCity($index)">
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </ion-scroll>
+        </div>
+        <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%"
+                     ng-show="isLoading===true"/>
     </ion-content>
 </ion-view>

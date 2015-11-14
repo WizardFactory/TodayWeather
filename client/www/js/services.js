@@ -1,48 +1,295 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherData', function () {
-        var cities = [];
-
-        var getCity = function (address) {
-            var city = cities.filter(function (value) {
-                    return (typeof value.address === address);
-                }
-            );
-            return city;
+    .factory('WeatherInfo', function ($q, $http, WeatherUtil) {
+        var obj = {
+            cities: [],
+            towns: [],
+            cityIndex: 0, // 최초 지역은 현재 위치가 보여지도록 함
+            loadIndex: -1 // 초기 로드 중인 city index
         };
 
-        return {
-            all: function () {
-                return cities;
-            },
-            addCity: function (address) {
-                if (getCity(address) === null) {
-                    var city = {
-                        address: address,
-                        currentWeather: {},
-                        timeTable: [],
-                        dayTable: [],
-                        timeChart: {},
-                        dayChart: {}
-                    };
-                    cities.push(city);
+        //region APIs
+
+        obj.addCity = function (city) {
+            var that = this;
+
+            if (that.getIndexOfCity(city) === -1) {
+                that.cities.push(city);
+                that.saveCities();
+                return true;
+            }
+            return false;
+        };
+
+        obj.removeCity = function (index) {
+            var that = this;
+
+            if (index !== -1) {
+                that.cities.splice(index, 1);
+                that.saveCities();
+                return true;
+            }
+            return false;
+        };
+
+        obj.updateCity = function (index, weatherData) {
+            var that = this;
+            var city = that.cities[index];
+
+            if (weatherData.address) {
+                city.address = weatherData.address;
+            }
+            if (weatherData.location) {
+                city.location = weatherData.location;
+            }
+            if (weatherData.currentWeather) {
+                city.currentWeather = weatherData.currentWeather;
+            }
+            if (weatherData.timeTable) {
+                city.timeTable = weatherData.timeTable;
+            }
+            if (weatherData.timeChart) {
+                city.timeChart = weatherData.timeChart;
+            }
+            if (weatherData.dayTable) {
+                city.dayTable = weatherData.dayTable;
+            }
+            if (weatherData.dayChart) {
+                city.dayChart = weatherData.dayChart;
+            }
+
+            that.saveCities();
+        };
+
+        obj.getIndexOfCity = function (city) {
+            var that = this;
+
+            for (var i = 0; i < that.cities.length; i += 1) {
+                if (that.cities[i].currentPosition === true) {
+                    if (city.currentPosition === true) {
+                        return i;
+                    }
                 }
-            },
-            getCity: function (address) {
-                return getCity(address);
-            },
-            removeCity: function (address) {
-                var city = getCity(address);
-                if (city === null) {
-                    cities.splice(cities.indexOf(city), 1);
+                else {
+                    if (that.cities[i].address === city.address) {
+                        return i;
+                    }
                 }
             }
+            return -1;
         };
-    })
-    .factory('WeatherService', function () {
 
+        obj.getCityOfIndex = function (index) {
+            var that = this;
+
+            if (index < 0 || index >= that.cities.length) {
+                return null;
+            }
+            return that.cities[index];
+        };
+
+        obj.getCityCount = function () {
+            var that = this;
+            return that.cities.length;
+        };
+
+        obj.loadCities = function() {
+            if (typeof(Storage) === "undefined") {
+                return false;
+            }
+
+            var that = this;
+            that.cities = JSON.parse(localStorage.getItem("cities"));
+            if (that.cities === null) { // set guide data
+                var city = {};
+                city.currentPosition = true;
+                city.address = "대한민국 하늘시 중구 구름동";
+                city.location = null;
+                city.currentWeather = {time: 7, t1h: 19, sky: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
+
+                var timeData = [];
+                timeData[0] = {day: "", time: "6시", t3h: 17, sky:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17};
+                timeData[1] = {day: "", time: "9시", t3h: 21, sky:"Lightning", pop: 20, tempIcon:"Temp-02"};
+                timeData[2] = {day: "", time: "12시", t3h: 26, sky:"Moon", pop: 30, tempIcon:"Temp-03"};
+                timeData[3] = {day: "", time: "15시", t3h: 28, sky:"MoonWithCloud", pop: 40, tempIcon:"Temp-04", tmx: 28};
+                timeData[4] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-05"};
+                timeData[5] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-06"};
+                timeData[6] = {day: "어제", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-07"};
+                timeData[7] = {day: "", time: "3시", t3h: 16, sky:"Snow", pop: 80, tempIcon:"Temp-08"};
+                timeData[8] = {day: "", time: "6시", t3h: 15, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09", tmn: 15};
+                timeData[9] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-10"};
+                timeData[10] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                timeData[11] = {day: "", time: "15시", t3h: 28, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+                timeData[12] = {day: "", time: "18시", t3h: 29, sky:"Rain", pop: 50, tempIcon:"Temp-04", tmx: 29};
+                timeData[13] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                timeData[14] = {day: "오늘", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[15] = {day: "", time: "3시", t3h: 15, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+                timeData[16] = {day: "", time: "지금", t3h: 14, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14};
+                timeData[17] = {day: "", time: "9시", t3h: 21, sky:"Cloud", pop: 10, tempIcon:"Temp-09"};
+                timeData[18] = {day: "", time: "12시", t3h: 26, sky:"Lightning", pop: 20, tempIcon:"Temp-10"};
+                timeData[19] = {day: "", time: "15시", t3h: 29, sky:"Moon", pop: 30, tempIcon:"Temp-01", tmx: 29};
+                timeData[20] = {day: "", time: "18시", t3h: 28, sky:"MoonWithCloud", pop: 50, tempIcon:"Temp-04"};
+                timeData[21] = {day: "", time: "21시", t3h: 22, sky:"Rain", pop: 60, tempIcon:"Temp-05"};
+                timeData[22] = {day: "내일", time: "0시", t3h: 20, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[23] = {day: "", time: "3시", t3h: 18, sky:"RainWithLightning", pop: 80, tempIcon:"Temp-07"};
+                timeData[24] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 17};
+                timeData[25] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
+                timeData[26] = {day: "", time: "12시", t3h: 27, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                timeData[27] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: 29};
+                timeData[28] = {day: "", time: "18시", t3h: 28, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+                timeData[29] = {day: "", time: "21시", t3h: 24, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                timeData[30] = {day: "모레", time: "0시", t3h: 21, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[31] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+                //timeData[32] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+                //timeData[33] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
+                //timeData[34] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                //timeData[35] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+                //timeData[36] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
+                //timeData[37] = {day: "", time: "21시", t3h: 23, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                //timeData[38] = {day: "글피", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                //timeData[39] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+
+                city.timeTable = timeData.slice(8);
+                city.timeChart = [
+                    {
+                        name: "yesterday",
+                        values: timeData.slice(0, timeData.length - 8).map(function (d) {
+                            return { name: "yesterday", value: d };
+                        })
+                    },
+                    {
+                        name: "today",
+                        values: timeData.slice(8).map(function (d) {
+                            return { name: "today", value: d };
+                        })
+                    }
+                ];
+
+                var dayData = [];
+                dayData[0] = {week: "목", sky:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
+                dayData[1] = {week: "금", sky:"Lightning", pop: 20, humidityIcon:"Humidity-20", reh: 10, tmn: 17, tmx: 26};
+                dayData[2] = {week: "토", sky:"Moon", pop: 30, humidityIcon:"Humidity-30", reh: 10, tmn: 16, tmx: 23};
+                dayData[3] = {week: "일", sky:"MoonWithCloud", pop: 40, humidityIcon:"Humidity-40", reh: 10, tmn: 14, tmx: 22};
+                dayData[4] = {week: "월", sky:"Rain", pop: 50, humidityIcon:"Humidity-50", reh: 10, tmn: 14, tmx: 22};
+                dayData[5] = {week: "화", sky:"RainWithLightning", pop: 60, humidityIcon:"Humidity-60", reh: 10, tmn: 12, tmx: 22};
+                dayData[6] = {week: "수", sky:"RainWithSnow", pop: 70, humidityIcon:"Humidity-70", reh: 10, tmn: 15, tmx: 27};
+                dayData[7] = {week: "오늘", sky:"Snow", pop: 80, humidityIcon:"Humidity-80", reh: 10, tmn: 15, tmx: 25};
+                dayData[8] = {week: "금", sky:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-90", reh: 10, tmn: 15, tmx: 22};
+                dayData[9] = {week: "토", sky:"Sun", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 12, tmx: 22};
+                dayData[10] = {week: "일", sky:"SunWithCloud", pop: 20, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 28};
+                dayData[11] = {week: "월", sky:"WindWithCloud", pop: 30, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 27};
+                dayData[12] = {week: "화", sky:"Rain", pop: 50, humidityIcon:"Humidity-40", reh: 10, tmn: 17, tmx: 26};
+                dayData[13] = {week: "수", sky:"RainWithLightning", pop: 60, humidityIcon:"Humidity-50", reh: 10, tmn: 16, tmx: 24};
+                dayData[14] = {week: "목", sky:"RainWithSnow", pop: 70, humidityIcon:"Humidity-60", reh: 10, tmn: 15, tmx: 28};
+                dayData[15] = {week: "금", sky:"Snow", pop: 80, humidityIcon:"Humidity-70", reh: 10, tmn: 17, tmx: 26};
+                dayData[16] = {week: "토", sky:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-80", reh: 10, tmn: 13, tmx: 24};
+                dayData[17] = {week: "일", sky:"Cloud", pop: 10, humidityIcon:"Humidity-90", reh: 10, tmn: 12, tmx: 25};
+
+                city.dayTable = dayData;
+                city.dayChart = [{
+                    values: dayData,
+                    temp: city.currentWeather.t1h
+                }];
+
+                that.cities = [];
+                that.cities.push(city);
+            }
+        };
+
+        obj.saveCities = function() {
+            if (typeof(Storage) === "undefined") {
+                return false;
+            }
+
+            var that = this;
+            localStorage.setItem("cities", JSON.stringify(that.cities));
+        };
+
+        obj.updateCities = function() {
+            var that = this;
+            var city = that.cities[++that.loadIndex];
+
+            if (city) {
+                WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
+                    var city = WeatherUtil.convertWeatherData(weatherDatas);
+                    that.updateCity(that.loadIndex, city);
+                    that.updateCities();
+                });
+            }
+        };
+
+        obj.loadTowns = function() {
+            var that = this;
+            var deferred = $q.defer();
+
+            $http.get('data/town.json')
+                .then(function (res) {
+                    that.towns = res.data;
+                    deferred.resolve();
+                }, function (err) {
+                    deferred.reject();
+                });
+
+            return deferred.promise;
+        };
+
+        //endregion
+
+        return obj;
     })
-    .factory('WeatherUtil', function () {
+    .factory('WeatherUtil', function ($q, $http) {
+        var obj = {};
+
+        //region Function
+
+        /**
+         *
+         * @param {Number} sky 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1
+         * @param {Number} pty 없음(0) 비(1) 비/눈(2) 눈(3), invalid : -1
+         * @param {Number} lgt 없음(0) 있음(1), invalid : -1
+         * @param {Boolean} isNight
+         */
+        function parseSkyState(sky, pty, lgt, isNight) {
+            var skyIconName = "";
+
+            switch (pty) {
+                case 1:
+                    skyIconName = "Rain";
+                    if (lgt) {
+                        skyIconName += "WithLightning";
+                    }
+                    return skyIconName;
+                case 2:
+                    return skyIconName = "RainWithSnow"; //Todo need RainWithSnow icon";
+                case 3:
+                    return skyIconName = "Snow";
+            }
+
+            if (lgt) {
+                return skyIconName = "Lightning";
+            }
+
+            if (isNight) {
+                skyIconName = "Moon";
+            }
+            else {
+                skyIconName = "Sun";
+            }
+
+            switch (sky) {
+                case 1:
+                    return skyIconName;
+                case 2:
+                    return skyIconName += "WithCloud";
+                case 3:
+                    return skyIconName = "Cloud"; //Todo need new icon
+                case 4:
+                    return skyIconName = "Cloud";
+            }
+
+            return skyIconName;
+        }
+
         /**
          *
          * @param pm10Value
@@ -50,19 +297,557 @@ angular.module('starter.services', [])
          */
         function parsePm10Value(pm10Value) {
             if (pm10Value <= 30) {
-                return '좋음';
+                return "좋음";
             }
             else if (pm10Value <= 80) {
-                return '보통';
+                return "보통";
             }
             else if (pm10Value <= 150) {
-                return '나쁨';
+                return "나쁨";
             }
             else if (pm10Value > 150) {
-                return '매우 나쁨';
+                return "매우 나쁨";
             }
-            return '-';
+            return "-";
         }
+
+        /**
+         *
+         * @param dailyInfoList
+         * @param date
+         * @returns {*}
+         */
+        function getDayInfo(dailyInfoList, date) {
+            if (dailyInfoList.length === 0) {
+                return undefined;
+            }
+
+            for (var i = 0; i < dailyInfoList.length; i++) {
+                if (dailyInfoList[i].date === date) {
+                    return dailyInfoList[i];
+                }
+            }
+
+            return undefined;
+        }
+
+        /**
+         *
+         * @param currentHours
+         * @returns {number}
+         */
+        function getPositionHours(currentHours) {
+            return Math.floor(currentHours / 3) * 3;
+        }
+
+        /**
+         *
+         * @param {Date} target
+         * @param {Date} current
+         * @returns {number}
+         */
+        function getDiffDays(target, current) {
+            if (!target || !current) {
+                console.log("target or current is invalid");
+                return 0;
+            }
+            var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+            return Math.ceil((target - date) / (1000 * 3600 * 24));
+        }
+
+        /**
+         * YYYYMMDD
+         * @param {String} str
+         * @returns {*}
+         */
+        function convertStringToDate(str) {
+            var y = str.substr(0, 4),
+                m = str.substr(4, 2) - 1,
+                d = str.substr(6, 2);
+            var data = new Date(y, m, d);
+            return (data.getFullYear() == y && data.getMonth() == m && data.getDate() == d) ? data : undefined;
+        }
+
+        /**
+         * @param day
+         * @param hours
+         * @returns {*}
+         */
+        function getDayString(day, hours) {
+            if (hours !== 0) {
+                return "";
+            }
+
+            var dayString = ["그제", "어제", "오늘", "내일", "모레", "글피"];
+            if (-2 <= day && day <= 3) {
+                return dayString[day + 2];
+            }
+            console.error("Fail to get day string day=" + day + " hours=" + hours);
+            return "";
+        }
+
+        /**
+         *
+         * @param {number} positionHours
+         * @param {number} day
+         * @param {number} hours
+         * @returns {String}
+         */
+        function getTimeString(positionHours, day, hours) {
+            if (positionHours === hours && day === 0) {
+                return "지금";
+            }
+            return hours + "시";
+        }
+
+        /**
+         *
+         * @param temp
+         * @param tmx
+         * @param tmn
+         * @returns {string}
+         */
+        function decideTempIcon(temp, tmx, tmn) {
+            var max = tmx - tmn;
+            var cur = temp - tmn;
+            var p = Math.max(1, Math.ceil(cur / max * 10));
+
+            if (p > 9) {
+                return "Temp-" + p;
+            }
+            else {
+                return "Temp-0" + p;
+            }
+        }
+
+        function dayToString(day) {
+            switch (day) {
+                case 0:
+                    return "일";
+                    break;
+                case 1:
+                    return "월";
+                    break;
+                case 2:
+                    return "화";
+                    break;
+                case 3:
+                    return "수";
+                    break;
+                case 4:
+                    return "목";
+                    break;
+                case 5:
+                    return "금";
+                    break;
+                case 6:
+                    return "토";
+                    break;
+            }
+            return "";
+        }
+
+        function parseSensoryTem(sensoryTem) {
+            if (sensoryTem >= 0 ) {
+                return "";
+            }
+            else if ( -10 < sensoryTem < 0) {
+                return "관심";
+            }
+            else if ( -25 < sensoryTem <= -10) {
+                return "주의";
+            }
+            else if ( -45 < sensoryTem <= -25) {
+                return "경고";
+            }
+            else if (sensoryTem <= -45) {
+                return "위험";
+            }
+            return "";
+        }
+
+        function convertMidSkyString(skyInfo) {
+            switch (skyInfo) {
+                case "맑음":
+                    return "Sun";
+                    break;
+                case "구름조금":
+                    return "SunWithCloud";
+                    break;
+                case "구름많음":
+                    return "SunWithCloud";
+                    break;
+                case "흐림":
+                    return "Cloud";
+                    break;
+                case "구름적고 비":
+                    return "Rain";
+                    break;
+                case "구름많고 비":
+                    return "Rain";
+                    break;
+                case "흐리고 비":
+                    return "Rain";
+                    break;
+                case "구름적고 눈":
+                    return "Snow";
+                    break;
+                case "구름많고 눈":
+                    return "Snow";
+                    break;
+                case "흐리고 눈":
+                    return "Snow";
+                    break;
+            }
+
+            console.log("Fail to convert skystring=" + skyInfo);
+            return "";
+        }
+
+        function getHighPrioritySky(sky1, sky2) {
+            if (sky2 === "Rain") {
+                return sky2;
+            }
+
+            return sky1;
+        }
+
+        function parseUltrv(ultrv) {
+            if (0 <= ultrv  && ultrv <= 2) return "낮음";
+            else if(3 <= ultrv && ultrv <= 5) return "보통";
+            else if(6 <= ultrv && ultrv <= 7) return "높음";
+            else if(8 <= ultrv && ultrv <= 10) return "매우 높음";
+            else if(11 <= ultrv) return "위험";
+            return "";
+        }
+
+        function decideHumidityIcon(reh) {
+            var tempIconName = "Humidity-";
+
+            if (reh == 100) {
+                tempIconName += "90";
+            }
+            else {
+                tempIconName += parseInt(reh / 10) * 10;
+            }
+            return tempIconName;
+        }
+
+        /**
+         *
+         * @param {Object} current
+         * @param {Object} yesterday
+         * @returns {String}
+         */
+        function makeSummary(current, yesterday) {
+            var str = "어제";
+            var diffTemp = current.t1h - yesterday.t3h;
+
+            if (diffTemp == 0) {
+                str += "와 동일";
+            }
+            else {
+                str += "보다 " + Math.abs(diffTemp);
+                if (diffTemp < 0) {
+                    str += "도 낮음";
+                }
+                else if (diffTemp > 0) {
+                    str += "도 높음";
+                }
+            }
+
+            //current.arpltn = {};
+            //current.arpltn.pm10Value = 80;
+            //current.arpltn.pm10Str = "나쁨";
+            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Value >= 80) {
+                str += ", " + "미세먼지 " + current.arpltn.pm10Str;
+            }
+            else {
+                if (current.pm10Value && current.pm10Value >= 80) {
+                    str += ', ' + '미세먼지 ' + current.pm10Str;
+                }
+            }
+
+            //current.ultrv = 6;
+            //current.ultrvStr = "높음";
+            if (current.ultrv && current.ultrv >= 6) {
+                str += ", " + "자외선 " + current.ultrvStr;
+            }
+
+            //current.sensorytmp = -10;
+            //current.sensorytmeStr = "관심";
+            if (current.sensorytem && current.sensorytem <= -10) {
+                str += ", " + "체감온도 " + current.sensorytemStr;
+            }
+
+            return str;
+        }
+
+        /**
+         * It's supporting only korean lang
+         * @param {Object[]} results
+         * @returns {string}
+         */
+        function findDongAddressFromGoogleGeoCodeResults(results) {
+            var dongAddress = "";
+            var length = 0;
+
+            results.forEach(function (result) {
+                var lastChar = result.formatted_address.slice(-1);
+                if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
+                    if(length < result.formatted_address.length) {
+                        dongAddress = result.formatted_address;
+                        length = result.formatted_address.length;
+                    }
+                }
+            });
+
+            if (dongAddress.length === 0) {
+                console.log("Fail to find index of dong from="+results[0].formatted_address);
+            }
+            return dongAddress;
+        }
+
+        /**
+         *
+         * @param {Object[]} results
+         * @returns {string}
+         */
+        function findLocationFromGoogleGeoCodeResults(results) {
+            var location = {}; //{"lat": Number, "long": Number};
+
+            results.forEach(function (result) {
+                location.lat = result.geometry.location.lat;
+                location.long = result.geometry.location.lng;
+            });
+            return location;
+        }
+
+        function getWeatherInfo (town) {
+            var deferred = $q.defer();
+            //var url = "town";
+            //var url = "https://todayweather1-wizardfactory.rhcloud.com/town";
+            //var url = "https://todayweather2-wizardfactory.rhcloud.com/town";
+            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
+            url += "/" + town.first + "/" + town.second + "/" + town.third;
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    console.log(data);
+                    deferred.resolve({data: data});
+                })
+                .error(function (error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getSensorytemLifeInfo (town) {
+            var deferred = $q.defer();
+
+            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
+            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
+            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
+            url += "/" + "getSensorytemLifeList";
+            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
+            url += "&AreaNo=" + town.areaNo;
+            url += "&_type=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function(data) {
+                    console.log(data);
+                    try {
+                        var senTemp = data.Response.Body.IndexModel.h3;
+                        console.log("senTemp=" + senTemp);
+                        deferred.resolve({senTemp: senTemp});
+                    }
+                    catch(e){
+                        console.log(e);
+                        deferred.resolve({senTemp: undefined});
+                        //deferred.reject(e);
+                    }
+                })
+                .error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.resolve({senTemp: undefined});
+                    //deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getUltrvLifeInfo (town) {
+            var deferred = $q.defer();
+
+            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
+            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
+            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
+            url += "/" + "getUltrvLifeList";
+            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
+            url += "&AreaNo=" + town.areaNo;
+            url += "&_type=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function(data) {
+                    console.log(data);
+                    try {
+                        var ultrv = data.Response.Body.IndexModel.today;
+                        if (!ultrv) {
+                            ultrv = data.Response.Body.IndexModel.tomorrow;
+                        }
+                        console.log("ultrv=" + ultrv);
+                        deferred.resolve({ultrv: ultrv});
+                    }
+                    catch(e){
+                        console.log(e);
+                        deferred.resolve({ultrv: undefined});
+                        //deferred.reject(e);
+                    }
+                })
+                .error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.resolve({ultrv: undefined});
+                    //deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getTmPointFromWgs84(y, x) {
+            var deferred = $q.defer();
+
+            var url = "https://apis.daum.net/local/geo/transcoord";
+            url += "?apiKey=" + "[DAUM_SERVICE_KEY]";
+            url += "&fromCoord=WGS84";
+            url += "&x=" + x;
+            url += "&y=" + y;
+            url += "&toCoord=TM";
+            url += "&output=json";
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getNearbyMsrstn(my, mx)  {
+            var deferred = $q.defer();
+
+            var DOMAIN_ARPLTN_KECO = "http://openapi.airkorea.or.kr/openapi/services/rest";
+            var PATH_MSRSTN_INFO_INQIRE_SVC = "MsrstnInfoInqireSvc";
+            var NEAR_BY_MSRSTN_LIST = "getNearbyMsrstnList";
+            var url = DOMAIN_ARPLTN_KECO + "/" + PATH_MSRSTN_INFO_INQIRE_SVC + "/" + NEAR_BY_MSRSTN_LIST;
+            url += "?ServiceKey=" + "[SERVICE_KEY]";
+            url += "&tmY=" + my;
+            url += "&tmX=" + mx;
+            url += "&pageNo=" + 1;
+            url += "&numOfRows=" + 999;
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    //console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getMsrstnAcctoRltmMesureDnsty(stationName) {
+            var deferred = $q.defer();
+
+            var url = "http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc" + "/getMsrstnAcctoRltmMesureDnsty";
+            url += "?ServiceKey=" + "[SERVICE_KEY]";
+            url += "&stationName=" + stationName;
+            url += "&dataTerm=DAILY";
+            url += "&pageNo=" + 1;
+            url += "&numOfRows=" + 999;
+            console.log(url);
+
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    //console.log(data);
+                    deferred.resolve(data);
+                }).error(function(error) {
+                    if (!error) {
+                        error = new Error("Fail to get tmpoint");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
+        }
+
+        function getPm10Info(town) {
+            var deferred = $q.defer();
+
+            getTmPointFromWgs84(town.lat, town.long).then(function (point) {
+                getNearbyMsrstn(point.y, point.x).then(function (data) {
+                    var ret = xml2json.parser(data);
+                    //console.log(ret);
+                    var stationname = ret.response.body.items.item[0].stationname;
+                    console.log(stationname);
+
+                    getMsrstnAcctoRltmMesureDnsty(stationname).then(function (data) {
+                        var ret = xml2json.parser(data);
+                        //console.log(ret);
+                        var pm10value = ret.response.body.items.item[0].pm10value;
+                        console.log(pm10value);
+                        deferred.resolve({pm10value: pm10value});
+                    }, function (err) {
+                        console.log(err);
+                        deferred.resolve({pm10value: undefined});
+                        //deferred.reject(err);
+                    });
+                }, function (err) {
+                    console.log(err);
+                    deferred.resolve({pm10value: undefined});
+                    //deferred.reject(err);
+                });
+            }, function (err) {
+                console.log(err);
+                deferred.resolve({pm10value: undefined});
+                //deferred.reject(err);
+            });
+
+            return deferred.promise;
+        }
+
+        //endregion
+
+        //region APIs
+
         /**
          * wsd : 풍속 4~8 약간 강, 9~13 강, 14~ 매우강
          * pm10Value, pm10Grade
@@ -72,7 +857,7 @@ angular.module('starter.services', [])
          * @param {Object} currentTownWeather
          * @returns {{}}
          */
-        function parseCurrentTownWeather(currentTownWeather) {
+        obj.parseCurrentTownWeather = function (currentTownWeather) {
             var currentForecast = {};
             var time = parseInt(currentTownWeather.time.substr(0, 2));
             var isNight = time < 7 || time > 18;
@@ -89,15 +874,15 @@ angular.module('starter.services', [])
                 currentForecast.pm10Str = parsePm10Value(currentTownWeather.arpltn.pm10Value);
             }
             return currentForecast;
-        }
+        };
 
         /**
          *
          * @param shortForecastList
          * @returns {Array}
          */
-        function parsePreShortTownWeather(shortForecastList) {
-            //It's the same type of dailyInfoArray
+        obj.parsePreShortTownWeather = function (shortForecastList) {
+            // {date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
             var dailyTemp = [];
 
             shortForecastList.forEach(function (shortForecast) {
@@ -108,18 +893,18 @@ angular.module('starter.services', [])
                     dayInfo = dailyTemp[dailyTemp.length - 1];
                     dayInfo.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
-                if (shortForecast.tmx != -50 && shortForecast.tmx != 0) {
+                if (!(shortForecast.tmx === -50 || shortForecast.tmx === 0)) {
                     dayInfo.tmx = shortForecast.tmx;
                 }
                 //sometimes, t3h over tmx;
-                if (shortForecast.t3h > dayInfo.tmx) {
+                if (dayInfo.tmx && (shortForecast.t3h > dayInfo.tmx)) {
                     dayInfo.tmx = shortForecast.t3h;
                 }
 
-                if (shortForecast.tmn != -50 && shortForecast.tmn != 0) {
+                if (!(shortForecast.tmn === -50 || shortForecast.tmn === 0)) {
                     dayInfo.tmn = shortForecast.tmn;
                 }
-                if (shortForecast.t3h < dayInfo.tmn) {
+                if (dayInfo.tmn && (shortForecast.t3h < dayInfo.tmn)) {
                     dayInfo.tmn = shortForecast.t3h;
                 }
 
@@ -132,26 +917,8 @@ angular.module('starter.services', [])
 
             console.log(dailyTemp);
             return dailyTemp;
-        }
+        };
 
-        function parseSensoryTem(sensoryTem) {
-            if (sensoryTem >= 0 ) {
-                return '';
-            }
-            else if ( -10 < sensoryTem < 0) {
-                return '관심';
-            }
-            else if ( -25 < sensoryTem <= -10) {
-                return '주의';
-            }
-            else if ( -45 < sensoryTem <= -25) {
-                return '경고';
-            }
-            else if (sensoryTem <= -45) {
-                return '위험';
-            }
-            return '';
-        }
         /**
          * r06 6시간 강수량, s06 6시간 신적설, Sensorytem 체감온도, 부패, 동상가능, 열, 불쾌, 동파가능, 대기확산
          * @param {Object[]} shortForecastList
@@ -160,7 +927,7 @@ angular.module('starter.services', [])
          * @param {Object[]} dailyInfoList
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        function parseShortTownWeather(shortForecastList, currentForecast, current, dailyInfoList) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
             var data = [];
             var positionHours = getPositionHours(current.getHours());
 
@@ -258,30 +1025,22 @@ angular.module('starter.services', [])
             var timeTable = data.slice(8);
             var timeChart = [
                 {
-                    name: 'yesterday',
+                    name: "yesterday",
                     values: data.slice(0, data.length - 8).map(function (d) {
-                        return {name: 'yesterday', value: d};
+                        return {name: "yesterday", value: d};
                     })
                 },
                 {
-                    name: 'today',
+                    name: "today",
                     values: data.slice(8).map(function (d) {
-                        return {name: 'today', value: d};
+                        return {name: "today", value: d};
                     })
                 }
             ];
 
             return {timeTable: timeTable, timeChart: timeChart};
-        }
-
-        function parseUltrv(ultrv) {
-            if (0 <= ultrv  && ultrv <= 2) return '낮음';
-            else if(3 <= ultrv && ultrv <= 5) return '보통';
-            else if(6 <= ultrv && ultrv <= 7) return '높음';
-            else if(8 <= ultrv && ultrv <= 10) return '매우 높음';
-            else if(11 <= ultrv) return '위험';
-            return '-';
-        }
+        };
+        
         /**
          * 식중독, ultra 자외선,
          * @param midData
@@ -290,7 +1049,7 @@ angular.module('starter.services', [])
          * @param currentWeather
          * @returns {Array}
          */
-        function parseMidTownWeather(midData, dailyInfoList, currentTime, currentWeather) {
+        obj.parseMidTownWeather = function (midData, dailyInfoList, currentTime, currentWeather) {
             var tmpDayTable = [];
             midData.dailyData.forEach(function (dayInfo) {
                 var data = {};
@@ -347,6 +1106,10 @@ angular.module('starter.services', [])
                     data.sky = dayInfo.sky;
                     data.pop = dayInfo.pop;
                     data.reh = dayInfo.reh;
+                    if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
+                    }
+                    if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
+                    }
                     data.humidityIcon = decideHumidityIcon(data.reh);
                     index++;
                 }
@@ -357,256 +1120,14 @@ angular.module('starter.services', [])
             });
 
             return tmpDayTable;
-        }
-
-        /**
-         *
-         * @param {Number} sky 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1
-         * @param {Number} pty 없음(0) 비(1) 비/눈(2) 눈(3), invalid : -1
-         * @param {Number} lgt 없음(0) 있음(1), invalid : -1
-         * @param {Boolean} isNight
-         */
-        function parseSkyState(sky, pty, lgt, isNight) {
-            var skyIconName = "";
-
-            switch (pty) {
-                case 1:
-                    skyIconName = "Rain";
-                    if (lgt) {
-                        skyIconName += "WithLightning";
-                    }
-                    return skyIconName;
-                case 2:
-                    return skyIconName = "RainWithSnow"; //Todo need RainWithSnow icon";
-                case 3:
-                    return skyIconName = "Snow";
-            }
-
-            if (lgt) {
-                return skyIconName = "Lightning";
-            }
-
-            if (isNight) {
-                skyIconName = "Moon";
-            }
-            else {
-                skyIconName = "Sun";
-            }
-
-            switch (sky) {
-                case 1:
-                    return skyIconName;
-                case 2:
-                    return skyIconName += "WithCloud";
-                case 3:
-                    return skyIconName = "Cloud"; //Todo need new icon
-                case 4:
-                    return skyIconName = "Cloud";
-            }
-
-            return skyIconName;
-        }
-
-        /**
-         *
-         * @param dailyInfoList
-         * @param date
-         * @returns {*}
-         */
-        function getDayInfo(dailyInfoList, date) {
-            if (dailyInfoList.length === 0) {
-                return undefined;
-            }
-
-            for (var i = 0; i < dailyInfoList.length; i++) {
-                if (dailyInfoList[i].date === date) {
-                    return dailyInfoList[i];
-                }
-            }
-
-            return undefined;
-        }
-
-        /**
-         *
-         * @param currentHours
-         * @returns {number}
-         */
-        function getPositionHours(currentHours) {
-            return Math.floor(currentHours / 3) * 3;
-        }
-
-        /**
-         *
-         * @param {Date} target
-         * @param {Date} current
-         * @returns {number}
-         */
-        function getDiffDays(target, current) {
-            if (!target || !current) {
-                console.log("target or current is invalid");
-                return 0;
-            }
-            var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
-            return Math.ceil((target - date) / (1000 * 3600 * 24));
-        }
-
-        /**
-         * YYYYMMDD
-         * @param {String} str
-         * @returns {*}
-         */
-        function convertStringToDate(str) {
-            var y = str.substr(0, 4),
-                m = str.substr(4, 2) - 1,
-                d = str.substr(6, 2);
-            var data = new Date(y, m, d);
-            return (data.getFullYear() == y && data.getMonth() == m && data.getDate() == d) ? data : undefined;
-        }
-
-        /**
-         * @param day
-         * @param hours
-         * @returns {*}
-         */
-        function getDayString(day, hours) {
-            if (hours !== 0) {
-                return '';
-            }
-
-            var dayString = ['그제', '어제', '오늘', '내일', '모레', '글피'];
-            if (-2 <= day && day <= 3) {
-                return dayString[day + 2];
-            }
-            console.error("Fail to get day string day=" + day + " hours=" + hours);
-            return '';
-        }
-
-        /**
-         *
-         * @param {number} positionHours
-         * @param {number} day
-         * @param {number} hours
-         * @returns {String}
-         */
-        function getTimeString(positionHours, day, hours) {
-            if (positionHours === hours && day === 0) {
-                return '지금';
-            }
-            return hours + '시';
-        }
-
-        /**
-         *
-         * @param temp
-         * @param tmx
-         * @param tmn
-         * @returns {string}
-         */
-        function decideTempIcon(temp, tmx, tmn) {
-            var max = tmx - tmn;
-            var cur = temp - tmn;
-            var p = Math.max(1, Math.ceil(cur / max * 10));
-
-            if (p > 9) {
-                return "Temp-" + p;
-            }
-            else {
-                return "Temp-0" + p;
-            }
-        }
-
-        function dayToString(day) {
-            switch (day) {
-                case 0:
-                    return "일";
-                    break;
-                case 1:
-                    return "월";
-                    break;
-                case 2:
-                    return "화";
-                    break;
-                case 3:
-                    return "수";
-                    break;
-                case 4:
-                    return "목";
-                    break;
-                case 5:
-                    return "금";
-                    break;
-                case 6:
-                    return "토";
-                    break;
-            }
-            return "";
-        }
-
-        function convertMidSkyString(skyInfo) {
-            switch (skyInfo) {
-                case "맑음":
-                    return "Sun";
-                    break;
-                case "구름조금":
-                    return "SunWithCloud";
-                    break;
-                case "구름많음":
-                    return "SunWithCloud";
-                    break;
-                case "흐림":
-                    return "Cloud";
-                    break;
-                case "구름적고 비":
-                    return "Rain";
-                    break;
-                case "구름많고 비":
-                    return "Rain";
-                    break;
-                case "흐리고 비":
-                    return "Rain";
-                    break;
-                case "구름적고 눈":
-                    return "Snow";
-                    break;
-                case "구름많고 눈":
-                    return "Snow";
-                    break;
-                case "흐리고 눈":
-                    return "Snow";
-                    break;
-            }
-
-            console.log("Fail to convert skystring=" + skyInfo);
-            return "";
-        }
-
-        function getHighPrioritySky(sky1, sky2) {
-            if (sky2 === 'Rain') {
-                return sky2;
-            }
-
-            return sky1;
-        }
-
-        function decideHumidityIcon(reh) {
-            var tempIconName = "Humidity-";
-
-            if (reh == 100) {
-                tempIconName += "90";
-            }
-            else {
-                tempIconName += parseInt(reh / 10) * 10;
-            }
-            return tempIconName;
-        }
+        };
 
         /**
          *
          * @param date
          * @returns {string}
          */
-        function convertTimeString(date) {
+        obj.convertTimeString = function (date) {
             var timeString;
             timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
             timeString += "("+dayToString(date.getDay()) +") ";
@@ -619,17 +1140,67 @@ angular.module('starter.services', [])
             }
 
             return timeString;
-        }
+        };
+
+        /**
+         *
+         * @param {String} fullAddress 대한민국 천하도 강남시 하늘구 가내동 33-2, 대한민국 서울특별시 라임구 마라동
+         * @returns {String[]}
+         */
+        obj.convertAddressArray = function (fullAddress) {
+            var splitAddress = [];
+
+            if (fullAddress && fullAddress.split) {
+                splitAddress = fullAddress.split(" ");
+            }
+            return splitAddress;
+        };
+
+        /**
+         * It's supporting only korean lang
+         * return only city namd and dong name
+         * @param {String} fullAddress
+         * @returns {string}
+         */
+        obj.getShortenAddress = function (fullAddress) {
+            var that = this;
+            var parsedAddress = that.convertAddressArray(fullAddress);
+
+            if (!parsedAddress || parsedAddress.length < 2) {
+                console.log("Fail to split full address="+fullAddress);
+                return "";
+            }
+            if (parsedAddress.length === 5) {
+                //대한민국, 경기도, 성남시, 분당구, 수내동
+                parsedAddress.splice(0, 2);
+            }
+            else if (parsedAddress.length === 4) {
+                //대한민국, 서울특별시, 송파구, 잠실동
+                parsedAddress.splice(0, 1);
+            }
+            else if (parsedAddress.length === 3) {
+                //대한민국, 세종특별자치시, 금난면,
+                parsedAddress.splice(0, 1);
+            }
+            else {
+                console.log("Fail to get shorten from ="+fullAddress);
+            }
+            parsedAddress.splice(1, 1);
+            parsedAddress.splice(2, 1);
+
+            console.log(parsedAddress.toString());
+            return parsedAddress.toString();
+        };
 
         /**
          *
          * @param addressArray
          * @returns {{first: string, second: string, third: string}}
          */
-        function getTownFromFullAddress(addressArray) {
-            var town = {first: '', second: '', third: ''};
+        obj.getTownFromFullAddress = function (addressArray) {
+            var town = {first: "", second: "", third: ""};
             if (!Array.isArray(addressArray) || addressArray.length === 0) {
-                console.log('addressArray is invalid');
+                console.log("addressArray is invalid");
                 return town;
             }
 
@@ -653,86 +1224,178 @@ angular.module('starter.services', [])
                 console.log(err);
             }
             return town;
-        }
-
-        return {
-            getTownFromFullAddress: function (addressArray) {
-                return getTownFromFullAddress(addressArray);
-            },
-            parseCurrentTownWeather: function (currentTownWeather) {
-                return parseCurrentTownWeather(currentTownWeather);
-            },
-            parsePreShortTownWeather: function (shortForecastList) {
-                return parsePreShortTownWeather(shortForecastList);
-            },
-            parseShortTownWeather: function (shortForecastList, currentForecast, current, dailyInfoList) {
-                return parseShortTownWeather(shortForecastList, currentForecast, current, dailyInfoList);
-            },
-            parseMidTownWeather: function (midData, dailyInfoList, currentTime, currentForecast) {
-                return parseMidTownWeather(midData, dailyInfoList, currentTime, currentForecast);
-            },
-            dayToString: function (day) {
-                return dayToString(day);
-            },
-            convertTimeString: function(date) {
-                return convertTimeString(date);
-            },
-            parseSensoryTem: function (sensoryTem) {
-                return parseSensoryTem(sensoryTem);
-            },
-            parseUltrv: function (ultrv) {
-                return parseUltrv(ultrv);
-            },
-            parsePm10Value: function (pm10value) {
-               return parsePm10Value(pm10value);
-            }
         };
-    })
-    .factory('Chats', function () {
-        // Might use a resource here that returns a JSON array
 
-        // Some fake testing data
-        var chats = [{
-            id: 0,
-            name: 'Ben Sparrow',
-            lastText: 'You on your way?',
-            face: 'https://pbs.twimg.com/profile_images/514549811765211136/9SgAuHeY.png'
-        }, {
-            id: 1,
-            name: 'Max Lynx',
-            lastText: 'Hey, it\'s me',
-            face: 'https://avatars3.githubusercontent.com/u/11214?v=3&s=460'
-        }, {
-            id: 2,
-            name: 'Adam Bradleyson',
-            lastText: 'I should buy a boat',
-            face: 'https://pbs.twimg.com/profile_images/479090794058379264/84TKj_qa.jpeg'
-        }, {
-            id: 3,
-            name: 'Perry Governor',
-            lastText: 'Look at my mukluks!',
-            face: 'https://pbs.twimg.com/profile_images/598205061232103424/3j5HUXMY.png'
-        }, {
-            id: 4,
-            name: 'Mike Harrington',
-            lastText: 'This is wicked good ice cream.',
-            face: 'https://pbs.twimg.com/profile_images/578237281384841216/R3ae1n61.png'
-        }];
+        /**
+         *
+         * @param {String} address
+         */
+        obj.getAddressToGeolocation = function (address) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
-        return {
-            all: function () {
-                return chats;
-            },
-            remove: function (chat) {
-                chats.splice(chats.indexOf(chat), 1);
-            },
-            get: function (chatId) {
-                for (var i = 0; i < chats.length; i++) {
-                    if (chats[i].id === parseInt(chatId)) {
-                        return chats[i];
-                    }
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                if (data.status === 'OK') {
+                    var location = findLocationFromGoogleGeoCodeResults(data.results);
+                    console.log(location);
+                    deferred.resolve(location);
                 }
-                return null;
-            }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
         };
+
+        /**
+         *
+         * @param {Number} lat
+         * @param {Number} long
+         */
+        obj.getAddressFromGeolocation = function (lat, long) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
+                "&sensor=true&language=ko";
+
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                if (data.status === "OK") {
+                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                    if (!address || address.length === 0) {
+                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
+                    }
+                    console.log(address);
+                    deferred.resolve(address);
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
+        };
+
+        obj.getCurrentPosition = function () {
+            var deferred = $q.defer();
+
+            navigator.geolocation.getCurrentPosition(function(position) {
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //deferred.resolve({latitude: 36.51, longitude: 127.259});
+
+                deferred.resolve(position.coords);
+            }, function(error) {
+                console.log(error);
+                deferred.reject();
+            },{timeout:3000});
+
+            return deferred.promise;
+        };
+
+        /**
+         *
+         * @param {String} address
+         * @param {cbWeatherInfo} callback
+         */
+        obj.getWeatherInfo = function (address, towns) {
+            var that = this;
+            var addressArray = that.convertAddressArray(address);
+            var townAddress = that.getTownFromFullAddress(addressArray);
+
+            var town = towns.filter(function (town) {
+                return !!(town.first === townAddress.first && town.second === townAddress.second
+                && town.third === townAddress.third);
+            })[0];
+
+            if (town === undefined) {
+                var deferred = $q.defer();
+                deferred.reject("address is empty");
+                return deferred.promise;
+            }
+
+            var promises = [];
+            promises.push(getWeatherInfo(town));
+            promises.push(getSensorytemLifeInfo(town));
+            promises.push(getUltrvLifeInfo(town));
+            promises.push(getPm10Info(town));
+
+            return $q.all(promises);
+        };
+
+        /**
+         *
+         * @param weatherData
+         */
+        obj.convertWeatherData = function (weatherDatas) {
+            var that = this;
+            var data = {};
+            var currentTime = new Date();
+            var weatherData, senTemp, ultrv, pm10value;
+            weatherDatas.forEach(function (data) {
+                if (data.hasOwnProperty("data")) {
+                    weatherData = data.data;
+                }
+                else if (data.hasOwnProperty("senTemp")) {
+                    senTemp = data.senTemp;
+                }
+                else if (data.hasOwnProperty("ultrv")) {
+                    ultrv = data.ultrv;
+                }
+                else if (data.hasOwnProperty("pm10value")) {
+                    pm10value = data.pm10value;
+                }
+            });
+
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+            var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short);
+
+            /*
+             parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
+             */
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
+            console.log(shortTownWeather);
+
+            /*
+             parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
+             */
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
+            console.log(midTownWeather);
+
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+
+            if(senTemp) {
+                currentForecast.sensorytem = senTemp;
+                currentForecast.sensorytemStr = parseSensoryTem(senTemp);
+            }
+            if (ultrv) {
+                currentForecast.ultrv = ultrv;
+                currentForecast.ultrvStr = parseUltrv(ultrv);
+            }
+            if (pm10value) {
+                currentForecast.pm10Value = pm10value;
+                currentForecast.pm10Str = parsePm10Value(pm10value);
+            }
+
+            data.currentWeather = currentForecast;
+            data.timeTable = shortTownWeather.timeTable;
+            data.timeChart = shortTownWeather.timeChart;
+            data.dayTable = midTownWeather;
+            data.dayChart = [{
+                values: midTownWeather,
+                temp: currentForecast.t1h
+            }];
+
+            return data;
+        };
+
+        //endregion
+
+        return obj;
     });

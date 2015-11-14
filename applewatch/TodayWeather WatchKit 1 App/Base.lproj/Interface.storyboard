@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder.WatchKit.Storyboard" version="3.0" toolsVersion="9059" systemVersion="15B42" targetRuntime="watchKit" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="AgC-eL-Hgc">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9049"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBWatchKitPlugin" version="9019"/>
+    </dependencies>
+    <scenes>
+        <!--Interface Controller-->
+        <scene sceneID="aou-V4-d1y">
+            <objects>
+                <controller id="AgC-eL-Hgc" customClass="InterfaceController">
+                    <items>
+                        <group alignment="center" spacing="7" id="LGc-d0-JPj">
+                            <items>
+                                <group alignment="left" id="BEe-WN-zSk">
+                                    <items>
+                                        <label alignment="left" text="99" id="VGQ-zo-wQu">
+                                            <fontDescription key="font" type="boldSystem" pointSize="40"/>
+                                        </label>
+                                        <group width="1" alignment="right" layout="vertical" id="6Q4-Sn-MM2">
+                                            <items>
+                                                <imageView width="19" height="14" alignment="left" image="reddot.png" contentMode="scaleAspectFit" id="x3Y-uW-fRn"/>
+                                                <imageView width="35" height="30" alignment="right" image="Snow.png" contentMode="scaleAspectFit" id="w1v-Sz-sJ7"/>
+                                            </items>
+                                        </group>
+                                    </items>
+                                </group>
+                            </items>
+                            <edgeInsets key="margins" left="10" right="0.0" top="0.0" bottom="0.0"/>
+                        </group>
+                        <group width="1" alignment="center" id="qZ2-RQ-CG7">
+                            <items>
+                                <label alignment="center" text="오늘은 어제와 같음" id="TQO-bb-HJc"/>
+                            </items>
+                            <edgeInsets key="margins" left="0.0" right="0.0" top="0.0" bottom="5"/>
+                        </group>
+                        <group alignment="center" spacing="5" id="XHU-VO-h2g">
+                            <items>
+                                <group width="1" alignment="left" layout="vertical" id="xg1-Jq-xje">
+                                    <items>
+                                        <group width="40" alignment="left" layout="vertical" radius="20" spacing="0.0" id="Q7K-Yu-WP2">
+                                            <items>
+                                                <label alignment="center" text="99" id="NtT-As-Khj"/>
+                                                <separator width="20" alignment="center" id="F85-vJ-8Gv"/>
+                                                <label alignment="center" text="99" id="IOQ-0o-1ur"/>
+                                            </items>
+                                            <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <label alignment="center" text="어제" id="7J9-iR-w8N"/>
+                                    </items>
+                                </group>
+                                <group width="1" alignment="left" layout="vertical" id="BKy-mb-mfo">
+                                    <items>
+                                        <group width="40" alignment="left" layout="vertical" radius="20" spacing="0.0" id="kLd-mh-ILu">
+                                            <items>
+                                                <label alignment="center" text="99" id="voB-r9-fn4"/>
+                                                <separator width="20" alignment="center" id="594-7D-vBF"/>
+                                                <label alignment="center" text="99" id="B6W-um-kAr"/>
+                                            </items>
+                                            <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <label alignment="center" text="오늘" id="crQ-Kj-xNL"/>
+                                    </items>
+                                </group>
+                                <group width="1" alignment="left" layout="vertical" id="cAi-7a-Wpa">
+                                    <items>
+                                        <group width="40" alignment="left" layout="vertical" radius="20" spacing="0.0" id="aqi-aV-3Lr">
+                                            <items>
+                                                <label alignment="center" text="99" id="2cA-om-Lv6"/>
+                                                <separator width="20" alignment="center" id="bTg-fu-RQX"/>
+                                                <label alignment="center" text="99" id="057-g6-9g9"/>
+                                            </items>
+                                            <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                            <edgeInsets key="margins" left="2" right="2" top="0.0" bottom="0.0"/>
+                                        </group>
+                                        <label alignment="center" text="내일" id="8Hp-yc-kRY"/>
+                                    </items>
+                                </group>
+                            </items>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="Temperature" destination="VGQ-zo-wQu" id="gh7-hy-UXH"/>
+                        <outlet property="todayMaxTemp" destination="voB-r9-fn4" id="EQ4-9Z-qLF"/>
+                        <outlet property="todayMinTemp" destination="B6W-um-kAr" id="8zf-98-x8k"/>
+                        <outlet property="tomorrowMaxTemp" destination="2cA-om-Lv6" id="gbL-Wj-xmh"/>
+                        <outlet property="tomorrowMinTemp" destination="057-g6-9g9" id="kzy-La-Ixw"/>
+                        <outlet property="weatherComment" destination="TQO-bb-HJc" id="IXd-ur-9uO"/>
+                        <outlet property="weatherImage" destination="w1v-Sz-sJ7" id="ZB1-Ky-tXr"/>
+                        <outlet property="yesterdayMaxTemp" destination="NtT-As-Khj" id="Fct-cT-BiK"/>
+                        <outlet property="yesterdayMinTemp" destination="IOQ-0o-1ur" id="0a7-W5-9kN"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="380" y="236"/>
+        </scene>
+    </scenes>
+</document>

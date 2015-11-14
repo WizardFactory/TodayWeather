@@ -6,7 +6,7 @@
 
 var mongoose = require('mongoose');
 var current = require('./current');
-var modelUtil = require('./modelUtil');
+var ModelUtil = require('./modelUtil');
 
 var midTempSchema = mongoose.Schema({
     regId : String,
@@ -38,6 +38,13 @@ var taList = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin
     'taMin7', 'taMax7', 'taMin8', 'taMax8', 'taMin9', 'taMax9', 'taMin10', 'taMax10'];
 
 midTempSchema.statics = {
+    getOneTempData : function(first, second, nowDate, cb){
+        var self = this;
+        var modelUtil = new ModelUtil();
+        var regId = modelUtil.getCode(first, second);
+        self.find({"regId" : regId, "midTempData.date" : nowDate})
+            .sort({"midTempData.date" : -1, "midTempData.time" : -1}).limit(1).exec(cb);
+    },
     getTempData : function(first, second, cb){
         //var config = require('../config/config');
         //var tempList = config.testTownData[0].data.current
@@ -48,7 +55,7 @@ midTempSchema.statics = {
         //    currentList.push(t);
         //});
         var self = this;
-        var util = new modelUtil();
+        var util = new ModelUtil();
         var regId = util.getCode(first, second);
         current.getCurrentDataForCal(169, regId, function (err, currentList) { // 168 + 1
             var beforeObj = {};
@@ -69,6 +76,9 @@ midTempSchema.statics = {
                         dateCnt ++;
                         return;
                     }
+                }else{
+                    beforeObj['tbMin'+ dateCnt] = tempMin; // tb == temperature before..
+                    beforeObj['tbMax'+ dateCnt] = tempMax;
                 }
 
                 if(tempMax < elem.currentData.t1h) tempMax = elem.currentData.t1h;

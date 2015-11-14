@@ -35,6 +35,15 @@ mongoose.connect(config.db.path, config.db.options);
 //    console.log(res);
 //});
 
+//var current = require('./current');
+//var config = require('../config/config');
+//
+//var currentList = config.testTownData[0].data.current;
+//current.setCurrentData(currentList, {mx : 93, my: 132}, function(err, res){
+//    if(err) console.log(err);
+//    console.log(res);
+//});
+
 //short.getShortData("경기도", "고양시덕양구", "성사2동", function(err, res){
 //    if(err) console.log(err);
 //    console.log(res);
@@ -44,16 +53,16 @@ mongoose.connect(config.db.path, config.db.options);
 //    if(err) console.log(err);
 //    console.log(res);
 //});
-//var midTemp = require('./midTemp');
+var midTemp = require('./midTemp');
 //
 //var first = config.testTownData[0].regionName;
 //var second = config.testTownData[0].cityName;
 //var third = config.testTownData[0].townName;
 //
-//midTemp.getTempData('강원도', '강릉시', function(err, res){
-//    if(err) return;
-//    console.log(res);
-//});
+midTemp.getTempData('강원도', '강릉시', function(err, res){
+    if(err) return;
+    console.log(res);
+});
 
 //var current = require('./current');
 //current.getCurrentDataForCal(1, '11D20501', function(err, res){
@@ -71,3 +80,29 @@ midLand.getLandData('강원도', '강릉시', function(err, res){
     if(err) return;
     console.log(res);
 });
+
+//var current = require('./short');
+//
+//var town = {first : '강원도', second : '강릉시', third : '강남동'};
+//current.getShortDataWithTime(town, '20151101', '', function(err, res){
+//    if(err) console.log(err);
+//    var list = [];
+//    list.push.apply(list, res);
+//    list.forEach(function(elem, idx){
+//        console.log('idx : ' + idx);
+//        console.log(elem);
+//    });
+//});
+
+//var forecast = ('./forecast');
+//current.getOneShortData('강원도', '강릉시', '강남동', function(err, res){
+//    if(err) console.log(err);
+//    console.log(res);
+//});
+
+//var short = require('./short');
+//
+//short.getOneShortDataWithTime('강원도', '강릉시', '강남동', '20151108', '1700', function(err, res){
+//    if(err) console.log(err);
+//    console.log(res[0].shortData);
+//});
