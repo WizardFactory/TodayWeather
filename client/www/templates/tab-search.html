@@ -29,7 +29,11 @@
                     <div class="item" style="background-color: inherit;" ng-repeat="city in cityList"
                          ng-click="OnSelectCity($index)" on-swipe-left="OnSwipeCity(city)" on-swipe-right="OnSwipeCity(city)">
                         <div class="row">
-                            <div class="col search-content" style="text-align: left; width: 40%;"><p>{{city.address[0]}}<br>{{city.address[1]}}</p></div>
+                            <div class="col search-content" style="text-align: left; width: 40%;">
+                                <p>{{city.address[0]}}<br>{{city.address[1]}}
+                                    <a class="icon ion-ios-location-outline" style="color: white;" ng-if="city.currentPosition"></a>
+                                </p>
+                            </div>
                             <div class="col search-content" style="width: 20%"><img src="img/{{city.sky}}-Big.png"></div>
                             <div class="col search-content" style="width: 20%;">
                                 <p style="font-size: 32px; padding-top: 18px; font-family: 'helvetica neue light';">{{city.t1h}}˚</p>

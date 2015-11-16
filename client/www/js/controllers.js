@@ -123,10 +123,12 @@ angular.module('starter.controllers', [])
             $scope.dayChart = cityData.dayChart;
             console.log($scope.dayChart);
 
+            $scope.currentPosition = cityData.currentPosition;
+
             // To share weather information for apple watch.
             if (ionic.Platform.isIOS()) {
                 var shortestAddress = $scope.address.split(",")[1];
-                if (!shortestAddress) {$scope.address.split(",")[0];
+                if (!shortestAddress) { shortestAddress = $scope.address.split(",")[0];
                 }
                 setUserDefaults({"Location": shortestAddress || "구름동"});
                 setUserDefaults({"Temperature": String(cityData.currentWeather.t1h) || "33"});
