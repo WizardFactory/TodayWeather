@@ -864,7 +864,7 @@ angular.module('starter.services', [])
 
             currentForecast.time = time;
             currentForecast.t1h = currentTownWeather.t1h;
-            currentForecast.sky = parseSkyState(currentForecast.sky, currentTownWeather.pty,
+            currentForecast.sky = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
             currentForecast.wsd = currentTownWeather.wsd;
 
