@@ -15,8 +15,9 @@
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding" style="height: 14%;"></div>
-                    <div class="row row-no-padding region" style="height: 16%;">
-                        <p>{{address}}</p>
+                    <div class="row row-no-padding region" style="height: 16%;" >
+                            <p><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
+                            {{address}}</p>
                     </div>
                     <div class="row row-no-padding" style="height: 3%;"></div>
                     <div class="row row-no-padding" style="height: 50%;">
