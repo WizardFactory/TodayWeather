@@ -61,7 +61,16 @@ angular.module('starter', [
             })
 
             // Each tab has its own nav history stack:
-
+            .state('tab.search', {
+                url: '/search',
+                cache: false,
+                views: {
+                    'tab-search': {
+                        templateUrl: 'templates/tab-search.html',
+                        controller: 'SearchCtrl'
+                    }
+                }
+            })
             .state('tab.forecast', {
                 url: '/forecast',
                 cache: false,
@@ -72,15 +81,8 @@ angular.module('starter', [
                     }
                 }
             })
-            .state('tab.search', {
-                url: '/search',
-                cache: false,
-                views: {
-                    'tab-search': {
-                        templateUrl: 'templates/tab-search.html',
-                        controller: 'SearchCtrl'
-                    }
-                }
+            .state('tab.update', {
+
             })
             .state('tab.setting', {
                 url: '/setting',
