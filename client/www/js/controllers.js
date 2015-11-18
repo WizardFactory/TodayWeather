@@ -2,7 +2,8 @@
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                          $ionicPopup, $q, $http, $timeout, WeatherInfo, WeatherUtil) {
+                                          $ionicPopup, $q, $http, $timeout, WeatherInfo, WeatherUtil,
+                                          $ionicNavBarDelegate) {
 
         $scope.skipGuide = false;
         if(typeof(Storage) !== "undefined") {
@@ -123,10 +124,12 @@ angular.module('starter.controllers', [])
             $scope.dayChart = cityData.dayChart;
             console.log($scope.dayChart);
 
+            $scope.currentPosition = cityData.currentPosition;
+
             // To share weather information for apple watch.
             if (ionic.Platform.isIOS()) {
                 var shortestAddress = $scope.address.split(",")[1];
-                if (!shortestAddress) {$scope.address.split(",")[0];
+                if (!shortestAddress) { shortestAddress = $scope.address.split(",")[0];
                 }
                 setUserDefaults({"Location": shortestAddress || "구름동"});
                 setUserDefaults({"Temperature": String(cityData.currentWeather.t1h) || "33"});
@@ -325,10 +328,23 @@ angular.module('starter.controllers', [])
             }
         };
 
+        $scope.$on('updateWeatherEvent', function(event) {
+            console.log('called by update weather event');
+            $scope.doRefresh();
+        });
+
+        var isShowingBar = false;
+
         $scope.doRefresh = function() {
+
+            $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
+            isShowingBar = !isShowingBar;
+            $ionicNavBarDelegate.showBar(isShowingBar);
             updateWeatherData(true).finally(function (res) {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-                $scope.$broadcast("scroll.refreshComplete");
+
+                isShowingBar = !isShowingBar;
+                $ionicNavBarDelegate.showBar(isShowingBar);
             });
         };
 
@@ -585,6 +601,11 @@ angular.module('starter.controllers', [])
                 $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
             }
         }, 1000);
+
+        $scope.doTabRefresh = function() {
+            //send event
+            $scope.$broadcast('updateWeatherEvent');
+        };
 
         //$ionicPlatform.ready(function() {
         //    WeatherInfo.loadCities();
