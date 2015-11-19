@@ -7,6 +7,7 @@ var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 //var forecast = require('../models/forecast');
 var short = require('../models/short');
+var shortest = require('../models/shortest');
 var current = require('../models/current');
 var midLand = require('../models/midLand');
 var midTemp = require('../models/midTemp');
@@ -927,6 +928,15 @@ Manager.prototype.getTownShortestData = function(){
     }
     else{
         town.getCoord(function(err, listTownDb){
+            if(err){
+                log.error('** getTownShortestData : ', err);
+                log.error(meta);
+                return this;
+            }
+
+            log.silly(listTownDb);
+            log.info('+++ COORD LIST : ', listTownDb.length);
+
             var collectShortInfo = new collectTown();
             collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function(err, dataList){
 
@@ -934,13 +944,17 @@ Manager.prototype.getTownShortestData = function(){
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
-                for(var i in dataList){
-                    for(var j in dataList[i].data){
-                        log.silly(dataList[i].data[j]);
+                for(var i = 0 ; i < listTownDb.length ; i++){
+                    if(Array.isArray(dataList[i].data)){
+                        shortest.setShortestData(dataList[i].data, listTownDb[i], function(err, res){
+                            if(err){
+                                log.error(err);
+                                return;
+                            }
+                            log.silly(res);
+                        });
                     }
                 }
-
-                // TODO: Store data to DB.
             });
         });
     }
