@@ -522,14 +522,27 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $cordovaInAppBrowser) {
+    .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup,
+                                        $http, $cordovaInAppBrowser) {
         $scope.version  = "0.0.0";
 
         var deploy = new Ionic.Deploy();
         deploy.info().then(function(deployInfo) {
-            console.log(deployInfo);
+            console.log("DeployInfo" + deployInfo);
             $scope.version = deployInfo.binary_version;
         }, function() {}, function() {});
+
+        //for chrome extension
+        if (chrome && chrome.extension) {
+
+            $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
+                console.log("Version: " + manifest.version);
+                $scope.version = manifest.version;
+            })
+            .error(function (err) {
+                    console.log(err);
+            });
+        }
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ea9623';
