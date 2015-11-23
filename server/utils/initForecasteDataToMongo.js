@@ -7,7 +7,12 @@ var config = require('../config/config');
 var convert = require('./coordinate2xy');
 var targetName = './utils/data/part.csv';
 
-mongoose.connect(config.db.path, config.db.options);
+mongoose.connect(config.db.path, config.db.options, function(err){
+    if(err){
+        console.error('could net connect to MongoDB');
+        console.error(err);
+    }
+});
 
 var fs = require('fs');
 var lineList = fs.readFileSync(targetName).toString().split('\n');
@@ -34,7 +39,7 @@ var mSchema = new mongoose.Schema({
     regId : String
 });
 
-var forecastNameList = ['short', 'current'];
+var forecastNameList = ['shortest', 'short', 'current'];
 //var collectionNameList = ['town', 'short', 'current'];
 var bDoc = null;
 
