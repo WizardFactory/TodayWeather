@@ -8,6 +8,7 @@ var config = require('../config/config');
 var dbForecast = require('../models/forecast');
 var dbCurrent = require('../models/current');
 var dbShort = require('../models/short');
+var dbShortest = require('../models/shortest');
 var dbMidTemp = require('../models/midTemp');
 var dbMidLand = require('../models/midLand');
 var DateUtil = require('../models/dateUtil');
@@ -691,31 +692,29 @@ var getShortest = function(req, res, next){
         });
     }
     else{
-        dbForecast.getData(regionName, cityName, townName, function(err, result){
+        dbShortest.getOneShortestData(regionName, cityName, townName, function(err, result){
             if(err){
-                if(err){
-                    log.error('> getShortest : failed to get data from DB');
-                    log.error(meta);
-                    next('route');
-                    return;
-                }
-            }
-            /********************
-             * TEST DATA
-             ********************/
-            //result = config;
-            /********************/
-            try{
-                var listShortest = result.mData.data.shortest;
-
-                //log.info(listShortest);
-                req.shortest = listShortest[listShortest.length - 1];
-                next();
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
+                log.error('> getShortest : failed to get data from DB');
+                log.error(meta);
                 next('route');
+                return;
             }
+
+            var shortestData = result[0].shortestData;
+            var nowDate = getCurrentTimeValue(+9);
+            var resultItem = {};
+
+            resultItem.date= nowDate.date;
+            resultItem.time= nowDate.time;
+            resultItem.mx= shortestData.mx;
+            resultItem.my= shortestData.my;
+            resultItem.pty= shortestData.pty;
+            resultItem.rn1= shortestData.rn1;
+            resultItem.sky= shortestData.sky;
+            resultItem.lgt= shortestData.lgt;
+
+            req.shortest = resultItem;
+            next();
         });
     }
 

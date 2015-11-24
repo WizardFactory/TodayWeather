@@ -408,6 +408,10 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         function decideTempIcon(temp, tmx, tmn) {
+            if (!tmx || !tmn) {
+                return "temp-01";
+            }
+
             var max = tmx - tmn;
             var cur = temp - tmn;
             var p = Math.max(1, Math.ceil(cur / max * 10));
@@ -481,23 +485,19 @@ angular.module('starter.services', [])
                     return "Cloud";
                     break;
                 case "구름적고 비":
-                    return "Rain";
-                    break;
                 case "구름많고 비":
-                    return "Rain";
-                    break;
                 case "흐리고 비":
                     return "Rain";
                     break;
                 case "구름적고 눈":
-                    return "Snow";
-                    break;
                 case "구름많고 눈":
-                    return "Snow";
-                    break;
                 case "흐리고 눈":
                     return "Snow";
                     break;
+                case "구름적고 비/눈":
+                case "구름많고 비/눈":
+                case "흐리고  비/눈":
+                    return "RainWithSnow";
             }
 
             console.log("Fail to convert skystring=" + skyInfo);

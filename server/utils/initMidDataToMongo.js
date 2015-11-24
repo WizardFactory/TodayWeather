@@ -6,7 +6,12 @@ var mongoose = require('mongoose');
 var config = require('../config/config');
 var targetName = './utils/data/region.csv';
 
-mongoose.connect(config.db.path, config.db.options);
+mongoose.connect(config.db.path, config.db.options, function(err){
+    if(err){
+        console.error('could net connect to MongoDB');
+        console.error(err);
+    }
+});
 
 var fs = require('fs');
 
