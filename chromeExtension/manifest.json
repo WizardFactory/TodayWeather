@@ -4,7 +4,7 @@
     "name": "TodayWeather",
     "description": "Inform how warm or cold it is today than yesterday.",
     "icons": { "128": "icon128.png" },
-    "version": "0.6.0",
+    "version": "0.6.1",
     "browser_action": {
         "default_title": "TodayWeather",
         "default_icon": "icon128.png",

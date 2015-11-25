@@ -132,7 +132,7 @@ angular.module('starter.controllers', [])
                 if (!shortestAddress) { shortestAddress = $scope.address.split(",")[0];
                 }
                 setUserDefaults({"Location": shortestAddress || "구름동"});
-                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h) || "33"});
+                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h)+'˚' || "33˚"});
                 setUserDefaults({"WeatherComment": cityData.currentWeather.summary || "어제과 같음"});
                 setUserDefaults({"WeatherImage": cityData.currentWeather.sky || "Snow"});
 
@@ -536,15 +536,16 @@ angular.module('starter.controllers', [])
         }, function() {}, function() {});
 
         //for chrome extension
-        if (chrome && chrome.extension) {
-
-            $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
-                console.log("Version: " + manifest.version);
-                $scope.version = manifest.version;
-            })
-            .error(function (err) {
-                    console.log(err);
-            });
+        if (window.chrome) {
+            if (chrome.extension) {
+                $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
+                    console.log("Version: " + manifest.version);
+                    $scope.version = manifest.version;
+                })
+                    .error(function (err) {
+                        console.log(err);
+                    });
+            }
         }
 
         $scope.$on('$ionicView.enter', function() {
