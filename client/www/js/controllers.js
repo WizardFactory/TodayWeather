@@ -257,7 +257,7 @@ angular.module('starter.controllers', [])
                 return colWidth;
             }
 
-            var bodyWidth =  angular.element(document).find("body")[0].offsetWidth;
+            var bodyWidth =  window.innerWidth;
             console.log("body of width="+bodyWidth);
 
             switch (bodyWidth) {
@@ -266,6 +266,9 @@ angular.module('starter.controllers', [])
                     break;
                 case 375:   //iphone 6
                     colWidth = 53;
+                    break;
+                case 412:   //SS note5
+                    colWidth = 58.85;
                     break;
                 case 414:   //iphone 6+
                     colWidth =  59;
