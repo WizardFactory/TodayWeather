@@ -90,7 +90,6 @@ $ ionic build --release ios
 copy widget files
 ```bash
 $ cd platforms/android/src/net/wizardfactory/todayweather/
-$ cp ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
 $ cp -af ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
 $ cd platforms/android/res/drawable-xhdpi
 $ cp ../../../../../android/res/drawable-xhdpi/* ./
@@ -106,9 +105,8 @@ $ cp ../../../../android/res/values/strings.xml values/strings.xml
 ```
 
 add activity and service for widget
-set android:minSdkVersion to 14
 ```bash
-$ vimdiff vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
+$ vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
 ```
 
 ### import apple watch app
@@ -156,3 +154,13 @@ ios
 2. general -> device : iPhone, check Hide status bar
 3. connect iPhone by USB
 4. Menu -> Product -> Archive
+
+
+chrome extension
+
+```bash
+$ cd ../../chromeExtension
+$ gulp sass;gulp manifest;gulp www;gulp uglify
+$ zip -r TodayWeather_chromeExtension.zip chrome
+```
+publish on https://chrome.google.com/webstore/developer/dashboard
