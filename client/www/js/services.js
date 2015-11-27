@@ -408,8 +408,8 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         function decideTempIcon(temp, tmx, tmn) {
-            if (!tmx || !tmn) {
-                return "temp-01";
+            if ( (tmx === undefined || tmx === null) || (tmn === undefined || tmn === null) || tmx < tmn) {
+                return "Temp-01";
             }
 
             var max = tmx - tmn;
@@ -484,11 +484,17 @@ angular.module('starter.services', [])
                 case "흐림":
                     return "Cloud";
                     break;
+                case "흐리고 한때 비":
+                case "구름적고 한때 비":
+                case "구름많고 한때 비":
                 case "구름적고 비":
                 case "구름많고 비":
                 case "흐리고 비":
                     return "Rain";
                     break;
+                case "흐리고 한때 눈":
+                case "구름적고 한때 눈":
+                case "구름많고 한때 눈":
                 case "구름적고 눈":
                 case "구름많고 눈":
                 case "흐리고 눈":
@@ -888,24 +894,29 @@ angular.module('starter.services', [])
             shortForecastList.forEach(function (shortForecast) {
                 var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
                 if (!dayInfo) {
-                    var data = {date: shortForecast.date, sky: "Sun", tmx: null, tmn: null, pop: 0, reh: 0};
+                    var data = {date: shortForecast.date, sky: "Sun", tmx: -100, tmn: 100, pop: 0, reh: 0};
                     dailyTemp.push(data);
                     dayInfo = dailyTemp[dailyTemp.length - 1];
                     dayInfo.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
-                if (!(shortForecast.tmx === -50 || shortForecast.tmx === 0)) {
-                    dayInfo.tmx = shortForecast.tmx;
-                }
-                //sometimes, t3h over tmx;
-                if (dayInfo.tmx && (shortForecast.t3h > dayInfo.tmx)) {
+                //check valid data by reh
+                if (dayInfo.tmx < shortForecast.t3h && shortForecast.reh) {
                     dayInfo.tmx = shortForecast.t3h;
                 }
-
-                if (!(shortForecast.tmn === -50 || shortForecast.tmn === 0)) {
-                    dayInfo.tmn = shortForecast.tmn;
+                if (!(shortForecast.tmx === -50) && shortForecast.reh) {
+                    if (dayInfo.tmx < shortForecast.tmx) {
+                        dayInfo.tmx = shortForecast.tmx;
+                    }
                 }
-                if (dayInfo.tmn && (shortForecast.t3h < dayInfo.tmn)) {
+
+                //check valid data by reh
+                if (dayInfo.tmn > shortForecast.t3h && shortForecast.reh) {
                     dayInfo.tmn = shortForecast.t3h;
+                }
+                if (!(shortForecast.tmn === -50) && shortForecast.reh) {
+                    if (dayInfo.tmn > shortForecast.tmn) {
+                        dayInfo.tmn = shortForecast.tmn;
+                    }
                 }
 
                 if (shortForecast.pty > 0) {

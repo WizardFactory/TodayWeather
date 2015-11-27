@@ -2,8 +2,8 @@
 <!--146 / 72-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/w2x1_widget_layout"
-    android:minHeight="40dp"
-    android:minWidth="72dp"
-    android:previewImage="@drawable/icon"
+    android:minWidth="146dp"
+    android:minHeight="72dp"
+    android:previewImage="@drawable/w2x1_widget_sample"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0" />
