@@ -14,11 +14,11 @@ angular.module('starter.controllers', [])
         $scope.forecastType = "short"; //mid, detail
         $scope.address = "";
 
-        //{time: Number, t1h: Number, sky: String, tmn: Number, tmx: Number, summary: String};
+        //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
         $scope.currentWeather;
-        //{day: String, time: Number, t3h: Number, sky: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
+        //{day: String, time: Number, t3h: Number, skyIcon: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
         $scope.timeTable = [];
-        //{week: String, sky:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
+        //{week: String, skyIcon:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
         $scope.dayTable = [];
         //[{name: String, values:[{name: String, value: Number}]}]
         $scope.timeChart;
@@ -95,11 +95,13 @@ angular.module('starter.controllers', [])
         }
 
         function setUserDefaults(obj) {
-            applewatch.sendUserDefaults(function() {
-                console.log(obj);
-            }, function() {
-                console.log("Failed to sendUserDefault");
-            }, obj, "group.net.wizardfactory.todayweather");
+            if (window.applewatch) {
+                applewatch.sendUserDefaults(function() {
+                    console.log(obj);
+                }, function() {
+                    console.log("Failed to sendUserDefault");
+                }, obj, "group.net.wizardfactory.todayweather");
+            }
         }
 
         function loadWeatherData() {
@@ -134,7 +136,7 @@ angular.module('starter.controllers', [])
                 setUserDefaults({"Location": shortestAddress || "구름동"});
                 setUserDefaults({"Temperature": String(cityData.currentWeather.t1h)+'˚' || "33˚"});
                 setUserDefaults({"WeatherComment": cityData.currentWeather.summary || "어제과 같음"});
-                setUserDefaults({"WeatherImage": cityData.currentWeather.sky || "Snow"});
+                setUserDefaults({"WeatherImage": cityData.currentWeather.skyIcon || "Snow"});
 
                 setUserDefaults({"TodayMaxTemp": "99"});
                 setUserDefaults({"TodayMinTemp": "0"});
@@ -424,7 +426,7 @@ angular.module('starter.controllers', [])
             var data = {
                 address: address,
                 currentPosition: city.currentPosition,
-                sky: city.currentWeather.sky,
+                skyIcon: city.currentWeather.skyIcon,
                 t1h: city.currentWeather.t1h,
                 tmn: todayData[0].tmn,
                 tmx: todayData[0].tmx,
