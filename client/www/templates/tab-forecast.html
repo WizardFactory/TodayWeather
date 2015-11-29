@@ -31,8 +31,8 @@
                                         <img src="img/reddot.png">
                                     </div>
                                     <div class="row-no-padding big-temp-sky-state" style="height: 60%"
-                                         ng-if="currentWeather.sky">
-                                        <img src="img/{{currentWeather.sky}}-Big.png">
+                                         ng-if="currentWeather.skyIcon">
+                                        <img src="img/{{currentWeather.skyIcon}}-Big.png">
                                     </div>
                                 </div>
                             </div>
@@ -69,7 +69,7 @@
                                 </div>
                                 <div class="row row-no-padding" style="height: 2%;"></div>
                                 <div class="row row-no-padding small-image" style="height: 15%;">
-                                    <div><img src="img/{{value.sky}}.png"></div>
+                                    <div><img src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 15%;">
                                     <p>{{value.pop}}
@@ -100,7 +100,7 @@
                                     <p>{{value.week}}</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 15%;">
-                                    <div><img src="img/{{value.sky}}.png"></div>
+                                    <div><img src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 15%;">
                                     <p>{{value.pop}}
@@ -140,7 +140,15 @@
                                     </div>
                                 </li>
                                 <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
-                                    <div class="row row-no-padding">
+                                    <div class="row row-no-padding" ng-if="currentWeather.rn1Str">
+                                        <div class="col col-33 detail-text"><p>1시간 {{currentWeather.ptyStr}}</p></div>
+                                        <div class="col col-33 detail-image">
+                                            <div><img src="img/Umbrella.png" style="width: 40px"></div>
+                                        </div>
+                                        <div class="col col-33 detail-text"><p>{{currentWeather.rn1Str}}</p>
+                                        </div>
+                                    </div>
+                                    <div class="row row-no-padding" ng-if="!currentWeather.rn1Str">
                                         <div class="col col-33 detail-text"><p>미세먼지</p></div>
                                         <div class="col col-33 detail-image">
                                             <div><img src="img/PM10.png" style="width: 40px"></div>

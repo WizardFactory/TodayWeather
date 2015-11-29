@@ -105,49 +105,49 @@ angular.module('starter.services', [])
                 city.currentPosition = true;
                 city.address = "대한민국 하늘시 중구 구름동";
                 city.location = null;
-                city.currentWeather = {time: 7, t1h: 19, sky: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
+                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
 
                 var timeData = [];
-                timeData[0] = {day: "", time: "6시", t3h: 17, sky:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17};
-                timeData[1] = {day: "", time: "9시", t3h: 21, sky:"Lightning", pop: 20, tempIcon:"Temp-02"};
-                timeData[2] = {day: "", time: "12시", t3h: 26, sky:"Moon", pop: 30, tempIcon:"Temp-03"};
-                timeData[3] = {day: "", time: "15시", t3h: 28, sky:"MoonWithCloud", pop: 40, tempIcon:"Temp-04", tmx: 28};
-                timeData[4] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-05"};
-                timeData[5] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-06"};
-                timeData[6] = {day: "어제", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-07"};
-                timeData[7] = {day: "", time: "3시", t3h: 16, sky:"Snow", pop: 80, tempIcon:"Temp-08"};
-                timeData[8] = {day: "", time: "6시", t3h: 15, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09", tmn: 15};
-                timeData[9] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-10"};
-                timeData[10] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-                timeData[11] = {day: "", time: "15시", t3h: 28, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
-                timeData[12] = {day: "", time: "18시", t3h: 29, sky:"Rain", pop: 50, tempIcon:"Temp-04", tmx: 29};
-                timeData[13] = {day: "", time: "21시", t3h: 21, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-                timeData[14] = {day: "오늘", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[15] = {day: "", time: "3시", t3h: 15, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
-                timeData[16] = {day: "", time: "지금", t3h: 14, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14};
-                timeData[17] = {day: "", time: "9시", t3h: 21, sky:"Cloud", pop: 10, tempIcon:"Temp-09"};
-                timeData[18] = {day: "", time: "12시", t3h: 26, sky:"Lightning", pop: 20, tempIcon:"Temp-10"};
-                timeData[19] = {day: "", time: "15시", t3h: 29, sky:"Moon", pop: 30, tempIcon:"Temp-01", tmx: 29};
-                timeData[20] = {day: "", time: "18시", t3h: 28, sky:"MoonWithCloud", pop: 50, tempIcon:"Temp-04"};
-                timeData[21] = {day: "", time: "21시", t3h: 22, sky:"Rain", pop: 60, tempIcon:"Temp-05"};
-                timeData[22] = {day: "내일", time: "0시", t3h: 20, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[23] = {day: "", time: "3시", t3h: 18, sky:"RainWithLightning", pop: 80, tempIcon:"Temp-07"};
-                timeData[24] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 17};
-                timeData[25] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
-                timeData[26] = {day: "", time: "12시", t3h: 27, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-                timeData[27] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: 29};
-                timeData[28] = {day: "", time: "18시", t3h: 28, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
-                timeData[29] = {day: "", time: "21시", t3h: 24, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-                timeData[30] = {day: "모레", time: "0시", t3h: 21, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[31] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
-                //timeData[32] = {day: "", time: "6시", t3h: 17, sky:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
-                //timeData[33] = {day: "", time: "9시", t3h: 21, sky:"Sun", pop: 10, tempIcon:"Temp-09"};
-                //timeData[34] = {day: "", time: "12시", t3h: 26, sky:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-                //timeData[35] = {day: "", time: "15시", t3h: 29, sky:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
-                //timeData[36] = {day: "", time: "18시", t3h: 26, sky:"Rain", pop: 50, tempIcon:"Temp-04"};
-                //timeData[37] = {day: "", time: "21시", t3h: 23, sky:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-                //timeData[38] = {day: "글피", time: "0시", t3h: 18, sky:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                //timeData[39] = {day: "", time: "3시", t3h: 18, sky:"Snow", pop: 80, tempIcon:"Temp-07"};
+                timeData[0] = {day: "", time: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17};
+                timeData[1] = {day: "", time: "9시", t3h: 21, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-02"};
+                timeData[2] = {day: "", time: "12시", t3h: 26, skyIcon:"Moon", pop: 30, tempIcon:"Temp-03"};
+                timeData[3] = {day: "", time: "15시", t3h: 28, skyIcon:"MoonWithCloud", pop: 40, tempIcon:"Temp-04", tmx: 28};
+                timeData[4] = {day: "", time: "18시", t3h: 26, skyIcon:"Rain", pop: 50, tempIcon:"Temp-05"};
+                timeData[5] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-06"};
+                timeData[6] = {day: "어제", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-07"};
+                timeData[7] = {day: "", time: "3시", t3h: 16, skyIcon:"Snow", pop: 80, tempIcon:"Temp-08"};
+                timeData[8] = {day: "", time: "6시", t3h: 15, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09", tmn: 15};
+                timeData[9] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-10"};
+                timeData[10] = {day: "", time: "12시", t3h: 26, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                timeData[11] = {day: "", time: "15시", t3h: 28, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+                timeData[12] = {day: "", time: "18시", t3h: 29, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04", tmx: 29};
+                timeData[13] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                timeData[14] = {day: "오늘", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[15] = {day: "", time: "3시", t3h: 15, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07"};
+                timeData[16] = {day: "", time: "지금", t3h: 14, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14};
+                timeData[17] = {day: "", time: "9시", t3h: 21, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-09"};
+                timeData[18] = {day: "", time: "12시", t3h: 26, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-10"};
+                timeData[19] = {day: "", time: "15시", t3h: 29, skyIcon:"Moon", pop: 30, tempIcon:"Temp-01", tmx: 29};
+                timeData[20] = {day: "", time: "18시", t3h: 28, skyIcon:"MoonWithCloud", pop: 50, tempIcon:"Temp-04"};
+                timeData[21] = {day: "", time: "21시", t3h: 22, skyIcon:"Rain", pop: 60, tempIcon:"Temp-05"};
+                timeData[22] = {day: "내일", time: "0시", t3h: 20, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[23] = {day: "", time: "3시", t3h: 18, skyIcon:"RainWithLightning", pop: 80, tempIcon:"Temp-07"};
+                timeData[24] = {day: "", time: "6시", t3h: 17, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 17};
+                timeData[25] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09"};
+                timeData[26] = {day: "", time: "12시", t3h: 27, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                timeData[27] = {day: "", time: "15시", t3h: 29, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: 29};
+                timeData[28] = {day: "", time: "18시", t3h: 28, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04"};
+                timeData[29] = {day: "", time: "21시", t3h: 24, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                timeData[30] = {day: "모레", time: "0시", t3h: 21, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                timeData[31] = {day: "", time: "3시", t3h: 18, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07"};
+                //timeData[32] = {day: "", time: "6시", t3h: 17, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
+                //timeData[33] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09"};
+                //timeData[34] = {day: "", time: "12시", t3h: 26, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
+                //timeData[35] = {day: "", time: "15시", t3h: 29, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
+                //timeData[36] = {day: "", time: "18시", t3h: 26, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04"};
+                //timeData[37] = {day: "", time: "21시", t3h: 23, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
+                //timeData[38] = {day: "글피", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
+                //timeData[39] = {day: "", time: "3시", t3h: 18, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07"};
 
                 city.timeTable = timeData.slice(8);
                 city.timeChart = [
@@ -166,24 +166,24 @@ angular.module('starter.services', [])
                 ];
 
                 var dayData = [];
-                dayData[0] = {week: "목", sky:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
-                dayData[1] = {week: "금", sky:"Lightning", pop: 20, humidityIcon:"Humidity-20", reh: 10, tmn: 17, tmx: 26};
-                dayData[2] = {week: "토", sky:"Moon", pop: 30, humidityIcon:"Humidity-30", reh: 10, tmn: 16, tmx: 23};
-                dayData[3] = {week: "일", sky:"MoonWithCloud", pop: 40, humidityIcon:"Humidity-40", reh: 10, tmn: 14, tmx: 22};
-                dayData[4] = {week: "월", sky:"Rain", pop: 50, humidityIcon:"Humidity-50", reh: 10, tmn: 14, tmx: 22};
-                dayData[5] = {week: "화", sky:"RainWithLightning", pop: 60, humidityIcon:"Humidity-60", reh: 10, tmn: 12, tmx: 22};
-                dayData[6] = {week: "수", sky:"RainWithSnow", pop: 70, humidityIcon:"Humidity-70", reh: 10, tmn: 15, tmx: 27};
-                dayData[7] = {week: "오늘", sky:"Snow", pop: 80, humidityIcon:"Humidity-80", reh: 10, tmn: 15, tmx: 25};
-                dayData[8] = {week: "금", sky:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-90", reh: 10, tmn: 15, tmx: 22};
-                dayData[9] = {week: "토", sky:"Sun", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 12, tmx: 22};
-                dayData[10] = {week: "일", sky:"SunWithCloud", pop: 20, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 28};
-                dayData[11] = {week: "월", sky:"WindWithCloud", pop: 30, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 27};
-                dayData[12] = {week: "화", sky:"Rain", pop: 50, humidityIcon:"Humidity-40", reh: 10, tmn: 17, tmx: 26};
-                dayData[13] = {week: "수", sky:"RainWithLightning", pop: 60, humidityIcon:"Humidity-50", reh: 10, tmn: 16, tmx: 24};
-                dayData[14] = {week: "목", sky:"RainWithSnow", pop: 70, humidityIcon:"Humidity-60", reh: 10, tmn: 15, tmx: 28};
-                dayData[15] = {week: "금", sky:"Snow", pop: 80, humidityIcon:"Humidity-70", reh: 10, tmn: 17, tmx: 26};
-                dayData[16] = {week: "토", sky:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-80", reh: 10, tmn: 13, tmx: 24};
-                dayData[17] = {week: "일", sky:"Cloud", pop: 10, humidityIcon:"Humidity-90", reh: 10, tmn: 12, tmx: 25};
+                dayData[0] = {week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
+                dayData[1] = {week: "금", skyIcon:"Lightning", pop: 20, humidityIcon:"Humidity-20", reh: 10, tmn: 17, tmx: 26};
+                dayData[2] = {week: "토", skyIcon:"Moon", pop: 30, humidityIcon:"Humidity-30", reh: 10, tmn: 16, tmx: 23};
+                dayData[3] = {week: "일", skyIcon:"MoonWithCloud", pop: 40, humidityIcon:"Humidity-40", reh: 10, tmn: 14, tmx: 22};
+                dayData[4] = {week: "월", skyIcon:"Rain", pop: 50, humidityIcon:"Humidity-50", reh: 10, tmn: 14, tmx: 22};
+                dayData[5] = {week: "화", skyIcon:"RainWithLightning", pop: 60, humidityIcon:"Humidity-60", reh: 10, tmn: 12, tmx: 22};
+                dayData[6] = {week: "수", skyIcon:"RainWithSnow", pop: 70, humidityIcon:"Humidity-70", reh: 10, tmn: 15, tmx: 27};
+                dayData[7] = {week: "오늘", skyIcon:"Snow", pop: 80, humidityIcon:"Humidity-80", reh: 10, tmn: 15, tmx: 25};
+                dayData[8] = {week: "금", skyIcon:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-90", reh: 10, tmn: 15, tmx: 22};
+                dayData[9] = {week: "토", skyIcon:"Sun", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 12, tmx: 22};
+                dayData[10] = {week: "일", skyIcon:"SunWithCloud", pop: 20, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 28};
+                dayData[11] = {week: "월", skyIcon:"WindWithCloud", pop: 30, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 27};
+                dayData[12] = {week: "화", skyIcon:"Rain", pop: 50, humidityIcon:"Humidity-40", reh: 10, tmn: 17, tmx: 26};
+                dayData[13] = {week: "수", skyIcon:"RainWithLightning", pop: 60, humidityIcon:"Humidity-50", reh: 10, tmn: 16, tmx: 24};
+                dayData[14] = {week: "목", skyIcon:"RainWithSnow", pop: 70, humidityIcon:"Humidity-60", reh: 10, tmn: 15, tmx: 28};
+                dayData[15] = {week: "금", skyIcon:"Snow", pop: 80, humidityIcon:"Humidity-70", reh: 10, tmn: 17, tmx: 26};
+                dayData[16] = {week: "토", skyIcon:"SnowWithLightning-Big", pop: 90, humidityIcon:"Humidity-80", reh: 10, tmn: 13, tmx: 24};
+                dayData[17] = {week: "일", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-90", reh: 10, tmn: 12, tmx: 25};
 
                 city.dayTable = dayData;
                 city.dayChart = [{
@@ -501,8 +501,11 @@ angular.module('starter.services', [])
                     return "Snow";
                     break;
                 case "구름적고 비/눈":
+                case "구름적고 눈/비":
                 case "구름많고 비/눈":
+                case "구름많고 눈/비":
                 case "흐리고  비/눈":
+                case "흐리고  눈/비":
                     return "RainWithSnow";
             }
 
@@ -560,6 +563,10 @@ angular.module('starter.services', [])
                 else if (diffTemp > 0) {
                     str += "도 높음";
                 }
+            }
+
+            if (current.rn1Str) {
+                str += ", " + current.ptyStr + " " + current.rn1Str;
             }
 
             //current.arpltn = {};
@@ -850,6 +857,48 @@ angular.module('starter.services', [])
             return deferred.promise;
         }
 
+        function convertKmaPtyToStr(pty) {
+           if (pty === 1 || pty ===2) {
+               return "강수량";
+           }
+            else if (pty === 3) {
+               return "적설량";
+           }
+        }
+
+        /**
+         *
+         * @param pty
+         * @param rXX
+         * @returns {*}
+         */
+        function convertKmaRxxToStr(pty, rXX) {
+            if (pty === 1 || pty === 2) {
+                switch(rXX) {
+                    case 0: return "0mm";
+                    case 1: return "1mm 미만";
+                    case 5: return "1~4mm";
+                    case 10: return "5~9mm";
+                    case 20: return "10~19mm";
+                    case 40: return "20~39mm";
+                    case 70: return "40~69mm";
+                    case 100: return "70mm 이상";
+                    default : return "알수없음";
+                }
+            }
+            else if (pty === 3) {
+                switch (rXX) {
+                    case 0: return "0cm";
+                    case 1: return "1cm 미만";
+                    case 5: return "1~4cm";
+                    case 10: return "5~9cm";
+                    case 20: return "10~19cm";
+                    case 100: return "20cm 이상";
+                    default : return "알수없음";
+                }
+            }
+        }
+
         //endregion
 
         //region APIs
@@ -869,10 +918,13 @@ angular.module('starter.services', [])
             var isNight = time < 7 || time > 18;
 
             currentForecast.time = time;
-            currentForecast.t1h = currentTownWeather.t1h;
-            currentForecast.sky = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
+            currentForecast = currentTownWeather;
+
+            currentForecast.ptyStr = convertKmaPtyToStr(currentForecast.pty);
+            currentForecast.rn1Str = convertKmaRxxToStr(currentForecast.pty, currentForecast.rn1);
+            currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
-            currentForecast.wsd = currentTownWeather.wsd;
+
 
             if (currentTownWeather.arpltn && currentTownWeather.arpltn.pm10Value) {
                 currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
@@ -894,10 +946,10 @@ angular.module('starter.services', [])
             shortForecastList.forEach(function (shortForecast) {
                 var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
                 if (!dayInfo) {
-                    var data = {date: shortForecast.date, sky: "Sun", tmx: -100, tmn: 100, pop: 0, reh: 0};
+                    var data = {date: shortForecast.date, skyIcon: "Sun", tmx: -100, tmn: 100, pop: 0, reh: 0};
                     dailyTemp.push(data);
                     dayInfo = dailyTemp[dailyTemp.length - 1];
-                    dayInfo.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
+                    dayInfo.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
                 //check valid data by reh
                 if (dayInfo.tmx < shortForecast.t3h && shortForecast.reh) {
@@ -920,7 +972,7 @@ angular.module('starter.services', [])
                 }
 
                 if (shortForecast.pty > 0) {
-                    dayInfo.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
+                    dayInfo.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
                 dayInfo.pop = shortForecast.pop > dayInfo.pop ? shortForecast.pop : dayInfo.pop;
                 dayInfo.reh = shortForecast.reh > dayInfo.reh ? shortForecast.reh : dayInfo.reh;
@@ -963,29 +1015,64 @@ angular.module('starter.services', [])
                     return true;
                 }
 
-                tempObject.day = day;
-                tempObject.time = getTimeString(positionHours, diffDays, time);
                 //It means invalid data
                 if (!shortForecast.pop && !shortForecast.sky && !shortForecast.pty && !shortForecast.reh && !shortForecast.t3h) {
-                    tempObject.t3h = undefined;
                     tempObject.pop = undefined;
-                    tempObject.sky = "Sun";
+                    tempObject.pty = undefined;
+                    tempObject.r06 = undefined;
+                    tempObject.reh = undefined;
+                    tempObject.s06 = undefined;
+                    tempObject.sky = undefined;
+                    tempObject.t3h = undefined;
+                    tempObject.tmx = undefined;
+                    tempObject.tmn = undefined;
+                    tempObject.uuu = undefined;
+                    tempObject.vvv = undefined;
+                    tempObject.wav = undefined;
+                    tempObject.vec = undefined;
+                    tempObject.wsd = undefined;
+                    tempObject.skyIcon = "Sun";
                     tempObject.tempIcon = "Temp-01";
                 }
                 else {
-                    tempObject.t3h = shortForecast.t3h;
-                    tempObject.sky = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                    tempObject.pop = shortForecast.pop;
+                    tempObject = shortForecast;
+                    if (tempObject.time !== '0600') {
+                        tempObject.tmn = undefined;
+                    }
+                    if (tempObject.time !== '1500') {
+                        tempObject.tmx = undefined;
+                    }
+
+                    if (tempObject.pty === 1 || tempObject.pty === 2) {
+
+                        tempObject.ptyStr = convertKmaPtyToStr(currentForecast.pty);
+                        tempObject.rnsStr = convertKmaRxxToStr(currentForecast.pty, currentForecast.r06);
+                    }
+                    else if (tempObject.pty === 3) {
+                        tempObject.ptyStr = convertKmaPtyToStr(currentForecast.pty);
+                        tempObject.rnsStr = convertKmaRxxToStr(currentForecast.pty, currentForecast.s06);
+                    }
+                    else {
+                        tempObject.rnsStr = undefined;
+                    }
+
+                    tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
                     tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.tmx, dayInfo.tmn);
                 }
 
-                // 단기 예보의 현재(지금) 데이터를 currentForecast 정보로 업데이트
-                if (diffDays === 0 && time === positionHours &&
-                    (time <= currentForecast.time && currentForecast.time < time + 3)) {
-                    tempObject.t3h = currentForecast.t1h;
-                    tempObject.sky = currentForecast.sky;
-                    tempObject.tempIcon = decideTempIcon(currentForecast.t1h, dayInfo.tmx, dayInfo.tmn);
-                }
+                tempObject.day = day;
+                tempObject.time = getTimeString(positionHours, diffDays, time);
+
+                // 단기 예보와 현재 정보를 분리 합니다. by dhkmm2
+                //{
+                //    //단기 예보의 현재(지금) 데이터를 currentForecast 정보로 업데이트
+                //    if (diffDays === 0 && time === positionHours &&
+                //        (time <= currentForecast.time && currentForecast.time < time + 3)) {
+                //        tempObject.t3h = currentForecast.t1h;
+                //        tempObject.skyIcon = currentForecast.skyIcon;
+                //        tempObject.tempIcon = decideTempIcon(currentForecast.t1h, dayInfo.tmx, dayInfo.tmn);
+                //    }
+                //}
 
                 // 하루 기준의 최고, 최저 온도 찾기
                 // t3h를 tmx, tmn로 대처함
@@ -1026,7 +1113,7 @@ angular.module('starter.services', [])
                     tempObject.time = "";
                     //tempObject.t3h = data[data.length-1].t3h;
                     tempObject.t3h = undefined;
-                    tempObject.sky = "Sun";
+                    tempObject.skyIcon = "Sun";
                     tempObject.pop = 0;
                     tempObject.tempIcon = "Temp-01";
                     data.push(tempObject);
@@ -1079,7 +1166,7 @@ angular.module('starter.services', [])
 
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
-                data.sky = getHighPrioritySky(skyAm, skyPm);
+                data.skyIcon = getHighPrioritySky(skyAm, skyPm);
                 if (diffDays === 0) {
                     data.tmx = currentWeather.t1h>dayInfo.taMax?currentWeather.t1h:dayInfo.taMax;
                     data.tmn = currentWeather.t1h<dayInfo.taMin?currentWeather.t1h:dayInfo.taMin;
@@ -1109,12 +1196,12 @@ angular.module('starter.services', [])
                 }
             }
 
-            //{week: "목", sky:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
+            //{week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
             dailyInfoList.forEach(function (dayInfo) {
                 var data;
                 if (tmpDayTable[index].date === dayInfo.date) {
                     data = tmpDayTable[index];
-                    data.sky = dayInfo.sky;
+                    data.skyIcon = dayInfo.skyIcon;
                     data.pop = dayInfo.pop;
                     data.reh = dayInfo.reh;
                     if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
