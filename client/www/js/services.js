@@ -504,8 +504,8 @@ angular.module('starter.services', [])
                 case "구름적고 눈/비":
                 case "구름많고 비/눈":
                 case "구름많고 눈/비":
-                case "흐리고  비/눈":
-                case "흐리고  눈/비":
+                case "흐리고 비/눈":
+                case "흐리고 눈/비":
                     return "RainWithSnow";
             }
 
