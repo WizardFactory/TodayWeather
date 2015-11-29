@@ -529,13 +529,19 @@ angular.module('starter.controllers', [])
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup,
                                         $http, $cordovaInAppBrowser) {
-        $scope.version  = "0.0.0";
+        //sync with config.xml
+        $scope.version  = "0.6.3";
 
-        var deploy = new Ionic.Deploy();
-        deploy.info().then(function(deployInfo) {
-            console.log("DeployInfo" + deployInfo);
-            $scope.version = deployInfo.binary_version;
-        }, function() {}, function() {});
+        //it doesn't work after ionic deploy
+        //var deploy = new Ionic.Deploy();
+        //deploy.info().then(function(deployInfo) {
+        //    console.log("DeployInfo" + deployInfo);
+        //    $scope.version = deployInfo.binary_version;
+        //}, function() {}, function() {});
+        //
+        //deploy.getVersions().then(function(versions) {
+        //    console.log("version:" + versions);
+        //}, function() {}, function() {});
 
         //for chrome extension
         if (window.chrome) {
