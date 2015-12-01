@@ -565,6 +565,8 @@ angular.module('starter.services', [])
                 }
             }
 
+            //current.ptyStr = '강수량'
+            //current.rn1Str = '1mm 미만'
             if (current.rn1Str) {
                 str += ", " + current.ptyStr + " " + current.rn1Str;
             }
@@ -593,6 +595,11 @@ angular.module('starter.services', [])
                 str += ", " + "체감온도 " + current.sensorytemStr;
             }
 
+            //current.wsd = 10;
+            //current.wsdStr = convertKmaWsdToStr(current.wsd);
+            if (current.wsd && current.wsd > 9) {
+                str += ", " + "바람이 " + current.wsdStr + '함';
+            }
             return str;
         }
 
@@ -899,6 +906,20 @@ angular.module('starter.services', [])
             }
         }
 
+        function convertKmaWsdToStr(wsd) {
+            if (wsd < 4) {
+                return '약';
+            }
+            else if(wsd < 9) {
+                return '약간 강'
+            }
+            else if(wsd < 14) {
+                return '강'
+            }
+            else {
+                return '매우 강'
+            }
+        }
         //endregion
 
         //region APIs
@@ -920,6 +941,8 @@ angular.module('starter.services', [])
             currentForecast.time = time;
             currentForecast = currentTownWeather;
 
+
+            currentForecast.wsdStr = convertKmaWsdToStr(currentForecast.wsd);
             currentForecast.ptyStr = convertKmaPtyToStr(currentForecast.pty);
             currentForecast.rn1Str = convertKmaRxxToStr(currentForecast.pty, currentForecast.rn1);
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
@@ -1045,16 +1068,18 @@ angular.module('starter.services', [])
 
                     if (tempObject.pty === 1 || tempObject.pty === 2) {
 
-                        tempObject.ptyStr = convertKmaPtyToStr(currentForecast.pty);
-                        tempObject.rnsStr = convertKmaRxxToStr(currentForecast.pty, currentForecast.r06);
+                        tempObject.ptyStr = convertKmaPtyToStr(shortForecast.pty);
+                        tempObject.rnsStr = convertKmaRxxToStr(shortForecast.pty, shortForecast.r06);
                     }
                     else if (tempObject.pty === 3) {
-                        tempObject.ptyStr = convertKmaPtyToStr(currentForecast.pty);
-                        tempObject.rnsStr = convertKmaRxxToStr(currentForecast.pty, currentForecast.s06);
+                        tempObject.ptyStr = convertKmaPtyToStr(shortForecast.pty);
+                        tempObject.rnsStr = convertKmaRxxToStr(shortForecast.pty, shortForecast.s06);
                     }
                     else {
                         tempObject.rnsStr = undefined;
                     }
+
+                    tempObject.wsdStr = convertKmaWsdToStr(shortForecast.wsd);
 
                     tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
                     tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.tmx, dayInfo.tmn);
