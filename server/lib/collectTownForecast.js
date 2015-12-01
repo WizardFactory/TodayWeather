@@ -307,7 +307,6 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
     req.get(url, null, function(err, response, body){
-        var statusCode = response.statusCode;
         if(err) {
             //log.error(err);
             //log.error('#', meta);
@@ -318,6 +317,7 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
             }
             return;
         }
+        var statusCode = response.statusCode;
 
         if(statusCode === 404 || statusCode === 403){
             //log.error('ERROR!!! StatusCode : ', statusCode);

@@ -1,15 +1,11 @@
 /**
- * Created by kay on 2015-10-23.
+ * Created by Peter on 2015. 11. 30..
  */
-/*
 var mongoose = require('mongoose');
 
 var midSeaSchema = mongoose.Schema({
-    sea: {
-        location: String
-    },
     regId: String,
-    midSeaData: {
+    data: [{
         date: String,
         time: String,
         regId: String,
@@ -52,32 +48,7 @@ var midSeaSchema = mongoose.Schema({
         wh9B: {type : Number, default : -100},
         wh10A: {type : Number, default : -100},
         wh10B: {type : Number, default : -100}
-    }
+    }]
 });
 
-midSeaSchema.statics = {
-    getSeaData: function(first, cb){
-        this.find({"sea" : { "first" : location }})
-            .sort({"midSeaData.date" : -1, "midSeaData.time" : -1}).limit(1).exec(cb);
-    },
-    setSeaData: function(seaData, regId, cb){
-        var self = this;
-
-        var findQuery = self.findOne({"regId": regId}).exec();
-
-        findQuery.then(function(res){
-            if(res == null) return;
-
-            self.update({'regId' : regId, 'midSeaData.date' : seaData.date, 'midSeaData.time' : seaData.time},
-                {
-                    'regId' : regId,
-                    'sea.location': res.sea.location,
-                    'midSeaData' : seaData
-                },
-                {upsert:true}, cb);
-        })
-    }
-};
-
 module.exports = mongoose.model('midSea', midSeaSchema);
-*/

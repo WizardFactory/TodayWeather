@@ -6,15 +6,24 @@
 var collectTown = require('../lib/collectTownForecast');
 var town = require('../models/town');
 //var forecast = require('../models/forecast');
-var short = require('../models/short');
-var shortest = require('../models/shortest');
-var current = require('../models/current');
-var midLand = require('../models/midLand');
-var midTemp = require('../models/midTemp');
+//var short = require('../models/short');
+//var shortest = require('../models/shortest');
+//var current = require('../models/current');
+//var midLand = require('../models/midLand');
+//var midTemp = require('../models/midTemp');
 var fs = require('fs');
 var config = require('../config/config');
 var convert = require('../utils/coordinate2xy');
 var convertGeocode = require('../utils/convertGeocode');
+
+var modelCurrent = require('../models/modelCurrent');
+var modelShort = require('../models/modelShort');
+var modelShortest = require('../models/modelShortest');
+var modelMidForecast = require('../models/modelMidForecast');
+var modelMidLand = require('../models/modelMidLand');
+var modelMidSea = require('../models/modelMidSea');
+var modelMidTemp = require('../models/modelMidTemp');
+var keydata = require('../config/keydata');
 
 function Manager(){
     var self = this;
@@ -28,6 +37,11 @@ function Manager(){
         MID_TEMP: (1000*60*60*12),
         MID_SEA: (1000*60*60*12)
     };
+
+    self.MAX_SHORT_COUNT = 100;
+    self.MAX_CURRENT_COUNT = 100;
+    self.MAX_SHORTEST_COUNT = 24;
+    self.MAX_MID_COUNT = 20;
 
     /****************************************************************************
      *   THIS IS FOR TEST.
@@ -193,7 +207,8 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
             }
             return;
         }
-        for(var index = 0 ; index < self.weatherDb.length; index++){
+        var index = 0;
+        for(index = 0 ; index < self.weatherDb.length; index++){
             var item = self.weatherDb[index];
             log.info('>> ', item.mData.mCoord.mx, item.mData.mCoord.my);
             if(item.mData.mCoord.mx === result.mx && item.mData.mCoord.my === result.my){
@@ -303,7 +318,7 @@ Manager.prototype.getMidDb = function(region, city, cb){
 
     city = city.slice(0,3);
     log.info('> getMidDb : ', region, city);
-    log.info(self.midForecast.midLand[0].data[0].regId);
+    //log.info(self.midForecast.midLand[0].data[0].regId);
     // Get Code data
     for(i=0 ; i<self.codeTable.length ; i++){
         if(self.codeTable[i].first === region){
@@ -321,6 +336,9 @@ Manager.prototype.getMidDb = function(region, city, cb){
         }
     }
     if(i >= self.codeTable.length){
+        if(cb){
+            cb(1);
+        }
         return {};
     }
 
@@ -332,6 +350,13 @@ Manager.prototype.getMidDb = function(region, city, cb){
             midData.forecast = self.midForecast.midForecast[i].data[0];
             break;
         }
+    }
+
+    if(i>= self.midForecast.midForecast.length){
+        if(cb){
+            cb(1);
+        }
+        return {};
     }
 
     // find land forecast data matched with code
@@ -346,6 +371,12 @@ Manager.prototype.getMidDb = function(region, city, cb){
         areaCode = currentCode.cityCode.slice(0, 4) + '0000';
     }
 
+    if(self.midForecast.midLand.length == 0){
+        if(cb){
+            cb(1);
+        }
+        return {};
+    }
     log.info('> area Code : ', areaCode);
     // 가장 최근(오늘)데이터를 가져온다
     var todayData = self.midForecast.midLand[self.midForecast.midLand.length - 1].data;
@@ -355,6 +386,12 @@ Manager.prototype.getMidDb = function(region, city, cb){
             result.land = todayData[i];
             break;
         }
+    }
+    if(i >= todayData.length){
+        if(cb){
+            cb(1);
+        }
+        return {};
     }
 
     for(i=0 ; i<8 ; i++){
@@ -425,6 +462,12 @@ Manager.prototype.getMidDb = function(region, city, cb){
         }
     }
 
+    if(self.midForecast.midTemp.length == 0){
+        if(cb){
+            cb(1);
+        }
+        return {};
+    }
     // find temperature data matched with code
     log.info('> city Code : ', currentCode.cityCode);
     todayData = self.midForecast.midTemp[self.midForecast.midTemp.length - 1].data;
@@ -434,6 +477,12 @@ Manager.prototype.getMidDb = function(region, city, cb){
             result.temp = todayData[i];
             break;
         }
+    }
+    if(i>= todayData.length){
+        if(cb){
+            cb(1);
+        }
+        return {};
     }
 
     // temp값도 날짜별로 결과 오브젝트에 넣자..
@@ -695,6 +744,498 @@ Manager.prototype.getWorldTime = function(tzOffset) {
     return result;
 };
 
+/*
+*   It's to compare the date object.
+*           - If the oldDate is future time, it would return -1
+*           - If the newDate is future time, it would return 1
+*           - If two dates object is same, it would return 0
+*   @oldDate
+*   @newDAte
+*/
+Manager.prototype.compareDate = function(oldDate, newDate){
+    if((oldDate.date === newDate.date) && (oldDate.time === newDate.time)){
+        return 0;
+    }
+
+    if(oldDate.date > newDate.date){
+        return -1;
+    }
+
+    if(oldDate.date < newDate.date){
+        return 1;
+    }
+    if((oldDate.date === newDate.date) && (oldDate.time < newDate.time)){
+        return 1;
+    }
+
+    if((oldDate.date === newDate.date) && (oldDate.time > newDate.time)){
+        return -1;
+    }
+
+    log.error('something wrong date!!!', oldDate, newDate);
+    return 0;
+};
+
+/*
+ *   save short data to DB.
+ *   @param newData - only one town's data list.
+ */
+Manager.prototype.saveShort = function(newData){
+    var self = this;
+
+    //log.info('S> save :', newData);
+    var coord = {
+        mx: newData[0].mx,
+        my: newData[0].my
+    };
+
+    //log.info('S> db find :', coord);
+    try{
+        modelShort.find({mCoord: coord}, function(err, list){
+            if(err){
+                log.error('S> fail to find db item');
+                return;
+            }
+
+            if(list.length === 0){
+                var newItem = new modelShort({mCoord: coord, shortData: newData});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('S> fail to save to DB :', coord);
+                        return;
+                    }
+                });
+
+                //log.info('S> add new Item : ', newData);
+                return;
+            }
+
+            //log.info('found db item : ', list.length);
+
+            list.forEach(function(dbShortList, index){
+                //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
+                newData.forEach(function(newItem){
+                    var isNew = 1;
+                    //log.info('S> newItem : ', newItem);
+                    //log.info('S> dbshortlist count : ', dbShortList.shortData.length);
+                    //for(var i in dbShortList.shortData){
+                    for(var i=0 ; i < dbShortList.shortData.length ; i++){
+                        //log.info(i,'>', dbShortList.shortData[i].date, '|', dbShortList.shortData[i].time);
+                        var comparedDate = self.compareDate(
+                            {date:dbShortList.shortData[i].date, time:dbShortList.shortData[i].time},
+                            {date:newItem.date, time:newItem.time}
+                        );
+                        if(comparedDate === 0){
+                            //log.info('S> over write :', newItem);
+                            //dbShortList.shortData[i] = newItem;
+                            isNew = 0;
+                            dbShortList.shortData[i].pop = newItem.pop;
+                            dbShortList.shortData[i].pty = newItem.pty;
+                            dbShortList.shortData[i].r06 = newItem.r06;
+                            dbShortList.shortData[i].reh = newItem.reh;
+                            dbShortList.shortData[i].s06 = newItem.s06;
+                            dbShortList.shortData[i].sky = newItem.sky;
+                            dbShortList.shortData[i].t3h = newItem.t3h;
+                            dbShortList.shortData[i].tmn = newItem.tmn;
+                            dbShortList.shortData[i].tmx = newItem.tmx;
+                            dbShortList.shortData[i].uuu = newItem.uuu;
+                            dbShortList.shortData[i].vvv = newItem.vvv;
+                            dbShortList.shortData[i].wav = newItem.wav;
+                            dbShortList.shortData[i].vec = newItem.vec;
+                            dbShortList.shortData[i].wsd = newItem.wsd;
+                            break;
+                        }
+                    }
+
+                    if(isNew){
+                        //log.info('push data :', newItem);
+                        dbShortList.shortData.push(newItem);
+                    }
+                });
+
+                dbShortList.shortData.sort(function(a, b){
+                    if(a.date > b.date){
+                        return 1;
+                    }
+                    if(a.date < b.date){
+                        return -1;
+                    }
+                    if(a.date === b.date && a.time > b.time){
+                        return 1;
+                    }
+                    if(a.date === b.date && a.time < b.time){
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+                    dbShortList.shortData.slice(0, (dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                }
+                //log.info(dbShortList.shortData);
+                dbShortList.save(function(err){
+                    if(err){
+                        log.error('S> fail to save');
+                    }
+                });
+            });
+        });
+    }
+    catch(e){
+        log.error('S> error!!! saveShort');
+    }
+};
+
+
+/*
+ *   save current data to DB.
+ *   @param newData - only one town's data list.
+ */
+Manager.prototype.saveCurrent = function(newData){
+    var self = this;
+
+    //log.info('C> save :', newData);
+    var coord = {
+        mx: newData[0].mx,
+        my: newData[0].my
+    };
+
+    //log.info('C> db find :', coord);
+    try{
+        modelCurrent.find({mCoord: coord}, function(err, list){
+            if(err){
+                log.error('C> fail to find db item');
+                return;
+            }
+
+            if(list.length === 0){
+                var newItem = new modelCurrent({mCoord: coord, currentData: newData});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('C> fail to save to DB :', coord);
+                        return;
+                    }
+                });
+
+                //log.info('C> add new Item : ', newData);
+                return;
+            }
+
+            //log.info('C> found db item : ', list.length);
+
+            list.forEach(function(dbCurrentList, index){
+                //log.info('C> coord :', dbCurrentList.mCoord.mx, dbCurrentList.mCoord.my);
+                newData.forEach(function(newItem){
+                    var isNew = 1;
+                    //log.info('C> newItem : ', newItem);
+                    //log.info('C> dbCurrentList count : ', dbCurrentList.currentData.length);
+                    //for(var i in dbCurrentList.currentData){
+                    for(var i=0 ; i < dbCurrentList.currentData.length ; i++){
+                        //log.info(i,'>', dbCurrentList.currentData[i].date, '|', dbCurrentList.currentData[i].time);
+                        var comparedDate = self.compareDate(
+                            {date:dbCurrentList.currentData[i].date, time:dbCurrentList.currentData[i].time},
+                            {date:newItem.date, time:newItem.time}
+                        );
+                        if(comparedDate === 0){
+                            //log.info('C> over write :', newItem);
+                            dbCurrentList.currentData[i].t1h = newItem.t1h;
+                            dbCurrentList.currentData[i].rn1 = newItem.rn1;
+                            dbCurrentList.currentData[i].sky = newItem.sky;
+                            dbCurrentList.currentData[i].uuu = newItem.uuu;
+                            dbCurrentList.currentData[i].vvv = newItem.vvv;
+                            dbCurrentList.currentData[i].reh = newItem.reh;
+                            dbCurrentList.currentData[i].pty = newItem.pty;
+                            dbCurrentList.currentData[i].lgt = newItem.lgt;
+                            dbCurrentList.currentData[i].vec = newItem.vec;
+                            dbCurrentList.currentData[i].wsd = newItem.wsd;
+                            isNew = 0;
+                            break;
+                        }
+                    }
+
+                    if(isNew){
+                        //log.info('C> push data :', newItem);
+                        dbCurrentList.currentData.push(newItem);
+                    }
+                });
+
+                dbCurrentList.currentData.sort(function(a, b){
+                    if(a.date > b.date){
+                        return 1;
+                    }
+                    if(a.date < b.date){
+                        return -1;
+                    }
+                    if(a.date === b.date && a.time > b.time){
+                        return 1;
+                    }
+                    if(a.date === b.date && a.time < b.time){
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
+                    dbCurrentList.currentData.slice(0, (dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                }
+                //log.info(dbCurrentList.currentData);
+                dbCurrentList.save(function(err){
+                    if(err){
+                        log.error('C> fail to save');
+                    }
+                });
+            });
+        });
+    }
+    catch(e){
+        log.error('C> error!!! saveShort');
+    }
+};
+
+
+/*
+ *   save shortest data to DB.
+ *   @param newData - only one town's data list.
+ */
+Manager.prototype.saveShortest = function(newData){
+    var self = this;
+
+    //log.info('ST> save :', newData);
+    var coord = {
+        mx: newData[0].mx,
+        my: newData[0].my
+    };
+
+    //log.info('ST> db find :', coord);
+    try{
+        modelShortest.find({mCoord: coord}, function(err, list){
+            if(err){
+                log.error('ST> fail to find db item');
+                return;
+            }
+
+            if(list.length === 0){
+                var newItem = new modelShortest({mCoord: coord, shortestData: newData});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('ST> fail to save to DB :', coord);
+                        return;
+                    }
+                });
+
+                //log.info('ST> add new Item : ', newData);
+                return;
+            }
+
+            //log.info('ST> found db item : ', list.length);
+
+            list.forEach(function(dbShortestList, index){
+                //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
+                newData.forEach(function(newItem){
+                    var isNew = 1;
+                    //log.info('ST> newItem : ', newItem);
+                    //log.info('ST> dbShortestList count : ', dbShortestList.shortestData.length);
+                    //for(var i in dbShortestList.shortestData){
+                    for(var i=0 ; i < dbShortestList.shortestData.length ; i++){
+                        //log.info(i,'>', dbShortestList.shortestData[i].date, '|', dbShortestList.shortestData[i].time);
+                        var comparedDate = self.compareDate(
+                            {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
+                            {date:newItem.date, time:newItem.time}
+                        );
+                        if(comparedDate === 0){
+                            //log.info('ST> over write :', newItem);
+                            dbShortestList.shortestData[i].pty = newItem.pty;
+                            dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                            dbShortestList.shortestData[i].sky = newItem.sky;
+                            dbShortestList.shortestData[i].lgt = newItem.lgt;
+                            isNew = 0;
+                            break;
+                        }
+                    }
+
+                    if(isNew){
+                        //log.info('ST> push data :', newItem);
+                        dbShortestList.shortestData.push(newItem);
+                    }
+                });
+
+                dbShortestList.shortestData.sort(function(a, b){
+                    if(a.date > b.date){
+                        return 1;
+                    }
+                    if(a.date < b.date){
+                        return -1;
+                    }
+                    if(a.date === b.date && a.time > b.time){
+                        return 1;
+                    }
+                    if(a.date === b.date && a.time < b.time){
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                if(dbShortestList.shortestData.length > self.MAX_CURRENT_COUNT){
+                    dbShortestList.shortestData.slice(0, (dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                }
+                //log.info(dbShortestList.shortestData);
+                dbShortestList.save(function(err){
+                    if(err){
+                        log.error('ST> fail to save');
+                    }
+                });
+            });
+        });
+    }
+    catch(e){
+        log.error('ST> error!!! saveShort');
+    }
+};
+
+/*
+ *   return duplicate data from src to des.
+ *   @param src
+ *   @param des
+ *
+ *   in this function, it doesn't copy the data that is not known by us such as _id that is only used and made by moongDB.
+ */
+Manager.prototype.dupMid = function(src, des){
+    var forecastString = ['cnt', 'wfsv'];
+    var tempString = ['taMin3', 'taMax3', 'taMin4', 'taMax4', 'taMin5', 'taMax5', 'taMin6', 'taMax6',
+        'taMin7', 'taMax7', 'taMin8', 'taMax8', 'taMin9', 'taMax9', 'taMin10', 'taMax10'];
+    var seaString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm', 'wf6Am', 'wf6Pm',
+        'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10',
+        'wh3AAm', 'wh3APm', 'wh3BAm', 'wh3BPm', 'wh4AAm', 'wh4APm', 'wh4BAm', 'wh4BPm',
+        'wh5AAm', 'wh5APm', 'wh5BAm', 'wh5BPm', 'wh6AAm', 'wh6APm', 'wh6BAm', 'wh6BPm',
+        'wh7AAm', 'wh7APm', 'wh7BAm', 'wh7BPm', 'wh8A', 'wh8B', 'wh9A', 'wh9B', 'wh10A', 'wh10B'];
+    var landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
+        'wf6Am', 'wf6Pm', 'wf7Am', 'wf7Pm', 'wf8', 'wf9', 'wf10'];
+    var stringList = [];
+
+    if(src.wfsv !== undefined){
+        // forecast
+        stringList = forecastString;
+    } else if(src.taMax10 !== undefined){
+        // temp
+        stringList = tempString;
+    } else if(src.wh10B !== undefined){
+        // sea
+        stringList = seaString;
+    } else if(src.wf10 !== undefined){
+        // land
+        stringList = landString;
+    } else {
+        log.error('It is not known object');
+        log.error(src);
+        return des;
+    }
+
+    stringList.forEach(function(string){
+        des[string] = src[string];
+    });
+
+    return des;
+};
+
+/*
+ *   save MidForecast data to DB.
+ *   @param db
+ *   @param newData
+ */
+Manager.prototype.saveMid = function(db, newData){
+    var self = this;
+    var regId = '';
+    var meta = {};
+
+    if(newData.pointNumber !== undefined){
+        regId = newData.pointNumber;
+    }else{
+        regId = newData.regId;
+    }
+
+    meta.method = 'saveMid';
+    meta.regId = 'regId';
+    meta.data = newData;
+
+    //log.info(newData);
+    try{
+        // find data from DB
+        db.find({regId: regId}, function(err, list){
+            if(err){
+                log.error('M> fail to find db item');
+                return;
+            }
+
+            // If there is no data, it would make the new data list.
+            if(list.length === 0){
+                var newItem = new db({regId: regId, data: [newData]});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('M> fail to save to DB :', regId);
+                        return;
+                    }
+                });
+
+                //log.info('M> add new Item : ', newData);
+                return;
+            }
+
+            list.forEach(function(dbShortestList, index){
+                var isNew = 1;
+                for(var i=0 ; i < dbShortestList.data.length ; i++){
+                    var comparedDate = self.compareDate(
+                        {date:dbShortestList.data[i].date, time:dbShortestList.data[i].time},
+                        {date:newData.date, time:newData.time}
+                    );
+
+                    // If there is the same date in the DB, it would be replaced by new data.
+                    if(comparedDate === 0){
+                        // over write
+                        dbShortestList.data[i] = self.dupMid(newData, dbShortestList.data[i]);
+                        //log.info('overwrite :', newData);
+                        isNew = 0;
+                        break;
+                    }
+                }
+
+                if(isNew){
+                    //log.info('M> push data :', newItem);
+                    dbShortestList.data.push(newData);
+                }
+
+                dbShortestList.data.sort(function(a, b){
+                    if(a.date > b.date){
+                        return 1;
+                    }
+                    if(a.date < b.date){
+                        return -1;
+                    }
+                    if(a.date === b.date && a.time > b.time){
+                        return 1;
+                    }
+                    if(a.date === b.date && a.time < b.time){
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                if(dbShortestList.data.length > self.MAX_MID_COUNT){
+                    dbShortestList.data.slice(0, (dbShortestList.data.length - self.MAX_MID_COUNT));
+                }
+                dbShortestList.save(function(err){
+                    if(err){
+                        log.error('M> fail to save');
+                    }
+                });
+            });
+        });
+    }
+    catch(e){
+        log.error('M> error!!! saveMid');
+        log.error(meta);
+    }
+};
+
 Manager.prototype.getTownShortData = function(baseTime){
     var self = this;
     //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
@@ -763,10 +1304,10 @@ Manager.prototype.getTownShortData = function(baseTime){
     key = config.keyString.cert_key;
     /***************************************************/
 
-    log.info('+++ GET SHORT INFO : ', dateString);
+    log.info('S> +++ GET SHORT INFO : ', dateString);
 
     if(config.db.mode === 'ram'){
-        log.info('+++ COORD LIST : ', self.coordDb.length);
+        log.info('+++ SHORT COORD LIST : ', self.coordDb.length);
 
         var collectShortInfo = new collectTown();
         collectShortInfo.requestData(self.coordDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, key, dateString.date, dateString.time, function(err, dataList){
@@ -775,23 +1316,6 @@ Manager.prototype.getTownShortData = function(baseTime){
                 log.error(meta);
                 return this;
             }
-
-            /**************************************************
-             * TEST CODE
-             ***************************************************/
-            //var dataList = [];
-            //if(self.count == 0){
-            //    dataList = config.mData.data.short.slice(0, 15);
-            //}
-            //else if(self.count === 1){
-            //    dataList = config.mData.data.short.slice(2, 17);
-            //}else if(self.count === 2){
-            //    dataList = config.mData.data.short.slice(21, 36);
-            //}
-            //else{
-            //    dataList = config.mData.data.short.slice(22, 37);
-            //}
-            //self.count++;
 
             log.info('short data receive completed : %d\n', dataList.length);
             //log.info(dataList);
@@ -806,10 +1330,6 @@ Manager.prototype.getTownShortData = function(baseTime){
                  if(Array.isArray(dataList[i].data)) {
                     self.setShortData(self.coordDb[i], dataList[i].data);
                 }
-                /**************************************************
-                 * TEST CODE
-                 ***************************************************/
-                //self.setShortData(self.coordDb[i], dataList);
             }
         });
     }
@@ -822,7 +1342,8 @@ Manager.prototype.getTownShortData = function(baseTime){
             }
 
             log.silly(listTownDb);
-            log.info('+++ COORD LIST : ', listTownDb.length);
+            //log.info('S> +++ SHORT COORD LIST : ', listTownDb.length);
+            //log.info('S> try to get short data : ', listTownDb.length);
 
             var collectShortInfo = new collectTown();
             collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORT, key, dateString.date, dateString.time, function(err, dataList){
@@ -832,7 +1353,7 @@ Manager.prototype.getTownShortData = function(baseTime){
                     return this;
                 }
 
-                log.info('short data receive completed : %d\n', dataList.length);
+                log.info('S> short data receive completed : %d\n', dataList.length);
                 //log.info(dataList);
                 //log.info(dataList[0]);
                 //for(var i=0 ; i<10 ; i++){
@@ -841,17 +1362,11 @@ Manager.prototype.getTownShortData = function(baseTime){
                 //    }
                 //}
 
-                for(var i = 0 ; i < listTownDb.length ; i ++){
-                    if(Array.isArray(dataList[i].data)) {
-                        short.setShortData(dataList[i].data, listTownDb[i], function (err, res) {
-                            if (err) {
-                                log.error('** getTownShortData : ', err);
-                                log.error(meta);
-                            }
-                            log.silly(res);
-                        });
-                    }
-                }
+                dataList.forEach(function(item){
+
+                    self.saveShort(item.data);
+                });
+                //log.info('S> save OK');
             });
         });
     }
@@ -883,24 +1398,24 @@ Manager.prototype.getTownShortestData = function(){
         dateString.time = hour + '30';
     }
 
-    log.info('+++ GET SHORTEST INFO : ', dateString);
+    log.info('ST> +++ GET SHORTEST INFO : ', dateString);
     /**************************************************
      * TEST CODE : KEY change
      ***************************************************/
     var key = '';
     //if(parseInt(dateString.time) < 800){
-    //    key = listKey.keyString.sooyeon;
+    //    key = keydata.keyString.sooyeon;
     //} else if(parseInt(dateString.time) < 1700) {
-    //    key = listKey.keyString.pokers11;
+    //    key = keydata.keyString.pokers11;
     //} else {
-    //    key = listKey.keyString.aleckim;
+    //    key = keydata.keyString.aleckim;
     //}
 
-    key = config.keyString.cert_key;
+    key = keydata.keyString.cert_key;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
-        log.info('+++ GET SHORTEST : ', self.coordDb.length);
+        log.info('ST> +++ GET SHORTEST : ', self.coordDb.length);
 
         /**************************************************
          * TEST CODE
@@ -912,7 +1427,7 @@ Manager.prototype.getTownShortestData = function(){
         var collectShortInfo = new collectTown();
         collectShortInfo.requestData(self.coordDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function (err, dataList) {
 
-            log.info('shortest data receive completed : %d\n', dataList.length);
+            log.info('ST> shortest data receive completed : %d\n', dataList.length);
 
             for (var i = 0; i < self.coordDb.length; i++) {
                 if (Array.isArray(dataList[i].data)) {
@@ -935,26 +1450,21 @@ Manager.prototype.getTownShortestData = function(){
             }
 
             log.silly(listTownDb);
-            log.info('+++ COORD LIST : ', listTownDb.length);
+            //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
 
             var collectShortInfo = new collectTown();
             collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_SHORTEST, key, dateString.date, dateString.time, function(err, dataList){
 
-                log.info('shortest data receive completed : %d\n', dataList.length);
+                log.info('ST> shortest data receive completed : %d\n', dataList.length);
 
                 //log.info(dataList);
                 //log.info(dataList[0]);
-                for(var i = 0 ; i < listTownDb.length ; i++){
-                    if(Array.isArray(dataList[i].data)){
-                        shortest.setShortestData(dataList[i].data, listTownDb[i], function(err, res){
-                            if(err){
-                                log.error(err);
-                                return;
-                            }
-                            log.silly(res);
-                        });
-                    }
-                }
+
+                dataList.forEach(function(item){
+                    self.saveShortest(item.data);
+                });
+
+                //log.info('ST> save OK');
             });
         });
     }
@@ -979,19 +1489,19 @@ Manager.prototype.getTownCurrentData = function(gmt){
     //log.info(currentDate);
     //log.info(hour, minute);
 
-    log.info('+++ GET CURRENT INFO : ', dateString);
+    log.info('C> +++ GET CURRENT INFO : ', dateString);
     /**************************************************
      * TEST CODE : KEY change
      ***************************************************/
     var key = '';
     //if(parseInt(dateString.time) < 800){
-    //    key = listKey.keyString.sooyeon;
+    //    key = keydata.keyString.sooyeon;
     //} else if(parseInt(dateString.time) < 1700) {
-    //    key = listKey.keyString.hyunsoo;
+    //    key = keydata.keyString.hyunsoo;
     //} else {
-    //    key = listKey.keyString.aleckim;
+    //    key = keydata.keyString.aleckim;
     //}
-    key = config.keyString.cert_key;
+    key = keydata.keyString.pokers;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -1023,22 +1533,17 @@ Manager.prototype.getTownCurrentData = function(gmt){
     }
     else {
         town.getCoord(function (err, listTownDb) {
+            //log.info('C> try to get current data');
             var collectShortInfo = new collectTown();
             collectShortInfo.requestData(listTownDb, collectShortInfo.DATA_TYPE.TOWN_CURRENT, key, dateString.date, dateString.time, function (err, dataList) {
 
-                log.info('current data receive completed : %d\n', dataList.length);
+                log.info('C> current data receive completed : %d\n', dataList.length);
 
-                for (var i = 0; i < listTownDb.length; i++) {
-                    if (Array.isArray(dataList[i].data)) {
-                        current.setCurrentData(dataList[i].data, listTownDb[i], function (err, res) {
-                            if (err) {
-                                log.error('** getTownCurrentData : ', err);
-                                return;
-                            }
-                            log.silly(res);
-                        });
-                    }
-                }
+                dataList.forEach(function(item){
+                    self.saveCurrent(item.data);
+                });
+
+                //log.info('C> save OK');
             });
 
         });
@@ -1067,36 +1572,37 @@ Manager.prototype.getMidForecast = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = config.keyString.cert_key;
+    var key = keydata.keyString.pokers;
 
     log.info('+++ GET MID Forecast : ', dateString);
 
-    if(config.db.mode === 'ram'){
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listPointNumber, collectShortInfo.DATA_TYPE.MID_FORECAST, key, dateString.date, dateString.time, function(err, dataList){
-            if(err){
-                log.error("middle forecst data recdive faile");
-                return;
-            }
-            log.info('mid forecast data receive completed : %d\n', dataList.length);
+    var collectShortInfo = new collectTown();
+    collectShortInfo.requestData(collectShortInfo.listPointNumber, collectShortInfo.DATA_TYPE.MID_FORECAST, key, dateString.date, dateString.time, function(err, dataList){
+        if(err){
+            log.error("middle forecst data recdive faile");
+            return;
+        }
+        log.info('mid forecast data receive completed : %d\n', dataList.length);
 
-            //log.info(dataList);
-            log.info(dataList[0]);
-            for(var i in dataList){
-                for(var j in dataList[i].data){
-                    log.silly(i, j, ' : ', dataList[i].data[j]);
-                }
-            }
-            self.midForecast.midForecast = [];
-            //self.midForecast.midForecast = dataList;
-            dataList.forEach(function(item){
+        //log.info(dataList);
+        //log.info(dataList[0]);
+        //for(var i in dataList){
+        //    for(var j in dataList[i].data){
+        //        log.info(i, j, ' : ', dataList[i].data[j]);
+        //    }
+        //}
+
+        //self.midForecast.midForecast = dataList;
+        dataList.forEach(function (item) {
+            if(config.db.mode === 'ram') {
+                self.midForecast.midForecast = [];
                 self.midForecast.midForecast.push(JSON.parse(JSON.stringify(item)));
-            });
+            } else{
+                //log.info(item.data[0]);
+                self.saveMid(modelMidForecast, item.data[0]);
+            }
         });
-    } else{
-        // TODO : get data and save to DB
-    }
-
+    });
 };
 
 // get middle range LAND forecast data from data.org by using collectTownForecast.js
@@ -1132,28 +1638,27 @@ Manager.prototype.getMidLand = function(gmt){
 
     log.info('+++ GET MID LAND Forecast : ', dateString);
 
-    if(config.db.mode === 'ram'){
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listAreaCode, collectShortInfo.DATA_TYPE.MID_LAND, key, dateString.date, dateString.time, function(err, dataList){
-            if(err){
-                log.error("middle land forecst data recdive faile");
-                return;
-            }
-            log.info('mid Land forecast data receive completed : %d\n', dataList.length);
+    var collectShortInfo = new collectTown();
+    collectShortInfo.requestData(collectShortInfo.listAreaCode, collectShortInfo.DATA_TYPE.MID_LAND, key, dateString.date, dateString.time, function(err, dataList){
+        if(err){
+            log.error("middle land forecst data recdive faile");
+            return;
+        }
+        log.info('mid Land forecast data receive completed : %d\n', dataList.length);
 
-            //log.info(dataList);
-            //for(var i in dataList){
-            //    for(var j in dataList[i].data){
-            //        log.info(i, j, ' : ', dataList[i].data[j]);
-            //    }
-            //}
+        //log.info(dataList);
+        //for(var i in dataList){
+        //    for(var j in dataList[i].data){
+        //        log.info(i, j, ' : ', dataList[i].data[j]);
+        //    }
+        //}
+        if(config.db.mode === 'ram'){
             var isNotExist = 1;
             var dataFormat = {
                 date: dateString.date + dateString.time,
                 data: []
             };
-            //self.midForecast.midLand = [];
-            //self.midForecast.midLand = dataList;
+
             dataList.forEach(function(item){
                 dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
@@ -1172,35 +1677,14 @@ Manager.prototype.getMidLand = function(gmt){
                     self.midForecast.midLand.shift();
                 }
             }
-
-            //log.info(self.midForecast.midLand);
-            //log.info('### Get LAND : ', self.midForecast.midLand[self.midForecast.midLand.length - 1].date);
-            //for(var i in self.midForecast.midLand){
-            //    for(var j in self.midForecast.midLand[i].data){
-            //        log.info(i,j, ' : ', self.midForecast.midLand[i].data[j]);
-            //    }
-            //}
-        });
-    } else{
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listAreaCode, collectShortInfo.DATA_TYPE.MID_LAND, key, dateString.date, dateString.time, function(err, dataList) {
-            if (err) {
-                log.error("middle land forecst data recdive faile");
-                return;
-            }
-            log.info('mid Land forecast data receive completed : %d\n', dataList.length);
-
-            dataList.forEach(function(item){
-                //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
-                midLand.setLandData(item.data[0], item.data[0].regId, function(err, res){
-                    if(err) { log.error(err);
-                    }
-                    log.silly(res);
-                });
+        } else{
+            dataList.forEach(function (item) {
+                //log.info(item.data[0]);
+                self.saveMid(modelMidLand, item.data[0]);
             });
-        });
-    }
+        }
 
+    });
 };
 
 // get middle range temperature data from data.org by using collectTownForecast.js
@@ -1236,30 +1720,28 @@ Manager.prototype.getMidTemp = function(gmt){
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
 
-    if(config.db.mode === 'ram'){
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listCityCode, collectShortInfo.DATA_TYPE.MID_TEMP, key, dateString.date, dateString.time, function(err, dataList){
-            if(err){
-                log.error("middle TEMP forecst data recdive faile");
-                return;
-            }
-            log.info('mid TEMP forecast data receive completed : %d\n', dataList.length);
+    var collectShortInfo = new collectTown();
+    collectShortInfo.requestData(collectShortInfo.listCityCode, collectShortInfo.DATA_TYPE.MID_TEMP, key, dateString.date, dateString.time, function(err, dataList){
+        if(err){
+            log.error("middle TEMP forecst data recdive faile");
+            return;
+        }
+        log.info('mid TEMP forecast data receive completed : %d\n', dataList.length);
 
-            //log.info(dataList);
-            //log.info(dataList[0]);
-            //for(var i in dataList){
-            //    for(var j in dataList[i].data){
-            //        log.info(i, j, ' : ', dataList[i].data[j]);
-            //    }
-            //}
+        //log.info(dataList);
+        //log.info(dataList[0]);
+        //for(var i in dataList){
+        //    for(var j in dataList[i].data){
+        //        log.info(i, j, ' : ', dataList[i].data[j]);
+        //    }
+        //}
 
+        if(config.db.mode === 'ram'){
             var isNotExist = 1;
             var dataFormat = {
                 date: dateString.date + dateString.time,
                 data: []
             };
-            //self.midForecast.midTemp = [];
-            //self.midForecast.midTemp = dataList;
             dataList.forEach(function(item){
                 dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
@@ -1278,35 +1760,13 @@ Manager.prototype.getMidTemp = function(gmt){
                     self.midForecast.midTemp.shift();
                 }
             }
-
-            //log.info(self.midForecast.midTemp);
-            //log.info('### Get TEMP : ', self.midForecast.midTemp[self.midForecast.midTemp.length - 1].date);
-            //for(var i in self.midForecast.midTemp){
-            //    for(var j in self.midForecast.midTemp[i].data){
-            //        log.info(i,j, ' : ', self.midForecast.midTemp[i].data[j]);
-            //    }
-            //}
-        });
-    } else{
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listCityCode, collectShortInfo.DATA_TYPE.MID_TEMP, key, dateString.date, dateString.time, function(err, dataList){
-            if (err) {
-                log.error("middle land forecst data recdive faile");
-                return;
-            }
-            log.info('mid Temp forecast data receive completed : %d\n', dataList.length);
-
-            dataList.forEach(function(item){
-                //dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
-                midTemp.setTempData(item.data[0], item.data[0].regId, function(err, res){
-                    if(err) { log.error(err);
-                    }
-                    log.silly(res);
-                });
+        }else{
+            dataList.forEach(function (item) {
+                //log.info(item.data[0]);
+                self.saveMid(modelMidTemp, item.data[0]);
             });
-        });
-    }
-
+        }
+    });
 };
 
 // get middle range sea forecast data from data.org by using collectTownForecast.js
@@ -1335,29 +1795,27 @@ Manager.prototype.getMidSea = function(gmt){
 
     log.info('+++ GET MID SEA Forecast : ', dateString);
 
-    if(config.db.mode === 'ram'){
-        var collectShortInfo = new collectTown();
-        collectShortInfo.requestData(collectShortInfo.listSeaCode, collectShortInfo.DATA_TYPE.MID_SEA, key, dateString.date, dateString.time, function(err, dataList){
-            if(err){
-                log.error("middle SEA forecst data recdive faile");
-                return;
-            }
-            log.info('mid SEA forecast data receive completed : %d\n', dataList.length);
+    var collectShortInfo = new collectTown();
+    collectShortInfo.requestData(collectShortInfo.listSeaCode, collectShortInfo.DATA_TYPE.MID_SEA, key, dateString.date, dateString.time, function(err, dataList){
+        if(err){
+            log.error("middle SEA forecst data recdive faile");
+            return;
+        }
+        log.info('mid SEA forecast data receive completed : %d\n', dataList.length);
 
-            //log.info(dataList);
-            //log.info(dataList[0]);
-            //for(var i in dataList){
-            //    for(var j in dataList[i].data){
-            //        log.info(dataList[i].data[j]);
-            //    }
-            //}
+        //log.info(dataList);
+        //log.info(dataList[0]);
+        //for(var i in dataList){
+        //    for(var j in dataList[i].data){
+        //        log.info(dataList[i].data[j]);
+        //    }
+        //}
 
+        if(config.db.mode === 'ram'){
             var dataFormat = {
                 date: dateString.date + dateString.time,
                 data: []
             };
-            //self.midForecast.midSea = [];
-            //self.midForecast.midSea = dataList;
             dataList.forEach(function(item){
                 dataFormat.data.push(JSON.parse(JSON.stringify(item.data[0])));
             });
@@ -1366,35 +1824,22 @@ Manager.prototype.getMidSea = function(gmt){
             if(self.midForecast.midSea.length > 26){
                 self.midForecast.midSea.shift();
             }
-
-            //log.info(self.midForecast.midTemp);
-            //log.info('### Get SEA : ', self.midForecast.midSea[self.midForecast.midSea.length - 1].date);
-            //for(var i in self.midForecast.midSea){
-            //    for(var j in self.midForecast.midSea[i].data){
-            //        log.info(i,j, ' : ', self.midForecast.midSea[i].data[j]);
-            //    }
-            //}
-        });
-    } else{
-        //
-    }
-
+        }else{
+            dataList.forEach(function (item) {
+                //log.info(item.data[0]);
+                self.saveMid(modelMidSea, item.data[0]);
+            });
+        }
+    });
 };
 
 Manager.prototype.startTownData = function(){
     var self = this;
-
-    // When the server is about to start, it would get the first data immediately.
-    //self.getTownShortData(-45).getTownShortData(-21).getTownShortData(+3).getTownShortData(+9);
-    //self.getTownShortData(-21);
-    //self.getTownShortData(+3);
-    //self.getTownShortData(+9);
-    //self.getTownShortestData();
-    var periodValue = 3000;
-    var midPeriod = 3000;
+    var periodValue = 15000;
+    var midPeriod = 10000;
     var times = 0;
     var midTimes = 11;
-    var curTimes = 48;
+    var curTimes = 24;
     if(config.mode === 'gather'){
         periodValue = 5 * 60 * 1000;
         midPeriod = 30 * 1000;

@@ -142,10 +142,20 @@ TownRss.prototype.loadList = function(){
 
     } else{
          town.getCoord(function(err, coordList){
-             self.coordDb = coordList;
-         });
+             if(err){
+                 log.info('RSS> failed to get coord');
+             }
 
-        log.info('coord count : ', self.coordDb.length);
+             log.info('RSS> coord: ', coordList);
+             coordList.forEach(function(coord){
+                var item = {mCoord: coord};
+                 self.coordDb.push(item);
+             });
+
+             log.info('RSS> coord count : ', self.coordDb.length);
+
+             //self.mainTask();
+         });
     }
 
     return self;
@@ -227,12 +237,13 @@ TownRss.prototype.leadingZeros = function(n, digits) {
  */
 TownRss.prototype.calculateTime = function(cur, offset){
     var self = this;
-    var now = new Date(cur.slice(0, 4), cur.slice(4, 6), cur.slice(6, 8), cur.slice(8, 10), cur.slice(10, 12));
+    //var tmp = new Date('2015-10-30T00:00');
+    //log.info(tmp.getFullYear(), tmp.getMonth(), tmp.getDate());
+    var now = new Date(cur.slice(0, 4) + '-' + cur.slice(4, 6) + '-' + cur.slice(6, 8) + 'T'+ cur.slice(8, 10) + ':'+cur.slice(10, 12));
     now.setTime(now.getTime() + (offset * 3600000));
-
     var result =
         self.leadingZeros(now.getFullYear(), 4) +
-        self.leadingZeros(now.getMonth() , 2) +
+        self.leadingZeros(now.getMonth()+1 , 2) +
         self.leadingZeros(now.getDate(), 2) +
         self.leadingZeros(now.getHours(), 2) +
         self.leadingZeros(now.getMinutes(), 2);
@@ -459,19 +470,39 @@ TownRss.prototype.saveShortRss = function(index, newData){
                         log.error('fail to save');
                     }
                 });
-                log.silly('> add new item:', newData);
+                //log.silly('> add new item:', newData);
                 return;
             }
 
             list.forEach(function(dbShortList, index){
-                log.info(index + ' :XY> ' + dbShortList.mCoord);
+                //log.info(index + ' :XY> ' + dbShortList.mCoord);
                 //log.info(index + ' :D> ' + dbShortList.shortData);
                 newData.shortData.forEach(function(newItem){
                     var isNew = 1;
                     for(var i in dbShortList.shortData){
                         if(dbShortList.shortData[i].date === newItem.date){
                             if(dbShortList.shortData[i].ftm < newItem.ftm){
-                                dbShortList.shortData[i] = newItem;
+                                //dbShortList.shortData[i] = newItem;
+
+                                dbShortList.shortData[i].ftm = newItem.ftm;
+                                dbShortList.shortData[i].date = newItem.date;
+                                dbShortList.shortData[i].temp = newItem.temp;
+                                dbShortList.shortData[i].tmx = newItem.tmx;
+                                dbShortList.shortData[i].tmn = newItem.tmn;
+                                dbShortList.shortData[i].sky = newItem.sky;
+                                dbShortList.shortData[i].pty = newItem.pty;
+                                dbShortList.shortData[i].wfKor = newItem.wfKor;
+                                dbShortList.shortData[i].wfEn = newItem.wfEn;
+                                dbShortList.shortData[i].pop = newItem.pop;
+                                dbShortList.shortData[i].r12 = newItem.r12;
+                                dbShortList.shortData[i].s12 = newItem.s12;
+                                dbShortList.shortData[i].ws = newItem.ws;
+                                dbShortList.shortData[i].wd = newItem.wd;
+                                dbShortList.shortData[i].wdKor = newItem.wdKor;
+                                dbShortList.shortData[i].wdEn = newItem.wdEn;
+                                dbShortList.shortData[i].reh = newItem.reh;
+                                dbShortList.shortData[i].r06 = newItem.r06;
+                                dbShortList.shortData[i].s06 = newItem.s06;
                             }
                             isNew = 0;
                             break;
@@ -493,6 +524,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
                     }
                     return 0;
                 });
+
 
                 dbShortList.save(function(err){
                     if(err){
@@ -574,7 +606,13 @@ TownRss.prototype.mainTask = function(){
     gridList = self.coordDb;
 
     self.receivedCount = 0;
+    if(gridList.length == 0){
+        log.info('RSS> there are no town list');
+        return;
+    }
+
     gridList.forEach(function(item, index){
+        log.info(item);
         self.getData(index, item);
     });
 };
@@ -583,7 +621,7 @@ TownRss.prototype.StartShortRss = function(){
     var self = this;
 
     self.loadList();
-    self.mainTask();
+    //self.mainTask();
 
     self.loopTownRssID = setInterval(function() {
 

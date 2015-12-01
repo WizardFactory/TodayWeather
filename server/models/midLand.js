@@ -1,7 +1,7 @@
 /**
  * Created by kay on 2015-10-21
  */
-
+/*
 var mongoose = require('mongoose');
 var config = require('../config/config');
 var current = require('./current');
@@ -146,3 +146,4 @@ midLandSchema.statics = {
 }
 
 module.exports = mongoose.model('midLand', midLandSchema);
+ */

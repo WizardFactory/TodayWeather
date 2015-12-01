@@ -1,7 +1,7 @@
 /**
  * Created by User on 2015-11-11.
  */
-
+/*
 var mongoose = require('mongoose');
 
 var shortestSchema = new mongoose.Schema({
@@ -51,7 +51,7 @@ shortestSchema.statics = {
                         , 'shortestData.date' : shortestData.date, 'shortestData.time' : shortestData.time}).exec();
 
                     isInsertQuery.then(function(value){
-                        if(value === null){ //insert
+                        if(value === null){
                             self.update({ 'town.third' : elem.town.third, 'town.second' : elem.town.second, 'town.first' : elem.town.first
                                 , 'shortestData.date' : shortestData.date, 'shortestData.time' : shortestData.time}, {
                                 'mCoord.my': mCoord.my,
@@ -75,3 +75,4 @@ shortestSchema.statics = {
 }
 
 module.exports = mongoose.model('shortest', shortestSchema);
+*/

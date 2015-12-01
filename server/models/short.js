@@ -1,7 +1,7 @@
 /**
  * Created by kay on 2015-10-08.
  */
-
+/*
 var mongoose = require("mongoose");
 var current = require('./current');
 
@@ -102,3 +102,4 @@ shortSchema.statics = {
 
 module.exports = mongoose.model('short', shortSchema);
 
+*/
