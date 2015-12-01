@@ -14,11 +14,11 @@ angular.module('starter.controllers', [])
         $scope.forecastType = "short"; //mid, detail
         $scope.address = "";
 
-        //{time: Number, t1h: Number, sky: String, tmn: Number, tmx: Number, summary: String};
+        //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
         $scope.currentWeather;
-        //{day: String, time: Number, t3h: Number, sky: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
+        //{day: String, time: Number, t3h: Number, skyIcon: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
         $scope.timeTable = [];
-        //{week: String, sky:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
+        //{week: String, skyIcon:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
         $scope.dayTable = [];
         //[{name: String, values:[{name: String, value: Number}]}]
         $scope.timeChart;
@@ -95,11 +95,13 @@ angular.module('starter.controllers', [])
         }
 
         function setUserDefaults(obj) {
-            applewatch.sendUserDefaults(function() {
-                console.log(obj);
-            }, function() {
-                console.log("Failed to sendUserDefault");
-            }, obj, "group.net.wizardfactory.todayweather");
+            if (window.applewatch) {
+                applewatch.sendUserDefaults(function() {
+                    console.log(obj);
+                }, function() {
+                    console.log("Failed to sendUserDefault");
+                }, obj, "group.net.wizardfactory.todayweather");
+            }
         }
 
         function loadWeatherData() {
@@ -132,9 +134,9 @@ angular.module('starter.controllers', [])
                 if (!shortestAddress) { shortestAddress = $scope.address.split(",")[0];
                 }
                 setUserDefaults({"Location": shortestAddress || "구름동"});
-                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h) || "33"});
+                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h)+'˚' || "33˚"});
                 setUserDefaults({"WeatherComment": cityData.currentWeather.summary || "어제과 같음"});
-                setUserDefaults({"WeatherImage": cityData.currentWeather.sky || "Snow"});
+                setUserDefaults({"WeatherImage": cityData.currentWeather.skyIcon || "Snow"});
 
                 setUserDefaults({"TodayMaxTemp": "99"});
                 setUserDefaults({"TodayMinTemp": "0"});
@@ -257,7 +259,7 @@ angular.module('starter.controllers', [])
                 return colWidth;
             }
 
-            var bodyWidth =  angular.element(document).find("body")[0].offsetWidth;
+            var bodyWidth =  window.innerWidth;
             console.log("body of width="+bodyWidth);
 
             switch (bodyWidth) {
@@ -266,6 +268,9 @@ angular.module('starter.controllers', [])
                     break;
                 case 375:   //iphone 6
                     colWidth = 53;
+                    break;
+                case 412:   //SS note5
+                    colWidth = 58.85;
                     break;
                 case 414:   //iphone 6+
                     colWidth =  59;
@@ -421,7 +426,7 @@ angular.module('starter.controllers', [])
             var data = {
                 address: address,
                 currentPosition: city.currentPosition,
-                sky: city.currentWeather.sky,
+                skyIcon: city.currentWeather.skyIcon,
                 t1h: city.currentWeather.t1h,
                 tmn: todayData[0].tmn,
                 tmx: todayData[0].tmx,
@@ -524,24 +529,31 @@ angular.module('starter.controllers', [])
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup,
                                         $http, $cordovaInAppBrowser) {
-        $scope.version  = "0.0.0";
+        //sync with config.xml
+        $scope.version  = "0.6.3";
 
-        var deploy = new Ionic.Deploy();
-        deploy.info().then(function(deployInfo) {
-            console.log("DeployInfo" + deployInfo);
-            $scope.version = deployInfo.binary_version;
-        }, function() {}, function() {});
+        //it doesn't work after ionic deploy
+        //var deploy = new Ionic.Deploy();
+        //deploy.info().then(function(deployInfo) {
+        //    console.log("DeployInfo" + deployInfo);
+        //    $scope.version = deployInfo.binary_version;
+        //}, function() {}, function() {});
+        //
+        //deploy.getVersions().then(function(versions) {
+        //    console.log("version:" + versions);
+        //}, function() {}, function() {});
 
         //for chrome extension
-        if (chrome && chrome.extension) {
-
-            $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
-                console.log("Version: " + manifest.version);
-                $scope.version = manifest.version;
-            })
-            .error(function (err) {
-                    console.log(err);
-            });
+        if (window.chrome) {
+            if (chrome.extension) {
+                $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
+                    console.log("Version: " + manifest.version);
+                    $scope.version = manifest.version;
+                })
+                    .error(function (err) {
+                        console.log(err);
+                    });
+            }
         }
 
         $scope.$on('$ionicView.enter', function() {

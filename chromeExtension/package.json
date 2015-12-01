@@ -1,0 +1,31 @@
+{
+  "name": "todayweather",
+  "version": "0.6.0",
+  "description": "Inform how warm or cold it is today than yesterday.",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WizardFactory/TodayWeather.git"
+  },
+  "bugs": {
+    "url": "http://github.com/WizardFactory/TodayWeather/issues"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "clean-css": "^3.4.8",
+    "gulp": "^3.9.0",
+    "gulp-run": "^1.6.11",
+    "imagemin": "^4.0.0",
+    "ng-annotate": "^1.0.2",
+    "uglify-js": "^2.6.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "weather",
+    "todayweather",
+    "chrome"
+  ],
+  "author": "wizardfactory",
+  "license": "MIT"
+}

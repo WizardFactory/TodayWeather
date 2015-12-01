@@ -630,16 +630,16 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-digit {
-    font-size: 130px;
+    font-size: 120px;
     letter-spacing: -6px;
   }
 
   .big-temp-point img{
-    width: 18px;
+    width: 16px;
   }
 
   .big-temp-sky-state img{
-    width: 64px;
+    width: 60px;
   }
 
   .timeChart {
@@ -711,6 +711,39 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .big-temp-sky-state img {
     width: 52px;
+  }
+
+  .city-list {
+    height: 75%;
+  }
+}
+
+/* SS Galaxy Note5, G6, .. QHD */
+@media screen and (device-width: 412px) and (device-height: 732px)
+    and (device-aspect-ratio: 412/732)
+{
+  .main-content {
+    height: 682px;
+  }
+
+  .big-digit {
+    font-size: 100px;
+  }
+
+  .big-temp-point img {
+    width: 14px;
+  }
+
+  .big-temp-sky-state img {
+    width: 52px;
+  }
+
+  .timeChart {
+    width: 1412px; // 58.85px per col * 24
+  }
+
+  .weeklyChart {
+    width: 1059px; //58.85px per col * 18
   }
 
   .city-list {
