@@ -60,6 +60,12 @@ app.use('/', routes);
 app.use('/users', users);
 app.use('/town', townForecast);
 
+global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
+//global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
+global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx'];
+global.shortestString = ['pty', 'rn1', 'sky', 'lgt'];
+global.commonString = ['date', 'time', 'mx', 'my'];
+global.rssString = ['ftm', 'date', 'temp', 'tmx', 'tmn', 'sky', 'pty', 'wfKor', 'wfEn', 'pop', 'r12', 's12', 'ws', 'wd', 'wdKor', 'wdEn', 'reh', 'r06', 's06'];
 global.manager = new controllerManager();
 global.townRss = new controllerShortRss();
 

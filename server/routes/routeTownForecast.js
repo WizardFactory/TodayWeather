@@ -14,6 +14,16 @@ var dbMidLand = require('../models/midLand');
 var DateUtil = require('../models/dateUtil');
 var ModelUtil = require('../models/modelUtil');
 
+var modelShort = require('../models/modelShort');
+var modelCurrent = require('../models/modelCurrent');
+var modelShortest = require('../models/modelShortest');
+var modelMidForecast = require('../models/modelMidForecast');
+var modelMidTemp = require('../models/modelMidTemp');
+var modelMidLand = require('../models/modelMidLand');
+var modelMidSea = require('../models/modelMidSea');
+var modelShortRss = require('../models/modelShortRss');
+var dbTown = require('../models/town');
+
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
     log.info('+ townForecast > request | Time[', printTime.toISOString(), ']');
@@ -292,6 +302,368 @@ function getCurrentFromDB(regionName, cityName, townName, callback){
 /****************************************************************************/
 
 
+/*
+ *   get coordinate (mx, my) from town list.
+ *   @param region
+ *   @param city
+ *   @param town
+ *   @param cb
+ *
+ *   @return {}
+ */
+var getCoord = function(region, city, town, cb){
+    var meta = {};
+    meta.method = 'getCoord';
+    meta.region = region;
+    meta.city = city;
+    meta.town = town;
+
+    try{
+        dbTown.find({'town.first':region, 'town.second':city, 'town.third':town}, function(err, result){
+            if(err){
+                log.error('~> getCoord : fail to find db item');
+                if(cb){
+                    cb(err);
+                }
+                return;
+            }
+
+            if(result.length === 0){
+                log.error('~> there is no data', result.length);
+                return;
+            }
+            if(result.length > 1){
+                log.error('~> what happened??', result.length);
+            }
+
+            var coord = {
+                mx: result[0].mCoord.mx,
+                my: result[0].mCoord.my
+            };
+
+            //log.info('~> found coord:', coord.mx, coord.my);
+
+            if(cb){
+                cb(0, coord);
+            }
+            return coord;
+        });
+    }catch(e){
+        log.error(meta);
+    }
+
+    return {}
+};
+
+/*
+ *   get town data list from db
+ *   @param coord
+ *   @param cb
+ *
+ *   @return {}
+ */
+var getTownDataFromDB = function(db, indicator, cb, date, time){
+    var meta = {};
+    meta.method = 'getShortFromDB';
+    meta.indicator = indicator;
+
+    try{
+        db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, function(err, result){
+            if(err){
+                log.error('~> getDataFromDB : fail to find db item');
+                if(cb){
+                    cb(err);
+                }
+                return;
+            }
+
+            if(result.length === 0){
+                log.error('~> getDataFromDB : there is no data');
+                return;
+            }
+            if(result.length > 1){
+                log.error('~> getDataFromDB : what happened??', result.length);
+            }
+
+            if(cb){
+                var ret = [];
+                if(result[0].shortData){
+                    if(result[0].shortData[0].ftm){
+                        result[0].shortData.forEach(function(item){
+                            var newItem = {};
+                            rssString.forEach(function(string){
+                                newItem[string] = item[string];
+                            });
+                            ret.push(newItem);
+                        });
+                    }else{
+                        //ret = result[0].shortData;
+                        result[0].shortData.forEach(function(item){
+                            var newItem = {};
+                            shortString.forEach(function(string){
+                                newItem[string] = item[string];
+                            });
+                            commonString.forEach(function(string){
+                                newItem[string] = item[string];
+                            });
+                            ret.push(newItem);
+                        });
+                    }
+                }else if(result[0].currentData){
+                    //ret = result[0].currentData;
+                    result[0].currentData.forEach(function(item){
+                        var newItem = {};
+                        curString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        commonString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        ret.push(newItem);
+                    });
+                }else if(result[0].shortest){
+                    //ret = result[0].shortestData;
+                    result[0].shortestData.forEach(function(item){
+                        var newItem = {};
+                        shortestString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        commonString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        ret.push(newItem);
+                    });
+                }
+                else{
+                    log.info('~> what???');
+                    log.error(meta);
+                    return {};
+                }
+                cb(0, ret);
+            }
+            return result[0];
+        });
+    }catch(e){
+        log.error(meta);
+    }
+
+    return {};
+};
+
+/*
+ *   get mid data list from db
+ *   @param coord
+ *   @param cb
+ *
+ *   @return {}
+ */
+var getMidDataFromDB = function(db, indicator, cb, date, time){
+    var meta = {};
+    meta.method = 'getMidDataFromDB';
+    meta.indicator = indicator;
+
+    try{
+        db.find({regId : indicator}, function(err, result){
+            if(err){
+                log.error('~> getMidDataFromDB : fail to find db item');
+                if(cb){
+                    cb(err);
+                }
+                return;
+            }
+
+            if(result.length > 1){
+                log.error('~> getMidDataFromDB : what happened??', result.length);
+            }
+
+            if(cb){
+                cb(0, result[0]);
+            }
+            return result[0];
+        });
+    }catch(e){
+        log.error(meta);
+    }
+
+    return {};
+};
+
+/*
+ *   merge short data with current data
+ *   @param short list
+ *   @param current list
+ *
+ *   @return []
+ */
+var mergeShortWithCurrent = function(shortList, currentList, cb){
+    var meta = {};
+    meta.method = 'mergeShortWithCurrent';
+    meta.short = shortList[0];
+    meta.current = currentList[0];
+
+    try{
+        var requestTime = getTimeValue();
+        var tmpList = [];
+
+        // 과거의 current 데이터를 short 리스트에 넣을 수 있게 리스트를 구성한다
+        currentList.forEach(function(curItem, index){
+            var newItem = {};
+            //log.info(parseInt(curItem.date), parseInt(requestTime.date));
+            //log.info(parseInt(curItem.time), parseInt(requestTime.time));
+            // 현재 시간 보다 작은 current의 데이터를 사용해서 지난 정보는 실제 current 값을 사용한다
+            if ((parseInt(curItem.date) < parseInt(requestTime.date)) ||
+                ((parseInt(curItem.date) === parseInt(requestTime.date)) &&
+                parseInt(curItem.time) <= parseInt(requestTime.time))){
+                // 시간이 0시 이거나 3의 배수인 시간일때 데이터를 구성한다
+                if(curItem.time === '0000' || (parseInt(curItem.time) % 3) === 0){
+                    newItem.time = curItem.time;
+                    newItem.date = curItem.date;
+                    if((index === 0) || (index === currentList.length - 1)){
+                        var tmp = {};
+                        if(index === 0){
+                            tmp = currentList[index + 1];
+                        }else{
+                            tmp = currentList[index - 1];
+                        }
+
+                        //log.info(tmp);
+                        curString.forEach(function(string){
+                            if(string === 'sky' || string === 'pty' || string === 'lgt') {
+                                newItem[string] = (tmp[string] > curItem[string])? tmp[string]:curItem[string];
+                            }
+                            else{
+                                newItem[string] = (tmp[string] + curItem[string]) / 2;
+                            }
+                        });
+                    }else {
+                        var prv = currentList[index-1];
+                        var next = currentList[index+1];
+                        curString.forEach(function(string){
+                            if(string === 'sky' || string === 'pty' || string === 'lgt') {
+                                newItem[string] = (prv[string] > curItem[string])? prv[string]:curItem[string];
+                                newItem[string] = (newItem[string] > next[string])? newItem[string]:next[string];
+                            }else{
+                                newItem[string] = (prv[string] + curItem[string] + next[string]) / 3;
+                            }
+                        });
+                    }
+
+                    tmpList.push(newItem);
+                }
+            }
+        });
+        //log.info('~> tmpList :',tmpList);
+
+        shortList.forEach(function(shortItem, index){
+            tmpList.forEach(function(tmpItem){
+                if(shortItem.date === tmpItem.date && shortItem.time === tmpItem.time){
+                    shortList[index].pty = tmpItem.pty;
+                    shortList[index].r06 = tmpItem.rn1;
+                    shortList[index].reh = tmpItem.reh;
+                    shortList[index].sky = tmpItem.sky;
+                    shortList[index].t3h = tmpItem.t1h;
+                }
+            });
+        });
+
+        //log.info('~> After :', shortList);
+
+        if(cb){
+            cb(0, shortList);
+        }
+    }
+    catch(e){
+        log.error(meta);
+        return [];
+    }
+
+    return shortList;
+};
+
+
+/*
+ *   merge short data with RSS data
+ *   @param short list
+ *   @param rss list
+ *
+ *   @return []
+ */
+var mergeShortWithRSS = function(shortList, rssList, cb){
+    var meta = {};
+    meta.method = 'mergeShortWithRSS';
+    meta.short = shortList[0];
+    meta.rssList = rssList[0];
+
+    //log.info(rssList.length);
+    //log.info(shortList.length);
+    try{
+        var requestTime = getTimeValue();
+
+        rssList.forEach(function(rssItem){
+            //log.info(parseInt('' + rssItem.date), parseInt('' + requestTime.date + requestTime.time));
+            // 현재 시간보다 큰(미래의 데이터)만 사용한다. 과거 데이터는 current로 부터 얻은 데이터를 그대로 사용.
+            if(parseInt('' + rssItem.date) > parseInt('' + requestTime.date + requestTime.time)){
+                var found = 0;
+                for(var i=0 ; i < shortList.length ; i++){
+                    //log.info(parseInt(''+shortList[i].date + shortList[i].time),parseInt(rssItem.date));
+                    if(parseInt('' + shortList[i].date + shortList[i].time) === parseInt(rssItem.date)){
+                        found = 1;
+                        shortList[i].pop = rssItem.pop;
+                        shortList[i].pty = rssItem.pty;
+                        shortList[i].r06 = rssItem.r06;
+                        shortList[i].reh = rssItem.reh;
+                        shortList[i].s06 = rssItem.s06;
+                        shortList[i].sky = rssItem.sky;
+                        shortList[i].t3h = rssItem.temp;
+                        if(shortList[i].time === '0600' && rssItem.tmn != -999) {
+                            shortList[i].tmn = rssItem.tmn;
+                        }
+                        if(shortList[i].time === '1500' && rssItem.tmn != -999){
+                            shortList[i].tmx = rssItem.tmx;
+                        }
+                    }
+                }
+                if(found === 0){
+                    var item = {};
+                    item.date = rssItem.date.slice(0, 8);
+                    item.time = rssItem.date.slice(8, 12);
+                    item.pop = rssItem.pop;
+                    item.pty = rssItem.pty;
+                    item.r06 = rssItem.r06;
+                    item.reh = rssItem.reh;
+                    item.s06 = rssItem.s06;
+                    item.sky = rssItem.sky;
+                    item.t3h = rssItem.temp;
+                    if(item.time === '0600' && rssItem.tmn != -999){
+                        item.tmn = rssItem.tmn;
+                    } else{
+                        item.tmn = 0;
+                    }
+                    if(item.time === '1500' && rssItem.tmx != -999){
+                        item.tmx = rssItem.tmx;
+                    }else{
+                        item.tmx = 0;
+                    }
+
+                    //log.info('~> push data>', item);
+                    shortList.push(item);
+                }
+            }
+        });
+
+        //log.info('~> final : ', shortList);
+        if(cb) {
+            cb(0, shortList);
+        }
+    }
+    catch(e) {
+        log.error(meta);
+        return [];
+    }
+
+    return shortList;
+};
+
 var getShort = function(req, res, next){
     var meta = {};
     var resultList = [];
@@ -306,8 +678,6 @@ var getShort = function(req, res, next){
     meta.town = townName;
 
     log.info('>', meta);
-
-    var getMethod;
 
     if(config.db.mode === 'ram'){
         manager.getWeatherDb(regionName, cityName, townName, function (err, result) {
@@ -492,155 +862,58 @@ var getShort = function(req, res, next){
             }
             catch (e) {
                 log.error('ERROE>>', meta);
-                next('route');
+                next();
             }
         });
     }
     else {
+        try{
+            getCoord(regionName, cityName, townName, function(err, coord){
+                getTownDataFromDB(modelShort, coord, function(err, shortList){
+                    var requestTime = getTimeValue();
+                    var popCount = 0;
+                    var i = 0;
 
-        var nowDate = getCurrentTimeValue(+9);
-        var dateUtil = new DateUtil();
-        var nowBefore = dateUtil.getNextDate(nowDate.date, nowDate.time, -2);
-        var nowAfter = dateUtil.getNextDate(nowDate.date, nowDate.time, 2);
-
-        dbShort.getShortDataWithSpecificDate({ first : regionName, second : cityName, third : townName },
-            nowDate.date, nowAfter.date, function (err, result) {
-            if (err) {
-                log.error('> getShort : failed to get Short data from DB');
-                log.error(meta);
-                next();
-            }
-
-            /********************
-             * TEST DATA
-             ********************/
-            //result = config;
-            /********************/
-            if(result === null || result === []) next();
-
-            try {
-                var listShort = result;
-                var requestTime = getTimeValue();
-                var tempList = [];
-                log.info('short list length : ' + listShort.length);
-
-                /********************
-                 * TEST DATA
-                 ********************/
-                //requestTime.date = '20150830';
-                //requestTime.time = '0300';
-                /********************/
-
-                dbCurrent.getCurrentDataWithSpecificDate({'first':regionName, 'second':cityName, 'third':townName},
-                    // start date , end(now) date
-                    nowBefore.date, nowDate.date, function(err, res) {
-                        if(err){
-                            log.error('> getShort : failed to get Current data from DB');
-                            log.error(meta);
-                            next();
+                    //log.info(shortList);
+                    //shortList.forEach(function(item, index){
+                    //    log.info('routeS>', item);
+                    //});
+                    for(i=0 ; shortList.length ; i++){
+                        if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
+                            //log.info('found same date');
+                            break;
                         }
-                        if(res === null || res === []) next();
+                    }
 
-                        var listCurrent = res;
-                        log.info('current length : ' + listCurrent.length);
-                        for (var i = 0; i < listCurrent.length; i++) {
-                            if(listCurrent[i].currentData.date === nowDate.date){// now date use just short data not current
-                                continue;
-                            }
+                    if(i > 16){
+                        //log.info('prv count :', i);
+                        shortList.slice(0, (i - 16));
+                    }
 
-                            var item = {};
-                            item.date = listCurrent[i].currentData.date;
-                            item.time = listCurrent[i].currentData.time;
-                            item.mx = listCurrent[i].currentData.mx;
-                            item.my = listCurrent[i].currentData.my;
-                            item.t1h = listCurrent[i].currentData.t1h;
-                            item.rn1 = listCurrent[i].currentData.rn1;
-                            item.sky = listCurrent[i].currentData.sky;
-                            item.uuu = listCurrent[i].currentData.uuu;
-                            item.vvv = listCurrent[i].currentData.vvv;
-                            item.reh = listCurrent[i].currentData.reh;
-                            item.pty = listCurrent[i].currentData.pty;
-                            item.lgt = listCurrent[i].currentData.lgt;
-                            item.vec = listCurrent[i].currentData.vec;
-                            item.wsd = listCurrent[i].currentData.wsd;
-                            tempList.push(item);
-                        }
-
-                        //tempList.push({'current end..' : 1});
-
-                        var lastTime = tempList[tempList.length - 1].time;
-                        if (lastTime === '0000' || lastTime === '0300' ||
-                            lastTime === '0600' || lastTime === '0900' ||
-                            lastTime === '1200' || lastTime === '1500' ||
-                            lastTime === '1800' || lastTime === '2100') {
-                            // remove duplicate short data ...
-                            tempList.pop();
-                        }
-                        for(var i = 0 ; i < listShort.length ; i ++){
-                            var item = {};
-
-                            item.date = listShort[i].shortData.date;
-                            item.time = listShort[i].shortData.time;
-                            item.mx = listShort[i].shortData.mx;
-                            item.my = listShort[i].shortData.my;
-                            item.t1h = listShort[i].shortData.t3h;
-                            item.rn1 = listShort[i].shortData.r06;
-                            item.sky = listShort[i].shortData.sky;
-                            item.uuu = listShort[i].shortData.uuu;
-                            item.vvv = listShort[i].shortData.vvv;
-                            item.reh = listShort[i].shortData.reh;
-                            item.pty = listShort[i].shortData.pty;
-                            item.lgt = 0;
-                            item.vec = listShort[i].shortData.vec;
-                            item.wsd = listShort[i].shortData.wsd;
-
-                            if(i == (listShort.length - 1)) {
-                                tempList.push(item);
-                                break;
-                            }
-
-                            var delta = Math.round((listShort[i + 1].shortData.t3h - listShort[i].shortData.t3h) / 3);
-                            var afterObj = JSON.parse(JSON.stringify(item));
-                            var time = afterObj.time;
-                            var nextTime = dateUtil.getNextTime(item.date, item.time, 1);
-                            afterObj.date = nextTime.date;
-                            afterObj.time = nextTime.time;
-                            afterObj.t1h = item.t1h + delta;
-                            var afterAfterObj = JSON.parse(JSON.stringify(item));
-                            nextTime = dateUtil.getNextTime(item.date, item.time, 2);
-                            afterAfterObj.date = nextTime.date;
-                            afterAfterObj.time = nextTime.time;
-                            afterAfterObj.t1h = item.t1h  + delta + delta;
-                            tempList.push(item);
-                            tempList.push(afterObj);
-                            tempList.push(afterAfterObj);
-                        }
-                        //log.info('tempList length : ' + tempList.length);
-                        req.short = tempList;
-                        next();
+                    getTownDataFromDB(modelCurrent, coord, function(err, currentList){
+                        //log.info(currentList);
+                        //currentList.forEach(function(item, index){
+                        //    log.info('routeC>', item);
+                        //});
+                        mergeShortWithCurrent(shortList, currentList, function(err, firstMerged){
+                            //log.info(firstMerged);
+                            getTownDataFromDB(modelShortRss, coord, function(err, rssList){
+                                //log.info(rssList);
+                                mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
+                                    log.info(resultList);
+                                    req.short = resultList;
+                                    next();
+                                });
+                            });
+                        });
                     });
-            }
-            catch (e) {
-                log.error('ERROE>>', meta);
-                next('route');
-            }
-        });
-    }
-    /****************************************************************************
-     *   THIS IS FOR TEST.
-     *****************************************************************************
-     getShortFromDB(regionName, cityName, townName, function(err, result){
-        if(err){
-            log.error('> getShortFromDB : Failed to get data');
-            next('route');
-            return;
+                });
+            });
+        } catch(e){
+            log.error('ERROE>>', meta);
+            next();
         }
-        log.info('> getShortFromDB : successed to get data');
-
-        req.short = result;
-        next();
-    });
-     */
+    }
 };
 
 var getShortest = function(req, res, next){
@@ -827,19 +1100,23 @@ var getCurrent = function(req, res, next){
                 var currentItem = result[0].currentData;
                 var nowDate = getCurrentTimeValue(+9);
                 var acceptedDate = getCurrentTimeValue(+6);
+                var shortDate = getTimeValue();
                 var resultItem = {};
 
+                log.info('>> current:', currentItem);
                 log.info('nowDate : ' + nowDate.date + " , nowTime : " + nowDate.time);
                 log.info('acceptDate : ' + acceptedDate.date + " , acceptTime : " + acceptedDate.time);
                 if((nowDate.date !== currentItem.date) ||
                     (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
                     // 데이터가 없다면 3시간 예보 데이터 사용.
-                    dbShort.getOneShortDataWithDateAndTime(regionName, cityName, townName, nowDate.date, nowDate.time, function(err, shortRes){
+                    dbShort.getOneShortDataWithDateAndTime(regionName, cityName, townName, shortDate.date, shortDate.time, function(err, shortRes){
                          if(err){
                             log.error('> getCurrentest : failed to get data from DB');
                             log.error(meta);
                             next();
                         }
+
+                        log.info('>> current(get short) : ', shortRes);
 
                         resultItem.date = shortRes[0].shortData.date;
                         resultItem.time = shortRes[0].shortData.time;

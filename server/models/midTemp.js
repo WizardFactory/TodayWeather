@@ -1,7 +1,7 @@
 /**
  * Created by User on 2015-10-23.
  */
-
+/*
 'use strict';
 
 var mongoose = require('mongoose');
@@ -128,3 +128,4 @@ midTempSchema.statics = {
 
 module.exports = mongoose.model('midTemp', midTempSchema);
 
+*/
