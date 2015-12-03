@@ -111,7 +111,7 @@ angular.module('starter', [
             transclude: true,
             link: function (scope, iElement) {
                 var duration = 1000;
-                var margin = {top: 25, right: 0, bottom: 5, left: 0};
+                var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
                 var width, height, x, y;
                 var svg, initLine, line;
 
@@ -249,10 +249,9 @@ angular.module('starter', [
                         .attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .attr('y', height - margin.bottom)
+                        .attr('y', height - margin.bottom - margin.textTop)
                         .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
-                        .attr('alignment-baseline', 'ideographic')
                         .text(function (d) {
                             if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
                                 return (d.value.tmn | d.value.tmx) + '˚';
@@ -265,7 +264,7 @@ angular.module('starter', [
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top;
+                            return y(d.value.t3h) - margin.top - margin.textTop;
                         });
                 }
 
@@ -289,7 +288,7 @@ angular.module('starter', [
             transclude: true,
             link: function (scope, iElement) {
                 var duration = 1000;
-                var margin = {top: 25, right: 0, bottom: 20, left: 0};
+                var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
                 var width, height, x, y;
                 var svg, initLine, line;
 
@@ -385,11 +384,10 @@ angular.module('starter', [
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
-                            return y(d.tmn) - margin.top;
+                            return y(d.tmn) - margin.top - margin.textTop;
                         })
                         .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
-                        .attr('alignment-baseline', 'ideographic')
                         .text(function (d) {
                             return d.tmx + '˚';
                         })
@@ -397,7 +395,7 @@ angular.module('starter', [
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.tmx) - margin.top;
+                            return y(d.tmx) - margin.top - margin.textTop;
                         });
 
                     // draw min value
