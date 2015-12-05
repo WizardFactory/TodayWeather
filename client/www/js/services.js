@@ -890,7 +890,11 @@ angular.module('starter.services', [])
                     case 40: return "20~39mm";
                     case 70: return "40~69mm";
                     case 100: return "70mm 이상";
-                    default : return "알수없음";
+                    default : console.log('unknown data='+rXX);
+                }
+                /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
+                if (0 < rXX || rXX < 100) {
+                    return rXX+"mm 미만"
                 }
             }
             else if (pty === 3) {
@@ -901,7 +905,11 @@ angular.module('starter.services', [])
                     case 10: return "5~9cm";
                     case 20: return "10~19cm";
                     case 100: return "20cm 이상";
-                    default : return "알수없음";
+                    default : console.log('unknown data='+rXX);
+                }
+                /* spec에 없지만 2로 오는 경우가 있었음 */
+                if (0 < rXX || rXX < 100) {
+                    return rXX+"cm 미만"
                 }
             }
         }
@@ -931,9 +939,10 @@ angular.module('starter.services', [])
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
          *          wsd: Number}
          * @param {Object} currentTownWeather
+         * @param shortList
          * @returns {{}}
          */
-        obj.parseCurrentTownWeather = function (currentTownWeather) {
+        obj.parseCurrentTownWeather = function (currentTownWeather, shortList) {
             var currentForecast = {};
             var time = parseInt(currentTownWeather.time.substr(0, 2));
             var isNight = time < 7 || time > 18;
@@ -941,6 +950,25 @@ angular.module('starter.services', [])
             currentForecast.time = time;
             currentForecast = currentTownWeather;
 
+            //related to #379
+            if (currentForecast.t1h === -50) {
+                //set near data of short
+                for(var i = 0; i < shortList.length; i++) {
+                    var short = shortList[i];
+                    if (short.date === currentForecast.date) {
+                        if (short.time === currentForecast.time) {
+                            currentForecast.t1h = short.t3h;
+                            console.log('set t1h to ' + short.t3h + ' of short t3h');
+                            break;
+                        }
+                        if (short.time > currentForecast.time) {
+                            currentForecast.t1h = shortList[i-1].t3h;
+                            console.log('set t1h to ' + shortList[i-1].t3h + ' of short time='+ shortList[i-1].time);
+                            break;
+                        }
+                    }
+                }
+            }
 
             currentForecast.wsdStr = convertKmaWsdToStr(currentForecast.wsd);
             currentForecast.ptyStr = convertKmaPtyToStr(currentForecast.pty);
@@ -1016,6 +1044,7 @@ angular.module('starter.services', [])
         obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
             var data = [];
             var positionHours = getPositionHours(current.getHours());
+            var prevT3H;
 
             shortForecastList.every(function (shortForecast) {
                 var tempObject = {};
@@ -1059,6 +1088,16 @@ angular.module('starter.services', [])
                 }
                 else {
                     tempObject = shortForecast;
+
+                    //related to #379
+                    if (tempObject.t3h === -50) {
+                        console.log('t3h is invalid');
+                        tempObject.t3h = prevT3H;
+                    }
+                    else {
+                        prevT3H = tempObject.t3h;
+                    }
+
                     if (tempObject.time !== '0600') {
                         tempObject.tmn = undefined;
                     }
@@ -1374,14 +1413,35 @@ angular.module('starter.services', [])
             return deferred.promise;
         };
 
-        /**
-         *
-         * @param {Number} lat
-         * @param {Number} long
-         */
-        obj.getAddressFromGeolocation = function (lat, long) {
+        function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + long +
+            var url = 'https://apis.daum.net/local/geo/coord2addr'+
+                '?apikey=' + '[DAUM_SERVICE_KEY]'+
+                '&longitude='+ lng +
+                '&latitude='+lat+
+                '&inputCoordSystem=WGS84'+
+                '&output=json';
+
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                if (data.fullName) {
+                    var address = data.fullName;
+
+                    address = '대한민국 ' + address;
+                    deferred.resolve(address);
+                }
+                else {
+                    deferred.reject(new Error('Fail to get address name'));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
+        }
+
+        function getAddressFromGoogle(lat, lng) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
                 "&sensor=true&language=ko";
 
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
@@ -1402,6 +1462,32 @@ angular.module('starter.services', [])
             });
 
             return deferred.promise;
+        }
+
+        /**
+         * related to #380
+         * @param {Number} lat
+         * @param {Number} long
+         */
+        obj.getAddressFromGeolocation = function (lat, long) {
+            var deferred = $q.defer();
+
+            getAddressFromDaum(lat, long).then(function(address) {
+
+                console.log(address);
+                deferred.resolve(address);
+            }, function (err) {
+
+                console.log(err);
+                getAddressFromGoogle(lat, long).then(function (address) {
+                    console.log(address);
+                    deferred.resolve(address);
+                }, function (err) {
+                    deferred.reject(err);
+                });
+            });
+
+            return deferred.promise;
         };
 
         obj.getCurrentPosition = function () {
@@ -1411,7 +1497,9 @@ angular.module('starter.services', [])
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
                 //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                //deferred.resolve({latitude: 36.51, longitude: 127.259});
+                //37.472595, 126.795249
+                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
 
                 deferred.resolve(position.coords);
             }, function(error) {
@@ -1424,8 +1512,9 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param {String} address
-         * @param {cbWeatherInfo} callback
+         * @param address
+         * @param towns
+         * @returns {*}
          */
         obj.getWeatherInfo = function (address, towns) {
             var that = this;
@@ -1454,7 +1543,8 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param weatherData
+         * @param weatherDatas
+         * @returns {{}}
          */
         obj.convertWeatherData = function (weatherDatas) {
             var that = this;
@@ -1476,7 +1566,7 @@ angular.module('starter.services', [])
                 }
             });
 
-            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.short);
             var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short);
 
             /*
