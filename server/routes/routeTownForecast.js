@@ -362,7 +362,7 @@ var getCoord = function(region, city, town, cb){
  *
  *   @return []
  */
-var getTownDataFromDB = function(db, indicator, cb, date, time){
+var getTownDataFromDB = function(db, indicator, cb){
     var meta = {};
     meta.method = 'getShortFromDB';
     meta.indicator = indicator;
@@ -377,8 +377,12 @@ var getTownDataFromDB = function(db, indicator, cb, date, time){
                 return;
             }
 
+            //log.info(result[0].shortData);
             if(result.length === 0){
                 log.error('~> getDataFromDB : there is no data');
+                if(cb){
+                    cb(1);
+                }
                 return;
             }
             if(result.length > 1){
@@ -439,6 +443,7 @@ var getTownDataFromDB = function(db, indicator, cb, date, time){
                     log.error(meta);
                     return [];
                 }
+                //log.info(ret);
                 cb(0, ret);
             }
             return result[0];
@@ -457,7 +462,7 @@ var getTownDataFromDB = function(db, indicator, cb, date, time){
  *
  *   @return []
  */
-var getMidDataFromDB = function(db, indicator, cb, date, time){
+var getMidDataFromDB = function(db, indicator, cb){
     var meta = {};
     meta.method = 'getMidDataFromDB';
     meta.indicator = indicator;
@@ -1024,6 +1029,12 @@ var getShort = function(req, res, next){
                             //log.info(firstMerged);
                             getTownDataFromDB(modelShortRss, coord, function(err, rssList){
                                 //log.info(rssList);
+                                if(err){
+                                    log.error('error to get short RSS');
+                                    req.short = firstMerged;
+                                    next();
+                                    return;
+                                }
                                 mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
                                     //log.info(resultList);
                                     req.short = resultList;

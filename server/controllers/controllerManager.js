@@ -1480,7 +1480,7 @@ Manager.prototype.getTownShortestData = function(){
     //    key = keydata.keyString.aleckim;
     //}
 
-    key = keydata.keyString.cert_key;
+    key = keydata.keyString.aleckim;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -1570,7 +1570,7 @@ Manager.prototype.getTownCurrentData = function(gmt){
     //} else {
     //    key = keydata.keyString.aleckim;
     //}
-    key = keydata.keyString.pokers;
+    key = keydata.keyString.aleckim;
     /***************************************************/
 
     if(config.db.mode === 'ram'){
@@ -1641,7 +1641,7 @@ Manager.prototype.getMidForecast = function(gmt){
         dateString.time = '1800';
     }
 
-    var key = keydata.keyString.pokers;
+    var key = config.keyString.cert_key;
 
     log.info('+++ GET MID Forecast : ', dateString);
 
@@ -1904,8 +1904,8 @@ Manager.prototype.getMidSea = function(gmt){
 
 Manager.prototype.startTownData = function(){
     var self = this;
-    var periodValue = 15000;
-    var midPeriod = 10000;
+    var periodValue = 30000;
+    var midPeriod = 15000;
     var times = 0;
     var midTimes = 11;
     var curTimes = 24;
