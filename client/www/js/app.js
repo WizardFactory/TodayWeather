@@ -198,19 +198,18 @@ angular.module('starter', [
 
                     // draw point
                     group_enter.append('g')
-                        .attr('class', 'line-point')
-                        .selectAll('circle')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('circle');
+                        .attr('class', 'line-point');
 
-                    group.select('.line-point')
-                        .selectAll('circle')
+                    var circles = group.selectAll('circle')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('cx', function (d, i) {
+                        });
+
+                    circles.enter().append('circle');
+
+                    circles.exit().remove();
+
+                    circles.attr('cx', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('cy', height - margin.bottom)
@@ -331,21 +330,20 @@ angular.module('starter', [
                     var group = svg.selectAll('.bar-group')
                         .data(data);
 
-                    group.enter()
-                        .append('g')
-                        .attr('class', 'bar-group')
-                        .selectAll('rect')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('rect');
+                    group.enter().append('g')
+                        .attr('class', 'bar-group');
 
-                    group.selectAll('rect')
+                    var rects = group.selectAll('rect')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'rect')
-                        .attr('x', function (d, i) {
+                        });
+
+                    rects.enter().append('rect')
+                        .attr('class', 'rect');
+
+                    rects.exit().remove();
+
+                    rects.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2 - 1;
                         })
                         .attr('width', 2)
@@ -368,19 +366,19 @@ angular.module('starter', [
 
                     maxValue.enter()
                         .append('g')
-                        .attr('class', 'bar-max-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-max-value');
 
-                    maxValue.selectAll('text')
+                    var maxTexts = maxValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    maxTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    maxTexts.exit().remove();
+
+                    maxTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
@@ -404,19 +402,19 @@ angular.module('starter', [
 
                     minValue.enter()
                         .append('g')
-                        .attr('class', 'bar-min-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-min-value');
 
-                    minValue.selectAll('text')
+                    var minTexts = minValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    minTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    minTexts.exit().remove();
+
+                    minTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
