@@ -226,7 +226,7 @@ angular.module('starter.services', [])
                 .then(function (res) {
                     that.towns = res.data;
                     deferred.resolve();
-                }, function (err) {
+                }, function () {
                     deferred.reject();
                 });
 
@@ -988,38 +988,36 @@ angular.module('starter.services', [])
         /**
          *
          * @param shortForecastList
+         * @param currentTime
          * @returns {Array}
          */
-        obj.parsePreShortTownWeather = function (shortForecastList) {
+        obj.parsePreShortTownWeather = function (shortForecastList, currentTime) {
             // {date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
             var dailyTemp = [];
 
             shortForecastList.forEach(function (shortForecast) {
                 var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
                 if (!dayInfo) {
-                    var data = {date: shortForecast.date, skyIcon: "Sun", tmx: -100, tmn: 100, pop: 0, reh: 0};
+                    var data = {date: shortForecast.date, skyIcon: "Sun", tmx: null, tmn: null, pop: 0, reh: 0};
                     dailyTemp.push(data);
                     dayInfo = dailyTemp[dailyTemp.length - 1];
                     dayInfo.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
                 }
-                //check valid data by reh
-                if (dayInfo.tmx < shortForecast.t3h && shortForecast.reh) {
-                    dayInfo.tmx = shortForecast.t3h;
+
+                var diffDays = getDiffDays(convertStringToDate(dayInfo.date), currentTime);
+                if (diffDays == 0) {
+                    dayInfo.week = "오늘";
                 }
-                if (!(shortForecast.tmx === -50) && shortForecast.reh) {
-                    if (dayInfo.tmx < shortForecast.tmx) {
-                        dayInfo.tmx = shortForecast.tmx;
-                    }
+                else {
+                    dayInfo.week = dayToString(convertStringToDate(dayInfo.date).getDay());
                 }
 
-                //check valid data by reh
-                if (dayInfo.tmn > shortForecast.t3h && shortForecast.reh) {
-                    dayInfo.tmn = shortForecast.t3h;
+                ////check valid data by reh
+                if (!(shortForecast.tmx === -50) && shortForecast.reh && shortForecast.time === '1500') {
+                    dayInfo.tmx = shortForecast.tmx;
                 }
-                if (!(shortForecast.tmn === -50) && shortForecast.reh) {
-                    if (dayInfo.tmn > shortForecast.tmn) {
-                        dayInfo.tmn = shortForecast.tmn;
-                    }
+                if (!(shortForecast.tmn === -50) && shortForecast.reh && shortForecast.time === '0600') {
+                    dayInfo.tmn = shortForecast.tmn;
                 }
 
                 if (shortForecast.pty > 0) {
@@ -1027,6 +1025,23 @@ angular.module('starter.services', [])
                 }
                 dayInfo.pop = shortForecast.pop > dayInfo.pop ? shortForecast.pop : dayInfo.pop;
                 dayInfo.reh = shortForecast.reh > dayInfo.reh ? shortForecast.reh : dayInfo.reh;
+            });
+
+            shortForecastList.forEach(function (shortForecast) {
+                var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
+                if (!dayInfo) {
+                    return;
+                }
+                if (dayInfo.tmx) {
+                    if (dayInfo.tmx < shortForecast.t3h && shortForecast.reh) {
+                        dayInfo.tmx = shortForecast.t3h;
+                    }
+                }
+                if (dayInfo.tmn) {
+                    if (dayInfo.tmn > shortForecast.t3h && shortForecast.reh) {
+                        dayInfo.tmn = shortForecast.t3h;
+                    }
+                }
             });
 
             console.log(dailyTemp);
@@ -1259,27 +1274,61 @@ angular.module('starter.services', [])
                     break;
                 }
             }
+            if (i === tmpDayTable.length) {
+                console.log("Fail to find today");
+                dailyInfoList.forEach(function (dayInfo) {
 
-            //{week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
-            dailyInfoList.forEach(function (dayInfo) {
-                var data;
-                if (tmpDayTable[index].date === dayInfo.date) {
-                    data = tmpDayTable[index];
-                    data.skyIcon = dayInfo.skyIcon;
-                    data.pop = dayInfo.pop;
-                    data.reh = dayInfo.reh;
-                    if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
+                    dayInfo.humidityIcon = decideHumidityIcon(dayInfo.reh);
+
+                    if (dayInfo.date < tmpDayTable[0].date) {
+                        tmpDayTable.unshift(dayInfo);
+                        return;
                     }
-                    if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
+                    for (i = 0; i < tmpDayTable.length; i++) {
+                        if (tmpDayTable[i].date === dayInfo.date) {
+                            data = tmpDayTable[i];
+                            data.skyIcon = dayInfo.skyIcon;
+                            data.pop = dayInfo.pop;
+                            data.reh = dayInfo.reh;
+                            if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
+                            }
+                            if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
+                            }
+                            data.humidityIcon = decideHumidityIcon(data.reh);
+                            return;
+                        }
+                        else if (dayInfo.date < tmpDayTable[i].date) {
+                            tmpDayTable.splice(i, 0, dayInfo);
+                            return;
+                        }
                     }
-                    data.humidityIcon = decideHumidityIcon(data.reh);
-                    index++;
-                }
-                else {
-                    console.log("Date was mismatched index:" + index + " date:" + tmpDayTable[index].date +
-                    " dayInfo.date=" + dayInfo.date);
-                }
-            });
+                    if (i === tmpDayTable.length) {
+                        tmpDayTable.push(dayInfo);
+                    }
+                });
+            }
+            else {
+                //{week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
+                dailyInfoList.forEach(function (dayInfo) {
+                    var data;
+                    if (tmpDayTable[index].date === dayInfo.date) {
+                        data = tmpDayTable[index];
+                        data.skyIcon = dayInfo.skyIcon;
+                        data.pop = dayInfo.pop;
+                        data.reh = dayInfo.reh;
+                        if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
+                        }
+                        if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
+                        }
+                        data.humidityIcon = decideHumidityIcon(data.reh);
+                        index++;
+                    }
+                    else {
+                        console.log("Date was mismatched index:" + index + " date:" + tmpDayTable[index].date +
+                            " dayInfo.date=" + dayInfo.date);
+                    }
+                });
+            }
 
             return tmpDayTable;
         };
@@ -1388,11 +1437,26 @@ angular.module('starter.services', [])
             return town;
         };
 
-        /**
-         *
-         * @param {String} address
-         */
-        obj.getAddressToGeolocation = function (address) {
+        function getGeoCodeFromDaum(address) {
+            var deferred = $q.defer();
+            var url = 'https://apis.daum.net/local/geo/addr2coord'+
+                '?apikey=' + '[DAUM_SERVICE_KEY]' +
+                '&q='+ encodeURIComponent(address) +
+                '&output=json';
+
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                var lat = data.channel.item[0].lat;
+                var lng = data.channel.item[0].lng;
+                var location = {"lat":lat, "long":lng};
+                deferred.resolve(location);
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
+        }
+
+        function getGeoCodeFromGoogle(address) {
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
@@ -1408,6 +1472,32 @@ angular.module('starter.services', [])
                 }
             }).error(function (err) {
                 deferred.reject(err);
+            });
+
+            return deferred.promise;
+        }
+
+        /**
+         *
+         * @param {String} address
+         */
+        obj.getAddressToGeolocation = function (address) {
+            var deferred = $q.defer();
+
+            getGeoCodeFromDaum(address).then(function(location) {
+
+                console.log(location);
+                deferred.resolve(location);
+            }, function (err) {
+
+                console.log(err);
+                getGeoCodeFromGoogle(address).then(function (location) {
+                    console.log(location);
+                    deferred.resolve(location);
+                }, function (err) {
+                    console.log(err);
+                    deferred.reject(err);
+                });
             });
 
             return deferred.promise;
@@ -1550,7 +1640,7 @@ angular.module('starter.services', [])
             var that = this;
             var data = {};
             var currentTime = new Date();
-            var weatherData, senTemp, ultrv, pm10value;
+            var weatherData = {}, senTemp, ultrv, pm10value;
             weatherDatas.forEach(function (data) {
                 if (data.hasOwnProperty("data")) {
                     weatherData = data.data;
@@ -1567,7 +1657,7 @@ angular.module('starter.services', [])
             });
 
             var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.short);
-            var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short);
+            var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short, currentTime);
 
             /*
              parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
