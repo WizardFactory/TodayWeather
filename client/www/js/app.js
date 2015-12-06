@@ -19,12 +19,13 @@ angular.module('starter', [
             $ionicAnalytics.register();
 
             if (ionic.Platform.isIOS()) {
-
-                applewatch.init(function (appIdentifier) {
+                if (window.applewatch) {
+                    applewatch.init(function () {
                         console.log("Succeeded to initialize for apple-watch");
-                }, function (err) {
+                    }, function (err) {
                         console.log('Failed to initialize apple-watch', err);
-                }, "group.net.wizardfactory.todayweather");
+                    }, "group.net.wizardfactory.todayweather");
+                }
             }
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
@@ -117,7 +118,7 @@ angular.module('starter', [
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function(val) {
+                scope.$watch('$hasTabs', function() {
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
@@ -258,7 +259,7 @@ angular.module('starter', [
                             }
                             return '';
                         })
-                        .attr('class', function (d, i) {
+                        .attr('class', function () {
                             return 'text-today';
                         })
                         .transition()
@@ -294,7 +295,7 @@ angular.module('starter', [
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function(val) {
+                scope.$watch('$hasTabs', function() {
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
@@ -442,7 +443,7 @@ angular.module('starter', [
                     svg.selectAll('circle')
                         .data(data)
                         .attr('class', 'circle circle-today-current')
-                        .attr('cx', function (d, i) {
+                        .attr('cx', function (d) {
                             for (var i = 0; i < d.values.length; i++) {
                                 if (d.values[i].week === "오늘") {
                                     return x.rangeBand() * i + x.rangeBand() / 2;
@@ -457,7 +458,7 @@ angular.module('starter', [
                         .transition()
                         .delay(duration)
                         .attr('r', 5);
-                }
+                };
 
                 scope.$watch('dayChart', function (newVal) {
                     if (newVal) {
