@@ -201,7 +201,7 @@ angular.module('starter.controllers', [])
                 else {
                     $scope.address = "위치 찾는 중";
                 }
-            }, function (err) {
+            }, function () {
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                     return;
@@ -232,11 +232,11 @@ angular.module('starter.controllers', [])
                                 loadWeatherData();
                                 deferred.notify();
                                 deferred.resolve();
-                            }, function (err) {
+                            }, function () {
                                 deferred.reject();
                             });
                         }
-                    }, function (err) {
+                    }, function () {
                         var str = "현재 위치에 대한 정보를 찾을 수 없습니다.";
                         showAlert("에러", str);
                         deferred.reject();
@@ -292,7 +292,7 @@ angular.module('starter.controllers', [])
                 title: title,
                 template: msg
             });
-            alertPopup.then(function(res) {
+            alertPopup.then(function() {
                 console.log("alertPopup close");
             });
         }
@@ -345,7 +345,7 @@ angular.module('starter.controllers', [])
             $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
             isShowingBar = !isShowingBar;
             $ionicNavBarDelegate.showBar(isShowingBar);
-            updateWeatherData(true).finally(function (res) {
+            updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
 
                 isShowingBar = !isShowingBar;
@@ -398,8 +398,8 @@ angular.module('starter.controllers', [])
             WeatherInfo.loadTowns().then(function () {
                 WeatherInfo.updateCities();
                 loadWeatherData();
-                checkForUpdates().finally(function (res) {
-                    updateWeatherData(false).finally(function (res) {
+                checkForUpdates().finally(function () {
+                    updateWeatherData(false).finally(function () {
                         $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                     });
                 });
@@ -422,6 +422,20 @@ angular.module('starter.controllers', [])
             var todayData = city.dayTable.filter(function (data) {
                 return (data.week === "오늘");
             });
+
+            if (!city.currentWeather) {
+                city.currentWeather = {};
+            }
+            if (!city.currentWeather.skyIcon) {
+                city.currentWeather.skyIcon = 'Sun';
+            }
+            if (city.currentWeather.t1h === undefined) {
+                city.currentWeather.t1h = '-';
+            }
+
+            if (!todayData || todayData.length === 0) {
+                todayData.push({tmn:'-', tmx:'-'});
+            }
 
             var data = {
                 address: address,
@@ -488,7 +502,7 @@ angular.module('starter.controllers', [])
                             $location.path('/tab/forecast');
                         }
                         $scope.isLoading = false;
-                    }, function (err) {
+                    }, function () {
                         $scope.isLoading = false;
                     });
                 }, function () {
