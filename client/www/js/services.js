@@ -213,6 +213,7 @@ angular.module('starter.services', [])
                 WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
                     that.updateCity(that.loadIndex, city);
+                }).finally(function() {
                     that.updateCities();
                 });
             }
