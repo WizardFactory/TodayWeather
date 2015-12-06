@@ -53,8 +53,77 @@ function Manager(){
 
     if(config.db.mode === 'ram'){
         self.makeTownlist();
+    }else{
+        self.makeRegIdTable();
     }
 }
+
+Manager.prototype.getRegIdByTown = function(region, city, cb){
+    var self = this;
+    var i=0;
+
+    city = city.slice(0,3);
+    //log.info(self.codeTable);
+    for(i=0 ; i<self.codeTable.length ; i++){
+        if(self.codeTable[i].first === region){
+            // 0~7번까지는 특별시 혹은 광역시
+            if(i<7){
+                if(cb) {
+                    cb(0, self.codeTable[i]);
+                }
+                return;
+            }
+            else {
+                if(self.codeTable[i].second === city){
+                    if(cb) {
+                        cb(0, self.codeTable[i]);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    if(cb){
+        cb(1);
+    }
+
+    return self.codeList;
+};
+
+Manager.prototype.makeRegIdTable = function(){
+    var self = this;
+
+    self.codeTable = [];
+
+    self.codeList = fs.readFileSync('./utils/data/region.csv').toString().split('\n');
+    self.codeList.forEach(function(line){
+        var codeItem = {
+            first: '',
+            second: '',
+            regionName: '',
+            pointNumber: '',
+            cityCode : ''
+        };
+        line.split(',').forEach(function(item, i){
+            if(i === 0){
+                codeItem.first = item;
+            }else if(i===1){
+                codeItem.second = item;
+            }else if(i===2){
+                codeItem.regionName = item;
+            }else if(i===3){
+                codeItem.pointNumber = item;
+            }else if(i===4){
+                codeItem.cityCode = item;
+
+                self.codeTable.push(JSON.parse(JSON.stringify(codeItem)));
+            }
+        });
+    });
+
+    log.info('code table count : ', self.codeTable.length);
+};
 
 Manager.prototype.makeTownlist = function(list){
     var self = this;
@@ -203,7 +272,7 @@ Manager.prototype.getWeatherDb = function(region, city, town, cb){
             log.error('can not get mx, my');
             if(cb !== undefined){
                 err = 1;
-                cb(err, self.weatherDb[index]);
+                cb(err);
             }
             return;
         }
@@ -1844,7 +1913,7 @@ Manager.prototype.startTownData = function(){
         periodValue = 5 * 60 * 1000;
         midPeriod = 30 * 1000;
     }
-
+/*
     var loop = setInterval(function(){
         if(times === 3){
             self.getTownShortData(9);
@@ -1885,7 +1954,7 @@ Manager.prototype.startTownData = function(){
 
     self.getMidForecast(9);
     self.getMidSea(9);
-
+*/
     // get short forecast once every three hours.
     self.loopTownShortID = setInterval(function() {
         self.getTownShortData(9);
