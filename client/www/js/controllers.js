@@ -410,12 +410,13 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $location,
-                                        WeatherInfo, WeatherUtil) {
+                                        $ionicScrollDelegate, WeatherInfo, WeatherUtil) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
         $scope.isLoading = false;
         var towns = WeatherInfo.towns;
+        var searchIndex = -1;
 
         WeatherInfo.cities.forEach(function (city) {
             var address = WeatherUtil.getShortenAddress(city.address).split(",");
@@ -438,7 +439,7 @@ angular.module('starter.controllers', [])
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ec72a8';
         });
-        
+
         $scope.OnChangeSearchWord = function() {
             if ($scope.searchWord === "") {
                 $scope.searchWord = undefined;
@@ -446,10 +447,27 @@ angular.module('starter.controllers', [])
                 return;
             }
 
-            $scope.searchResults = towns.filter(function (town) {
-                return !!(town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
-                || town.third.indexOf($scope.searchWord) >= 0);
-            });
+            $scope.searchResults = [];
+            $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
+            searchIndex = 0;
+            $scope.OnScrollResults();
+        };
+
+        $scope.OnScrollResults = function() {
+            if ($scope.searchWord !== undefined && searchIndex !== -1) {
+                for (var i = searchIndex; i < towns.length; i++) {
+                    var town = towns[i];
+                    if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
+                        || town.third.indexOf($scope.searchWord) >= 0) {
+                        $scope.searchResults.push(town);
+                        if ($scope.searchResults.length % 10 === 0) {
+                            searchIndex = i + 1;
+                            return;
+                        }
+                    }
+                }
+                searchIndex = -1;
+            }
         };
 
         $scope.OnSelectResult = function(result) {

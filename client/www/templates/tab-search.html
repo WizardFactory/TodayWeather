@@ -17,7 +17,8 @@
                     </div>
                 </div>
             </div>
-            <ion-scroll class="city-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false">
+            <ion-scroll class="city-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                        delegate-handle="cityList" on-scroll="OnScrollResults()">
                 <div class="list list-inset" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;" ng-show="searchWord!==undefined">
                     <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                         <div class="row">
