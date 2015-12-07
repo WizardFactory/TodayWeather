@@ -1101,6 +1101,11 @@ angular.module('starter.services', [])
                     tempObject.wsd = undefined;
                     tempObject.skyIcon = "Sun";
                     tempObject.tempIcon = "Temp-01";
+
+                    //related to #402
+                    if (prevT3H) {
+                        tempObject.t3h = prevT3H;
+                    }
                 }
                 else {
                     tempObject = shortForecast;
