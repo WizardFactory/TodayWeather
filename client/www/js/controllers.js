@@ -201,7 +201,7 @@ angular.module('starter.controllers', [])
                 else {
                     $scope.address = "위치 찾는 중";
                 }
-            }, function (err) {
+            }, function () {
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                     return;
@@ -232,11 +232,11 @@ angular.module('starter.controllers', [])
                                 loadWeatherData();
                                 deferred.notify();
                                 deferred.resolve();
-                            }, function (err) {
+                            }, function () {
                                 deferred.reject();
                             });
                         }
-                    }, function (err) {
+                    }, function () {
                         var str = "현재 위치에 대한 정보를 찾을 수 없습니다.";
                         showAlert("에러", str);
                         deferred.reject();
@@ -292,7 +292,7 @@ angular.module('starter.controllers', [])
                 title: title,
                 template: msg
             });
-            alertPopup.then(function(res) {
+            alertPopup.then(function() {
                 console.log("alertPopup close");
             });
         }
@@ -345,7 +345,7 @@ angular.module('starter.controllers', [])
             $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
             isShowingBar = !isShowingBar;
             $ionicNavBarDelegate.showBar(isShowingBar);
-            updateWeatherData(true).finally(function (res) {
+            updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
 
                 isShowingBar = !isShowingBar;
@@ -398,8 +398,8 @@ angular.module('starter.controllers', [])
             WeatherInfo.loadTowns().then(function () {
                 WeatherInfo.updateCities();
                 loadWeatherData();
-                checkForUpdates().finally(function (res) {
-                    updateWeatherData(false).finally(function (res) {
+                checkForUpdates().finally(function () {
+                    updateWeatherData(false).finally(function () {
                         $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                     });
                 });
@@ -410,18 +410,33 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $location,
-                                        WeatherInfo, WeatherUtil) {
+                                        $ionicScrollDelegate, WeatherInfo, WeatherUtil) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
         $scope.isLoading = false;
         var towns = WeatherInfo.towns;
+        var searchIndex = -1;
 
         WeatherInfo.cities.forEach(function (city) {
             var address = WeatherUtil.getShortenAddress(city.address).split(",");
             var todayData = city.dayTable.filter(function (data) {
                 return (data.week === "오늘");
             });
+
+            if (!city.currentWeather) {
+                city.currentWeather = {};
+            }
+            if (!city.currentWeather.skyIcon) {
+                city.currentWeather.skyIcon = 'Sun';
+            }
+            if (city.currentWeather.t1h === undefined) {
+                city.currentWeather.t1h = '-';
+            }
+
+            if (!todayData || todayData.length === 0) {
+                todayData.push({tmn:'-', tmx:'-'});
+            }
 
             var data = {
                 address: address,
@@ -438,7 +453,7 @@ angular.module('starter.controllers', [])
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ec72a8';
         });
-        
+
         $scope.OnChangeSearchWord = function() {
             if ($scope.searchWord === "") {
                 $scope.searchWord = undefined;
@@ -446,10 +461,27 @@ angular.module('starter.controllers', [])
                 return;
             }
 
-            $scope.searchResults = towns.filter(function (town) {
-                return !!(town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
-                || town.third.indexOf($scope.searchWord) >= 0);
-            });
+            $scope.searchResults = [];
+            $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
+            searchIndex = 0;
+            $scope.OnScrollResults();
+        };
+
+        $scope.OnScrollResults = function() {
+            if ($scope.searchWord !== undefined && searchIndex !== -1) {
+                for (var i = searchIndex; i < towns.length; i++) {
+                    var town = towns[i];
+                    if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
+                        || town.third.indexOf($scope.searchWord) >= 0) {
+                        $scope.searchResults.push(town);
+                        if ($scope.searchResults.length % 10 === 0) {
+                            searchIndex = i + 1;
+                            return;
+                        }
+                    }
+                }
+                searchIndex = -1;
+            }
         };
 
         $scope.OnSelectResult = function(result) {
@@ -488,7 +520,7 @@ angular.module('starter.controllers', [])
                             $location.path('/tab/forecast');
                         }
                         $scope.isLoading = false;
-                    }, function (err) {
+                    }, function () {
                         $scope.isLoading = false;
                     });
                 }, function () {
@@ -530,7 +562,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup,
                                         $http, $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.6.3";
+        $scope.version  = "0.6.5";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();

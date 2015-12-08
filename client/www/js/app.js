@@ -19,12 +19,13 @@ angular.module('starter', [
             $ionicAnalytics.register();
 
             if (ionic.Platform.isIOS()) {
-
-                applewatch.init(function (appIdentifier) {
+                if (window.applewatch) {
+                    applewatch.init(function () {
                         console.log("Succeeded to initialize for apple-watch");
-                }, function (err) {
+                    }, function (err) {
                         console.log('Failed to initialize apple-watch', err);
-                }, "group.net.wizardfactory.todayweather");
+                    }, "group.net.wizardfactory.todayweather");
+                }
             }
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
@@ -117,7 +118,7 @@ angular.module('starter', [
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function(val) {
+                scope.$watch('$hasTabs', function() {
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
@@ -198,19 +199,18 @@ angular.module('starter', [
 
                     // draw point
                     group_enter.append('g')
-                        .attr('class', 'line-point')
-                        .selectAll('circle')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('circle');
+                        .attr('class', 'line-point');
 
-                    group.select('.line-point')
-                        .selectAll('circle')
+                    var circles = group.selectAll('circle')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('cx', function (d, i) {
+                        });
+
+                    circles.enter().append('circle');
+
+                    circles.exit().remove();
+
+                    circles.attr('cx', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('cy', height - margin.bottom)
@@ -258,7 +258,7 @@ angular.module('starter', [
                             }
                             return '';
                         })
-                        .attr('class', function (d, i) {
+                        .attr('class', function () {
                             return 'text-today';
                         })
                         .transition()
@@ -294,7 +294,7 @@ angular.module('starter', [
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function(val) {
+                scope.$watch('$hasTabs', function() {
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
@@ -331,21 +331,20 @@ angular.module('starter', [
                     var group = svg.selectAll('.bar-group')
                         .data(data);
 
-                    group.enter()
-                        .append('g')
-                        .attr('class', 'bar-group')
-                        .selectAll('rect')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('rect');
+                    group.enter().append('g')
+                        .attr('class', 'bar-group');
 
-                    group.selectAll('rect')
+                    var rects = group.selectAll('rect')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'rect')
-                        .attr('x', function (d, i) {
+                        });
+
+                    rects.enter().append('rect')
+                        .attr('class', 'rect');
+
+                    rects.exit().remove();
+
+                    rects.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2 - 1;
                         })
                         .attr('width', 2)
@@ -368,19 +367,19 @@ angular.module('starter', [
 
                     maxValue.enter()
                         .append('g')
-                        .attr('class', 'bar-max-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-max-value');
 
-                    maxValue.selectAll('text')
+                    var maxTexts = maxValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    maxTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    maxTexts.exit().remove();
+
+                    maxTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
@@ -404,19 +403,19 @@ angular.module('starter', [
 
                     minValue.enter()
                         .append('g')
-                        .attr('class', 'bar-min-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-min-value');
 
-                    minValue.selectAll('text')
+                    var minTexts = minValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    minTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    minTexts.exit().remove();
+
+                    minTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
@@ -442,7 +441,7 @@ angular.module('starter', [
                     svg.selectAll('circle')
                         .data(data)
                         .attr('class', 'circle circle-today-current')
-                        .attr('cx', function (d, i) {
+                        .attr('cx', function (d) {
                             for (var i = 0; i < d.values.length; i++) {
                                 if (d.values[i].week === "오늘") {
                                     return x.rangeBand() * i + x.rangeBand() / 2;
@@ -457,7 +456,7 @@ angular.module('starter', [
                         .transition()
                         .delay(duration)
                         .attr('r', 5);
-                }
+                };
 
                 scope.$watch('dayChart', function (newVal) {
                     if (newVal) {
