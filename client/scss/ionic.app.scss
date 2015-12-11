@@ -21,6 +21,9 @@ $positive:                        #8dc63f !default; //detail weather
 $assertive:                       #ec72a8 !default; //city search
 $energized:                       #ea9623 !default; //setting
 
+$bar-height: 50px;
+$tabs-height: 40px;
+
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
@@ -409,10 +412,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 320/480)
 {
-  .main-content {
-    height: 431px;
-  }
-
   .current-content {
     height: 25%;
   }
@@ -477,10 +476,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 320/568)
 {
-  .main-content {
-    height: 519px;
-  }
-
   .current-content {
     height: 25%;
   }
@@ -549,10 +544,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 2)
     and (device-aspect-ratio: 375/667)
 {
-  .main-content {
-    height: 618px;
-  }
-
   .current-content {
     height: 25%;
   }
@@ -617,10 +608,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 3)
     and (device-aspect-ratio: 414/736)
 {
-  .main-content {
-    height: 687px;
-  }
-
   .region p {
     font-size: 28px;
   }
@@ -675,10 +662,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 320px) and (device-height: 640px)
     and (device-aspect-ratio: 320/640)
 {
-  .main-content {
-    height: 591px;
-  }
-
   .timeChart {
     width: 1272px; //53 px per col
   }
@@ -697,10 +680,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 360px) and (device-height: 640px)
     and (device-aspect-ratio: 360/640)
 {
-  .main-content {
-    height: 591px;
-  }
-
   .big-digit {
     font-size: 100px;
   }
@@ -722,10 +701,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 412px) and (device-height: 732px)
     and (device-aspect-ratio: 412/732)
 {
-  .main-content {
-    height: 682px;
-  }
-
   .big-digit {
     font-size: 100px;
   }
