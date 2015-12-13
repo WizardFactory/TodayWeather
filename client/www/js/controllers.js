@@ -179,6 +179,9 @@ angular.module('starter.controllers', [])
                 deferred.resolve();
                 return deferred.promise;
             }
+            if (cityData.currentPosition === false) {
+                addressUpdate = true;
+            }
 
             WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                 // 1: resolved, 2: rejected
@@ -202,13 +205,15 @@ angular.module('starter.controllers', [])
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                     return;
                 }
-                if (cityData.currentPosition === false) {
-                    var msg = "위치 정보 업데이트를 실패하였습니다.";
-                    $scope.showAlert("에러", msg);
-                    deferred.reject();
-                }
                 if (addressUpdate === true) {
-                    deferred.resolve();
+                    if (cityData.currentPosition === false) {
+                        var msg = "위치 정보 업데이트를 실패하였습니다.";
+                        $scope.showAlert("에러", msg);
+                        deferred.reject();
+                    }
+                    else {
+                        deferred.resolve();
+                    }
                 }
             });
 
