@@ -317,8 +317,18 @@ angular.module('starter.controllers', [])
         });
 
         var isShowingBar = false;
+        var runAdmob = false;
 
         $scope.doRefresh = function() {
+            if (runAdmob) {
+                if ( window.plugins && window.plugins.AdMob ) {
+                    window.plugins.AdMob.showAd(false,
+                        function(){},
+                        function(e){
+                            console.log(JSON.stringify(e));
+                        });
+                }
+            }
 
             $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
             isShowingBar = !isShowingBar;
@@ -326,8 +336,20 @@ angular.module('starter.controllers', [])
             updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
 
+                $ionicNavBarDelegate.title("");
                 isShowingBar = !isShowingBar;
                 $ionicNavBarDelegate.showBar(isShowingBar);
+
+                if (runAdmob) {
+                    if (window.plugins && window.plugins.AdMob) {
+                        window.plugins.AdMob.showAd(true,
+                            function () {
+                            },
+                            function (e) {
+                                console.log(JSON.stringify(e));
+                            });
+                    }
+                }
             });
         };
 
