@@ -2,8 +2,7 @@
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                          $ionicPopup, $q, $http, $timeout, WeatherInfo, WeatherUtil,
-                                          $ionicNavBarDelegate) {
+                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil) {
 
         $scope.skipGuide = false;
         if(typeof(Storage) !== "undefined") {
@@ -42,7 +41,7 @@ angular.module('starter.controllers', [])
             deploy.check().then(function(hasUpdate) {
                 console.log("Ionic Deploy: Update available: " + hasUpdate);
                 if (hasUpdate) {
-                    showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
+                    $scope.showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
                         if (res)   {
                             // Update app code with new release from Ionic Deploy
                             $scope.currentWeather.summary = "업데이트 시작";
@@ -180,9 +179,6 @@ angular.module('starter.controllers', [])
                 deferred.resolve();
                 return deferred.promise;
             }
-            if (cityData.currentPosition === false) {
-                addressUpdate = true;
-            }
 
             WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                 // 1: resolved, 2: rejected
@@ -205,6 +201,11 @@ angular.module('starter.controllers', [])
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
                     return;
+                }
+                if (cityData.currentPosition === false) {
+                    var msg = "위치 정보 업데이트를 실패하였습니다.";
+                    $scope.showAlert("에러", msg);
+                    deferred.reject();
                 }
                 if (addressUpdate === true) {
                     deferred.resolve();
@@ -233,20 +234,22 @@ angular.module('starter.controllers', [])
                                 deferred.notify();
                                 deferred.resolve();
                             }, function () {
+                                var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                                $scope.showAlert("에러", msg);
                                 deferred.reject();
                             });
                         }
                     }, function () {
-                        var str = "현재 위치에 대한 정보를 찾을 수 없습니다.";
-                        showAlert("에러", str);
+                        var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                        $scope.showAlert("에러", msg);
                         deferred.reject();
                     });
                 }, function () {
-                    var str = "현재 위치를 찾을 수 없습니다.";
+                    var msg = "현재 위치를 찾을 수 없습니다.";
                     if (ionic.Platform.isAndroid()) {
-                        str += "<br>WIFI와 위치정보를 켜주세요.";
+                        msg += "<br>WIFI와 위치정보를 켜주세요.";
                     }
-                    showAlert("에러", str);
+                    $scope.showAlert("에러", msg);
                     deferred.reject();
                 });
             }
@@ -285,31 +288,6 @@ angular.module('starter.controllers', [])
 
         function getTodayNowPosition(index) {
             return getWidthPerCol()*index;
-        }
-
-        function showAlert(title, msg) {
-            var alertPopup = $ionicPopup.alert({
-                title: title,
-                template: msg
-            });
-            alertPopup.then(function() {
-                console.log("alertPopup close");
-            });
-        }
-
-        function showConfirm(title, template, callback) {
-            var confirmPopup = $ionicPopup.confirm({
-                title: title,
-                template: template
-            });
-            confirmPopup.then(function (res) {
-                if (res) {
-                    console.log("You are sure");
-                } else {
-                    console.log("You are not sure");
-                }
-                callback(res);
-            });
         }
 
         $scope.$on('$ionicView.enter', function() {
@@ -409,8 +387,8 @@ angular.module('starter.controllers', [])
         identifyUser();
     })
 
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup, $location,
-                                        $ionicScrollDelegate, WeatherInfo, WeatherUtil) {
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
+                                        $location, WeatherInfo, WeatherUtil) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
@@ -507,13 +485,7 @@ angular.module('starter.controllers', [])
 
                         if (WeatherInfo.addCity(city) === false) {
                             var msg = "이미 동일한 지역이 추가되어 있습니다.";
-                            var alertPopup = $ionicPopup.alert({
-                                title: "에러",
-                                template: msg
-                            });
-                            alertPopup.then(function() {
-                                console.log("alertPopup close");
-                            });
+                            $scope.showAlert("에러", msg);
                         }
                         else {
                             WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
@@ -521,12 +493,21 @@ angular.module('starter.controllers', [])
                         }
                         $scope.isLoading = false;
                     }, function () {
+                        var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                        $scope.showAlert("에러", msg);
                         $scope.isLoading = false;
                     });
                 }, function () {
+                    var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                    $scope.showAlert("에러", msg);
                     $scope.isLoading = false;
                 });
             }, function () {
+                var msg = "현재 위치를 찾을 수 없습니다.";
+                if (ionic.Platform.isAndroid()) {
+                    str += "<br>WIFI와 위치정보를 켜주세요.";
+                }
+                $scope.showAlert("에러", msg);
                 $scope.isLoading = false;
             });
         };
@@ -559,8 +540,8 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicPopup,
-                                        $http, $cordovaInAppBrowser) {
+    .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
+                                        $cordovaInAppBrowser) {
         //sync with config.xml
         $scope.version  = "0.6.7";
 
@@ -624,13 +605,7 @@ angular.module('starter.controllers', [])
 
         $scope.openInfo = function () {
             var msg = "기상정보 : 기상청 <br> 대기오염정보 : 환경부/한국환경공단 <br> 인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.";
-            var alertPopup = $ionicPopup.alert({
-                title: "TodayWeather",
-                template: msg
-            });
-            alertPopup.then(function() {
-                console.log("alertPopup close");
-            });
+            $scope.showAlert("TodayWeather", msg);
         };
 
         $ionicPlatform.ready(function() {
@@ -639,7 +614,7 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('TabCtrl', function ($scope, $ionicPlatform, $interval, WeatherInfo, WeatherUtil) {
+    .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -670,5 +645,30 @@ angular.module('starter.controllers', [])
         //        WeatherInfo.updateCities();
         //    });
         //});
+
+        $scope.showAlert = function(title, msg) {
+            var alertPopup = $ionicPopup.alert({
+                title: title,
+                template: msg
+            });
+            alertPopup.then(function() {
+                console.log("alertPopup close");
+            });
+        };
+
+        $scope.showConfirm = function(title, template, callback) {
+            var confirmPopup = $ionicPopup.confirm({
+                title: title,
+                template: template
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log("You are sure");
+                } else {
+                    console.log("You are not sure");
+                }
+                callback(res);
+            });
+        };
     });
 
