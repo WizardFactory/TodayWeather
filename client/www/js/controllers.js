@@ -404,6 +404,47 @@ angular.module('starter.controllers', [])
                     });
                 });
             });
+
+            var runLocalNotification = false;
+
+            if (runLocalNotification) {
+                //todo: notification setting on settings, load setting info from local storage, make user story
+                //todo: move to service or app(consider updateWeatherData func)
+                if (cordova && cordova.plugins && cordova.plugins.notification && cordova.plugins.notification.local) {
+                    cordova.plugins.notification.local.hasPermission(function (granted) {
+                        console.log('hasPermission '+ granted ? 'Yes' : 'No');
+                    });
+
+                    cordova.plugins.notification.local.registerPermission(function (granted) {
+                        console.log('registerPermission '+ granted ? 'Yes' : 'No');
+
+                        cordova.plugins.notification.local.schedule({
+                            id: 1,
+                            text: 'My first notification',
+                            //firstAt: today_at_1_am,
+                            every: "minute"
+                        });
+                    });
+
+                    cordova.plugins.notification.local.on('trigger', function (notification) {
+                        console.log('triggered: ' + notification.id);
+
+                        updateWeatherData(true).finally(function () {
+                            cordova.plugins.notification.local.update({
+                                id: 1,
+                                text: $scope.currentWeather.summary
+                            });
+                        });
+                    }, this);
+
+                    cordova.plugins.notification.local.on('click', function (notification) {
+                        console.log('clicked: ' + notification.id);
+                    }, this);
+                }
+                else {
+                    console.log('local notification plugin was unloaded');
+                }
+            }
         });
 
         identifyUser();
