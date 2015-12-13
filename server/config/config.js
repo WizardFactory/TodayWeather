@@ -6,7 +6,7 @@
 module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
-    mode: (process.env.SERVER_MDOE || 'local'), //local, gather, service
+    mode: (process.env.SERVER_MODE || 'local'), //local, gather, service
     db: {
         mode: (process.env.DB_MODE || 'ram'), //ram, db
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/todayweather')
