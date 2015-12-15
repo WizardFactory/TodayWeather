@@ -240,7 +240,8 @@ TownRss.prototype.calculateTime = function(cur, offset){
     //var tmp = new Date('2015-10-30T00:00');
     //log.info(tmp.getFullYear(), tmp.getMonth(), tmp.getDate());
     var now = new Date(cur.slice(0, 4) + '-' + cur.slice(4, 6) + '-' + cur.slice(6, 8) + 'T'+ cur.slice(8, 10) + ':'+cur.slice(10, 12));
-    now.setTime(now.getTime() + (offset * 3600000));
+    var _timezone = now.getTimezoneOffset() * 60000;
+    now.setTime(now.getTime() + (offset * 3600000) + _timezone);
     var result =
         self.leadingZeros(now.getFullYear(), 4) +
         self.leadingZeros(now.getMonth()+1 , 2) +

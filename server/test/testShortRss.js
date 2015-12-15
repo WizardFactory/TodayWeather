@@ -16,14 +16,17 @@ var controllerTownRss = require('../controllers/controllerShortRss');
 describe('unit test - get short rss by using controllerShortRss', function(){
 
     it('controller/controllerShortRss', function(done){
-        var date = new Date(2015, 10, 20, 15, 30);
-        log.info('now:', date.toString());
+        var townRss = new controllerTownRss();
 
-        //date.setDate(date.getTime());
-        date.setTime(date.getTime() + (5 * 3600000));
-        log.info('time 1:', date.toString());
-        log.info('year:', '' + date.getFullYear() + date.getMonth() + date.getDay() + date.getHours() + date.getMinutes());
+        var resultTime = townRss.calculateTime('201512150000', 18);
 
-        done();
+        assert.equal(resultTime, '201512151800', 'calcuate time');
+
+        townRss.StartShortRss();
+
+        townRss.mainTask();
+        this.timeout(5000);
+
+        setTimeout(done, 300);
     });
 });
