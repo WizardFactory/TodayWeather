@@ -19,14 +19,15 @@ describe('unit test - get short rss by using controllerShortRss', function(){
         var townRss = new controllerTownRss();
 
         var resultTime = townRss.calculateTime('201512150000', 18);
+        assert.equal(resultTime, '201512151800', 'calculate time');
 
-        assert.equal(resultTime, '201512151800', 'calcuate time');
+        resultTime = townRss.calculateTime('201512310000', 25);
+        assert.equal(resultTime, '201601010100', 'calculate time');
 
         townRss.StartShortRss();
-
         townRss.mainTask();
-        this.timeout(5000);
 
+        this.timeout(5000);
         setTimeout(done, 300);
     });
 });
