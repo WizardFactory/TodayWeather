@@ -41,7 +41,16 @@
       "id": "cordova-plugin-whitelist"
     },
     "ionic-plugin-deploy",
-    "cordova-plugin-inappbrowser"
+    "cordova-plugin-inappbrowser",
+    {
+      "locator": "https://github.com/WizardFactory/cordova-plugin-admob.git",
+      "id": "cordova-plugin-admob"
+    },
+    "cordova-plugin-local-notifications",
+    {
+      "locator": "https://github.com/katzer/cordova-plugin-local-notifications.git",
+      "id": "de.appplant.cordova.plugin.local-notification"
+    }
   ],
   "cordovaPlatforms": [
     "android",
