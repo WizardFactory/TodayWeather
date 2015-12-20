@@ -4,7 +4,7 @@ angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil) {
 
-        $scope.skipGuide = false;
+        $scope.skipGuide = true;
         if(typeof(Storage) !== "undefined") {
             if (localStorage.getItem("skipGuide") !== null) {
                 $scope.skipGuide = localStorage.getItem("skipGuide");
@@ -661,7 +661,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.6.7";
+        $scope.version  = "0.6.8";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();
