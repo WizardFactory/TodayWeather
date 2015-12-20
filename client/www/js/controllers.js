@@ -159,8 +159,12 @@ angular.module('starter.controllers', [])
             // end for apple watch
 
             $timeout(function() {
-                $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayNowPosition(7), 0, false);
-                $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayNowPosition(5), 0, false);
+                if ($scope.forecastType === 'short') {
+                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                }
+                else if ($scope.forecastType === 'mid') {
+                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                }
             },0);
         }
 
@@ -262,12 +266,13 @@ angular.module('starter.controllers', [])
             return deferred.promise;
         }
 
+        var bodyWidth =  window.innerWidth;
+
         function getWidthPerCol() {
             if (colWidth)  {
                 return colWidth;
             }
 
-            var bodyWidth =  window.innerWidth;
             console.log("body of width="+bodyWidth);
 
             switch (bodyWidth) {
@@ -291,7 +296,52 @@ angular.module('starter.controllers', [])
             return colWidth;
         }
 
-        function getTodayNowPosition(index) {
+        function getTodayPosition() {
+            var time = new Date();
+            var index = 0;
+
+            if ($scope.forecastType === 'short') {
+                var hours = time.getHours();
+                var hoursPadding = 3;
+
+                if (hours < 9) {
+                    index = 7;
+                }
+                else {
+
+                    // 6 cells 에서는 15이후부터, 9시,12,15,18,21,24 표시
+                    if (hours > 15 && bodyWidth < 360) {
+                       hoursPadding += 1;
+                    }
+                    index = 7 + hoursPadding - Math.floor(hours/3);
+                }
+                return getWidthPerCol()*index;
+            }
+            else if ($scope.forecastType === 'mid') {
+
+                //monday는 토요일부터 표시
+                var day = time.getDay();
+                var dayPadding = 2;
+
+                if (day === 1) {
+                    index = 5;
+                }
+                else {
+
+                    //sunday는 monday까지 보이게
+                    if (day === 0) {
+                        day = 7;
+                        dayPadding += 1;
+                    }
+
+                    // 6 cells 에서는 수요일부터는 화,수,목,금,토,일 표시
+                    if (day > 2 && bodyWidth < 360) {
+                        dayPadding += 1;
+                    }
+                    index = 6 + dayPadding - day;
+                }
+                return getWidthPerCol()*index;
+            }
             return getWidthPerCol()*index;
         }
 
@@ -303,7 +353,7 @@ angular.module('starter.controllers', [])
             if ($scope.forecastType === 'short') {
                 $scope.forecastType = 'mid';
                 $rootScope.viewColor = '#0fbe96';
-                $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayNowPosition(5), 0, false);
+                $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
             }
             else if ($scope.forecastType === 'mid') {
                 $scope.forecastType = 'detail';
@@ -312,7 +362,7 @@ angular.module('starter.controllers', [])
             else if ($scope.forecastType === 'detail') {
                 $scope.forecastType = 'short';
                 $rootScope.viewColor = '#22a1db';
-                $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayNowPosition(7), 0, false);
+                $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
             }
         };
 
