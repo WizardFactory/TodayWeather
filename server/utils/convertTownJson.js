@@ -18,7 +18,7 @@ function convertJsonObject(list) {
     list.every(function(src){
         var srcArray = src.split(',');
         var jsonObject = {"first":srcArray[0],"second":srcArray[1],"third":srcArray[2],
-            "lat":parseInt(srcArray[3]),"long":parseInt(srcArray[4]),"areaNo":parseInt(srcArray[5])};
+            "lat": Math.round(srcArray[3]*100)/100,"long":Math.round(srcArray[4]*100)/100,"areaNo":parseInt(srcArray[5])};
         //console.log(jsonObject);
         //dstStr.push(jsonObject);
         dstStr += JSON.stringify(jsonObject) +',\n';
