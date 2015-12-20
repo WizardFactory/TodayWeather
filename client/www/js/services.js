@@ -837,13 +837,29 @@ angular.module('starter.services', [])
                 getNearbyMsrstn(point.y, point.x).then(function (data) {
                     var ret = xml2json.parser(data);
                     //console.log(ret);
+                    if (ret.response.header.resultCode !== 0) {
+                        console.log(ret.response.header.resultmsg);
+                        deferred.resolve({pm10value: undefined});
+                        return;
+                    }
                     var stationname = ret.response.body.items.item[0].stationname;
                     console.log(stationname);
 
                     getMsrstnAcctoRltmMesureDnsty(stationname).then(function (data) {
                         var ret = xml2json.parser(data);
+                        var pm10value;
                         //console.log(ret);
-                        var pm10value = ret.response.body.items.item[0].pm10value;
+                        if (ret.response.header.resultCode !== 0) {
+                            console.log(ret.response.header.resultmsg);
+                            deferred.resolve({pm10value: undefined});
+                            return;
+                        }
+                        if (ret.response.body.items.item && ret.response.body.items.item[0]) {
+                            pm10value = ret.response.body.items.item[0].pm10value;
+                        }
+                        else {
+                            console.log("Fail to get data from station :"+stationname);
+                        }
                         console.log(pm10value);
                         deferred.resolve({pm10value: pm10value});
                     }, function (err) {
