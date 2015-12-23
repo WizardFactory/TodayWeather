@@ -29,6 +29,7 @@ function TownRss(){
     self.addrZond = 'http://www.kma.go.kr/wid/queryDFSRSS.jsp';
 
     self.TIME_PERIOD_TOWN_RSS = (1000*60*60*3);
+    self.MAX_SHORT_COUNT = 60;
     self.SUCCESS = 0;
     self.ERROR = -1;
     self.RETRY = -2;
@@ -526,6 +527,11 @@ TownRss.prototype.saveShortRss = function(index, newData){
                     return 0;
                 });
 
+                if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+                    for(var i = 0 ; i< (dbShortList.shortData.length - self.MAX_SHORT_COUNT) ; i++){
+                        dbShortList.shift();
+                    }
+                }
 
                 dbShortList.save(function(err){
                     if(err){

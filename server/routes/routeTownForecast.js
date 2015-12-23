@@ -1004,9 +1004,6 @@ var getShort = function(req, res, next){
                     var i = 0;
 
                     //log.info(shortList);
-                    //shortList.forEach(function(item, index){
-                    //    log.info('routeS>', item);
-                    //});
                     for(i=0 ; i < shortList.length ; i++){
                         //log.info(shortList[i]);
                         if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
@@ -1015,26 +1012,48 @@ var getShort = function(req, res, next){
                         }
                     }
 
+                    log.info('request date:', requestTime);
                     if(i > 16){
-                        //log.info('prv count :', i);
-                        shortList.slice(0, (i - 16));
+                        log.info('prv count :', i);
+                        for(var j=0 ; j<i ; j++){
+                            shortList.shift();
+                        }
                     }
 
+                    //shortList.forEach(function(item, index){
+                    //    log.info('routeS>', item);
+                    //});
                     getTownDataFromDB(modelCurrent, coord, function(err, currentList){
                         //log.info(currentList);
-                        //currentList.forEach(function(item, index){
-                        //    log.info('routeC>', item);
-                        //});
+                        currentList.forEach(function(item, index){
+                            log.info('routeC>', item);
+                        });
                         mergeShortWithCurrent(shortList, currentList, function(err, firstMerged){
                             //log.info(firstMerged);
                             getTownDataFromDB(modelShortRss, coord, function(err, rssList){
-                                //log.info(rssList);
+                                log.info(rssList);
                                 if(err){
                                     log.error('error to get short RSS');
                                     req.short = firstMerged;
                                     next();
                                     return;
                                 }
+                                for(i=0 ; i < rssList.length ; i++){
+                                    if(parseInt('' + rssList[i].date) >= parseInt('' + requestTime.date + requestTime.time)){
+                                        //log.info('found same date');
+                                        break;
+                                    }
+                                }
+
+                                if(i > 16){
+                                    log.info('prv count :', i);
+                                    for(var j=0 ; j<i ; j++){
+                                        rssList.shift();
+                                    }
+                                }
+                                //rssList.forEach(function(item, index){
+                                //    log.info('routeS>', item);
+                                //});
                                 mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
                                     //log.info(resultList);
                                     req.short = resultList;
