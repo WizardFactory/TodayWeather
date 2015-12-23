@@ -87,35 +87,41 @@ describe('unit test - get town forecast in lib/collect class', function(){
     });
 */
 
-    //it('lib/collect : get towns SHORTEST info by using XY list', function(done){
-    //    var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //it('lib/collect : get towns SHORTEST info by using XY list', function(done) {
+    //    this.timeout(10*1000);
+    //    var listXY = [{mx: 91, my: 131}, {mx: 91, my: 132}, {mx: 94, my: 131}];
     //    //var listXY = listTown;
     //
     //    var collection = new collect();
-    //    assert.doesNotThrow(function(){
-    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORTEST, keydata.keyString.sooyeon, '20151005', '1500', function(err, dataList){
-    //            log.info('shortest data receive completed : %d\n', dataList.length);
+    //    assert.doesNotThrow(function () {
+    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORTEST, keydata.keyString.normal, '20151222', '1930',
+    //                    function (err, dataList)
+    //        {
+    //                log.info('shortest data receive completed : %d\n', dataList.length);
     //
-    //            //log.info(dataList);
-    //            //log.info(dataList[0]);
-    //            for(var i in dataList){
-    //                for(var j in dataList[i].data){
-    //                    log.info(dataList[i].data[j]);
+    //                log.info(dataList);
+    //                log.info(dataList[0]);
+    //                for (var i in dataList) {
+    //                    for (var j in dataList[i].data) {
+    //                        log.info(dataList[i].data[j]);
+    //                    }
     //                }
-    //            }
     //
-    //            assert.equal(dataList.length, listXY.length, 'check receive count');
+    //                assert.equal(dataList.length, listXY.length, 'check receive count');
     //
-    //            assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
-    //            assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
-    //            assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
+    //                assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
+    //                assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
+    //                assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
     //
-    //            assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
-    //            assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
-    //            assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
+    //                assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
+    //                assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
+    //                assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
     //
-    //            done();
+    //                done();
     //        });
+    //    });
+    //});
+
 
 /*
     it('lib/collect : get towns CURRENT info by using XY list', function(done){
@@ -174,25 +180,25 @@ describe('unit test - get middle range forecast in lib/collect class', function(
     });
 */
 
-    it('lib/collect : get Middle range LAND info by using XY list', function(done){
-        this.timeout(10*1000);
-        var collection = new collect();
-        assert.doesNotThrow(function(){
-            collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.test_cert, '20150926', '0600', function(err, dataList){
-                log.info('current data receive completed : %d\n', dataList.length);
-
-                //log.info(dataList);
-                //log.info(dataList[0]);
-                for(var i in dataList){
-                    for(var j in dataList[i].data){
-                        log.info(dataList[i].data[j]);
-                    }
-                }
-
-                done();
-            });
-        });
-    });
+    //it('lib/collect : get Middle range LAND info by using XY list', function(done){
+    //    this.timeout(10*1000);
+    //    var collection = new collect();
+    //    assert.doesNotThrow(function(){
+    //        collection.requestData(collection.listAreaCode, collection.DATA_TYPE.MID_LAND, keydata.keyString.test_cert, '20150926', '0600', function(err, dataList){
+    //            log.info('current data receive completed : %d\n', dataList.length);
+    //
+    //            //log.info(dataList);
+    //            //log.info(dataList[0]);
+    //            for(var i in dataList){
+    //                for(var j in dataList[i].data){
+    //                    log.info(dataList[i].data[j]);
+    //                }
+    //            }
+    //
+    //            done();
+    //        });
+    //    });
+    //});
 
 /*
     it('lib/collect : get Middle range TEMP info by using XY list', function(done){
