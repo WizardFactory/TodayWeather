@@ -294,9 +294,10 @@ angular.module('starter.services', [])
         /**
          *
          * @param pm10Value
+         * @param pm10Grade
          * @returns {*}
          */
-        function parsePm10Value(pm10Value) {
+        function parsePm10Info(pm10Value, pm10Grade) {
             if (pm10Value <= 30) {
                 return "좋음";
             }
@@ -308,6 +309,21 @@ angular.module('starter.services', [])
             }
             else if (pm10Value > 150) {
                 return "매우 나쁨";
+            }
+            else {
+                console.log("Fail to parse pm10Value="+pm10Value);
+                switch (pm10Grade) {
+                    case 1:
+                        return "좋음";
+                    case 2:
+                        return "보통";
+                    case 3:
+                        return "나쁨";
+                    case 4:
+                        return "매우 나쁨";
+                    default :
+                        console.log("Unknown pm10Grade="+pm10Grade);
+                }
             }
             return "-";
         }
@@ -575,11 +591,12 @@ angular.module('starter.services', [])
             //current.arpltn = {};
             //current.arpltn.pm10Value = 80;
             //current.arpltn.pm10Str = "나쁨";
-            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Value >= 80) {
+            if (current.arpltn && current.arpltn.pm10Value &&
+                        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
                 str += ", " + "미세먼지 " + current.arpltn.pm10Str;
             }
             else {
-                if (current.pm10Value && current.pm10Value >= 80) {
+                if (current.pm10Value && (current.pm10Value > 80 || current.pm10Grade > 2)) {
                     str += ', ' + '미세먼지 ' + current.pm10Str;
                 }
             }
@@ -837,15 +854,32 @@ angular.module('starter.services', [])
                 getNearbyMsrstn(point.y, point.x).then(function (data) {
                     var ret = xml2json.parser(data);
                     //console.log(ret);
+                    if (ret.response.header.resultcode !== 0) {
+                        console.log(ret.response.header.resultmsg);
+                        deferred.resolve({pm10value: undefined});
+                        return;
+                    }
                     var stationname = ret.response.body.items.item[0].stationname;
                     console.log(stationname);
 
                     getMsrstnAcctoRltmMesureDnsty(stationname).then(function (data) {
                         var ret = xml2json.parser(data);
+                        var pm10value, pm10Grade;
                         //console.log(ret);
-                        var pm10value = ret.response.body.items.item[0].pm10value;
+                        if (ret.response.header.resultcode !== 0) {
+                            console.log(ret.response.header.resultmsg);
+                            deferred.resolve({pm10value: undefined});
+                            return;
+                        }
+                        if (ret.response.body.items.item && ret.response.body.items.item[0]) {
+                            pm10value = ret.response.body.items.item[0].pm10value;
+                            pm10Grade = ret.response.body.items.item[0].pm10grade;
+                        }
+                        else {
+                            console.log("Fail to get data from station :"+stationname);
+                        }
                         console.log(pm10value);
-                        deferred.resolve({pm10value: pm10value});
+                        deferred.resolve({pm10value: pm10value, pm10Grade: pm10Grade});
                     }, function (err) {
                         console.log(err);
                         deferred.resolve({pm10value: undefined});
@@ -981,7 +1015,8 @@ angular.module('starter.services', [])
             if (currentTownWeather.arpltn && currentTownWeather.arpltn.pm10Value) {
                 currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
                 currentForecast.pm10Grade = currentTownWeather.arpltn.pm10Grade;
-                currentForecast.pm10Str = parsePm10Value(currentTownWeather.arpltn.pm10Value);
+                currentForecast.pm10Str = parsePm10Info(currentTownWeather.arpltn.pm10Value,
+                                                currentTownWeather.arpltn.pm10Grade);
             }
             return currentForecast;
         };
@@ -1663,7 +1698,7 @@ angular.module('starter.services', [])
             var that = this;
             var data = {};
             var currentTime = new Date();
-            var weatherData = {}, senTemp, ultrv, pm10value;
+            var weatherData = {}, senTemp, ultrv, pm10value, pm10Grade;
             weatherDatas.forEach(function (data) {
                 if (data.hasOwnProperty("data")) {
                     weatherData = data.data;
@@ -1676,6 +1711,7 @@ angular.module('starter.services', [])
                 }
                 else if (data.hasOwnProperty("pm10value")) {
                     pm10value = data.pm10value;
+                    pm10Grade = data.pm10Grade;
                 }
             });
 
@@ -1694,8 +1730,6 @@ angular.module('starter.services', [])
             var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
             console.log(midTownWeather);
 
-            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
-
             if(senTemp) {
                 currentForecast.sensorytem = senTemp;
                 currentForecast.sensorytemStr = parseSensoryTem(senTemp);
@@ -1706,8 +1740,11 @@ angular.module('starter.services', [])
             }
             if (pm10value) {
                 currentForecast.pm10Value = pm10value;
-                currentForecast.pm10Str = parsePm10Value(pm10value);
+                currentForecast.pm10Grade = pm10Grade;
+                currentForecast.pm10Str = parsePm10Info(pm10value, pm10Grade);
             }
+
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
