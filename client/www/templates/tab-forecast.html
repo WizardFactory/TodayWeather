@@ -44,6 +44,12 @@
                     </div>
                 </div>
             </div>
+            <div class="row row-no-padding btns-content">
+                <div class="col" style="height: 100%; border: 1px solid rgba(255,255,255,0.6); text-align: center">어제</div>
+                <div class="col" style="height: 100%; border: 1px solid rgba(255,255,255,0.6); text-align: center">오늘</div>
+                <div class="col" style="height: 100%; border: 1px solid rgba(255,255,255,0.6); text-align: center">내일</div>
+                <div class="col" style="height: 100%; border: 1px solid rgba(255,255,255,0.6); text-align: center">일별</div>
+            </div>
             <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
@@ -61,9 +67,9 @@
                                 <div class="row row-no-padding small-time" style="height: 15%;">
                                     <p>{{value.time}}</p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 15%;">
-                                    <div><img src="img/{{value.tempIcon}}.png"></div>
-                                </div>
+                                <!--<div class="row row-no-padding small-image" style="height: 15%;">-->
+                                    <!--<div><img src="img/{{value.tempIcon}}.png"></div>-->
+                                <!--</div>-->
                                 <div class="row row-no-padding small-digit" style="height: 15%;">
                                     <p>{{value.t3h}}˚</p>
                                 </div>

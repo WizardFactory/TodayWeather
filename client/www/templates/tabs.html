@@ -5,22 +5,22 @@ navigation history that also transitions its views in and out.
 -->
 <ion-tabs class="tabs-icon-only tabs-dark" style="background-color: #22a1db" ng-style="{'background-color': viewColor}">
 
+    <!-- Forecast Tab -->
+    <ion-tab title="Forecast" icon-off="ion-ios-arrow-left" icon-on="ion-ios-arrow-left" href="#/tab/forecast">
+        <ion-nav-view name="tab-forecast"></ion-nav-view>
+    </ion-tab>
+
     <!-- Search Tab -->
     <ion-tab title="Search" icon-off="ion-ios-search" icon-on="ion-ios-search" href="#/tab/search">
         <ion-nav-view name="tab-search"></ion-nav-view>
     </ion-tab>
 
-    <!-- Forecast Tab -->
-    <ion-tab title="Forecast" icon-off="ion-ios-partlysunny-outline" icon-on="ion-ios-partlysunny-outline" href="#/tab/forecast">
-        <ion-nav-view name="tab-forecast"></ion-nav-view>
-    </ion-tab>
-
     <!--Update tab-->
-    <ion-tab title="Update" icon-off="ion-ios-loop" icon-on="ion-ios-loop" ng-click="doTabRefresh()">
+    <ion-tab title="Update" icon-off="ion-ios-reload" icon-on="ion-ios-reload" ng-click="doTabRefresh()">
     </ion-tab>
 
     <!-- Setting Tab -->
-    <ion-tab title="Setting" icon-off="ion-ios-gear-outline" icon-on="ion-ios-gear-outline" href="#/tab/setting">
+    <ion-tab title="Setting" icon-off="ion-ios-list-outline" icon-on="ion-ios-list-outline" href="#/tab/setting">
         <ion-nav-view name="tab-setting"></ion-nav-view>
     </ion-tab>
 

@@ -330,6 +330,9 @@ var getCoord = function(region, city, town, cb){
 
             if(result.length === 0){
                 log.error('~> there is no data', result.length);
+                if(cb){
+                    cb(new Error("there is no data"));
+                }
                 return;
             }
             if(result.length > 1){
@@ -377,17 +380,18 @@ var getTownDataFromDB = function(db, indicator, cb){
                 return;
             }
 
-            //log.info(result[0].shortData);
             if(result.length === 0){
                 log.error('~> getDataFromDB : there is no data');
                 if(cb){
-                    cb(1);
+                    cb(new Error("there is no data"));
                 }
                 return;
             }
             if(result.length > 1){
                 log.error('~> getDataFromDB : what happened??', result.length);
             }
+
+            log.debug(result.toString());
 
             if(cb){
                 var ret = [];
@@ -478,6 +482,9 @@ var getMidDataFromDB = function(db, indicator, cb){
             }
             if(result.length === 0){
                 log.error('~> getMidDataFromDB : there is no data');
+                if(cb){
+                    cb(new Error("there is no data"));
+                }
                 return;
             }
             if(result.length > 1){
@@ -717,12 +724,14 @@ var mergeLandWithTemp = function(landList, tempList, cb){
         var todayLand = landList[landList.length - 1];
         var todayTemp = tempList[tempList.length - 1];
         var i = 0;
+        var currentDate;
+        var item;
 
         //log.info(todayLand);
         //log.info(todayTemp);
         for(i=0 ; i<8 ; i++){
-            var currentDate = getCurrentTimeValue(9+ 72 + (i * 24));
-            var item = {
+            currentDate = getCurrentTimeValue(9+ 72 + (i * 24));
+            item = {
                 date: currentDate.date
             };
             var index = i+3;
@@ -742,13 +751,14 @@ var mergeLandWithTemp = function(landList, tempList, cb){
         //log.info('res', result);
         // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
         for(i = 10 ; i > 0 ; i--){
-            var currentDate = getCurrentTimeValue(9 - (i * 24));
+            currentDate = getCurrentTimeValue(9 - (i * 24));
             var targetDate = getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
-            var item = {
+            item = {
                 date: targetDate.date
             };
+            var j;
             //log.info(currentDate, targetDate);
-            for(var j in landList){
+            for(j in landList){
                 if(currentDate.date === landList[j].date && landList[j].time === '1800'){
                     item.wfAm = landList[j].wf3Am;
                     item.wfPm = landList[j].wf3Pm;
@@ -756,7 +766,7 @@ var mergeLandWithTemp = function(landList, tempList, cb){
                 }
             }
 
-            for(var j in tempList){
+            for(j in tempList){
                 if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
                     item.taMin = tempList[j].taMin3;
                     item.taMax = tempList[j].taMax3;
@@ -832,7 +842,7 @@ var getShort = function(req, res, next){
                 var j = 0;
                 var requestTime = getTimeValue();
                 var tempList = [];
-
+                var item;
                 /********************
                  * TEST DATA
                  ********************/
@@ -842,7 +852,7 @@ var getShort = function(req, res, next){
 
                 log.info(requestTime);
                 for (i = 0; i < listCurrent.length; i++) {
-                    var item = {};
+                    item = {};
                     log.info('cur time : ', parseInt(listCurrent[i].date), parseInt(requestTime.date));
                     // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
                     if (parseInt(listCurrent[i].date) > parseInt(requestTime.date)) {
@@ -876,7 +886,7 @@ var getShort = function(req, res, next){
 
                 var popCount = 0;
                 for (i = 0; i < listShort.length; i++) {
-                    var item = {};
+                    item = {};
                     if(listShort[i].date === requestTime.date && listShort[i].time === requestTime.time){
                         // 현재시간 보다 이전의 데이터는 16개만 보내주기 위해서...
                         popCount = i - 16;
@@ -998,7 +1008,16 @@ var getShort = function(req, res, next){
     else {
         try{
             getCoord(regionName, cityName, townName, function(err, coord){
+                if (err) {
+                    log.error(err);
+                    return next();
+                }
                 getTownDataFromDB(modelShort, coord, function(err, shortList){
+                    if (err) {
+                        log.error(err);
+                        return next();
+                    }
+
                     var requestTime = getTimeValue();
                     var popCount = 0;
                     var i = 0;
@@ -1021,19 +1040,26 @@ var getShort = function(req, res, next){
                     }
 
                     getTownDataFromDB(modelCurrent, coord, function(err, currentList){
+                        if (err) {
+                            log.error(err);
+                            return next();
+                        }
                         //log.info(currentList);
                         //currentList.forEach(function(item, index){
                         //    log.info('routeC>', item);
                         //});
                         mergeShortWithCurrent(shortList, currentList, function(err, firstMerged){
+                            if (err) {
+                                log.error(err);
+                                return next();
+                            }
                             //log.info(firstMerged);
                             getTownDataFromDB(modelShortRss, coord, function(err, rssList){
                                 //log.info(rssList);
                                 if(err){
                                     log.error('error to get short RSS');
                                     req.short = firstMerged;
-                                    next();
-                                    return;
+                                    return next();
                                 }
                                 mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
                                     //log.info(resultList);
@@ -1103,13 +1129,25 @@ var getShortest = function(req, res, next){
     else{
         try{
             getCoord(regionName, cityName, townName, function(err, coord){
+                if (err) {
+                    log.error(err);
+                    return next();
+                }
                 getTownDataFromDB(modelShortest, coord, function(err, shortestList){
+                    if (err) {
+                        log.error(err);
+                        return next();
+                    }
                     var nowDate = getShortestTimeValue(+9);
-                    var resultItem = {};
+                    var resultItem = [];
 
-                    resultItem = shortestList[shortestList.length - 1];
-                    resultItem.date = nowDate.date;
-                    resultItem.time = nowDate.time;
+                    log.debug(shortestList.length);
+                    resultItem = shortestList.filter(function (shortest) {
+                       if (nowDate.date + nowDate.time <= shortest.date +  shortest.time) {
+                          return true;
+                       }
+                        return false;
+                    });
 
                     //log.info(listShortest);
                     req.shortest = resultItem;
@@ -1143,7 +1181,7 @@ var getCurrent = function(req, res, next){
                 if(err){
                     log.error('> getShortest : failed to get data from DB');
                     log.error(meta);
-                    next();
+                    return next();
                 }
             }
             /********************
@@ -1201,8 +1239,16 @@ var getCurrent = function(req, res, next){
     }
     else{
         try{
-            getCoord(regionName, cityName, townName, function(err, coord){
-                getTownDataFromDB(modelCurrent, coord, function(err, currentList){
+            getCoord(regionName, cityName, townName, function(err, coord) {
+                if (err) {
+                    log.error(err);
+                    return next();
+                }
+                getTownDataFromDB(modelCurrent, coord, function(err, currentList) {
+                    if (err) {
+                        log.error(err);
+                        return next();
+                    }
                     var nowDate = getCurrentTimeValue(+9);
                     var acceptedDate = getCurrentTimeValue(+6);
                     var shortDate = getTimeValue();
@@ -1253,7 +1299,7 @@ var getMid = function(req, res, next){
             if(err){
                 log.error('> getMid : failed to get data from DB');
                 log.error(meta);
-                next();
+                return next();
             }
             try{
                 log.info('> Mid DATA : ', result);
@@ -1266,7 +1312,7 @@ var getMid = function(req, res, next){
                         if(err){
                             log.error('> getShortest : failed to get data from DB');
                             log.error(meta);
-                            next();
+                            return next();
                         }
 
                         try{
@@ -1299,7 +1345,7 @@ var getMid = function(req, res, next){
 
                         }catch(e){
                             log.error('Second Phase ERROE>>', meta);
-                            next();
+                            return next();
                         }
                     });
                     /**********************************************************
@@ -1323,7 +1369,7 @@ var getMid = function(req, res, next){
                 if(err){
                     log.error('RM> there is no code');
                     log.error(meta);
-                    next();
+                    return next();
                 }
 
                 var result = {};
@@ -1333,7 +1379,7 @@ var getMid = function(req, res, next){
                     if(err){
                         log.error('RM> no forecast data');
                         log.error(meta);
-                        next();
+                        return next();
                     }
 
                     //log.info(forecastList);
@@ -1355,21 +1401,21 @@ var getMid = function(req, res, next){
                         if(err){
                             log.error('RM> no land data');
                             log.error(meta);
-                            next();
+                            return next();
                         }
                         //log.info(landList);
                         getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempList){
                             if(err){
                                 log.error('RM> no temp data');
                                 log.error(meta);
-                                next();
+                                return next();
                             }
                             //log.info(tempList);
                             mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
                                     log.error('RM> failed to merge land and temp');
                                     log.error(meta);
-                                    next();
+                                    return next();
                                 }
                                 //log.info(dataList);
                                 req.midData.dailyData = dataList;
@@ -1401,7 +1447,7 @@ var getRegionSummary = function(req, res, next){
                 if(err){
                     log.error('> getRegionSummary : failed to get data from DB');
                     log.error(meta);
-                    next();
+                    return next();
                 }
             }
             try{
@@ -1434,7 +1480,7 @@ var getSummary = function(req, res, next){
                 if(err){
                     log.error('> getSummary : failed to get data from DB');
                     log.error(meta);
-                    next();
+                    return next();
                 }
             }
             try{
@@ -1459,7 +1505,7 @@ var getLifeIndexKma = function(req, res, next) {
     if (!req.short && !req.midData) {
         var err = new Error("Fail to find short, mid weather");
         log.error(err);
-        next();
+        return next();
     }
 
     try {
@@ -1484,7 +1530,7 @@ var getKeco = function (req, res, next) {
     if (!req.current)  {
         var err = new Error("Fail to find current weather");
         log.warn(err);
-        next();
+        return next();
     }
 
     try {
