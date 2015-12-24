@@ -25,7 +25,7 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
-var keydata = require('../config/keydata');
+//var keydata = require('../config/keydata');
 
 function Manager(){
     var self = this;
