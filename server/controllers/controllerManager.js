@@ -38,8 +38,8 @@ function Manager(){
         MID_SEA: (1000*60*60*12)
     };
 
-    self.MAX_SHORT_COUNT = 100;
-    self.MAX_CURRENT_COUNT = 100;
+    self.MAX_SHORT_COUNT = 60;
+    self.MAX_CURRENT_COUNT = 60;
     self.MAX_SHORTEST_COUNT = 24;
     self.MAX_MID_COUNT = 20;
 
@@ -939,7 +939,9 @@ Manager.prototype.saveShort = function(newData){
                 });
 
                 if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                    dbShortList.shortData.slice(0, (dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                    for(var i = 0 ; i< (dbShortList.shortData.length - self.MAX_SHORT_COUNT) ; i++){
+                        dbShortList.shift();
+                    }
                 }
                 //log.info(dbShortList.shortData);
                 dbShortList.save(function(err){
@@ -1045,7 +1047,9 @@ Manager.prototype.saveCurrent = function(newData){
                 });
 
                 if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
-                    dbCurrentList.currentData.slice(0, (dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                    for(var i=0 ; i < (dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT) ; i++){
+                        dbCurrentList.shift();
+                    }
                 }
                 //log.info(dbCurrentList.currentData);
                 dbCurrentList.save(function(err){
@@ -1145,7 +1149,9 @@ Manager.prototype.saveShortest = function(newData){
                 });
 
                 if(dbShortestList.shortestData.length > self.MAX_CURRENT_COUNT){
-                    dbShortestList.shortestData.slice(0, (dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                    for(var i=0 ; i<(dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT) ; i++){
+                        dbShortestList.shift();
+                    }
                 }
                 //log.info(dbShortestList.shortestData);
                 dbShortestList.save(function(err){
@@ -1289,7 +1295,9 @@ Manager.prototype.saveMid = function(db, newData){
                 });
 
                 if(dbShortestList.data.length > self.MAX_MID_COUNT){
-                    dbShortestList.data.slice(0, (dbShortestList.data.length - self.MAX_MID_COUNT));
+                    for(i=0 ; i<(dbShortestList.data.length - self.MAX_MID_COUNT) ; i++ ){
+                        dbShortestList.shift();
+                    }
                 }
                 dbShortestList.save(function(err){
                     if(err){
