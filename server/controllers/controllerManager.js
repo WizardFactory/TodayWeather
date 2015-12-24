@@ -940,7 +940,7 @@ Manager.prototype.saveShort = function(newData){
 
                 if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
                     for(var i = 0 ; i< (dbShortList.shortData.length - self.MAX_SHORT_COUNT) ; i++){
-                        dbShortList.shift();
+                        dbShortList.shortData.shift();
                     }
                 }
                 //log.info(dbShortList.shortData);
@@ -1048,7 +1048,7 @@ Manager.prototype.saveCurrent = function(newData){
 
                 if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
                     for(var i=0 ; i < (dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT) ; i++){
-                        dbCurrentList.shift();
+                        dbCurrentList.currentData.shift();
                     }
                 }
                 //log.info(dbCurrentList.currentData);
@@ -1150,7 +1150,7 @@ Manager.prototype.saveShortest = function(newData){
 
                 if(dbShortestList.shortestData.length > self.MAX_CURRENT_COUNT){
                     for(var i=0 ; i<(dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT) ; i++){
-                        dbShortestList.shift();
+                        dbShortestList.shortestData.shift();
                     }
                 }
                 //log.info(dbShortestList.shortestData);
@@ -1296,7 +1296,7 @@ Manager.prototype.saveMid = function(db, newData){
 
                 if(dbShortestList.data.length > self.MAX_MID_COUNT){
                     for(i=0 ; i<(dbShortestList.data.length - self.MAX_MID_COUNT) ; i++ ){
-                        dbShortestList.shift();
+                        dbShortestList.data.shift();
                     }
                 }
                 dbShortestList.save(function(err){
