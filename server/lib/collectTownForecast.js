@@ -125,7 +125,7 @@ function CollectData(options, callback){
 
     self.DATA_URL = Object.freeze({
         TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastGrib',
-        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastTimeData',
+        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
         TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData',
         MID_FORECAST: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast',
         MID_LAND: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather',
@@ -144,10 +144,11 @@ function CollectData(options, callback){
         }
     }
     else{
-        self.timeout = 3000;
+        self.timeout = 2000;
         self.retryCount = 1;
     }
 
+    //it seems to be unused
     if(callback){
         self.callback = callback;
     }
@@ -157,7 +158,7 @@ function CollectData(options, callback){
     * we can get the notify by request event and will decide whether to retry or ignore this item
     */
     self.on('recvFail', function(listIndex){
-        //log.error('receive fail[%d]', listIndex);
+        log.verbose('receive fail[%d]', listIndex);
         if(self.resultList[listIndex].retryCount > 0){
             //log.error('try again:', listIndex);
             //log.error('URL : ', self.resultList[listIndex].url);
@@ -165,8 +166,9 @@ function CollectData(options, callback){
 
             setTimeout(function(){
                 self.resultList[listIndex].retryCount--;
-                self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
-            }, 2000);
+                self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url,
+                    self.resultList[listIndex].options);
+            }, self.timeout);
 
             //self.resultList[listIndex].retryCount--;
             //self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
@@ -176,11 +178,10 @@ function CollectData(options, callback){
             self.recvFailed = true;
             self.receivedCount++;
 
-            log.error('ignore this: ', listIndex);
-            log.error('URL : ', self.resultList[listIndex].url);
+            log.debug('ignore this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
 
             if(self.receivedCount === self.listCount){
-                self.emit('dataComplated');
+                self.emit('dataCompleted');
             }
         }
     });
@@ -194,9 +195,9 @@ function CollectData(options, callback){
         self.resultList[listIndex].isCompleted = true;
         self.resultList[listIndex].data = data;
 
-        //log.info('index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
+        log.verbose('index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
         if(self.receivedCount === self.listCount){
-            self.emit('dataComplated');
+            self.emit('dataCompleted');
         }
     });
 
@@ -282,7 +283,8 @@ CollectData.prototype.resetResult = function(){
                 time: '',
                 dataType: -1,
                 code: ''
-            }
+            },
+            mCoord: {}
         };
         self.resultList.push(item);
     }
@@ -295,7 +297,7 @@ CollectData.prototype.resetResult = function(){
 *               If it successes to get data, it would send 'recvData' event to this.
 *               If it fail to get data, it would send 'recvFail' event to this.
 * */
-CollectData.prototype.getData = function(index, dataType, url,options, callback){
+CollectData.prototype.getData = function(index, dataType, url, options, callback){
     var self = this;
     var meta = {};
 
@@ -308,7 +310,7 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
 
     req.get(url, null, function(err, response, body){
         if(err) {
-            //log.error(err);
+            log.warn(err);
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -323,6 +325,7 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
 
+            log.debug('ERROR!!! StatusCode : ', statusCode);
             self.emit('recvFail', index);
             if(callback){
                 callback(err, index);
@@ -501,28 +504,39 @@ CollectData.prototype.organizeShortData = function(index, listData){
 
 CollectData.prototype.organizeShortestData = function(index, listData) {
     var self = this;
-    var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
+    var template = {
+        lastUpdateTime: '', /*baseDate+baseTime*/
+        date: '',
+        time: '',
+        mx: -1,
+        my: -1,
+        pty: -1, /* 강수 형태 : 1%, invalid : -1 */
+        rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+        sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
+        lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+    };
 
     //log.info('shortestData count : ' + listItem.length);
 
-    try{
-        var result = {};
-        var template = {
-            date: '',
-            time: '',
-            mx: -1,
-            my: -1,
-            pty: -1, /* 강수 형태 : 1%, invalid : -1 */
-            rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
-            sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
-            lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
-        };
+    function getListResult(fcsDate, fsctime) {
+        var result;
+        for (var i=0; i<listResult.length; i+=1) {
+            result = listResult[i];
+            if (result.date === fcsDate, result.time === fsctime) {
+                return result;
+            }
+        }
+        result = Object.create(template);
+        listResult.push(result);
+        return listResult[listResult.length-1];
+    }
 
-        for(i=0 ; i < listItem.length ; i++){
+    try{
+        var listItem = listData.response.body[0].items[0].item;
+
+        for(var i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
-            //log.info(item);
             if((item.fcstDate === undefined)
                 && (item.fcstTime === undefined)
                 && (item.fcstValue === undefined)){
@@ -531,26 +545,9 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
-                //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('organizeShortestData : start collecting items');
+                var result = getListResult(item.fcstDate[0], item.fcstTime[0]);
 
-                }
-                else if(result.date === item.fcstDate[0] && result.time === item.fcstTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('organizeShortestData : same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('organizeShortestData : changed date --> push it to list and reset result');
-                    //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
-
+                result.lastUpdateTime = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
                 result.time = item.fcstTime[0];
                 result.mx = parseInt(item.nx[0]);
@@ -566,15 +563,10 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+        log.silly('organizeShortestData result count : ', listResult.length);
+        for(i=0 ; i<listResult.length ; i++){
+            log.silly(listResult[i]);
         }
-
-        //log.info('organizeShortestData result count : ', listResult.length);
-        //for(i=0 ; i<listResult.length ; i++){
-        //    log.info(listResult[i]);
-        //}
 
         self.emit('recvData', index, listResult);
     }
@@ -1006,20 +998,22 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
     meta.date = date;
     meta.time = time;
 
-    if(srcList){
-        self.srcList = srcList;
-        self.listCount = srcList.length;
-        self.resetResult();
-    }
-    else{
-        log.error('There is no location list');
+    if(!srcList || !srcList.length){
+        var err = new Error('There is no location list');
+        log.error(err);
         log.error('#', meta);
+        callback(err);
         return;
     }
 
+    self.srcList = srcList;
+    self.listCount = srcList.length;
+    self.resetResult();
+
     if(callback || self.callback){
-        self.on('dataComplated', function() {
+        self.on('dataCompleted', function() {
             try{
+                log.debug("request dataCompleted");
                 if (self.callback) {
                     self.callback(self.recvFailed, self.resultList);
                 }
@@ -1028,15 +1022,20 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
                 }
             }
             catch(e){
-                log.error("requestData : ERROR !!! in event dataComplated");
+                log.error("requestData : ERROR !!! in event dataCompleted");
+                log.error(e);
                 log.error('#', meta);
+                if (callback) {
+                    callback(e);
+                }
             }
         });
     }
 
     try{
-        for(var i in self.srcList){
+        for(var i in self.srcList) {
             var string = self.getUrl(dataType, key, date, time, self.srcList[i]);
+            self.resultList[i].mCoord = self.srcList[i];
             self.resultList[i].url = string.toString();
             self.resultList[i].options.date = date;
             self.resultList[i].options.time = time;
@@ -1054,8 +1053,6 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
         log.error('# ERROR!! ', meta);
     }
 };
-
-
 
 module.exports = CollectData;
 
