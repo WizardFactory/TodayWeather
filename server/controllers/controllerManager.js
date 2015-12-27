@@ -1089,7 +1089,9 @@ Manager.prototype.saveShortest = function(newData, callback){
         modelShortest.find({mCoord: coord}, function(err, list){
             if(err){
                 log.error('ST> fail to find db item');
-                callback(err);
+                if (callback) {
+                    callback(err);
+                }
                 return;
             }
 
@@ -1099,7 +1101,9 @@ Manager.prototype.saveShortest = function(newData, callback){
                     if(err){
                         log.error('ST> fail to save to DB :', coord);
                     }
-                    callback(err);
+                    if (callback) {
+                        callback(err);
+                    }
                 });
 
                 //log.info('ST> add new Item : ', newData);
@@ -1165,14 +1169,18 @@ Manager.prototype.saveShortest = function(newData, callback){
                     if(err){
                         log.error('ST> fail to save');
                     }
-                    callback(err);
+                    if (callback) {
+                        callback(err);
+                    }
                 });
             });
         });
     }
     catch(e){
         log.error('ST> error!!! saveShort');
-        callback(e);
+        if (callback) {
+            callback(e);
+        }
     }
 };
 
@@ -1459,10 +1467,10 @@ function requestShortestData(self, mCoordList, key, dateString, callback) {
         //log.info(dataList[0]);
 
         async.mapSeries(dataList,
-            function(item, callback) {
+            function(item, cb) {
                 if (item.isCompleted) {
                     self.saveShortest(item.data, function (err) {
-                        callback(err);
+                        cb(err);
                     });
                 }
                 else {
@@ -1470,7 +1478,7 @@ function requestShortestData(self, mCoordList, key, dateString, callback) {
                     log.verbose("request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
                     failedList.push(item.mCoord);
                     //this index was not rcvData
-                    callback(undefined);
+                    cb(undefined);
                 }
             },
             function (err, results) {
@@ -1481,7 +1489,9 @@ function requestShortestData(self, mCoordList, key, dateString, callback) {
                     return requestShortestData(self, failedList, key, dateString, callback);
                 }
                 log.info("received All ShortestData of ", dateString);
-                callback(err, results);
+                if (callback) {
+                    callback(err, results);
+                }
             });
         //log.info('ST> save OK');
     });
@@ -1542,14 +1552,18 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
                  ***************************************************/
                 //self.setCurrentData(self.coordDb[i], dataList);
             }
-            callback(undefined);
+            if (callback) {
+                callback(undefined);
+            }
         });
     }
     else{
         town.getCoord(function(err, listTownDb){
             if(err){
                 log.error(err);
-                callback(err);
+                if (callback) {
+                    callback(err);
+                }
                 return this;
             }
 
@@ -1577,7 +1591,9 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 
                 if (listTownDb.length === 0) {
                     log.info('All shortest was already updated');
-                    callback(err);
+                    if (callback) {
+                        callback(err);
+                    }
                     return this;
                 }
 
@@ -1586,7 +1602,9 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
                     if (err) {
                         log.error(err);
                     }
-                    callback(err, results);
+                    if (callback) {
+                        callback(err, results);
+                    }
                 });
             });
         });
