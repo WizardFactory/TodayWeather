@@ -15,19 +15,19 @@ var controllerTownRss = require('../controllers/controllerShortRss');
 
 describe('unit test - get short rss by using controllerShortRss', function(){
 
-    it('controller/controllerShortRss', function(done){
-        var townRss = new controllerTownRss();
-
-        var resultTime = townRss.calculateTime('201512150000', 18);
-        assert.equal(resultTime, '201512151800', 'calculate time');
-
-        resultTime = townRss.calculateTime('201512310000', 25);
-        assert.equal(resultTime, '201601010100', 'calculate time');
-
-        townRss.StartShortRss();
-        townRss.mainTask();
-
-        this.timeout(5000);
-        setTimeout(done, 300);
-    });
+    //it('controller/controllerShortRss', function(done){
+    //    var townRss = new controllerTownRss();
+    //
+    //    var resultTime = townRss.calculateTime('201512150000', 18);
+    //    assert.equal(resultTime, '201512151800', 'calculate time');
+    //
+    //    resultTime = townRss.calculateTime('201512310000', 25);
+    //    assert.equal(resultTime, '201601010100', 'calculate time');
+    //
+    //    townRss.StartShortRss();
+    //    townRss.mainTask();
+    //
+    //    this.timeout(5000);
+    //    setTimeout(done, 300);
+    //});
 });

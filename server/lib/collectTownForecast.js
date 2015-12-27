@@ -39,10 +39,13 @@ function CollectData(options, callback){
         [
             {name: '강원도', code: '105'},
             {name: '전국', code: '108'},
-            {name: '경기도', code: '109'},
-            {name: '충청도', code: '133'},
-            {name: '전라도', code: '156'},
-            {name: '경상도', code: '159'},
+            {name: '서울,인천,경기도', code: '109'},
+            {name: '충청북도', code: '131'},
+            {name: '대전,세종,충청남도', code: '133'},
+            {name: '전라북도', code: '146'},
+            {name: '광주,전라남도', code: '156'},
+            {name: '대구,경상북도', code: '143'},
+            {name: '부산,울산,경상남도', code: '159'},
             {name: '제주도', code: '184'}
         ]
     );
@@ -66,8 +69,8 @@ function CollectData(options, callback){
         [
             {name: '서울', code: '11B10101'}, // 서울
             {name: '인천', code: '11B20201'}, // 경기 서부
-                {name: '수원', code: '11B20601'}, // 경기 남부
-            {name: '문산', code: '11B20305'}, // 경기 북부
+            {name: '수원', code: '11B20601'}, // 경기 남부
+            {name: '파주', code: '11B20305'}, // 경기 북부
 
             {name: '춘천', code: '11D10301'}, // 강원 서부
             {name: '원주', code: '11D10401'}, // 강원 남서
