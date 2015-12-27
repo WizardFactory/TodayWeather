@@ -191,26 +191,32 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
         if (err) {
             return callback(err);
         }
-        midKmaList.forEach(function (mid) {
-            var midRssModel;
-            for (var i=0; i<midRssModelList.length; i++) {
-               if (midRssModelList[i].regId === mid.regId) {
-                   midRssModel = midRssModelList[i];
-                   break;
-               }
-            }
-            if (!midRssModel) {
-                midRssModel = new MidRssModel(mid);
-                log.info(midRssModel.toString());
-            }
-            else {
-                midRssModel.pubDate = mid.pubDate;
-                midRssModel.midData = mid.midData;
-            }
-            midRssModel.save(function (err) {
-                callback(err, midRssModel.pubDate);
+        async.map(midKmaList, function (mid, cBack) {
+                var midRssModel;
+                for (var i=0; i<midRssModelList.length; i++) {
+                    if (midRssModelList[i].regId === mid.regId) {
+                        midRssModel = midRssModelList[i];
+                        break;
+                    }
+                }
+                if (!midRssModel) {
+                    midRssModel = new MidRssModel(mid);
+                    log.info(midRssModel.toString());
+                }
+                else {
+                    midRssModel.pubDate = mid.pubDate;
+                    midRssModel.midData = mid.midData;
+                }
+                midRssModel.save(function (err) {
+                    cBack(err, midRssModel.pubDate);
+                });
+            },
+            function (err, results) {
+                if (err) {
+                    return callback(err);
+                }
+                callback(err, results[0]);
             });
-        });
     });
     return this;
 };
