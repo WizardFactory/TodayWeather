@@ -1287,18 +1287,18 @@ Manager.prototype.saveMid = function(db, newData){
                 return;
             }
 
-            list.forEach(function(dbShortestList, index){
+            list.forEach(function(dbMidList, index){
                 var isNew = 1;
-                for(var i=0 ; i < dbShortestList.data.length ; i++){
+                for(var i=0 ; i < dbMidList.data.length ; i++){
                     var comparedDate = self.compareDate(
-                        {date:dbShortestList.data[i].date, time:dbShortestList.data[i].time},
+                        {date:dbMidList.data[i].date, time:dbMidList.data[i].time},
                         {date:newData.date, time:newData.time}
                     );
 
                     // If there is the same date in the DB, it would be replaced by new data.
                     if(comparedDate === 0){
                         // over write
-                        dbShortestList.data[i] = self.dupMid(newData, dbShortestList.data[i]);
+                        dbMidList.data[i] = self.dupMid(newData, dbMidList.data[i]);
                         //log.info('overwrite :', newData);
                         isNew = 0;
                         break;
@@ -1307,10 +1307,10 @@ Manager.prototype.saveMid = function(db, newData){
 
                 if(isNew){
                     //log.info('M> push data :', newItem);
-                    dbShortestList.data.push(newData);
+                    dbMidList.data.push(newData);
                 }
 
-                dbShortestList.data.sort(function(a, b){
+                dbMidList.data.sort(function(a, b){
                     if(a.date > b.date){
                         return 1;
                     }
@@ -1326,10 +1326,10 @@ Manager.prototype.saveMid = function(db, newData){
                     return 0;
                 });
 
-                if(dbShortestList.data.length > self.MAX_MID_COUNT){
-                    dbShortestList.data = dbShortestList.data.slice((dbShortestList.data.length - self.MAX_MID_COUNT));
+                if(dbMidList.data.length > self.MAX_MID_COUNT){
+                    dbMidList.data = dbMidList.data.slice((dbMidList.data.length - self.MAX_MID_COUNT));
                 }
-                dbShortestList.save(function(err){
+                dbMidList.save(function(err){
                     if(err){
                         log.error('M> fail to save');
                     }
