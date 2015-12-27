@@ -1298,6 +1298,39 @@ var getCurrent = function(req, res, next){
     }
 };
 
+var getMidRss = function (req, res, next) {
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+
+    if (!req.hasOwnProperty('midData')) {
+        req.midData = {};
+    }
+    if (!req.midData.hasOwnProperty('dailyData') || !Array.isArray(req.midData.dailyData)) {
+        req.midData.dailyData = [];
+    }
+
+    try {
+        manager.getRegIdByTown(regionName, cityName, function(err, code) {
+            if (err) {
+                log.error(err);
+                return next();
+            }
+
+            var midRssKmaController = require('../controllers/midRssKmaController');
+            midRssKmaController.overwriteData(req.midData, code.cityCode, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
+        });
+    }
+    catch(e) {
+        log.error(e);
+        next();
+    }
+};
+
 var getMid = function(req, res, next){
     var meta = {};
 
@@ -1598,7 +1631,7 @@ router.get('/', [getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [getRegionSummary], function(req, res) {
+router.get('/:region', [getRegionSummary, getMidRss], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1618,7 +1651,7 @@ router.get('/:region', [getRegionSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city', [getMid, getLifeIndexKma], function(req, res) {
+router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1640,7 +1673,8 @@ router.get('/:region/:city', [getMid, getLifeIndexKma], function(req, res) {
 
     res.json(result);
 });
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getLifeIndexKma, getKeco],
+
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss, getLifeIndexKma, getKeco],
             function(req, res) {
     var meta = {};
 
@@ -1673,6 +1707,23 @@ router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, g
         result.midData = req.midData;
     }
 
+    res.json(result);
+});
+
+router.get('/:region/:city/:town/mid', [getMid, getMidRss], function (req, res) {
+    var result = {};
+
+    result.regionName = req.params.region;
+    result.cityName = req.params.city;
+    result.townName = req.params.town;
+
+    log.info('##', result);
+
+    if(req.midData){
+        result.midData = req.midData;
+    }
+
+    log.debug(result);
     res.json(result);
 });
 

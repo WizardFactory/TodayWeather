@@ -62,7 +62,7 @@ function Manager(){
 
 Manager.prototype.getRegIdByTown = function(region, city, cb){
     var self = this;
-    var i=0;
+    var i;
 
     city = city.slice(0,3);
     //log.info(self.codeTable);
@@ -87,7 +87,7 @@ Manager.prototype.getRegIdByTown = function(region, city, cb){
     }
 
     if(cb){
-        cb(1);
+        cb(new Error('Fail to find code table ', region, ' ', city));
     }
 
     return self.codeList;

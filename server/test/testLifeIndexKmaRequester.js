@@ -9,6 +9,7 @@ var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
 var assert  = require('assert');
+var config = require('../config/config');
 var LifeIndexKmaRequester  = require('../lib/lifeIndexKmaRequester');
 
 describe('unit test - requester of kma index service class', function() {
@@ -65,7 +66,7 @@ describe('unit test - requester of kma index service class', function() {
     });
 
     it('get url to get fsn life list', function () {
-        reqLifeIndex.setServiceKey('pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F%2FPS1pchRtnCa%2BSBLwlVt%2FrHwb44YC4ksQWcdEg%3D%3D');
+        reqLifeIndex.setServiceKey(config.keyString.test_cert);
         var url = reqLifeIndex.getUrl('fsn', 1111051500);
         assert.equal(url, url, 'check next get fsn list list time');
     });
@@ -122,11 +123,13 @@ describe('unit test - requester of kma index service class', function() {
 
     it ('get url', function() {
         var url = reqLifeIndex.getUrl('ultrv', '1100000000');
-        var result = 'http://203.247.66.146/iros/RetrieveLifeIndexService/getUltrvLifeList?serviceKey=pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F%2FPS1pchRtnCa%2BSBLwlVt%2FrHwb44YC4ksQWcdEg%3D%3D&AreaNo=1100000000&_type=json';
+        var result = 'http://203.247.66.146/iros/RetrieveLifeIndexService/getUltrvLifeList?serviceKey='+
+            config.keyString.test_cert+'&AreaNo=1100000000&_type=json';
         assert.equal(url, result, '');
 
         url = reqLifeIndex.getUrl('fsn', '1100000000');
-        result = 'http://203.247.66.146/iros/RetrieveLifeIndexService/getFsnLifeList?serviceKey=pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F%2FPS1pchRtnCa%2BSBLwlVt%2FrHwb44YC4ksQWcdEg%3D%3D&AreaNo=1100000000&_type=json';
+        result = 'http://203.247.66.146/iros/RetrieveLifeIndexService/getFsnLifeList?serviceKey='+
+            config.keyString.test_cert+'&AreaNo=1100000000&_type=json';
         assert.equal(url, result, '');
     });
 
