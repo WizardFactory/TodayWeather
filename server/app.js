@@ -86,13 +86,16 @@ if (config.mode === 'gather' || config.mode === 'local') {
 
 var keyBox = require('./config/config').keyString;
 
+var midRssKmaRequester = new (require('./lib/midRssKmaRequester'))();
+midRssKmaRequester.start();
+
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
 //client요청이 있을때 실행함
 //taskKmaIndexService.start();
 
 var keco = new (require('./lib/kecoRequester.js'))();
-keco.setServiceKey(keyBox.pokers);
+keco.setServiceKey(keyBox.normal);
 keco.setDaumApiKey(keyBox.daum_key);
 //client요청이 있을때 실행함
 //keco.start();
