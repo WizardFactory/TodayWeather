@@ -147,8 +147,8 @@ function CollectData(options, callback){
         }
     }
     else{
-        self.timeout = 2000;
-        self.retryCount = 1;
+        self.timeout = 0;
+        self.retryCount = 0;
     }
 
     //it seems to be unused
@@ -181,7 +181,7 @@ function CollectData(options, callback){
             self.recvFailed = true;
             self.receivedCount++;
 
-            log.debug('ignore this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
+            log.warn('ignore this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
 
             if(self.receivedCount === self.listCount){
                 self.emit('dataCompleted');
@@ -411,6 +411,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
 
     try{
         var result = {};
+        var insertItem;
         var template = {
             date: '',
             time: '',
@@ -458,7 +459,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
                     /* changed date value with prv date, so result should be pushed into the list and set new result */
                     //log.info('changed date --> push it to list and reset result');
                     //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
+                    insertItem = JSON.parse(JSON.stringify(result));
                     listResult.push(insertItem);
                     result = template;
                 }
@@ -489,7 +490,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
         }
 
         if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
+            insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
         }
 
@@ -526,7 +527,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         var result;
         for (var i=0; i<listResult.length; i+=1) {
             result = listResult[i];
-            if (result.date === fcsDate, result.time === fsctime) {
+            if (result.date === fcsDate && result.time === fsctime) {
                 return result;
             }
         }
@@ -589,6 +590,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
 
     try{
         var result = {};
+        var insertItem;
         var template = {
             date: '',
             time: '',
@@ -634,7 +636,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                     /* changed date value with prv date, so result should be pushed into the list and set new result */
                     //log.info('organizeCurrentData : changed date --> push it to list and reset result');
                     //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
+                    insertItem = JSON.parse(JSON.stringify(result));
                     listResult.push(insertItem);
                     result = template;
                 }
@@ -661,7 +663,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         }
 
         if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
+            insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
         }
 
@@ -679,7 +681,6 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
 
 CollectData.prototype.organizeForecastData = function(index, listData, options){
     var self = this;
-    var meta = {};
     var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
@@ -725,7 +726,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
 
 CollectData.prototype.organizeLandData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -753,7 +754,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
             wf10: '' /* 10일 후 날씨 예보 */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -794,7 +795,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
 
 CollectData.prototype.organizeTempData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -825,7 +826,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
             taMax10: -100 /* 10일 후 예상 최고 기온 */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -869,7 +870,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
 CollectData.prototype.organizeSeaData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -923,7 +924,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             wh10B: -100 /* 10일 후 최고 예상 파고(m) */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -992,7 +993,6 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
 CollectData.prototype.requestData = function(srcList, dataType, key, date, time, callback){
     var self = this;
     var meta = {};
-    var options = {date: date, time: time};
 
 
     meta.method = 'requestData';
@@ -1003,10 +1003,13 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
 
     if(!srcList || !srcList.length){
         var err = new Error('There is no location list');
-        log.error(err);
-        log.error('#', meta);
-        callback(err);
-        return;
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
     }
 
     self.srcList = srcList;
@@ -1025,12 +1028,10 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
                 }
             }
             catch(e){
+                //callback 안에서 error가 발생하면 이쪽으로 타기 때문에 여기서 error를 callback으로 넘지면 안됨
                 log.error("requestData : ERROR !!! in event dataCompleted");
                 log.error(e);
                 log.error('#', meta);
-                if (callback) {
-                    callback(e);
-                }
             }
         });
     }
@@ -1053,8 +1054,15 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
         }
     }
     catch(e){
-        log.error('# ERROR!! ', meta);
+        if (callback) {
+            callback(e);
+        }
+        else {
+            log.error(e);
+        }
     }
+
+    return this;
 };
 
 module.exports = CollectData;
