@@ -49,7 +49,7 @@ describe('unit test - controller manager', function() {
 
     //it('test mid forecast', function (done) {
     //    this.timeout(60 * 1000 * 60 * 100); //100mins
-    //    manager.getMidForecast(9, config.keyString.test_cert, function (err, results) {
+    //    manager.getMidForecast(9, config.keyString.test_normal, function (err, results) {
     //        if (err) {
     //            log.error(err);
     //        }
@@ -59,7 +59,7 @@ describe('unit test - controller manager', function() {
 
     //it('test mid land', function (done) {
     //    this.timeout(60 * 1000 * 60 * 100); //100mins
-    //    manager.getMidLand(9, config.keyString.test_cert, function (err, results) {
+    //    manager.getMidLand(9, config.keyString.test_normal, function (err, results) {
     //        if (err) {
     //            log.error(err);
     //        }
@@ -69,7 +69,7 @@ describe('unit test - controller manager', function() {
 
     //it('test mid temp', function (done) {
     //    this.timeout(60 * 1000 * 60 * 100); //100mins
-    //    manager.getMidTemp(9, config.keyString.test_cert, function (err, results) {
+    //    manager.getMidTemp(9, config.keyString.test_normal, function (err, results) {
     //        if (err) {
     //            log.error(err);
     //        }
@@ -79,7 +79,7 @@ describe('unit test - controller manager', function() {
 
     //it('test mid sea', function (done) {
     //    this.timeout(60 * 1000 * 60 * 100); //100mins
-    //    manager.getMidSea(9, config.keyString.test_cert, function (err, results) {
+    //    manager.getMidSea(9, config.keyString.test_normal, function (err, results) {
     //        if (err) {
     //            log.error(err);
     //        }

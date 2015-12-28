@@ -21,10 +21,10 @@ var convertGeocode = require('../utils/convertGeocode');
 var modelCurrent = require('../models/modelCurrent');
 var modelShort = require('../models/modelShort');
 var modelShortest = require('../models/modelShortest');
-//var modelMidForecast = require('../models/modelMidForecast');
-//var modelMidLand = require('../models/modelMidLand');
-//var modelMidSea = require('../models/modelMidSea');
-//var modelMidTemp = require('../models/modelMidTemp');
+var modelMidForecast = require('../models/modelMidForecast');
+var modelMidLand = require('../models/modelMidLand');
+var modelMidSea = require('../models/modelMidSea');
+var modelMidTemp = require('../models/modelMidTemp');
 //var keydata = require('../config/keydata');
 
 function Manager(){
@@ -1247,7 +1247,7 @@ Manager.prototype.dupMid = function(src, des){
         // land
         stringList = landString;
     } else {
-        log.error('It is not known object');
+        log.error(new Error('It is not known object'));
         log.error(src);
         return des;
     }
@@ -1370,6 +1370,25 @@ Manager.prototype.saveMid = function(db, newData, callback){
     return this;
 };
 
+Manager.prototype.saveMidForecast = function(newData, callback) {
+    this.saveMid(modelMidForecast, newData[0], callback);
+    return this;
+};
+
+Manager.prototype.saveMidLand = function(newData, callback) {
+    this.saveMid(modelMidLand, newData[0], callback);
+    return this;
+};
+
+Manager.prototype.saveMidTemp = function(newData, callback) {
+    this.saveMid(modelMidTemp, newData[0], callback);
+    return this;
+};
+
+Manager.prototype.saveMidSea = function(newData, callback) {
+    this.saveMid(modelMidSea, newData[0], callback);
+    return this;
+};
 
 Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, callback) {
     var self = this;
@@ -2102,7 +2121,6 @@ Manager.prototype.startTownData = function(){
     /**************************************************
      * TEST CODE : KEY change
      ***************************************************/
-    var key = '';
     //if(parseInt(dateString.time) < 800){
     //    key = keydata.keyString.sooyeon;
     //} else if(parseInt(dateString.time) < 1700) {
@@ -2111,7 +2129,8 @@ Manager.prototype.startTownData = function(){
     //    key = keydata.keyString.aleckim;
     //}
 
-    key = config.keyString.cert_key;
+    var server_key = config.keyString.cert_key;
+    var normal_key = config.keyString.normal;
 
 /*
     var loop = setInterval(function(){
@@ -2157,18 +2176,18 @@ Manager.prototype.startTownData = function(){
 */
      //get shortest forecast once every hours.
     self.loopTownShortestID = setInterval(function(){
-        self.getTownShortestData(9, key);
+        self.getTownShortestData(9, server_key);
     }, self.TIME_PERIOD.TOWN_SHORTEST);
 
     var timeToGetShort = 0;
     self.loopTownCurrentID = setInterval(function(){
         async.waterfall([
             function(callback){
-                self.getTownCurrentData(9, key, callback);
+                self.getTownCurrentData(9, server_key, callback);
             },
             function(callback){
                 if(timeToGetShort >= 2){
-                    self.getTownShortData(9, key, callback);
+                    self.getTownShortData(9, server_key, callback);
                 }
                 else{
                     callback(null);
@@ -2190,22 +2209,22 @@ Manager.prototype.startTownData = function(){
 
     // get middle range forecast once every 12 hours.
     self.loopMidForecastID = setInterval(function(){
-        self.getMidForecast(9, key);
+        self.getMidForecast(9, normal_key);
     }, self.TIME_PERIOD.MID_FORECAST);
 
     // get middle range land forecast once every 12 hours.
     self.loopMidLandID = setInterval(function(){
-        self.getMidLand(9, key);
+        self.getMidLand(9, normal_key);
     }, self.TIME_PERIOD.MID_LAND);
 
     // get middle range temperature once every 12 hours.
     self.loopMidTempID = setInterval(function(){
-        self.getMidTemp(9, key);
+        self.getMidTemp(9, normal_key);
     }, self.TIME_PERIOD.MID_TEMP);
 
     // get middle range sea forecast  once every 12 hours.
     self.loopMidSeaID = setInterval(function(){
-        self.getMidSea(9, key);
+        self.getMidSea(9, normal_key);
     }, self.TIME_PERIOD.MID_SEA);
 };
 
@@ -2289,10 +2308,13 @@ Manager.prototype.getSaveFunc = function(value) {
         case this.DATA_TYPE.TOWN_SHORT:
             return this.saveShort;
         case this.DATA_TYPE.MID_FORECAST:
+            return this.saveMidForecast;
         case this.DATA_TYPE.MID_LAND:
+            return this.saveMidLand;
         case this.DATA_TYPE.MID_TEMP:
+            return this.saveMidTemp;
         case this.DATA_TYPE.MID_SEA:
-            return this.saveMid;
+            return this.saveMidSea;
         default:
             log.error("Fail to find save func for ", this.getDataTypeName(value));
             return function(){};
