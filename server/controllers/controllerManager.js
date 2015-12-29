@@ -2357,7 +2357,7 @@ Manager.prototype.startTownData = function(){
                     self.getTownShortData(9, server_key, callback);
                 }
                 else{
-                    callback(null);
+                    callback();
                 }
             }
         ], function(err){
