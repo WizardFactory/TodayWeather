@@ -5,6 +5,7 @@ var mongoose = require('mongoose');
 
 var midLandSchema = mongoose.Schema({
     regId : String,
+    pubDate: String, //last data.date+data.time
     data : [{
         date: String,
         time: String,

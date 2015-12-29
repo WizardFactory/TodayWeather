@@ -29,6 +29,9 @@ describe('unit test - controller manager', function() {
     //it('test shortest appendData', function(done) {
     //    this.timeout(60*1000*60*100); //100mins
     //    manager.getTownShortestData(9, config.keyString.test_cert, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
     //        done();
     //    });
     //});
@@ -36,6 +39,9 @@ describe('unit test - controller manager', function() {
     //it('test current appendData', function(done) {
     //    this.timeout(60*1000*60*100); //100mins
     //    manager.getTownCurrentData(9, config.keyString.test_cert, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
     //        done();
     //    });
     //});
@@ -43,6 +49,9 @@ describe('unit test - controller manager', function() {
     //it('test short appendData', function (done) {
     //    this.timeout(60*1000*60*100); //100mins
     //    manager.getTownShortData(9, config.keyString.test_cert, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
     //        done();
     //    });
     //});
@@ -86,6 +95,7 @@ describe('unit test - controller manager', function() {
     //        done();
     //    });
     //});
+
     it('test stop manager', function () {
         manager.stopManager();
     });

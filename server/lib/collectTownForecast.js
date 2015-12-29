@@ -413,8 +413,9 @@ CollectData.prototype.organizeShortData = function(index, listData){
         var result = {};
         var insertItem;
         var template = {
-            date: '',
-            time: '',
+            pubDate: '', /*baseDate+baseTime*/
+            date: '',   /* fcstDate */
+            time: '',   /* fcstTime */
             mx: -1,
             my: -1,
             pop: -1,    /* 강수 확률 : 1% 단위, invalid : -1 */
@@ -464,6 +465,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
                     result = template;
                 }
 
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
                 result.time = item.fcstTime[0];
                 result.mx = parseInt(item.nx[0]);
@@ -510,7 +512,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
     var self = this;
     var listResult = [];
     var template = {
-        lastUpdateTime: '', /*baseDate+baseTime*/
+        pubDate: '', /*baseDate+baseTime*/
         date: '',
         time: '',
         mx: -1,
@@ -544,14 +546,14 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             if((item.fcstDate === undefined)
                 && (item.fcstTime === undefined)
                 && (item.fcstValue === undefined)){
-                log.error('organizeShortestData : There is not shortest forecast date');
+                log.error(new Error('There is not shortest forecast date'));
                 continue;
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
                 var result = getListResult(item.fcstDate[0], item.fcstTime[0]);
 
-                result.lastUpdateTime = item.baseDate[0] + item.baseTime[0];
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
                 result.time = item.fcstTime[0];
                 result.mx = parseInt(item.nx[0]);
@@ -562,7 +564,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'LGT') {result.lgt = parseInt(item.fcstValue[0]);}
                 else{
-                    log.error('organizeShortestData : Known property', item.category[0]);
+                    log.error(new Error('Known property '+item.category[0]));
                 }
             }
         }
@@ -575,7 +577,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeShortestData : failed data organized');
+        log.error(e);
     }
 };
 
@@ -592,6 +594,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         var result = {};
         var insertItem;
         var template = {
+            pubDate: '', /*baseDate+baseTime*/
             date: '',
             time: '',
             mx: -1,
@@ -641,6 +644,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                     result = template;
                 }
 
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.baseDate[0];
                 result.time = item.baseTime[0];
                 result.mx = parseInt(item.nx[0]);
@@ -691,6 +695,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             pointNumber: options.code,
@@ -736,6 +741,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
@@ -805,6 +811,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
@@ -880,6 +887,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
