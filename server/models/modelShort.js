@@ -9,9 +9,10 @@ var shortSchema = new mongoose.Schema({
         mx : Number,
         my : Number
     },
+    pubDate : String, //YYYYMMDDHHMM last baseDate+baseTime
     shortData : [{
-        date : String,
-        time : String,
+        date : String, //fcstDate
+        time : String, //fcstTime
         mx : {type : Number, default : -1},
         my : {type : Number, default : -1},
         pop: {type : Number, default : -1},

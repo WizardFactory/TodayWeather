@@ -8,6 +8,7 @@ var currentSchema = new mongoose.Schema({
         mx : Number,
         my : Number
     },
+    pubDate : String, //YYYYMMDDHHMM last baseDate+baseTime
     currentData : [{
         date: String, // get시 sort용
         time: String,
