@@ -21,11 +21,11 @@ var midRssKmaSchema = mongoose.Schema({
     midData: [
         {
             date: String, /* YYYYMMDD */
-            tmn: Number,
-            tmx: Number,
+            taMin: Number,
+            taMax: Number,
             wfAm: String,
             wfPm: String,
-            reliability: String, /* 높음, 보통, 낮음 */
+            reliability: String /* 높음, 보통, 낮음 */
         }
     ]
 });

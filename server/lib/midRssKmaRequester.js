@@ -80,15 +80,12 @@ MidRssKmaRequester.prototype.parseMidRssData = function(midDataList, dataList) {
 
         var efStr = self.parsetmEf(tmEf);
         var filteredList = midDataList.filter(function(data) {
-            if (data.date === efStr) {
-                return true;
-            }
-            return false;
+            return data.date === efStr;
         });
 
         var midData;
         if (!filteredList.length) {
-            midData = {date:efStr, tmn: data.tmn[0], tmx: data.tmx[0], wfAm: '', wfPm: '',
+            midData = {date:efStr, taMin: data.tmn[0], taMax: data.tmx[0], wfAm: '', wfPm: '',
                 reliability: data.reliability[0]};
         }
         else {
@@ -204,8 +201,30 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
                     log.info(midRssModel.toString());
                 }
                 else {
+                    if (midRssModel.pubDate === mid.pubDate) {
+                        log.info('regId ', mid.regId, ' already saved pubDate=', mid.pubDate);
+                        return cBack(undefined, mid.pubDate);
+                    }
                     midRssModel.pubDate = mid.pubDate;
-                    midRssModel.midData = mid.midData;
+
+                    //midRssModel.midData = mid.midData;
+                    //append new data
+                    var modelDataList = midRssModel.midData;
+                    mid.midData.forEach(function (midData) {
+                        for (var i=0; i<modelDataList.length; i++) {
+                            if (modelDataList[i].date === midData.date) {
+                                modelDataList[i].wfAm = midData.wfAm;
+                                modelDataList[i].wfPm = midData.wfPm;
+                                modelDataList[i].taMin = midData.taMin;
+                                modelDataList[i].taMax = midData.taMax;
+                                modelDataList[i].reliability = midData.reliability;
+                                break;
+                            }
+                        }
+                        if (i === modelDataList.length) {
+                            modelDataList.push(midData);
+                        }
+                    });
                 }
                 midRssModel.save(function (err) {
                     cBack(err, midRssModel.pubDate);
