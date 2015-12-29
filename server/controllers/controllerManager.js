@@ -2071,7 +2071,7 @@ Manager.prototype.startTownData = function(){
                     self.getTownShortData(9, key, callback);
                 }
                 else{
-                    callback(null);
+                    callback();
                 }
             }
         ], function(err, result){
