@@ -79,15 +79,16 @@ global.landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
 global.manager = new controllerManager();
 global.townRss = new controllerShortRss();
 
-if (config.mode === 'gather' || config.mode === 'local') {
-    manager.startManager();
-    townRss.StartShortRss();
-}
 
 var keyBox = require('./config/config').keyString;
 
-var midRssKmaRequester = new (require('./lib/midRssKmaRequester'))();
-midRssKmaRequester.start();
+if (config.mode === 'gather' || config.mode === 'local') {
+    manager.startManager();
+    townRss.StartShortRss();
+
+    var midRssKmaRequester = new (require('./lib/midRssKmaRequester'))();
+    midRssKmaRequester.start();
+}
 
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);

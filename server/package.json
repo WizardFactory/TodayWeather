@@ -26,7 +26,7 @@
     "express": "~4.13.0",
     "jade": "~1.11.0",
     "jwt-simple": "^0.3.0",
-    "mongoose": "^4.1.8",
+    "mongoose": "^4.3.4",
     "morgan": "~1.6.1",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
