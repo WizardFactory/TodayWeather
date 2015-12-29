@@ -401,17 +401,42 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     });
 };
 
+CollectData.prototype._createOrFindResult = function(list, template, date, time) {
+    for (var i=0; i<list.length; i+=1) {
+        if (list[i].date === date && list[i].time === time) {
+            return list[i];
+        }
+    }
+    list.push(Object.create(template));
+    return list[list.length-1];
+};
+
+CollectData.prototype._sortByDateTime = function (a, b) {
+    if(a.date > b.date){
+        return 1;
+    }
+    else if(a.date < b.date){
+        return -1;
+    }
+    else if(a.date === b.date){
+        if (a.time > b.time) {
+            return 1;
+        }
+        else if (a.time < b.time){
+            return -1;
+        }
+    }
+    return 0;
+};
+
 CollectData.prototype.organizeShortData = function(index, listData){
     var self = this;
     var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
-    //log.info('shortData count : ' + listItem.length);
-
     try{
-        var result = {};
-        var insertItem;
+        var listItem = listData.response.body[0].items[0].item;
+        //log.info('shortData count : ' + listItem.length);
         var template = {
             pubDate: '', /*baseDate+baseTime*/
             date: '',   /* fcstDate */
@@ -440,30 +465,13 @@ CollectData.prototype.organizeShortData = function(index, listData){
             if((item.fcstDate === undefined)
                 && (item.fcstTime === undefined)
                 && (item.fcstValue === undefined)){
-                log.error('organizeShortData : There is not forecast date');
+                log.error(new Error('There is not forecast date'));
                 continue;
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
                 //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('start collecting items');
-
-                }
-                else if(result.date === item.fcstDate[0] && result.time === item.fcstTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('changed date --> push it to list and reset result');
-                    //log.info(result);
-                    insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
+                var result = self._createOrFindResult(listResult, template, item.fcstDate[0], item.fcstTime[0]);
 
                 result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
@@ -486,15 +494,12 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 else if(item.category[0] === 'VEC') {result.vec = parseInt(item.fcstValue[0]);}
                 else if(item.category[0] === 'WSD') {result.wsd = parseInt(item.fcstValue[0]);}
                 else{
-                    log.error('organizeShortData : Known property', item.category[0]);
+                    log.error(new Error('Known property', item.category[0]));
                 }
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
-        }
+        listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
@@ -525,19 +530,6 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 
     //log.info('shortestData count : ' + listItem.length);
 
-    function getListResult(fcsDate, fsctime) {
-        var result;
-        for (var i=0; i<listResult.length; i+=1) {
-            result = listResult[i];
-            if (result.date === fcsDate && result.time === fsctime) {
-                return result;
-            }
-        }
-        result = Object.create(template);
-        listResult.push(result);
-        return listResult[listResult.length-1];
-    }
-
     try{
         var listItem = listData.response.body[0].items[0].item;
 
@@ -551,7 +543,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
-                var result = getListResult(item.fcstDate[0], item.fcstTime[0]);
+                var result = self._createOrFindResult(listResult, template, item.fcstDate[0], item.fcstTime[0]);
 
                 result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
@@ -569,10 +561,12 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
             }
         }
 
-        log.silly('organizeShortestData result count : ', listResult.length);
-        for(i=0 ; i<listResult.length ; i++){
-            log.silly(listResult[i]);
-        }
+        listResult.sort(self._sortByDateTime);
+
+        //log.silly('organizeShortestData result count : ', listResult.length);
+        //for(i=0 ; i<listResult.length ; i++){
+        //    log.silly(listResult[i]);
+        //}
 
         self.emit('recvData', index, listResult);
     }
@@ -584,15 +578,12 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
 CollectData.prototype.organizeCurrentData = function(index, listData) {
     var self = this;
     var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
-    //log.info('currentData count : ' + listItem.length);
-    //log.info(listItem);
-
     try{
-        var result = {};
-        var insertItem;
+        var listItem = listData.response.body[0].items[0].item;
+        //log.info('currentData count : ' + listItem.length);
+        //log.info(listItem);
         var template = {
             pubDate: '', /*baseDate+baseTime*/
             date: '',
@@ -623,27 +614,9 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                 continue;
             }
 
-            if((item.baseDate[0].length > 1) && (item.baseTime[0].length > 1)){
-                //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('organizeCurrentData : start collecting items');
+            if((item.baseDate[0].length > 1) && (item.baseTime[0].length > 1)) {
 
-                }
-                else if(result.date === item.baseDate[0] && result.time === item.baseTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('organizeCurrentData : same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('organizeCurrentData : changed date --> push it to list and reset result');
-                    //log.info(result);
-                    insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
-
+                var result = self._createOrFindResult(listResult, template, item.baseDate[0], item.baseTime[0]);
                 result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.baseDate[0];
                 result.time = item.baseTime[0];
@@ -666,11 +639,6 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
-        }
-
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
         //    log.info(listResult[i]);
@@ -680,6 +648,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
     }
     catch(e){
         log.error('Error!! organizeCurrentData : failed data organized');
+        log.error(e);
     }
 };
 

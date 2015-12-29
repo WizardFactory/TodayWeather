@@ -353,6 +353,12 @@ var getCoord = function(region, city, town, cb){
         });
     }catch(e){
         log.error(meta);
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
     }
 
     return {}
@@ -454,6 +460,12 @@ var getTownDataFromDB = function(db, indicator, cb){
         });
     }catch(e){
         log.error(meta);
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
     }
 
     return [];
@@ -526,6 +538,12 @@ var getMidDataFromDB = function(db, indicator, cb){
         });
     }catch(e){
         log.error(meta);
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
     }
 
     return [];
@@ -567,6 +585,11 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                             tmp = currentList[index + 1];
                         }else{
                             tmp = currentList[index - 1];
+                        }
+
+                        if (tmp === undefined || !tmp.hasOwnProperty('sky')) {
+                            log.warn(new Error('current is undefined or empty object'));
+                            return;
                         }
 
                         //log.info(tmp);
@@ -617,6 +640,12 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
     }
     catch(e){
         log.error(meta);
+        if (cb) {
+            cb(e)
+        }
+        else {
+            log.error(e);
+        }
         return [];
     }
 
@@ -701,6 +730,12 @@ var mergeShortWithRSS = function(shortList, rssList, cb){
     }
     catch(e) {
         log.error(meta);
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
         return [];
     }
 
@@ -797,6 +832,12 @@ var mergeLandWithTemp = function(landList, tempList, cb){
     } catch(e){
         log.error('> something wrong');
         log.error(meta);
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
         return [];
     }
 
@@ -823,6 +864,7 @@ var getShort = function(req, res, next){
             if (err) {
                 log.error('> getShort : failed to get data from DB');
                 log.error(meta);
+                log.error(err);
                 return;
             }
 
@@ -1042,6 +1084,10 @@ var getShort = function(req, res, next){
                     //shortList.forEach(function(item, index){
                     //    log.info('routeS>', item);
                     //});
+
+                    //req.short = shortList;
+                    //return next();
+
                     getTownDataFromDB(modelCurrent, coord, function(err, currentList){
                         if (err) {
                             log.error(err);
@@ -1092,6 +1138,7 @@ var getShort = function(req, res, next){
             });
         } catch(e){
             log.error('ERROE>>', meta);
+            log.error(e);
             next();
         }
     }
@@ -1175,6 +1222,7 @@ var getShortest = function(req, res, next){
             });
         } catch(e){
             log.error('ERROE>>', meta);
+            log.error(e);
             next();
         }
     }
@@ -1293,6 +1341,7 @@ var getCurrent = function(req, res, next){
             });
         } catch(e){
             log.error('ERROE>>', meta);
+            log.error(e);
             next();
         }
     }
@@ -1479,6 +1528,7 @@ var getMid = function(req, res, next){
             });
         }catch(e){
             log.error('ERROE>>', meta);
+            log.error(e);
             next();
         }
     }
@@ -1674,7 +1724,7 @@ router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req,
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss, getLifeIndexKma, getKeco],
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss ],
             function(req, res) {
     var meta = {};
 
@@ -1727,7 +1777,7 @@ router.get('/:region/:city/:town/mid', [getMid, getMidRss], function (req, res) 
     res.json(result);
 });
 
-router.get('/:region/:city/:town/short', [getShort, getLifeIndexKma], function(req, res) {
+router.get('/:region/:city/:town/short', [getShort], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1753,7 +1803,7 @@ router.get('/:region/:city/:town/short', [getShort, getLifeIndexKma], function(r
     res.json(result);
 });
 
-router.get('/:region/:city/:town/shortest', getShortest, function(req, res) {
+router.get('/:region/:city/:town/shortest', [getShortest], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -1779,7 +1829,7 @@ router.get('/:region/:city/:town/shortest', getShortest, function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city/:town/current', [getCurrent, getKeco], function(req, res) {
+router.get('/:region/:city/:town/current', [getCurrent], function(req, res) {
     var meta = {};
 
     var result = {};

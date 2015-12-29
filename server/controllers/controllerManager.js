@@ -40,6 +40,7 @@ function Manager(){
         MID_SEA: (1000*60*60*12)
     };
 
+    self.saveOnlyLastOne = true;
     self.MAX_SHORT_COUNT = 60;
     self.MAX_CURRENT_COUNT = 60;
     self.MAX_SHORTEST_COUNT = 240; //24 hours * 10 days
@@ -900,63 +901,68 @@ Manager.prototype.saveShort = function(newData, callback){
 
             list.forEach(function(dbShortList){
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('S> newItem : ', newItem);
-                    //log.info('S> dbshortlist count : ', dbShortList.shortData.length);
-                    //for(var i in dbShortList.shortData){
-                    for(var i=0 ; i < dbShortList.shortData.length ; i++){
-                        //log.info(i,'>', dbShortList.shortData[i].date, '|', dbShortList.shortData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbShortList.shortData[i].date, time:dbShortList.shortData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('S> over write :', newItem);
-                            //dbShortList.shortData[i] = newItem;
-                            isNew = 0;
-                            dbShortList.shortData[i].pop = newItem.pop;
-                            dbShortList.shortData[i].pty = newItem.pty;
-                            dbShortList.shortData[i].r06 = newItem.r06;
-                            dbShortList.shortData[i].reh = newItem.reh;
-                            dbShortList.shortData[i].s06 = newItem.s06;
-                            dbShortList.shortData[i].sky = newItem.sky;
-                            dbShortList.shortData[i].t3h = newItem.t3h;
-                            dbShortList.shortData[i].tmn = newItem.tmn;
-                            dbShortList.shortData[i].tmx = newItem.tmx;
-                            dbShortList.shortData[i].uuu = newItem.uuu;
-                            dbShortList.shortData[i].vvv = newItem.vvv;
-                            dbShortList.shortData[i].wav = newItem.wav;
-                            dbShortList.shortData[i].vec = newItem.vec;
-                            dbShortList.shortData[i].wsd = newItem.wsd;
-                            break;
+                if (self.saveOnlyLastOne) {
+                    dbShortList.shortData = newData;
+                }
+                else {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('S> newItem : ', newItem);
+                        //log.info('S> dbshortlist count : ', dbShortList.shortData.length);
+                        //for(var i in dbShortList.shortData){
+                        for(var i=0 ; i < dbShortList.shortData.length ; i++){
+                            //log.info(i,'>', dbShortList.shortData[i].date, '|', dbShortList.shortData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbShortList.shortData[i].date, time:dbShortList.shortData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('S> over write :', newItem);
+                                //dbShortList.shortData[i] = newItem;
+                                isNew = 0;
+                                dbShortList.shortData[i].pop = newItem.pop;
+                                dbShortList.shortData[i].pty = newItem.pty;
+                                dbShortList.shortData[i].r06 = newItem.r06;
+                                dbShortList.shortData[i].reh = newItem.reh;
+                                dbShortList.shortData[i].s06 = newItem.s06;
+                                dbShortList.shortData[i].sky = newItem.sky;
+                                dbShortList.shortData[i].t3h = newItem.t3h;
+                                dbShortList.shortData[i].tmn = newItem.tmn;
+                                dbShortList.shortData[i].tmx = newItem.tmx;
+                                dbShortList.shortData[i].uuu = newItem.uuu;
+                                dbShortList.shortData[i].vvv = newItem.vvv;
+                                dbShortList.shortData[i].wav = newItem.wav;
+                                dbShortList.shortData[i].vec = newItem.vec;
+                                dbShortList.shortData[i].wsd = newItem.wsd;
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('push data :', newItem);
-                        dbShortList.shortData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //log.info('push data :', newItem);
+                            dbShortList.shortData.push(newItem);
+                        }
+                    });
 
-                dbShortList.shortData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbShortList.shortData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                    dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                    if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+                        dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                    }
                 }
 
                 dbShortList.pubDate = pubDate;
@@ -1026,58 +1032,63 @@ Manager.prototype.saveCurrent = function(newData, callback){
 
             list.forEach(function(dbCurrentList){
                 //log.info('C> coord :', dbCurrentList.mCoord.mx, dbCurrentList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('C> newItem : ', newItem);
-                    //log.info('C> dbCurrentList count : ', dbCurrentList.currentData.length);
-                    //for(var i in dbCurrentList.currentData){
-                    for(var i=0 ; i < dbCurrentList.currentData.length ; i++){
-                        //log.info(i,'>', dbCurrentList.currentData[i].date, '|', dbCurrentList.currentData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbCurrentList.currentData[i].date, time:dbCurrentList.currentData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('C> over write :', newItem);
-                            dbCurrentList.currentData[i].t1h = newItem.t1h;
-                            dbCurrentList.currentData[i].rn1 = newItem.rn1;
-                            dbCurrentList.currentData[i].sky = newItem.sky;
-                            dbCurrentList.currentData[i].uuu = newItem.uuu;
-                            dbCurrentList.currentData[i].vvv = newItem.vvv;
-                            dbCurrentList.currentData[i].reh = newItem.reh;
-                            dbCurrentList.currentData[i].pty = newItem.pty;
-                            dbCurrentList.currentData[i].lgt = newItem.lgt;
-                            dbCurrentList.currentData[i].vec = newItem.vec;
-                            dbCurrentList.currentData[i].wsd = newItem.wsd;
-                            isNew = 0;
-                            break;
+                if (self.saveOnlyLastOne) {
+                    dbCurrentList.currentData = newData;
+                }
+                else {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('C> newItem : ', newItem);
+                        //log.info('C> dbCurrentList count : ', dbCurrentList.currentData.length);
+                        //for(var i in dbCurrentList.currentData){
+                        for(var i=0 ; i < dbCurrentList.currentData.length ; i++){
+                            //log.info(i,'>', dbCurrentList.currentData[i].date, '|', dbCurrentList.currentData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbCurrentList.currentData[i].date, time:dbCurrentList.currentData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('C> over write :', newItem);
+                                dbCurrentList.currentData[i].t1h = newItem.t1h;
+                                dbCurrentList.currentData[i].rn1 = newItem.rn1;
+                                dbCurrentList.currentData[i].sky = newItem.sky;
+                                dbCurrentList.currentData[i].uuu = newItem.uuu;
+                                dbCurrentList.currentData[i].vvv = newItem.vvv;
+                                dbCurrentList.currentData[i].reh = newItem.reh;
+                                dbCurrentList.currentData[i].pty = newItem.pty;
+                                dbCurrentList.currentData[i].lgt = newItem.lgt;
+                                dbCurrentList.currentData[i].vec = newItem.vec;
+                                dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                isNew = 0;
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('C> push data :', newItem);
-                        dbCurrentList.currentData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //log.info('C> push data :', newItem);
+                            dbCurrentList.currentData.push(newItem);
+                        }
+                    });
 
-                dbCurrentList.currentData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbCurrentList.currentData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
-                    dbCurrentList.currentData = dbCurrentList.currentData.slice((dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                    if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
+                        dbCurrentList.currentData = dbCurrentList.currentData.slice((dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                    }
                 }
 
                 dbCurrentList.pubDate = pubDate;
@@ -1152,52 +1163,57 @@ Manager.prototype.saveShortest = function(newData, callback){
 
             list.forEach(function(dbShortestList){
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('ST> newItem : ', newItem);
-                    //log.info('ST> dbShortestList count : ', dbShortestList.shortestData.length);
-                    //for(var i in dbShortestList.shortestData){
-                    for(var i=0 ; i < dbShortestList.shortestData.length ; i++){
-                        //log.info(i,'>', dbShortestList.shortestData[i].date, '|', dbShortestList.shortestData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('ST> over write :', newItem);
-                            dbShortestList.shortestData[i].pty = newItem.pty;
-                            dbShortestList.shortestData[i].rn1 = newItem.rn1;
-                            dbShortestList.shortestData[i].sky = newItem.sky;
-                            dbShortestList.shortestData[i].lgt = newItem.lgt;
-                            isNew = 0;
-                            break;
+                if (self.saveOnlyLastOne) {
+                    dbShortestList.shortestData = newData;
+                }
+                else {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('ST> newItem : ', newItem);
+                        //log.info('ST> dbShortestList count : ', dbShortestList.shortestData.length);
+                        //for(var i in dbShortestList.shortestData){
+                        for(var i=0 ; i < dbShortestList.shortestData.length ; i++){
+                            //log.info(i,'>', dbShortestList.shortestData[i].date, '|', dbShortestList.shortestData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('ST> over write :', newItem);
+                                dbShortestList.shortestData[i].pty = newItem.pty;
+                                dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                                dbShortestList.shortestData[i].sky = newItem.sky;
+                                dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                isNew = 0;
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('ST> push data :', newItem);
-                        dbShortestList.shortestData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //log.info('ST> push data :', newItem);
+                            dbShortestList.shortestData.push(newItem);
+                        }
+                    });
 
-                dbShortestList.shortestData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbShortestList.shortestData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbShortestList.shortestData.length > self.MAX_SHORTEST_COUNT){
-                    dbShortestList.shortestData = dbShortestList.shortestData.slice((dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                    if(dbShortestList.shortestData.length > self.MAX_SHORTEST_COUNT){
+                        dbShortestList.shortestData = dbShortestList.shortestData.slice((dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                    }
                 }
 
                 dbShortestList.pubDate = pubDate;
@@ -1321,47 +1337,53 @@ Manager.prototype.saveMid = function(db, newData, callback){
             }
 
             list.forEach(function(dbMidList){
-                var isNew = 1;
-                for(var i=0 ; i < dbMidList.data.length ; i++){
-                    var comparedDate = self.compareDate(
-                        {date:dbMidList.data[i].date, time:dbMidList.data[i].time},
-                        {date:newData.date, time:newData.time}
-                    );
+                if (self.saveOnlyLastOne) {
+                    dbMidList.data = [newData];
+                }
+                else {
+                    var isNew = 1;
+                    for(var i=0 ; i < dbMidList.data.length ; i++){
+                        var comparedDate = self.compareDate(
+                            {date:dbMidList.data[i].date, time:dbMidList.data[i].time},
+                            {date:newData.date, time:newData.time}
+                        );
 
-                    // If there is the same date in the DB, it would be replaced by new data.
-                    if(comparedDate === 0){
-                        // over write
-                        dbMidList.data[i] = self.dupMid(newData, dbMidList.data[i]);
-                        //log.info('overwrite :', newData);
-                        isNew = 0;
-                        break;
+                        // If there is the same date in the DB, it would be replaced by new data.
+                        if(comparedDate === 0){
+                            // over write
+                            dbMidList.data[i] = self.dupMid(newData, dbMidList.data[i]);
+                            //log.info('overwrite :', newData);
+                            isNew = 0;
+                            break;
+                        }
+                    }
+
+                    if(isNew){
+                        //log.info('M> push data :', newItem);
+                        dbMidList.data.push(newData);
+                    }
+
+                    dbMidList.data.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
+
+                    if(dbMidList.data.length > self.MAX_MID_COUNT){
+                        dbMidList.data = dbMidList.data.slice((dbMidList.data.length - self.MAX_MID_COUNT));
                     }
                 }
 
-                if(isNew){
-                    //log.info('M> push data :', newItem);
-                    dbMidList.data.push(newData);
-                }
-
-                dbMidList.data.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
-
-                if(dbMidList.data.length > self.MAX_MID_COUNT){
-                    dbMidList.data = dbMidList.data.slice((dbMidList.data.length - self.MAX_MID_COUNT));
-                }
                 dbMidList.pubDate = pubDate;
                 dbMidList.save(function(err){
                     if(err){
@@ -2340,8 +2362,17 @@ Manager.prototype.startTownData = function(){
 
     self.getMidForecast(9, key);
     self.getMidSea(9, key);
-*/
-     //get shortest forecast once every hours.
+ */
+
+    self.getMidTemp(9, normal_key);
+    self.getMidLand(9, normal_key);
+    self.getTownCurrentData(9, server_key);
+    self.getTownShortData(9, server_key);
+    self.getTownShortestData(9, server_key);
+    self.getMidForecast(9, normal_key);
+    self.getMidSea(9, normal_key);
+
+    //get shortest forecast once every hours.
     self.loopTownShortestID = setInterval(function(){
         self.getTownShortestData(9, server_key);
     }, self.TIME_PERIOD.TOWN_SHORTEST);
@@ -2352,7 +2383,7 @@ Manager.prototype.startTownData = function(){
             function(callback){
                 self.getTownCurrentData(9, server_key, callback);
             },
-            function(callback){
+            function(data, callback){
                 if(timeToGetShort >= 2){
                     self.getTownShortData(9, server_key, callback);
                 }
