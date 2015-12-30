@@ -27,6 +27,8 @@ var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 //var keydata = require('../config/keydata');
 
+var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
+
 function Manager(){
     var self = this;
 
@@ -45,6 +47,8 @@ function Manager(){
     self.MAX_CURRENT_COUNT = 60;
     self.MAX_SHORTEST_COUNT = 240; //24 hours * 10 days
     self.MAX_MID_COUNT = 20;
+
+    self.asyncTasks = [];
 
     /****************************************************************************
      *   THIS IS FOR TEST.
@@ -2295,202 +2299,6 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
     return this;
 };
 
-Manager.prototype._setIntervalForGather = function () {
-    var self = this;
-    //get shortest forecast once every hours.
-    log.info('set Interval for gather !!');
-
-    self.loopTownShortestID = setInterval(function(){
-        self.getTownShortestData(9, server_key);
-    }, self.TIME_PERIOD.TOWN_SHORTEST);
-
-    var timeToGetShort = 0;
-    self.loopTownCurrentID = setInterval(function(){
-        async.waterfall([
-            function(callback){
-                self.getTownCurrentData(9, server_key, callback);
-            },
-            function(data, callback){
-                if(timeToGetShort >= 2){
-                    self.getTownShortData(9, server_key, callback);
-                }
-                else{
-                    callback(null);
-                }
-            }
-        ], function(err){
-            if (err) {
-                log.error(err);
-            }
-            log.info('Received Current');
-            if(timeToGetShort >= 2){
-                log.info('Received Short');
-                timeToGetShort = 0;
-            }else{
-                timeToGetShort++;
-            }
-        });
-    }, self.TIME_PERIOD.TOWN_CURRENT);
-
-    // get middle range forecast once every 12 hours.
-    self.loopMidForecastID = setInterval(function(){
-        self.getMidForecast(9, normal_key);
-    }, self.TIME_PERIOD.MID_FORECAST);
-
-    // get middle range land forecast once every 12 hours.
-    self.loopMidLandID = setInterval(function(){
-        self.getMidLand(9, normal_key);
-    }, self.TIME_PERIOD.MID_LAND);
-
-    // get middle range temperature once every 12 hours.
-    self.loopMidTempID = setInterval(function(){
-        self.getMidTemp(9, normal_key);
-    }, self.TIME_PERIOD.MID_TEMP);
-
-    // get middle range sea forecast  once every 12 hours.
-    self.loopMidSeaID = setInterval(function(){
-        self.getMidSea(9, normal_key);
-    }, self.TIME_PERIOD.MID_SEA);
-};
-
-Manager.prototype.startTownData = function(){
-    var self = this;
-    //var periodValue = 30000;
-    //var midPeriod = 15000;
-    //var times = 0;
-    //var midTimes = 11;
-    //var curTimes = 24;
-    //if(config.mode === 'gather'){
-    //    periodValue = 5 * 60 * 1000;
-    //    midPeriod = 30 * 1000;
-    //}
-
-    /**************************************************
-     * TEST CODE : KEY change
-     ***************************************************/
-    //if(parseInt(dateString.time) < 800){
-    //    key = keydata.keyString.sooyeon;
-    //} else if(parseInt(dateString.time) < 1700) {
-    //    key = keydata.keyString.pokers11;
-    //} else {
-    //    key = keydata.keyString.aleckim;
-    //}
-
-    var server_key = config.keyString.cert_key;
-    var normal_key = config.keyString.normal;
-
-/*
-    var loop = setInterval(function(){
-        if(times === 3){
-            self.getTownShortData(9, key);
-        }else{
-            self.getTownShortData(-45 + (24*times), key);
-        }
-        times+= 1;
-
-        if(times > 3){
-            clearInterval(loop);
-        }
-    }, periodValue);
-
-    self.getTownShortestData(9, key);
-
-    var curloop = setInterval(function(){
-
-        self.getTownCurrentData(9 - curTimes, key);
-
-        curTimes -= 1;
-
-        if(curTimes < 0){
-            clearInterval(curloop);
-        }
-    }, (periodValue/2));
-    //self.getTownCurrentData(9, key);
-
-    var midLoop = setInterval(function(){
-        log.info('mid : ', midTimes,(midTimes * 24));
-        self.getMidLand(9 - (midTimes * 24), key);
-        self.getMidTemp(9 - (midTimes * 24), key);
-        midTimes-=1;
-
-        if(midTimes < 0 ){
-            clearInterval(midLoop);
-        }
-    }, midPeriod);
-
-    self.getMidForecast(9, key);
-    self.getMidSea(9, key);
- */
-
-    async.waterfall([
-            function(callback){
-                self.getTownShortData(9, server_key, callback);
-            },
-            function(data, callback){
-                self.getTownCurrentData(9, server_key, callback);
-            },
-            function(data, callback){
-                self.getMidTemp(9, normal_key, callback);
-            },
-            function(data, callback){
-                self.getMidLand(9, normal_key, callback);
-            },
-            function(data, callback){
-                self.getTownShortestData(9, server_key, callback);
-            }],
-        function(err) {
-            if (err) {
-                log.error(err);
-            }
-            log.info('Updated latest data');
-            var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
-            midRssKmaRequester.start();
-
-            townRss.StartShortRss();
-
-            self._setIntervalForGather();
-        });
-};
-
-Manager.prototype.stopTownData = function(){
-    var self = this;
-
-    if(self.loopTownShortID !== undefined){
-        clearInterval(self.loopTownShortID);
-        self.loopTownShortID = undefined;
-    }
-
-    if(self.loopTownShortestID !== undefined){
-        clearInterval(self.loopTownShortestID);
-        self.loopTownShortestID = undefined;
-    }
-
-    if(self.loopTownCurrentID !== undefined){
-        clearInterval(self.loopTownCurrentID);
-        self.loopTownCurrentID = undefined;
-    }
-
-    if(self.loopMidForecastID !== undefined){
-        clearInterval(self.loopMidForecastID);
-        self.loopMidForecastID = undefined;
-    }
-
-    if(self.loopMidLandID !== undefined){
-        clearInterval(self.loopMidLandID);
-        self.loopMidLandID = undefined;
-    }
-
-    if(self.loopMidTempID !== undefined){
-        clearInterval(self.loopMidTempID);
-        self.loopMidTempID = undefined;
-    }
-
-    if(self.loopMidSeaID !== undefined){
-        clearInterval(self.loopMidSeaID);
-        self.loopMidSeaID = undefined;
-    }
-};
-
 /**
  * it needs to sync with collectTownForecast DATA_TYPE
  * @type {Object}
@@ -2545,16 +2353,115 @@ Manager.prototype.getSaveFunc = function(value) {
     }
 };
 
+Manager.prototype.task = function(callback) {
+    var self = this;
+    var tempTasks = [];
+
+    while(self.asyncTasks.length) {
+        tempTasks.push(self.asyncTasks.pop());
+    }
+
+    log.info('start tasks counts '+tempTasks.length);
+
+    async.series(tempTasks, function (err) { 
+        if(err) { 
+            log.error(err); 
+        }  
+        log.info("Finished task counts:"+tempTasks.length+ " "+ new Date());
+        if (callback) {
+            callback(err);
+        }
+        else {
+            return setTimeout(function() {
+                self.task();
+            }, 1000*30); //30 secs
+        }
+    });
+};
+
+Manager.prototype.checkTimeAndPushTask = function (putAll) {
+    var self = this;
+    var time = (new Date()).getUTCMinutes();
+
+    var server_key = config.keyString.cert_key;
+    var normal_key = config.keyString.normal;
+
+    log.info('check time and push task');
+
+    if (time === 1 || putAll) {
+        //short rss
+        log.info('push short rss');
+        self.asyncTasks.push(function (callback) {
+            //need to update sync
+            townRss.mainTask();
+            setTimeout(function () {
+                callback(undefined, []);
+            }, 1000*60); //1min
+        });
+        log.info('push mid rss');
+        self.asyncTasks.push(function (callback) {
+            midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
+                callback(err, []);
+            });
+        });
+    }
+
+    if (time === 2 || putAll) {
+        log.info('push MidTemp');
+        self.asyncTasks.push(function (callback) {
+            self.getMidTemp(9, normal_key, callback);
+        });
+        log.info('push MidLand');
+        self.asyncTasks.push(function (callback) {
+            self.getMidLand(9, normal_key, callback);
+        });
+        log.info('push MidForecast');
+        self.asyncTasks.push(function (callback) {
+            self.getMidForecast(9, normal_key, callback);
+        });
+        log.info('push MidSea');
+        self.asyncTasks.push(function (callback) {
+            self.getMidSea(9, normal_key, callback);
+        });
+    }
+
+    if (time === 30 || putAll) {
+        log.info('push Short');
+        self.asyncTasks.push(function (callback) {
+            self.getTownShortData(9, server_key, callback);
+        });
+    }
+
+    if (time === 40 || putAll) {
+        log.info('push Shortest');
+        self.asyncTasks.push(function (callback) {
+            self.getTownShortestData(9, server_key, callback);
+        });
+        log.info('push Current');
+        self.asyncTasks.push(function (callback) {
+            self.getTownCurrentData(9, server_key, callback);
+        });
+    }
+
+    log.info('wait '+self.asyncTasks.length+' tasks');
+};
+
 Manager.prototype.startManager = function(){
     var self = this;
 
-    self.startTownData();
+    midRssKmaRequester.setNextGetTime(new Date());
+    townRss.loadList();
+
+    self.checkTimeAndPushTask(true);
+    self.task();
+    setInterval(function() {
+       self.checkTimeAndPushTask(false) ;
+    }, 1000*60);
 };
 
 Manager.prototype.stopManager = function(){
-    var self = this;
-
-    self.stopTownData();
+    //var self = this;
+    //self.stopTownData();
 };
 
 module.exports = Manager;
