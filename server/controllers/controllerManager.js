@@ -1647,22 +1647,22 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
                 if (srcList.length === 0) {
                     log.info('S> All data was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
-                    return this;
+                    return;
                 }
                 else {
                     log.info('S> srcList length=', srcList.length);
                 }
 
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 30, function (err, results) {
+                    log.info('S> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err)  {
                         return log.error(err);
                     }
-                    log.info('S> save OK');
                 });
             });
             return this;
@@ -1754,7 +1754,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
                 if (srcList.length === 0) {
                     log.info('ST> All shortest was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
                     return;
                 }
@@ -1764,13 +1764,13 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 
                 //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 30, function (err, results) {
+                    log.info('ST> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err)  {
                         return log.error(err);
                     }
-                    log.info('ST> save OK');
                 });
             });
 
@@ -1857,7 +1857,7 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 if (srcList.length === 0) {
                     log.info('C> All current was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
                     return;
                 }
@@ -1866,13 +1866,13 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 }
 
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 30, function (err, results) {
+                    log.info('C> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err) {
                         return log.error(err);
                     }
-                    log.info('C> save OK');
                 });
             });
             return this;
@@ -1946,7 +1946,7 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('MF> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -1955,13 +1955,13 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 10, function (err, results) {
+                log.info('MF> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('MF> save OK');
             });
         });
     }
@@ -2059,7 +2059,7 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('ML> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2068,13 +2068,13 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 10, function (err, results) {
+                log.info('ML> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('ML> save OK');
             });
         });
     }
@@ -2175,7 +2175,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             if (srcList.length === 0) {
                 log.info('MT> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2184,13 +2184,13 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 10, function (err, results) {
+                log.info('MT> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('MT> save OK');
             });
         });
     }
@@ -2273,7 +2273,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('MS> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2282,17 +2282,75 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 10, function (err, results) {
+                log.info('MD> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err)  {
                     return log.error(err);
                 }
-                log.info('MD> save OK');
             });
         });
     }
     return this;
+};
+
+Manager.prototype._setIntervalForGather = function () {
+    var self = this;
+    //get shortest forecast once every hours.
+    log.info('set Interval for gather !!');
+
+    self.loopTownShortestID = setInterval(function(){
+        self.getTownShortestData(9, server_key);
+    }, self.TIME_PERIOD.TOWN_SHORTEST);
+
+    var timeToGetShort = 0;
+    self.loopTownCurrentID = setInterval(function(){
+        async.waterfall([
+            function(callback){
+                self.getTownCurrentData(9, server_key, callback);
+            },
+            function(data, callback){
+                if(timeToGetShort >= 2){
+                    self.getTownShortData(9, server_key, callback);
+                }
+                else{
+                    callback(null);
+                }
+            }
+        ], function(err){
+            if (err) {
+                log.error(err);
+            }
+            log.info('Received Current');
+            if(timeToGetShort >= 2){
+                log.info('Received Short');
+                timeToGetShort = 0;
+            }else{
+                timeToGetShort++;
+            }
+        });
+    }, self.TIME_PERIOD.TOWN_CURRENT);
+
+    // get middle range forecast once every 12 hours.
+    self.loopMidForecastID = setInterval(function(){
+        self.getMidForecast(9, normal_key);
+    }, self.TIME_PERIOD.MID_FORECAST);
+
+    // get middle range land forecast once every 12 hours.
+    self.loopMidLandID = setInterval(function(){
+        self.getMidLand(9, normal_key);
+    }, self.TIME_PERIOD.MID_LAND);
+
+    // get middle range temperature once every 12 hours.
+    self.loopMidTempID = setInterval(function(){
+        self.getMidTemp(9, normal_key);
+    }, self.TIME_PERIOD.MID_TEMP);
+
+    // get middle range sea forecast  once every 12 hours.
+    self.loopMidSeaID = setInterval(function(){
+        self.getMidSea(9, normal_key);
+    }, self.TIME_PERIOD.MID_SEA);
 };
 
 Manager.prototype.startTownData = function(){
@@ -2364,66 +2422,29 @@ Manager.prototype.startTownData = function(){
     self.getMidSea(9, key);
  */
 
-    self.getMidTemp(9, normal_key);
-    self.getMidLand(9, normal_key);
-    self.getTownCurrentData(9, server_key);
-    self.getTownShortData(9, server_key);
-    self.getTownShortestData(9, server_key);
-    self.getMidForecast(9, normal_key);
-    self.getMidSea(9, normal_key);
-
-    //get shortest forecast once every hours.
-    self.loopTownShortestID = setInterval(function(){
-        self.getTownShortestData(9, server_key);
-    }, self.TIME_PERIOD.TOWN_SHORTEST);
-
-    var timeToGetShort = 0;
-    self.loopTownCurrentID = setInterval(function(){
-        async.waterfall([
+    async.waterfall([
             function(callback){
                 self.getTownCurrentData(9, server_key, callback);
             },
             function(data, callback){
-                if(timeToGetShort >= 2){
-                    self.getTownShortData(9, server_key, callback);
-                }
-                else{
-                    callback(null);
-                }
-            }
-        ], function(err){
+                self.getTownShortData(9, server_key, callback);
+            },
+            function(data, callback){
+                self.getMidTemp(9, normal_key, callback);
+            },
+            function(data, callback){
+                self.getMidLand(9, normal_key, callback);
+            },
+            function(data, callback){
+                self.getTownShortestData(9, server_key, callback);
+            }],
+        function(err) {
             if (err) {
                 log.error(err);
             }
-            log.info('Received Current');
-            if(timeToGetShort >= 2){
-                log.info('Received Short');
-                timeToGetShort = 0;
-            }else{
-                timeToGetShort++;
-            }
+            log.info('Updated latest data');
+            self._setIntervalForGather();
         });
-    }, self.TIME_PERIOD.TOWN_CURRENT);
-
-    // get middle range forecast once every 12 hours.
-    self.loopMidForecastID = setInterval(function(){
-        self.getMidForecast(9, normal_key);
-    }, self.TIME_PERIOD.MID_FORECAST);
-
-    // get middle range land forecast once every 12 hours.
-    self.loopMidLandID = setInterval(function(){
-        self.getMidLand(9, normal_key);
-    }, self.TIME_PERIOD.MID_LAND);
-
-    // get middle range temperature once every 12 hours.
-    self.loopMidTempID = setInterval(function(){
-        self.getMidTemp(9, normal_key);
-    }, self.TIME_PERIOD.MID_TEMP);
-
-    // get middle range sea forecast  once every 12 hours.
-    self.loopMidSeaID = setInterval(function(){
-        self.getMidSea(9, normal_key);
-    }, self.TIME_PERIOD.MID_SEA);
 };
 
 Manager.prototype.stopTownData = function(){

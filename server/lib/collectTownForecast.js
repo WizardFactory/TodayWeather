@@ -161,7 +161,7 @@ function CollectData(options, callback){
     * we can get the notify by request event and will decide whether to retry or ignore this item
     */
     self.on('recvFail', function(listIndex){
-        log.verbose('receive fail[%d]', listIndex);
+        log.debug('Fail index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
         if(self.resultList[listIndex].retryCount > 0){
             //log.error('try again:', listIndex);
             //log.error('URL : ', self.resultList[listIndex].url);
@@ -198,7 +198,7 @@ function CollectData(options, callback){
         self.resultList[listIndex].isCompleted = true;
         self.resultList[listIndex].data = data;
 
-        log.verbose('index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
+        log.debug('Recv index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
         if(self.receivedCount === self.listCount){
             self.emit('dataCompleted');
         }
@@ -311,7 +311,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     //log.info(meta);
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
-    req.get(url, null, function(err, response, body){
+    req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
             log.warn(err);
             //log.error('#', meta);
