@@ -1488,7 +1488,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
 };
 
 Manager.prototype._checkPubDate = function(model, srcList, dateString, callback) {
-    model.find(function(err, modelList) {
+    model.find(null, {_id: 0, mCoord: 1, regId: 1, pubDate: 1}).lean().exec(function(err, modelList) {
         if (err) {
             return callback(err);
         }
@@ -1519,7 +1519,7 @@ Manager.prototype._checkPubDate = function(model, srcList, dateString, callback)
                         return false;
                     }
                     else {
-                        log.silly('It need to upate');
+                        log.silly('It need to update');
                     }
                 }
                 else {
@@ -2424,10 +2424,10 @@ Manager.prototype.startTownData = function(){
 
     async.waterfall([
             function(callback){
-                self.getTownCurrentData(9, server_key, callback);
+                self.getTownShortData(9, server_key, callback);
             },
             function(data, callback){
-                self.getTownShortData(9, server_key, callback);
+                self.getTownCurrentData(9, server_key, callback);
             },
             function(data, callback){
                 self.getMidTemp(9, normal_key, callback);
@@ -2443,6 +2443,11 @@ Manager.prototype.startTownData = function(){
                 log.error(err);
             }
             log.info('Updated latest data');
+            var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
+            midRssKmaRequester.start();
+
+            townRss.StartShortRss();
+
             self._setIntervalForGather();
         });
 };
