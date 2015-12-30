@@ -7,6 +7,7 @@ var mongoose = require('mongoose');
 
 var midTempSchema = mongoose.Schema({
     regId : String,
+    pubDate: String, //last data.date+data.time
     data :[{
         date: String,
         time: String,

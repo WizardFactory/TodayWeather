@@ -17,6 +17,8 @@ mongoose.connect(config.db.path, config.db.options, function(err){
 });
 
 var fs = require('fs');
+console.log('load '+targetName);
+
 var lineList = fs.readFileSync(targetName).toString().split('\n');
 // header remove
 lineList.shift();

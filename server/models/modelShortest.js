@@ -9,7 +9,7 @@ var shortestSchema = new mongoose.Schema({
         mx:Number,
         my:Number
     },
-    lastUpdateTime : String, //YYYYMMDDHHMM baseDate+baseTime
+    pubDate : String, //YYYYMMDDHHMM baseDate+baseTime
     shortestData:[{
         date: String,   //fcstDate
         time: String,   //fcstTime
