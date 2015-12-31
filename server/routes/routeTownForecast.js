@@ -60,10 +60,10 @@ function getCurrentTimeValue(gmt){
     return dateString;
 }
 
-function getTimeValue(){
+function getTimeValue(gmt){
     var i=0;
     var timeFunction = manager;
-    var currentDate = timeFunction.getWorldTime(9);
+    var currentDate = timeFunction.getWorldTime(gmt);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: ''
@@ -563,7 +563,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
     meta.current = currentList[0];
 
     try{
-        var requestTime = getTimeValue();
+        var requestTime = getTimeValue(9);
         var tmpList = [];
 
         // 과거의 current 데이터를 short 리스트에 넣을 수 있게 리스트를 구성한다
@@ -582,7 +582,11 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                     if((index === 0) || (index === currentList.length - 1)){
                         var tmp = {};
                         if(index === 0){
-                            tmp = currentList[index + 1];
+                            if(currentList.length === 1){
+                                tmp = curItem;
+                            }else{
+                                tmp = currentList[index + 1];
+                            }
                         }else{
                             tmp = currentList[index - 1];
                         }
@@ -598,7 +602,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                                 newItem[string] = (tmp[string] > curItem[string])? tmp[string]:curItem[string];
                             }
                             else{
-                                newItem[string] = (tmp[string] + curItem[string]) / 2;
+                                newItem[string] = parseInt((tmp[string] + curItem[string]) / 2);
                             }
                         });
                     }else {
@@ -609,7 +613,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                                 newItem[string] = (prv[string] > curItem[string])? prv[string]:curItem[string];
                                 newItem[string] = (newItem[string] > next[string])? newItem[string]:next[string];
                             }else{
-                                newItem[string] = (prv[string] + curItem[string] + next[string]) / 3;
+                                newItem[string] = parseInt((prv[string] + curItem[string] + next[string]) / 3);
                             }
                         });
                     }
@@ -631,8 +635,6 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                 }
             });
         });
-
-        //log.info('~> After :', shortList);
 
         if(cb){
             cb(0, shortList);
@@ -669,7 +671,7 @@ var mergeShortWithRSS = function(shortList, rssList, cb){
     //log.info(rssList.length);
     //log.info(shortList.length);
     try{
-        var requestTime = getTimeValue();
+        var requestTime = getTimeValue(9);
 
         rssList.forEach(function(rssItem){
             //log.info(parseInt('' + rssItem.date), parseInt('' + requestTime.date + requestTime.time));
@@ -844,6 +846,50 @@ var mergeLandWithTemp = function(landList, tempList, cb){
     return [];
 };
 
+var makeBasicShortList = function(){
+    var result = [];
+
+    // make time table
+    for(var i=0 ; i < 36 ; i++){
+        //var item = getTimeValue(9 - (i * 3));
+        var item = getTimeValue((i*3) - (3*16) + 9);
+        shortString.forEach(function(string){
+            if(string == 'tmn' || string === 'tmx'){
+                item[string] = -50;
+            }else{
+                item[string] = 0;
+            }
+        });
+        result.push(item);
+    }
+
+    dataListPrint(result, 'route S', 'template short');
+
+    return result;
+};
+
+var mergeShortWithBasicList = function(shortList, basicList){
+    shortList.forEach(function(shortItem,index){
+        basicList.forEach(function(basicItem){
+            if(shortItem.date === basicItem.date && shortItem.time === basicItem.time){
+                shortString.forEach(function(string){
+                    basicItem[string] = shortItem[string];
+                });
+            }
+        });
+    });
+
+    return basicList;
+};
+
+var dataListPrint = function(list, name, title){
+    log.silly(name, '> ' + title + 'List (size: ' +  list.length +' )========================================');
+    list.forEach(function(item, index){
+        log.silly('[' + index +']', item);
+    });
+    log.silly('==================================================================================');
+};
+
 var getShort = function(req, res, next){
     var meta = {};
     var resultList = [];
@@ -882,7 +928,7 @@ var getShort = function(req, res, next){
                 var listCurrent = result.mData.data.current;
                 var i = 0;
                 var j = 0;
-                var requestTime = getTimeValue();
+                var requestTime = getTimeValue(9);
                 var tempList = [];
                 var item;
                 /********************
@@ -1049,6 +1095,13 @@ var getShort = function(req, res, next){
     }
     else {
         try{
+            /*
+             * 클라이언트에게 보내 줄 예보 날짜와 시간만넣은 데이터의 리스트를 만든다.
+             * 이는 DB에 데이터가 빠진 부분이 있어도 최종 개수 및 데이터 시간 테이블을 맞추기 위함
+             */
+            var basicShortlist = makeBasicShortList();
+            var requestTime = getTimeValue(9);
+
             getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
                     log.error(err);
@@ -1060,11 +1113,11 @@ var getShort = function(req, res, next){
                         return next();
                     }
 
-                    var requestTime = getTimeValue();
                     var popCount = 0;
                     var i = 0;
 
-                    //log.info(shortList);
+                    dataListPrint(shortList, 'route S', 'original short');
+
                     for(i=0 ; i < shortList.length ; i++){
                         //log.info(shortList[i]);
                         if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
@@ -1073,38 +1126,31 @@ var getShort = function(req, res, next){
                         }
                     }
 
-                    log.info('request date:', requestTime);
-                    if(i > 16){
-                        log.info('prv count :', i);
-                        for(var j=0 ; j<i ; j++){
-                            shortList.shift();
-                        }
+                    log.silly('route S> short remove count :', i);
+                    for(var j=0 ; j<i ; j++){
+                        shortList.shift();
                     }
 
-                    //shortList.forEach(function(item, index){
-                    //    log.info('routeS>', item);
-                    //});
-
-                    //req.short = shortList;
-                    //return next();
+                    basicShortlist = mergeShortWithBasicList(shortList,basicShortlist);
+                    dataListPrint(basicShortlist, 'route S', 'First, merged short');
 
                     getTownDataFromDB(modelCurrent, coord, function(err, currentList){
                         if (err) {
                             log.error(err);
                             return next();
                         }
-                        //log.info(currentList);
-                        currentList.forEach(function(item, index){
-                            log.info('routeC>', item);
-                        });
-                        mergeShortWithCurrent(shortList, currentList, function(err, firstMerged){
+
+                        dataListPrint(currentList, 'route S', 'Original Current');
+
+                        mergeShortWithCurrent(basicShortlist, currentList, function(err, firstMerged){
                             if (err) {
                                 log.error(err);
                                 return next();
                             }
-                            //log.info(firstMerged);
+
+                            dataListPrint(firstMerged, 'route S', 'Merged with Current');
+
                             getTownDataFromDB(modelShortRss, coord, function(err, rssList){
-                                log.info(rssList);
                                 if(err){
                                     log.error('error to get short RSS');
                                     req.short = firstMerged;
@@ -1117,17 +1163,17 @@ var getShort = function(req, res, next){
                                     }
                                 }
 
-                                if(i > 16){
-                                    log.info('prv count :', i);
-                                    for(var j=0 ; j<i ; j++){
-                                        rssList.shift();
-                                    }
+                                log.silly('route S> RSS remove count :', i);
+                                for(var j=0 ; j<i ; j++){
+                                    rssList.shift();
                                 }
-                                //rssList.forEach(function(item, index){
-                                //    log.info('routeS>', item);
-                                //});
+
+                                dataListPrint(rssList, 'route S', 'Original Short RSS');
+
                                 mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
-                                    //log.info(resultList);
+
+                                    dataListPrint(resultList, 'route S', 'Final merged');
+
                                     req.short = resultList;
                                     next();
                                 });
@@ -1261,7 +1307,7 @@ var getCurrent = function(req, res, next){
                 var listShort = result.mData.data.short;
                 var nowDate = getCurrentTimeValue(+9);
                 var acceptedDate = getCurrentTimeValue(+6);
-                var shortDate = getTimeValue();
+                var shortDate = getTimeValue(9);
                 var currentItem = listCurrent[listCurrent.length - 1];
                 var resultItem = {};
 
@@ -1318,7 +1364,7 @@ var getCurrent = function(req, res, next){
                     }
                     var nowDate = getCurrentTimeValue(+9);
                     var acceptedDate = getCurrentTimeValue(+6);
-                    var shortDate = getTimeValue();
+                    var shortDate = getTimeValue(9);
                     var currentItem = currentList[currentList.length - 1];
                     var resultItem = {};
 
