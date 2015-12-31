@@ -259,3 +259,28 @@ describe('unit test - test geocode ', function() {
     //    });
     //});
 });
+
+describe('unit test - test requestDataByBaseTimeList', function() {
+    //var col = new collect();
+    ////var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //var listXY = [{mx: 91, my: 131}];
+    //var baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //
+    //it('requestDataByBaseTimeList', function (done) {
+    //    col.requestDataByBaseTimeList(listXY[0], col.DATA_TYPE.TOWN_CURRENT, keydata.keyString.test_cert, baseTimeList, function (err, dataList) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        log.info(dataList.length);
+    //        dataList.forEach(function (newData) {
+    //            log.info(newData.data.length);
+    //            newData.data.forEach(function (data) {
+    //                log.info(JSON.stringify(data));
+    //            });
+    //        });
+    //        done();
+    //    });
+    //});
+});
+
+
