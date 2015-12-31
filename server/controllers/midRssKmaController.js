@@ -13,7 +13,7 @@ function midRssKmaController() {
 midRssKmaController.getData = function(regId, callback) {
     log.input('midRssKmaController getData '+regId);
 
-    MidRssModel.find({regId:regId}, function (err, midRssList) {
+    MidRssModel.find({regId:regId}, {_id: 0}).lean().exec(function(err, midRssList) {
         if (err) {
             return callback(err);
         }
@@ -60,7 +60,7 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
                 }
             }
             if (i === dailyData.length) {
-                dailyData.push(midData.toJSON());
+                dailyData.push(midData);
             }
         });
         callback(err, reqMidData);

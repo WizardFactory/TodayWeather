@@ -198,11 +198,11 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
                 }
                 if (!midRssModel) {
                     midRssModel = new MidRssModel(mid);
-                    log.info(midRssModel.toString());
+                    log.debug(midRssModel.toString());
                 }
                 else {
                     if (midRssModel.pubDate === mid.pubDate) {
-                        log.info('regId ', mid.regId, ' already saved pubDate=', mid.pubDate);
+                        log.debug('regId ', mid.regId, ' already saved pubDate=', mid.pubDate);
                         return cBack(undefined, mid.pubDate);
                     }
                     midRssModel.pubDate = mid.pubDate;
