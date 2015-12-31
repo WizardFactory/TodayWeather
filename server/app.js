@@ -84,10 +84,6 @@ var keyBox = require('./config/config').keyString;
 
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
-    townRss.StartShortRss();
-
-    var midRssKmaRequester = new (require('./lib/midRssKmaRequester'))();
-    midRssKmaRequester.start();
 }
 
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();

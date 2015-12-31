@@ -954,7 +954,6 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             listResult.push(insertItem);
         });
 
-
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
         //    log.info(listResult[i]);
@@ -1023,6 +1022,12 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
             self.resultList[i].options.dataType = dataType;
             if(srcList[i].code !== undefined){
                 self.resultList[i].options.code = srcList[i].code;
+            }
+
+            //200 connections per 1 term
+            if (i >= 200) {
+                self.receivedCount++;
+                continue;
             }
 
             if(self.resultList[i].url !== ''){
