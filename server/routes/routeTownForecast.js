@@ -883,11 +883,11 @@ var mergeShortWithBasicList = function(shortList, basicList){
 };
 
 var dataListPrint = function(list, name, title){
-    log.info(name, '> ' + title + 'List (size: ' +  list.length +' )========================================');
+    log.silly(name, '> ' + title + 'List (size: ' +  list.length +' )========================================');
     list.forEach(function(item, index){
-        log.info('[' + index +']', item);
+        log.silly('[' + index +']', item);
     });
-    log.info('==================================================================================');
+    log.silly('==================================================================================');
 };
 
 var getShort = function(req, res, next){
@@ -1126,7 +1126,7 @@ var getShort = function(req, res, next){
                         }
                     }
 
-                    log.info('route S> short remove count :', i);
+                    log.silly('route S> short remove count :', i);
                     for(var j=0 ; j<i ; j++){
                         shortList.shift();
                     }
@@ -1163,7 +1163,7 @@ var getShort = function(req, res, next){
                                     }
                                 }
 
-                                log.info('route S> RSS remove count :', i);
+                                log.silly('route S> RSS remove count :', i);
                                 for(var j=0 ; j<i ; j++){
                                     rssList.shift();
                                 }
