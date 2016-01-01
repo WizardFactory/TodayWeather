@@ -121,6 +121,48 @@ describe('unit test - controller manager', function() {
         manager.stopManager();
     });
 
+    it('test get world time', function () {
+        var  dateStr = manager.getWorldTime(9);
+        log.info(dateStr);
+    });
+
+    //it('test recursive request data by base time list', function (done) {
+    //    this.timeout(1000*60); //1min
+    //    var updateObject = {mCoord:{mx:91, my:131}, baseTimeList:[]};
+    //    updateObject.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //
+    //    manager._recursiveRequestDataByBaseTimList(manager.DATA_TYPE.TOWN_CURRENT, config.keyString.test_cert,
+    //        updateObject.mCoord, updateObject.baseTimeList, 10, function(err, results) {
+    //            log.info('TOWN_CURRENT '+JSON.stringify(updateObject.mCoord)+' was updated counts='+updateObject.baseTimeList);
+    //            if (err) {
+    //                log.error(err);
+    //            }
+    //            log.info(results);
+    //            //unless previous item was failed, continues next item
+    //            done();
+    //        });
+    //});
+
+    //it('test requestDataByUpdateList', function (done) {
+    //    this.timeout(1000*60); //1min
+    //    var updateList = [];
+    //
+    //    var updateObject = {mCoord:{mx:91, my:131}, baseTimeList:[]};
+    //    updateObject.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //    updateList.push(updateObject);
+    //
+    //    var updateObject2 = {mCoord:{mx:62, my:125}, baseTimeList:[]};
+    //    updateObject2.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //    updateList.push(updateObject2);
+    //
+    //    manager.requestDataByUpdateList(manager.DATA_TYPE.TOWN_CURRENT, config.keyString.test_cert, updateList, 10, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        done();
+    //    });
+    //
+    //});
 });
 
 
