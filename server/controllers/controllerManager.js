@@ -2541,6 +2541,20 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
+    if (time === 10 || putAll) {
+        log.info('push PastConditionGather');
+        self.asyncTasks.push(function (callback) {
+            var pastGather = new PastConditionGather();
+
+            pastGather.start(0.5, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
     if (time === 30 || putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
