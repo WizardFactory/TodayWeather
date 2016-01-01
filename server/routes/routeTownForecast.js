@@ -301,6 +301,75 @@ function getCurrentFromDB(regionName, cityName, townName, callback){
 }
 /****************************************************************************/
 
+/**
+ *
+ * @param list
+ * @returns {number}
+ * @private
+ */
+function _sum(list) {
+    var total = 0;
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+    list.forEach(function (num) {
+        total += num;
+    });
+    return total;
+}
+
+/**
+ *
+ * @param list
+ * @returns {number}
+ * @private
+ */
+function _average(list) {
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+    return Math.round(_sum(list)/list.length);
+}
+
+function _sortByDateTime(a, b) {
+    if(a.date > b.date){
+        return 1;
+    }
+    if(a.date < b.date){
+        return -1;
+    }
+    if(a.date === b.date) {
+        if (a.hasOwnProperty('time') && b.hasOwnProperty('time')) {
+            if (a.time > b.time){
+                return 1;
+            }
+            if(a.time < b.time){
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
+function _mergeList(dstList, srcList) {
+    srcList.forEach(function (src) {
+        for (var i=0; i<dstList.length; i++) {
+            if (dstList[i].date === src.date) {
+                for (var key in src) {
+                    //copy all the fields
+                    if (src[key] !== -50) {
+                        dstList[i][key] = src[key];
+                    }
+                }
+                return;
+            }
+        }
+        dstList.push(src);
+    });
+
+    dstList.sort(_sortByDateTime);
+    return this;
+}
 
 /*
  *   get coordinate (mx, my) from town list.
@@ -506,17 +575,19 @@ var getMidDataFromDB = function(db, indicator, cb){
             if(cb){
                 var ret = [];
                 var privateString = [];
-                if(result[0].data[0].wfsv){
+                if(result[0].data[0].hasOwnProperty('wfsv')){
                     privateString = forecastString;
-                } else if(result[0].data[0].wh10B){
+                } else if(result[0].data[0].hasOwnProperty('wh10B')){
                     privateString = seaString;
-                } else if(result[0].data[0].taMax10){
+                } else if(result[0].data[0].hasOwnProperty('taMax10')){
                     privateString = tempString;
-                } else if(result[0].data[0].wf10){
+                } else if(result[0].data[0].hasOwnProperty('wf10')){
                     privateString = landString;
                 } else {
-                    log.error('~> what is it???');
+                    var err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
+                    log.error(err);
                     log.error(meta);
+                    cb(err);
                     return [];
                 }
 
@@ -565,10 +636,18 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
     try{
         var requestTime = getTimeValue(9);
         var tmpList = [];
+        var daySummaryList = [];
 
         // 과거의 current 데이터를 short 리스트에 넣을 수 있게 리스트를 구성한다
         currentList.forEach(function(curItem, index){
             var newItem = {};
+            var daySummary = _createOrGetDaySummaryList(daySummaryList, curItem.date);
+            if (daySummary.taMax < curItem.t1h) {
+                daySummary.taMax = curItem.t1h;
+            }
+            if (daySummary.taMin === -50 || daySummary.taMin > curItem.t1h) {
+                daySummary.taMin = curItem.t1h;
+            }
             //log.info(parseInt(curItem.date), parseInt(requestTime.date));
             //log.info(parseInt(curItem.time), parseInt(requestTime.time));
             // 현재 시간 보다 작은 current의 데이터를 사용해서 지난 정보는 실제 current 값을 사용한다
@@ -634,6 +713,32 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                     shortList[index].t3h = tmpItem.t1h;
                 }
             });
+            //당일은 측정된 값과, 예보중에 큰값으로 결정.
+            if (shortItem.date === requestTime.date) {
+                if (shortItem.time === '0600') {
+                    var currentTmn = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
+                    log.info(shortItem.date+shortItem.time+' short.tmn'+shortList[index].tmn+' curTmn='+currentTmn);
+                    if (shortList[index].tmn !== -50) {
+                        shortList[index].tmn = shortList[index].tmn < currentTmn ? shortList[index].tmn : currentTmn;
+                    }
+                    else {
+                       shortList[index].tmn = currentTmn;
+                    }
+                }
+                if (shortItem.time === '1500') {
+                    var currentTmx = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
+                    log.info(shortItem.date+shortItem.time+' short.tmx'+shortList[index].tmx+' curTmx='+currentTmx);
+                    shortList[index].tmx = shortList[index].tmx > currentTmx ? shortList[index].tmx : currentTmx;
+                }
+            }
+            else {
+                if (shortItem.time === '0600') {
+                    shortList[index].tmn = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
+                }
+                if (shortItem.time === '1500') {
+                    shortList[index].tmx = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
+                }
+            }
         });
 
         if(cb){
@@ -814,16 +919,7 @@ var mergeLandWithTemp = function(landList, tempList, cb){
             }
         }
 
-        result.sort(function(a, b){
-            if(a.date > b.date){
-                return 1;
-            }
-
-            if(a.date < b.date){
-                return -1;
-            }
-            return 0;
-        });
+        result.sort(_sortByDateTime);
 
         //log.info(result);
 
@@ -1703,6 +1799,299 @@ var getKeco = function (req, res, next) {
     }
 };
 
+function _createOrGetDayCondition(list, date) {
+    for(var i=0; i<list.length; i++) {
+        if (list[i].date === date) {
+            return list[i];
+        }
+    }
+
+    list.push({date: date, lgt:[], pty:[], reh:[], rn1:[], sky:[], t1h:[], wsd:[], pop:[], r06:[], s06:[], t3h:[], tmx:-50, tmn:-50});
+    return list[list.length-1];
+}
+
+function _createOrGetDaySummaryList(list, date) {
+    for(var i=0; i<list.length; i++) {
+        if (list[i].date === date) {
+            return list[i];
+        }
+    }
+
+    list.push({date:date, lgt:-1, pty:-1, reh:-1, rn1:-1, sky:-1, pop:-1, s06:-1, wfAm:'', wfPm:'', t1d:-50, wsd:-1, taMax:-50, taMin:-50});
+    return list[list.length-1];
+}
+
+/**
+ * -1, 0, 1
+ * @param list
+ * @returns {*}
+ * @private
+ */
+function _summaryLgt(list) {
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+    for (var i=0; i<list.length; i++) {
+        if (list[i] > 0) {
+            return list[i];
+        }
+    }
+    return 0;
+}
+
+/**
+ *  -1, 0, 1, 2, 3
+ * @param list
+ * @returns {number}
+ * @private
+ */
+function _summaryPty(list) {
+    var pty = 0;
+
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+    for (var i=0; i<list.length; i++) {
+        if (list[i] === 2) {
+            return 2;
+        }
+        else if (list[i] === 1) {
+            if (pty === 3) {
+                return 2;
+            }
+            pty = 1;
+        }
+        else if (list[i] === 3) {
+            if (pty === 1) {
+                return  2;
+            }
+            pty = 3;
+        }
+    }
+    return pty;
+}
+
+function _convertSkyToKorStr(sky, pty) {
+    var str = ''
+
+    if (pty === 0) {
+        switch (sky) {
+            case 0: return '맑음';
+            case 1: return '구름조금';
+            case 2: return '구름많음';
+            case 3: return '흐림';
+        }
+    }
+    else {
+        switch (sky) {
+            case 0: str = '맑고 ';
+                break;
+            case 1: str = '구름적고 ';
+                break;
+            case 2: str = '구름많고 ';
+                break;
+            case 3: str = '흐리고 ';
+                break;
+        }
+        switch (pty) {
+            case 1: return str+'비';
+            case 2: return str+'비/눈';
+            case 3: return str+'눈';
+        }
+    }
+    return str;
+}
+
+function _getDaySummaryListByShort(shortList) {
+    var dayConditionList = [];
+    var daySummaryList = [];
+    var dateInfo = getCurrentTimeValue(9);
+
+    shortList.forEach(function (short, i) {
+        if (short.date < dateInfo.date) {
+            log.info('getDaySummaryListByShort skip date='+short.date+' before today');
+            return;
+        }
+        if (i === shortList.length-1 && short.time === '0000') {
+            //todo update way
+           return;
+        }
+
+        //"pop":0,"pty":0,"r06":0,"reh":50,"s06":0,"sky":4,"t3h":4,"tmn":-50,"tmx":-50
+        var dayCondition = _createOrGetDayCondition(dayConditionList, short.date);
+        dayCondition.pop.push(short.pop);
+        dayCondition.pty.push(short.pty);
+        dayCondition.r06.push(short.r06);
+        dayCondition.reh.push(short.reh);
+        dayCondition.s06.push(short.s06);
+        dayCondition.sky.push(short.sky);
+        dayCondition.t3h.push(short.t3h);
+        if (short.tmx !== -50) {
+            dayCondition.tmx = short.tmx;
+        }
+        if (short.tmn !== -50) {
+            dayCondition.tmn = short.tmn;
+        }
+    });
+
+    dayConditionList.forEach(function (dayCondition) {
+        var daySummary = _createOrGetDaySummaryList(daySummaryList, dayCondition.date);
+
+        daySummary.pop = Math.max.apply(null, dayCondition.pop);
+        daySummary.pty = _summaryPty(dayCondition.pty);
+        //daySummary.r06 = _sum(dayCondition.r06);
+        daySummary.reh = _average(dayCondition.reh);
+        //daySummary.s06 = _sum(dayCondition.s06);
+        daySummary.sky = _average(dayCondition.sky);
+        daySummary.wfAm = _convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.wfPm = _convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.t1d = _average(dayCondition.t3h);
+        daySummary.taMax = dayCondition.tmx;
+        daySummary.taMin = dayCondition.tmn;
+    });
+
+    return daySummaryList;
+}
+
+function _getDaySummaryList(pastList) {
+
+    var dayConditionList = [];
+    var daySummaryList = [];
+    var dateInfo = getCurrentTimeValue(9);
+
+    pastList.forEach(function (hourCondition) {
+        //if (dateInfo.date - hourCondition.date > 7) {
+        //    //skip
+        //    log.info('getDaySummaryList skip date='+ hourCondition.date);
+        //    return;
+        //}
+        var dayCondition = _createOrGetDayCondition(dayConditionList, hourCondition.date);
+        dayCondition.lgt.push(hourCondition.lgt);
+        dayCondition.pty.push(hourCondition.pty);
+        dayCondition.reh.push(hourCondition.reh);
+        dayCondition.rn1.push(hourCondition.rn1);
+        dayCondition.sky.push(hourCondition.sky);
+        dayCondition.t1h.push(hourCondition.t1h);
+        dayCondition.wsd.push(hourCondition.wsd);
+    });
+
+    dayConditionList.forEach(function (dayCondition) {
+        var daySummary = _createOrGetDaySummaryList(daySummaryList, dayCondition.date);
+
+        daySummary.lgt = _summaryLgt(dayCondition.lgt);
+        daySummary.pty = _summaryPty(dayCondition.pty);
+        daySummary.reh = _average(dayCondition.reh);
+        daySummary.rn1 = _sum(dayCondition.rn1);
+        daySummary.sky = _average(dayCondition.sky);
+        daySummary.wfAm = _convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.wfPm = _convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.t1d = _average(dayCondition.t1h);
+        daySummary.wsd = _average(dayCondition.wsd);
+        daySummary.taMax = Math.max.apply(null, dayCondition.t1h);
+        daySummary.taMin = Math.min.apply(null, dayCondition.t1h);
+    });
+
+    return daySummaryList;
+}
+
+var getPastMid = function (req, res, next) {
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
+
+    if(config.db.mode === 'ram') {
+        return next();
+    }
+
+    if (!req.hasOwnProperty('midData')) {
+        req.midData = {};
+    }
+    if (!req.midData.hasOwnProperty('dailyData') || !Array.isArray(req.midData.dailyData)) {
+        req.midData.dailyData = [];
+    }
+
+    var daySummaryList;
+
+    if (req.pastData) {
+        try {
+            daySummaryList = _getDaySummaryList(req.pastData);
+            _mergeList(req.midData.dailyData, daySummaryList);
+        }
+        catch(e) {
+            log.error(e);
+        }
+        next();
+    }
+    else {
+        getCoord(regionName, cityName, townName, function(err, coord) {
+            if (err) {
+                log.error(err);
+                return next();
+            }
+            getTownDataFromDB(modelCurrent, coord, function (err, currentList) {
+                if (err) {
+                    log.error(err);
+                    return next();
+                }
+
+                try {
+                    req.pastData = currentList;
+                    daySummaryList = _getDaySummaryList(req.pastData);
+                    _mergeList(req.midData.dailyData, daySummaryList);
+                }
+                catch (e) {
+                    log.error(e);
+                }
+                return next();
+            });
+        });
+    }
+
+    return this;
+};
+
+/**
+ * 이미 pastdata가 merge되어 있다고 가정하고 있음.
+ * @param req
+ * @param res
+ * @param next
+ * @returns {*}
+ */
+var mergeMidWithShort  = function (req, res, next) {
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
+
+    if(config.db.mode === 'ram') {
+        return next();
+    }
+
+    if (!req.hasOwnProperty('midData')) {
+        req.midData = {};
+    }
+    if (!req.midData.hasOwnProperty('dailyData') || !Array.isArray(req.midData.dailyData)) {
+        req.midData.dailyData = [];
+    }
+
+    var daySummaryList;
+
+    if (req.short) {
+        try {
+            daySummaryList = _getDaySummaryListByShort(req.short);
+            _mergeList(req.midData.dailyData, daySummaryList);
+        }
+        catch(e) {
+            log.error(e);
+        }
+        next();
+    }
+    else {
+        log.error('You have to getShort before mergeMid');
+        next();
+    }
+    return this;
+};
+
 router.get('/', [getSummary], function(req, res) {
     var meta = {};
 
@@ -1770,7 +2159,7 @@ router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req,
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss ],
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss, getPastMid, mergeMidWithShort],
             function(req, res) {
     var meta = {};
 
@@ -1806,7 +2195,7 @@ router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, g
     res.json(result);
 });
 
-router.get('/:region/:city/:town/mid', [getMid, getMidRss], function (req, res) {
+router.get('/:region/:city/:town/mid', [getMid, getMidRss, getPastMid, mergeMidWithShort], function (req, res) {
     var result = {};
 
     result.regionName = req.params.region;
