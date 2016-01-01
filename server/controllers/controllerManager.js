@@ -28,6 +28,7 @@ var modelMidTemp = require('../models/modelMidTemp');
 //var keydata = require('../config/keydata');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
+var PastConditionGather = require('../lib/PastConditionGather');
 
 function Manager(){
     var self = this;
@@ -44,8 +45,8 @@ function Manager(){
 
     self.saveOnlyLastOne = true;
     self.MAX_SHORT_COUNT = 60;
-    self.MAX_CURRENT_COUNT = 60;
-    self.MAX_SHORTEST_COUNT = 240; //24 hours * 10 days
+    self.MAX_CURRENT_COUNT = 240;
+    self.MAX_SHORTEST_COUNT = 4; //4 hours
     self.MAX_MID_COUNT = 20;
 
     self.asyncTasks = [];
@@ -1036,10 +1037,11 @@ Manager.prototype.saveCurrent = function(newData, callback){
 
             list.forEach(function(dbCurrentList){
                 //log.info('C> coord :', dbCurrentList.mCoord.mx, dbCurrentList.mCoord.my);
-                if (self.saveOnlyLastOne) {
-                    dbCurrentList.currentData = newData;
-                }
-                else {
+                //if (self.saveOnlyLastOne) {
+                //    dbCurrentList.currentData = newData;
+                //}
+                //else
+                {
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('C> newItem : ', newItem);
@@ -1095,7 +1097,10 @@ Manager.prototype.saveCurrent = function(newData, callback){
                     }
                 }
 
-                dbCurrentList.pubDate = pubDate;
+                //skip to update pubDate when pastCondition gather
+                if (pubDate !== '') {
+                    dbCurrentList.pubDate = pubDate;
+                }
                 //log.info(dbCurrentList.currentData);
                 dbCurrentList.save(function(err){
                     if(err){
@@ -1475,7 +1480,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             },
             function (err, results) {
                 if (err) {
-                    return log.error(err);
+                    log.error(err);
                 }
                 if (failedList.length) {
                     return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, callback);
@@ -1487,6 +1492,94 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             });
         //log.info('ST> save OK');
     });
+
+    return this;
+};
+
+Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, mCoord, baseTimeList, retryCount, callback) {
+    var self = this;
+    var failedList = [];
+    var collectInfo = new collectTown();
+    var dataTypeName = self.getDataTypeName(dataType);
+
+    if (!retryCount) {
+        var err = new Error("retryCount is zero for request DATA : ", dataTypeName);
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
+    }
+
+    collectInfo.requestDataByBaseTimeList(mCoord, dataType, key, baseTimeList, function(err, dataList) {
+        if (err) {
+            log.verbose(dataTypeName, " It has items rcvFailed ");
+            log.verbose(err);
+        }
+        log.info(dataTypeName, 'data receive completed : ', dataList.length);
+
+        async.mapSeries(dataList,
+            function(item, cb) {
+                if (item.isCompleted) {
+                    //will not update pubDate
+                    item.data[0].pubDate = '';
+                    self.getSaveFunc(dataType).call(self, item.data, function (err) {
+                        if (err) {
+                            log.error(err);
+                        }
+                        cb(err, item);
+                    });
+                }
+                else {
+                    log.silly(item);
+                    log.verbose(dataTypeName, " request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
+                    failedList.push(item.mCoord);
+                    //this index was not rcvData
+                    cb(undefined, item);
+                }
+            },
+            function (err, results) {
+                if (err) {
+                    log.error(err);
+                }
+                if (failedList.length) {
+                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, baseTimeList, --retryCount, callback);
+                }
+                log.info('received All ', dataTypeName, ' of baseTimes=', baseTimeList.length);
+                if (callback) {
+                    callback(err, results);
+                }
+            });
+    });
+};
+
+Manager.prototype.requestDataByUpdateList = function (dataType, key, updateList, retryCount, callback) {
+    var self = this;
+    var dataTypeName = self.getDataTypeName(dataType);
+
+    async.mapSeries(updateList,
+        function(updateObject, cb){
+            log.info(updateObject);
+            self._recursiveRequestDataByBaseTimList(dataType, key, updateObject.mCoord, updateObject.baseTimeList, retryCount, function(err, result){
+                log.info(dataTypeName+' '+JSON.stringify(updateObject.mCoord)+' was updated counts='+updateObject.baseTimeList.length);
+                if (err) {
+                    log.error(err);
+                }
+                //unless previous item was failed, continues next item
+                cb();
+            });
+        },
+        function (err, results) {
+            log.info('Finished '+dataTypeName+' requests='+updateList.length);
+            if (callback) {
+                callback(err, results);
+            }
+            else if (err) {
+                log.error(err);
+            }
+        });
 
     return this;
 };
@@ -2395,13 +2488,16 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
             //need to update sync
             townRss.mainTask();
             setTimeout(function () {
-                callback(undefined, []);
+                callback();
             }, 1000*60); //1min
         });
         log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
             midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
-                callback(err, []);
+                if (err) {
+                    log.error(err);
+                }
+                callback();
             });
         });
     }
@@ -2409,37 +2505,72 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
     if (time === 2 || putAll) {
         log.info('push MidTemp');
         self.asyncTasks.push(function (callback) {
-            self.getMidTemp(9, normal_key, callback);
+            self.getMidTemp(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
         log.info('push MidLand');
         self.asyncTasks.push(function (callback) {
-            self.getMidLand(9, normal_key, callback);
+            self.getMidLand(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
         log.info('push MidForecast');
         self.asyncTasks.push(function (callback) {
-            self.getMidForecast(9, normal_key, callback);
+            self.getMidForecast(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
         log.info('push MidSea');
         self.asyncTasks.push(function (callback) {
-            self.getMidSea(9, normal_key, callback);
+            self.getMidSea(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
     }
 
     if (time === 30 || putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
-            self.getTownShortData(9, server_key, callback);
+            self.getTownShortData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
     }
 
     if (time === 40 || putAll) {
         log.info('push Shortest');
         self.asyncTasks.push(function (callback) {
-            self.getTownShortestData(9, server_key, callback);
+            self.getTownShortestData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
         log.info('push Current');
         self.asyncTasks.push(function (callback) {
-            self.getTownCurrentData(9, server_key, callback);
+            self.getTownCurrentData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
         });
     }
 
