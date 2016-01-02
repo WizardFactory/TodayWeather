@@ -795,16 +795,16 @@ var mergeShortWithRSS = function(shortList, rssList, cb){
                         found = 1;
                         shortList[i].pop = rssItem.pop;
                         shortList[i].pty = rssItem.pty;
-                        shortList[i].r06 = rssItem.r06;
+                        shortList[i].r06 = Math.round(rssItem.r06);
                         shortList[i].reh = rssItem.reh;
-                        shortList[i].s06 = rssItem.s06;
+                        shortList[i].s06 = Math.round(rssItem.s06);
                         shortList[i].sky = rssItem.sky;
-                        shortList[i].t3h = rssItem.temp;
+                        shortList[i].t3h = Math.round(rssItem.temp);
                         if(shortList[i].time === '0600' && rssItem.tmn != -999) {
-                            shortList[i].tmn = rssItem.tmn;
+                            shortList[i].tmn = Math.round(rssItem.tmn);
                         }
                         if(shortList[i].time === '1500' && rssItem.tmn != -999){
-                            shortList[i].tmx = rssItem.tmx;
+                            shortList[i].tmx = Math.round(rssItem.tmx);
                         }
                     }
                 }
@@ -814,20 +814,20 @@ var mergeShortWithRSS = function(shortList, rssList, cb){
                     item.time = rssItem.date.slice(8, 12);
                     item.pop = rssItem.pop;
                     item.pty = rssItem.pty;
-                    item.r06 = rssItem.r06;
+                    item.r06 = Math.round(rssItem.r06);
                     item.reh = rssItem.reh;
-                    item.s06 = rssItem.s06;
+                    item.s06 = Math.round(rssItem.s06);
                     item.sky = rssItem.sky;
-                    item.t3h = rssItem.temp;
+                    item.t3h = Math.round(rssItem.temp);
                     if(item.time === '0600' && rssItem.tmn != -999){
-                        item.tmn = rssItem.tmn;
+                        item.tmn = Math.round(rssItem.tmn);
                     } else{
-                        item.tmn = 0;
+                        item.tmn = -50;
                     }
                     if(item.time === '1500' && rssItem.tmx != -999){
-                        item.tmx = rssItem.tmx;
+                        item.tmx = Math.round(rssItem.tmx);
                     }else{
-                        item.tmx = 0;
+                        item.tmx = -50;
                     }
 
                     //log.info('~> push data>', item);
