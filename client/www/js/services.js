@@ -531,7 +531,19 @@ angular.module('starter.services', [])
         }
 
         function getHighPrioritySky(sky1, sky2) {
+            if (sky2 === "RainWithSnow" || sky1 === "RainWithSnow") {
+                return "RainWithSnow";
+            }
             if (sky2 === "Rain") {
+                if (sky1 === "Show") {
+                   return "RainWithSnow";
+                }
+                return sky2;
+            }
+            if (sky2 === "Snow") {
+                if (sky1 === "Rain") {
+                    return "RainWithSnow";
+                }
                 return sky2;
             }
 
@@ -566,19 +578,23 @@ angular.module('starter.services', [])
          * @returns {String}
          */
         function makeSummary(current, yesterday) {
-            var str = "어제";
-            var diffTemp = current.t1h - yesterday.t3h;
+            var str = "";
 
-            if (diffTemp == 0) {
-                str += "와 동일";
-            }
-            else {
-                str += "보다 " + Math.abs(diffTemp);
-                if (diffTemp < 0) {
-                    str += "도 낮음";
+            if (current.t1h && yesterday && yesterday.t3h) {
+                var diffTemp = current.t1h - yesterday.t3h;
+
+                str += "어제";
+                if (diffTemp == 0) {
+                    str += "와 동일";
                 }
-                else if (diffTemp > 0) {
-                    str += "도 높음";
+                else {
+                    str += "보다 " + Math.abs(diffTemp);
+                    if (diffTemp < 0) {
+                        str += "도 낮음";
+                    }
+                    else if (diffTemp > 0) {
+                        str += "도 높음";
+                    }
                 }
             }
 
@@ -664,13 +680,11 @@ angular.module('starter.services', [])
         function getWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
-            //var url = "https://todayweather1-wizardfactory.rhcloud.com/town";
-            //var url = "https://todayweather2-wizardfactory.rhcloud.com/town";
             var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
             url += "/" + town.first + "/" + town.second + "/" + town.third;
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 3000})
+            $http({method: 'GET', url: url, timeout: 5000})
                 .success(function (data) {
                     console.log(data);
                     deferred.resolve({data: data});
@@ -979,9 +993,13 @@ angular.module('starter.services', [])
          */
         obj.parseCurrentTownWeather = function (currentTownWeather, shortList) {
             var currentForecast = {};
-            var time = parseInt(currentTownWeather.time.substr(0, 2));
+            var time;
             var isNight = time < 7 || time > 18;
 
+            if (!currentTownWeather) {
+                return currentForecast;
+            }
+            time = parseInt(currentTownWeather.time.substr(0, 2));
             currentForecast.time = time;
             currentForecast = currentTownWeather;
 
@@ -1030,6 +1048,9 @@ angular.module('starter.services', [])
         obj.parsePreShortTownWeather = function (shortForecastList, currentTime) {
             // {date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
             var dailyTemp = [];
+            if (!shortForecastList || !Array.isArray(shortForecastList)) {
+               return dailyTemp;
+            }
 
             shortForecastList.forEach(function (shortForecast) {
                 var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
@@ -1097,6 +1118,10 @@ angular.module('starter.services', [])
             var positionHours = getPositionHours(current.getHours());
             var prevT3H;
 
+            if (!shortForecastList || !Array.isArray(shortForecastList)) {
+                return {timeTable: [], timeChart: []};
+            }
+
             shortForecastList.every(function (shortForecast) {
                 var tempObject = {};
                 var time = parseInt(shortForecast.time.slice(0, -2));
@@ -1107,15 +1132,6 @@ angular.module('starter.services', [])
                 if (!dayInfo) {
                     console.log("Fail to find dayInfo date=" + shortForecast.date);
                     dayInfo = {date: shortForecast.date, tmx: 100, tmn: -49};
-                }
-
-                if (diffDays <= -2 && time < positionHours) {
-                    //skip object
-                    return true;
-                }
-                if (positionHours === 0 && diffDays <= -3) {
-                    //when current time is 0, skip all -3
-                    return true;
                 }
 
                 //It means invalid data
@@ -1136,6 +1152,11 @@ angular.module('starter.services', [])
                     tempObject.wsd = undefined;
                     tempObject.skyIcon = "Sun";
                     tempObject.tempIcon = "Temp-01";
+                    //past condition from current
+                    tempObject.rn1 = undefined;
+                    tempObject.lgt = undefined;
+                    tempObject.wsd = undefined;
+                    tempObject.vec = undefined;
 
                     //related to #402
                     if (prevT3H) {
@@ -1222,23 +1243,8 @@ angular.module('starter.services', [])
 
                 data.push(tempObject);
 
-                return data.length < 32;
+                return true;
             });
-
-            if (data.length < 32) {
-                var i;
-                for (i = 0; data.length < 32; i++) {
-                    var tempObject = {};
-                    tempObject.day = "";
-                    tempObject.time = "";
-                    //tempObject.t3h = data[data.length-1].t3h;
-                    tempObject.t3h = undefined;
-                    tempObject.skyIcon = "Sun";
-                    tempObject.pop = 0;
-                    tempObject.tempIcon = "Temp-01";
-                    data.push(tempObject);
-                }
-            }
 
             var timeTable = data.slice(8);
             var timeChart = [
@@ -1269,6 +1275,10 @@ angular.module('starter.services', [])
          */
         obj.parseMidTownWeather = function (midData, dailyInfoList, currentTime, currentWeather) {
             var tmpDayTable = [];
+
+            if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
+                return tmpDayTable;
+            }
             midData.dailyData.forEach(function (dayInfo) {
                 var data = {};
                 data.date = dayInfo.date;
@@ -1296,81 +1306,35 @@ angular.module('starter.services', [])
                     data.tmn = dayInfo.taMin;
                 }
 
+                if (dayInfo.reh !== undefined) {
+                    data.reh = dayInfo.reh;
+                }
+                if (dayInfo.pop !== undefined && dayInfo.pop !== -1) {
+                   data.pop = dayInfo.pop;
+                }
+
                 if (diffDays === 0) {
                     currentWeather.ultrv = dayInfo.ultrv;
                     currentWeather.ultrvStr = parseUltrv(dayInfo.ultrv);
                 }
-                data.humidityIcon = "Humidity-00";
+                if (data.reh !== undefined) {
+                    data.humidityIcon = decideHumidityIcon(data.reh);
+                }
+                else {
+                    data.humidityIcon = "Humidity-00";
+                }
+
+                if (dayInfo.rn1 !== undefined && dayInfo.rn1 !== -1) {
+                    data.rn1 = dayInfo.rn1;
+                }
+                if (dayInfo.pty !== undefined && dayInfo.pty !== -1) {
+                    data.pty = dayInfo.pty;
+                }
+
                 tmpDayTable.push(data);
             });
 
             console.log(tmpDayTable);
-
-            var index = 0;
-            for (var i = 0; i < tmpDayTable.length; i++) {
-                var tmpDate = dailyInfoList[0].date;
-                //console.log(tmpDate);
-                if (tmpDayTable[i].date === tmpDate) {
-                    index = i;
-                    break;
-                }
-            }
-            if (i === tmpDayTable.length) {
-                console.log("Fail to find today");
-                dailyInfoList.forEach(function (dayInfo) {
-
-                    dayInfo.humidityIcon = decideHumidityIcon(dayInfo.reh);
-
-                    if (dayInfo.date < tmpDayTable[0].date) {
-                        tmpDayTable.unshift(dayInfo);
-                        return;
-                    }
-                    for (i = 0; i < tmpDayTable.length; i++) {
-                        if (tmpDayTable[i].date === dayInfo.date) {
-                            data = tmpDayTable[i];
-                            data.skyIcon = dayInfo.skyIcon;
-                            data.pop = dayInfo.pop;
-                            data.reh = dayInfo.reh;
-                            if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
-                            }
-                            if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
-                            }
-                            data.humidityIcon = decideHumidityIcon(data.reh);
-                            return;
-                        }
-                        else if (dayInfo.date < tmpDayTable[i].date) {
-                            tmpDayTable.splice(i, 0, dayInfo);
-                            return;
-                        }
-                    }
-                    if (i === tmpDayTable.length) {
-                        tmpDayTable.push(dayInfo);
-                    }
-                });
-            }
-            else {
-                //{week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
-                dailyInfoList.forEach(function (dayInfo) {
-                    var data;
-                    if (tmpDayTable[index].date === dayInfo.date) {
-                        data = tmpDayTable[index];
-                        data.skyIcon = dayInfo.skyIcon;
-                        data.pop = dayInfo.pop;
-                        data.reh = dayInfo.reh;
-                        if (dayInfo.tmx) { data.tmx = dayInfo.tmx;
-                        }
-                        if (dayInfo.tmn) { data.tmn = dayInfo.tmn;
-                        }
-                        data.humidityIcon = decideHumidityIcon(data.reh);
-                        index++;
-                    }
-                    else {
-                        console.log("Date was mismatched index:" + index + " date:" + tmpDayTable[index].date +
-                            " dayInfo.date=" + dayInfo.date);
-                    }
-                });
-            }
-
             return tmpDayTable;
         };
 
@@ -1624,7 +1588,7 @@ angular.module('starter.services', [])
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
-            if (ionic.Platform.isAndroid()) {
+            if (ionic.Platform.isAndroid() && window.cordova) {
 
                 var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
