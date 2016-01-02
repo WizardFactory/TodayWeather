@@ -44,7 +44,7 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 60;
+    self.MAX_SHORT_COUNT = 24;
     self.MAX_CURRENT_COUNT = 240;
     self.MAX_SHORTEST_COUNT = 4; //4 hours
     self.MAX_MID_COUNT = 20;
@@ -906,10 +906,11 @@ Manager.prototype.saveShort = function(newData, callback){
 
             list.forEach(function(dbShortList){
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
-                if (self.saveOnlyLastOne) {
-                    dbShortList.shortData = newData;
-                }
-                else {
+                //if (self.saveOnlyLastOne) {
+                //    dbShortList.shortData = newData;
+                //}
+                //else
+                {
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('S> newItem : ', newItem);

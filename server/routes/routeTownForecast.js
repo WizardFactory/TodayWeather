@@ -945,10 +945,12 @@ var mergeLandWithTemp = function(landList, tempList, cb){
 var makeBasicShortList = function(){
     var result = [];
 
+    var currentTime = parseInt(getCurrentTimeValue(9).time.slice(0,2));
+
     // make time table
-    for(var i=0 ; i < 36 ; i++){
-        //var item = getTimeValue(9 - (i * 3));
-        var item = getTimeValue((i*3) - (3*16) + 9);
+    // the day before yesterday 00h ~ the day after tomorrow 24h
+    for(var i=0 ; i < 41 ; i++){
+        var item = getTimeValue(9-currentTime-24*2+(i*3));
         shortString.forEach(function(string){
             if(string == 'tmn' || string === 'tmx'){
                 item[string] = -50;
