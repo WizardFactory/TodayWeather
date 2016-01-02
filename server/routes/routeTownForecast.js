@@ -1887,21 +1887,21 @@ function _convertSkyToKorStr(sky, pty) {
 
     if (pty === 0) {
         switch (sky) {
-            case 0: return '맑음';
-            case 1: return '구름조금';
-            case 2: return '구름많음';
-            case 3: return '흐림';
+            case 1: return '맑음';
+            case 2: return '구름조금';
+            case 3: return '구름많음';
+            case 4: return '흐림';
         }
     }
     else {
         switch (sky) {
-            case 0: str = '맑고 ';
+            case 1: str = '맑고 ';
                 break;
-            case 1: str = '구름적고 ';
+            case 2: str = '구름적고 ';
                 break;
-            case 2: str = '구름많고 ';
+            case 3: str = '구름많고 ';
                 break;
-            case 3: str = '흐리고 ';
+            case 4: str = '흐리고 ';
                 break;
         }
         switch (pty) {
@@ -1910,6 +1910,7 @@ function _convertSkyToKorStr(sky, pty) {
             case 3: return str+'눈';
         }
     }
+    log.error(new Error("Unknown state sky="+sky+" pty="+pty));
     return str;
 }
 
