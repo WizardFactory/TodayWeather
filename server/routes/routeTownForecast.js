@@ -704,6 +704,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
         //log.info('~> tmpList :',tmpList);
 
         shortList.forEach(function(shortItem, index){
+
             tmpList.forEach(function(tmpItem){
                 if(shortItem.date === tmpItem.date && shortItem.time === tmpItem.time){
                     shortList[index].pty = tmpItem.pty;
@@ -713,30 +714,35 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                     shortList[index].t3h = tmpItem.t1h;
                 }
             });
-            //당일은 측정된 값과, 예보중에 큰값으로 결정.
-            if (shortItem.date === requestTime.date) {
-                if (shortItem.time === '0600') {
-                    var currentTmn = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
-                    log.info(shortItem.date+shortItem.time+' short.tmn'+shortList[index].tmn+' curTmn='+currentTmn);
-                    if (shortList[index].tmn !== -50) {
+
+            var currentTmn;
+            var currentTmx;
+
+            if (shortItem.time === '0600') {
+                currentTmn = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
+                if (currentTmn !== -50) {
+                    //당일은 측정된 값과, 예보중에 큰값으로 결정.
+                    if (shortItem.date === requestTime.date && shortList[index].tmn !== -50) {
+                        log.info(shortItem.date+shortItem.time+' short.tmn'+shortList[index].tmn+' curTmn='+currentTmn);
                         shortList[index].tmn = shortList[index].tmn < currentTmn ? shortList[index].tmn : currentTmn;
                     }
                     else {
-                       shortList[index].tmn = currentTmn;
+                        shortList[index].tmn = currentTmn;
                     }
                 }
-                if (shortItem.time === '1500') {
-                    var currentTmx = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
-                    log.info(shortItem.date+shortItem.time+' short.tmx'+shortList[index].tmx+' curTmx='+currentTmx);
-                    shortList[index].tmx = shortList[index].tmx > currentTmx ? shortList[index].tmx : currentTmx;
-                }
             }
-            else {
-                if (shortItem.time === '0600') {
-                    shortList[index].tmn = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
-                }
-                if (shortItem.time === '1500') {
-                    shortList[index].tmx = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
+            if (shortItem.time === '1500') {
+                currentTmx = (_createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
+                if (currentTmx !== -50) {
+                    //당일은 측정된 값과, 예보중에 큰값으로 결정.
+                    if (shortItem.date === requestTime.date && shortList[index].tmx !== -50) {
+                        log.info(shortItem.date+shortItem.time+' short.tmx'+shortList[index].tmx+' curTmx='+currentTmx);
+                        shortList[index].tmx = shortList[index].tmx > currentTmx ? shortList[index].tmx : currentTmx;
+                    }
+                    else {
+                        shortList[index].tmx = currentTmx;
+
+                    }
                 }
             }
         });
@@ -952,10 +958,13 @@ var makeBasicShortList = function(){
     for(var i=0 ; i < 41 ; i++){
         var item = getTimeValue(9-currentTime-24*2+(i*3));
         shortString.forEach(function(string){
-            if(string == 'tmn' || string === 'tmx'){
+            if(string == 'tmn' || string === 'tmx' || string === 't3h') {
                 item[string] = -50;
+            } else if (string === 'uuu' || string === 'vvv') {
+                item[string] = -100;
+
             }else{
-                item[string] = 0;
+                item[string] = -1;
             }
         });
         result.push(item);
