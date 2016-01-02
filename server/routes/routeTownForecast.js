@@ -704,14 +704,16 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
         //log.info('~> tmpList :',tmpList);
 
         shortList.forEach(function(shortItem, index){
-
             tmpList.forEach(function(tmpItem){
                 if(shortItem.date === tmpItem.date && shortItem.time === tmpItem.time){
                     shortList[index].pty = tmpItem.pty;
-                    shortList[index].r06 = tmpItem.rn1;
+                    shortList[index].rn1 = tmpItem.rn1;
                     shortList[index].reh = tmpItem.reh;
                     shortList[index].sky = tmpItem.sky;
                     shortList[index].t3h = tmpItem.t1h;
+                    shortList[index].lgt = tmpItem.lgt;
+                    shortList[index].wsd = tmpItem.wsd;
+                    shortList[index].vec = tmpItem.vec;
                 }
             });
 
@@ -723,7 +725,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                 if (currentTmn !== -50) {
                     //당일은 측정된 값과, 예보중에 큰값으로 결정.
                     if (shortItem.date === requestTime.date && shortList[index].tmn !== -50) {
-                        log.info(shortItem.date+shortItem.time+' short.tmn'+shortList[index].tmn+' curTmn='+currentTmn);
+                        log.silly(shortItem.date+shortItem.time+' short.tmn'+shortList[index].tmn+' curTmn='+currentTmn);
                         shortList[index].tmn = shortList[index].tmn < currentTmn ? shortList[index].tmn : currentTmn;
                     }
                     else {
@@ -736,7 +738,7 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                 if (currentTmx !== -50) {
                     //당일은 측정된 값과, 예보중에 큰값으로 결정.
                     if (shortItem.date === requestTime.date && shortList[index].tmx !== -50) {
-                        log.info(shortItem.date+shortItem.time+' short.tmx'+shortList[index].tmx+' curTmx='+currentTmx);
+                        log.silly(shortItem.date+shortItem.time+' short.tmx'+shortList[index].tmx+' curTmx='+currentTmx);
                         shortList[index].tmx = shortList[index].tmx > currentTmx ? shortList[index].tmx : currentTmx;
                     }
                     else {
@@ -1921,7 +1923,7 @@ function _getDaySummaryListByShort(shortList) {
 
     shortList.forEach(function (short, i) {
         if (short.date < dateInfo.date) {
-            log.info('getDaySummaryListByShort skip date='+short.date+' before today');
+            log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
             return;
         }
         if (i === shortList.length-1 && short.time === '0000') {
@@ -1931,12 +1933,24 @@ function _getDaySummaryListByShort(shortList) {
 
         //"pop":0,"pty":0,"r06":0,"reh":50,"s06":0,"sky":4,"t3h":4,"tmn":-50,"tmx":-50
         var dayCondition = _createOrGetDayCondition(dayConditionList, short.date);
-        dayCondition.pop.push(short.pop);
-        dayCondition.pty.push(short.pty);
-        dayCondition.r06.push(short.r06);
-        dayCondition.reh.push(short.reh);
-        dayCondition.s06.push(short.s06);
-        dayCondition.sky.push(short.sky);
+        if (short.pop !== -1) {
+            dayCondition.pop.push(short.pop);
+        }
+        if (short.pty !== -1) {
+            dayCondition.pty.push(short.pty);
+        }
+        if (short.r06 !== -1) {
+            dayCondition.r06.push(short.r06);
+        }
+        if (short.reh !== -1) {
+            dayCondition.reh.push(short.reh);
+        }
+        if (short.s06 !== -1) {
+            dayCondition.s06.push(short.s06);
+        }
+        if (short.sky !== -1) {
+            dayCondition.sky.push(short.sky);
+        }
         dayCondition.t3h.push(short.t3h);
         if (short.tmx !== -50) {
             dayCondition.tmx = short.tmx;
@@ -1978,13 +1992,27 @@ function _getDaySummaryList(pastList) {
         //    return;
         //}
         var dayCondition = _createOrGetDayCondition(dayConditionList, hourCondition.date);
-        dayCondition.lgt.push(hourCondition.lgt);
-        dayCondition.pty.push(hourCondition.pty);
-        dayCondition.reh.push(hourCondition.reh);
-        dayCondition.rn1.push(hourCondition.rn1);
-        dayCondition.sky.push(hourCondition.sky);
-        dayCondition.t1h.push(hourCondition.t1h);
-        dayCondition.wsd.push(hourCondition.wsd);
+        if (hourCondition.lgt !== -1) {
+            dayCondition.lgt.push(hourCondition.lgt);
+        }
+        if (hourCondition.pty !== -1) {
+            dayCondition.pty.push(hourCondition.pty);
+        }
+        if (hourCondition.reh !== -1) {
+            dayCondition.reh.push(hourCondition.reh);
+        }
+        if (hourCondition.rn1 !== -1) {
+            dayCondition.rn1.push(hourCondition.rn1);
+        }
+        if (hourCondition.sky !== -1) {
+            dayCondition.sky.push(hourCondition.sky);
+        }
+        if (hourCondition.t1h !== -50) {
+            dayCondition.t1h.push(hourCondition.t1h);
+        }
+        if (hourCondition.wsd !== -1) {
+            dayCondition.wsd.push(hourCondition.wsd);
+        }
     });
 
     dayConditionList.forEach(function (dayCondition) {

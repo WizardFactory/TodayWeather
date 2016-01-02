@@ -2542,7 +2542,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
-    if (time === 30 || putAll) {
+    if (time === 31 || putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
             self.getTownShortData(9, server_key, function (err) {
@@ -2554,7 +2554,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
-    if (time === 40 || putAll) {
+    if (time === 41 || putAll) {
         log.info('push Shortest');
         self.asyncTasks.push(function (callback) {
             self.getTownShortestData(9, server_key, function (err) {
