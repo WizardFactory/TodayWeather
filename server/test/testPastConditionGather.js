@@ -52,6 +52,23 @@ describe('unit test - past condition gather', function() {
     //        done();
     //    });
     //});
+
+    //it('test get length currentData', function (done) {
+    //    this.timeout(1000*60*60*3);
+    //
+    //    var modelCurrent = require('../models/modelCurrent');
+    //    modelCurrent.find(null, {_id: 0}).lean().exec(function(err, modelList) {
+    //        if (err) {
+    //            log.error(err);
+    //            done();
+    //            return;
+    //        }
+    //        modelList.forEach(function (model) {
+    //            log.info('mCoord='+JSON.stringify(model.mCoord)+' currentData.lenghth='+model.currentData.length);
+    //        });
+    //        done();
+    //    });
+    //});
 });
 
 

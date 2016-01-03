@@ -60,7 +60,9 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
                 }
             }
             if (i === dailyData.length) {
-                dailyData.push(midData);
+                //create object for removing _id of midData
+                dailyData.push({date:midData.date, tmn:midData.tmn, tmx:midData.tmx, wfAm:midData.wfAm,
+                    wfPm:midData.wfPm, reliability: midData.reliability});
             }
         });
         callback(err, reqMidData);
