@@ -282,13 +282,13 @@ angular.module('starter', [
                         })
                         .attr('cy', height - margin.bottom)
                         .attr('r', function (d, i) {
-                            if (i === 8) {
+                            if (d.value.time === "지금") {
                                 return 5;
                             }
                             return 2;
                         })
                         .attr('class', function (d, i) {
-                            if (i === 8) {
+                            if (d.value.time === "지금") {
                                 return 'circle-' + d.name + '-current';
                             }
                             return 'circle-' + d.name;

@@ -302,7 +302,7 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                var hoursPadding = 3;
+                var hoursPadding = 9;
 
                 if (hours < 9) {
                     index = 7;

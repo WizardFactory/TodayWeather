@@ -44,8 +44,8 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 60;
-    self.MAX_CURRENT_COUNT = 240;
+    self.MAX_SHORT_COUNT = 33;      //for pop
+    self.MAX_CURRENT_COUNT = 192; //8days * 24hours
     self.MAX_SHORTEST_COUNT = 4; //4 hours
     self.MAX_MID_COUNT = 20;
 
@@ -906,10 +906,11 @@ Manager.prototype.saveShort = function(newData, callback){
 
             list.forEach(function(dbShortList){
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
-                if (self.saveOnlyLastOne) {
-                    dbShortList.shortData = newData;
-                }
-                else {
+                //if (self.saveOnlyLastOne) {
+                //    dbShortList.shortData = newData;
+                //}
+                //else
+                {
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('S> newItem : ', newItem);
@@ -1559,7 +1560,7 @@ Manager.prototype.requestDataByUpdateList = function (dataType, key, updateList,
     var self = this;
     var dataTypeName = self.getDataTypeName(dataType);
 
-    async.mapSeries(updateList,
+    async.mapLimit(updateList, 20,
         function(updateObject, cb){
             log.info(updateObject);
             self._recursiveRequestDataByBaseTimList(dataType, key, updateObject.mCoord, updateObject.baseTimeList, retryCount, function(err, result){
@@ -2541,7 +2542,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
-    if (time === 30 || putAll) {
+    if (time === 31 || putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
             self.getTownShortData(9, server_key, function (err) {
@@ -2553,7 +2554,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
-    if (time === 40 || putAll) {
+    if (time === 41 || putAll) {
         log.info('push Shortest');
         self.asyncTasks.push(function (callback) {
             self.getTownShortestData(9, server_key, function (err) {
