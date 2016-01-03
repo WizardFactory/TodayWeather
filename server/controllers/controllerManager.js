@@ -1658,31 +1658,34 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
     /*
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
-    if(parseInt(time) < 300){
+    if(parseInt(time) < 230){
         var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
-    else if(parseInt(time) < 600) {
+    else if(parseInt(time) < 530) {
         dateString.time = '0200';
     }
-    else if(parseInt(time) < 900){
+    else if(parseInt(time) < 830){
         dateString.time = '0500';
     }
-    else if(parseInt(time) < 1200){
+    else if(parseInt(time) < 1130){
         dateString.time = '0800';
     }
-    else if(parseInt(time) < 1500){
+    else if(parseInt(time) < 1430){
         dateString.time = '1100';
     }
-    else if(parseInt(time) < 1800){
+    else if(parseInt(time) < 1730){
         dateString.time = '1400';
     }
-    else if(parseInt(time) < 2100){
+    else if(parseInt(time) < 2030){
         dateString.time = '1700';
     }
-    else if(parseInt(time) < 2400){
+    else if(parseInt(time) < 2330){
         dateString.time = '2000';
+    }
+    else if(parseInt(time) >= 2330){
+        dateString.time = '2300';
     }
     else{
         log.error('unknown TimeString');
