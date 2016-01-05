@@ -926,20 +926,51 @@ Manager.prototype.saveShort = function(newData, callback){
                                 //log.info('S> over write :', newItem);
                                 //dbShortList.shortData[i] = newItem;
                                 isNew = 0;
-                                dbShortList.shortData[i].pop = newItem.pop;
-                                dbShortList.shortData[i].pty = newItem.pty;
-                                dbShortList.shortData[i].r06 = newItem.r06;
-                                dbShortList.shortData[i].reh = newItem.reh;
-                                dbShortList.shortData[i].s06 = newItem.s06;
-                                dbShortList.shortData[i].sky = newItem.sky;
-                                dbShortList.shortData[i].t3h = newItem.t3h;
-                                dbShortList.shortData[i].tmn = newItem.tmn;
-                                dbShortList.shortData[i].tmx = newItem.tmx;
-                                dbShortList.shortData[i].uuu = newItem.uuu;
-                                dbShortList.shortData[i].vvv = newItem.vvv;
-                                dbShortList.shortData[i].wav = newItem.wav;
-                                dbShortList.shortData[i].vec = newItem.vec;
-                                dbShortList.shortData[i].wsd = newItem.wsd;
+                                if (newItem.pop !== -1) {
+                                    dbShortList.shortData[i].pop = newItem.pop;
+                                }
+                                else {
+                                    log.warn(new Error("new short("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbShortList.shortData[i].pty = newItem.pty;
+                                }
+                                if (newItem.r06 !== -1) {
+                                    dbShortList.shortData[i].r06 = newItem.r06;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbShortList.shortData[i].reh = newItem.reh;
+                                }
+                                if (newItem.s06 !== -1) {
+                                    dbShortList.shortData[i].s06 = newItem.s06;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortList.shortData[i].sky = newItem.sky;
+                                }
+                                if (newItem.t3h !== -50) {
+                                    dbShortList.shortData[i].t3h = newItem.t3h;
+                                }
+                                if (newItem.tmn !== -50) {
+                                    dbShortList.shortData[i].tmn = newItem.tmn;
+                                }
+                                if (newItem.tmx !== -50) {
+                                    dbShortList.shortData[i].tmx = newItem.tmx;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbShortList.shortData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbShortList.shortData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.wav !== -1) {
+                                    dbShortList.shortData[i].wav = newItem.wav;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbShortList.shortData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbShortList.shortData[i].wsd = newItem.wsd;
+                                }
                                 break;
                             }
                         }
@@ -1056,22 +1087,46 @@ Manager.prototype.saveCurrent = function(newData, callback){
                             );
                             if(comparedDate === 0){
                                 //log.info('C> over write :', newItem);
-                                dbCurrentList.currentData[i].t1h = newItem.t1h;
-                                dbCurrentList.currentData[i].rn1 = newItem.rn1;
-                                dbCurrentList.currentData[i].sky = newItem.sky;
-                                dbCurrentList.currentData[i].uuu = newItem.uuu;
-                                dbCurrentList.currentData[i].vvv = newItem.vvv;
-                                dbCurrentList.currentData[i].reh = newItem.reh;
-                                dbCurrentList.currentData[i].pty = newItem.pty;
-                                dbCurrentList.currentData[i].lgt = newItem.lgt;
-                                dbCurrentList.currentData[i].vec = newItem.vec;
-                                dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                if (newItem.t1h !== -50) {
+                                    dbCurrentList.currentData[i].t1h = newItem.t1h;
+                                }
+                                else {
+                                    log.warn(new Error("new current("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbCurrentList.currentData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbCurrentList.currentData[i].sky = newItem.sky;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbCurrentList.currentData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbCurrentList.currentData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbCurrentList.currentData[i].reh = newItem.reh;
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbCurrentList.currentData[i].pty = newItem.pty;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbCurrentList.currentData[i].lgt = newItem.lgt;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbCurrentList.currentData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                }
                                 isNew = 0;
                                 break;
                             }
                         }
 
                         if(isNew){
+                            //although newItem is invaild, it is saved.
                             //log.info('C> push data :', newItem);
                             dbCurrentList.currentData.push(newItem);
                         }
@@ -1190,10 +1245,21 @@ Manager.prototype.saveShortest = function(newData, callback){
                             );
                             if(comparedDate === 0){
                                 //log.info('ST> over write :', newItem);
-                                dbShortestList.shortestData[i].pty = newItem.pty;
-                                dbShortestList.shortestData[i].rn1 = newItem.rn1;
-                                dbShortestList.shortestData[i].sky = newItem.sky;
-                                dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                if (newItem.pty !== -1) {
+                                    dbShortestList.shortestData[i].pty = newItem.pty;
+                                }
+                                else {
+                                    log.warn(new Error("new shortest("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortestList.shortestData[i].sky = newItem.sky;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                }
                                 isNew = 0;
                                 break;
                             }
@@ -2550,7 +2616,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             var pastGather = new PastConditionGather();
 
-            pastGather.start(0.5, server_key, function (err) {
+            pastGather.start(1, server_key, function (err) {
                 if (err) {
                     log.error(err);
                 }
