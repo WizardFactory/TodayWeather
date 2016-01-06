@@ -14,10 +14,23 @@ var convertGeocode = require('../utils/convertGeocode');
 var controllerTownRss = require('../controllers/controllerShortRss');
 
 describe('unit test - get short rss by using controllerShortRss', function(){
-
-    //it('controller/controllerShortRss', function(done){
-    //    var townRss = new controllerTownRss();
+    //var mongoose = require('mongoose');
+    //mongoose.connect(config.db.path, function(err) {
+    //    if (err) {
+    //        log.error('Could not connect to MongoDB!');
+    //        console.log(err);
+    //        done();
+    //    }
+    //});
     //
+    //mongoose.connection.on('error', function(err) {
+    //    log.error('MongoDB connection error: ' + err);
+    //    done();
+    //});
+    //
+    //var townRss = new controllerTownRss();
+    //
+    //it('controller/controllerShortRss', function(done){
     //    var resultTime = townRss.calculateTime('201512150000', 18);
     //    assert.equal(resultTime, '201512151800', 'calculate time');
     //
@@ -25,9 +38,16 @@ describe('unit test - get short rss by using controllerShortRss', function(){
     //    assert.equal(resultTime, '201601010100', 'calculate time');
     //
     //    townRss.StartShortRss();
+    //    log.info('start mainTask');
     //    townRss.mainTask();
-    //
-    //    this.timeout(5000);
-    //    setTimeout(done, 300);
+    //    this.timeout(1000*8);
+    //    setTimeout(done, 1000*10);
+    //});
+    //it('controller/controllerShortRss2', function(done){
+    //    log.info('restart mainTask');
+    //    // pubDate 정상 작동 확인
+    //    townRss.mainTask();
+    //    this.timeout(1000*8);
+    //    setTimeout(done, 1000*10);
     //});
 });
