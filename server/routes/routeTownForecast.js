@@ -623,7 +623,7 @@ var getMidDataFromDB = function(db, indicator, cb){
 function _getMax(list, invalidValue) {
     var ret;
     list.forEach(function (data) {
-        if (data !== invalidValue && (data > ret || data === undefined)) {
+        if (data !== invalidValue && (data > ret || ret === undefined)) {
             ret = data;
         }
     });

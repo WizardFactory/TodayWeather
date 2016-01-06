@@ -266,7 +266,7 @@ angular.module('starter.services', [])
                     return skyIconName = "Snow";
             }
 
-            if (lgt) {
+            if (lgt === 1) {
                 return skyIconName = "Lightning";
             }
 
