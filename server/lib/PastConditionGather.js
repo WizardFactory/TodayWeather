@@ -52,8 +52,14 @@ PastConditionGather.prototype._checkBaseTime = function (callback) {
             self.pubDateList.forEach(function (pubDate) {
                 for (var i=0; i<model.currentData.length; i++) {
                     if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
-                        log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
-                        return;
+                        if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
+                            log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+                            break;
+                        }
+                        else {
+                            log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+                            return;
+                        }
                     }
                 }
                 log.silly('baseTime='+JSON.stringify(pubDate)+' needs to get data');
@@ -63,7 +69,7 @@ PastConditionGather.prototype._checkBaseTime = function (callback) {
                 self.updateList.push(updateObject);
             }
             else {
-                log.info('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
+                log.debug('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
             }
         });
         callback();

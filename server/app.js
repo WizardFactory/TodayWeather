@@ -34,7 +34,10 @@ else {
 // Bootstrap db connection
 log.info(config.db.path);
 
-mongoose.connect(config.db.path, function(err) {
+var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+
+mongoose.connect(config.db.path, options, function(err) {
     if (err) {
         log.error('Could not connect to MongoDB! ' + config.db.path);
         log.error(err);

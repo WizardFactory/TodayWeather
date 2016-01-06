@@ -620,6 +620,41 @@ var getMidDataFromDB = function(db, indicator, cb){
     return [];
 };
 
+function _getMax(list, invalidValue) {
+    var ret;
+    list.forEach(function (data) {
+        if (data !== invalidValue && (data > ret || data === undefined)) {
+            ret = data;
+        }
+    });
+
+    if (ret === undefined) {
+        ret = invalidValue;
+    }
+    return ret;
+}
+
+function _getAverage(list, invalidValue) {
+    var ret=0;
+    var len=0;
+
+    list.forEach(function (data) {
+        if (data !== invalidValue) {
+            ret += data;
+            len++;
+        }
+    });
+
+    if (len > 0) {
+        ret = Math.round(ret/len);
+    }
+    else {
+        ret = invalidValue;
+    }
+
+    return ret;
+}
+
 /*
  *   merge short data with current data
  *   @param short list
@@ -678,10 +713,16 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                         //log.info(tmp);
                         curString.forEach(function(string){
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
-                                newItem[string] = (tmp[string] > curItem[string])? tmp[string]:curItem[string];
+                                newItem[string] = _getMax([tmp[string], curItem[string]], -1);
+                            }
+                            else if(string === 'uuu' || string === 'vvv') {
+                                newItem[string] = _getAverage([tmp[string], curItem[string]], -100);
+                            }
+                            else if(string === 't1h') {
+                                newItem[string] = _getAverage([tmp[string], curItem[string]], -50);
                             }
                             else{
-                                newItem[string] = parseInt((tmp[string] + curItem[string]) / 2);
+                                newItem[string] = _getAverage([tmp[string], curItem[string]], -1);
                             }
                         });
                     }else {
@@ -689,10 +730,16 @@ var mergeShortWithCurrent = function(shortList, currentList, cb){
                         var next = currentList[index+1];
                         curString.forEach(function(string){
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
-                                newItem[string] = (prv[string] > curItem[string])? prv[string]:curItem[string];
-                                newItem[string] = (newItem[string] > next[string])? newItem[string]:next[string];
-                            }else{
-                                newItem[string] = parseInt((prv[string] + curItem[string] + next[string]) / 3);
+                                newItem[string] = _getMax([prv[string], curItem[string], next[string]], -1);
+                            }
+                            else if(string === 'uuu' || string === 'vvv') {
+                                newItem[string] = _getAverage([prv[string], curItem[string], next[string]], -100);
+                            }
+                            else if(string === 't1h') {
+                                newItem[string] = _getAverage([prv[string], curItem[string], next[string]], -50);
+                            }
+                            else{
+                                newItem[string] = _getAverage([prv[string], curItem[string], next[string]], -1);
                             }
                         });
                     }
