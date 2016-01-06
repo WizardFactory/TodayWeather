@@ -61,24 +61,12 @@ describe('unit test - get town forecast in lib/collect class', function(){
     //    var collection = new collect();
     //    assert.doesNotThrow(function(){
     //        //collection.getTownData(listXY, collection.DATA_TYPE.TOWN_SHORT, keyString, '20150815', '0500', function(err, dataList){
-    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.test_cert, '20151225', '0200', function(err, dataList){
+    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_SHORT, keydata.keyString.test_cert, '20151229', '1400', function(err, dataList){
+    //            if (err) {
+    //                log.error(err);
+    //                return;
+    //            }
     //            log.info('short data receive completed : %d\n', dataList.length);
-    //
-    //            dataList[0].data.sort(function(a, b){
-    //                if(a.date > b.date){
-    //                    return 1;
-    //                }
-    //                if(a.date < b.date){
-    //                    return -1;
-    //                }
-    //                if(a.date === b.date && a.time > b.time){
-    //                    return 1;
-    //                }
-    //                if(a.date === b.date && a.time < b.time){
-    //                    return -1;
-    //                }
-    //                return 0;
-    //            });
     //
     //            for(var i in dataList) {
     //                for (var j in dataList[i].data) {
@@ -89,12 +77,12 @@ describe('unit test - get town forecast in lib/collect class', function(){
     //            assert.equal(dataList.length, listXY.length, 'check receive count');
     //
     //            assert.notEqual(dataList[0].data[0].date, '', 'check date whether it is invalid');
-    //            assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
-    //            assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
+    //            //assert.notEqual(dataList[1].data[0].date, '', 'check date whether it is invalid');
+    //            //assert.notEqual(dataList[2].data[0].date, '', 'check date whether it is invalid');
     //
     //            assert.notEqual(dataList[0].data[0].time, '', 'check time whether it is invalid');
-    //            assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
-    //            assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
+    //            //assert.notEqual(dataList[1].data[0].time, '', 'check time whether it is invalid');
+    //            //assert.notEqual(dataList[2].data[0].time, '', 'check time whether it is invalid');
     //
     //            done();
     //        });
@@ -137,12 +125,12 @@ describe('unit test - get town forecast in lib/collect class', function(){
     //});
 
     //it('lib/collect : get towns CURRENT info by using XY list', function(done){
-    //    //var listXY = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-    //    var listXY = listTown;
+    //    var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //    //var listXY = listTown;
     //
     //    var collection = new collect();
     //    assert.doesNotThrow(function(){
-    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_CURRENT, keydata.keyString.hyunsoo, '20150831', '0300', function(err, dataList){
+    //        collection.requestData(listXY, collection.DATA_TYPE.TOWN_CURRENT, keydata.keyString.test_cert, '20151229', '1600', function(err, dataList){
     //            log.info('current data receive completed : %d\n', dataList.length);
     //
     //            //log.info(dataList);
@@ -271,3 +259,28 @@ describe('unit test - test geocode ', function() {
     //    });
     //});
 });
+
+describe('unit test - test requestDataByBaseTimeList', function() {
+    //var col = new collect();
+    ////var listXY = [{mx:91, my:131}, {mx:91, my:132}, {mx:94, my:131}];
+    //var listXY = [{mx: 91, my: 131}];
+    //var baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //
+    //it('requestDataByBaseTimeList', function (done) {
+    //    col.requestDataByBaseTimeList(listXY[0], col.DATA_TYPE.TOWN_CURRENT, keydata.keyString.test_cert, baseTimeList, function (err, dataList) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        log.info(dataList.length);
+    //        dataList.forEach(function (newData) {
+    //            log.info(newData.data.length);
+    //            newData.data.forEach(function (data) {
+    //                log.info(JSON.stringify(data));
+    //            });
+    //        });
+    //        done();
+    //    });
+    //});
+});
+
+

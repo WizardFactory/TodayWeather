@@ -3,11 +3,14 @@
  */
 
 var Logger = require('../lib/log');
-global.log  = new Logger(__dirname + "/debug.log");
+global.log  = new Logger();
 
 var assert  = require('assert');
 var config = require('../config/config');
 var controllerManager = require('../controllers/controllerManager');
+
+var controllerShortRss = require('../controllers/controllerShortRss');
+global.townRss = new controllerShortRss();
 
 var manager = new controllerManager();
 
@@ -96,9 +99,70 @@ describe('unit test - controller manager', function() {
     //    });
     //});
 
+    it('test task of controller manager', function (done) {
+        manager.task(function (err) {
+            if (err){
+                log.error(err);
+            }
+            done();
+       });
+    });
+
+    it('test check time and push tasks of controller manager', function () {
+        manager.checkTimeAndPushTask(true);
+    });
+
+    //it('test start of controller manager', function (done) {
+    //    this.timeout(1000*60*60*3); //3hours
+    //    manager.startManager();
+    //});
+
     it('test stop manager', function () {
         manager.stopManager();
     });
+
+    it('test get world time', function () {
+        var  dateStr = manager.getWorldTime(9);
+        log.info(dateStr);
+    });
+
+    //it('test recursive request data by base time list', function (done) {
+    //    this.timeout(1000*60); //1min
+    //    var updateObject = {mCoord:{mx:91, my:131}, baseTimeList:[]};
+    //    updateObject.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //
+    //    manager._recursiveRequestDataByBaseTimList(manager.DATA_TYPE.TOWN_CURRENT, config.keyString.test_cert,
+    //        updateObject.mCoord, updateObject.baseTimeList, 10, function(err, results) {
+    //            log.info('TOWN_CURRENT '+JSON.stringify(updateObject.mCoord)+' was updated counts='+updateObject.baseTimeList);
+    //            if (err) {
+    //                log.error(err);
+    //            }
+    //            log.info(results);
+    //            //unless previous item was failed, continues next item
+    //            done();
+    //        });
+    //});
+
+    //it('test requestDataByUpdateList', function (done) {
+    //    this.timeout(1000*60); //1min
+    //    var updateList = [];
+    //
+    //    var updateObject = {mCoord:{mx:91, my:131}, baseTimeList:[]};
+    //    updateObject.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //    updateList.push(updateObject);
+    //
+    //    var updateObject2 = {mCoord:{mx:62, my:125}, baseTimeList:[]};
+    //    updateObject2.baseTimeList = [{date: '20151231', time: '0500'}, {date: '20151231', time: '0600'}];
+    //    updateList.push(updateObject2);
+    //
+    //    manager.requestDataByUpdateList(manager.DATA_TYPE.TOWN_CURRENT, config.keyString.test_cert, updateList, 10, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        done();
+    //    });
+    //
+    //});
 });
 
 

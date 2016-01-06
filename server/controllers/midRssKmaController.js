@@ -13,7 +13,7 @@ function midRssKmaController() {
 midRssKmaController.getData = function(regId, callback) {
     log.input('midRssKmaController getData '+regId);
 
-    MidRssModel.find({regId:regId}, function (err, midRssList) {
+    MidRssModel.find({regId:regId}, {_id: 0}).lean().exec(function(err, midRssList) {
         if (err) {
             return callback(err);
         }
@@ -60,7 +60,9 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
                 }
             }
             if (i === dailyData.length) {
-                dailyData.push(midData.toJSON());
+                //create object for removing _id of midData
+                dailyData.push({date:midData.date, tmn:midData.tmn, tmx:midData.tmx, wfAm:midData.wfAm,
+                    wfPm:midData.wfPm, reliability: midData.reliability});
             }
         });
         callback(err, reqMidData);

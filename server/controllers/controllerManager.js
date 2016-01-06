@@ -27,6 +27,9 @@ var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 //var keydata = require('../config/keydata');
 
+var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
+var PastConditionGather = require('../lib/PastConditionGather');
+
 function Manager(){
     var self = this;
 
@@ -40,10 +43,13 @@ function Manager(){
         MID_SEA: (1000*60*60*12)
     };
 
-    self.MAX_SHORT_COUNT = 60;
-    self.MAX_CURRENT_COUNT = 60;
-    self.MAX_SHORTEST_COUNT = 240; //24 hours * 10 days
+    self.saveOnlyLastOne = true;
+    self.MAX_SHORT_COUNT = 33;      //for pop
+    self.MAX_CURRENT_COUNT = 192; //8days * 24hours
+    self.MAX_SHORTEST_COUNT = 4; //4 hours
     self.MAX_MID_COUNT = 20;
+
+    self.asyncTasks = [];
 
     /****************************************************************************
      *   THIS IS FOR TEST.
@@ -900,63 +906,100 @@ Manager.prototype.saveShort = function(newData, callback){
 
             list.forEach(function(dbShortList){
                 //log.info('S> coord :', dbShortList.mCoord.mx, dbShortList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('S> newItem : ', newItem);
-                    //log.info('S> dbshortlist count : ', dbShortList.shortData.length);
-                    //for(var i in dbShortList.shortData){
-                    for(var i=0 ; i < dbShortList.shortData.length ; i++){
-                        //log.info(i,'>', dbShortList.shortData[i].date, '|', dbShortList.shortData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbShortList.shortData[i].date, time:dbShortList.shortData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('S> over write :', newItem);
-                            //dbShortList.shortData[i] = newItem;
-                            isNew = 0;
-                            dbShortList.shortData[i].pop = newItem.pop;
-                            dbShortList.shortData[i].pty = newItem.pty;
-                            dbShortList.shortData[i].r06 = newItem.r06;
-                            dbShortList.shortData[i].reh = newItem.reh;
-                            dbShortList.shortData[i].s06 = newItem.s06;
-                            dbShortList.shortData[i].sky = newItem.sky;
-                            dbShortList.shortData[i].t3h = newItem.t3h;
-                            dbShortList.shortData[i].tmn = newItem.tmn;
-                            dbShortList.shortData[i].tmx = newItem.tmx;
-                            dbShortList.shortData[i].uuu = newItem.uuu;
-                            dbShortList.shortData[i].vvv = newItem.vvv;
-                            dbShortList.shortData[i].wav = newItem.wav;
-                            dbShortList.shortData[i].vec = newItem.vec;
-                            dbShortList.shortData[i].wsd = newItem.wsd;
-                            break;
+                //if (self.saveOnlyLastOne) {
+                //    dbShortList.shortData = newData;
+                //}
+                //else
+                {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('S> newItem : ', newItem);
+                        //log.info('S> dbshortlist count : ', dbShortList.shortData.length);
+                        //for(var i in dbShortList.shortData){
+                        for(var i=0 ; i < dbShortList.shortData.length ; i++){
+                            //log.info(i,'>', dbShortList.shortData[i].date, '|', dbShortList.shortData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbShortList.shortData[i].date, time:dbShortList.shortData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('S> over write :', newItem);
+                                //dbShortList.shortData[i] = newItem;
+                                isNew = 0;
+                                if (newItem.pop !== -1) {
+                                    dbShortList.shortData[i].pop = newItem.pop;
+                                }
+                                else {
+                                    log.warn(new Error("new short("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbShortList.shortData[i].pty = newItem.pty;
+                                }
+                                if (newItem.r06 !== -1) {
+                                    dbShortList.shortData[i].r06 = newItem.r06;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbShortList.shortData[i].reh = newItem.reh;
+                                }
+                                if (newItem.s06 !== -1) {
+                                    dbShortList.shortData[i].s06 = newItem.s06;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortList.shortData[i].sky = newItem.sky;
+                                }
+                                if (newItem.t3h !== -50) {
+                                    dbShortList.shortData[i].t3h = newItem.t3h;
+                                }
+                                if (newItem.tmn !== -50) {
+                                    dbShortList.shortData[i].tmn = newItem.tmn;
+                                }
+                                if (newItem.tmx !== -50) {
+                                    dbShortList.shortData[i].tmx = newItem.tmx;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbShortList.shortData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbShortList.shortData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.wav !== -1) {
+                                    dbShortList.shortData[i].wav = newItem.wav;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbShortList.shortData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbShortList.shortData[i].wsd = newItem.wsd;
+                                }
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('push data :', newItem);
-                        dbShortList.shortData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //log.info('push data :', newItem);
+                            dbShortList.shortData.push(newItem);
+                        }
+                    });
 
-                dbShortList.shortData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbShortList.shortData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                    dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                    if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+                        dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+                    }
                 }
 
                 dbShortList.pubDate = pubDate;
@@ -1026,61 +1069,94 @@ Manager.prototype.saveCurrent = function(newData, callback){
 
             list.forEach(function(dbCurrentList){
                 //log.info('C> coord :', dbCurrentList.mCoord.mx, dbCurrentList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('C> newItem : ', newItem);
-                    //log.info('C> dbCurrentList count : ', dbCurrentList.currentData.length);
-                    //for(var i in dbCurrentList.currentData){
-                    for(var i=0 ; i < dbCurrentList.currentData.length ; i++){
-                        //log.info(i,'>', dbCurrentList.currentData[i].date, '|', dbCurrentList.currentData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbCurrentList.currentData[i].date, time:dbCurrentList.currentData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('C> over write :', newItem);
-                            dbCurrentList.currentData[i].t1h = newItem.t1h;
-                            dbCurrentList.currentData[i].rn1 = newItem.rn1;
-                            dbCurrentList.currentData[i].sky = newItem.sky;
-                            dbCurrentList.currentData[i].uuu = newItem.uuu;
-                            dbCurrentList.currentData[i].vvv = newItem.vvv;
-                            dbCurrentList.currentData[i].reh = newItem.reh;
-                            dbCurrentList.currentData[i].pty = newItem.pty;
-                            dbCurrentList.currentData[i].lgt = newItem.lgt;
-                            dbCurrentList.currentData[i].vec = newItem.vec;
-                            dbCurrentList.currentData[i].wsd = newItem.wsd;
-                            isNew = 0;
-                            break;
+                //if (self.saveOnlyLastOne) {
+                //    dbCurrentList.currentData = newData;
+                //}
+                //else
+                {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('C> newItem : ', newItem);
+                        //log.info('C> dbCurrentList count : ', dbCurrentList.currentData.length);
+                        //for(var i in dbCurrentList.currentData){
+                        for(var i=0 ; i < dbCurrentList.currentData.length ; i++){
+                            //log.info(i,'>', dbCurrentList.currentData[i].date, '|', dbCurrentList.currentData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbCurrentList.currentData[i].date, time:dbCurrentList.currentData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('C> over write :', newItem);
+                                if (newItem.t1h !== -50) {
+                                    dbCurrentList.currentData[i].t1h = newItem.t1h;
+                                }
+                                else {
+                                    log.warn(new Error("new current("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbCurrentList.currentData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbCurrentList.currentData[i].sky = newItem.sky;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbCurrentList.currentData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbCurrentList.currentData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbCurrentList.currentData[i].reh = newItem.reh;
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbCurrentList.currentData[i].pty = newItem.pty;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbCurrentList.currentData[i].lgt = newItem.lgt;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbCurrentList.currentData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                }
+                                isNew = 0;
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('C> push data :', newItem);
-                        dbCurrentList.currentData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //although newItem is invaild, it is saved.
+                            //log.info('C> push data :', newItem);
+                            dbCurrentList.currentData.push(newItem);
+                        }
+                    });
 
-                dbCurrentList.currentData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbCurrentList.currentData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
-                    dbCurrentList.currentData = dbCurrentList.currentData.slice((dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                    if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
+                        dbCurrentList.currentData = dbCurrentList.currentData.slice((dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
+                    }
                 }
 
-                dbCurrentList.pubDate = pubDate;
+                //skip to update pubDate when pastCondition gather
+                if (pubDate !== '') {
+                    dbCurrentList.pubDate = pubDate;
+                }
                 //log.info(dbCurrentList.currentData);
                 dbCurrentList.save(function(err){
                     if(err){
@@ -1152,52 +1228,68 @@ Manager.prototype.saveShortest = function(newData, callback){
 
             list.forEach(function(dbShortestList){
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
-                newData.forEach(function(newItem){
-                    var isNew = 1;
-                    //log.info('ST> newItem : ', newItem);
-                    //log.info('ST> dbShortestList count : ', dbShortestList.shortestData.length);
-                    //for(var i in dbShortestList.shortestData){
-                    for(var i=0 ; i < dbShortestList.shortestData.length ; i++){
-                        //log.info(i,'>', dbShortestList.shortestData[i].date, '|', dbShortestList.shortestData[i].time);
-                        var comparedDate = self.compareDate(
-                            {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
-                            {date:newItem.date, time:newItem.time}
-                        );
-                        if(comparedDate === 0){
-                            //log.info('ST> over write :', newItem);
-                            dbShortestList.shortestData[i].pty = newItem.pty;
-                            dbShortestList.shortestData[i].rn1 = newItem.rn1;
-                            dbShortestList.shortestData[i].sky = newItem.sky;
-                            dbShortestList.shortestData[i].lgt = newItem.lgt;
-                            isNew = 0;
-                            break;
+                if (self.saveOnlyLastOne) {
+                    dbShortestList.shortestData = newData;
+                }
+                else {
+                    newData.forEach(function(newItem){
+                        var isNew = 1;
+                        //log.info('ST> newItem : ', newItem);
+                        //log.info('ST> dbShortestList count : ', dbShortestList.shortestData.length);
+                        //for(var i in dbShortestList.shortestData){
+                        for(var i=0 ; i < dbShortestList.shortestData.length ; i++){
+                            //log.info(i,'>', dbShortestList.shortestData[i].date, '|', dbShortestList.shortestData[i].time);
+                            var comparedDate = self.compareDate(
+                                {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
+                                {date:newItem.date, time:newItem.time}
+                            );
+                            if(comparedDate === 0){
+                                //log.info('ST> over write :', newItem);
+                                if (newItem.pty !== -1) {
+                                    dbShortestList.shortestData[i].pty = newItem.pty;
+                                }
+                                else {
+                                    log.warn(new Error("new shortest("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortestList.shortestData[i].sky = newItem.sky;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                }
+                                isNew = 0;
+                                break;
+                            }
                         }
-                    }
 
-                    if(isNew){
-                        //log.info('ST> push data :', newItem);
-                        dbShortestList.shortestData.push(newItem);
-                    }
-                });
+                        if(isNew){
+                            //log.info('ST> push data :', newItem);
+                            dbShortestList.shortestData.push(newItem);
+                        }
+                    });
 
-                dbShortestList.shortestData.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
+                    dbShortestList.shortestData.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
 
-                if(dbShortestList.shortestData.length > self.MAX_SHORTEST_COUNT){
-                    dbShortestList.shortestData = dbShortestList.shortestData.slice((dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                    if(dbShortestList.shortestData.length > self.MAX_SHORTEST_COUNT){
+                        dbShortestList.shortestData = dbShortestList.shortestData.slice((dbShortestList.shortestData.length - self.MAX_SHORTEST_COUNT));
+                    }
                 }
 
                 dbShortestList.pubDate = pubDate;
@@ -1321,47 +1413,53 @@ Manager.prototype.saveMid = function(db, newData, callback){
             }
 
             list.forEach(function(dbMidList){
-                var isNew = 1;
-                for(var i=0 ; i < dbMidList.data.length ; i++){
-                    var comparedDate = self.compareDate(
-                        {date:dbMidList.data[i].date, time:dbMidList.data[i].time},
-                        {date:newData.date, time:newData.time}
-                    );
+                if (self.saveOnlyLastOne) {
+                    dbMidList.data = [newData];
+                }
+                else {
+                    var isNew = 1;
+                    for(var i=0 ; i < dbMidList.data.length ; i++){
+                        var comparedDate = self.compareDate(
+                            {date:dbMidList.data[i].date, time:dbMidList.data[i].time},
+                            {date:newData.date, time:newData.time}
+                        );
 
-                    // If there is the same date in the DB, it would be replaced by new data.
-                    if(comparedDate === 0){
-                        // over write
-                        dbMidList.data[i] = self.dupMid(newData, dbMidList.data[i]);
-                        //log.info('overwrite :', newData);
-                        isNew = 0;
-                        break;
+                        // If there is the same date in the DB, it would be replaced by new data.
+                        if(comparedDate === 0){
+                            // over write
+                            dbMidList.data[i] = self.dupMid(newData, dbMidList.data[i]);
+                            //log.info('overwrite :', newData);
+                            isNew = 0;
+                            break;
+                        }
+                    }
+
+                    if(isNew){
+                        //log.info('M> push data :', newItem);
+                        dbMidList.data.push(newData);
+                    }
+
+                    dbMidList.data.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        if(a.date === b.date && a.time > b.time){
+                            return 1;
+                        }
+                        if(a.date === b.date && a.time < b.time){
+                            return -1;
+                        }
+                        return 0;
+                    });
+
+                    if(dbMidList.data.length > self.MAX_MID_COUNT){
+                        dbMidList.data = dbMidList.data.slice((dbMidList.data.length - self.MAX_MID_COUNT));
                     }
                 }
 
-                if(isNew){
-                    //log.info('M> push data :', newItem);
-                    dbMidList.data.push(newData);
-                }
-
-                dbMidList.data.sort(function(a, b){
-                    if(a.date > b.date){
-                        return 1;
-                    }
-                    if(a.date < b.date){
-                        return -1;
-                    }
-                    if(a.date === b.date && a.time > b.time){
-                        return 1;
-                    }
-                    if(a.date === b.date && a.time < b.time){
-                        return -1;
-                    }
-                    return 0;
-                });
-
-                if(dbMidList.data.length > self.MAX_MID_COUNT){
-                    dbMidList.data = dbMidList.data.slice((dbMidList.data.length - self.MAX_MID_COUNT));
-                }
                 dbMidList.pubDate = pubDate;
                 dbMidList.save(function(err){
                     if(err){
@@ -1449,7 +1547,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
             },
             function (err, results) {
                 if (err) {
-                    return log.error(err);
+                    log.error(err);
                 }
                 if (failedList.length) {
                     return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, callback);
@@ -1465,8 +1563,96 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     return this;
 };
 
+Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, mCoord, baseTimeList, retryCount, callback) {
+    var self = this;
+    var failedList = [];
+    var collectInfo = new collectTown();
+    var dataTypeName = self.getDataTypeName(dataType);
+
+    if (!retryCount) {
+        var err = new Error("retryCount is zero for request DATA : ", dataTypeName);
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
+    }
+
+    collectInfo.requestDataByBaseTimeList(mCoord, dataType, key, baseTimeList, function(err, dataList) {
+        if (err) {
+            log.verbose(dataTypeName, " It has items rcvFailed ");
+            log.verbose(err);
+        }
+        log.info(dataTypeName, 'data receive completed : ', dataList.length);
+
+        async.mapSeries(dataList,
+            function(item, cb) {
+                if (item.isCompleted) {
+                    //will not update pubDate
+                    item.data[0].pubDate = '';
+                    self.getSaveFunc(dataType).call(self, item.data, function (err) {
+                        if (err) {
+                            log.error(err);
+                        }
+                        cb(err, item);
+                    });
+                }
+                else {
+                    log.silly(item);
+                    log.verbose(dataTypeName, " request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
+                    failedList.push(item.mCoord);
+                    //this index was not rcvData
+                    cb(undefined, item);
+                }
+            },
+            function (err, results) {
+                if (err) {
+                    log.error(err);
+                }
+                if (failedList.length) {
+                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, baseTimeList, --retryCount, callback);
+                }
+                log.info('received All ', dataTypeName, ' of baseTimes=', baseTimeList.length);
+                if (callback) {
+                    callback(err, results);
+                }
+            });
+    });
+};
+
+Manager.prototype.requestDataByUpdateList = function (dataType, key, updateList, retryCount, callback) {
+    var self = this;
+    var dataTypeName = self.getDataTypeName(dataType);
+
+    async.mapLimit(updateList, 20,
+        function(updateObject, cb){
+            log.info(updateObject);
+            self._recursiveRequestDataByBaseTimList(dataType, key, updateObject.mCoord, updateObject.baseTimeList, retryCount, function(err, result){
+                log.info(dataTypeName+' '+JSON.stringify(updateObject.mCoord)+' was updated counts='+updateObject.baseTimeList.length);
+                if (err) {
+                    log.error(err);
+                }
+                //unless previous item was failed, continues next item
+                cb();
+            });
+        },
+        function (err, results) {
+            log.info('Finished '+dataTypeName+' requests='+updateList.length);
+            if (callback) {
+                callback(err, results);
+            }
+            else if (err) {
+                log.error(err);
+            }
+        });
+
+    return this;
+};
+
 Manager.prototype._checkPubDate = function(model, srcList, dateString, callback) {
-    model.find(function(err, modelList) {
+    model.find(null, {_id: 0, mCoord: 1, regId: 1, pubDate: 1}).lean().exec(function(err, modelList) {
         if (err) {
             return callback(err);
         }
@@ -1497,7 +1683,7 @@ Manager.prototype._checkPubDate = function(model, srcList, dateString, callback)
                         return false;
                     }
                     else {
-                        log.silly('It need to upate');
+                        log.silly('It need to update');
                     }
                 }
                 else {
@@ -1538,31 +1724,34 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
     /*
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
-    if(parseInt(time) < 300){
+    if(parseInt(time) < 230){
         var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
-    else if(parseInt(time) < 600) {
+    else if(parseInt(time) < 530) {
         dateString.time = '0200';
     }
-    else if(parseInt(time) < 900){
+    else if(parseInt(time) < 830){
         dateString.time = '0500';
     }
-    else if(parseInt(time) < 1200){
+    else if(parseInt(time) < 1130){
         dateString.time = '0800';
     }
-    else if(parseInt(time) < 1500){
+    else if(parseInt(time) < 1430){
         dateString.time = '1100';
     }
-    else if(parseInt(time) < 1800){
+    else if(parseInt(time) < 1730){
         dateString.time = '1400';
     }
-    else if(parseInt(time) < 2100){
+    else if(parseInt(time) < 2030){
         dateString.time = '1700';
     }
-    else if(parseInt(time) < 2400){
+    else if(parseInt(time) < 2330){
         dateString.time = '2000';
+    }
+    else if(parseInt(time) >= 2330){
+        dateString.time = '2300';
     }
     else{
         log.error('unknown TimeString');
@@ -1625,22 +1814,22 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
                 if (srcList.length === 0) {
                     log.info('S> All data was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
-                    return this;
+                    return;
                 }
                 else {
                     log.info('S> srcList length=', srcList.length);
                 }
 
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 30, function (err, results) {
+                    log.info('S> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err)  {
                         return log.error(err);
                     }
-                    log.info('S> save OK');
                 });
             });
             return this;
@@ -1732,7 +1921,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
                 if (srcList.length === 0) {
                     log.info('ST> All shortest was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
                     return;
                 }
@@ -1742,13 +1931,13 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 
                 //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 30, function (err, results) {
+                    log.info('ST> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err)  {
                         return log.error(err);
                     }
-                    log.info('ST> save OK');
                 });
             });
 
@@ -1835,7 +2024,7 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 if (srcList.length === 0) {
                     log.info('C> All current was already updated');
                     if (callback) {
-                        callback();
+                        callback(undefined, []);
                     }
                     return;
                 }
@@ -1844,13 +2033,13 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 }
 
                 self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 30, function (err, results) {
+                    log.info('C> save OK');
                     if (callback) {
                         return callback(err, results);
                     }
                     if (err) {
                         return log.error(err);
                     }
-                    log.info('C> save OK');
                 });
             });
             return this;
@@ -1924,7 +2113,7 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('MF> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -1933,13 +2122,13 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 10, function (err, results) {
+                log.info('MF> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('MF> save OK');
             });
         });
     }
@@ -2037,7 +2226,7 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('ML> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2046,13 +2235,13 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 10, function (err, results) {
+                log.info('ML> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('ML> save OK');
             });
         });
     }
@@ -2153,7 +2342,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             if (srcList.length === 0) {
                 log.info('MT> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2162,13 +2351,13 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 10, function (err, results) {
+                log.info('MT> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err) {
                     return log.error(err);
                 }
-                log.info('MT> save OK');
             });
         });
     }
@@ -2251,7 +2440,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             if (srcList.length === 0) {
                 log.info('MS> All current was already updated');
                 if (callback) {
-                    callback();
+                    callback(undefined, []);
                 }
                 return;
             }
@@ -2260,178 +2449,17 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             }
 
             self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 10, function (err, results) {
+                log.info('MD> save OK');
                 if (callback) {
                     return callback(err, results);
                 }
                 if (err)  {
                     return log.error(err);
                 }
-                log.info('MD> save OK');
             });
         });
     }
     return this;
-};
-
-Manager.prototype.startTownData = function(){
-    var self = this;
-    //var periodValue = 30000;
-    //var midPeriod = 15000;
-    //var times = 0;
-    //var midTimes = 11;
-    //var curTimes = 24;
-    //if(config.mode === 'gather'){
-    //    periodValue = 5 * 60 * 1000;
-    //    midPeriod = 30 * 1000;
-    //}
-
-    /**************************************************
-     * TEST CODE : KEY change
-     ***************************************************/
-    //if(parseInt(dateString.time) < 800){
-    //    key = keydata.keyString.sooyeon;
-    //} else if(parseInt(dateString.time) < 1700) {
-    //    key = keydata.keyString.pokers11;
-    //} else {
-    //    key = keydata.keyString.aleckim;
-    //}
-
-    var server_key = config.keyString.cert_key;
-    var normal_key = config.keyString.normal;
-
-/*
-    var loop = setInterval(function(){
-        if(times === 3){
-            self.getTownShortData(9, key);
-        }else{
-            self.getTownShortData(-45 + (24*times), key);
-        }
-        times+= 1;
-
-        if(times > 3){
-            clearInterval(loop);
-        }
-    }, periodValue);
-
-    self.getTownShortestData(9, key);
-
-    var curloop = setInterval(function(){
-
-        self.getTownCurrentData(9 - curTimes, key);
-
-        curTimes -= 1;
-
-        if(curTimes < 0){
-            clearInterval(curloop);
-        }
-    }, (periodValue/2));
-    //self.getTownCurrentData(9, key);
-
-    var midLoop = setInterval(function(){
-        log.info('mid : ', midTimes,(midTimes * 24));
-        self.getMidLand(9 - (midTimes * 24), key);
-        self.getMidTemp(9 - (midTimes * 24), key);
-        midTimes-=1;
-
-        if(midTimes < 0 ){
-            clearInterval(midLoop);
-        }
-    }, midPeriod);
-
-    self.getMidForecast(9, key);
-    self.getMidSea(9, key);
-*/
-     //get shortest forecast once every hours.
-    self.loopTownShortestID = setInterval(function(){
-        self.getTownShortestData(9, server_key);
-    }, self.TIME_PERIOD.TOWN_SHORTEST);
-
-    var timeToGetShort = 0;
-    self.loopTownCurrentID = setInterval(function(){
-        async.waterfall([
-            function(callback){
-                self.getTownCurrentData(9, server_key, callback);
-            },
-            function(callback){
-                if(timeToGetShort >= 2){
-                    self.getTownShortData(9, server_key, callback);
-                }
-                else{
-                    callback(null);
-                }
-            }
-        ], function(err){
-            if (err) {
-                log.error(err);
-            }
-            log.info('Received Current');
-            if(timeToGetShort >= 2){
-                log.info('Received Short');
-                timeToGetShort = 0;
-            }else{
-                timeToGetShort++;
-            }
-        });
-    }, self.TIME_PERIOD.TOWN_CURRENT);
-
-    // get middle range forecast once every 12 hours.
-    self.loopMidForecastID = setInterval(function(){
-        self.getMidForecast(9, normal_key);
-    }, self.TIME_PERIOD.MID_FORECAST);
-
-    // get middle range land forecast once every 12 hours.
-    self.loopMidLandID = setInterval(function(){
-        self.getMidLand(9, normal_key);
-    }, self.TIME_PERIOD.MID_LAND);
-
-    // get middle range temperature once every 12 hours.
-    self.loopMidTempID = setInterval(function(){
-        self.getMidTemp(9, normal_key);
-    }, self.TIME_PERIOD.MID_TEMP);
-
-    // get middle range sea forecast  once every 12 hours.
-    self.loopMidSeaID = setInterval(function(){
-        self.getMidSea(9, normal_key);
-    }, self.TIME_PERIOD.MID_SEA);
-};
-
-Manager.prototype.stopTownData = function(){
-    var self = this;
-
-    if(self.loopTownShortID !== undefined){
-        clearInterval(self.loopTownShortID);
-        self.loopTownShortID = undefined;
-    }
-
-    if(self.loopTownShortestID !== undefined){
-        clearInterval(self.loopTownShortestID);
-        self.loopTownShortestID = undefined;
-    }
-
-    if(self.loopTownCurrentID !== undefined){
-        clearInterval(self.loopTownCurrentID);
-        self.loopTownCurrentID = undefined;
-    }
-
-    if(self.loopMidForecastID !== undefined){
-        clearInterval(self.loopMidForecastID);
-        self.loopMidForecastID = undefined;
-    }
-
-    if(self.loopMidLandID !== undefined){
-        clearInterval(self.loopMidLandID);
-        self.loopMidLandID = undefined;
-    }
-
-    if(self.loopMidTempID !== undefined){
-        clearInterval(self.loopMidTempID);
-        self.loopMidTempID = undefined;
-    }
-
-    if(self.loopMidSeaID !== undefined){
-        clearInterval(self.loopMidSeaID);
-        self.loopMidSeaID = undefined;
-    }
 };
 
 /**
@@ -2488,16 +2516,167 @@ Manager.prototype.getSaveFunc = function(value) {
     }
 };
 
+Manager.prototype.task = function(callback) {
+    var self = this;
+    var tempTasks = [];
+
+    while(self.asyncTasks.length) {
+        tempTasks.push(self.asyncTasks.pop());
+    }
+
+    log.info('start tasks counts '+tempTasks.length);
+
+    async.series(tempTasks, function (err) { 
+        if(err) { 
+            log.error(err); 
+        }  
+        log.info("Finished task counts:"+tempTasks.length+ " "+ new Date());
+        if (callback) {
+            callback(err);
+        }
+        else {
+            return setTimeout(function() {
+                self.task();
+            }, 1000*30); //30 secs
+        }
+    });
+};
+
+Manager.prototype.checkTimeAndPushTask = function (putAll) {
+    var self = this;
+    var time = (new Date()).getUTCMinutes();
+
+    var server_key = config.keyString.cert_key;
+    var normal_key = config.keyString.normal;
+
+    log.info('check time and push task');
+
+    if (time === 1 || putAll) {
+        //short rss
+        log.info('push short rss');
+        self.asyncTasks.push(function (callback) {
+            //need to update sync
+            townRss.mainTask();
+            setTimeout(function () {
+                callback();
+            }, 1000*60); //1min
+        });
+        log.info('push mid rss');
+        self.asyncTasks.push(function (callback) {
+            midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    if (time === 2 || putAll) {
+        log.info('push MidTemp');
+        self.asyncTasks.push(function (callback) {
+            self.getMidTemp(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+        log.info('push MidLand');
+        self.asyncTasks.push(function (callback) {
+            self.getMidLand(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+        log.info('push MidForecast');
+        self.asyncTasks.push(function (callback) {
+            self.getMidForecast(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+        log.info('push MidSea');
+        self.asyncTasks.push(function (callback) {
+            self.getMidSea(9, normal_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    if (time === 10 || putAll) {
+        log.info('push PastConditionGather');
+        self.asyncTasks.push(function (callback) {
+            var pastGather = new PastConditionGather();
+
+            pastGather.start(1, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    if (time === 31 || putAll) {
+        log.info('push Short');
+        self.asyncTasks.push(function (callback) {
+            self.getTownShortData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    if (time === 41 || putAll) {
+        log.info('push Shortest');
+        self.asyncTasks.push(function (callback) {
+            self.getTownShortestData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+        log.info('push Current');
+        self.asyncTasks.push(function (callback) {
+            self.getTownCurrentData(9, server_key, function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    log.info('wait '+self.asyncTasks.length+' tasks');
+};
+
 Manager.prototype.startManager = function(){
     var self = this;
 
-    self.startTownData();
+    midRssKmaRequester.setNextGetTime(new Date());
+    townRss.loadList();
+
+    self.checkTimeAndPushTask(true);
+    self.task();
+    setInterval(function() {
+       self.checkTimeAndPushTask(false) ;
+    }, 1000*60);
 };
 
 Manager.prototype.stopManager = function(){
-    var self = this;
-
-    self.stopTownData();
+    //var self = this;
+    //self.stopTownData();
 };
 
 module.exports = Manager;

@@ -34,7 +34,10 @@ else {
 // Bootstrap db connection
 log.info(config.db.path);
 
-mongoose.connect(config.db.path, function(err) {
+var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+
+mongoose.connect(config.db.path, options, function(err) {
     if (err) {
         log.error('Could not connect to MongoDB! ' + config.db.path);
         log.error(err);
@@ -79,15 +82,12 @@ global.landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
 global.manager = new controllerManager();
 global.townRss = new controllerShortRss();
 
-if (config.mode === 'gather' || config.mode === 'local') {
-    manager.startManager();
-    townRss.StartShortRss();
-}
 
 var keyBox = require('./config/config').keyString;
 
-var midRssKmaRequester = new (require('./lib/midRssKmaRequester'))();
-midRssKmaRequester.start();
+if (config.mode === 'gather' || config.mode === 'local') {
+    manager.startManager();
+}
 
 var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);

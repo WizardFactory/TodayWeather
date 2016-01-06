@@ -71,10 +71,11 @@
                                 <div class="row row-no-padding small-image" style="height: 15%;">
                                     <div><img src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 15%;">
-                                    <p>{{value.pop}}
-                                        <small>%</small>
-                                    </p>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 15%;">
+                                    <p>{{value.pop}}<small>%</small></p>
+                                </div>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 15%;">
+                                    <p>{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
                                 </div>
                             </div>
                         </div>
@@ -102,19 +103,18 @@
                                 <div class="row row-no-padding small-image" style="height: 15%;">
                                     <div><img src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 15%;">
-                                    <p>{{value.pop}}
-                                        <small>%</small>
-                                    </p>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 15%;">
+                                    <p>{{value.pop}}<small>%</small></p>
+                                </div>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 15%;">
+                                    <p>{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
                                 </div>
                                 <div class="row row-no-padding" style="height: 2%;"></div>
                                 <div class="row row-no-padding small-image" style="height: 15%;">
                                     <div><img src="img/{{value.humidityIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 15%;">
-                                    <p>{{value.reh}}
-                                        <small>%</small>
-                                    </p>
+                                    <p>{{value.reh}}<small>%</small></p>
                                 </div>
                             </div>
                         </div>

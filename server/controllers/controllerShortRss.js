@@ -174,7 +174,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
     meta.method = 'getShortRss';
     meta.url = url;
 
-    log.info('get rss URL : ', url);
+    log.verbose('get rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
         var statusCode = response.statusCode;
         if(err){
@@ -558,9 +558,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
                 });
 
                 if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                    for(var i = 0 ; i< (dbShortList.shortData.length - self.MAX_SHORT_COUNT) ; i++){
-                        dbShortList.shift();
-                    }
+                    dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
                 }
 
                 dbShortList.save(function(err){

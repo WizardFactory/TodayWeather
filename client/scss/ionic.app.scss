@@ -120,7 +120,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .timeChart {
-  width: 1248px; //52px per col
+  width: 1716px; //52px per col * 33
 }
 
 .weeklyChart {
@@ -442,7 +442,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
@@ -506,7 +506,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
@@ -570,7 +570,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
@@ -630,7 +630,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .timeChart {
-    width: 1416px; // 59px per col
+    width: 1947px; // 59px per col * 33
   }
 
   .weeklyChart {
@@ -663,7 +663,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (device-aspect-ratio: 320/640)
 {
   .timeChart {
-    width: 1272px; //53 px per col
+    width: 1749px; //53 px per col
   }
 
   .weeklyChart {
@@ -714,7 +714,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .timeChart {
-    width: 1412px; // 58.85px per col * 24
+    width: 1942px; // 58.85px per col * (41-8)
   }
 
   .weeklyChart {
