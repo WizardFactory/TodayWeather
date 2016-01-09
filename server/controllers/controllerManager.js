@@ -2524,7 +2524,7 @@ Manager.prototype.task = function(callback) {
         tempTasks.push(self.asyncTasks.pop());
     }
 
-    log.info('start tasks counts '+tempTasks.length);
+    log.info('start tasks counts '+tempTasks.length+' '+new Date());
 
     async.series(tempTasks, function (err) { 
         if(err) { 
@@ -2558,12 +2558,14 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
             //need to update sync
             townRss.mainTask();
             setTimeout(function () {
+                log.info('Finished ShortRss '+new Date());
                 callback();
             }, 1000*60); //1min
         });
         log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
             midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
+                log.info('Finished MidRss '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2576,6 +2578,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidTemp');
         self.asyncTasks.push(function (callback) {
             self.getMidTemp(9, normal_key, function (err) {
+                log.info('Finished MidTemp '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2585,6 +2588,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidLand');
         self.asyncTasks.push(function (callback) {
             self.getMidLand(9, normal_key, function (err) {
+                log.info('Finished MidLand '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2594,6 +2598,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidForecast');
         self.asyncTasks.push(function (callback) {
             self.getMidForecast(9, normal_key, function (err) {
+                log.info('Finished MidForecast '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2603,6 +2608,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidSea');
         self.asyncTasks.push(function (callback) {
             self.getMidSea(9, normal_key, function (err) {
+                log.info('Finished MidSea '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2617,6 +2623,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
             var pastGather = new PastConditionGather();
 
             pastGather.start(1, server_key, function (err) {
+                log.info('Finished PastConditionGather '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2629,6 +2636,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
             self.getTownShortData(9, server_key, function (err) {
+                log.info('Finished Short '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2641,6 +2649,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Shortest');
         self.asyncTasks.push(function (callback) {
             self.getTownShortestData(9, server_key, function (err) {
+                log.info('Finished Shortest '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2650,6 +2659,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Current');
         self.asyncTasks.push(function (callback) {
             self.getTownCurrentData(9, server_key, function (err) {
+                log.info('Finished Current '+new Date());
                 if (err) {
                     log.error(err);
                 }
