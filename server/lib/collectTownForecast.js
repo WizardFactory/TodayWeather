@@ -311,7 +311,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     //log.info(meta);
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
-    req.get(url, {timeout: 1000*10}, function(err, response, body){
+    req.get(url, {timeout: 1000*5}, function(err, response, body){
         if(err) {
             log.warn(err);
             //log.error('#', meta);
@@ -1142,8 +1142,8 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
                 self.resultList[i].options.code = srcList[i].code;
             }
 
-            //200 connections per 1 term
-            if (i >= 200) {
+            //400 connections per 1 term
+            if (i >= 400) {
                 self.receivedCount++;
                 continue;
             }

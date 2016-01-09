@@ -926,20 +926,51 @@ Manager.prototype.saveShort = function(newData, callback){
                                 //log.info('S> over write :', newItem);
                                 //dbShortList.shortData[i] = newItem;
                                 isNew = 0;
-                                dbShortList.shortData[i].pop = newItem.pop;
-                                dbShortList.shortData[i].pty = newItem.pty;
-                                dbShortList.shortData[i].r06 = newItem.r06;
-                                dbShortList.shortData[i].reh = newItem.reh;
-                                dbShortList.shortData[i].s06 = newItem.s06;
-                                dbShortList.shortData[i].sky = newItem.sky;
-                                dbShortList.shortData[i].t3h = newItem.t3h;
-                                dbShortList.shortData[i].tmn = newItem.tmn;
-                                dbShortList.shortData[i].tmx = newItem.tmx;
-                                dbShortList.shortData[i].uuu = newItem.uuu;
-                                dbShortList.shortData[i].vvv = newItem.vvv;
-                                dbShortList.shortData[i].wav = newItem.wav;
-                                dbShortList.shortData[i].vec = newItem.vec;
-                                dbShortList.shortData[i].wsd = newItem.wsd;
+                                if (newItem.pop !== -1) {
+                                    dbShortList.shortData[i].pop = newItem.pop;
+                                }
+                                else {
+                                    log.warn(new Error("new short("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbShortList.shortData[i].pty = newItem.pty;
+                                }
+                                if (newItem.r06 !== -1) {
+                                    dbShortList.shortData[i].r06 = newItem.r06;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbShortList.shortData[i].reh = newItem.reh;
+                                }
+                                if (newItem.s06 !== -1) {
+                                    dbShortList.shortData[i].s06 = newItem.s06;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortList.shortData[i].sky = newItem.sky;
+                                }
+                                if (newItem.t3h !== -50) {
+                                    dbShortList.shortData[i].t3h = newItem.t3h;
+                                }
+                                if (newItem.tmn !== -50) {
+                                    dbShortList.shortData[i].tmn = newItem.tmn;
+                                }
+                                if (newItem.tmx !== -50) {
+                                    dbShortList.shortData[i].tmx = newItem.tmx;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbShortList.shortData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbShortList.shortData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.wav !== -1) {
+                                    dbShortList.shortData[i].wav = newItem.wav;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbShortList.shortData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbShortList.shortData[i].wsd = newItem.wsd;
+                                }
                                 break;
                             }
                         }
@@ -1056,22 +1087,46 @@ Manager.prototype.saveCurrent = function(newData, callback){
                             );
                             if(comparedDate === 0){
                                 //log.info('C> over write :', newItem);
-                                dbCurrentList.currentData[i].t1h = newItem.t1h;
-                                dbCurrentList.currentData[i].rn1 = newItem.rn1;
-                                dbCurrentList.currentData[i].sky = newItem.sky;
-                                dbCurrentList.currentData[i].uuu = newItem.uuu;
-                                dbCurrentList.currentData[i].vvv = newItem.vvv;
-                                dbCurrentList.currentData[i].reh = newItem.reh;
-                                dbCurrentList.currentData[i].pty = newItem.pty;
-                                dbCurrentList.currentData[i].lgt = newItem.lgt;
-                                dbCurrentList.currentData[i].vec = newItem.vec;
-                                dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                if (newItem.t1h !== -50) {
+                                    dbCurrentList.currentData[i].t1h = newItem.t1h;
+                                }
+                                else {
+                                    log.warn(new Error("new current("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbCurrentList.currentData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbCurrentList.currentData[i].sky = newItem.sky;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbCurrentList.currentData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbCurrentList.currentData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbCurrentList.currentData[i].reh = newItem.reh;
+                                }
+                                if (newItem.pty !== -1) {
+                                    dbCurrentList.currentData[i].pty = newItem.pty;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbCurrentList.currentData[i].lgt = newItem.lgt;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbCurrentList.currentData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbCurrentList.currentData[i].wsd = newItem.wsd;
+                                }
                                 isNew = 0;
                                 break;
                             }
                         }
 
                         if(isNew){
+                            //although newItem is invaild, it is saved.
                             //log.info('C> push data :', newItem);
                             dbCurrentList.currentData.push(newItem);
                         }
@@ -1190,10 +1245,21 @@ Manager.prototype.saveShortest = function(newData, callback){
                             );
                             if(comparedDate === 0){
                                 //log.info('ST> over write :', newItem);
-                                dbShortestList.shortestData[i].pty = newItem.pty;
-                                dbShortestList.shortestData[i].rn1 = newItem.rn1;
-                                dbShortestList.shortestData[i].sky = newItem.sky;
-                                dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                if (newItem.pty !== -1) {
+                                    dbShortestList.shortestData[i].pty = newItem.pty;
+                                }
+                                else {
+                                    log.warn(new Error("new shortest("+newItem.date+newItem.time+") data is invalid!"));
+                                }
+                                if (newItem.rn1 !== -1) {
+                                    dbShortestList.shortestData[i].rn1 = newItem.rn1;
+                                }
+                                if (newItem.sky !== -1) {
+                                    dbShortestList.shortestData[i].sky = newItem.sky;
+                                }
+                                if (newItem.lgt !== -1) {
+                                    dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                }
                                 isNew = 0;
                                 break;
                             }
@@ -1658,31 +1724,34 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
     /*
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
-    if(parseInt(time) < 300){
+    if(parseInt(time) < 230){
         var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
-    else if(parseInt(time) < 600) {
+    else if(parseInt(time) < 530) {
         dateString.time = '0200';
     }
-    else if(parseInt(time) < 900){
+    else if(parseInt(time) < 830){
         dateString.time = '0500';
     }
-    else if(parseInt(time) < 1200){
+    else if(parseInt(time) < 1130){
         dateString.time = '0800';
     }
-    else if(parseInt(time) < 1500){
+    else if(parseInt(time) < 1430){
         dateString.time = '1100';
     }
-    else if(parseInt(time) < 1800){
+    else if(parseInt(time) < 1730){
         dateString.time = '1400';
     }
-    else if(parseInt(time) < 2100){
+    else if(parseInt(time) < 2030){
         dateString.time = '1700';
     }
-    else if(parseInt(time) < 2400){
+    else if(parseInt(time) < 2330){
         dateString.time = '2000';
+    }
+    else if(parseInt(time) >= 2330){
+        dateString.time = '2300';
     }
     else{
         log.error('unknown TimeString');
@@ -2455,7 +2524,7 @@ Manager.prototype.task = function(callback) {
         tempTasks.push(self.asyncTasks.pop());
     }
 
-    log.info('start tasks counts '+tempTasks.length);
+    log.info('start tasks counts '+tempTasks.length+' '+new Date());
 
     async.series(tempTasks, function (err) { 
         if(err) { 
@@ -2489,12 +2558,14 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
             //need to update sync
             townRss.mainTask();
             setTimeout(function () {
+                log.info('Finished ShortRss '+new Date());
                 callback();
             }, 1000*60); //1min
         });
         log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
             midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
+                log.info('Finished MidRss '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2507,6 +2578,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidTemp');
         self.asyncTasks.push(function (callback) {
             self.getMidTemp(9, normal_key, function (err) {
+                log.info('Finished MidTemp '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2516,6 +2588,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidLand');
         self.asyncTasks.push(function (callback) {
             self.getMidLand(9, normal_key, function (err) {
+                log.info('Finished MidLand '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2525,6 +2598,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidForecast');
         self.asyncTasks.push(function (callback) {
             self.getMidForecast(9, normal_key, function (err) {
+                log.info('Finished MidForecast '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2534,6 +2608,22 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push MidSea');
         self.asyncTasks.push(function (callback) {
             self.getMidSea(9, normal_key, function (err) {
+                log.info('Finished MidSea '+new Date());
+                if (err) {
+                    log.error(err);
+                }
+                callback();
+            });
+        });
+    }
+
+    if (time === 10 || putAll) {
+        log.info('push PastConditionGather');
+        self.asyncTasks.push(function (callback) {
+            var pastGather = new PastConditionGather();
+
+            pastGather.start(1, server_key, function (err) {
+                log.info('Finished PastConditionGather '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2546,6 +2636,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
             self.getTownShortData(9, server_key, function (err) {
+                log.info('Finished Short '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2558,6 +2649,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Shortest');
         self.asyncTasks.push(function (callback) {
             self.getTownShortestData(9, server_key, function (err) {
+                log.info('Finished Shortest '+new Date());
                 if (err) {
                     log.error(err);
                 }
@@ -2567,6 +2659,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push Current');
         self.asyncTasks.push(function (callback) {
             self.getTownCurrentData(9, server_key, function (err) {
+                log.info('Finished Current '+new Date());
                 if (err) {
                     log.error(err);
                 }

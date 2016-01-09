@@ -11,6 +11,7 @@ var config = require('../config/config');
 
 function PastConditionGather() {
     this.pubDateList; //{date: String, time: String}
+    this.mCoordList = [];
     this.updateList = []; //{mCoord: {mx,my}, baseTimeList: {date, time}}
 }
 
@@ -40,6 +41,72 @@ PastConditionGather.prototype.makePubDateList = function (days) {
     return pubDateList;
 };
 
+PastConditionGather.prototype.getCoordList = function (callback) {
+    var self = this;
+
+    town.getCoord(function(err, listTownDb) {
+        if (err) {
+            if (callback) {
+                callback(err);
+            }
+            else {
+                log.error(err);
+            }
+            return;
+        }
+        self.mCoordList = listTownDb;
+        callback(err);
+    });
+
+    return this;
+};
+
+PastConditionGather.prototype._checkBaseTimeByCoord = function (callback) {
+    var self = this;
+    var updateObject;
+
+    async.mapLimit(self.mCoordList, 400, function(mCoord, cb) {
+        modelCurrent.find({"mCoord.mx":mCoord.mx, "mCoord.my":mCoord.my}, {_id:0}).lean().exec(function (err, modelList) {
+            err = err || modelList.length===0?new Error("Fail get current="+JSON.stringify(mCoord)):undefined;
+            if (err)  {
+                return cb(err);
+            }
+
+            var model = modelList[0];
+
+            updateObject = {mCoord: model.mCoord, baseTimeList: []};
+
+            self.pubDateList.forEach(function (pubDate) {
+                for (var i=0; i<model.currentData.length; i++) {
+                    if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
+                        if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
+                            log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+                            break;
+                        }
+                        else {
+                            log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+                            return;
+                        }
+                    }
+                }
+                log.silly('baseTime='+JSON.stringify(pubDate)+' needs to get data');
+                updateObject.baseTimeList.push(pubDate);
+            });
+            if (updateObject.baseTimeList.length) {
+                self.updateList.push(updateObject);
+            }
+            else {
+                log.debug('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
+            }
+            cb();
+        });
+    }, function(err) {
+        callback(err);
+    });
+
+    return this;
+};
+
 PastConditionGather.prototype._checkBaseTime = function (callback) {
     var self = this;
     var updateObject;
@@ -52,8 +119,14 @@ PastConditionGather.prototype._checkBaseTime = function (callback) {
             self.pubDateList.forEach(function (pubDate) {
                 for (var i=0; i<model.currentData.length; i++) {
                     if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
-                        log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
-                        return;
+                        if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
+                            log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+                            break;
+                        }
+                        else {
+                            log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+                            return;
+                        }
                     }
                 }
                 log.silly('baseTime='+JSON.stringify(pubDate)+' needs to get data');
@@ -63,7 +136,7 @@ PastConditionGather.prototype._checkBaseTime = function (callback) {
                 self.updateList.push(updateObject);
             }
             else {
-                log.info('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
+                log.debug('mCoord='+JSON.stringify(updateObject.mCoord)+' is already updated');
             }
         });
         callback();
@@ -79,10 +152,20 @@ PastConditionGather.prototype.start = function (days, key, callback) {
             callback();
         },
         function (callback) {
-            self._checkBaseTime(function (err) {
+            self.getCoordList(function (err) {
+              callback(err);
+            });
+        },
+        function (callback) {
+            self._checkBaseTimeByCoord(function (err) {
                 callback(err);
             });
         },
+        //function (callback) {
+        //    self._checkBaseTime(function (err) {
+        //        callback(err);
+        //    });
+        //},
         function (callback) {
             manager.requestDataByUpdateList(manager.DATA_TYPE.TOWN_CURRENT, key, self.updateList, 10, function (err, results) {
                 callback(err);

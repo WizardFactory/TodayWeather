@@ -9,6 +9,7 @@ var shortRssSchema = new mongoose.Schema({
         mx : Number,
         my : Number
     },
+    pubDate: String,
     shortData : [{
         ftm: String, /* Forecast Date */
         date : String,  /* YYYYMMDDHHMM */

@@ -174,7 +174,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
     meta.method = 'getShortRss';
     meta.url = url;
 
-    log.info('get rss URL : ', url);
+    log.verbose('get rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
         var statusCode = response.statusCode;
         if(err){
@@ -370,6 +370,9 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
             template.r12 = parseFloat(item.r12[0]);
             template.s12 = parseFloat(item.s12[0]);
             template.ws = parseFloat(item.ws[0]);
+            if(template.ws.toString().length >= 5) {
+                template.ws = template.ws.toFixed(1);
+            }
             template.wd = parseFloat(item.wd[0]);
             template.wdKor = self.convertWeaterString(item.wdKor[0]);
             template.wfEn = self.convertWeaterString(item.wfEn[0]);
@@ -393,7 +396,7 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
 
         //log.info(dataList);
         if(callback){
-            callback(self.SUCCESS, {mCoord: coord, shortData: dataList});
+            callback(self.SUCCESS, {mCoord: coord, pubDate: data.wid.header[0].tm[0], shortData: dataList});
         }
     }
     catch(e){
@@ -403,6 +406,31 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
         }
     }
 };
+
+TownRss.prototype.lastestPubDate = function() {
+    var self = this;
+    var now = new Date();
+    var result;
+    var resultTime;
+    var tz = now.getTime() + (now.getTimezoneOffset() * 60000); // 서버의 타임존을 제거한다.
+    tz = tz + ((9*60)*60000);    // 대한민국 타임존을 더한다.
+    now.setTime(tz);
+
+    var hour = now.getHours();
+    if(hour <= 2) {
+        now.setDate(now.getDate() - 1);
+        resultTime = '2300';
+    } else {
+        resultTime = self.leadingZeros(((Math.floor(hour / 3)-1)*3) + 2, 2) + '00';
+    }
+
+    result =
+        self.leadingZeros(now.getFullYear(), 4) +
+        self.leadingZeros(now.getMonth() + 1, 2) +
+        self.leadingZeros(now.getDate(), 2) + resultTime;
+
+    return result;
+}
 
 /*
  *   @param index
@@ -418,6 +446,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
         for( i=0 ; i < self.townRssDb.length ; i++){
             if(self.townRssDb[i].mCoord.mx === newData.mCoord.mx &&
                 self.townRssDb[i].mCoord.my === newData.mCoord.my){
+                self.townRssDb[i].pubDate = newData.pubDate;
                 newData.shortData.forEach(function(newItem) {
                     var isNewItem = 1;
                     for (var j in self.townRssDb[i].shortData) {
@@ -466,7 +495,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
             }
 
             if(list.length === 0){
-                var item = new shortRssDb({mCoord: newData.mCoord, shortData: newData.shortData});
+                var item = new shortRssDb({mCoord: newData.mCoord, pubDate: newData.pubDate, shortData: newData.shortData});
                 item.save(function(err){
                     if(err){
                         log.error('fail to save');
@@ -481,6 +510,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
                 //log.info(index + ' :D> ' + dbShortList.shortData);
                 newData.shortData.forEach(function(newItem){
                     var isNew = 1;
+                    dbShortList.pubDate = newData.pubDate;
                     for(var i in dbShortList.shortData){
                         if(dbShortList.shortData[i].date === newItem.date){
                             if(dbShortList.shortData[i].ftm < newItem.ftm){
@@ -528,9 +558,7 @@ TownRss.prototype.saveShortRss = function(index, newData){
                 });
 
                 if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                    for(var i = 0 ; i< (dbShortList.shortData.length - self.MAX_SHORT_COUNT) ; i++){
-                        dbShortList.shift();
-                    }
+                    dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
                 }
 
                 dbShortList.save(function(err){
@@ -618,9 +646,53 @@ TownRss.prototype.mainTask = function(){
         return;
     }
 
+    var lastestPubDate = self.lastestPubDate();
+
     gridList.forEach(function(item, index){
         log.info(item);
-        self.getData(index, item);
+
+        if(config.db.mode === 'ram') {
+            var i;
+            var bFind = false;
+
+            for( i=0; i < self.townRssDb.length ; i++) {
+                if ((self.townRssDb[i].mCoord.mx === item.mCoord.mx)
+                    && (self.townRssDb[i].mCoord.my === item.mCoord.my)) {
+                    bFind = true;
+                    break;
+                }
+            }
+            // townRssDb에 데이터가 있을 경우
+            if(bFind === true) {
+                if((self.townRssDb[i].pubDate === undefined)
+                    || (Number(self.townRssDb[i].pubDate) < Number(lastestPubDate)))
+                {
+                    log.info('old rss weather data');
+                    self.getData(index, item);
+                } else {
+                    log.info('already updated information to lastest.');
+                }
+            } else {
+                log.info('not found rss weather data');
+                self.getData(index, item);
+            }
+        } else {
+            shortRssDb.find({mCoord: item.mCoord}, function (err, list) {
+                if ((err)
+                    || (list.length === 0)
+                    || (list[0].pubDate === undefined)) {
+                    // log.info('not found rss weather data');
+                    self.getData(index, item);
+                } else {
+                    if (Number(list[0].pubDate) < Number(lastestPubDate)) {
+                       //  log.info('old rss weather data');
+                        self.getData(index, item);
+                    } else {
+                       // log.info('already updated information to lastest.');
+                    }
+                }
+            });
+        }
     });
 };
 
