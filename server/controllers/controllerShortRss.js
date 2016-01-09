@@ -147,7 +147,7 @@ TownRss.prototype.loadList = function(){
                  log.info('RSS> failed to get coord');
              }
 
-             log.info('RSS> coord: ', coordList);
+             log.silly('RSS> coord: ', coordList);
              coordList.forEach(function(coord){
                 var item = {mCoord: coord};
                  self.coordDb.push(item);
@@ -176,7 +176,6 @@ TownRss.prototype.getShortRss = function(index, url, callback){
 
     log.verbose('get rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
-        var statusCode = response.statusCode;
         if(err){
             log.error('failed to req (%d)', index);
             if(callback){
@@ -184,7 +183,8 @@ TownRss.prototype.getShortRss = function(index, url, callback){
             }
             return;
         }
-        if(statusCode === 404 || statusCode === 403){
+
+        if(!response.statusCode || response.statusCode === 404 || response.statusCode === 403){
             log.error('ERROR!!! StatusCode : ', statusCode);
             if(callback){
                 callback(self.RETRY);
@@ -700,7 +700,7 @@ TownRss.prototype.StartShortRss = function(){
     var self = this;
 
     self.loadList();
-    //self.mainTask();
+    self.mainTask();
 
     self.loopTownRssID = setInterval(function() {
 
