@@ -29,6 +29,7 @@ var modelMidTemp = require('../models/modelMidTemp');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
+var keco = new (require('../lib/kecoRequester.js'))();
 
 function Manager(){
     var self = this;
@@ -2632,6 +2633,19 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         });
     }
 
+    //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.
+    if (time === 20 || putAll) {
+        log.info('push keco main process');
+        self.asyncTasks.push(function (callback) {
+            keco.cbMainProcess(keco, function (err) {
+                if (err) {
+                    log.error;
+                }
+                callback();
+            });
+        });
+    }
+
     if (time === 31 || putAll) {
         log.info('push Short');
         self.asyncTasks.push(function (callback) {
@@ -2676,6 +2690,15 @@ Manager.prototype.startManager = function(){
 
     midRssKmaRequester.setNextGetTime(new Date());
     townRss.loadList();
+
+    keco.setServiceKey(config.keyString.normal);
+    keco.setDaumApiKey(config.keyString.daum_key);
+    keco.getCtprvnSidoList();
+    keco.addMsrstnInfoToTown(function (err) {
+        if (err) {
+            log.error(err);
+        }
+    });
 
     self.checkTimeAndPushTask(true);
     self.task();
