@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.6.10",
+  "version": "0.6.11",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
