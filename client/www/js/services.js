@@ -580,7 +580,7 @@ angular.module('starter.services', [])
         function makeSummary(current, yesterday) {
             var str = "";
 
-            if (current.t1h && yesterday && yesterday.t3h) {
+            if (current.t1h !== undefined && yesterday && yesterday.t3h !== undefined) {
                 var diffTemp = current.t1h - yesterday.t3h;
 
                 str += "어제";

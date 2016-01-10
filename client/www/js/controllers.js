@@ -302,18 +302,20 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                var hoursPadding = 9;
+                index = 7; //yesterday 21h
 
-                if (hours < 9) {
-                    index = 7;
+                if(hours >= 3) {
+                    //start today
+                    index+=1;
                 }
-                else {
-
-                    // 6 cells 에서는 15이후부터, 9시,12,15,18,21,24 표시
-                    if (hours > 15 && bodyWidth < 360) {
-                       hoursPadding += 1;
-                    }
-                    index = 7 + hoursPadding - Math.floor(hours/3);
+                if (hours >= 6) {
+                    index+=1;
+                }
+                if (hours >= 9) {
+                    index += 1;
+                }
+                if (hours > 15 && bodyWidth < 360) {
+                    index += 1;
                 }
                 return getWidthPerCol()*index;
             }
