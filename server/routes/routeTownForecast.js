@@ -2246,7 +2246,7 @@ router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req,
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getMid, getMidRss, getPastMid, mergeMidWithShort],
+router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort],
             function(req, res) {
     var meta = {};
 
@@ -2351,7 +2351,7 @@ router.get('/:region/:city/:town/shortest', [getShortest], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city/:town/current', [getCurrent], function(req, res) {
+router.get('/:region/:city/:town/current', [getCurrent, getKeco], function(req, res) {
     var meta = {};
 
     var result = {};

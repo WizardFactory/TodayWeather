@@ -12,7 +12,7 @@ function arpltnController() {
 }
 
 arpltnController._appendFromDb = function(town, current, callback) {
-    arpltn.findOne({town:town}, function (err, arpltnData) {
+    arpltn.findOne({town:town}).lean().exec(function (err, arpltnData) {
         if (err) {
             log.warn(err);
             return callback(err);
@@ -24,7 +24,7 @@ arpltnController._appendFromDb = function(town, current, callback) {
                 return callback(err);
             }
 
-            log.debug(arpltnData.toString());
+            log.info(JSON.stringify(arpltnData));
 
             current.arpltn = arpltnData.arpltn;
             return callback(err, arpltnData);
