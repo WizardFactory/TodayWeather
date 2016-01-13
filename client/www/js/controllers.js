@@ -663,7 +663,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.6.10";
+        $scope.version  = "0.6.11";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();
