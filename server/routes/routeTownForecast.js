@@ -388,7 +388,7 @@ var getCoord = function(region, city, town, cb){
     meta.town = town;
 
     try{
-        dbTown.find({'town.first':region, 'town.second':city, 'town.third':town}, {mCoord: 1}).lean().exec(function(err, result){
+        dbTown.find({'town.first':region, 'town.second':city, 'town.third':town}, {mCoord: 1}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getCoord : fail to find db item');
                 if(cb){
@@ -446,7 +446,7 @@ var getTownDataFromDB = function(db, indicator, cb){
     meta.indicator = indicator;
 
     try{
-        db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).lean().exec(function(err, result){
+        db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getDataFromDB : fail to find db item');
                 if(cb){
@@ -553,7 +553,7 @@ var getMidDataFromDB = function(db, indicator, cb){
     meta.indicator = indicator;
 
     try{
-        db.find({regId : indicator}, {_id: 0}).lean().exec(function(err, result){
+        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getMidDataFromDB : fail to find db item');
                 if(cb){
