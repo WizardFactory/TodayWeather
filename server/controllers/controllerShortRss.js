@@ -649,7 +649,7 @@ TownRss.prototype.mainTask = function(){
     var lastestPubDate = self.lastestPubDate();
 
     gridList.forEach(function(item, index){
-        log.info(item);
+        log.debug(item);
 
         if(config.db.mode === 'ram') {
             var i;

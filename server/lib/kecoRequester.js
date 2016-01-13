@@ -446,6 +446,7 @@ Keco.prototype.parseMsrstn = function(data, callback) {
 
 /**
  *
+ * @param lean
  * @param callback
  */
 Keco.prototype.loadTownList = function(lean, callback) {
@@ -504,7 +505,7 @@ Keco.prototype.addMsrstnInfoToTown = function(callback) {
 
         log.info('loaded town list');
 
-        async.mapSeries(townList,
+        async.mapLimit(townList, 400,
             function(town, mapCallback) {
 
                 //서버 시작할때매다, 갱신함.

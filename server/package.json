@@ -28,6 +28,7 @@
     "jwt-simple": "^0.3.0",
     "mongoose": "^4.3.4",
     "morgan": "~1.6.1",
+    "newrelic": "^1.24.1",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
     "winston": "^1.0.1",
