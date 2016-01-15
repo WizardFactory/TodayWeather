@@ -371,6 +371,39 @@ function _mergeList(dstList, srcList) {
     return this;
 }
 
+
+/**
+ * todo: we have to make object for routing
+ * @type {Array}
+ */
+var dbTownList = [];
+
+/**
+ *
+ * @param list
+ * @param region
+ * @param city
+ * @param town
+ * @param callback
+ * @returns {*}
+ * @private
+ */
+function _findTownFromList(list, region, city, town, callback) {
+    if (list.length <= 0) {
+       return callback(new Error("list length is zero"));
+    }
+
+    for(var i=0; i<list.length; i++) {
+        var dbTown = list[i];
+        if (dbTown.town.first === region && dbTown.town.second === city && dbTown.town.third === town) {
+            callback(undefined, dbTown.mCoord);
+            return this;
+        }
+    }
+    callback(new Error("Fail to find town "+region+" "+city+" "+town));
+    return this;
+}
+
 /*
  *   get coordinate (mx, my) from town list.
  *   @param region
@@ -388,38 +421,33 @@ var getCoord = function(region, city, town, cb){
     meta.town = town;
 
     try{
-        dbTown.find({'town.first':region, 'town.second':city, 'town.third':town}, {mCoord: 1}).lean().exec(function(err, result){
-            if(err){
-                log.error('~> getCoord : fail to find db item');
-                if(cb){
-                    cb(err);
+        if (dbTownList.length > 0) {
+            _findTownFromList(dbTownList, region, city, town, cb);
+            return this;
+        }
+        else {
+            dbTown.find({}, {_id:0}).lean().exec(function (err, tList) {
+                if(err){
+                    log.error('~> getCoord : fail to find db item');
+                    if(cb){
+                        cb(err);
+                    }
+                    return;
                 }
-                return;
-            }
 
-            if(result.length === 0){
-                log.error('~> there is no data', result.length);
-                if(cb){
-                    cb(new Error("there is no data"));
+                if(tList.length === 0){
+                    log.error('~> there is no data', tList.length);
+                    if(cb){
+                        cb(new Error("there is no data"));
+                    }
+                    return;
                 }
+                dbTownList = tList;
+                _findTownFromList(dbTownList, region, city, town, cb);
                 return;
-            }
-            if(result.length > 1){
-                log.error('~> what happened??', result.length);
-            }
-
-            var coord = {
-                mx: result[0].mCoord.mx,
-                my: result[0].mCoord.my
-            };
-
-            //log.info('~> found coord:', coord.mx, coord.my);
-
-            if(cb){
-                cb(0, coord);
-            }
-            return coord;
-        });
+            });
+            return this;
+        }
     }catch(e){
         log.error(meta);
         if (cb) {
@@ -446,7 +474,7 @@ var getTownDataFromDB = function(db, indicator, cb){
     meta.indicator = indicator;
 
     try{
-        db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).lean().exec(function(err, result){
+        db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getDataFromDB : fail to find db item');
                 if(cb){
@@ -553,7 +581,7 @@ var getMidDataFromDB = function(db, indicator, cb){
     meta.indicator = indicator;
 
     try{
-        db.find({regId : indicator}, {_id: 0}).lean().exec(function(err, result){
+        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getMidDataFromDB : fail to find db item');
                 if(cb){
@@ -623,7 +651,7 @@ var getMidDataFromDB = function(db, indicator, cb){
 function _getMax(list, invalidValue) {
     var ret;
     list.forEach(function (data) {
-        if (data !== invalidValue && (data > ret || data === undefined)) {
+        if (data !== invalidValue && (data > ret || ret === undefined)) {
             ret = data;
         }
     });

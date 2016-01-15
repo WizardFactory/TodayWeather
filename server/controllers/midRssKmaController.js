@@ -13,7 +13,7 @@ function midRssKmaController() {
 midRssKmaController.getData = function(regId, callback) {
     log.input('midRssKmaController getData '+regId);
 
-    MidRssModel.find({regId:regId}, {_id: 0}).lean().exec(function(err, midRssList) {
+    MidRssModel.find({regId:regId}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
         if (err) {
             return callback(err);
         }

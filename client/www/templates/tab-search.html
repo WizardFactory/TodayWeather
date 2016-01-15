@@ -1,5 +1,5 @@
-<ion-view hide-nav-bar="true" style="background-color: inherit;">
-    <ion-content style="background-color: inherit;" scroll="false">
+<ion-view hide-nav-bar="true">
+    <ion-content scroll="false">
         <div class="main-content search">
             <div class="row row-no-padding" style="height: 5%;">
                 <p class="top-time">
@@ -37,11 +37,11 @@
                             </div>
                             <div class="col search-content" style="width: 20%"><img src="img/{{city.skyIcon}}-Big.png"></div>
                             <div class="col search-content" style="width: 20%;">
-                                <p style="font-size: 32px; padding-top: 18px; font-family: 'helvetica neue light';">{{city.t1h}}˚</p>
+                                <p class="search-digit">{{city.t1h}}˚</p>
                             </div>
                             <div class="col search-content" style="width: 20%;" ng-show="city.delete===false">
-                                <p style="font-size: 32px; padding-top: 18px; font-family: 'helvetica neue light';">
-                                    <span style="font-size: 16px">{{city.tmn}}˚/{{city.tmx}}˚</span>
+                                <p class="search-digit">
+                                    <span style="font-size: 16px; font-family: inherit">{{city.tmn}}˚/{{city.tmx}}˚</span>
                                 </p>
                             </div>
                             <button class="button button-energized" style="width: 20%;" ng-show="city.delete===true" ng-click="OnDeleteCity($index)">
