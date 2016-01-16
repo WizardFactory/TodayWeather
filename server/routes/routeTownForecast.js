@@ -3,6 +3,8 @@
  */
 "use strict";
 
+var async = require('async');
+
 var router = require('express').Router();
 var config = require('../config/config');
 var dbForecast = require('../models/forecast');
@@ -23,6 +25,7 @@ var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelShortRss = require('../models/modelShortRss');
 var dbTown = require('../models/town');
+var convertGeocode = require('../utils/convertGeocode');
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
@@ -388,20 +391,44 @@ var dbTownList = [];
  * @returns {*}
  * @private
  */
-function _findTownFromList(list, region, city, town, callback) {
+function _findTownCode(list, region, city, town, cb){
     if (list.length <= 0) {
-       return callback(new Error("list length is zero"));
+        return cb(new Error("list length is zero"));
     }
 
-    for(var i=0; i<list.length; i++) {
-        var dbTown = list[i];
-        if (dbTown.town.first === region && dbTown.town.second === city && dbTown.town.third === town) {
-            callback(undefined, dbTown.mCoord);
-            return this;
+    async.waterfall([
+        function(callback){
+            log.silly('Find code from list', region, city, town);
+            for(var i=0; i<list.length; i++) {
+                var dbTown = list[i];
+                if (dbTown.town.first === region && dbTown.town.second === city && dbTown.town.third === town) {
+                    log.silly('_findCode : ', dbTown.mCoord);
+                    callback('goto exit', dbTown.mCoord);
+                    return;
+                }
+            }
+            callback(null);
+        },
+        function(callback){
+            log.silly('get getcode');
+            convertGeocode(region, city, town, function (err, result) {
+                log.silly('_findCode XY>',result);
+                callback('goto exit', {mx:result.mx, my: result.my});
+                return;
+            });
+
+            callback(null);
         }
-    }
-    callback(new Error("Fail to find town "+region+" "+city+" "+town));
-    return this;
+    ],
+    function(err, result){
+        log.silly('FindCode>', result);
+        if(result){
+            cb(0, result);
+            return;
+        }
+
+        cb(new Error("can not find code"));
+    });
 }
 
 /*
@@ -422,7 +449,7 @@ var getCoord = function(region, city, town, cb){
 
     try{
         if (dbTownList.length > 0) {
-            _findTownFromList(dbTownList, region, city, town, cb);
+            _findTownCode(dbTownList, region, city, town, cb);
             return this;
         }
         else {
@@ -443,7 +470,7 @@ var getCoord = function(region, city, town, cb){
                     return;
                 }
                 dbTownList = tList;
-                _findTownFromList(dbTownList, region, city, town, cb);
+                _findTownCode(dbTownList, region, city, town, cb);
                 return;
             });
             return this;
@@ -1078,6 +1105,14 @@ var getShort = function(req, res, next){
     var meta = {};
     var resultList = [];
 
+    if(req.params.city === undefined){
+        req.params.city = '';
+    }
+
+    if(req.params.town === undefined){
+        req.params.town = '';
+    }
+
     var regionName = req.params.region;
     var cityName = req.params.city;
     var townName = req.params.town;
@@ -1291,6 +1326,8 @@ var getShort = function(req, res, next){
                     log.error(err);
                     return next();
                 }
+                log.silly('S> coord : ',coord);
+
                 getTownDataFromDB(modelShort, coord, function(err, shortList){
                     if (err) {
                         log.error(err);
@@ -2231,19 +2268,34 @@ router.get('/', [getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [getRegionSummary, getMidRss], function(req, res) {
+router.get('/:region', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
     var meta = {};
 
     var result = {};
     var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
 
     meta.method = '/:region';
     meta.region = regionName;
+    meta.city = cityName;
 
     log.info('##', meta);
 
-    result.regionName = regionName;
 
+    result.regionName = regionName;
+    result.cityName = cityName;
+    result.townName = townName;
+
+    if(req.short){
+        result.short = req.short;
+    }
+    if(req.shortest){
+        result.shortest = req.shortest;
+    }
+    if(req.current){
+        result.current = req.current;
+    }
     if(req.midData){
         result.midData = req.midData;
     }
@@ -2251,12 +2303,13 @@ router.get('/:region', [getRegionSummary, getMidRss], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req, res) {
+router.get('/:region/:city', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
     var meta = {};
 
     var result = {};
     var regionName = req.params.region;
     var cityName = req.params.city;
+    var townName = req.params.town;
 
     meta.method = '/:region/:city';
     meta.region = regionName;
@@ -2264,9 +2317,20 @@ router.get('/:region/:city', [getMid, getMidRss, getLifeIndexKma], function(req,
 
     log.info('##', meta);
 
+
     result.regionName = regionName;
     result.cityName = cityName;
+    result.townName = townName;
 
+    if(req.short){
+        result.short = req.short;
+    }
+    if(req.shortest){
+        result.shortest = req.shortest;
+    }
+    if(req.current){
+        result.current = req.current;
+    }
     if(req.midData){
         result.midData = req.midData;
     }
