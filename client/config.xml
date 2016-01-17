@@ -73,6 +73,15 @@
                 <true/>
             </dict>
         </config-file>
+        <config-file parent="CFBundleDevelopmentRegion" platform="ios" target="*-Info.plist">
+            <string>ko_KR</string>
+        </config-file>
+        <config-file parent="CFBundleLocalizations" platform="ios" target="*-Info.plist">
+            <array>
+                <string>en</string>
+                <string>ko</string>
+            </array>
+        </config-file>
     </platform>
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />
     <plugin name="cordova-plugin-whitelist" spec="https://github.com/apache/cordova-plugin-whitelist.git" />

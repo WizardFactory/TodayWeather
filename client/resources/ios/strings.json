@@ -1,0 +1,12 @@
+{
+  "en":
+  {
+    "CFBundleDisplayName" : "TodayWeather",
+    "CFBundleName" : "TodayWeather"
+  },
+  "ko":
+  {
+    "CFBundleDisplayName" : "오늘날씨",
+    "CFBundleName" : "오늘날씨"
+  }
+}
