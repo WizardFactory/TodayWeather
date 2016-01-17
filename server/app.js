@@ -4,6 +4,8 @@
 
 'use strict';
 
+require('newrelic');
+
 var express = require('express');
 var path = require('path');
 //var favicon = require('serve-favicon');
@@ -93,12 +95,6 @@ var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
 taskKmaIndexService.setServiceKey(keyBox.cert_key);
 //client요청이 있을때 실행함
 //taskKmaIndexService.start();
-
-var keco = new (require('./lib/kecoRequester.js'))();
-keco.setServiceKey(keyBox.normal);
-keco.setDaumApiKey(keyBox.daum_key);
-//client요청이 있을때 실행함
-//keco.start();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

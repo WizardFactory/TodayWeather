@@ -1,5 +1,5 @@
-<ion-view hide-nav-bar="true" style="background-color: inherit">
-    <ion-content delegate-handle="body" scroll="false" style="background-color: inherit">
+<ion-view hide-nav-bar="true">
+    <ion-content delegate-handle="body" scroll="false">
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
             <div class="row row-no-padding" style="height: 5%;">
@@ -25,12 +25,11 @@
                                 <div class="col" style="width: 1%"></div>
                                 <div class="col"
                                      style="width: 45%; height: 100%; display: table-cell; vertical-align: middle">
-                                    <div class="row-no-padding" style="height: 10%"></div>
                                     <div class="row-no-padding big-temp-point" style="height: 30%"
                                          ng-if="currentWeather.t1h!==undefined">
                                         <img src="img/reddot.png">
                                     </div>
-                                    <div class="row-no-padding big-temp-sky-state" style="height: 60%"
+                                    <div class="row-no-padding big-temp-sky-state" style="height: 70%"
                                          ng-if="currentWeather.skyIcon">
                                         <img src="img/{{currentWeather.skyIcon}}-Big.png">
                                     </div>
@@ -38,10 +37,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row row-no-padding" style="height: 6%;"></div>
                     <div class="row row-no-padding region-sum" style="height: 13%;">
                         <p>{{currentWeather.summary}}</p>
                     </div>
+                    <div class="row row-no-padding" style="height: 8%;"></div>
                 </div>
             </div>
             <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
@@ -128,8 +127,8 @@
                     <div class="row row-no-padding" style="height: 80%">
                         <div class="col col-10"></div>
                         <div class="col col-80" style="height: 100%;">
-                            <ul class="list" style="background-color: #8dc63f; color: #ffffff; height: 100%">
-                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                            <ul class="list" style="color: #ffffff; height: 100%">
+                                <li class="item detail-item">
                                     <div class="row row-no-padding">
                                         <div class="col col-33 detail-text"><p>체감온도</p></div>
                                         <div class="col col-33 detail-image">
@@ -139,7 +138,7 @@
                                         </div>
                                     </div>
                                 </li>
-                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                <li class="item detail-item">
                                     <div class="row row-no-padding" ng-if="currentWeather.rn1Str">
                                         <div class="col col-33 detail-text"><p>{{currentWeather.ptyStr}}</p></div>
                                         <div class="col col-33 detail-image">
@@ -158,7 +157,7 @@
                                         </div>
                                     </div>
                                 </li>
-                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                <li class="item detail-item">
                                     <div class="row row-no-padding">
                                         <div class="col col-33 detail-text"><p>자외선</p></div>
                                         <div class="col col-33 detail-image">
@@ -167,7 +166,7 @@
                                         <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
                                     </div>
                                 </li>
-                                <li class="item" style="background-color: inherit; color: inherit; padding: 5px">
+                                <li class="item detail-item">
                                     <div class="row row-no-padding">
                                         <div class="col col-33 detail-text"><p>바람</p></div>
                                         <div class="col col-33 detail-image">

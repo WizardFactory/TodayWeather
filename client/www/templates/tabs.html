@@ -3,7 +3,7 @@ Create tabs with an icon and label, using the tabs-positive style.
 Each tab's child <ion-nav-view> directive will have its own
 navigation history that also transitions its views in and out.
 -->
-<ion-tabs class="tabs-icon-only tabs-dark" style="background-color: #22a1db" ng-style="{'background-color': viewColor}">
+<ion-tabs class="tabs-icon-only tabs-dark">
 
     <!-- Search Tab -->
     <ion-tab title="Search" icon-off="ion-ios-search" icon-on="ion-ios-search" href="#/tab/search">
@@ -16,7 +16,7 @@ navigation history that also transitions its views in and out.
     </ion-tab>
 
     <!--Update tab-->
-    <ion-tab title="Update" icon-off="ion-ios-loop" icon-on="ion-ios-loop" ng-click="doTabRefresh()">
+    <ion-tab title="Update" icon-off="ion-ios-reload" icon-on="ion-ios-reload" ng-click="doTabRefresh()">
     </ion-tab>
 
     <!-- Setting Tab -->

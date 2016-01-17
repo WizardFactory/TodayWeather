@@ -12,19 +12,24 @@ function arpltnController() {
 }
 
 arpltnController._appendFromDb = function(town, current, callback) {
-    arpltn.findOne({town:town}, function (err, arpltnData) {
+    arpltn.find({town:town}).limit(1).lean().exec(function (err, arpltnDataList) {
         if (err) {
             log.warn(err);
             return callback(err);
         }
         try {
+            if (arpltnDataList.length === 0) {
+                err = new Error('Fail to find arpltn town='+JSON.stringify(town));
+                return callback(err);
+            }
+            var arpltnData = arpltnDataList[0];
             if (!arpltnData) {
-                err = new Error('Fail to find arpltn ' + town.toString());
+                err = new Error('Fail to find arpltn ' + JSON.stringify(town));
                 log.error(err);
                 return callback(err);
             }
 
-            log.debug(arpltnData.toString());
+            log.info(JSON.stringify(arpltnData));
 
             current.arpltn = arpltnData.arpltn;
             return callback(err, arpltnData);

@@ -15,12 +15,6 @@ $royal:                           #886aea !default;
 $dark:                            #444 !default;
 */
 
-$calm:                            #22a1db !default; //dashboard color, short forecast
-$balanced:                        #0fbe96 !default; //mid forecast
-$positive:                        #8dc63f !default; //detail weather
-$assertive:                       #ec72a8 !default; //city search
-$energized:                       #ea9623 !default; //setting
-
 $bar-height: 50px;
 $tabs-height: 40px;
 
@@ -28,31 +22,18 @@ $tabs-height: 40px;
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 @font-face {
-  font-family: "helvetica neue ultralight";
-  src: url("../fonts/HelveticaNeue-UltraLight.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro 1";
+  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
 }
 
 @font-face {
-  font-family: "helvetica neue light";
-  src: url("../fonts/HelveticaNeueLTPro-Lt.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro 2";
+  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
 }
 
 @font-face {
-  font-family: "Nanum Barun Gothic UltraLight";
-  src: url("../fonts/NanumBarunGothicUltraLight.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Nanum Barun Gothic Light";
-  src: url("../fonts/NanumBarunGothicLight.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro 3";
+  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
 }
 
 // Include all of Ionic
@@ -67,7 +48,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .col {
-  font-family: "Nanum Barun Gothic UltraLight";
+  font-family: "Bareun Dotum Pro 1";
 }
 
 .row + .row {
@@ -77,7 +58,8 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .top-time {
   padding: 5px;
   text-align: left;
-  font-family: 'Nanum Barun Gothic Light';
+  font-size: 14px;
+  font-family: 'Bareun Dotum Pro 3';
 }
 
 .region {
@@ -90,6 +72,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   text-align: center;
   margin: 0;
   font-size: 21px;
+  font-family: 'Bareun Dotum Pro 2';
 }
 
 .region-sum {
@@ -102,10 +85,11 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   text-align: center;
   margin: 0;
   font-size: 19px;
+  font-family: 'Bareun Dotum Pro 2';
 }
 
 .big-digit {
-  font-family: 'helvetica neue ultralight';
+  font-family: 'Bareun Dotum Pro 1';
   text-align: right;
   font-size: 66px;
   letter-spacing: -3px;
@@ -134,7 +118,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .small-time p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'Nanum Barun Gothic Light';
+  font-family: 'Bareun Dotum Pro 3';
   text-align: center;
   font-size: 14px;
   margin: 0;
@@ -162,7 +146,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .small-digit p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'helvetica neue light';
+  font-family: 'Bareun Dotum Pro 1';
   text-align: center;
   font-size: 15px;
   margin: 0;
@@ -175,7 +159,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   background-color: #231815;
   opacity: 0.8;
   color: white;
-  font-family: "Nanum Barun Gothic UltraLight";
+  font-family: "Bareun Dotum Pro 1";
 }
 
 .guide-row {
@@ -256,13 +240,13 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .text-today {
   fill: #ffffff;
-  font-family: 'helvetica neue light';
+  font-family: 'Bareun Dotum Pro 1';
   font-size: 20px;
 }
 
 .text-yesterday {
   fill: #d0d0d0;
-  font-family: 'helvetica neue light';
+  font-family: 'Bareun Dotum Pro 1';
   font-size: 20px;
 }
 
@@ -297,7 +281,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .detail-text p {
   display: table-cell;
   vertical-align: middle;
-  font-family: "Nanum Barun Gothic UltraLight";
+  font-family: "Bareun Dotum Pro 1";
   padding-top: 10px;
   font-size: 18px;
   padding-left: 5px;
@@ -305,30 +289,16 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin: 0;
 }
 
+.detail-item {
+  background-color: transparent;
+  color: inherit;
+  padding: 5px;
+}
+
 .main-content {
   width: 100%;
   height: 100%;
   color: white;
-}
-
-.main-content.short-forecast {
-  background-color: #22a1db;
-}
-
-.main-content.mid-forecast {
-  background-color: #0fbe96;
-}
-
-.main-content.detail-forecast {
-  background-color: #8dc63f;
-}
-
-.main-content.search {
-  background-color: #ec72a8;
-}
-
-.main-content.setting {
-  background-color: #ea9623;
 }
 
 .current-content {
@@ -367,11 +337,13 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .search-content input {
   display: table-cell;
+  vertical-align: middle;
   border: 0;
   padding: 0;
   background-color: transparent;
   color: white;
   font-size: 22px;;
+  font-family: "Bareun Dotum Pro 2";
 }
 
 .search-content img{
@@ -386,8 +358,17 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   padding-top: 6px;
   padding-left: 4px;
   color: white;
-  font-family: "Nanum Barun Gothic UltraLight";
+  font-family: "Bareun Dotum Pro 1";
   font-size: 20px;
+}
+
+.search-content .search-digit {
+  display: table-cell;
+  vertical-align: middle;
+  color: white;
+  font-size: 30px;
+  padding-top: 18px;
+  font-family: 'Bareun Dotum Pro 1';
 }
 
 .city-list {
@@ -403,6 +384,15 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 //  background-color: transparent;
 //  color: white;
 //}
+
+.tabs-dark .tabs {
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-color: transparent;
+}
+
+.pane, .view {
+  background-color: transparent;
+}
 
 //chrome extension
 
@@ -430,7 +420,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .big-digit {
     font-size: 62px;
-    letter-spacing: -3px;
   }
 
   .big-temp-point img{
@@ -493,8 +482,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-digit {
-    font-size: 90px;
-    letter-spacing: -2px;
+    font-size: 80px;
   }
 
   .big-temp-point img{
@@ -502,7 +490,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-temp-sky-state img{
-    width: 48px;
+    width: 41px;
   }
 
   .timeChart {
@@ -552,13 +540,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     height: 68%;
   }
 
-   .region p {
+  .region p {
     font-size: 22px;
   }
 
   .big-digit {
-    font-size: 105px;
-    letter-spacing: -3px;
+    font-size: 96px;
   }
 
   .big-temp-point img{
@@ -608,25 +595,28 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (-webkit-min-device-pixel-ratio: 3)
     and (device-aspect-ratio: 414/736)
 {
+  .top-time {
+    font-size: 16px;
+  }
+
   .region p {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .region-sum p {
-    font-size: 23px;
+    font-size: 22px;
   }
 
   .big-digit {
-    font-size: 120px;
-    letter-spacing: -6px;
+    font-size: 104px;
   }
 
   .big-temp-point img{
-    width: 16px;
+    width: 14px;
   }
 
   .big-temp-sky-state img{
-    width: 60px;
+    width: 52px;
   }
 
   .timeChart {
@@ -646,7 +636,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .small-digit p {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .search-icon {
@@ -681,7 +671,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     and (device-aspect-ratio: 360/640)
 {
   .big-digit {
-    font-size: 100px;
+    font-size: 84px;
   }
 
   .big-temp-point img {
@@ -689,11 +679,23 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   }
 
   .big-temp-sky-state img {
-    width: 52px;
+    width: 49px;
   }
 
   .city-list {
     height: 75%;
+  }
+
+  .small-time p {
+    font-size: 14px;
+  }
+
+  .small-image div img {
+    width: 30px;
+  }
+
+  .small-digit p {
+    font-size: 15px;
   }
 }
 
@@ -701,8 +703,12 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 @media screen and (device-width: 412px) and (device-height: 732px)
     and (device-aspect-ratio: 412/732)
 {
+  .top-time {
+    font-size: 16px;
+  }
+
   .big-digit {
-    font-size: 100px;
+    font-size: 104px;
   }
 
   .big-temp-point img {
@@ -711,6 +717,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .big-temp-sky-state img {
     width: 52px;
+  }
+
+  .region p {
+    font-size: 24px;
+  }
+
+  .region-sum p {
+    font-size: 22px;
   }
 
   .timeChart {
@@ -724,50 +738,16 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   .city-list {
     height: 75%;
   }
-}
 
-//
-//.scroll-content {
-//  background: url("../img/screen-dash.png");
-//  background-size: cover;
-//}
+  .small-time p {
+    font-size: 15px;
+  }
 
-.tabs-calm .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
+  .small-image div img {
+    width: 32px;
+  }
 
-.tabs-dark .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
-
-.tabs-balanced .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
-
-.tabs-energized .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
-
-.tabs-positive .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
-
-.tabs-assertive .tabs {
-  //background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
-  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
- // border-top:1px solid rgba(255,255,255,0.6);
-}
-
-.tabs-dark .tabs {
-  background-color: inherit !important;
+  .small-digit p {
+    font-size: 18px;
+  }
 }

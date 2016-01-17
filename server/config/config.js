@@ -16,6 +16,7 @@ module.exports = {
         test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
-        daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net')
+        daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net'),
+        newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key')
     }
 };

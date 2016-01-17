@@ -266,7 +266,7 @@ angular.module('starter.services', [])
                     return skyIconName = "Snow";
             }
 
-            if (lgt) {
+            if (lgt === 1) {
                 return skyIconName = "Lightning";
             }
 
@@ -580,7 +580,7 @@ angular.module('starter.services', [])
         function makeSummary(current, yesterday) {
             var str = "";
 
-            if (current.t1h && yesterday && yesterday.t3h) {
+            if (current.t1h !== undefined && yesterday && yesterday.t3h !== undefined) {
                 var diffTemp = current.t1h - yesterday.t3h;
 
                 str += "어제";
@@ -1708,7 +1708,8 @@ angular.module('starter.services', [])
                 currentForecast.pm10Str = parsePm10Info(pm10value, pm10Grade);
             }
 
-            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3);
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[yesterdayIndex]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
