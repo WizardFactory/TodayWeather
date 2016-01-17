@@ -1708,7 +1708,8 @@ angular.module('starter.services', [])
                 currentForecast.pm10Str = parsePm10Info(pm10value, pm10Grade);
             }
 
-            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3);
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[yesterdayIndex]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
