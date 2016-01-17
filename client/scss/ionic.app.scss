@@ -40,6 +40,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
+.popup-body {
+  line-height: 20px;
+}
+
 .scroll {
   height: 100%;
 }
