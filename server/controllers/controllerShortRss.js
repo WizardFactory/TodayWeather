@@ -608,7 +608,7 @@ TownRss.prototype.getData = function(index, item){
     var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
     self.getShortRss(index, url, function(err, RssData){
         if(err){
-            log.err('failed to get rss (%d)', index);
+            log.error('failed to get rss (%d)', index);
             if(err == self.RETRY){
                 self.emit('recvFail', index, item);
             }
