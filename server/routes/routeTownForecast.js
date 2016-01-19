@@ -1101,6 +1101,101 @@ var dataListPrint = function(list, name, title){
     log.silly('==================================================================================');
 };
 
+var getShortRss = function(req, res, next){
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
+
+    getCoord(regionName, cityName, townName, function(err, coord) {
+        if(err) {
+            log.error(err);
+            return next();
+        }
+
+        // req.short 데이터가 없을 경우 만들어준다.
+        if(!req.hasOwnProperty('short')) {
+            req.short = makeBasicShortList();
+        }
+
+        // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
+        getTownDataFromDB(modelShortRss, coord, function(err, rssList) {
+            if(err) {
+                log.error('error to get short RSS');
+                return next();
+            }
+
+            var i;
+            var requestTime = getTimeValue(9);
+
+            for(i=rssList.length-1;i>0;i--) {
+                // 미래의 데이터만을 가져와서 사용한다. 과거 데이터는 current로 부터 얻은 데이터를 그대로 사용
+                // === 만을 하지 않고 <= 로 하는 이유는 동일한 값이 존재하지 않을 수도 있기 때문이다.
+                if(parseInt('' + rssList[i].date) <= parseInt('' + requestTime.date + requestTime.time)) {
+                    // 여기서 바로 처리하지 않는 이유는 날짜 순서대로 배열에 놓고자함이다.
+                    break;
+                }
+            }
+            // 미래의 데이터만 사용한다.
+            if(parseInt('' + rssList[i].date) === parseInt('' + requestTime.date + requestTime.time)) {
+                i = i+1;
+            }
+
+            var j;
+            var found;
+
+            // rss 데이터를 모두 가져온다.
+            for(i;i<rssList.length;i++) {
+                found = 0;
+
+                for(j=0;j<req.short.length;j++) {
+                    if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
+                        found = 1;
+
+                        req.short[j].pop = rssList[i].pop;
+                        req.short[j].pty = rssList[i].pty;
+                        req.short[j].r06 = Math.round(rssList[i].r06);
+                        req.short[j].reh = rssList[i].reh;
+                        req.short[j].s06 = Math.round(rssList[i].s06);
+                        req.short[j].sky = rssList[i].sky;
+                        req.short[j].t3h = Math.round(rssList[i].temp);
+                        if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
+                            req.short[j].tmn = Math.round(rssList[i].tmn);
+                        } else if(req.short[j].time === '1500' && rssList[i].tmn != -999) {
+                            req.short[j].tmx = Math.round(rssList.tmx);
+                        }
+                        break;
+                    }
+                }
+                if(found === 0) {
+                    var item = {};
+                    item.date = rssList[i].date.slice(0, 8);
+                    item.time = rssList[i].date.slice(8, 12);
+                    item.pop = rssList[i].pop;
+                    item.pty = rssList[i].pty;
+                    item.r06 = Math.round(rssList[i].r06);
+                    item.reh = rssList[i].reh;
+                    item.s06 = Math.round(rssList[i].s06);
+                    item.sky = rssList[i].sky;
+                    item.t3h = Math.round(rssList[i].temp);
+                    if(item.time === '0600' && rssList[i].tmn != -999){
+                        item.tmn = Math.round(rssList[i].tmn);
+                    } else{
+                        item.tmn = -50;
+                    }
+                    if(item.time === '1500' && rssList[i].tmx != -999){
+                        item.tmx = Math.round(rssList[i].tmx);
+                    }else{
+                        item.tmx = -50;
+                    }
+
+                    req.short.push(item);
+                }
+            }
+            next();
+        });
+    });
+}
+
 var getShort = function(req, res, next){
     var meta = {};
     var resultList = [];
@@ -1363,42 +1458,16 @@ var getShort = function(req, res, next){
 
                         dataListPrint(currentList, 'route S', 'Original Current');
 
-                        mergeShortWithCurrent(basicShortlist, currentList, function(err, firstMerged){
+                        mergeShortWithCurrent(basicShortlist, currentList, function(err, resultShortList) {
                             if (err) {
                                 log.error(err);
                                 return next();
                             }
 
-                            dataListPrint(firstMerged, 'route S', 'Merged with Current');
+                            dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
-                            getTownDataFromDB(modelShortRss, coord, function(err, rssList){
-                                if(err){
-                                    log.error('error to get short RSS');
-                                    req.short = firstMerged;
-                                    return next();
-                                }
-                                for(i=0 ; i < rssList.length ; i++){
-                                    if(parseInt('' + rssList[i].date) >= parseInt('' + requestTime.date + requestTime.time)){
-                                        //log.info('found same date');
-                                        break;
-                                    }
-                                }
-
-                                log.silly('route S> RSS remove count :', i);
-                                for(var j=0 ; j<i ; j++){
-                                    rssList.shift();
-                                }
-
-                                dataListPrint(rssList, 'route S', 'Original Short RSS');
-
-                                mergeShortWithRSS(firstMerged, rssList, function(err, resultList){
-
-                                    dataListPrint(resultList, 'route S', 'Final merged');
-
-                                    req.short = resultList;
-                                    next();
-                                });
-                            });
+                            req.short = resultShortList;
+                            next();
                         });
                     });
                 });
@@ -2268,7 +2337,7 @@ router.get('/', [getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
+router.get('/:region', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -2303,7 +2372,7 @@ router.get('/:region', [getShort, getShortest, getCurrent, getKeco, getMid, getM
     res.json(result);
 });
 
-router.get('/:region/:city', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
+router.get('/:region/:city', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -2338,7 +2407,7 @@ router.get('/:region/:city', [getShort, getShortest, getCurrent, getKeco, getMid
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort],
+router.get('/:region/:city/:town', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort],
             function(req, res) {
     var meta = {};
 
@@ -2391,7 +2460,7 @@ router.get('/:region/:city/:town/mid', [getMid, getMidRss, getPastMid, mergeMidW
     res.json(result);
 });
 
-router.get('/:region/:city/:town/short', [getShort], function(req, res) {
+router.get('/:region/:city/:town/short', [getShort, getShortRss], function(req, res) {
     var meta = {};
 
     var result = {};
