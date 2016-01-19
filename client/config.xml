@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="0.6.11" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="net.wizardfactory.todayweather" version="0.7.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>TodayWeather</name>
     <description>
         Inform how warm or cold it's today than yesterday.
@@ -15,7 +15,6 @@
     <preference name="android-minSdkVersion" value="14" />
     <preference name="BackupWebStorage" value="none" />
     <preference name="SplashScreen" value="screen" />
-    <preference name="SplashScreenDelay" value="3000" />
     <preference name="orientation" value="portrait" />
     <feature name="StatusBar">
         <param name="ios-package" onload="true" value="CDVStatusBar" />
@@ -72,6 +71,15 @@
                 <key>NSAllowsArbitraryLoads</key>
                 <true/>
             </dict>
+        </config-file>
+        <config-file parent="CFBundleDevelopmentRegion" platform="ios" target="*-Info.plist">
+            <string>ko_KR</string>
+        </config-file>
+        <config-file parent="CFBundleLocalizations" platform="ios" target="*-Info.plist">
+            <array>
+                <string>en</string>
+                <string>ko</string>
+            </array>
         </config-file>
     </platform>
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />

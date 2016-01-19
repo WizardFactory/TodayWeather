@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.6.11",
+  "version": "0.7.1",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -46,11 +46,7 @@
       "locator": "https://github.com/WizardFactory/cordova-plugin-admob.git",
       "id": "cordova-plugin-admob"
     },
-    "cordova-plugin-local-notifications",
-    {
-      "locator": "https://github.com/katzer/cordova-plugin-local-notifications.git",
-      "id": "de.appplant.cordova.plugin.local-notification"
-    }
+    "de.appplant.cordova.plugin.local-notification"
   ],
   "cordovaPlatforms": [
     "android",

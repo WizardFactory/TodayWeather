@@ -1,18 +1,13 @@
-<ion-view hide-nav-bar="true">
+<ion-view hide-nav-bar="{{runAdmob}}">
     <ion-content scroll="false">
         <div class="main-content setting">
-            <div class="row row-no-padding" style="height: 5%;">
-                <p class="top-time">
-                    {{currentTimeString}}
-                </p>
-            </div>
-            <div class="row" style="height: 15%"></div>
-            <div class="row" style="height: 10%">
-                <div class="col" style="height: 10%; text-align: center;">
-                    <h3 style="color: #ffffff">TodayWeather</h3>
+            <div class="row" style="height: 10%"></div>
+            <div class="row" style="height: 15%">
+                <div class="col" style="height: 100%; text-align: center;">
+                    <h2 style="color: #ffffff">TodayWeather</h2>
                 </div>
             </div>
-            <div class="row" style="height: 50%">
+            <div class="row" style="height: 55%">
                 <div class="col-10"></div>
                 <div class="col">
                     <ul class="list">
@@ -36,17 +31,17 @@
                         <!--</label>-->
                         <li class="item" style="background-color: inherit; color: inherit">
                             <div class="row row-no-padding">
-                                <div class="col col-80">버전</div>
-                                <div class="col col-20">{{version}}</div>
+                                <div class="col col-66" style="line-height: 24px; font-size:20px;">버전</div>
+                                <div class="col col-33" style="line-height: 24px; font-size:20px;">{{version}}</div>
                                 <!--<button class="button button-energized">-->
                                 <!--<i class="ion-ios-download-outline"></i>-->
                                 <!--</button>-->
                             </div>
                         </li>
-                        <li class="item"  ng-click="openMarket()" style="background-color: inherit; color: inherit">평가하기
+                        <li class="item"  ng-click="openMarket()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">평가하기
                             <!--<img src="img/setting-review.png" style="width: 30px">-->
                         </li>
-                        <li class="item"  ng-click="openInfo()" style="background-color: inherit; color: inherit">정보
+                        <li class="item"  ng-click="openInfo()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">정보
                         </li>
                     </ul>
                 </div>

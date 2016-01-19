@@ -24,6 +24,41 @@ angular.module('starter.controllers', [])
         //[{values: Object, temp: Number}]
         $scope.dayChart;
 
+        var padding = 1;
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        //iphone 5 568-20
+        if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
+            padding = 0.90;
+        }
+        //iphone 6 667-20
+        if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
+            padding = 0.85;
+        }
+        //iphone 6+ 736-20
+        if ((window.innerHeight === 716 || window.innerHeight === 736) && window.innerWidth === 414) {
+            padding = 0.80;
+        }
+        //ss note3 640-25
+        if (window.innerHeight === 615 && window.innerWidth === 360 && window.devicePixelRatio === 3) {
+            padding = 0.80;
+        }
+        //ss uhd 732-25
+        if (window.innerHeight === 707 && window.innerWidth === 412 && window.devicePixelRatio === 3.5) {
+            padding = 0.80;
+        }
+
+        var mainHeight = window.innerHeight - 100;
+        $scope.topTimeSize = mainHeight * 0.026;
+        $scope.regionSize = mainHeight * 0.051 * padding;
+        $scope.regionSumSize = mainHeight * 0.047 * padding;
+        $scope.bigDigitSize = mainHeight * 0.2193 * padding;
+        $scope.bigTempPointSize = mainHeight * 0.0423 * padding;
+        $scope.bigSkyStateSize = mainHeight * 0.1408 * padding;
+        $scope.smallTimeSize = mainHeight * 0.0299;
+        $scope.smallImageSize = mainHeight * 0.0512;
+        $scope.smallDigitSize = mainHeight * 0.0320;
+
         var colWidth;
         var cityData;
         var deploy = new Ionic.Deploy();
@@ -374,7 +409,8 @@ angular.module('starter.controllers', [])
         });
 
         var isShowingBar = false;
-        var runAdmob = false;
+        var runAdmob = true;
+        $rootScope.runAdmob = !runAdmob;
 
         $scope.doRefresh = function() {
             if (runAdmob) {
@@ -388,15 +424,18 @@ angular.module('starter.controllers', [])
             }
 
             $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
-            isShowingBar = !isShowingBar;
-            $ionicNavBarDelegate.showBar(isShowingBar);
+            if (!runAdmob) {
+                isShowingBar = !isShowingBar;
+                $ionicNavBarDelegate.showBar(isShowingBar);
+            }
             updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
 
                 $ionicNavBarDelegate.title("");
-                isShowingBar = !isShowingBar;
-                $ionicNavBarDelegate.showBar(isShowingBar);
-
+                if (!runAdmob) {
+                    isShowingBar = !isShowingBar;
+                    $ionicNavBarDelegate.showBar(isShowingBar);
+                }
                 if (runAdmob) {
                     if (window.plugins && window.plugins.AdMob) {
                         window.plugins.AdMob.showAd(true,
@@ -663,7 +702,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.6.11";
+        $scope.version  = "0.7.1";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();

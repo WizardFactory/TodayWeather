@@ -37,15 +37,14 @@ angular.module('starter', [
             }
             if (window.StatusBar) {
                 // org.apache.cordova.statusbar required
-                //StatusBar.styleLightContent();
-                StatusBar.hide();
-                ionic.Platform.fullScreen();
+                StatusBar.backgroundColorByName("black");
+                StatusBar.overlaysWebView(false);
             }
 
             //#367
             //todo: height 기준으로 layout 재계산
             //todo: header hide상태를 해제하여 bannerAd가 overlap되도록 변경
-            var runAdmob = false;
+            var runAdmob = true;
 
             if (runAdmob) {
                 if ( window.plugins && window.plugins.AdMob ) {
@@ -65,9 +64,9 @@ angular.module('starter', [
                         interstitialAdId: interstitialAdUnit,
                         bannerAtTop: true, // set to true, to put banner at top
                         overlap: true, // set to true, to allow banner overlap webview
-                        offsetTopBar: false, // set to true to avoid ios7 status bar overlap
+                        offsetTopBar: true, // set to true to avoid ios7 status bar overlap
                         isTesting: false, // receiving test ad
-                        autoShow: false // auto show interstitial ad when loaded
+                        autoShow: false, // auto show interstitial ad when loaded
                     }, function(e) {
                         console.log('setOptions is '+JSON.stringify(e));
                     }, function(e) {

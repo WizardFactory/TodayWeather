@@ -16,7 +16,8 @@ $dark:                            #444 !default;
 */
 
 $bar-height: 50px;
-$tabs-height: 40px;
+//for ads on bar
+$ios-statusbar-height: 0px;
 
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
@@ -39,6 +40,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
+.popup-body {
+  line-height: 20px;
+}
+
 .scroll {
   height: 100%;
 }
@@ -56,9 +61,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .top-time {
-  padding: 5px;
-  text-align: left;
-  font-size: 14px;
+  display: table;
+  margin-left: 5px;
+}
+
+.top-time p {
+  display: table-cell;
+  vertical-align: middle;
+  //font-size: 14px;
   font-family: 'Bareun Dotum Pro 3';
 }
 
@@ -71,7 +81,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   vertical-align: middle;
   text-align: center;
   margin: 0;
-  font-size: 21px;
+  //font-size: 21px;
   font-family: 'Bareun Dotum Pro 2';
 }
 
@@ -84,23 +94,29 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   vertical-align: middle;
   text-align: center;
   margin: 0;
-  font-size: 19px;
+  //font-size: 19px;
   font-family: 'Bareun Dotum Pro 2';
 }
 
 .big-digit {
+  display: table;
+}
+
+.big-digit p {
+  display: table-cell;
+  vertical-align: middle;
   font-family: 'Bareun Dotum Pro 1';
+  //font-size: 66px;
   text-align: right;
-  font-size: 66px;
-  letter-spacing: -3px;
+  margin: 0;
 }
 
 .big-temp-point img {
-  width: 12px;
+  //height: 12px;
 }
 
 .big-temp-sky-state img {
-  width: 32px;
+  //height: 32px;
 }
 
 .timeChart {
@@ -120,7 +136,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   vertical-align: middle;
   font-family: 'Bareun Dotum Pro 3';
   text-align: center;
-  font-size: 14px;
+  //font-size: 14px;
   margin: 0;
 }
 
@@ -134,7 +150,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .small-image div img {
-  width: 24px;
+  //height: 24px;
   margin: 0 auto;
   display: block;
 }
@@ -148,7 +164,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   vertical-align: middle;
   font-family: 'Bareun Dotum Pro 1';
   text-align: center;
-  font-size: 15px;
+  //font-size: 15px;
   margin: 0;
 }
 
@@ -276,12 +292,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .detail-text {
   display: table;
+  height: 100%;
 }
 
 .detail-text p {
   display: table-cell;
   vertical-align: middle;
   font-family: "Bareun Dotum Pro 1";
+  line-height: 20px;
   padding-top: 10px;
   font-size: 18px;
   padding-left: 5px;
@@ -302,19 +320,19 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .current-content {
-  height: 25%;
+  height: 38.19%;
 }
 
 .extend-content {
-  height: 70%;
+  height: 61.80%;
 }
 
 .chart-content {
-  height: 54%;
+  height: 55%;
 }
 
 .table-content {
-  height: 46%;
+  height: 45%;
 }
 
 /* search */
@@ -359,6 +377,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   padding-left: 4px;
   color: white;
   font-family: "Bareun Dotum Pro 1";
+  line-height: 24px;
   font-size: 20px;
 }
 
@@ -397,39 +416,8 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 //chrome extension
 
 //iphone 4
-@media only screen and (min-device-width: 320px)
-    and (max-device-width: 480px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 320/480)
+@media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/480)
 {
-  .current-content {
-    height: 25%;
-  }
-
-  .extend-content {
-    height: 70%;
-  }
-
-  .region  p {
-    font-size: 18px;
-  }
-
-  .region-sum p {
-    font-size: 17px;
-  }
-
-  .big-digit {
-    font-size: 62px;
-  }
-
-  .big-temp-point img{
-    width: 10px;
-  }
-
-  .big-temp-sky-state img{
-    width: 32px;
-  }
-
   .timeChart {
     width: 1749px; //53px per col * 33
   }
@@ -437,88 +425,17 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   .weeklyChart {
     width: 954px; //53px per col *18
   }
-
-  .chart-content {
-    height: 55%;
-  }
-
-  .table-content {
-    height: 45%;
-  }
-
-  .small-time p {
-    font-size: 13px;
-  }
-
-  .small-image div img {
-    width: 20px;
-  }
-
-  .small-digit p {
-    font-size: 14px;
-  }
 }
 
 //iphone 5
-@media only screen and (min-device-width: 320px)
-    and (max-device-width: 568px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 320/568)
+@media only screen and (min-device-width: 320px) and (max-device-width: 568px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/568)
 {
-  .current-content {
-    height: 25%;
-  }
-
-  .extend-content {
-    height: 68%;
-  }
-
-  .region p {
-    font-size: 20px;
-  }
-
-  .region-sum p {
-    font-size: 18px;
-  }
-
-  .big-digit {
-    font-size: 80px;
-  }
-
-  .big-temp-point img{
-    width: 14px;
-  }
-
-  .big-temp-sky-state img{
-    width: 41px;
-  }
-
   .timeChart {
     width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
     width: 954px; //53px per col * 18
-  }
-
-  .chart-content {
-    height: 60%;
-  }
-
-  .table-content {
-    height: 40%;
-  }
-
-  .small-time p {
-    font-size: 14px;
-  }
-
-  .small-image div img {
-    width: 24px;
-  }
-
-  .small-digit p {
-    font-size: 15px;
   }
 
   .city-list {
@@ -527,35 +444,8 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 //iphone 6
-@media only screen and (min-device-width: 375px)
-    and (max-device-width: 667px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 375/667)
+@media only screen and (min-device-width: 375px) and (max-device-width: 667px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 375/667)
 {
-  .current-content {
-    height: 25%;
-  }
-
-  .extend-content {
-    height: 68%;
-  }
-
-  .region p {
-    font-size: 22px;
-  }
-
-  .big-digit {
-    font-size: 96px;
-  }
-
-  .big-temp-point img{
-    width: 14px;
-  }
-
-  .big-temp-sky-state img{
-    width: 52px;
-  }
-
   .timeChart {
     width: 1749px; //53px per col * 33
   }
@@ -564,61 +454,14 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 954px; //53px per col * 18
   }
 
-  .chart-content {
-    height: 60%;
-  }
-
-  .table-content {
-    height: 40%;
-  }
-
-  .small-time p {
-    font-size: 14px;
-  }
-
-  .small-image div img {
-    width: 30px;
-  }
-
-  .small-digit p {
-    font-size: 15px;
-  }
-
   .city-list {
     height: 75%;
   }
 }
 
 //iphone 6+
-@media only screen and (min-device-width: 414px)
-    and (max-device-width: 736px)
-    and (-webkit-min-device-pixel-ratio: 3)
-    and (device-aspect-ratio: 414/736)
+@media only screen and (min-device-width: 414px) and (max-device-width: 736px) and (-webkit-min-device-pixel-ratio: 3) and (device-aspect-ratio: 414/736)
 {
-  .top-time {
-    font-size: 16px;
-  }
-
-  .region p {
-    font-size: 24px;
-  }
-
-  .region-sum p {
-    font-size: 22px;
-  }
-
-  .big-digit {
-    font-size: 104px;
-  }
-
-  .big-temp-point img{
-    width: 14px;
-  }
-
-  .big-temp-sky-state img{
-    width: 52px;
-  }
-
   .timeChart {
     width: 1947px; // 59px per col * 33
   }
@@ -627,106 +470,30 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     width: 1062px; //59px per col * 18
   }
 
-  .small-time p {
-    font-size: 15px;
-  }
-
-  .small-image div img {
-    width: 32px;
-  }
-
-  .small-digit p {
-    font-size: 18px;
-  }
-
-  .search-icon {
-    width: 12%;
-  }
-
   .city-list {
     height: 75%;
   }
 }
 
-/* SS S3 */
-@media screen and (device-width: 320px) and (device-height: 640px)
-    and (device-aspect-ratio: 320/640)
+/* SS S3, note2*/
+@media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 2)
 {
-  .timeChart {
-    width: 1749px; //53 px per col
-  }
-
-  .weeklyChart {
-    width: 954px; //53px per col * 18
-  }
-
   .city-list {
     height: 75%;
   }
 }
 
 /* SS Galaxy Note3, S5, S4, S6 */
-//It's default
-@media screen and (device-width: 360px) and (device-height: 640px)
-    and (device-aspect-ratio: 360/640)
+@media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 3)
 {
-  .big-digit {
-    font-size: 84px;
-  }
-
-  .big-temp-point img {
-    width: 14px;
-  }
-
-  .big-temp-sky-state img {
-    width: 49px;
-  }
-
   .city-list {
     height: 75%;
-  }
-
-  .small-time p {
-    font-size: 14px;
-  }
-
-  .small-image div img {
-    width: 30px;
-  }
-
-  .small-digit p {
-    font-size: 15px;
   }
 }
 
 /* SS Galaxy Note5, G6, .. QHD */
-@media screen and (device-width: 412px) and (device-height: 732px)
-    and (device-aspect-ratio: 412/732)
+@media screen and (device-width: 412px) and (device-height: 732px) and (device-aspect-ratio: 412/732)
 {
-  .top-time {
-    font-size: 16px;
-  }
-
-  .big-digit {
-    font-size: 104px;
-  }
-
-  .big-temp-point img {
-    width: 14px;
-  }
-
-  .big-temp-sky-state img {
-    width: 52px;
-  }
-
-  .region p {
-    font-size: 24px;
-  }
-
-  .region-sum p {
-    font-size: 22px;
-  }
-
   .timeChart {
     width: 1942px; // 58.85px per col * (41-8)
   }
@@ -737,17 +504,5 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .city-list {
     height: 75%;
-  }
-
-  .small-time p {
-    font-size: 15px;
-  }
-
-  .small-image div img {
-    width: 32px;
-  }
-
-  .small-digit p {
-    font-size: 18px;
   }
 }

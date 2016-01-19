@@ -266,7 +266,7 @@ angular.module('starter.services', [])
                     return skyIconName = "Snow";
             }
 
-            if (lgt) {
+            if (lgt === 1) {
                 return skyIconName = "Lightning";
             }
 
@@ -472,13 +472,13 @@ angular.module('starter.services', [])
             if (sensoryTem >= 0 ) {
                 return "";
             }
-            else if ( -10 < sensoryTem < 0) {
+            else if ( -10 < sensoryTem && sensoryTem < 0) {
                 return "관심";
             }
-            else if ( -25 < sensoryTem <= -10) {
+            else if ( -25 < sensoryTem && sensoryTem <= -10) {
                 return "주의";
             }
-            else if ( -45 < sensoryTem <= -25) {
+            else if ( -45 < sensoryTem && sensoryTem <= -25) {
                 return "경고";
             }
             else if (sensoryTem <= -45) {
@@ -1231,11 +1231,13 @@ angular.module('starter.services', [])
                 }
 
                 if (diffDays === 0 && time === positionHours) {
-                    currentForecast.sensorytem = shortForecast.sensorytem;
-                    currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
+                    if (shortForecast.sensorytem !== undefined) {
+                        currentForecast.sensorytem = shortForecast.sensorytem;
+                        currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
+                    }
                 }
                 if (diffDays === 0 && time === positionHours + 3) {
-                   if (!currentForecast.sensorytem) {
+                   if (!currentForecast.sensorytem && shortForecast.sensorytem !== undefined) {
                        currentForecast.sensorytem = shortForecast.sensorytem;
                        currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
                    }
@@ -1708,7 +1710,8 @@ angular.module('starter.services', [])
                 currentForecast.pm10Str = parsePm10Info(pm10value, pm10Grade);
             }
 
-            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[0]);
+            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3);
+            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[yesterdayIndex]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
