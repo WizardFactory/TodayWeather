@@ -680,7 +680,8 @@ angular.module('starter.services', [])
         function getWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
-            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
+            //var url = "http://localhost:3000/town";
+            var url = "http://todayweather.wizardfactory.net/town";
             url += "/" + town.first + "/" + town.second + "/" + town.third;
             console.log(url);
 
@@ -943,7 +944,7 @@ angular.module('starter.services', [])
                 }
                 /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
                 if (0 < rXX || rXX < 100) {
-                    return rXX+"mm 미만"
+                    return rXX+"mm 미만";
                 }
             }
             else if (pty === 3) {
@@ -958,7 +959,7 @@ angular.module('starter.services', [])
                 }
                 /* spec에 없지만 2로 오는 경우가 있었음 */
                 if (0 < rXX || rXX < 100) {
-                    return rXX+"cm 미만"
+                    return rXX+"cm 미만";
                 }
             }
         }
@@ -968,13 +969,13 @@ angular.module('starter.services', [])
                 return '약함';
             }
             else if(wsd < 9) {
-                return '약간강함'
+                return '약간강함';
             }
             else if(wsd < 14) {
-                return '강함'
+                return '강함';
             }
             else {
-                return '매우강함'
+                return '매우강함';
             }
         }
         //endregion
