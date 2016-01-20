@@ -1495,6 +1495,42 @@ var getShortest = function(req, res, next){
     }
 };
 
+function getNewWCT(Tdum,Wdum) {
+    var T = Tdum;
+    var W = Wdum*3.6;
+    var result = 0.0;
+    if ( W > 4.8 ) {
+        W = Math.pow(W,0.16);
+        result = 13.12 + 0.6215 * T - 11.37 * W + 0.3965 * W * T;
+        if(result > T) {
+            result = T;
+        }
+    }
+    else {
+        result = T;
+    }
+    return result;
+}
+
+function parseSensoryTem(sensoryTem) {
+    if (sensoryTem >= 0 ) {
+        return "";
+    }
+    else if ( -10 < sensoryTem && sensoryTem < 0) {
+        return "관심";
+    }
+    else if ( -25 < sensoryTem && sensoryTem <= -10) {
+        return "주의";
+    }
+    else if ( -45 < sensoryTem && sensoryTem <= -25) {
+        return "경고";
+    }
+    else if (sensoryTem <= -45) {
+        return "위험";
+    }
+    return "";
+}
+
 var getCurrent = function(req, res, next){
     var meta = {};
 
@@ -1601,6 +1637,8 @@ var getCurrent = function(req, res, next){
                     resultItem.time = nowDate.time;
                     resultItem.date = currentItem.date;
 
+                    resultItem.sensorytem = Math.round(getNewWCT(resultItem.t1h, resultItem.wsd));
+                    resultItem.sensorytemStr = parseSensoryTem(resultItem.sensorytem);
                     //log.info(listCurrent);
                     req.current = resultItem;
                     next();
