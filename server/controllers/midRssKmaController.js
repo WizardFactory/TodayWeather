@@ -18,7 +18,7 @@ midRssKmaController.getData = function(regId, callback) {
             return callback(err);
         }
         if (midRssList.length === 0) {
-            err = new Error("Fail to find midRss regId="+code.cityCode);
+            err = new Error("Fail to find midRss regId="+regId);
             return callback(err);
         }
 
