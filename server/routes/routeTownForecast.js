@@ -1161,7 +1161,7 @@ var getShortRss = function(req, res, next){
                         if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
                             req.short[j].tmn = Math.round(rssList[i].tmn);
                         } else if(req.short[j].time === '1500' && rssList[i].tmn != -999) {
-                            req.short[j].tmx = Math.round(rssList.tmx);
+                            req.short[j].tmx = Math.round(rssList[i].tmx);
                         }
                         break;
                     }
