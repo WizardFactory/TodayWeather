@@ -308,7 +308,7 @@ angular.module('starter.services', [])
                 return "나쁨";
             }
             else if (pm10Value > 150) {
-                return "매우 나쁨";
+                return "매우나쁨";
             }
             else {
                 console.log("Fail to parse pm10Value="+pm10Value);
@@ -320,7 +320,7 @@ angular.module('starter.services', [])
                     case 3:
                         return "나쁨";
                     case 4:
-                        return "매우 나쁨";
+                        return "매우나쁨";
                     default :
                         console.log("Unknown pm10Grade="+pm10Grade);
                 }
@@ -554,7 +554,7 @@ angular.module('starter.services', [])
             if (0 <= ultrv  && ultrv <= 2) return "낮음";
             else if(3 <= ultrv && ultrv <= 5) return "보통";
             else if(6 <= ultrv && ultrv <= 7) return "높음";
-            else if(8 <= ultrv && ultrv <= 10) return "매우 높음";
+            else if(8 <= ultrv && ultrv <= 10) return "매우높음";
             else if(11 <= ultrv) return "위험";
             return "";
         }
@@ -623,16 +623,16 @@ angular.module('starter.services', [])
                 str += ", " + "자외선 " + current.ultrvStr;
             }
 
-            //current.sensorytmp = -10;
-            //current.sensorytmeStr = "관심";
+            //current.sensorytem = -10;
+            //current.sensorytemStr = "관심";
             if (current.sensorytem && current.sensorytem <= -10) {
-                str += ", " + "체감온도 " + current.sensorytemStr;
+                str += ", " + "체감온도 " + current.sensorytem +"˚";
             }
 
             //current.wsd = 10;
             //current.wsdStr = convertKmaWsdToStr(current.wsd);
             if (current.wsd && current.wsd > 9) {
-                str += ", " + "바람이 " + current.wsdStr + '함';
+                str += ", " + "바람이 " + current.wsdStr;
             }
             return str;
         }
@@ -680,7 +680,8 @@ angular.module('starter.services', [])
         function getWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
-            var url = "https://d2ibo8bwl7ifj5.cloudfront.net/town";
+            //var url = "http://localhost:3000/town";
+            var url = "http://todayweather.wizardfactory.net/town";
             url += "/" + town.first + "/" + town.second + "/" + town.third;
             console.log(url);
 
@@ -943,7 +944,7 @@ angular.module('starter.services', [])
                 }
                 /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
                 if (0 < rXX || rXX < 100) {
-                    return rXX+"mm 미만"
+                    return rXX+"mm 미만";
                 }
             }
             else if (pty === 3) {
@@ -958,23 +959,23 @@ angular.module('starter.services', [])
                 }
                 /* spec에 없지만 2로 오는 경우가 있었음 */
                 if (0 < rXX || rXX < 100) {
-                    return rXX+"cm 미만"
+                    return rXX+"cm 미만";
                 }
             }
         }
 
         function convertKmaWsdToStr(wsd) {
             if (wsd < 4) {
-                return '약';
+                return '약함';
             }
             else if(wsd < 9) {
-                return '약간 강'
+                return '약간강함';
             }
             else if(wsd < 14) {
-                return '강'
+                return '강함';
             }
             else {
-                return '매우 강'
+                return '매우강함';
             }
         }
         //endregion

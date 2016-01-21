@@ -276,6 +276,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .detail-image {
+  height: 100%;
   display: table;
 }
 
@@ -298,10 +299,9 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .detail-text p {
   display: table-cell;
   vertical-align: middle;
-  font-family: "Bareun Dotum Pro 1";
-  line-height: 20px;
-  padding-top: 10px;
-  font-size: 18px;
+  font-family: "Bareun Dotum Pro 3";
+  line-height: 24px;
+  font-size: 20px;
   padding-left: 5px;
   color: #ffffff;
   margin: 0;
@@ -310,7 +310,10 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .detail-item {
   background-color: transparent;
   color: inherit;
-  padding: 5px;
+  margin-left: 0px;
+  margin-right: 0px;
+  padding: 0px;
+  height: 80px;
 }
 
 .main-content {
@@ -376,7 +379,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   padding-top: 6px;
   padding-left: 4px;
   color: white;
-  font-family: "Bareun Dotum Pro 1";
+  font-family: "Bareun Dotum Pro 3";
   line-height: 24px;
   font-size: 20px;
 }
@@ -384,10 +387,11 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .search-content .search-digit {
   display: table-cell;
   vertical-align: middle;
+  text-align: center;
   color: white;
   font-size: 30px;
   padding-top: 18px;
-  font-family: 'Bareun Dotum Pro 1';
+  font-family: 'Bareun Dotum Pro 3';
 }
 
 .city-list {
