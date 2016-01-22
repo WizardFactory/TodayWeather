@@ -390,7 +390,10 @@ angular.module('starter.controllers', [])
             if ($scope.forecastType === 'short') {
                 $scope.forecastType = 'mid';
                 $rootScope.viewColor = '#0fbe96';
-                $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                //async drawing for preventing screen cut #544
+                setTimeout(function () {
+                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                }, 0);
             }
             else if ($scope.forecastType === 'mid') {
                 $scope.forecastType = 'detail';
@@ -399,7 +402,9 @@ angular.module('starter.controllers', [])
             else if ($scope.forecastType === 'detail') {
                 $scope.forecastType = 'short';
                 $rootScope.viewColor = '#22a1db';
-                $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                setTimeout(function () {
+                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                }, 0);
             }
         };
 
