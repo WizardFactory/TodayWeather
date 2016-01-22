@@ -18,7 +18,10 @@ function arpltnController() {
  * @returns {*}
  */
 arpltnController.parsePm10Info = function(pm10Value, pm10Grade) {
-    if (pm10Value <= 30) {
+    if (pm10Value < 0) {
+       return "없음";
+    }
+    else if (pm10Value <= 30) {
         return "좋음";
     }
     else if (pm10Value <= 80) {
@@ -49,7 +52,10 @@ arpltnController.parsePm10Info = function(pm10Value, pm10Grade) {
 };
 
 arpltnController.parsePm25Info = function (pm25Value, pm25Grade) {
-    if (pm25Value <=15) {
+    if (pm25Value < 0) {
+        return "없음";
+    }
+    else if (pm25Value <=15) {
         return "좋음";
     }
     else if(pm25Value<=50) {
