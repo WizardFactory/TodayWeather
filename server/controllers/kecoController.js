@@ -198,6 +198,9 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             return cb(new Error("Fail to find station "+town.kecoStationName));
         }
     ], function(err, arpltn) {
+        if(err){
+            return callback(err);
+        }
         if (arpltn) {
             current.arpltn = arpltn;
         }

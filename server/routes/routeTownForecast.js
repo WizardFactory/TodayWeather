@@ -412,12 +412,15 @@ function _findTownCode(list, region, city, town, cb){
         function(callback){
             log.silly('get getcode');
             convertGeocode(region, city, town, function (err, result) {
+                if(err){
+                    log.silly('Cannot get mx, my ');
+                    callback(null);
+                }
+
                 log.silly('_findCode XY>',result);
                 callback('goto exit', {mx:result.mx, my: result.my});
                 return;
             });
-
-            callback(null);
         }
     ],
     function(err, result){
@@ -2421,6 +2424,7 @@ router.get('/:region/:city', [getShort, getShortRss, getShortest, getCurrent, ge
     meta.method = '/:region/:city';
     meta.region = regionName;
     meta.city = cityName;
+    meta.town = townName;
 
     log.info('##', meta);
 

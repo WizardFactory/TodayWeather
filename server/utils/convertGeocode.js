@@ -21,7 +21,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
     meta.third = third;
     meta.url = url;
 
-    log.info(meta.method + ' : ', url);
+    log.silly(meta.method + ' : ', url);
     req.get(encodedUrl, {json:true}, function(err, response, body) {
         if (err) {
             //log.error(err);
@@ -56,7 +56,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
             geocode.lat = body.channel.item[0].lat;
             geocode.lon = body.channel.item[0].lng;
 
-            log.info('lat:', geocode.lat, 'lon:', geocode.lon);
+            log.silly('lat:', geocode.lat, 'lon:', geocode.lon);
             resultXY.lat = geocode.lat;
             resultXY.lon = geocode.lon;
 
@@ -64,7 +64,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
             resultXY.mx = conv.getLocation().x;
             resultXY.my = conv.getLocation().y;
 
-            log.info('mx:', resultXY.mx, 'my :', resultXY.my);
+            log.info('ConvertDaum >', 'mx:', resultXY.mx, 'my :', resultXY.my);
         }
         catch (e) {
             log.error('## Error!!!', meta);
@@ -154,7 +154,7 @@ function convertGeocodeByGoogle(first, second, third, callback) {
 }
 
 function convertGeocode(first, second, third, callback){
-    convertGeocodeByGoogle(first, second, third, function(err, resultXY) {
+    convertGeocodeByDaum(first, second, third, function(err, resultXY) {
         if (err)  {
             log.warn(err);
             convertGeocodeByGoogle(first, second, third, function(err, resultXY){
