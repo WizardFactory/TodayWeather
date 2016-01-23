@@ -67,25 +67,26 @@ PastConditionGather.prototype._checkBaseTimeByCoord = function (callback) {
 
     async.mapLimit(self.mCoordList, 400, function(mCoord, cb) {
         modelCurrent.find({"mCoord.mx":mCoord.mx, "mCoord.my":mCoord.my}, {_id:0}).lean().exec(function (err, modelList) {
-            err = err || modelList.length===0?new Error("Fail get current="+JSON.stringify(mCoord)):undefined;
             if (err)  {
                 return cb(err);
             }
 
-            var model = modelList[0];
+            var model = modelList[0]||{};
 
-            updateObject = {mCoord: model.mCoord, baseTimeList: []};
+            updateObject = {mCoord: mCoord, baseTimeList: []};
 
             self.pubDateList.forEach(function (pubDate) {
-                for (var i=0; i<model.currentData.length; i++) {
-                    if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
-                        if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
-                            log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
-                            break;
-                        }
-                        else {
-                            log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
-                            return;
+                if (Array.isArray(model.currentData)) {
+                    for (var i=0; i<model.currentData.length; i++) {
+                        if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
+                            if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
+                                log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+                                break;
+                            }
+                            else {
+                                log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+                                return;
+                            }
                         }
                     }
                 }
@@ -107,25 +108,33 @@ PastConditionGather.prototype._checkBaseTimeByCoord = function (callback) {
     return this;
 };
 
+/**
+ * I will remove this function by aleckim
+ * @param callback
+ * @private
+ */
 PastConditionGather.prototype._checkBaseTime = function (callback) {
     var self = this;
     var updateObject;
     modelCurrent.find(null, {_id: 0}).lean().exec(function(err, modelList) {
+        err = err || modelList.length===0?new Error("Fail get current="+JSON.stringify(mCoord)):undefined;
         if (err) {
             return callback(err);
         }
         modelList.forEach(function (model) {
             updateObject = {mCoord: model.mCoord, baseTimeList: []};
             self.pubDateList.forEach(function (pubDate) {
-                for (var i=0; i<model.currentData.length; i++) {
-                    if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
-                        if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
-                            log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
-                            break;
-                        }
-                        else {
-                            log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
-                            return;
+                if (Array.isArray(model.currentData)) {
+                    for (var i=0; i<model.currentData.length; i++) {
+                        if (pubDate.date === model.currentData[i].date && pubDate.time === model.currentData[i].time) {
+                            if (model.currentData[i].t1h === -50 || model.currentData[i].reh === -1) {
+                                log.info('baseTime='+JSON.stringify(pubDate)+' data is invalid. so retry!');
+                                break;
+                            }
+                            else {
+                                log.debug('baseTime='+JSON.stringify(pubDate)+' is skipped');
+                                return;
+                            }
                         }
                     }
                 }
