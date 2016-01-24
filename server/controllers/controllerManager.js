@@ -77,7 +77,7 @@ Manager.prototype.getRegIdByTown = function(region, city, cb){
         if(self.codeTable[i].first === region){
             // 0~7번까지는 특별시 혹은 광역시
             // city name이 없는 경우 일단 첫번째 매칭되는 시를 기준으로 보내주자..
-            if(i<7 || city === ''){
+            if(i<8 || city === ''){
                 if(cb) {
                     cb(0, self.codeTable[i]);
                 }
