@@ -129,8 +129,7 @@
                                 <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
-                        <div class="item row detail-item"
-                             ng-if="currentWeather.sensorytem && currentWeather.sensorytem !== currentWeather.t1h">
+                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem < 0">
                                 <div class="col col-33 detail-text"><p>체감온도</p></div>
                                 <div class="col col-33 detail-image">
                                     <div><img src="img/SensoryTem.png" style="width: 40px"></div>
