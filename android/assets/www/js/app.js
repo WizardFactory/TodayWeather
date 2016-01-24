@@ -18,6 +18,16 @@ angular.module('starter', [
 
             $ionicAnalytics.register();
 
+            if (ionic.Platform.isIOS()) {
+                if (window.applewatch) {
+                    applewatch.init(function () {
+                        console.log("Succeeded to initialize for apple-watch");
+                    }, function (err) {
+                        console.log('Failed to initialize apple-watch', err);
+                    }, "group.net.wizardfactory.todayweather");
+                }
+            }
+
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
             // for form inputs)
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
@@ -27,14 +37,85 @@ angular.module('starter', [
             }
             if (window.StatusBar) {
                 // org.apache.cordova.statusbar required
-                //StatusBar.styleLightContent();
-                StatusBar.hide();
-                ionic.Platform.fullScreen();
+                StatusBar.backgroundColorByName("black");
+                StatusBar.overlaysWebView(false);
+            }
+
+            //#367
+            //todo: height 기준으로 layout 재계산
+            //todo: header hide상태를 해제하여 bannerAd가 overlap되도록 변경
+            var runAdmob = true;
+
+            if (runAdmob) {
+                if ( window.plugins && window.plugins.AdMob ) {
+                    var bannerAdUnit;
+                    var interstitialAdUnit;
+                    if (ionic.Platform.isIOS()) {
+                        bannerAdUnit = "ca-app-pub-3300619349648096/7636193363";
+                        interstitialAdUnit = "ca-app-pub-3300619349648096/3066392962";
+                    }
+                    else if (ionic.Platform.isAndroid()) {
+                        bannerAdUnit = "ca-app-pub-3300619349648096/9569086167";
+                        interstitialAdUnit = "ca-app-pub-3300619349648096/2045819361";
+                    }
+
+                    window.plugins.AdMob.setOptions({
+                        publisherId: bannerAdUnit,
+                        interstitialAdId: interstitialAdUnit,
+                        bannerAtTop: true, // set to true, to put banner at top
+                        overlap: true, // set to true, to allow banner overlap webview
+                        offsetTopBar: true, // set to true to avoid ios7 status bar overlap
+                        isTesting: false, // receiving test ad
+                        autoShow: false, // auto show interstitial ad when loaded
+                    }, function(e) {
+                        console.log('setOptions is '+JSON.stringify(e));
+                    }, function(e) {
+                        console.log(JSON.stringify(e));
+                    });
+
+                    //Android에서는 ReceivedAd에서 광고를 show하지 않으면, 한 텀(1min)동안 안나옴.
+                    var isFirstReceiveAd = true;
+                    document.addEventListener('onReceiveAd', function(){
+                        if (isFirstReceiveAd) {
+                            isFirstReceiveAd = false;
+                            window.plugins.AdMob.showAd(true,
+                                function(){},
+                                function(e){
+                                    console.log(JSON.stringify(e));
+                                });
+                        }
+                    });
+
+                    document.addEventListener('onFailedToReceiveAd', function(data){
+                        console.log(JSON.stringify(data));
+                    });
+
+                    window.plugins.AdMob.createBannerView({adSize:'BANNER'}, function(e){
+                            console.log('createBannerView is '+JSON.stringify(e));
+                        },
+                        function(e) {
+                            console.log(JSON.stringify(e));
+                        });
+
+                    window.plugins.AdMob.createInterstitialView({}, function(e){
+                            console.log('createInterstitialView is '+JSON.stringify(e));
+                        },
+                        function(e) {
+                            console.log(JSON.stringify(e));
+                        });
+                }
+                else {
+                    console.log( 'admob plugin not ready' );
+                }
             }
         });
     })
 
-    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider) {
+    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider) {
+
+        //for chrome extension
+        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
 
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
@@ -46,52 +127,47 @@ angular.module('starter', [
             .state('tab', {
                 url: '/tab',
                 abstract: true,
-                templateUrl: 'templates/tabs.html'
+                templateUrl: 'templates/tabs.html',
+                controller: "TabCtrl"
             })
 
             // Each tab has its own nav history stack:
-
-            .state('tab.dash', {
-                url: '/dash',
+            .state('tab.search', {
+                url: '/search',
+                cache: false,
                 views: {
-                    'tab-dash': {
-                        templateUrl: 'templates/tab-dash.html',
-                        controller: 'DashCtrl'
+                    'tab-search': {
+                        templateUrl: 'templates/tab-search.html',
+                        controller: 'SearchCtrl'
                     }
                 }
             })
-
-            .state('tab.chats', {
-                url: '/chats',
+            .state('tab.forecast', {
+                url: '/forecast',
+                cache: false,
                 views: {
-                    'tab-chats': {
-                        templateUrl: 'templates/tab-chats.html',
-                        controller: 'ChatsCtrl'
+                    'tab-forecast': {
+                        templateUrl: 'templates/tab-forecast.html',
+                        controller: 'ForecastCtrl'
                     }
                 }
             })
-            .state('tab.chat-detail', {
-                url: '/chats/:chatId',
-                views: {
-                    'tab-chats': {
-                        templateUrl: 'templates/chat-detail.html',
-                        controller: 'ChatDetailCtrl'
-                    }
-                }
-            })
+            .state('tab.update', {
 
-            .state('tab.account', {
-                url: '/account',
+            })
+            .state('tab.setting', {
+                url: '/setting',
+                cache: false,
                 views: {
-                    'tab-account': {
-                        templateUrl: 'templates/tab-account.html',
-                        controller: 'AccountCtrl'
+                    'tab-setting': {
+                        templateUrl: 'templates/tab-setting.html',
+                        controller: 'SettingCtrl'
                     }
                 }
             });
 
         // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('/tab/dash');
+        $urlRouterProvider.otherwise('/tab/forecast');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
@@ -102,37 +178,39 @@ angular.module('starter', [
             transclude: true,
             link: function (scope, iElement) {
                 var duration = 1000;
-                var margin = {top: 30, right: 0, bottom: 10, left: 0},
-                    width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
-                    height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
+                var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                var width, height, x, y;
+                var svg, initLine, line;
 
-                var svg = d3.select(iElement[0]).append('svg')
-                    .attr('width', width + margin.left + margin.right)
-                    .attr('height', height + margin.top + margin.bottom)
-                    .append('g')
-                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
+                // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
+                scope.$watch('$hasTabs', function() {
+                    width = iElement[0].getBoundingClientRect().width;
+                    height = iElement[0].getBoundingClientRect().height;
+                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                    y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
-                var x = d3.scale.ordinal()
-                    .rangeBands([width, 0]);
+                    svg = d3.select(iElement[0]).append('svg')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .append('g');
 
-                var y = d3.scale.linear()
-                    .range([height, 0]);
+                    initLine = d3.svg.line()
+                        .interpolate('linear')
+                        .x(function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .y(height);
 
-                var initLine = d3.svg.line()
-                    .interpolate('linear')
-                    .x(function (d, i) {
-                        return x.rangeBand() * i + x.rangeBand() / 2;
-                    })
-                    .y(height);
-
-                var line = d3.svg.line()
-                    .interpolate('linear')
-                    .x(function (d, i) {
-                        return x.rangeBand() * i + x.rangeBand() / 2;
-                    })
-                    .y(function (d) {
-                        return y(d.value.t3h);
-                    });
+                    line = d3.svg.line()
+                        .interpolate('linear')
+                        .x(function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .y(function (d) {
+                            return y(d.value.t3h);
+                        });
+                });
 
                 var chart = function () {
                     var data = scope.timeChart;
@@ -187,30 +265,29 @@ angular.module('starter', [
 
                     // draw point
                     group_enter.append('g')
-                        .attr('class', 'line-point')
-                        .selectAll('circle')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('circle');
+                        .attr('class', 'line-point');
 
-                    group.select('.line-point')
-                        .selectAll('circle')
+                    var circles = group.selectAll('circle')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('cx', function (d, i) {
+                        });
+
+                    circles.enter().append('circle');
+
+                    circles.exit().remove();
+
+                    circles.attr('cx', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .attr('cy', height)
+                        .attr('cy', height - margin.bottom)
                         .attr('r', function (d, i) {
-                            if (i === 8) {
+                            if (d.value.time === "지금") {
                                 return 5;
                             }
                             return 2;
                         })
                         .attr('class', function (d, i) {
-                            if (i === 8) {
+                            if (d.value.time === "지금") {
                                 return 'circle-' + d.name + '-current';
                             }
                             return 'circle-' + d.name;
@@ -238,8 +315,8 @@ angular.module('starter', [
                         .attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .attr('y', height)
-                        .attr('dy', -10)
+                        .attr('y', height - margin.bottom - margin.textTop)
+                        .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
                             if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
@@ -247,13 +324,13 @@ angular.module('starter', [
                             }
                             return '';
                         })
-                        .attr('class', function (d, i) {
+                        .attr('class', function () {
                             return 'text-today';
                         })
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.value.t3h);
+                            return y(d.value.t3h) - margin.top - margin.textTop;
                         });
                 }
 
@@ -263,7 +340,7 @@ angular.module('starter', [
                     }
                 });
 
-                scope.$watch('shortForecast', function (newVal) {
+                scope.$watch('forecastType', function (newVal) {
                     if (newVal === true) {
                         chart();
                     }
@@ -277,21 +354,23 @@ angular.module('starter', [
             transclude: true,
             link: function (scope, iElement) {
                 var duration = 1000;
-                var margin = {top: 30, right: 0, bottom: 30, left: 0},
-                    width = iElement[0].getBoundingClientRect().width - margin.left - margin.right,
-                    height = iElement[0].getBoundingClientRect().height - margin.top - margin.bottom;
+                var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                var width, height, x, y;
+                var svg, initLine, line;
 
-                var svg = d3.select(iElement[0]).append('svg')
-                    .attr('width', width + margin.left + margin.right)
-                    .attr('height', height + margin.top + margin.bottom)
-                    .append('g')
-                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
+                // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
+                scope.$watch('$hasTabs', function() {
+                    width = iElement[0].getBoundingClientRect().width;
+                    height = iElement[0].getBoundingClientRect().height;
+                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                    y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
-                var x = d3.scale.ordinal()
-                    .rangeBands([0, width]);
-
-                var y = d3.scale.linear()
-                    .range([height, 0]);
+                    svg = d3.select(iElement[0]).append('svg')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .append('g');
+                });
 
                 var chart = function () {
                     var data = scope.dayChart;
@@ -318,21 +397,20 @@ angular.module('starter', [
                     var group = svg.selectAll('.bar-group')
                         .data(data);
 
-                    group.enter()
-                        .append('g')
-                        .attr('class', 'bar-group')
-                        .selectAll('rect')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('rect');
+                    group.enter().append('g')
+                        .attr('class', 'bar-group');
 
-                    group.selectAll('rect')
+                    var rects = group.selectAll('rect')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'rect')
-                        .attr('x', function (d, i) {
+                        });
+
+                    rects.enter().append('rect')
+                        .attr('class', 'rect');
+
+                    rects.exit().remove();
+
+                    rects.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2 - 1;
                         })
                         .attr('width', 2)
@@ -355,25 +433,25 @@ angular.module('starter', [
 
                     maxValue.enter()
                         .append('g')
-                        .attr('class', 'bar-max-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-max-value');
 
-                    maxValue.selectAll('text')
+                    var maxTexts = maxValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    maxTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    maxTexts.exit().remove();
+
+                    maxTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
-                            return y(d.tmn);
+                            return y(d.tmn) - margin.top - margin.textTop;
                         })
-                        .attr('dy', -10)
+                        .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
                             return d.tmx + '˚';
@@ -382,7 +460,7 @@ angular.module('starter', [
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.tmx);
+                            return y(d.tmx) - margin.top - margin.textTop;
                         });
 
                     // draw min value
@@ -391,30 +469,35 @@ angular.module('starter', [
 
                     minValue.enter()
                         .append('g')
-                        .attr('class', 'bar-min-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                        .attr('class', 'bar-min-value');
 
-                    minValue.selectAll('text')
+                    var minTexts = minValue.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('class', 'text')
-                        .attr('x', function (d, i) {
+                        });
+
+                    minTexts.enter().append('text')
+                        .attr('class', 'text');
+
+                    minTexts.exit().remove();
+
+                    minTexts.attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
                             return y(d.tmn);
                         })
-                        .attr('dy', 20)
+                        .attr('dy', margin.bottom)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
                             return d.tmn + '˚';
                         })
-                        .attr('class', 'text-today');
+                        .attr('class', 'text-today')
+                        .transition()
+                        .duration(duration)
+                        .attr('y', function (d) {
+                            return y(d.tmn);
+                        });
 
                     // draw point
                     var circle = svg.selectAll('circle')
@@ -424,7 +507,7 @@ angular.module('starter', [
                     svg.selectAll('circle')
                         .data(data)
                         .attr('class', 'circle circle-today-current')
-                        .attr('cx', function (d, i) {
+                        .attr('cx', function (d) {
                             for (var i = 0; i < d.values.length; i++) {
                                 if (d.values[i].week === "오늘") {
                                     return x.rangeBand() * i + x.rangeBand() / 2;
@@ -439,7 +522,7 @@ angular.module('starter', [
                         .transition()
                         .delay(duration)
                         .attr('r', 5);
-                }
+                };
 
                 scope.$watch('dayChart', function (newVal) {
                     if (newVal) {
@@ -447,7 +530,7 @@ angular.module('starter', [
                     }
                 });
 
-                scope.$watch('shortForecast', function (newVal) {
+                scope.$watch('forecastType', function (newVal) {
                     if (newVal === false) {
                         chart();
                     }

@@ -118,7 +118,7 @@ if (ext.cdvReleaseSigningPropertiesFile == null && file('release-signing.propert
 }
 
 // Cast to appropriate types.
-ext.cdvBuildMultipleApks = cdvBuildMultipleApks == null ? false : cdvBuildMultipleApks.toBoolean();
+ext.cdvBuildMultipleApks = !!cdvBuildMultipleApks;
 ext.cdvMinSdkVersion = cdvMinSdkVersion == null ? null : Integer.parseInt('' + cdvMinSdkVersion)
 ext.cdvVersionCode = cdvVersionCode == null ? null : Integer.parseInt('' + cdvVersionCode)
 
@@ -152,8 +152,11 @@ task cdvPrintProps << {
     println('cdvDebugSigningPropertiesFile=' + cdvDebugSigningPropertiesFile)
     println('cdvBuildArch=' + cdvBuildArch)
     println('computedVersionCode=' + android.defaultConfig.versionCode)
-    android.productFlavors.each { flavor ->
-        println('computed' + flavor.name.capitalize() + 'VersionCode=' + flavor.versionCode)
+    if (android.productFlavors.has('armv7')) {
+        println('computedArmv7VersionCode=' + android.productFlavors.armv7.versionCode)
+    }
+    if (android.productFlavors.has('x86')) {
+        println('computedx86VersionCode=' + android.productFlavors.x86.versionCode)
     }
 }
 
@@ -243,8 +246,8 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     // SUB-PROJECT DEPENDENCIES START
-    debugCompile project(path: "CordovaLib", configuration: "debug")
-    releaseCompile project(path: "CordovaLib", configuration: "release")
+    debugCompile project(path: ":CordovaLib", configuration: "debug")
+    releaseCompile project(path: ":CordovaLib", configuration: "release")
     // SUB-PROJECT DEPENDENCIES END
 }
 

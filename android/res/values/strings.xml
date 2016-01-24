@@ -3,9 +3,7 @@
     <string name="app_name">TodayWeather</string>
     <string name="launcher_name">@string/app_name</string>
     <string name="activity_name">@string/launcher_name</string>
-
-    <!-- widget string -->
-    <string name="widget_name">[2x1]TodayWeather</string>
+    <string name="widget_name">TodayWeather</string>
     <string name="yesterday">어제</string>
     <string name="today">오늘</string>
     <string name="same_yesterday">어제와 같음</string>
@@ -17,5 +15,4 @@
     <string name="move_main">앱가기</string>
     <string name="temperature_separator">/</string>
     <string name="msg_do_not_widget_data_plz_update">정보가 없습니다.\n여기를 눌러 갱신해 주세요.</string>
-
 </resources>
