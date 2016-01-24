@@ -6,6 +6,7 @@ import android.util.Log;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -37,20 +38,20 @@ public class GetHttpsServerAysncTask extends AsyncTask<String, String, String> {
         // do nothing
     }
 
-    private String GetWeatherFromHttpsServer(String strUrl){
+    private String GetWeatherFromHttpsServer(String strUrl) {
         String retString = "";
         DataInputStream dis = null;
         StringBuilder messageBuilder = new StringBuilder();
-        HttpsURLConnection urlConnection = null;
+        HttpURLConnection urlConnection = null;
         try {
             URL url = new URL(strUrl);
-            urlConnection = (HttpsURLConnection) url.openConnection();
+            urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setDoOutput(false);
             urlConnection.setRequestMethod("GET");
 
             BufferedReader bi2 = new BufferedReader( new InputStreamReader( urlConnection.getInputStream() ) );
             String s = "";
-            while ( ( s = bi2.readLine() ) !=null) {
+            while ((s = bi2.readLine()) != null) {
                 retString += s;
             }
         } catch (Exception e) {

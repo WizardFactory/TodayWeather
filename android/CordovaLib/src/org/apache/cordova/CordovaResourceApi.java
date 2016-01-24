@@ -28,6 +28,8 @@ import android.os.Looper;
 import android.util.Base64;
 import android.webkit.MimeTypeMap;
 
+import org.apache.http.util.EncodingUtils;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,7 +38,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.FileChannel;
@@ -104,28 +105,28 @@ public class CordovaResourceApi {
     public static int getUriType(Uri uri) {
         assertNonRelative(uri);
         String scheme = uri.getScheme();
-        if (ContentResolver.SCHEME_CONTENT.equalsIgnoreCase(scheme)) {
+        if (ContentResolver.SCHEME_CONTENT.equals(scheme)) {
             return URI_TYPE_CONTENT;
         }
-        if (ContentResolver.SCHEME_ANDROID_RESOURCE.equalsIgnoreCase(scheme)) {
+        if (ContentResolver.SCHEME_ANDROID_RESOURCE.equals(scheme)) {
             return URI_TYPE_RESOURCE;
         }
-        if (ContentResolver.SCHEME_FILE.equalsIgnoreCase(scheme)) {
+        if (ContentResolver.SCHEME_FILE.equals(scheme)) {
             if (uri.getPath().startsWith("/android_asset/")) {
                 return URI_TYPE_ASSET;
             }
             return URI_TYPE_FILE;
         }
-        if ("data".equalsIgnoreCase(scheme)) {
+        if ("data".equals(scheme)) {
             return URI_TYPE_DATA;
         }
-        if ("http".equalsIgnoreCase(scheme)) {
+        if ("http".equals(scheme)) {
             return URI_TYPE_HTTP;
         }
-        if ("https".equalsIgnoreCase(scheme)) {
+        if ("https".equals(scheme)) {
             return URI_TYPE_HTTPS;
         }
-        if (PLUGIN_URI_SCHEME.equalsIgnoreCase(scheme)) {
+        if (PLUGIN_URI_SCHEME.equals(scheme)) {
             return URI_TYPE_PLUGIN;
         }
         return URI_TYPE_UNKNOWN;
@@ -188,11 +189,7 @@ public class CordovaResourceApi {
                     HttpURLConnection conn = (HttpURLConnection)new URL(uri.toString()).openConnection();
                     conn.setDoInput(false);
                     conn.setRequestMethod("HEAD");
-                    String mimeType = conn.getHeaderField("Content-Type");
-                    if (mimeType != null) {
-                        mimeType = mimeType.split(";")[0];
-                    }
-                    return mimeType;
+                    return conn.getHeaderField("Content-Type");
                 } catch (IOException e) {
                 }
             }
@@ -287,9 +284,6 @@ public class CordovaResourceApi {
                 HttpURLConnection conn = (HttpURLConnection)new URL(uri.toString()).openConnection();
                 conn.setDoInput(true);
                 String mimeType = conn.getHeaderField("Content-Type");
-                if (mimeType != null) {
-                    mimeType = mimeType.split(";")[0];
-                }
                 int length = conn.getContentLength();
                 InputStream inputStream = conn.getInputStream();
                 return new OpenForReadResult(uri, inputStream, mimeType, length, null);
@@ -433,16 +427,7 @@ public class CordovaResourceApi {
             }
         }
         String dataPartAsString = uriAsString.substring(commaPos + 1);
-        byte[] data;
-        if (base64) {
-            data = Base64.decode(dataPartAsString, Base64.DEFAULT);
-        } else {
-            try {
-                data = dataPartAsString.getBytes("UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                data = dataPartAsString.getBytes();
-            }
-        }
+        byte[] data = base64 ? Base64.decode(dataPartAsString, Base64.DEFAULT) : EncodingUtils.getBytes(dataPartAsString, "UTF-8");
         InputStream inputStream = new ByteArrayInputStream(data);
         return new OpenForReadResult(uri, inputStream, contentType, data.length, null);
     }
