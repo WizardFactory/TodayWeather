@@ -25,9 +25,9 @@ angular.module('starter.controllers', [])
         $scope.dayChart;
 
         var padding = 1;
-        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
-        //iphone 5 568-20
+        //console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        //console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        //iphone 5 568-20(status bar)
         if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
             padding = 0.90;
         }
@@ -40,11 +40,15 @@ angular.module('starter.controllers', [])
             padding = 0.80;
         }
         //ss note3 640-25
-        if (window.innerHeight === 615 && window.innerWidth === 360 && window.devicePixelRatio === 3) {
+        if ((window.innerHeight === 615 || window.innerHeight === 640 ) &&
+            window.innerWidth === 360 &&
+            window.devicePixelRatio === 3) {
             padding = 0.80;
         }
         //ss uhd 732-25
-        if (window.innerHeight === 707 && window.innerWidth === 412 && window.devicePixelRatio === 3.5) {
+        if ((window.innerHeight === 707 || window.innerHeight === 732) &&
+            window.innerWidth === 412 &&
+            window.devicePixelRatio === 3.5) {
             padding = 0.80;
         }
 
@@ -54,6 +58,8 @@ angular.module('starter.controllers', [])
         $scope.regionSumSize = mainHeight * 0.047 * padding;
         $scope.bigDigitSize = mainHeight * 0.2193 * padding;
         $scope.bigTempPointSize = mainHeight * 0.0423 * padding;
+        //injection img url after setting imgSize.
+        $scope.reddot = 'reddot';
         $scope.bigSkyStateSize = mainHeight * 0.1408 * padding;
         $scope.smallTimeSize = mainHeight * 0.0299;
         $scope.smallImageSize = mainHeight * 0.0512;
@@ -416,6 +422,9 @@ angular.module('starter.controllers', [])
         var isShowingBar = false;
         var runAdmob = true;
         $rootScope.runAdmob = !runAdmob;
+        if (runAdmob){
+            $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
+        }
 
         $scope.doRefresh = function() {
             if (runAdmob) {
@@ -436,12 +445,12 @@ angular.module('starter.controllers', [])
             updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
 
-                $ionicNavBarDelegate.title("");
                 if (!runAdmob) {
                     isShowingBar = !isShowingBar;
                     $ionicNavBarDelegate.showBar(isShowingBar);
                 }
                 if (runAdmob) {
+                    $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
                     if (window.plugins && window.plugins.AdMob) {
                         window.plugins.AdMob.showAd(true,
                             function () {

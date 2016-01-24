@@ -18,11 +18,11 @@
                                 <div class="col" style="width: 46%;">
                                     <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
                                          ng-if="currentWeather.t1h!==undefined">
-                                        <img ng-style="{'height':bigTempPointSize+'px'}" ng-show="bigTempPointSize" style="width: auto" src="img/reddot.png">
+                                        <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
                                     </div>
                                     <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
                                          ng-if="currentWeather.skyIcon">
-                                        <img ng-style="{'height':bigSkyStateSize+'px'}" ng-show="bigSkyStateSize" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
+                                        <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
                                     </div>
                                 </div>
                             </div>
@@ -117,7 +117,7 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
-                                <br><small>{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
@@ -126,11 +126,10 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
-                                <br><small>{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
-                        <div class="item row detail-item"
-                             ng-if="currentWeather.sensorytem && currentWeather.sensorytem !== currentWeather.t1h">
+                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem < 0">
                                 <div class="col col-33 detail-text"><p>체감온도</p></div>
                                 <div class="col col-33 detail-image">
                                     <div><img src="img/SensoryTem.png" style="width: 40px"></div>

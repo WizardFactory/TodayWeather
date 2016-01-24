@@ -625,7 +625,7 @@ angular.module('starter.services', [])
 
             //current.sensorytem = -10;
             //current.sensorytemStr = "관심";
-            if (current.sensorytem && current.sensorytem <= -10) {
+            if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
                 str += ", " + "체감온도 " + current.sensorytem +"˚";
             }
 
@@ -1347,18 +1347,9 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         obj.convertTimeString = function (date) {
-            var timeString;
-            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
-            timeString += "("+dayToString(date.getDay()) +") ";
-
-            if (date.getHours() < 12) {
-                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
-            }
-            else {
-                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
-            }
-
-            return timeString;
+            return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
+                    " " + (date.getHours()<10?"0":"") + date.getHours() +
+                    ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
         };
 
         /**
