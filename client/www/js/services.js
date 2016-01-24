@@ -625,7 +625,7 @@ angular.module('starter.services', [])
 
             //current.sensorytem = -10;
             //current.sensorytemStr = "관심";
-            if (current.sensorytem && current.sensorytem <= -10) {
+            if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
                 str += ", " + "체감온도 " + current.sensorytem +"˚";
             }
 

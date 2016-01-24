@@ -117,7 +117,7 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
-                                <br><small>{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
@@ -126,7 +126,7 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
-                                <br><small>{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item"
