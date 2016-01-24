@@ -1197,7 +1197,7 @@ var getShortRss = function(req, res, next){
             next();
         });
     });
-}
+};
 
 var getShort = function(req, res, next){
     var meta = {};
@@ -1483,6 +1483,75 @@ var getShort = function(req, res, next){
     }
 };
 
+/*
+ *   merge short/current with shorest.
+ *  @param  req
+ *  @param  shortestList
+ *
+ *   @return
+ */
+var mergeByShortest = function(req, res, next){
+    var meta = {};
+
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
+
+    meta.method = 'mergeByShortest';
+    meta.region = regionName;
+    meta.city = cityName;
+    meta.town = townName;
+
+    log.info('>', meta);
+
+    var currentTime = getCurrentTimeValue(9);
+
+    getCoord(regionName, cityName, townName, function(err, coord){
+        if (err) {
+            log.error(err);
+            return next();
+        }
+        getTownDataFromDB(modelShortest, coord, function(err, shortestList) {
+            if (err) {
+                log.error(err);
+                return next();
+            }
+
+            log.info(shortestList);
+            if(shortestList && shortestList.length > 0){
+                if(req.short && req.short.length > 0){
+                    shortestList.forEach(function(shortestItem){
+                        if(currentTime.date <= shortestItem.date && currentTime.time <= shortestItem.date){
+                            req.short.forEach(function(shortItem){
+                                if(shortestItem.date === shortItem.date && shortestItem.time === shortItem.time){
+                                    log.silly('MRbyST> update short data');
+                                    shortestString.forEach(function(string){
+                                        shortItem[string] = shortestItem[string];
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+
+                if(req.current){
+                    shortestList.forEach(function(shortestItem){
+                        if(shortestItem.date === req.current.date && shortestItem.time === req.current.time){
+                            log.silly('MRbyST> update current data');
+                            shortestString.forEach(function(string){
+                                req.current[string] = shortestItem[string];
+                            });
+                        }
+                    });
+
+                }
+            }
+
+            next();
+        });
+    });
+};
+
 var getShortest = function(req, res, next){
     var meta = {};
 
@@ -1543,6 +1612,7 @@ var getShortest = function(req, res, next){
                         log.error(err);
                         return next();
                     }
+
                     var nowDate = getShortestTimeValue(+9);
                     var resultItem = [];
 
@@ -2378,7 +2448,10 @@ router.get('/', [getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
+router.get('/:region', [getShort, getShortRss, getShortest,
+                        getCurrent, getKeco, getMid,
+                        getMidRss, getPastMid, mergeMidWithShort,
+                        mergeByShortest], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -2413,7 +2486,10 @@ router.get('/:region', [getShort, getShortRss, getShortest, getCurrent, getKeco,
     res.json(result);
 });
 
-router.get('/:region/:city', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort], function(req, res) {
+router.get('/:region/:city', [getShort, getShortRss, getShortest,
+                                getCurrent, getKeco, getMid,
+                                getMidRss, getPastMid, mergeMidWithShort,
+                                mergeByShortest], function(req, res) {
     var meta = {};
 
     var result = {};
@@ -2449,8 +2525,10 @@ router.get('/:region/:city', [getShort, getShortRss, getShortest, getCurrent, ge
     res.json(result);
 });
 
-router.get('/:region/:city/:town', [getShort, getShortRss, getShortest, getCurrent, getKeco, getMid, getMidRss, getPastMid, mergeMidWithShort],
-            function(req, res) {
+router.get('/:region/:city/:town', [getShort, getShortRss, getShortest,
+                                    getCurrent, getKeco, getMid,
+                                    getMidRss, getPastMid, mergeMidWithShort,
+                                    mergeByShortest], function(req, res) {
     var meta = {};
 
     var result = {};
