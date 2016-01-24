@@ -414,7 +414,7 @@ function _findTownCode(list, region, city, town, cb){
             convertGeocode(region, city, town, function (err, result) {
                 if(err){
                     log.silly('Cannot get mx, my ');
-                    return callback(null);
+                    callback(null);
                 }
 
                 log.silly('_findCode XY>',result);
