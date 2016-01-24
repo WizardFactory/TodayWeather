@@ -293,43 +293,6 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param pm10Value
-         * @param pm10Grade
-         * @returns {*}
-         */
-        function parsePm10Info(pm10Value, pm10Grade) {
-            if (pm10Value <= 30) {
-                return "좋음";
-            }
-            else if (pm10Value <= 80) {
-                return "보통";
-            }
-            else if (pm10Value <= 150) {
-                return "나쁨";
-            }
-            else if (pm10Value > 150) {
-                return "매우나쁨";
-            }
-            else {
-                console.log("Fail to parse pm10Value="+pm10Value);
-                switch (pm10Grade) {
-                    case 1:
-                        return "좋음";
-                    case 2:
-                        return "보통";
-                    case 3:
-                        return "나쁨";
-                    case 4:
-                        return "매우나쁨";
-                    default :
-                        console.log("Unknown pm10Grade="+pm10Grade);
-                }
-            }
-            return "-";
-        }
-
-        /**
-         *
          * @param dailyInfoList
          * @param date
          * @returns {*}
@@ -468,25 +431,6 @@ angular.module('starter.services', [])
             return "";
         }
 
-        function parseSensoryTem(sensoryTem) {
-            if (sensoryTem >= 0 ) {
-                return "";
-            }
-            else if ( -10 < sensoryTem && sensoryTem < 0) {
-                return "관심";
-            }
-            else if ( -25 < sensoryTem && sensoryTem <= -10) {
-                return "주의";
-            }
-            else if ( -45 < sensoryTem && sensoryTem <= -25) {
-                return "경고";
-            }
-            else if (sensoryTem <= -45) {
-                return "위험";
-            }
-            return "";
-        }
-
         function convertMidSkyString(skyInfo) {
             switch (skyInfo) {
                 case "맑음":
@@ -550,15 +494,6 @@ angular.module('starter.services', [])
             return sky1;
         }
 
-        function parseUltrv(ultrv) {
-            if (0 <= ultrv  && ultrv <= 2) return "낮음";
-            else if(3 <= ultrv && ultrv <= 5) return "보통";
-            else if(6 <= ultrv && ultrv <= 7) return "높음";
-            else if(8 <= ultrv && ultrv <= 10) return "매우높음";
-            else if(11 <= ultrv) return "위험";
-            return "";
-        }
-
         function decideHumidityIcon(reh) {
             var tempIconName = "Humidity-";
 
@@ -572,18 +507,19 @@ angular.module('starter.services', [])
         }
 
         /**
-         *
+         * 어제오늘, 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음), 강수량/적설량, 자외선, 체감온도
          * @param {Object} current
          * @param {Object} yesterday
          * @returns {String}
          */
         function makeSummary(current, yesterday) {
             var str = "";
+            var stringList = [];
 
             if (current.t1h !== undefined && yesterday && yesterday.t3h !== undefined) {
                 var diffTemp = current.t1h - yesterday.t3h;
 
-                str += "어제";
+                str = "어제";
                 if (diffTemp == 0) {
                     str += "와 동일";
                 }
@@ -596,45 +532,59 @@ angular.module('starter.services', [])
                         str += "도 높음";
                     }
                 }
+                stringList.push(str);
+            }
+
+            //current.arpltn = {};
+            //current.arpltn.pm10Value = 82;
+            //current.arpltn.pm10Str = "나쁨";
+            //current.arpltn.pm25Value = 82;
+            //current.arpltn.pm25Str = "나쁨";
+            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Str &&
+                        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
+                stringList.push("미세먼지 " + current.arpltn.pm10Str);
+            }
+            else if (current.arpltn && current.arpltn.pm25Value &&
+                        (current.arpltn.pm25Value > 50 || current.arpltn.pm25Grade > 2)) {
+                stringList.push("초미세먼지 " + current.arpltn.pm25Str);
             }
 
             //current.ptyStr = '강수량'
             //current.rn1Str = '1mm 미만'
             if (current.rn1Str) {
-                str += ", " + current.ptyStr + " " + current.rn1Str;
-            }
-
-            //current.arpltn = {};
-            //current.arpltn.pm10Value = 80;
-            //current.arpltn.pm10Str = "나쁨";
-            if (current.arpltn && current.arpltn.pm10Value &&
-                        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
-                str += ", " + "미세먼지 " + current.arpltn.pm10Str;
-            }
-            else {
-                if (current.pm10Value && (current.pm10Value > 80 || current.pm10Grade > 2)) {
-                    str += ', ' + '미세먼지 ' + current.pm10Str;
-                }
+                stringList.push(current.ptyStr + " " + current.rn1Str);
             }
 
             //current.ultrv = 6;
             //current.ultrvStr = "높음";
             if (current.ultrv && current.ultrv >= 6) {
-                str += ", " + "자외선 " + current.ultrvStr;
+                stringList.push("자외선 " + current.ultrvStr);
             }
 
             //current.sensorytem = -10;
             //current.sensorytemStr = "관심";
-            if (current.sensorytem && current.sensorytem <= -10) {
-                str += ", " + "체감온도 " + current.sensorytem +"˚";
-            }
-
             //current.wsd = 10;
             //current.wsdStr = convertKmaWsdToStr(current.wsd);
-            if (current.wsd && current.wsd > 9) {
-                str += ", " + "바람이 " + current.wsdStr;
+            if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
+                stringList.push("체감온도 " + current.sensorytem +"˚");
             }
-            return str;
+            else if (current.wsd && current.wsd > 9) {
+                stringList.push("바람이 " + current.wsdStr);
+            }
+
+            if (stringList.length === 1) {
+                //특정 이벤트가 없다면, 미세먼지가 기본으로 추가.
+                if (current.arpltn && current.arpltn.pm10Str)  {
+                    stringList.push("미세먼지 " + current.arpltn.pm10Str);
+                }
+            }
+
+            if (stringList.length >= 3) {
+                return stringList[1]+", "+stringList[2];
+            }
+            else {
+               return stringList.toString();
+            }
         }
 
         /**
@@ -677,7 +627,7 @@ angular.module('starter.services', [])
             return location;
         }
 
-        function getWeatherInfo (town) {
+        function getTownWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
             //var url = "http://localhost:3000/town";
@@ -697,219 +647,6 @@ angular.module('starter.services', [])
                     console.log(error);
                     deferred.reject(error);
                 });
-
-            return deferred.promise;
-        }
-
-        function getSensorytemLifeInfo (town) {
-            var deferred = $q.defer();
-
-            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
-            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
-            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
-            url += "/" + "getSensorytemLifeList";
-            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
-            url += "&AreaNo=" + town.areaNo;
-            url += "&_type=json";
-            console.log(url);
-
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function(data) {
-                    console.log(data);
-                    try {
-                        var senTemp = data.Response.Body.IndexModel.h3;
-                        console.log("senTemp=" + senTemp);
-                        deferred.resolve({senTemp: senTemp});
-                    }
-                    catch(e){
-                        console.log(e);
-                        deferred.resolve({senTemp: undefined});
-                        //deferred.reject(e);
-                    }
-                })
-                .error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get weatherInfo");
-                    }
-                    console.log(error);
-                    deferred.resolve({senTemp: undefined});
-                    //deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function getUltrvLifeInfo (town) {
-            var deferred = $q.defer();
-
-            var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
-            var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
-            var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
-            url += "/" + "getUltrvLifeList";
-            url += "?serviceKey=" + "[KMA_SERVICE_KEY]";
-            url += "&AreaNo=" + town.areaNo;
-            url += "&_type=json";
-            console.log(url);
-
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function(data) {
-                    console.log(data);
-                    try {
-                        var ultrv = data.Response.Body.IndexModel.today;
-                        if (!ultrv) {
-                            ultrv = data.Response.Body.IndexModel.tomorrow;
-                        }
-                        console.log("ultrv=" + ultrv);
-                        deferred.resolve({ultrv: ultrv});
-                    }
-                    catch(e){
-                        console.log(e);
-                        deferred.resolve({ultrv: undefined});
-                        //deferred.reject(e);
-                    }
-                })
-                .error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get weatherInfo");
-                    }
-                    console.log(error);
-                    deferred.resolve({ultrv: undefined});
-                    //deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function getTmPointFromWgs84(y, x) {
-            var deferred = $q.defer();
-
-            var url = "https://apis.daum.net/local/geo/transcoord";
-            url += "?apiKey=" + "[DAUM_SERVICE_KEY]";
-            url += "&fromCoord=WGS84";
-            url += "&x=" + x;
-            url += "&y=" + y;
-            url += "&toCoord=TM";
-            url += "&output=json";
-            console.log(url);
-
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function (data) {
-                    console.log(data);
-                    deferred.resolve(data);
-                }).error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get tmpoint");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function getNearbyMsrstn(my, mx)  {
-            var deferred = $q.defer();
-
-            var DOMAIN_ARPLTN_KECO = "http://openapi.airkorea.or.kr/openapi/services/rest";
-            var PATH_MSRSTN_INFO_INQIRE_SVC = "MsrstnInfoInqireSvc";
-            var NEAR_BY_MSRSTN_LIST = "getNearbyMsrstnList";
-            var url = DOMAIN_ARPLTN_KECO + "/" + PATH_MSRSTN_INFO_INQIRE_SVC + "/" + NEAR_BY_MSRSTN_LIST;
-            url += "?ServiceKey=" + "[SERVICE_KEY]";
-            url += "&tmY=" + my;
-            url += "&tmX=" + mx;
-            url += "&pageNo=" + 1;
-            url += "&numOfRows=" + 999;
-            console.log(url);
-
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function (data) {
-                    //console.log(data);
-                    deferred.resolve(data);
-                }).error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get tmpoint");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function getMsrstnAcctoRltmMesureDnsty(stationName) {
-            var deferred = $q.defer();
-
-            var url = "http://openapi.airkorea.or.kr/openapi/services/rest/ArpltnInforInqireSvc" + "/getMsrstnAcctoRltmMesureDnsty";
-            url += "?ServiceKey=" + "[SERVICE_KEY]";
-            url += "&stationName=" + stationName;
-            url += "&dataTerm=DAILY";
-            url += "&pageNo=" + 1;
-            url += "&numOfRows=" + 999;
-            console.log(url);
-
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function (data) {
-                    //console.log(data);
-                    deferred.resolve(data);
-                }).error(function(error) {
-                    if (!error) {
-                        error = new Error("Fail to get tmpoint");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function getPm10Info(town) {
-            var deferred = $q.defer();
-
-            getTmPointFromWgs84(town.lat, town.long).then(function (point) {
-                getNearbyMsrstn(point.y, point.x).then(function (data) {
-                    var ret = xml2json.parser(data);
-                    //console.log(ret);
-                    if (ret.response.header.resultcode !== 0) {
-                        console.log(ret.response.header.resultmsg);
-                        deferred.resolve({pm10value: undefined});
-                        return;
-                    }
-                    var stationname = ret.response.body.items.item[0].stationname;
-                    console.log(stationname);
-
-                    getMsrstnAcctoRltmMesureDnsty(stationname).then(function (data) {
-                        var ret = xml2json.parser(data);
-                        var pm10value, pm10Grade;
-                        //console.log(ret);
-                        if (ret.response.header.resultcode !== 0) {
-                            console.log(ret.response.header.resultmsg);
-                            deferred.resolve({pm10value: undefined});
-                            return;
-                        }
-                        if (ret.response.body.items.item && ret.response.body.items.item[0]) {
-                            pm10value = ret.response.body.items.item[0].pm10value;
-                            pm10Grade = ret.response.body.items.item[0].pm10grade;
-                        }
-                        else {
-                            console.log("Fail to get data from station :"+stationname);
-                        }
-                        console.log(pm10value);
-                        deferred.resolve({pm10value: pm10value, pm10Grade: pm10Grade});
-                    }, function (err) {
-                        console.log(err);
-                        deferred.resolve({pm10value: undefined});
-                        //deferred.reject(err);
-                    });
-                }, function (err) {
-                    console.log(err);
-                    deferred.resolve({pm10value: undefined});
-                    //deferred.reject(err);
-                });
-            }, function (err) {
-                console.log(err);
-                deferred.resolve({pm10value: undefined});
-                //deferred.reject(err);
-            });
 
             return deferred.promise;
         }
@@ -1030,13 +767,6 @@ angular.module('starter.services', [])
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
 
-
-            if (currentTownWeather.arpltn && currentTownWeather.arpltn.pm10Value) {
-                currentForecast.pm10Value = currentTownWeather.arpltn.pm10Value;
-                currentForecast.pm10Grade = currentTownWeather.arpltn.pm10Grade;
-                currentForecast.pm10Str = parsePm10Info(currentTownWeather.arpltn.pm10Value,
-                                                currentTownWeather.arpltn.pm10Grade);
-            }
             return currentForecast;
         };
 
@@ -1205,17 +935,6 @@ angular.module('starter.services', [])
                 tempObject.day = day;
                 tempObject.time = getTimeString(positionHours, diffDays, time);
 
-                // 단기 예보와 현재 정보를 분리 합니다. by dhkmm2
-                //{
-                //    //단기 예보의 현재(지금) 데이터를 currentForecast 정보로 업데이트
-                //    if (diffDays === 0 && time === positionHours &&
-                //        (time <= currentForecast.time && currentForecast.time < time + 3)) {
-                //        tempObject.t3h = currentForecast.t1h;
-                //        tempObject.skyIcon = currentForecast.skyIcon;
-                //        tempObject.tempIcon = decideTempIcon(currentForecast.t1h, dayInfo.tmx, dayInfo.tmn);
-                //    }
-                //}
-
                 // 하루 기준의 최고, 최저 온도 찾기
                 // t3h를 tmx, tmn로 대처함
                 if (shortForecast.tmx !== 0) {
@@ -1229,19 +948,6 @@ angular.module('starter.services', [])
                         tempObject.t3h = tempObject.tmn;
                     }
                     tempObject.tmn = shortForecast.tmn;
-                }
-
-                if (diffDays === 0 && time === positionHours) {
-                    if (shortForecast.sensorytem !== undefined) {
-                        currentForecast.sensorytem = shortForecast.sensorytem;
-                        currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
-                    }
-                }
-                if (diffDays === 0 && time === positionHours + 3) {
-                   if (!currentForecast.sensorytem && shortForecast.sensorytem !== undefined) {
-                       currentForecast.sensorytem = shortForecast.sensorytem;
-                       currentForecast.sensorytemStr = parseSensoryTem(shortForecast.sensorytem);
-                   }
                 }
 
                 data.push(tempObject);
@@ -1316,10 +1022,6 @@ angular.module('starter.services', [])
                    data.pop = dayInfo.pop;
                 }
 
-                if (diffDays === 0) {
-                    currentWeather.ultrv = dayInfo.ultrv;
-                    currentWeather.ultrvStr = parseUltrv(dayInfo.ultrv);
-                }
                 if (data.reh !== undefined) {
                     data.humidityIcon = decideHumidityIcon(data.reh);
                 }
@@ -1347,18 +1049,9 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         obj.convertTimeString = function (date) {
-            var timeString;
-            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
-            timeString += "("+dayToString(date.getDay()) +") ";
-
-            if (date.getHours() < 12) {
-                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
-            }
-            else {
-                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
-            }
-
-            return timeString;
+            return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
+                    " " + (date.getHours()<10?"0":"") + date.getHours() +
+                    ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
         };
 
         /**
@@ -1648,10 +1341,7 @@ angular.module('starter.services', [])
             }
 
             var promises = [];
-            promises.push(getWeatherInfo(town));
-            promises.push(getSensorytemLifeInfo(town));
-            promises.push(getUltrvLifeInfo(town));
-            promises.push(getPm10Info(town));
+            promises.push(getTownWeatherInfo(town));
 
             return $q.all(promises);
         };
@@ -1665,51 +1355,29 @@ angular.module('starter.services', [])
             var that = this;
             var data = {};
             var currentTime = new Date();
-            var weatherData = {}, senTemp, ultrv, pm10value, pm10Grade;
+            var weatherData = {};
             weatherDatas.forEach(function (data) {
                 if (data.hasOwnProperty("data")) {
                     weatherData = data.data;
-                }
-                else if (data.hasOwnProperty("senTemp")) {
-                    senTemp = data.senTemp;
-                }
-                else if (data.hasOwnProperty("ultrv")) {
-                    ultrv = data.ultrv;
-                }
-                else if (data.hasOwnProperty("pm10value")) {
-                    pm10value = data.pm10value;
-                    pm10Grade = data.pm10Grade;
                 }
             });
 
             var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.short);
             var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short, currentTime);
 
-            /*
-             parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
+            /**
+             * parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
+             * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
             var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
             console.log(shortTownWeather);
 
-            /*
-             parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
+            /**
+             * parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
+             * @type {Array}
              */
             var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
             console.log(midTownWeather);
-
-            if(senTemp) {
-                currentForecast.sensorytem = senTemp;
-                currentForecast.sensorytemStr = parseSensoryTem(senTemp);
-            }
-            if (ultrv) {
-                currentForecast.ultrv = ultrv;
-                currentForecast.ultrvStr = parseUltrv(ultrv);
-            }
-            if (pm10value) {
-                currentForecast.pm10Value = pm10value;
-                currentForecast.pm10Grade = pm10Grade;
-                currentForecast.pm10Str = parsePm10Info(pm10value, pm10Grade);
-            }
 
             var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3);
             currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[yesterdayIndex]);

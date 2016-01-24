@@ -18,7 +18,10 @@ function arpltnController() {
  * @returns {*}
  */
 arpltnController.parsePm10Info = function(pm10Value, pm10Grade) {
-    if (pm10Value <= 30) {
+    if (pm10Value < 0) {
+       return "없음";
+    }
+    else if (pm10Value <= 30) {
         return "좋음";
     }
     else if (pm10Value <= 80) {
@@ -49,7 +52,10 @@ arpltnController.parsePm10Info = function(pm10Value, pm10Grade) {
 };
 
 arpltnController.parsePm25Info = function (pm25Value, pm25Grade) {
-    if (pm25Value <=15) {
+    if (pm25Value < 0) {
+        return "없음";
+    }
+    else if (pm25Value <=15) {
         return "좋음";
     }
     else if(pm25Value<=50) {
@@ -79,35 +85,75 @@ arpltnController.parsePm25Info = function (pm25Value, pm25Grade) {
     return "-";
 };
 
-arpltnController._appendFromDb = function(town, current, callback) {
+arpltnController._mregeData = function(current, arpltnDataList, callback){
     var self = this;
-    arpltn.find({town:town}).limit(1).lean().exec(function (err, arpltnDataList) {
-        if (err) {
-            log.warn(err);
+    var err = undefined;
+
+    try {
+        if (arpltnDataList.length === 0) {
+            err = new Error('Fail to find arpltn town='+JSON.stringify(town));
             return callback(err);
         }
-        try {
-            if (arpltnDataList.length === 0) {
-                err = new Error('Fail to find arpltn town='+JSON.stringify(town));
-                return callback(err);
-            }
-            var arpltnData = arpltnDataList[0];
-            if (!arpltnData) {
-                err = new Error('Fail to find arpltn ' + JSON.stringify(town));
-                log.error(err);
-                return callback(err);
-            }
-
-            log.info(JSON.stringify(arpltnData));
-
-            current.arpltn = arpltnData.arpltn;
-            current.arpltn.pm10Str = self.parsePm10Info(arpltnData.arpltn.pm10Value, arpltnData.arpltn.pm10Grade);
-            current.arpltn.pm25Str = self.parsePm25Info(arpltnData.arpltn.pm25Value, arpltnData.arpltn.pm25Grade);
-            return callback(err, arpltnData);
+        var arpltnData = arpltnDataList[0];
+        if (!arpltnData) {
+            err = new Error('Fail to find arpltn ' + JSON.stringify(town));
+            log.error(err);
+            return callback(err);
         }
-        catch(e) {
-            callback(e);
+
+        log.silly(JSON.stringify(arpltnData));
+
+        current.arpltn = arpltnData.arpltn;
+        current.arpltn.pm10Str = self.parsePm10Info(arpltnData.arpltn.pm10Value, arpltnData.arpltn.pm10Grade);
+        current.arpltn.pm25Str = self.parsePm25Info(arpltnData.arpltn.pm25Value, arpltnData.arpltn.pm25Grade);
+        return callback(err, arpltnData);
+    }
+    catch(e) {
+        callback(e);
+    }
+};
+
+arpltnController._appendFromDb = function(town, current, callback) {
+    var self = this;
+    var async = require('async');
+
+    async.waterfall([
+            function(cb){
+                arpltn.find({town:town}).limit(1).lean().exec(function (err, arpltnDataList) {
+                    if(err || arpltnDataList.length === 0){
+                        log.warn(err);
+                        return cb(null);
+                    }
+
+                    return cb('goto exit', arpltnDataList);
+
+                });
+            },
+            function(cb){
+                convertGeocode(town.first, town.second, town.third, function (err, result) {
+                    if(err){
+                        return cb(null);
+                    }
+
+                    arpltn.find({'mCoord.mx':result.mx, 'mCoord.my':result.my}).limit(1).lean().exec(function (err, arpltnDataList) {
+                        if(err || arpltnDataList.length === 0){
+                            log.warn(err);
+                            return cb(null);
+                        }
+
+                        return cb('goto exit', arpltnDataList);
+
+                    });
+                });
+            }
+        ],
+    function(err, result){
+        if(result){
+            self._mregeData(current, result, callback);
+            return;
         }
+
+        callback(new Error('Can not find data from DB'));
     });
 };
 
@@ -198,6 +244,9 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             return cb(new Error("Fail to find station "+town.kecoStationName));
         }
     ], function(err, arpltn) {
+        if(err){
+            return callback(err);
+        }
         if (arpltn) {
             current.arpltn = arpltn;
         }
