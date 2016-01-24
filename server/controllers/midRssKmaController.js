@@ -51,8 +51,8 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
         midRssData.midData.forEach(function (midData) {
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
-                    dailyData[i].tmn = midData.tmn;
-                    dailyData[i].tmx = midData.tmx;
+                    dailyData[i].taMin = midData.taMin;
+                    dailyData[i].taMax = midData.taMax;
                     dailyData[i].wfAm = midData.wfAm;
                     dailyData[i].wfPm = midData.wfPm;
                     dailyData[i].reliability = midData.reliability;
@@ -61,7 +61,7 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
             }
             if (i === dailyData.length) {
                 //create object for removing _id of midData
-                dailyData.push({date:midData.date, tmn:midData.tmn, tmx:midData.tmx, wfAm:midData.wfAm,
+                dailyData.push({date:midData.date, taMin:midData.taMin, taMax:midData.taMax, wfAm:midData.wfAm,
                     wfPm:midData.wfPm, reliability: midData.reliability});
             }
         });
