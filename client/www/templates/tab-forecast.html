@@ -18,11 +18,11 @@
                                 <div class="col" style="width: 46%;">
                                     <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
                                          ng-if="currentWeather.t1h!==undefined">
-                                        <img ng-style="{'height':bigTempPointSize+'px'}" ng-show="bigTempPointSize" style="width: auto" src="img/reddot.png">
+                                        <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
                                     </div>
                                     <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
                                          ng-if="currentWeather.skyIcon">
-                                        <img ng-style="{'height':bigSkyStateSize+'px'}" ng-show="bigSkyStateSize" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
+                                        <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
                                     </div>
                                 </div>
                             </div>
