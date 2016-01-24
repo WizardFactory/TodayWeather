@@ -1347,18 +1347,9 @@ angular.module('starter.services', [])
          * @returns {string}
          */
         obj.convertTimeString = function (date) {
-            var timeString;
-            timeString = (date.getMonth()+1)+"월 "+date.getDate()+ "일";
-            timeString += "("+dayToString(date.getDay()) +") ";
-
-            if (date.getHours() < 12) {
-                timeString += " "+ date.getHours()+":"+date.getMinutes() + " AM";
-            }
-            else {
-                timeString += " "+ (date.getHours()-12) +":"+date.getMinutes() + " PM";
-            }
-
-            return timeString;
+            return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
+                    " " + (date.getHours()<10?"0":"") + date.getHours() +
+                    ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
         };
 
         /**
