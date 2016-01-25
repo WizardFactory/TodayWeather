@@ -206,25 +206,7 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
                         return cBack(undefined, mid.pubDate);
                     }
                     midRssModel.pubDate = mid.pubDate;
-
-                    //midRssModel.midData = mid.midData;
-                    //append new data
-                    var modelDataList = midRssModel.midData;
-                    mid.midData.forEach(function (midData) {
-                        for (var i=0; i<modelDataList.length; i++) {
-                            if (modelDataList[i].date === midData.date) {
-                                modelDataList[i].wfAm = midData.wfAm;
-                                modelDataList[i].wfPm = midData.wfPm;
-                                modelDataList[i].taMin = midData.taMin;
-                                modelDataList[i].taMax = midData.taMax;
-                                modelDataList[i].reliability = midData.reliability;
-                                break;
-                            }
-                        }
-                        if (i === modelDataList.length) {
-                            modelDataList.push(midData);
-                        }
-                    });
+                    midRssModel.midData = mid.midData;
                 }
                 midRssModel.save(function (err) {
                     cBack(err, midRssModel.pubDate);

@@ -49,6 +49,11 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
 
         var dailyData = reqMidData.dailyData;
         midRssData.midData.forEach(function (midData) {
+            if (parseInt(midData.date)  < parseInt(dailyData[0].date) ) {
+                //skip old data
+                return;
+            }
+
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
                     dailyData[i].tmn = midData.tmn;
