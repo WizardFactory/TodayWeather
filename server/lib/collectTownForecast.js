@@ -436,7 +436,6 @@ CollectData.prototype.organizeShortData = function(index, listData){
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -516,6 +515,7 @@ CollectData.prototype.organizeShortData = function(index, listData){
     }
     catch(e){
         log.error('Error!! organizeShortData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
@@ -539,7 +539,6 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -585,6 +584,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
     }
     catch(e){
         log.error(e);
+        self.emit('recvFail', index);
     }
 };
 
@@ -678,6 +678,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
     catch(e){
         log.error('Error!! organizeCurrentData : failed data organized');
         log.error(e);
+        self.emit('recvFail', index);
     }
 };
 
@@ -693,7 +694,6 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -731,6 +731,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     }
     catch(e){
         log.error('Error!! organizeForecastData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
@@ -746,7 +747,6 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -807,7 +807,8 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeLandData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
@@ -823,7 +824,6 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -890,7 +890,8 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeTempData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
@@ -906,7 +907,6 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
     try{
         if (listData.response.body[0].totalCount[0] === '0') {
             log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
-            log.error(meta);
             self.emit('recvFail', index);
             return;
         }
@@ -1019,7 +1019,8 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeSeaData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
