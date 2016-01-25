@@ -2686,10 +2686,108 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
     log.info('wait '+self.asyncTasks.length+' tasks');
 };
 
+Manager.prototype._requestApi = function (apiName, callback) {
+    var req = require('request');
+    var timeout = 1000*60*60*24;
+    var url = "http://"+config.ipAddress+":"+config.port+"/gather/";
+
+    log.info('Start '+apiName);
+    req(url+apiName, {timeout: timeout}, function(err, response) {
+        log.info('Finished '+apiName+' '+new Date());
+        if (err) {
+            log.error(err);
+            return callback();
+        }
+        if ( response.statusCode >= 400) {
+            log.error(new Error("response.statusCode="+response.statusCode));
+        }
+        callback();
+    });
+};
+
+Manager.prototype.checkTimeAndRequestTask = function (putAll) {
+    var self = this;
+    var time = (new Date()).getUTCMinutes();
+
+    log.verbose('check time and request task');
+
+    if (time === 1 || putAll) {
+        log.info('push short rss');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("shortrss", callback);
+        });
+
+        log.info('push mid rss');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("midrss", callback);
+        });
+    }
+
+    if (time === 2 || putAll) {
+        log.info('push mid temp');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("midtemp", callback);
+        });
+        log.info('push mid land');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("midland", callback);
+        });
+        log.info('push mid forecast');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("midforecast", callback);
+        });
+        log.info('push mid sea');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("midsea", callback);
+        });
+    }
+
+    if (time === 10 || putAll) {
+        log.info('push past');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("past", callback);
+        });
+    }
+
+    //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.
+    if (time === 20 || putAll) {
+        log.info('push keco');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("keco", callback);
+        });
+    }
+
+    if (time === 31 || putAll) {
+        log.info('push short');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("short", callback);
+        });
+    }
+
+    if (time === 41 || putAll) {
+        log.info('push shortest');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("shortest", callback);
+        });
+        log.info('push current');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("current", callback);
+        });
+    }
+
+    if (self.asyncTasks.length <= 11) {
+        log.debug('wait '+self.asyncTasks.length+' tasks');
+    }
+    else {
+        log.error('wait '+self.asyncTasks.length+' tasks');
+    }
+};
+
 Manager.prototype.startManager = function(){
     var self = this;
 
     midRssKmaRequester.setNextGetTime(new Date());
+    self.midRssKmaRequester = midRssKmaRequester;
     townRss.loadList();
 
     keco.setServiceKey(config.keyString.normal);
@@ -2700,11 +2798,14 @@ Manager.prototype.startManager = function(){
             log.error(err);
         }
     });
+    self.keco = keco;
 
-    self.checkTimeAndPushTask(true);
+    //self.checkTimeAndPushTask(true);
+    self.checkTimeAndRequestTask(true);
     self.task();
+
     setInterval(function() {
-       self.checkTimeAndPushTask(false) ;
+       self.checkTimeAndRequestTask(false) ;
     }, 1000*60);
 };
 
