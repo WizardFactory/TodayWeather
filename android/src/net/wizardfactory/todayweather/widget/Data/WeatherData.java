@@ -40,16 +40,16 @@ public class WeatherData {
         return minTemperature;
     }
 
-    public void setSky(int sky) {
-        this.sky = sky;
+    public void setSky(double sky) {
+        this.sky = (int)sky;
     }
 
-    public void setPty(int pty) {
-        this.pty = pty;
+    public void setPty(double pty) {
+        this.pty = (int)pty;
     }
 
-    public void setLgt(int lgt) {
-        this.lgt = lgt;
+    public void setLgt(double lgt) {
+        this.lgt = (int)lgt;
     }
 
     public void setTemperature(double temperature) {
@@ -65,65 +65,58 @@ public class WeatherData {
     }
 
     /**
-    *
-    * @param {Number} sky ¸¼À½(1) ±¸¸§Á¶±Ý(2) ±¸¸§¸¹À½(3) Èå¸²(4) , invalid : -1
-    * @param {Number} pty ¾øÀ½(0) ºñ(1) ºñ/´«(2) ´«(3), invalid : -1
-    * @param {Number} lgt ¾øÀ½(0) ÀÖÀ½(1), invalid : -1
-    * @param {Boolean} isNight
-    */
-     public int parseSkyState(){
-         int retSkyIconRscId = -1;
+     *
+     * @param {Number} sky ë§‘ìŒ(1) êµ¬ë¦„ì¡°ê¸ˆ(2) êµ¬ë¦„ë§ŽìŒ(3) íë¦¼(4) , invalid : -1
+     * @param {Number} pty ì—†ìŒ(0) ë¹„(1) ë¹„/ëˆˆ(2) ëˆˆ(3), invalid : -1
+     * @param {Number} lgt ì—†ìŒ(0) ìžˆìŒ(1), invalid : -1
+     * @param {Boolean} isNight
+     */
+    public int parseSkyState() {
+        int retSkyIconRscId = -1;
 
-         Calendar c = Calendar.getInstance();
-         int hour =c.get(Calendar.HOUR_OF_DAY);
-         boolean isNight = (hour > 7 && hour < 18) ? false : true;
+        Calendar c = Calendar.getInstance();
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+        boolean isNight = (hour > 7 && hour < 18) ? false : true;
 
-         switch (pty) {
-             case 1:
-                 retSkyIconRscId = R.drawable.rain;
-                 if (lgt == 1) {
-                     retSkyIconRscId = R.drawable.rain_lightning;
-                 }
-                 break;
-             case 2:
-                 retSkyIconRscId = R.drawable.rain_snow;//Todo need RainWithSnow icon";
-                 break;
-             case 3:
-                 retSkyIconRscId = R.drawable.snow;
-                 break;
-         }
+        switch (pty) {
+            case 1:
+                if (lgt == 1) {
+                    return R.drawable.rain_lightning;
+                }
+                return R.drawable.rain;
+            case 2:
+                return R.drawable.rain_snow;//Todo need RainWithSnow icon";
+            case 3:
+                return R.drawable.snow;
+        }
 
-         if(retSkyIconRscId == -1) {
-             if (lgt == 1) {
-                 retSkyIconRscId = R.drawable.lightning;
-             }
-         }
+        if (lgt == 1) {
+            return R.drawable.lightning;
+        }
 
-         if(retSkyIconRscId == -1) {
-             switch (sky) {
-                 case 1:
-                     if (isNight) {
-                         retSkyIconRscId = R.drawable.moon;
-                     } else {
-                         retSkyIconRscId = R.drawable.sun;
-                     }
-                     break;
-                 case 2:
-                     if (isNight) {
-                         retSkyIconRscId = R.drawable.moon_cloud;
-                     } else {
-                         retSkyIconRscId = R.drawable.sun_cloud;
-                     }
-                     break;
-                 case 3:
-                     retSkyIconRscId = R.drawable.cloud; //Todo need new icon
-                     break;
-                 case 4:
-                     retSkyIconRscId = R.drawable.cloud;
-                     break;
-             }
-         }
+        switch (sky) {
+            case 1:
+                if (isNight) {
+                    retSkyIconRscId = R.drawable.moon;
+                } else {
+                    retSkyIconRscId = R.drawable.sun;
+                }
+                break;
+            case 2:
+                if (isNight) {
+                    retSkyIconRscId = R.drawable.moon_cloud;
+                } else {
+                    retSkyIconRscId = R.drawable.sun_cloud;
+                }
+                break;
+            case 3:
+                retSkyIconRscId = R.drawable.cloud; //Todo need new icon
+                break;
+            case 4:
+                retSkyIconRscId = R.drawable.cloud;
+                break;
+        }
 
-         return retSkyIconRscId;
-     }
+        return retSkyIconRscId;
+    }
 }

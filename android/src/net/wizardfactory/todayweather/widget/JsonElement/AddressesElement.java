@@ -25,21 +25,21 @@ public class AddressesElement {
 
     // jsonStr is result from google geocoder.
     // "formatted_address" is only used in json data.
-    public static AddressesElement parsingAddressJson2String(String jsonStr){
+    public static AddressesElement parsingAddressJson2String(String jsonStr) {
         AddressesElement retElement = null;
 
         try {
             JSONObject result = new JSONObject(jsonStr);
-            if(result != null){
+            if (result != null) {
                 retElement = new AddressesElement();
 
                 JSONArray arrReader = result.getJSONArray("results");
                 int len = arrReader.length();
 
-                if(arrReader != null && len > 0){
+                if (arrReader != null && len > 0) {
                     String[] addrs = new String[len];
 
-                    for(int i =0; i< len; i++ ) {
+                    for (int i =0; i< len; i++ ) {
                         JSONObject reader = arrReader.getJSONObject(i);
 
                         if (reader != null) {
@@ -51,11 +51,11 @@ public class AddressesElement {
 
                     retElement.setAddrs(addrs);
                 }
-                else{
+                else {
                     Log.e("AddressesElement", "arrReader array json string is NULL");
                 }
             }
-            else{
+            else {
                 Log.e("AddressesElement", "Short result string is NULL");
             }
         } catch (JSONException e) {
@@ -75,21 +75,21 @@ public class AddressesElement {
          String dongAddress = null;
          int length = 0;
 
-         for(int i =0; i< addrs.length; i++){
+         for (int i =0; i< addrs.length; i++) {
              String lastStr = addrs[i].substring(addrs[i].length()-1);
              try {
                  // hangle encoding type is same as geocoder result.
-                 byte[] dongBytes = {-21, -113, -103};  // µ¿
+                 byte[] dongBytes = {-21, -113, -103};  // ï¿½ï¿½
                  String dong = new String(dongBytes, "utf-8");
 
-                 byte[] yupBytes = {-20, -99, -115};    // À¾
+                 byte[] yupBytes = {-20, -99, -115};    // ï¿½ï¿½
                  String yup = new String(yupBytes, "utf-8");
 
-                 byte[] myenBytes = {-21, -87, -76};    // ¸é
+                 byte[] myenBytes = {-21, -87, -76};    // ï¿½ï¿½
                  String myen = new String(myenBytes, "utf-8");
 
-                 if (lastStr.equals(dong) || lastStr.equals(yup) || lastStr.equals(myen)){
-                     if(length <  addrs[i].length()) {
+                 if (lastStr.equals(dong) || lastStr.equals(yup) || lastStr.equals(myen)) {
+                     if (length <  addrs[i].length()) {
                          dongAddress =  addrs[i];
                          length =  addrs[i].length();
                      }
@@ -102,10 +102,10 @@ public class AddressesElement {
     }
 
     // this is same as app code that write javascript
-    public String makeUrlAddress(String addr){
+    public String makeUrlAddress(String addr) {
         String retUrl = null;
 
-        if(addr != null) {
+        if (addr != null) {
             String[] addrTokens = addr.split(" ");
 
             if (addrTokens.length == 5) {
@@ -123,7 +123,7 @@ public class AddressesElement {
     }
 
     // if url address is changed utf-8, server read right  address.
-    private String encodingUtf8(String str){
+    private String encodingUtf8(String str) {
         String retStr = null;
         try {
             retStr = URLEncoder.encode(str, "utf-8");

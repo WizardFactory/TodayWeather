@@ -53,17 +53,36 @@ angular.module('starter.controllers', [])
         }
 
         var mainHeight = window.innerHeight - 100;
-        $scope.topTimeSize = mainHeight * 0.026;
-        $scope.regionSize = mainHeight * 0.051 * padding;
-        $scope.regionSumSize = mainHeight * 0.047 * padding;
-        $scope.bigDigitSize = mainHeight * 0.2193 * padding;
-        $scope.bigTempPointSize = mainHeight * 0.0423 * padding;
+
+        var topTimeSize = mainHeight * 0.026;
+        $scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
+
+        var regionSize = mainHeight * 0.051 * padding;
+        $scope.regionSize = regionSize<33.04?regionSize:33.04;
+
+        var regionSumSize = mainHeight * 0.047 * padding;
+        $scope.regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
+
+        var bigDigitSize = mainHeight * 0.2193 * padding;
+        $scope.bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
+
+        var bigTempPointSize = mainHeight * 0.0423 * padding;
+        $scope.bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
+
         //injection img url after setting imgSize.
         $scope.reddot = 'reddot';
-        $scope.bigSkyStateSize = mainHeight * 0.1408 * padding;
-        $scope.smallTimeSize = mainHeight * 0.0299;
-        $scope.smallImageSize = mainHeight * 0.0512;
-        $scope.smallDigitSize = mainHeight * 0.0320;
+
+        var bigSkyStateSize = mainHeight * 0.1408 * padding;
+        $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
+
+        var smallTimeSize = mainHeight * 0.0299;
+        $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
+
+        var smallImageSize = mainHeight * 0.0512;
+        $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
+
+        var smallDigitSize = mainHeight * 0.0320;
+        $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
         var colWidth;
         var cityData;
@@ -423,7 +442,8 @@ angular.module('starter.controllers', [])
         var runAdmob = true;
         $rootScope.runAdmob = !runAdmob;
         if (runAdmob){
-            $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
+            //좋은 멘트 필요.
+            //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
         }
 
         $scope.doRefresh = function() {
@@ -449,8 +469,9 @@ angular.module('starter.controllers', [])
                     isShowingBar = !isShowingBar;
                     $ionicNavBarDelegate.showBar(isShowingBar);
                 }
+                //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
+                $ionicNavBarDelegate.title("");
                 if (runAdmob) {
-                    $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
                     if (window.plugins && window.plugins.AdMob) {
                         window.plugins.AdMob.showAd(true,
                             function () {
@@ -716,7 +737,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.7.1";
+        $scope.version  = "0.7.2";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();

@@ -16,7 +16,7 @@ import org.apache.cordova.CordovaActivity;
  * This class is menu of widget
  * used common all widget.
  */
-public class WidgetMenuActivity extends CordovaActivity{
+public class WidgetMenuActivity extends CordovaActivity {
     private Context mContxt = null;
 
     @Override
@@ -54,13 +54,13 @@ public class WidgetMenuActivity extends CordovaActivity{
         });
     }
 
-    private void updateWidet(){
+    private void updateWidet() {
         Intent serviceIntent = new Intent(mContxt, WidgetUpdateService.class);
         mContxt.startService(serviceIntent);
         finish();
     }
 
-    private void moveMain(){
+    private void moveMain() {
         Intent intent = new Intent(mContxt, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP
