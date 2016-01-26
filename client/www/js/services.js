@@ -630,8 +630,8 @@ angular.module('starter.services', [])
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
-            var url = "http://localhost:3000/town";
-            //var url = "http://todayweather.wizardfactory.net/town";
+            //var url = "http://localhost:3000/town";
+            var url = "http://todayweather.wizardfactory.net/town";
             url += "/" + town.first + "/" + town.second + "/" + town.third;
             console.log(url);
 
