@@ -174,7 +174,7 @@ Keco.prototype.updateTimeGetCtprvn = function() {
 Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
     var url = this.getUrlCtprvn(sidoName, key);
 
-    log.info(url);
+    log.debug(url);
 
     req(url, function(err, response, body) {
         if (err) {
@@ -235,7 +235,7 @@ Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
  * @param callback
  */
 Keco.prototype.parseCtprvn = function (data, callback) {
-    log.info('parse Ctpvrn');
+    log.debug('parse Ctpvrn');
     var self = this;
 
     xml2json(data, function (err, result) {
@@ -274,7 +274,7 @@ Keco.prototype.parseCtprvn = function (data, callback) {
  * @param callback
  */
 Keco.prototype.saveCtprvn = function (arpltnList, callback) {
-    log.info('save Ctpvrn');
+    log.debug('save Ctpvrn');
 
     async.mapSeries(arpltnList,
         function(arpltn, callback) {
@@ -488,8 +488,8 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
             return callback(err);
         }
         if ( response.statusCode >= 400) {
-            console.log(body);
-            return callback(new Error(body.message));
+            err = new Error("response.statusCode="+response.statusCode);
+            return callback(err);
         }
         return callback(err, body);
     });
