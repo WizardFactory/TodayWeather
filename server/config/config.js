@@ -18,5 +18,9 @@ module.exports = {
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
         daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net'),
         newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key')
+    },
+    logToken: {
+        gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),
+        service: (process.env.LOGENTRIES_SERVICE_TOKEN||'Your Logentries key')
     }
 };
