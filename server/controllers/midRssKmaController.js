@@ -49,9 +49,11 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
 
         var dailyData = reqMidData.dailyData;
         midRssData.midData.forEach(function (midData) {
-            if (parseInt(midData.date)  < parseInt(dailyData[0].date) ) {
-                //skip old data
-                return;
+            if (dailyData.length > 0) {
+                if (parseInt(midData.date)  < parseInt(dailyData[0].date) ) {
+                    //skip old data
+                    return;
+                }
             }
 
             for (var i = 0; i < dailyData.length; i++) {
@@ -64,6 +66,7 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
                     break;
                 }
             }
+
             if (i === dailyData.length) {
                 //create object for removing _id of midData
                 dailyData.push({date:midData.date, taMin:midData.taMin, taMax:midData.taMax, wfAm:midData.wfAm,
