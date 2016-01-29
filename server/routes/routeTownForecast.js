@@ -407,13 +407,14 @@ function _findTownCode(list, region, city, town, cb){
                     return;
                 }
             }
+            log.error("_findTownCode : Fail to find " + region + city + town);
             callback(null);
         },
         function(callback){
             log.silly('get getcode');
             convertGeocode(region, city, town, function (err, result) {
                 if(err){
-                    log.silly('Cannot get mx, my ');
+                    log.error('_findTownCode : Cannot get mx, my ' + region + city + town + " "+err.message);
                     return callback(null);
                 }
 
@@ -479,7 +480,6 @@ var getCoord = function(region, city, town, cb){
             return this;
         }
     }catch(e){
-        log.error(meta);
         if (cb) {
             cb(e);
         }
@@ -491,12 +491,12 @@ var getCoord = function(region, city, town, cb){
     return {}
 };
 
-/*
- *   get town data list from db
- *   @param coord
- *   @param cb
- *
- *   @return []
+/**
+ * you have to return error object when it's error.
+ * @param db
+ * @param indicator
+ * @param cb
+ * @returns {Array}
  */
 var getTownDataFromDB = function(db, indicator, cb){
     var meta = {};
@@ -513,10 +513,10 @@ var getTownDataFromDB = function(db, indicator, cb){
                 return;
             }
 
-            if(result.length === 0){
-                log.error('~> getDataFromDB : there is no data');
+            if(result.length === 0) {
+                err = new Error("~> getDataFromDB : there is no data src="+JSON.stringify(indicator));
                 if(cb){
-                    cb(new Error("there is no data"));
+                    cb(err);
                 }
                 return;
             }
@@ -622,12 +622,12 @@ var getMidDataFromDB = function(db, indicator, cb){
             if(result.length === 0){
                 log.error('~> getMidDataFromDB : there is no data');
                 if(cb){
-                    cb(new Error("there is no data"));
+                    cb(new Error("there is no data regId="+indicator));
                 }
                 return;
             }
             if(result.length > 1){
-                log.error('~> getMidDataFromDB : what happened??', result.length);
+                log.error('~> getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
             }
 
             if(cb){
@@ -1109,9 +1109,16 @@ var getShortRss = function(req, res, next){
     var cityName = req.params.city;
     var townName = req.params.town;
 
+    var meta = {};
+    meta.method = 'getShortRss';
+    meta.region = regionName;
+    meta.city = cityName;
+    meta.town = townName;
+    log.info('>', meta);
+
     getCoord(regionName, cityName, townName, function(err, coord) {
         if(err) {
-            log.error(err);
+            log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
             return next();
         }
 
@@ -1123,7 +1130,7 @@ var getShortRss = function(req, res, next){
         // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
         getTownDataFromDB(modelShortRss, coord, function(err, rssList) {
             if(err) {
-                log.error('error to get short RSS');
+                log.error(new Error('error to get short RSS '+ err.message));
                 return next();
             }
 
@@ -1421,14 +1428,14 @@ var getShort = function(req, res, next){
 
             getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(err);
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
                 log.silly('S> coord : ',coord);
 
                 getTownDataFromDB(modelShort, coord, function(err, shortList){
                     if (err) {
-                        log.error(err);
+                        log.error(new Error('error to get short '+ err.message));
                         return next();
                     }
 
@@ -1455,7 +1462,7 @@ var getShort = function(req, res, next){
 
                     getTownDataFromDB(modelCurrent, coord, function(err, currentList){
                         if (err) {
-                            log.error(err);
+                            log.error(new Error('error to get current '+err.message));
                             return next();
                         }
 
@@ -1508,12 +1515,12 @@ var mergeByShortest = function(req, res, next){
 
     getCoord(regionName, cityName, townName, function(err, coord){
         if (err) {
-            log.error(err);
+            log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
             return next();
         }
         getTownDataFromDB(modelShortest, coord, function(err, shortestList) {
             if (err) {
-                log.error(err);
+                log.error(new Error('error to get shortest for merge'+err.message));
                 return next();
             }
 
@@ -1604,12 +1611,12 @@ var getShortest = function(req, res, next){
         try{
             getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(err);
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
                 getTownDataFromDB(modelShortest, coord, function(err, shortestList){
                     if (err) {
-                        log.error(err);
+                        log.error(new Error('error to get shortest '+ err.message));
                         return next();
                     }
 
@@ -1630,7 +1637,7 @@ var getShortest = function(req, res, next){
                 });
             });
         } catch(e){
-            log.error('ERROE>>', meta);
+            log.error('ERROR >>', meta);
             log.error(e);
             next();
         }
@@ -1753,12 +1760,12 @@ var getCurrent = function(req, res, next){
         try{
             getCoord(regionName, cityName, townName, function(err, coord) {
                 if (err) {
-                    log.error(err);
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
                 getTownDataFromDB(modelCurrent, coord, function(err, currentList) {
                     if (err) {
-                        log.error(err);
+                        log.error(new Error('error to get current ' + err.message));
                         return next();
                     }
                     var nowDate = getCurrentTimeValue(+9);
@@ -1798,6 +1805,12 @@ var getMidRss = function (req, res, next) {
     var regionName = req.params.region;
     var cityName = req.params.city;
 
+    var meta = {};
+    meta.method = 'getMidRss';
+    meta.region = regionName;
+    meta.city = cityName;
+    log.info('>', meta);
+
     if (!req.hasOwnProperty('midData')) {
         req.midData = {};
     }
@@ -1808,7 +1821,7 @@ var getMidRss = function (req, res, next) {
     try {
         manager.getRegIdByTown(regionName, cityName, function(err, code) {
             if (err) {
-                log.error(err);
+                log.error(new Error("Fail to get mid RSS "+ err.message));
                 return next();
             }
 
@@ -1915,8 +1928,7 @@ var getMid = function(req, res, next){
         try{
             manager.getRegIdByTown(regionName, cityName, function(err, code){
                 if(err){
-                    log.error('RM> there is no code');
-                    log.error(meta);
+                    log.error(new Error('RM> there is no code '+ err.message));
                     return next();
                 }
 
@@ -1925,8 +1937,7 @@ var getMid = function(req, res, next){
                 var i=0;
                 getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastList){
                     if(err){
-                        log.error('RM> no forecast data');
-                        log.error(meta);
+                        log.error('RM> no forecast data '+err.message);
                         return next();
                     }
 
@@ -1947,14 +1958,13 @@ var getMid = function(req, res, next){
                     //log.info(result);
                     getMidDataFromDB(modelMidLand, areaCode, function(err, landList){
                         if(err){
-                            log.error('RM> no land data');
-                            log.error(meta);
+                            log.error('RM> no land data ' + err.message);
                             return next();
                         }
                         //log.info(landList);
                         getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempList){
                             if(err){
-                                log.error('RM> no temp data');
+                                log.error('RM> no temp data ' + err.message);
                                 log.error(meta);
                                 return next();
                             }
@@ -2051,6 +2061,14 @@ var getSummary = function(req, res, next){
 
 var getLifeIndexKma = function(req, res, next) {
      //add life index of kma info
+
+    var meta = {};
+    meta.method = 'getLifeIndeKma';
+    meta.region = req.params.region;
+    meta.city = req.params.city;
+    meta.town = req.params.town;
+    log.info('>', meta);
+
     if (!req.short && !req.midData) {
         var err = new Error("Fail to find short, mid weather");
         log.error(err);
@@ -2076,8 +2094,16 @@ var getLifeIndexKma = function(req, res, next) {
 };
 
 var getKeco = function (req, res, next) {
+
+    var meta = {};
+    meta.method = 'getKeco';
+    meta.region = req.params.region;
+    meta.city = req.params.city;
+    meta.town = req.params.town;
+    log.info('>', meta);
+
     if (!req.current)  {
-        var err = new Error("Fail to find current weather");
+        var err = new Error("Fail to find current weather "+JSON.stringify(meta));
         log.warn(err);
         return next();
     }
@@ -2177,7 +2203,7 @@ function _summaryPty(list) {
 }
 
 function _convertSkyToKorStr(sky, pty) {
-    var str = ''
+    var str = '';
 
     if (pty === 0) {
         switch (sky) {
@@ -2253,6 +2279,11 @@ function _getDaySummaryListByShort(shortList) {
     });
 
     dayConditionList.forEach(function (dayCondition) {
+        if (dayCondition.reh.length === 0) {
+            log.warn(new Error("dayCondition is empty :" + dayCondition.date));
+            return;
+        }
+
         var daySummary = _createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
         daySummary.pop = Math.max.apply(null, dayCondition.pop);
@@ -2275,7 +2306,7 @@ function _getDaySummaryList(pastList) {
 
     var dayConditionList = [];
     var daySummaryList = [];
-    var dateInfo = getCurrentTimeValue(9);
+    //var dateInfo = getCurrentTimeValue(9);
 
     pastList.forEach(function (hourCondition) {
         //if (dateInfo.date - hourCondition.date > 7) {
@@ -2308,6 +2339,11 @@ function _getDaySummaryList(pastList) {
     });
 
     dayConditionList.forEach(function (dayCondition) {
+        if (dayCondition.reh.length === 0) {
+            log.warn(new Error("dayCondition is empty :" + dayCondition.date));
+            return;
+        }
+
         var daySummary = _createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
         daySummary.lgt = _summaryLgt(dayCondition.lgt);
@@ -2330,6 +2366,13 @@ var getPastMid = function (req, res, next) {
     var regionName = req.params.region;
     var cityName = req.params.city;
     var townName = req.params.town;
+
+    var meta = {};
+    meta.method = 'getPastMid';
+    meta.region = regionName;
+    meta.city = cityName;
+    meta.town = townName;
+    log.info('>', meta);
 
     if(config.db.mode === 'ram') {
         return next();
@@ -2357,12 +2400,12 @@ var getPastMid = function (req, res, next) {
     else {
         getCoord(regionName, cityName, townName, function(err, coord) {
             if (err) {
-                log.error(err);
+                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                 return next();
             }
             getTownDataFromDB(modelCurrent, coord, function (err, currentList) {
                 if (err) {
-                    log.error(err);
+                    log.error(new Error('error to get current for past' + err.message));
                     return next();
                 }
 
@@ -2393,6 +2436,13 @@ var mergeMidWithShort  = function (req, res, next) {
     var regionName = req.params.region;
     var cityName = req.params.city;
     var townName = req.params.town;
+
+    var meta = {};
+    meta.method = 'mergeMidWithShort';
+    meta.region = regionName;
+    meta.city = cityName;
+    meta.town = townName;
+    log.info('>', meta);
 
     if(config.db.mode === 'ram') {
         return next();
