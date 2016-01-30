@@ -574,7 +574,7 @@ angular.module('starter.services', [])
 
             if (stringList.length === 1) {
                 //특정 이벤트가 없다면, 미세먼지가 기본으로 추가.
-                if (current.arpltn && current.arpltn.pm10Str)  {
+                if (current.arpltn && current.arpltn.pm10Str && current.arpltn.pm10Value >= 0)  {
                     stringList.push("미세먼지 " + current.arpltn.pm10Str);
                 }
             }

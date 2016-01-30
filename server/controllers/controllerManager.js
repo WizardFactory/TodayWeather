@@ -95,7 +95,7 @@ Manager.prototype.getRegIdByTown = function(region, city, cb){
     }
 
     if(cb){
-        cb(new Error('Fail to find code table ', region, ' ', city));
+        cb(new Error('Fail to find code table ' + region + city));
     }
 
     return self.codeList;

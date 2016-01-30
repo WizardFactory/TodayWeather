@@ -37,6 +37,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
         if (statusCode === 404 || statusCode === 403 || statusCode === 400) {
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
+            err = new Error("StatusCode="+statusCode);
 
             if (callback) {
                 callback(err);
@@ -105,6 +106,7 @@ function convertGeocodeByGoogle(first, second, third, callback) {
         if(statusCode === 404 || statusCode === 403 || statusCode === 400){
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
+            err = new Error("StatusCode="+statusCode);
 
             if(callback){
                 callback(err);

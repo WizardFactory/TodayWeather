@@ -4,8 +4,18 @@
 "use strict";
 
 var winston = require('winston');
+var config = require('../config/config');
+require('winston-logentries');
 
 //silly, debug, verbose, info, warn, error
+
+var LogentriesToken;
+if (config.mode === 'gather') {
+    LogentriesToken = config.logToken.gather;
+}
+else if (config.mode === 'service') {
+   LogentriesToken = config.logToken.service;
+}
 
 module.exports = function(filename) {
     var transports = [];
@@ -13,6 +23,11 @@ module.exports = function(filename) {
                 level      : 'info',
                 colorize   : true
             }));
+
+    transports.push(new winston.transports.Logentries({
+        level: 'info',
+        token: LogentriesToken
+    }));
 
     if (filename) {
         transports.push(new winston.transports.File({

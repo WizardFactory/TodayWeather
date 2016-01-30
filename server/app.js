@@ -99,26 +99,10 @@ taskKmaIndexService.setServiceKey(keyBox.cert_key);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Not Found');
+  var err = new Error('Not Found url='+req.originalUrl);
   err.status = 404;
   next(err);
 });
-
-
-if (config.mode === 'gather') {
-    setInterval(
-        function() {
-            var req = require('request');
-            var url = 'http://'+ config.ipAddress + ':' + config.port;
-            log.info('keep alive : ' + url);
-            req(url, function (err, response, body) {
-                if (err) { log.error(err);
-                }
-                log.silly(body);
-            });
-        },
-        1000*60); //check 1 min
-}
 
 // error handlers
 
