@@ -7,14 +7,6 @@ var async = require('async');
 
 var router = require('express').Router();
 var config = require('../config/config');
-var dbForecast = require('../models/forecast');
-var dbCurrent = require('../models/current');
-var dbShort = require('../models/short');
-var dbShortest = require('../models/shortest');
-var dbMidTemp = require('../models/midTemp');
-var dbMidLand = require('../models/midLand');
-var DateUtil = require('../models/dateUtil');
-var ModelUtil = require('../models/modelUtil');
 
 var modelShort = require('../models/modelShort');
 var modelCurrent = require('../models/modelCurrent');
@@ -104,10 +96,6 @@ function getTimeValue(gmt){
 
     return dateString;
 }
-
-/****************************************************************************
-*   THIS IS FOR TEST.
-*****************************************************************************/
 
 function getTimeTable(){
     var i=0;
@@ -227,82 +215,6 @@ function getShortFromDB(regionName, cityName, townName, callback){
         callback(err, result);
     }
 }
-
-function getShortestFromDB(regionName, cityName, townName, callback){
-    var err = 0;
-    var listTownData = config.testTownData;
-    var result = {};
-    var resultTown = {};
-
-    for(var i in listTownData){
-        var townData = listTownData[i];
-        if(townData.regionName === regionName && townData.cityName === cityName && townData.townName === townName){
-            resultTown = townData;
-            break;
-        }
-    }
-
-    if(resultTown.regionName === undefined){
-        resultTown = listTownData[2];
-    }
-    var timeFunction = manager;
-    var currentDate = timeFunction.getWorldTime(+9);
-    var dateString = {
-        date: currentDate.slice(0, 8),
-        time: currentDate.slice(8, 10) + '00'
-    };
-    result.date = dateString.date;
-    result.time = dateString.time;
-    result.pty = Date.now() % 90;
-    result.rn1 = 5;
-    result.sky = Date.now() % 4;
-    result.lgt = Date.now() % 3;
-
-    if(callback){
-        callback(err, result);
-    }
-}
-
-function getCurrentFromDB(regionName, cityName, townName, callback){
-    var err = 0;
-    var listTownData = config.testTownData;
-    var result = {};
-    var resultTown = {};
-    var index = 0;
-
-    for(var i in listTownData){
-        var townData = listTownData[i];
-        if(townData.regionName === regionName && townData.cityName === cityName && townData.townName === townName){
-            resultTown = townData;
-            break;
-        }
-    }
-
-    if(resultTown.regionName === undefined){
-        resultTown = listTownData[2];
-    }
-
-    index = (Date.now() %12);
-    var timeFunction = manager;
-    var currentDate = timeFunction.getWorldTime(+9);
-    var dateString = {
-        date: currentDate.slice(0, 8),
-        time: currentDate.slice(8, 10) + '00'
-    };
-    result.date = dateString.date;//resultTown.data.current[index].date;
-    result.time = dateString.time;//resultTown.data.current[index].time;
-    result.t1h = resultTown.data.current[index].t1h;
-    result.rn1 = resultTown.data.current[index].rn1;
-    result.sky = resultTown.data.current[index].sky;
-    result.reh = resultTown.data.current[index].reh;
-    result.pty = resultTown.data.current[index].pty;
-    result.lgt = resultTown.data.current[index].lgt;
-
-    if(callback){
-        callback(err, result);
-    }
-}
-/****************************************************************************/
 
 /**
  *
@@ -1229,264 +1141,74 @@ var getShort = function(req, res, next){
 
     log.info('>', meta);
 
-    if(config.db.mode === 'ram'){
-        manager.getWeatherDb(regionName, cityName, townName, function (err, result) {
+    try{
+        /*
+         * 클라이언트에게 보내 줄 예보 날짜와 시간만넣은 데이터의 리스트를 만든다.
+         * 이는 DB에 데이터가 빠진 부분이 있어도 최종 개수 및 데이터 시간 테이블을 맞추기 위함
+         */
+        var basicShortlist = makeBasicShortList();
+        var requestTime = getTimeValue(9);
+
+        getCoord(regionName, cityName, townName, function(err, coord){
             if (err) {
-                log.error('> getShort : failed to get data from DB');
-                log.error(meta);
-                log.error(err);
-                return;
+                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                return next();
             }
+            log.silly('S> coord : ',coord);
 
-            //log.info(result.toString());
-            //log.info(result.mData.data.short);
-            //log.info(result.mData.data.current);
-            /********************
-             * TEST DATA
-             ********************/
-            //result = config;
-            /********************/
-
-            try {
-                var listShort = result.mData.data.short;
-                var listCurrent = result.mData.data.current;
-                var i = 0;
-                var j = 0;
-                var requestTime = getTimeValue(9);
-                var tempList = [];
-                var item;
-                /********************
-                 * TEST DATA
-                 ********************/
-                //requestTime.date = '20150830';
-                //requestTime.time = '0300';
-                /********************/
-
-                log.info(requestTime);
-                for (i = 0; i < listCurrent.length; i++) {
-                    item = {};
-                    log.info('cur time : ', parseInt(listCurrent[i].date), parseInt(requestTime.date));
-                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if (parseInt(listCurrent[i].date) > parseInt(requestTime.date)) {
-                        continue;
-                    }
-                    // 현재 요구한 시간을 3시간 단위 시간으로 변환 후 변환된 날짜가 같고 현재 시간 보다 큰 값은 예보 데이터 사용하기 위해 버림.
-                    if ((listCurrent[i].date === requestTime.date) && (parseInt(listCurrent[i].time) > parseInt(requestTime.time))) {
-                        continue;
-                    }
-
-                    if (listCurrent[i].time === '0000' || listCurrent[i].time === '0300' ||
-                        listCurrent[i].time === '0600' || listCurrent[i].time === '0900' ||
-                        listCurrent[i].time === '1200' || listCurrent[i].time === '1500' ||
-                        listCurrent[i].time === '1800' || listCurrent[i].time === '2100') {
-                        item.date = listCurrent[i].date;
-                        item.time = listCurrent[i].time;
-                        item.pop = -100;
-                        item.pty = listCurrent[i].pty;
-                        item.r06 = listCurrent[i].rn1;
-                        item.reh = listCurrent[i].reh;
-                        item.s06 = -1;
-                        item.sky = listCurrent[i].sky;
-                        item.t3h = listCurrent[i].t1h;
-                        item.tmn = -100;
-                        item.tmx = -100;
-
-                        log.info('from current', item);
-                        tempList.push(JSON.parse(JSON.stringify(item)));
-                    }
+            getTownDataFromDB(modelShort, coord, function(err, shortList){
+                if (err) {
+                    log.error(new Error('error to get short '+ err.message));
+                    return next();
                 }
 
                 var popCount = 0;
-                for (i = 0; i < listShort.length; i++) {
-                    item = {};
-                    if(listShort[i].date === requestTime.date && listShort[i].time === requestTime.time){
-                        // 현재시간 보다 이전의 데이터는 16개만 보내주기 위해서...
-                        popCount = i - 16;
+                var i = 0;
+
+                dataListPrint(shortList, 'route S', 'original short');
+
+                for(i=0 ; i < shortList.length ; i++){
+                    //log.info(shortList[i]);
+                    if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
+                        //log.info('found same date');
+                        break;
                     }
-
-                    item.date = listShort[i].date;
-                    item.time = listShort[i].time;
-                    item.pop = listShort[i].pop;
-                    item.pty = listShort[i].pty;
-                    item.r06 = listShort[i].r06;
-                    item.reh = listShort[i].reh;
-                    item.s06 = listShort[i].s06;
-                    item.sky = listShort[i].sky;
-                    item.t3h = listShort[i].t3h;
-                    item.tmn = listShort[i].tmn;
-                    item.tmx = listShort[i].tmx;
-                    for(var j = 0 ; j < tempList.length ; j++) {
-                        if ((tempList[j].date === listShort[i].date) && (tempList[j].time === listShort[i].time)) {
-                            item.date = tempList[j].date;
-                            item.time = tempList[j].time;
-                            item.pty = tempList[j].pty;
-                            item.r06 = tempList[j].r06;
-                            item.reh = tempList[j].reh;
-                            item.sky = tempList[j].sky;
-                            item.t3h = tempList[j].t3h;
-                            break;
-                        }
-                    }
-                    resultList.push(item);
                 }
 
-                if(popCount > 0){
-                    log.info('pop count : ', popCount);
-                    resultList = resultList.slice(popCount, resultList.length);
+                log.silly('route S> short remove count :', i);
+                for(var j=0 ; j<i ; j++){
+                    shortList.shift();
                 }
 
-                /********************************************************************
-                 * START : To merge the RSS data to result.
-                 ********************************************************************/
-                var rssData = townRss.getTownRssDb(result.mData.mCoord.mx, result.mData.mCoord.my).shortData;
-                if(rssData.length > 1){
-                    var lastDate = 0;
-                    log.info(rssData);
-                    resultList.forEach(function(item){
-                        // resultList의 short데이터 중 제일 마지막 리스트 즉 제일 미래의 시간을 기억해둔다
-                        if(parseInt(lastDate) < parseInt('' + item.date + item.time)){
-                            lastDate = '' + item.date + item.time;
-                            log.info('change last date:', lastDate);
-                        }
+                basicShortlist = mergeShortWithBasicList(shortList,basicShortlist);
+                dataListPrint(basicShortlist, 'route S', 'First, merged short');
 
-                        // 현재 이후의 데이터는 RSS DATA 에서 같은 날짜의 데이터가 있으면 RSS의 데이터로 overwrite하자
-                        if(parseInt('' + item.date + item.time) > parseInt('' + requestTime.date + requestTime.time)){
-                            for(i=0 ; i < rssData.length ; i++){
-                                if(parseInt('' + item.date + item.time) === parseInt(rssData[i].date)){
-                                    //item.date = rssData[i].date.slice(0, 8);
-                                    //item.time = rssData[i].date.slice(8, 12);
-                                    item.pop = rssData[i].pop;
-                                    item.pty = rssData[i].pty;
-                                    item.r06 = rssData[i].r06;
-                                    item.reh = rssData[i].reh;
-                                    item.s06 = rssData[i].s06;
-                                    item.sky = rssData[i].sky;
-                                    item.t3h = rssData[i].temp;
-                                    if(item.time === '0600' && rssData[i].tmn != -999) {
-                                        item.tmn = rssData[i].tmn;
-                                    }
-                                    if(item.time === '1500' && rssData[i].tmn != -999){
-                                        item.tmx = rssData[i].tmx;
-                                    }
-                                    log.info('updated', item);
-                                    break;
-                                }
-                            }
-                        }
-                    });
-
-                    // 이제 RSS 데이터에 resultList의 가장 미래의 데이터보다 큰 값이 있으면 resultList뒤에다 붙여 주자
-                    rssData.forEach(function(rssItem){
-                        if(lastDate < rssItem.date){
-                            var item = {};
-                            item.date = rssItem.date.slice(0, 8);
-                            item.time = rssItem.date.slice(8, 12);
-                            item.pop = rssItem.pop;
-                            item.pty = rssItem.pty;
-                            item.r06 = rssItem.r06;
-                            item.reh = rssItem.reh;
-                            item.s06 = rssItem.s06;
-                            item.sky = rssItem.sky;
-                            item.t3h = rssItem.temp;
-                            if(item.time === '0600' && rssItem.tmn != -999){
-                                item.tmn = rssItem.tmn;
-                            } else{
-                                item.tmn = 0;
-                            }
-                            if(item.time === '1500' && rssItem.tmx != -999){
-                                item.tmx = rssItem.tmx;
-                            }else{
-                                item.tmx = 0;
-                            }
-
-                            log.info('push data>', item);
-                            resultList.push(item);
-                        }
-                    });
-                }
-                /********************************************************************
-                 * END :
-                 ********************************************************************/
-                log.info(resultList);
-                req.short = resultList;
-                next();
-            }
-            catch (e) {
-                log.error('ERROE>>', meta);
-                next();
-            }
-        });
-    }
-    else {
-        try{
-            /*
-             * 클라이언트에게 보내 줄 예보 날짜와 시간만넣은 데이터의 리스트를 만든다.
-             * 이는 DB에 데이터가 빠진 부분이 있어도 최종 개수 및 데이터 시간 테이블을 맞추기 위함
-             */
-            var basicShortlist = makeBasicShortList();
-            var requestTime = getTimeValue(9);
-
-            getCoord(regionName, cityName, townName, function(err, coord){
-                if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
-                    return next();
-                }
-                log.silly('S> coord : ',coord);
-
-                getTownDataFromDB(modelShort, coord, function(err, shortList){
+                getTownDataFromDB(modelCurrent, coord, function(err, currentList){
                     if (err) {
-                        log.error(new Error('error to get short '+ err.message));
+                        log.error(new Error('error to get current '+err.message));
                         return next();
                     }
 
-                    var popCount = 0;
-                    var i = 0;
+                    dataListPrint(currentList, 'route S', 'Original Current');
 
-                    dataListPrint(shortList, 'route S', 'original short');
-
-                    for(i=0 ; i < shortList.length ; i++){
-                        //log.info(shortList[i]);
-                        if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
-                            //log.info('found same date');
-                            break;
-                        }
-                    }
-
-                    log.silly('route S> short remove count :', i);
-                    for(var j=0 ; j<i ; j++){
-                        shortList.shift();
-                    }
-
-                    basicShortlist = mergeShortWithBasicList(shortList,basicShortlist);
-                    dataListPrint(basicShortlist, 'route S', 'First, merged short');
-
-                    getTownDataFromDB(modelCurrent, coord, function(err, currentList){
+                    mergeShortWithCurrent(basicShortlist, currentList, function(err, resultShortList) {
                         if (err) {
-                            log.error(new Error('error to get current '+err.message));
+                            log.error(err);
                             return next();
                         }
 
-                        dataListPrint(currentList, 'route S', 'Original Current');
+                        dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
-                        mergeShortWithCurrent(basicShortlist, currentList, function(err, resultShortList) {
-                            if (err) {
-                                log.error(err);
-                                return next();
-                            }
-
-                            dataListPrint(resultShortList, 'route S', 'Merged with Current');
-
-                            req.short = resultShortList;
-                            next();
-                        });
+                        req.short = resultShortList;
+                        next();
                     });
                 });
             });
-        } catch(e){
-            log.error('ERROE>>', meta);
-            log.error(e);
-            next();
-        }
+        });
+    } catch(e){
+        log.error('ERROE>>', meta);
+        log.error(e);
+        next();
     }
 };
 
@@ -1573,74 +1295,38 @@ var getShortest = function(req, res, next){
 
     log.info('>', meta);
 
-    if(config.db.mode === 'ram'){
-        manager.getWeatherDb(regionName, cityName, townName, function(err, result){
-            if(err){
-                if(err){
-                    log.error('> getShortest : failed to get data from DB');
-                    log.error(meta);
-                    return;
-                }
+    try{
+        getCoord(regionName, cityName, townName, function(err, coord){
+            if (err) {
+                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                return next();
             }
-            /********************
-             * TEST DATA
-             ********************/
-            //result = config;
-            /********************/
-            log.info('get shortest data');
-            try{
-                var listShortest = result.mData.data.shortest;
-                var nowDate = getShortestTimeValue(+9);
-                var resultItem = {};
+            getTownDataFromDB(modelShortest, coord, function(err, shortestList){
+                if (err) {
+                    log.error(new Error('error to get shortest '+ err.message));
+                    return next();
+                }
 
-                resultItem = listShortest[listShortest.length - 1];
-                resultItem.date = nowDate.date;
-                resultItem.time = nowDate.time;
+                var nowDate = getShortestTimeValue(+9);
+                var resultItem = [];
+
+                log.debug(shortestList.length);
+                resultItem = shortestList.filter(function (shortest) {
+                   if (nowDate.date + nowDate.time <= shortest.date +  shortest.time) {
+                      return true;
+                   }
+                    return false;
+                });
 
                 //log.info(listShortest);
                 req.shortest = resultItem;
                 next();
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next();
-            }
-        });
-    }
-    else{
-        try{
-            getCoord(regionName, cityName, townName, function(err, coord){
-                if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
-                    return next();
-                }
-                getTownDataFromDB(modelShortest, coord, function(err, shortestList){
-                    if (err) {
-                        log.error(new Error('error to get shortest '+ err.message));
-                        return next();
-                    }
-
-                    var nowDate = getShortestTimeValue(+9);
-                    var resultItem = [];
-
-                    log.debug(shortestList.length);
-                    resultItem = shortestList.filter(function (shortest) {
-                       if (nowDate.date + nowDate.time <= shortest.date +  shortest.time) {
-                          return true;
-                       }
-                        return false;
-                    });
-
-                    //log.info(listShortest);
-                    req.shortest = resultItem;
-                    next();
-                });
             });
-        } catch(e){
-            log.error('ERROR >>', meta);
-            log.error(e);
-            next();
-        }
+        });
+    } catch(e){
+        log.error('ERROR >>', meta);
+        log.error(e);
+        next();
     }
 };
 
@@ -1694,110 +1380,46 @@ var getCurrent = function(req, res, next){
 
     log.info('>', meta);
 
-    if(config.db.mode === 'ram'){
-        manager.getWeatherDb(regionName, cityName, townName, function(err, result){
-            if(err){
-                if(err){
-                    log.error('> getShortest : failed to get data from DB');
-                    log.error(meta);
+    try{
+        getCoord(regionName, cityName, townName, function(err, coord) {
+            if (err) {
+                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                return next();
+            }
+            getTownDataFromDB(modelCurrent, coord, function(err, currentList) {
+                if (err) {
+                    log.error(new Error('error to get current ' + err.message));
                     return next();
                 }
-            }
-            /********************
-             * TEST DATA
-             ********************/
-            //result = config;
-            /********************/
-            try{
-                var listCurrent = result.mData.data.current;
-                var listShort = result.mData.data.short;
                 var nowDate = getCurrentTimeValue(+9);
                 var acceptedDate = getCurrentTimeValue(+6);
                 var shortDate = getTimeValue(9);
-                var currentItem = listCurrent[listCurrent.length - 1];
+                var currentItem = currentList[currentList.length - 1];
                 var resultItem = {};
 
                 if((nowDate.date !== currentItem.date) ||
                     (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
-                    // 데이터가 없다면 3시간 예보 데이터 사용.
-                    for(var i=0 ; i<listShort.length ; i++){
-                        if(shortDate.date === listShort[i].date && shortDate.time === listShort[i].time){
-                            resultItem.date = listShort[i].date;
-                            resultItem.time = listShort[i].time;
-                            resultItem.mx = listShort[i].mx;
-                            resultItem.my = listShort[i].my;
-                            resultItem.t1h = listShort[i].t3h;
-                            resultItem.rn1 = listShort[i].r06;
-                            resultItem.sky = listShort[i].sky;
-                            resultItem.uuu = listShort[i].uuu;
-                            resultItem.vvv = listShort[i].vvv;
-                            resultItem.reh = listShort[i].reh;
-                            resultItem.pty = listShort[i].pty;
-                            resultItem.lgt = 0;
-                            resultItem.vec = listShort[i].vec;
-                            resultItem.wsd = listShort[i].wsd;
-                            break;
-                        }
-                    }
+                    // 없으면 short를 가져다 쓸까?? 일단은 그냥 current꺼 쓰자.
+                    resultItem = currentItem;
 
                 }else{
                     // 현재 시간으로 넣어준
                     resultItem = currentItem;
                 }
                 resultItem.time = nowDate.time;
+                resultItem.date = currentItem.date;
 
+                resultItem.sensorytem = Math.round(getNewWCT(resultItem.t1h, resultItem.wsd));
+                resultItem.sensorytemStr = parseSensoryTem(resultItem.sensorytem);
                 //log.info(listCurrent);
                 req.current = resultItem;
                 next();
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next();
-            }
-        });
-    }
-    else{
-        try{
-            getCoord(regionName, cityName, townName, function(err, coord) {
-                if (err) {
-                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
-                    return next();
-                }
-                getTownDataFromDB(modelCurrent, coord, function(err, currentList) {
-                    if (err) {
-                        log.error(new Error('error to get current ' + err.message));
-                        return next();
-                    }
-                    var nowDate = getCurrentTimeValue(+9);
-                    var acceptedDate = getCurrentTimeValue(+6);
-                    var shortDate = getTimeValue(9);
-                    var currentItem = currentList[currentList.length - 1];
-                    var resultItem = {};
-
-                    if((nowDate.date !== currentItem.date) ||
-                        (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
-                        // 없으면 short를 가져다 쓸까?? 일단은 그냥 current꺼 쓰자.
-                        resultItem = currentItem;
-
-                    }else{
-                        // 현재 시간으로 넣어준
-                        resultItem = currentItem;
-                    }
-                    resultItem.time = nowDate.time;
-                    resultItem.date = currentItem.date;
-
-                    resultItem.sensorytem = Math.round(getNewWCT(resultItem.t1h, resultItem.wsd));
-                    resultItem.sensorytemStr = parseSensoryTem(resultItem.sensorytem);
-                    //log.info(listCurrent);
-                    req.current = resultItem;
-                    next();
-                });
             });
-        } catch(e){
-            log.error('ERROE>>', meta);
-            log.error(e);
-            next();
-        }
+        });
+    } catch(e){
+        log.error('ERROE>>', meta);
+        log.error(e);
+        next();
     }
 };
 
@@ -1855,173 +1477,67 @@ var getMid = function(req, res, next){
 
     log.info('>', meta);
 
-    if(config.db.mode === 'ram'){
-        manager.getMidDb(regionName, cityName, function(err, result){
+    try{
+        manager.getRegIdByTown(regionName, cityName, function(err, code){
             if(err){
-                log.error('> getMid : failed to get data from DB');
-                log.error(meta);
+                log.error(new Error('RM> there is no code '+ err.message));
                 return next();
             }
-            try{
-                log.info('> Mid DATA : ', result);
 
-                if(townName != ''){
-                    /**********************************************************
-                     *  START : Get current data and merge it
-                     **********************************************************/
-                    manager.getWeatherDb(regionName, cityName, townName, function(err, townDb){
+            var result = {};
+            var nowDate = getCurrentTimeValue(+9);
+            var i=0;
+            getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastList){
+                if(err){
+                    log.error('RM> no forecast data '+err.message);
+                    return next();
+                }
+
+                //log.info(forecastList);
+                req.midData = {};
+                req.midData.forecast = forecastList[forecastList.length - 1];
+
+                var areaCode = code.cityCode.slice(0, 3);
+                if(areaCode === '11B'){
+                    areaCode = '11B00000';
+                }
+                else if(areaCode === '21F'){
+                    areaCode = '11F10000';
+                }
+                else{
+                    areaCode = code.cityCode.slice(0, 4) + '0000';
+                }
+                //log.info(result);
+                getMidDataFromDB(modelMidLand, areaCode, function(err, landList){
+                    if(err){
+                        log.error('RM> no land data ' + err.message);
+                        return next();
+                    }
+                    //log.info(landList);
+                    getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempList){
                         if(err){
-                            log.error('> getShortest : failed to get data from DB');
+                            log.error('RM> no temp data ' + err.message);
                             log.error(meta);
                             return next();
                         }
-
-                        try{
-                            var listCurrent = townDb.mData.data.current;
-                            log.info('current>', townDb);
-
-                            result.dailyData.forEach(function(item){
-                                var max = 0;
-                                var min = 100;
-                                var count = 0;
-                                listCurrent.forEach(function(curItem){
-                                    if(item.date == curItem.date){
-                                        count += 1;
-                                        if(curItem.t1h > max){
-                                            max = curItem.t1h;
-                                        }
-                                        if(curItem.t1h < min){
-                                            min = curItem.t1h;
-                                        }
-                                    }
-                                });
-
-                                if(count > 23){
-                                    log.info('replace:', item.date, item.taMax, item.taMin);
-                                    item.taMax = max;
-                                    item.taMin = min;
-                                    count = 0;
-                                }
-                            });
-
-                        }catch(e){
-                            log.error('Second Phase ERROE>>', meta);
-                            return next();
-                        }
-                    });
-                    /**********************************************************
-                     *  END
-                     **********************************************************/
-                }
-
-                req.midData = result;
-                next();
-
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next();
-            }
-        });
-    }
-    else{
-        try{
-            manager.getRegIdByTown(regionName, cityName, function(err, code){
-                if(err){
-                    log.error(new Error('RM> there is no code '+ err.message));
-                    return next();
-                }
-
-                var result = {};
-                var nowDate = getCurrentTimeValue(+9);
-                var i=0;
-                getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastList){
-                    if(err){
-                        log.error('RM> no forecast data '+err.message);
-                        return next();
-                    }
-
-                    //log.info(forecastList);
-                    req.midData = {};
-                    req.midData.forecast = forecastList[forecastList.length - 1];
-
-                    var areaCode = code.cityCode.slice(0, 3);
-                    if(areaCode === '11B'){
-                        areaCode = '11B00000';
-                    }
-                    else if(areaCode === '21F'){
-                        areaCode = '11F10000';
-                    }
-                    else{
-                        areaCode = code.cityCode.slice(0, 4) + '0000';
-                    }
-                    //log.info(result);
-                    getMidDataFromDB(modelMidLand, areaCode, function(err, landList){
-                        if(err){
-                            log.error('RM> no land data ' + err.message);
-                            return next();
-                        }
-                        //log.info(landList);
-                        getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempList){
+                        //log.info(tempList);
+                        mergeLandWithTemp(landList, tempList, function(err, dataList){
                             if(err){
-                                log.error('RM> no temp data ' + err.message);
+                                log.error('RM> failed to merge land and temp');
                                 log.error(meta);
                                 return next();
                             }
-                            //log.info(tempList);
-                            mergeLandWithTemp(landList, tempList, function(err, dataList){
-                                if(err){
-                                    log.error('RM> failed to merge land and temp');
-                                    log.error(meta);
-                                    return next();
-                                }
-                                //log.info(dataList);
-                                req.midData.dailyData = dataList;
-                                next();
-                            });
+                            //log.info(dataList);
+                            req.midData.dailyData = dataList;
+                            next();
                         });
                     });
-                })
-            });
-        }catch(e){
-            log.error('ERROE>>', meta);
-            log.error(e);
-            next();
-        }
-    }
-};
-
-var getRegionSummary = function(req, res, next){
-    var meta = {};
-    var regionName = req.params.region;
-
-    meta.method = 'getRegionSummary';
-    meta.region = regionName;
-
-    log.info('>', meta);
-
-    if(config.db.mode === 'ram'){
-        manager.getRegionSummary(regionName, function(err, result){
-            if(err){
-                if(err){
-                    log.error('> getRegionSummary : failed to get data from DB');
-                    log.error(meta);
-                    return next();
-                }
-            }
-            try{
-                log.info('> getRegionSummary DATA : ', result);
-                req.midData = result;
-                next();
-
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next();
-            }
+                });
+            })
         });
-    }
-    else{
+    }catch(e){
+        log.error('ERROE>>', meta);
+        log.error(e);
         next();
     }
 };
@@ -2033,30 +1549,7 @@ var getSummary = function(req, res, next){
 
     log.info('>', meta);
 
-    if(config.db.mode === 'ram'){
-        manager.getSummary(function(err, result){
-            if(err){
-                if(err){
-                    log.error('> getSummary : failed to get data from DB');
-                    log.error(meta);
-                    return next();
-                }
-            }
-            try{
-                log.info('> getSummary DATA : ', result);
-                req.summary = result;
-                next();
-
-            }
-            catch(e){
-                log.error('ERROE>>', meta);
-                next();
-            }
-        });
-    }
-    else{
-        next();
-    }
+    next();
 };
 
 var getLifeIndexKma = function(req, res, next) {
