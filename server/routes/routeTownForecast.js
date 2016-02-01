@@ -2071,7 +2071,7 @@ router.get('/:region/:city', [getShort, getShortRss, getShortest,
 router.get('/:region/:city/:town', [getShort, getShortRss, getShortest,
                                     getCurrent, getKeco, getMid,
                                     getMidRss, getPastMid, mergeMidWithShort,
-                                    mergeByShortest], function(req, res) {
+                                    mergeByShortest, getLifeIndexKma], function(req, res) {
     var meta = {};
 
     var result = {};

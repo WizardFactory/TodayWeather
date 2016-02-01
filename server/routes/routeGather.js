@@ -112,4 +112,13 @@ router.get('/shortest', function(req, res) {
     });
 });
 
+router.get('/lifeindex', function (req, res) {
+    manager.taskKmaIndexService.cbMainProcess(manager.taskKmaIndexService, function (err) {
+        if (err) {
+            log.error(err);
+        }
+        res.send();
+    });
+});
+
 module.exports = router;

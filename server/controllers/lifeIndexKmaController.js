@@ -10,6 +10,60 @@ function LifeIndexKmaController() {
 
 }
 
+LifeIndexKmaController._fsnStr = function (grade) {
+    switch(grade) {
+        case 0: return "관심";
+        case 1: return "주의";
+        case 2: return "경고";
+        case 3: return "위험";
+        default: return "";
+    }
+};
+
+LifeIndexKmaController._fsnGrade = function (value) {
+    if (value < 35) {
+        return 0; //관심
+    }
+    else if (value < 70) {
+        return 1; //주의
+    }
+    else if (value < 95) {
+        return 2; //경고
+    }
+    else {
+        return 3; //위험
+    }
+};
+
+LifeIndexKmaController._ultrvStr = function (grade) {
+    switch(grade) {
+        case 0: return "낮음";
+        case 1: return "보통";
+        case 2: return "높음";
+        case 3: return "매우높음";
+        case 4: return "위험";
+        default: return "";
+    }
+};
+
+LifeIndexKmaController._ultrvGrade = function (value) {
+    if (value <=2) {
+        return 0; //낮음
+    }
+    else if (value <=5) {
+        return 1; //보통
+    }
+    else if (value <=7) {
+        return 2; //높음
+    }
+    else if (value <=10) {
+        return 3; //매우높음
+    }
+    else {
+        return 4; //위험.
+    }
+};
+
 LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexName) {
     var foundStartPoint = false;
     var i;
@@ -46,6 +100,15 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
         for (; i<srcList.length && j<destList.length; i++, j++) {
             log.debug('add data ' + srcList[i].value + ' to ' + destList[j].date + ' ' + indexName);
             (destList[j])[indexName] = srcList[i].value;
+            //add grade
+            if (indexName === 'fsn') {
+                (destList[j])['fsnGrade'] = this._fsnGrade(srcList[i].value);
+                (destList[j])['fsnStr'] = this._fsnStr((destList[j])['fsnGrade']);
+            }
+            else if (indexName === 'ultrv') {
+                (destList[j])['ultrvGrade'] = this._ultrvGrade(srcList[i].value);
+                (destList[j])['ultrvStr'] = this._ultrvStr((destList[j])['ultrvGrade']);
+            }
         }
         return true;
     }
@@ -61,11 +124,12 @@ LifeIndexKmaController._appendFromKma = function (town, callback){
 };
 
 LifeIndexKmaController._appendFromDb = function(town, callback) {
-    LifeIndexKma.findOne({town:town}, function (err, indexData) {
+    LifeIndexKma.find({'town.first':town.first, 'town.second':town.second, 'town.third':town.third}).lean().exec(function (err, indexDataList) {
         if (err) {
             log.error(err);
             return callback(err);
         }
+        var indexData = indexDataList[0];
         if (!indexData) {
             err = new Error('Fail to find indexData ' + town.toString());
             log.error(err);
@@ -123,13 +187,8 @@ LifeIndexKmaController.needToUpdate = function(indexData) {
 LifeIndexKmaController.appendData = function (town, shortList, midList, callback) {
     var self = this;
     this._appendFromDb(town, function(err, indexData) {
-        if (err || self.needToUpdate()) {
-            self._appendFromKma(town, function(err, indexData) {
-                if (err) {
-                    return callback(err);
-                }
-                self._addIndexData(indexData, shortList, midList, callback);
-            });
+        if (err || self.needToUpdate(indexData)) {
+            return callback(err);
         }
         else {
             self._addIndexData(indexData, shortList, midList, callback);
