@@ -180,7 +180,7 @@ angular.module('starter', [
                 var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
                 var width, height, x, y;
-                var svg, initLine, line;
+                var svg, g, initLine, line;
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
@@ -192,8 +192,8 @@ angular.module('starter', [
 
                     svg = d3.select(iElement[0]).append('svg')
                         .attr('width', width)
-                        .attr('height', height)
-                        .append('g');
+                        .attr('height', height);
+                    g = svg.append('g');
 
                     initLine = d3.svg.line()
                         .interpolate('linear')
@@ -332,7 +332,14 @@ angular.module('starter', [
                         .attr('y', function (d) {
                             return y(d.value.t3h) - margin.top - margin.textTop;
                         });
-                }
+                };
+
+                scope.$watch('timeWidth', function(newValue, oldValue) {
+                    width = newValue;
+                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+
+                    svg.attr('width', width);
+                });
 
                 scope.$watch('timeChart', function (newVal) {
                     if (newVal) {
@@ -356,7 +363,7 @@ angular.module('starter', [
                 var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
                 var width, height, x, y;
-                var svg, initLine, line;
+                var svg, g;
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
@@ -368,8 +375,8 @@ angular.module('starter', [
 
                     svg = d3.select(iElement[0]).append('svg')
                         .attr('width', width)
-                        .attr('height', height)
-                        .append('g');
+                        .attr('height', height);
+                    g = svg.append('g');
                 });
 
                 var chart = function () {
@@ -523,6 +530,13 @@ angular.module('starter', [
                         .delay(duration)
                         .attr('r', 5);
                 };
+
+                scope.$watch('dayWidth', function(newValue, oldValue) {
+                    width = newValue;
+                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+
+                    svg.attr('width', width);
+                });
 
                 scope.$watch('dayChart', function (newVal) {
                     if (newVal) {

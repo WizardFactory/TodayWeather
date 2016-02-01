@@ -24,6 +24,9 @@ angular.module('starter.controllers', [])
         //[{values: Object, temp: Number}]
         $scope.dayChart;
 
+        $scope.timeWidth; //total width of timeChart and timeTable
+        $scope.dayWidth; //total width of dayChart and dayTable
+
         var padding = 1;
         //console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
         //console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
@@ -171,6 +174,9 @@ angular.module('starter.controllers', [])
             }
 
             console.log("start");
+
+            $scope.timeWidth = getWidthPerCol() * cityData.timeTable.length;
+            $scope.dayWidth = getWidthPerCol() * cityData.dayTable.length;
 
             $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             console.log($scope.address);
@@ -326,7 +332,7 @@ angular.module('starter.controllers', [])
             return deferred.promise;
         }
 
-        var bodyWidth =  window.innerWidth;
+        var bodyWidth = window.innerWidth;
 
         function getWidthPerCol() {
             if (colWidth)  {
