@@ -841,9 +841,24 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var failedList = [];
     var collectInfo = new collectTown();
     var dataTypeName = self.getDataTypeName(dataType);
+    var err;
 
     if (!retryCount) {
-        var err = new Error("retryCount is zero for request DATA : ", dataTypeName);
+        err = new Error("retryCount is zero for request DATA : " + dataTypeName);
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
+    }
+
+    if (srcList.length) {
+        log.info(dataTypeName, 'start request data : ', srcList.length);
+    }
+    else {
+        err = new Error(dataTypeName + ' srcList is not array or empty');
         if (callback) {
             callback(err);
         }
@@ -879,6 +894,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
             },
             function (err, results) {
+                log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
                 }
@@ -941,6 +957,7 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 }
             },
             function (err, results) {
+                log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
                 }
