@@ -1867,10 +1867,6 @@ var getPastMid = function (req, res, next) {
     meta.town = townName;
     log.info('>', meta);
 
-    if(config.db.mode === 'ram') {
-        return next();
-    }
-
     if (!req.hasOwnProperty('midData')) {
         req.midData = {};
     }
@@ -1936,10 +1932,6 @@ var mergeMidWithShort  = function (req, res, next) {
     meta.city = cityName;
     meta.town = townName;
     log.info('>', meta);
-
-    if(config.db.mode === 'ram') {
-        return next();
-    }
 
     if (!req.hasOwnProperty('midData')) {
         req.midData = {};
