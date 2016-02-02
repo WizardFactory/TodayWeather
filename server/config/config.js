@@ -8,7 +8,6 @@ module.exports = {
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
     mode: (process.env.SERVER_MODE || 'local'), //local, gather, service
     db: {
-        mode: (process.env.DB_MODE || 'ram'), //ram, db
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/todayweather')
     },
     keyString: {
