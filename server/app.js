@@ -85,17 +85,9 @@ global.landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
 global.manager = new controllerManager();
 global.townRss = new controllerShortRss();
 
-
-var keyBox = require('./config/config').keyString;
-
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
 }
-
-var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
-taskKmaIndexService.setServiceKey(keyBox.cert_key);
-//client요청이 있을때 실행함
-//taskKmaIndexService.start();
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

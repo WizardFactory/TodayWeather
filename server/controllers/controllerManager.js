@@ -24,6 +24,7 @@ var modelMidTemp = require('../models/modelMidTemp');
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
 var keco = new (require('../lib/kecoRequester.js'))();
+var taskKmaIndexService = new (require('../lib/lifeIndexKmaRequester'))();
 
 function Manager(){
     var self = this;
@@ -1792,6 +1793,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("midrss", callback);
         });
+
+        log.info('push life index');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("lifeindex", callback);
+        });
     }
 
     if (time === 2 || putAll) {
@@ -1846,7 +1852,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (self.asyncTasks.length <= 11) {
+    if (self.asyncTasks.length <= 12) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {
@@ -1870,6 +1876,12 @@ Manager.prototype.startManager = function(){
         }
     });
     self.keco = keco;
+
+    taskKmaIndexService.setServiceKey(config.keyString.cert_key);
+    taskKmaIndexService.loadAreaList();
+    taskKmaIndexService.setNextGetTime('fsn', new Date());
+    taskKmaIndexService.setNextGetTime('ultrv', new Date());
+    self.taskKmaIndexService = taskKmaIndexService;
 
     //self.checkTimeAndPushTask(true);
     self.checkTimeAndRequestTask(true);
