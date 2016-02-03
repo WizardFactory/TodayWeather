@@ -24,6 +24,7 @@ var modelMidTemp = require('../models/modelMidTemp');
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
 var keco = new (require('../lib/kecoRequester.js'))();
+var taskKmaIndexService = new (require('../lib/lifeIndexKmaRequester'))();
 
 function Manager(){
     var self = this;
@@ -841,9 +842,24 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
     var failedList = [];
     var collectInfo = new collectTown();
     var dataTypeName = self.getDataTypeName(dataType);
+    var err;
 
     if (!retryCount) {
-        var err = new Error("retryCount is zero for request DATA : ", dataTypeName);
+        err = new Error("retryCount is zero for request DATA : " + dataTypeName);
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
+    }
+
+    if (srcList.length) {
+        log.info(dataTypeName, 'start request data : ', srcList.length);
+    }
+    else {
+        err = new Error(dataTypeName + ' srcList is not array or empty');
         if (callback) {
             callback(err);
         }
@@ -879,6 +895,7 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
             },
             function (err, results) {
+                log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
                 }
@@ -941,6 +958,7 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 }
             },
             function (err, results) {
+                log.info(dataTypeName + ' saved data');
                 if (err) {
                     log.error(err);
                 }
@@ -1792,6 +1810,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("midrss", callback);
         });
+
+        log.info('push life index');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("lifeindex", callback);
+        });
     }
 
     if (time === 2 || putAll) {
@@ -1846,7 +1869,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (self.asyncTasks.length <= 11) {
+    if (self.asyncTasks.length <= 12) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {
@@ -1870,6 +1893,12 @@ Manager.prototype.startManager = function(){
         }
     });
     self.keco = keco;
+
+    taskKmaIndexService.setServiceKey(config.keyString.cert_key);
+    taskKmaIndexService.loadAreaList();
+    taskKmaIndexService.setNextGetTime('fsn', new Date());
+    taskKmaIndexService.setNextGetTime('ultrv', new Date());
+    self.taskKmaIndexService = taskKmaIndexService;
 
     //self.checkTimeAndPushTask(true);
     self.checkTimeAndRequestTask(true);

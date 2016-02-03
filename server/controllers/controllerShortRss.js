@@ -62,7 +62,7 @@ TownRss.prototype.loadList = function(){
 
      town.getCoord(function(err, coordList){
          if(err){
-             log.info('RSS> failed to get coord');
+             log.error('RSS> failed to get coord');
          }
 
          log.silly('RSS> coord: ', coordList);

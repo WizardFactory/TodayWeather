@@ -613,7 +613,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     }
 
     var self = this;
-    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
+    var list = ['ultrv', 'fsn'];
 
     //findAreaNo from town
     this.findAreaByTown(townInfo, function (err, town) {
@@ -647,7 +647,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
  * @param self
  * @returns {*}
  */
-KmaIndexService.prototype.cbMainProcess = function(self) {
+KmaIndexService.prototype.cbMainProcess = function(self, callback) {
     log.info("Called KMA Index service Main process");
     if (!self.serviceKey) {
         return log.error("You have to set KEY first!");
@@ -659,7 +659,7 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
     //RotLife
     //HeatLife
     //AirpollutionLife
-    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
+    var list = ['ultrv', 'fsn'];
     async.mapSeries(list,
         function(indexName, cb) {
             self.taskLifeIndex(indexName, function (err, results) {
@@ -674,7 +674,12 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
                 log.error(err);
             }
             log.silly(results);
-            setTimeout(self.cbMainProcess, 60*1000*10, self); //10mins
+            if (callback) {
+               callback(err);
+            }
+            else {
+                setTimeout(self.cbMainProcess, 60*1000*10, self); //10mins
+            }
         });
 };
 
@@ -684,9 +689,10 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
 KmaIndexService.prototype.start = function() {
     log.info('start KMA INDEX SERVICE');
     this.loadAreaList();
-    this.setNextGetTime('rot', new Date());
-    this.setNextGetTime('sensorytem', new Date());
-    this.setNextGetTime('dspls', new Date());
+    //rot, sensorytem, dspls는 routing시에 계산하여 추가.
+    //this.setNextGetTime('rot', new Date());
+    //this.setNextGetTime('sensorytem', new Date());
+    //this.setNextGetTime('dspls', new Date());
     this.setNextGetTime('fsn', new Date());
     this.setNextGetTime('ultrv', new Date());
     setTimeout(this.cbMainProcess, 3*1000, this); //start after 3secs

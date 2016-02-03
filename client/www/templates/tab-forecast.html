@@ -39,7 +39,7 @@
             <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col timeChart" style="padding: 0; height: 100%;">
+                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
                         <div class="row row-no-padding chart-content">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
@@ -76,7 +76,7 @@
                  ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col weeklyChart" style="padding: 0; height: 100%;">
+                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':dayWidth +'px'}">
                         <div class="row row-no-padding chart-content">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
                         </div>
