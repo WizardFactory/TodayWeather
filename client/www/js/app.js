@@ -65,7 +65,7 @@ angular.module('starter', [
                         bannerAtTop: true, // set to true, to put banner at top
                         overlap: true, // set to true, to allow banner overlap webview
                         offsetTopBar: true, // set to true to avoid ios7 status bar overlap
-                        isTesting: false, // receiving test ad
+                        isTesting: true, // receiving test ad
                         autoShow: false, // auto show interstitial ad when loaded
                     }, function(e) {
                         console.log('setOptions is '+JSON.stringify(e));
