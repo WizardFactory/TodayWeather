@@ -1143,7 +1143,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
                 log.info('S> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 30, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 10, function (err, results) {
                 log.info('S> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1219,7 +1219,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
 
             //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 30, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 10, function (err, results) {
                 log.info('ST> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1289,7 +1289,7 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 log.info('C> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 30, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 10, function (err, results) {
                 log.info('C> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1858,7 +1858,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 41 || putAll) {
+    if (time === 35 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);
