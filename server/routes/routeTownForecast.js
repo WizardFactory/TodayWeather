@@ -286,7 +286,6 @@ function _mergeList(dstList, srcList) {
     return this;
 }
 
-
 /**
  * todo: we have to make object for routing
  * @type {Array}
@@ -330,6 +329,19 @@ function _findTownCode(list, region, city, town, cb){
                     return callback(null);
                 }
 
+                var newTown = {
+                    mCoord: {
+                        mx: result.mx,
+                        my: result.my
+                    },
+                    town:{
+                        first: region,
+                        second: city,
+                        third: town
+                    }
+                };
+
+                list.push(newTown);
                 log.silly('_findCode XY>',result);
                 callback('goto exit', {mx:result.mx, my: result.my});
                 return;
@@ -1162,7 +1174,6 @@ var getShort = function(req, res, next){
                     return next();
                 }
 
-                var popCount = 0;
                 var i = 0;
 
                 dataListPrint(shortList, 'route S', 'original short');
