@@ -632,7 +632,13 @@ angular.module('starter.services', [])
             //var url = "town";
             //var url = "http://localhost:3000/town";
             var url = "http://todayweather.wizardfactory.net/town";
-            url += "/" + town.first + "/" + town.second + "/" + town.third;
+            url += "/" + town.first;
+            if (town.second) {
+                url += "/" + town.second;
+            }
+            if (town.third) {
+                url += "/" + town.third;
+            }
             console.log(url);
 
             $http({method: 'GET', url: url, timeout: 5000})
@@ -1069,8 +1075,25 @@ angular.module('starter.services', [])
         };
 
         /**
+         * 남해군 같은 경우 군을 버리면 남해 라고 표시되어 이상해보이므로, 시,군 표시함.
+         * @param name
+         * @returns {*}
+         * @private
+         */
+        obj._getShortSiName = function(name) {
+            //특별시, 특별자치시, 광역시,
+            var aStr = ["특별시", "광역시", "특별자치시"];
+            for (var i=0; i<aStr.length; i++) {
+                if (name.slice(-1*aStr[i].length) === aStr[i]) {
+                    return name.replace(aStr[i], "시");
+                }
+            }
+            return name;
+        };
+
+        /**
          * It's supporting only korean lang
-         * return only city namd and dong name
+         * return si+dong, si+gu, si or do
          * @param {String} fullAddress
          * @returns {string}
          */
@@ -1082,26 +1105,36 @@ angular.module('starter.services', [])
                 console.log("Fail to split full address="+fullAddress);
                 return "";
             }
+
             if (parsedAddress.length === 5) {
-                //대한민국, 경기도, 성남시, 분당구, 수내동
-                parsedAddress.splice(0, 2);
+                //nation + do + si + gu + dong
+                return that._getShortSiName(parsedAddress[2])+","+parsedAddress[4];
             }
             else if (parsedAddress.length === 4) {
-                //대한민국, 서울특별시, 송파구, 잠실동
-                parsedAddress.splice(0, 1);
+                if (parsedAddress[1].slice(-1) === '도') {
+                    //nation + do + si + gu
+                    return parsedAddress[2]+","+parsedAddress[3];
+                }
+                else {
+                    //nation + si + gu + dong
+                    return that._getShortSiName(parsedAddress[1])+","+parsedAddress[3];
+                }
             }
             else if (parsedAddress.length === 3) {
-                //대한민국, 세종특별자치시, 금난면,
-                parsedAddress.splice(0, 1);
+                //nation + do + si
+                //nation + si + gu
+                //nation + si + eup,myeon
+                return that._getShortSiName(parsedAddress[1])+","+parsedAddress[2];
+            }
+            else if (parsedAddress.length === 2) {
+                //nation + si,do
+                return that._getShortSiName(parsedAddress[1]);
             }
             else {
                 console.log("Fail to get shorten from ="+fullAddress);
-            }
-            parsedAddress.splice(1, 1);
-            parsedAddress.splice(2, 1);
 
-            console.log(parsedAddress.toString());
-            return parsedAddress.toString();
+            }
+            return "";
         };
 
         /**
@@ -1117,19 +1150,41 @@ angular.module('starter.services', [])
             }
 
             if (addressArray.length === 5) {
+                //nation + do + si + gu + dong
                 town.first = addressArray[1];
                 town.second = addressArray[2]+addressArray[3];
                 town.third = addressArray[4];
             }
             else if (addressArray.length === 4) {
                 town.first = addressArray[1];
-                town.second = addressArray[2];
-                town.third = addressArray[3];
+                if (addressArray[3].slice(-1) === '구') {
+                    //nation + do + si + gu
+                    town.second = addressArray[2]+addressArray[3];
+                }
+                else {
+                    //nation + si + gu + dong
+                    town.second = addressArray[2];
+                    town.third = addressArray[3];
+                }
             }
             else if (addressArray.length === 3) {
+                if (addressArray[2].slice(-1) === '읍' || addressArray[2].slice(-1) === '면' ||
+                    addressArray[2].slice(-1) === '동')
+                {
+                    //nation + si + myeon,eup,dong
+                    town.first = addressArray[1];
+                    town.second = addressArray[1];
+                    town.third = addressArray[2];
+                }
+                else {
+                    //nation + si,do + si, gun, gu
+                    town.first = addressArray[1];
+                    town.second = addressArray[2];
+                }
+            }
+            else if (addressArray.length === 2) {
+               //nation + si,do
                 town.first = addressArray[1];
-                town.second = addressArray[1];
-                town.third = addressArray[2];
             }
             else {
                 var err = new Error("Fail to parse address array="+addressArray.toString());
