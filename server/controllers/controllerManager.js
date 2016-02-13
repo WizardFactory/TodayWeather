@@ -26,6 +26,8 @@ var PastConditionGather = require('../lib/PastConditionGather');
 var keco = new (require('../lib/kecoRequester.js'))();
 var taskKmaIndexService = new (require('../lib/lifeIndexKmaRequester'))();
 
+var awsCloudFront = require('../utils/awsCloudFront');
+
 function Manager(){
     var self = this;
 
@@ -1775,6 +1777,32 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
     log.info('wait '+self.asyncTasks.length+' tasks');
 };
 
+/**
+ *
+ * @param region
+ * @param accessKey
+ * @param secretKey
+ * @param apiVersion
+ * @param distributionId
+ * @private
+ */
+Manager.prototype.deleteCacheOnCloudFront = function(items, region, accessKey, secretKey, apiVersion, distributionId, callback){
+    var cf = new awsCloudFront(region, accessKey, secretKey, apiVersion);
+
+    cf.invalidateCloudFront(items, distributionId, function(err){
+        if(err){
+            log.error(err);
+            if(callback){
+                callback(new Error('Can not invalidate cloudfront'));
+            }
+        }
+
+        if(callback){
+            callback();
+        }
+    });
+};
+
 Manager.prototype._requestApi = function (apiName, callback) {
     var req = require('request');
     var timeout = 1000*60*60*24;
@@ -1867,6 +1895,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("current", callback);
         });
+    }
+
+    if(time === 50 || putAll){
+        log.info('push invalidateCloudFront');
+        self.asyncTasks.push(function(callback){
+            self._requestApi("invalidateCloudFront/ALL", callback);
+        })
     }
 
     if (self.asyncTasks.length <= 12) {
