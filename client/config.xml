@@ -13,12 +13,16 @@
     <preference name="UIWebViewBounce" value="false" />
     <preference name="DisallowOverscroll" value="true" />
     <preference name="android-minSdkVersion" value="14" />
-    <preference name="BackupWebStorage" value="none" />
+    <preference name="BackupWebStorage" value="local" />
     <preference name="SplashScreen" value="screen" />
+    <preference name="FadeSplashScreen" value="false"/>
+    <preference name="ShowSplashScreenSpinner" value="false"/>
     <preference name="orientation" value="portrait" />
+    <preference name="target-device" value="universal" />
     <feature name="StatusBar">
         <param name="ios-package" onload="true" value="CDVStatusBar" />
     </feature>
+    <preference name="StatusBarStyle" value="lightcontent" />
     <platform name="android">
         <icon density="ldpi" src="resources/android/icon/drawable-ldpi-icon.png" />
         <icon density="mdpi" src="resources/android/icon/drawable-mdpi-icon.png" />
