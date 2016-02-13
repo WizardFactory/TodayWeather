@@ -16,10 +16,17 @@ module.exports = {
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
         daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net'),
-        newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key')
+        newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),
+        aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
+        aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS')
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),
         service: (process.env.LOGENTRIES_SERVICE_TOKEN||'Your Logentries key')
+    },
+    aws:{
+        distribution_id:(process.env.AWS_DISTRIBUTION_ID || 'You need to set the distributionid of CloudFront'),
+        region: (process.env.AWS_REGION || 'us-east-1'),
+        cloudfront_api_version:(process.env.AWS_CLOUDFRONT_API_VERSION || 'latest')
     }
 };

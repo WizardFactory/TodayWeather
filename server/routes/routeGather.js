@@ -121,4 +121,28 @@ router.get('/lifeindex', function (req, res) {
     });
 });
 
+router.get('/invalidateCloudFront/:items', function(req, res){
+    var keydata  = require('../config/config').keyString;
+    var awsData = require('../config/config').aws;
+    var items = [];
+    if(req.params.items === 'ALL'){
+        items.push('/town/*')
+    }
+
+    manager.deleteCacheOnCloudFront(items,
+        awsData.region,
+        keydata.aws_access_key,
+        keydata.aws_secret_key,
+        awsData.cloudfront_api_version,
+        awsData.distribution_id,
+        function(err){
+            if(err){
+                log.error(err);
+            }
+            res.send();
+        }
+    );
+
+});
+
 module.exports = router;
