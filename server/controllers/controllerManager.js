@@ -1897,12 +1897,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if(time === 50 || putAll){
-        log.info('push invalidateCloudFront');
-        self.asyncTasks.push(function(callback){
-            self._requestApi("invalidateCloudFront/ALL", callback);
-        })
-    }
+    //if(time === 50 || putAll){
+    //    log.info('push invalidateCloudFront');
+    //    self.asyncTasks.push(function(callback){
+    //        self._requestApi("invalidateCloudFront/ALL", callback);
+    //    })
+    //}
 
     if (self.asyncTasks.length <= 12) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
