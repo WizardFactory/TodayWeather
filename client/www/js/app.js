@@ -319,8 +319,13 @@ angular.module('starter', [
                         .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
-                            if (d.name === 'today' && (d.value.tmn !== undefined || d.value.tmx !== undefined)) {
-                                return (d.value.tmn | d.value.tmx) + '˚';
+                            if (d.name === 'today') {
+                                if (d.value.tmn !== -50) {
+                                    return d.value.tmn + '˚';
+                                }
+                                if (d.value.tmx !== -50) {
+                                    return d.value.tmx + '˚';
+                                }
                             }
                             return '';
                         })

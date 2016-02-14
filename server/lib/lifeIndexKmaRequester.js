@@ -14,60 +14,13 @@ var async = require('async');
 
 var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 //var config = require('../config/config');
 
 //var DOMAIN_KMA_INDEX_SERVICE = "http://openapi.kma.go.kr";
 var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
 var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
-
-/**
- *
- * @param str
- * @returns {*}
- */
-function convertStringToDate(str) {
-    var y = str.substr(0,4),
-        m = str.substr(4,2) - 1,
-        d = str.substr(6,2),
-        h = str.substr(8,2);
-    if (h!== '') {
-        h = str.substr(8,2);
-    }
-    else {
-        h = '0';
-    }
-    var D = new Date(y,m,d, h);
-    return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
-}
-
-/**
- *
- * @param date
- * @returns {string}
- */
-function convertDateToYYYMMDD(date) {
-
-    //I don't know why one more create Date object by aleckim
-    var d = new Date(date);
-    var month = '' + (d.getMonth() + 1);
-    var day = '' + d.getDate();
-    var year = d.getFullYear();
-
-    if (month.length < 2) { month = '0' + month; }
-    if (day.length < 2) { day = '0' + day; }
-
-    return year+month+day;
-}
-
-function convertDateToHHMM(date) {
-    //I don't know why one more create Date object by aleckim
-    var d = new Date(date);
-    var hh = '' + (d.getHours());
-    if (hh.length < 2)  {hh = '0'+hh; }
-
-    return hh+'00';
-}
 
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
@@ -283,9 +236,9 @@ KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexMode
 
     var lastUpdateDate = ''+indexModel.date;
 
-    var today = convertStringToDate(lastUpdateDate);
-    var tomorrowStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
-    var tdatStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
+    var today = kmaTimeLib.convertStringToDate(lastUpdateDate);
+    var tomorrowStr = kmaTimeLib.convertDateToYYYYMMDD(today.setDate(today.getDate()+1));
+    var tdatStr = kmaTimeLib.convertDateToYYYYMMDD(today.setDate(today.getDate()+1));
 
 
     if (indexModel.today !== "") {
@@ -310,7 +263,7 @@ KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexMode
 KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexModel) {
     var lastUpdateDate = ''+indexModel.date;
 
-    var startTime = convertStringToDate(lastUpdateDate);
+    var startTime = kmaTimeLib.convertStringToDate(lastUpdateDate);
 
     for (var i=3;i<67;i+=3) {
         var propertyName = 'h'+i;
@@ -321,8 +274,8 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
             continue;
         }
 
-        var data = {date: convertDateToYYYMMDD(startTime),
-                    time: convertDateToHHMM(startTime),
+        var data = {date: kmaTimeLib.convertDateToYYYYMMDD(startTime),
+                    time: kmaTimeLib.convertDateToHHMM(startTime),
                     value: indexModel[propertyName]};
 
         log.silly(data);
