@@ -656,13 +656,17 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
 
         //check data complete
         result = listResult[0];
-        if (result.rn1 === template.rn1 || result.sky === template.sky || result.uuu === template.uuu ||
-            result.vvv === template.vvv || result.reh === template.reh || result.pty === template.pty ||
-            result.lgt === template.lgt || result.vec === template.vec || result.wsd === template.wsd) {
-            log.error('Fail get full current data');
+        if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
+            result.pty === template.pty) {
+            log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
         }
+        if (result.uuu === template.uuu || result.vvv === template.vvv || result.lgt === template.lgt ||
+            result.vec === template.vec || result.wsd === template.wsd) {
+            log.warn('Fail get full current data -'+JSON.stringify(result));
+        }
+
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
         //    log.info(listResult[i]);

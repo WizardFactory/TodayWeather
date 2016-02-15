@@ -1176,7 +1176,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
     //log.info(currentDate);
     //log.info(hour, minute);
 
-    if(parseInt(minute) <= 40){
+    if(parseInt(minute) < 30){
         currentDate = self.getWorldTime(+8);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = currentDate.slice(8,10) + '30';
