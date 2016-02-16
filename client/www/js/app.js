@@ -66,7 +66,7 @@ angular.module('starter', [
                         overlap: true, // set to true, to allow banner overlap webview
                         offsetTopBar: true, // set to true to avoid ios7 status bar overlap
                         isTesting: true, // receiving test ad
-                        autoShow: false, // auto show interstitial ad when loaded
+                        autoShow: false // auto show interstitial ad when loaded
                     }, function(e) {
                         console.log('setOptions is '+JSON.stringify(e));
                     }, function(e) {
@@ -180,7 +180,7 @@ angular.module('starter', [
                 var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
                 var width, height, x, y;
-                var svg, g, initLine, line;
+                var svg, initLine, line;
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
@@ -193,7 +193,6 @@ angular.module('starter', [
                     svg = d3.select(iElement[0]).append('svg')
                         .attr('width', width)
                         .attr('height', height);
-                    g = svg.append('g');
 
                     initLine = d3.svg.line()
                         .interpolate('linear')
@@ -229,95 +228,172 @@ angular.module('starter', [
                         })
                     ]).nice();
 
-                    var xAxis = d3.svg.axis()
+                    d3.svg.axis()
                         .scale(x)
                         .orient('bottom');
 
-                    var yAxis = d3.svg.axis()
+                    d3.svg.axis()
                         .scale(y)
                         .orient('left');
 
-                    var group = svg.selectAll('.line-group')
+                    var lineGroups = svg.selectAll('.line-group')
                         .data(data);
 
-                    var group_enter = group.enter()
+                    lineGroups.enter()
                         .append('g')
                         .attr('class', 'line-group');
 
                     // draw line
-                    group_enter.append('path')
+                    var lines = lineGroups.selectAll('.line')
+                        .data(function(d) {
+                            return [d];
+                        })
+                        .attr('d', function (d) {
+                            return initLine(d.values);
+                        });
+
+                    lines.enter()
+                        .append('path')
                         .attr('class', function (d) {
                             return 'line line-' + d.name;
                         })
                         .attr('d', function (d) {
-                            return line(d.values);
+                            return initLine(d.values);
                         });
 
-                    group.select('.line')
-                        .attr('d', function (d) {
-                            return initLine(d.values);
-                        })
-                        .transition()
+                    lines.transition()
                         .duration(duration)
                         .attr('d', function (d) {
                             return line(d.values);
                         });
 
                     // draw point
-                    group_enter.append('g')
-                        .attr('class', 'line-point');
-
-                    var circles = group.selectAll('circle')
+                    var linePoints = lineGroups.selectAll('.line-point')
                         .data(function (d) {
-                            return d.values;
+                            return [d];
                         });
 
-                    circles.enter().append('circle');
+                    linePoints.enter()
+                        .append('g')
+                        .attr('class', 'line-point');
 
-                    circles.exit().remove();
+                    var circles = linePoints.selectAll('circle')
+                        .data(function (d) {
+                            return d.values;
+                        })
+                        .attr('cy', height - margin.bottom);
 
-                    circles.attr('cx', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .attr('cy', height - margin.bottom)
-                        .attr('r', function (d, i) {
-                            if (d.value.time === "지금") {
-                                return 5;
-                            }
-                            return 2;
-                        })
-                        .attr('class', function (d, i) {
-                            if (d.value.time === "지금") {
-                                return 'circle-' + d.name + '-current';
-                            }
+                    circles.enter()
+                        .append('circle')
+                        .attr('class', function (d) {
                             return 'circle-' + d.name;
                         })
-                        .transition()
+                        .attr('r', 2)
+                        .attr('cx', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                        .attr('cy', height - margin.bottom);
+
+                    circles.transition()
                         .duration(duration)
                         .attr('cy', function (d) {
                             return y(d.value.t3h);
                         });
 
-                    // draw value
-                    group_enter.append('g')
-                        .attr('class', 'line-value')
-                        .selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .enter().append('text');
+                    circles.exit()
+                        .remove();
 
-                    group.select('.line-value')
-                        .selectAll('text')
+                    // draw current point
+                    var currentTime = new Date();
+
+                    var point = lineGroups.selectAll('.point')
+                        .data(function(d) {
+                            return [d];
+                        })
+                        .attr('cx', function (d) {
+                            var cx1, cx2;
+                            for (var i = 0; i < d.values.length; i = i + 1) {
+                                if (d.values[i].value.day === "오늘") {
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx2 = currentTime.getHours() % 3;
+                                    break;
+                                }
+                            }
+                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                        })
+                        .attr('cy', height - margin.bottom);
+
+                    point.enter()
+                        .append('circle')
+                        .attr('class', function (d) {
+                            return 'point circle-' + d.name + '-current';
+                        })
+                        .attr('r', 5)
+                        .attr('cx', function (d) {
+                            var cx1, cx2;
+                            for (var i = 0; i < d.values.length; i = i + 1) {
+                                if (d.values[i].value.day === "오늘") {
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx2 = currentTime.getHours() % 3;
+                                    break;
+                                }
+                            }
+                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                        })
+                        .attr('cy', height - margin.bottom);
+
+                    point.transition()
+                        .duration(duration)
+                        .attr('cx', function (d) {
+                            var cx1, cx2;
+                            for (var i = 0; i < d.values.length; i = i + 1) {
+                                if (d.values[i].value.day === "오늘") {
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx2 = currentTime.getHours() % 3;
+                                    break;
+                                }
+                            }
+                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                        })
+                        .attr('cy', function (d) {
+                            var cx1, cx2;
+                            for (var i = 0; i < d.values.length; i = i + 1) {
+                                if (d.values[i].value.day === "오늘") {
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx2 = currentTime.getHours() % 3;
+                                    break;
+                                }
+                            }
+                            var cy1 = d.values[cx1].value.t3h;
+                            var cy2 = d.values[cx1+1].value.t3h;
+
+                            if (cx2 === 1) {
+                                return y(cy1 + (cy2 - cy1) / 3);
+                            }
+                            else if (cx2 === 2) {
+                                return y(cy1 + (cy2 - cy1) / 3 * 2);
+                            }
+                            return y(cy1);
+                        });
+
+                    point.exit()
+                        .remove();
+
+                    // draw value
+                    var lineValues = lineGroups.selectAll('.line-value')
+                        .data(function (d) {
+                            return [d];
+                        });
+
+                    lineValues.enter()
+                        .append('g')
+                        .attr('class', 'line-value');
+
+                    var texts = lineValues.selectAll('text')
                         .data(function (d) {
                             return d.values;
-                        })
-                        .attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', height - margin.bottom - margin.textTop)
-                        .attr('dy', margin.top)
-                        .attr('text-anchor', 'middle')
                         .text(function (d) {
                             if (d.name === 'today') {
                                 if (d.value.tmn !== -50) {
@@ -328,18 +404,42 @@ angular.module('starter', [
                                 }
                             }
                             return '';
+                        });
+
+                    texts.enter()
+                        .append('text')
+                        .attr('class', function (d) {
+                            return 'text-' + d.name;
                         })
-                        .attr('class', function () {
-                            return 'text-today';
+                        .attr('text-anchor', 'middle')
+                        .attr('dy', margin.top)
+                        .attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .transition()
+                        .attr('y', height - margin.bottom - margin.textTop)
+                        .text(function (d) {
+                            if (d.name === 'today') {
+                                if (d.value.tmn !== -50) {
+                                    return d.value.tmn + '˚';
+                                }
+                                if (d.value.tmx !== -50) {
+                                    return d.value.tmx + '˚';
+                                }
+                            }
+                            return '';
+                        });
+
+                    texts.transition()
                         .duration(duration)
                         .attr('y', function (d) {
                             return y(d.value.t3h) - margin.top - margin.textTop;
                         });
+
+                    texts.exit()
+                        .remove();
                 };
 
-                scope.$watch('timeWidth', function(newValue, oldValue) {
+                scope.$watch('timeWidth', function(newValue) {
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
 
@@ -368,7 +468,7 @@ angular.module('starter', [
                 var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
                 var width, height, x, y;
-                var svg, g;
+                var svg;
 
                 // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
                 // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
@@ -381,7 +481,6 @@ angular.module('starter', [
                     svg = d3.select(iElement[0]).append('svg')
                         .attr('width', width)
                         .attr('height', height);
-                    g = svg.append('g');
                 });
 
                 var chart = function () {
@@ -397,11 +496,11 @@ angular.module('starter', [
                         })
                     ]).nice();
 
-                    var xAxis = d3.svg.axis()
+                    d3.svg.axis()
                         .scale(x)
                         .orient('bottom');
 
-                    var yAxis = d3.svg.axis()
+                    d3.svg.axis()
                         .scale(y)
                         .orient('left');
 
@@ -536,7 +635,7 @@ angular.module('starter', [
                         .attr('r', 5);
                 };
 
-                scope.$watch('dayWidth', function(newValue, oldValue) {
+                scope.$watch('dayWidth', function(newValue) {
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
 
