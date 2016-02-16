@@ -1721,8 +1721,8 @@ function _convertSkyToKorStr(sky, pty) {
     }
     else {
         switch (sky) {
-            case 1: str = '맑고 ';
-                break;
+            case 1: //str = '맑고 ';
+                log.warn("It's special case");
             case 2: str = '구름적고 ';
                 break;
             case 3: str = '구름많고 ';
