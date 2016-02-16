@@ -124,7 +124,7 @@ angular.module('starter.services', [])
                 timeData[13] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
                 timeData[14] = {day: "오늘", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
                 timeData[15] = {day: "", time: "3시", t3h: 15, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
-                timeData[16] = {day: "", time: "지금", t3h: 14, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14, tmx:-50};
+                timeData[16] = {day: "", time: "6시", t3h: 14, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14, tmx:-50};
                 timeData[17] = {day: "", time: "9시", t3h: 21, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-09", tmn: -50, tmx:-50};
                 timeData[18] = {day: "", time: "12시", t3h: 26, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
                 timeData[19] = {day: "", time: "15시", t3h: 29, skyIcon:"Moon", pop: 30, tempIcon:"Temp-01", tmn:-50, tmx: 29};
@@ -364,20 +364,6 @@ angular.module('starter.services', [])
             }
             console.error("Fail to get day string day=" + day + " hours=" + hours);
             return "";
-        }
-
-        /**
-         *
-         * @param {number} positionHours
-         * @param {number} day
-         * @param {number} hours
-         * @returns {String}
-         */
-        function getTimeString(positionHours, day, hours) {
-            if (positionHours === hours && day === 0) {
-                return "지금";
-            }
-            return hours + "시";
         }
 
         /**
@@ -914,7 +900,7 @@ angular.module('starter.services', [])
                 }
 
                 tempObject.day = day;
-                tempObject.time = getTimeString(positionHours, diffDays, time);
+                tempObject.time = time + "시";
                 data.push(tempObject);
 
                 return true;
