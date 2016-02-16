@@ -1176,7 +1176,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
     //log.info(currentDate);
     //log.info(hour, minute);
 
-    if(parseInt(minute) <= 40){
+    if(parseInt(minute) < 30){
         currentDate = self.getWorldTime(+8);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = currentDate.slice(8,10) + '30';
@@ -1897,12 +1897,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if(time === 50 || putAll){
-        log.info('push invalidateCloudFront');
-        self.asyncTasks.push(function(callback){
-            self._requestApi("invalidateCloudFront/ALL", callback);
-        })
-    }
+    //if(time === 50 || putAll){
+    //    log.info('push invalidateCloudFront');
+    //    self.asyncTasks.push(function(callback){
+    //        self._requestApi("invalidateCloudFront/ALL", callback);
+    //    })
+    //}
 
     if (self.asyncTasks.length <= 12) {
         log.debug('wait '+self.asyncTasks.length+' tasks');

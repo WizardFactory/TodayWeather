@@ -667,46 +667,46 @@ angular.module('starter.controllers', [])
             $scope.searchResults = [];
             $scope.isLoading = true;
 
-            var address = result.first;
+            var address = "대한민국"+" "+result.first;
             if (result.second !== "") {
-                address += "+" + result.second;
+                if (result.first.slice(-1) === '도' && result.second.slice(-1) === '구') {
+                    if (result.second.indexOf(' ') > 0) {
+                        //si gu
+                        var aTemp = result.second.split(" ");
+                        address = " " + aTemp[0];
+                        address = " " + aTemp[1];
+                    }
+                    else {
+                        //sigu
+                        address += " " + result.second.substr(0, result.second.indexOf('시')+1);
+                        address += " " + result.second.substr(result.second.indexOf('시')+1, result.second.length);
+                    }
+                }
+                else {
+                    address += " " + result.second;
+                }
             }
             if (result.third !== "") {
-                address += "+" + result.third;
+                address += " " + result.third;
             }
 
-            WeatherUtil.getAddressToGeolocation(address).then(function (location) {
-                WeatherUtil.getAddressFromGeolocation(location.lat, location.long).then(function (address) {
-                    WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
-                        var city = WeatherUtil.convertWeatherData(weatherDatas);
-                        city.currentPosition = false;
-                        city.address = address;
-                        city.location = location;
+            WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                var city = WeatherUtil.convertWeatherData(weatherDatas);
+                city.currentPosition = false;
+                city.address = address;
+                city.location = location;
 
-                        if (WeatherInfo.addCity(city) === false) {
-                            var msg = "이미 동일한 지역이 추가되어 있습니다.";
-                            $scope.showAlert("에러", msg);
-                        }
-                        else {
-                            WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
-                            $location.path('/tab/forecast');
-                        }
-                        $scope.isLoading = false;
-                    }, function () {
-                        var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
-                        $scope.showAlert("에러", msg);
-                        $scope.isLoading = false;
-                    });
-                }, function () {
-                    var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                if (WeatherInfo.addCity(city) === false) {
+                    var msg = "이미 동일한 지역이 추가되어 있습니다.";
                     $scope.showAlert("에러", msg);
-                    $scope.isLoading = false;
-                });
-            }, function () {
-                var msg = "현재 위치를 찾을 수 없습니다.";
-                if (ionic.Platform.isAndroid()) {
-                    str += "<br>WIFI와 위치정보를 켜주세요.";
                 }
+                else {
+                    WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
+                    $location.path('/tab/forecast');
+                }
+                $scope.isLoading = false;
+            }, function () {
+                var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                 $scope.showAlert("에러", msg);
                 $scope.isLoading = false;
             });
@@ -743,7 +743,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.7.3";
+        $scope.version  = "0.7.4";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();

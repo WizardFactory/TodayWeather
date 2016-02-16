@@ -19,6 +19,8 @@ var modelShortRss = require('../models/modelShortRss');
 var dbTown = require('../models/town');
 var convertGeocode = require('../utils/convertGeocode');
 
+var kmaTimeLib = require('../lib/kmaTimeLib');
+
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
     log.info('+ townForecast > request | Time[', printTime.toISOString(), ']');
@@ -1719,8 +1721,8 @@ function _convertSkyToKorStr(sky, pty) {
     }
     else {
         switch (sky) {
-            case 1: str = '맑고 ';
-                break;
+            case 1: //str = '맑고 ';
+                log.warn("It's special case");
             case 2: str = '구름적고 ';
                 break;
             case 3: str = '구름많고 ';
@@ -1970,6 +1972,172 @@ var mergeMidWithShort  = function (req, res, next) {
     return this;
 };
 
+/**
+ * adjust tmn, tmx
+ * @param req
+ * @param res
+ * @param next
+ */
+var adjustShort = function(req, res, next) {
+    var regionName = req.params.region;
+    var cityName = req.params.city;
+    var townName = req.params.town;
+
+    var meta = {};
+    meta.method = 'adjustShort';
+    meta.region = regionName;
+    meta.city = cityName;
+    meta.town = townName;
+    log.info('>', meta);
+
+    if (!req.hasOwnProperty('short')) {
+        log.error("Short forecast data hasn't attached on req");
+        return next();
+    }
+
+    var daySummaryList = [];
+    req.short.forEach(function (short, index) {
+
+        //client 하위 버전 지원 못함.
+        //if (short.time === "0000") {
+        //    var D = kmaTimeLib.convertStringToDate(short.date);
+        //    D.setDate(D.getDate()-1);
+        //    //date = back one day
+        //    //date = (parseInt(short.date)-1).toString();
+        //    short.time = "2400";
+        //    short.date = kmaTimeLib.convertDateToYYYYMMDD(D);
+        //}
+
+        var daySummary = _createOrGetDaySummaryList(daySummaryList, short.date);
+        if (daySummary.taMax < short.t3h) {
+            daySummary.taMax = short.t3h;
+        }
+        if (daySummary.taMax < short.tmx) {
+            daySummary.taMax = short.tmx;
+            log.info(index+" tmx clear");
+            //clear tmx
+        }
+        short.tmx = -50;
+
+        if (daySummary.taMin === -50 && short.t3h !== -50) {
+            daySummary.taMin = short.t3h;
+        }
+        else if (daySummary.taMin > short.t3h && short.t3h !== -50) {
+            daySummary.taMin = short.t3h;
+        }
+
+        if (daySummary.taMin === -50 && short.tmn !== -50) {
+            daySummary.taMin = short.tmn;
+        }
+        else if (daySummary.taMin > short.tmn && short.tmn !== -50) {
+            daySummary.taMin = short.tmn;
+            short.tmn = -50;
+            log.info(index+" tmn clear");
+        }
+        short.tmn = -50;
+    });
+
+    req.short.forEach(function (short) {
+        var daySum = _createOrGetDaySummaryList(daySummaryList, short.date);
+        if (daySum.taMax === -50 || daySum.taMin === -50) {
+            log.error("short date:"+short.date+" fail to get daySummary");
+            return;
+        }
+        if (short.time === "0600") {
+            short.tmn = daySum.taMin;
+        }
+        if (short.time === "1500") {
+            short.tmx = daySum.taMax;
+        }
+    });
+
+    //client 하위 버전 지원 못함.
+    //req.short.forEach(function (short, index) {
+    //
+    //    var daySum = _createOrGetDaySummaryList(daySummaryList, short.date);
+    //    if (daySum.taMax === -50 || daySum.taMin === -50) {
+    //        log.error("short date:"+short.date+" fail to get daySummary");
+    //        return;
+    //    }
+    //    var tmxDiff = Math.abs(daySum.taMax - short.t3h);
+    //    var tmnDiff = Math.abs(daySum.taMin - short.t3h);
+    //
+    //    if (!daySum.hasOwnProperty("tmxDiff")) {
+    //        daySum.tmxDiff = tmxDiff;
+    //        short.tmx = daySum.taMax;
+    //        daySum.tmxIndex = index;
+    //    }
+    //    else {
+    //        if (daySum.tmxDiff === tmxDiff) {
+    //           if(short.time === "1500")  {
+    //               req.short[daySum.tmxIndex].tmx = -50;
+    //
+    //               daySum.tmxDiff = tmxDiff;
+    //               short.tmx = daySum.taMax;
+    //               daySum.tmxIndex = index;
+    //               log.info("put index:"+index+" tmx:"+short.tmx);
+    //           }
+    //           else if (req.short[daySum.tmxIndex].time === "1500") {
+    //               //skip
+    //           }
+    //           else {
+    //               //nearest from 1500
+    //               //late time
+    //               req.short[daySum.tmxIndex].tmx = -50;
+    //
+    //               daySum.tmxDiff = tmxDiff;
+    //               short.tmx = daySum.taMax;
+    //               daySum.tmxIndex = index;
+    //               log.info("put index:"+index+" tmx:"+short.tmx);
+    //           }
+    //        }
+    //        else if (daySum.tmxDiff > tmxDiff) {
+    //            req.short[daySum.tmxIndex].tmx = -50;
+    //
+    //            daySum.tmxDiff = tmxDiff;
+    //            short.tmx = daySum.taMax;
+    //            daySum.tmxIndex = index;
+    //            log.info("put index:"+index+" tmx:"+short.tmx);
+    //        }
+    //    }
+    //
+    //    if (!daySum.hasOwnProperty("tmnDiff")) {
+    //        daySum.tmnDiff = tmnDiff;
+    //        short.tmn = daySum.taMin;
+    //        daySum.tmnIndex = index;
+    //    }
+    //    else {
+    //        if (daySum.tmnDiff === tmnDiff) {
+    //            if(short.time === "0600")  {
+    //                req.short[daySum.tmnIndex].tmn = -50;
+    //
+    //                daySum.tmnDiff = tmnDiff;
+    //                short.tmn = daySum.taMin;
+    //                daySum.tmnIndex = index;
+    //                log.info("put index:"+index+" tmn:"+short.tmn);
+    //            }
+    //            else if (req.short[daySum.tmnIndex].time === "0600") {
+    //                //skip
+    //            }
+    //            else {
+    //                //nearest from 0600
+    //                //early time
+    //            }
+    //        }
+    //        else if (daySum.tmnDiff > tmnDiff) {
+    //            req.short[daySum.tmnIndex].tmn = -50;
+    //
+    //            daySum.tmnDiff = tmnDiff;
+    //            short.tmn = daySum.taMin;
+    //            daySum.tmnIndex = index;
+    //            log.info("put index:"+index+" tmn:"+short.tmn);
+    //        }
+    //    }
+    //});
+
+    next();
+};
+
 router.get('/', [getSummary], function(req, res) {
     var meta = {};
 
@@ -1995,7 +2163,7 @@ router.get('/', [getSummary], function(req, res) {
 });
 
 router.get('/:region', [getShort, getShortRss, getShortest,
-                        getCurrent, getKeco, getMid,
+                        getCurrent, adjustShort, getKeco, getMid,
                         getMidRss, getPastMid, mergeMidWithShort,
                         mergeByShortest], function(req, res) {
     var meta = {};
@@ -2033,7 +2201,7 @@ router.get('/:region', [getShort, getShortRss, getShortest,
 });
 
 router.get('/:region/:city', [getShort, getShortRss, getShortest,
-                                getCurrent, getKeco, getMid,
+                                getCurrent, adjustShort, getKeco, getMid,
                                 getMidRss, getPastMid, mergeMidWithShort,
                                 mergeByShortest], function(req, res) {
     var meta = {};
@@ -2072,7 +2240,7 @@ router.get('/:region/:city', [getShort, getShortRss, getShortest,
 });
 
 router.get('/:region/:city/:town', [getShort, getShortRss, getShortest,
-                                    getCurrent, getKeco, getMid,
+                                    getCurrent, adjustShort, getKeco, getMid,
                                     getMidRss, getPastMid, mergeMidWithShort,
                                     mergeByShortest, getLifeIndexKma], function(req, res) {
     var meta = {};
@@ -2126,7 +2294,7 @@ router.get('/:region/:city/:town/mid', [getMid, getMidRss, getPastMid, mergeMidW
     res.json(result);
 });
 
-router.get('/:region/:city/:town/short', [getShort, getShortRss], function(req, res) {
+router.get('/:region/:city/:town/short', [getShort, getShortRss, adjustShort], function(req, res) {
     var meta = {};
 
     var result = {};

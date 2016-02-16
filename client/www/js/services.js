@@ -108,38 +108,38 @@ angular.module('starter.services', [])
                 city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
 
                 var timeData = [];
-                timeData[0] = {day: "", time: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17};
-                timeData[1] = {day: "", time: "9시", t3h: 21, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-02"};
-                timeData[2] = {day: "", time: "12시", t3h: 26, skyIcon:"Moon", pop: 30, tempIcon:"Temp-03"};
-                timeData[3] = {day: "", time: "15시", t3h: 28, skyIcon:"MoonWithCloud", pop: 40, tempIcon:"Temp-04", tmx: 28};
-                timeData[4] = {day: "", time: "18시", t3h: 26, skyIcon:"Rain", pop: 50, tempIcon:"Temp-05"};
-                timeData[5] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-06"};
-                timeData[6] = {day: "어제", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-07"};
-                timeData[7] = {day: "", time: "3시", t3h: 16, skyIcon:"Snow", pop: 80, tempIcon:"Temp-08"};
-                timeData[8] = {day: "", time: "6시", t3h: 15, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09", tmn: 15};
-                timeData[9] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-10"};
-                timeData[10] = {day: "", time: "12시", t3h: 26, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-                timeData[11] = {day: "", time: "15시", t3h: 28, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01"};
-                timeData[12] = {day: "", time: "18시", t3h: 29, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04", tmx: 29};
-                timeData[13] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-                timeData[14] = {day: "오늘", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[15] = {day: "", time: "3시", t3h: 15, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07"};
-                timeData[16] = {day: "", time: "지금", t3h: 14, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14};
-                timeData[17] = {day: "", time: "9시", t3h: 21, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-09"};
-                timeData[18] = {day: "", time: "12시", t3h: 26, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-10"};
-                timeData[19] = {day: "", time: "15시", t3h: 29, skyIcon:"Moon", pop: 30, tempIcon:"Temp-01", tmx: 29};
-                timeData[20] = {day: "", time: "18시", t3h: 28, skyIcon:"MoonWithCloud", pop: 50, tempIcon:"Temp-04"};
-                timeData[21] = {day: "", time: "21시", t3h: 22, skyIcon:"Rain", pop: 60, tempIcon:"Temp-05"};
-                timeData[22] = {day: "내일", time: "0시", t3h: 20, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[23] = {day: "", time: "3시", t3h: 18, skyIcon:"RainWithLightning", pop: 80, tempIcon:"Temp-07"};
-                timeData[24] = {day: "", time: "6시", t3h: 17, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 17};
-                timeData[25] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09"};
-                timeData[26] = {day: "", time: "12시", t3h: 27, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
-                timeData[27] = {day: "", time: "15시", t3h: 29, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: 29};
-                timeData[28] = {day: "", time: "18시", t3h: 28, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04"};
-                timeData[29] = {day: "", time: "21시", t3h: 24, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05"};
-                timeData[30] = {day: "모레", time: "0시", t3h: 21, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06"};
-                timeData[31] = {day: "", time: "3시", t3h: 18, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07"};
+                timeData[0] = {day: "", time: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17, tmx: -50};
+                timeData[1] = {day: "", time: "9시", t3h: 21, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-02", tmn: -50, tmx:-50};
+                timeData[2] = {day: "", time: "12시", t3h: 26, skyIcon:"Moon", pop: 30, tempIcon:"Temp-03", tmn: -50, tmx:-50};
+                timeData[3] = {day: "", time: "15시", t3h: 28, skyIcon:"MoonWithCloud", pop: 40, tempIcon:"Temp-04", tmn:-50, tmx: 28};
+                timeData[4] = {day: "", time: "18시", t3h: 26, skyIcon:"Rain", pop: 50, tempIcon:"Temp-05", tmn: -50, tmx:-50};
+                timeData[5] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-06", tmn: -50, tmx:-50};
+                timeData[6] = {day: "어제", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-07", tmn: -50, tmx:-50};
+                timeData[7] = {day: "", time: "3시", t3h: 16, skyIcon:"Snow", pop: 80, tempIcon:"Temp-08", tmn: -50, tmx:-50};
+                timeData[8] = {day: "", time: "6시", t3h: 15, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-09", tmn: 15, tmx:-50};
+                timeData[9] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-10", tmn: -50, tmx:-50};
+                timeData[10] = {day: "", time: "12시", t3h: 26, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
+                timeData[11] = {day: "", time: "15시", t3h: 28, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: -50, tmx:-50};
+                timeData[12] = {day: "", time: "18시", t3h: 29, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx: 29};
+                timeData[13] = {day: "", time: "21시", t3h: 21, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
+                timeData[14] = {day: "오늘", time: "0시", t3h: 18, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
+                timeData[15] = {day: "", time: "3시", t3h: 15, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
+                timeData[16] = {day: "", time: "지금", t3h: 14, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 14, tmx:-50};
+                timeData[17] = {day: "", time: "9시", t3h: 21, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-09", tmn: -50, tmx:-50};
+                timeData[18] = {day: "", time: "12시", t3h: 26, skyIcon:"Lightning", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
+                timeData[19] = {day: "", time: "15시", t3h: 29, skyIcon:"Moon", pop: 30, tempIcon:"Temp-01", tmn:-50, tmx: 29};
+                timeData[20] = {day: "", time: "18시", t3h: 28, skyIcon:"MoonWithCloud", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx:-50};
+                timeData[21] = {day: "", time: "21시", t3h: 22, skyIcon:"Rain", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
+                timeData[22] = {day: "내일", time: "0시", t3h: 20, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
+                timeData[23] = {day: "", time: "3시", t3h: 18, skyIcon:"RainWithLightning", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
+                timeData[24] = {day: "", time: "6시", t3h: 17, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08", tmn: 17, tmx:-50};
+                timeData[25] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09", tmn: -50, tmx:-50};
+                timeData[26] = {day: "", time: "12시", t3h: 27, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
+                timeData[27] = {day: "", time: "15시", t3h: 29, skyIcon:"WindWithCloud", pop: 30, tempIcon:"Temp-01", tmn: -50, tmx: 29};
+                timeData[28] = {day: "", time: "18시", t3h: 28, skyIcon:"Rain", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx:-50};
+                timeData[29] = {day: "", time: "21시", t3h: 24, skyIcon:"RainWithLightning", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
+                timeData[30] = {day: "모레", time: "0시", t3h: 21, skyIcon:"RainWithSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
+                timeData[31] = {day: "", time: "3시", t3h: 18, skyIcon:"Snow", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
                 //timeData[32] = {day: "", time: "6시", t3h: 17, skyIcon:"SnowWithLightning-Big", pop: 90, tempIcon:"Temp-08"};
                 //timeData[33] = {day: "", time: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09"};
                 //timeData[34] = {day: "", time: "12시", t3h: 26, skyIcon:"SunWithCloud", pop: 20, tempIcon:"Temp-10"};
@@ -632,7 +632,13 @@ angular.module('starter.services', [])
             //var url = "town";
             //var url = "http://localhost:3000/town";
             var url = "http://todayweather.wizardfactory.net/town";
-            url += "/" + town.first + "/" + town.second + "/" + town.third;
+            url += "/" + town.first;
+            if (town.second) {
+                url += "/" + town.second;
+            }
+            if (town.third) {
+                url += "/" + town.third;
+            }
             console.log(url);
 
             $http({method: 'GET', url: url, timeout: 5000})
@@ -800,11 +806,10 @@ angular.module('starter.services', [])
                     dayInfo.week = dayToString(convertStringToDate(dayInfo.date).getDay());
                 }
 
-                ////check valid data by reh
-                if (!(shortForecast.tmx === -50) && shortForecast.reh && shortForecast.time === '1500') {
+                if (shortForecast.tmx !== -50) {
                     dayInfo.tmx = shortForecast.tmx;
                 }
-                if (!(shortForecast.tmn === -50) && shortForecast.reh && shortForecast.time === '0600') {
+                if (shortForecast.tmn !== -50) {
                     dayInfo.tmn = shortForecast.tmn;
                 }
 
@@ -813,23 +818,6 @@ angular.module('starter.services', [])
                 }
                 dayInfo.pop = shortForecast.pop > dayInfo.pop ? shortForecast.pop : dayInfo.pop;
                 dayInfo.reh = shortForecast.reh > dayInfo.reh ? shortForecast.reh : dayInfo.reh;
-            });
-
-            shortForecastList.forEach(function (shortForecast) {
-                var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
-                if (!dayInfo) {
-                    return;
-                }
-                if (dayInfo.tmx) {
-                    if (dayInfo.tmx < shortForecast.t3h && shortForecast.reh) {
-                        dayInfo.tmx = shortForecast.t3h;
-                    }
-                }
-                if (dayInfo.tmn) {
-                    if (dayInfo.tmn > shortForecast.t3h && shortForecast.reh) {
-                        dayInfo.tmn = shortForecast.t3h;
-                    }
-                }
             });
 
             console.log(dailyTemp);
@@ -906,13 +894,6 @@ angular.module('starter.services', [])
                         prevT3H = tempObject.t3h;
                     }
 
-                    if (tempObject.time !== '0600') {
-                        tempObject.tmn = undefined;
-                    }
-                    if (tempObject.time !== '1500') {
-                        tempObject.tmx = undefined;
-                    }
-
                     if (tempObject.pty === 1 || tempObject.pty === 2) {
 
                         tempObject.ptyStr = convertKmaPtyToStr(shortForecast.pty);
@@ -934,22 +915,6 @@ angular.module('starter.services', [])
 
                 tempObject.day = day;
                 tempObject.time = getTimeString(positionHours, diffDays, time);
-
-                // 하루 기준의 최고, 최저 온도 찾기
-                // t3h를 tmx, tmn로 대처함
-                if (shortForecast.tmx !== 0) {
-                    if (tempObject.t3h < shortForecast.tmx) {
-                        tempObject.t3h = shortForecast.tmx;
-                    }
-                    tempObject.tmx = shortForecast.tmx;
-                }
-                else if (shortForecast.tmn !== 0) {
-                    if (tempObject.tmn < tempObject.t3h) {
-                        tempObject.t3h = tempObject.tmn;
-                    }
-                    tempObject.tmn = shortForecast.tmn;
-                }
-
                 data.push(tempObject);
 
                 return true;
@@ -1069,8 +1034,25 @@ angular.module('starter.services', [])
         };
 
         /**
+         * 남해군 같은 경우 군을 버리면 남해 라고 표시되어 이상해보이므로, 시,군 표시함.
+         * @param name
+         * @returns {*}
+         * @private
+         */
+        obj._getShortSiName = function(name) {
+            //특별시, 특별자치시, 광역시,
+            var aStr = ["특별시", "광역시", "특별자치시"];
+            for (var i=0; i<aStr.length; i++) {
+                if (name.slice(-1*aStr[i].length) === aStr[i]) {
+                    return name.replace(aStr[i], "시");
+                }
+            }
+            return name;
+        };
+
+        /**
          * It's supporting only korean lang
-         * return only city namd and dong name
+         * return si+dong, si+gu, si or do
          * @param {String} fullAddress
          * @returns {string}
          */
@@ -1082,26 +1064,36 @@ angular.module('starter.services', [])
                 console.log("Fail to split full address="+fullAddress);
                 return "";
             }
+
             if (parsedAddress.length === 5) {
-                //대한민국, 경기도, 성남시, 분당구, 수내동
-                parsedAddress.splice(0, 2);
+                //nation + do + si + gu + dong
+                return that._getShortSiName(parsedAddress[2])+","+parsedAddress[4];
             }
             else if (parsedAddress.length === 4) {
-                //대한민국, 서울특별시, 송파구, 잠실동
-                parsedAddress.splice(0, 1);
+                if (parsedAddress[1].slice(-1) === '도') {
+                    //nation + do + si + gu
+                    return parsedAddress[2]+","+parsedAddress[3];
+                }
+                else {
+                    //nation + si + gu + dong
+                    return that._getShortSiName(parsedAddress[1])+","+parsedAddress[3];
+                }
             }
             else if (parsedAddress.length === 3) {
-                //대한민국, 세종특별자치시, 금난면,
-                parsedAddress.splice(0, 1);
+                //nation + do + si
+                //nation + si + gu
+                //nation + si + eup,myeon
+                return that._getShortSiName(parsedAddress[1])+","+parsedAddress[2];
+            }
+            else if (parsedAddress.length === 2) {
+                //nation + si,do
+                return that._getShortSiName(parsedAddress[1]);
             }
             else {
                 console.log("Fail to get shorten from ="+fullAddress);
-            }
-            parsedAddress.splice(1, 1);
-            parsedAddress.splice(2, 1);
 
-            console.log(parsedAddress.toString());
-            return parsedAddress.toString();
+            }
+            return "";
         };
 
         /**
@@ -1117,19 +1109,41 @@ angular.module('starter.services', [])
             }
 
             if (addressArray.length === 5) {
+                //nation + do + si + gu + dong
                 town.first = addressArray[1];
                 town.second = addressArray[2]+addressArray[3];
                 town.third = addressArray[4];
             }
             else if (addressArray.length === 4) {
                 town.first = addressArray[1];
-                town.second = addressArray[2];
-                town.third = addressArray[3];
+                if (addressArray[3].slice(-1) === '구') {
+                    //nation + do + si + gu
+                    town.second = addressArray[2]+addressArray[3];
+                }
+                else {
+                    //nation + si + gu + dong
+                    town.second = addressArray[2];
+                    town.third = addressArray[3];
+                }
             }
             else if (addressArray.length === 3) {
+                if (addressArray[2].slice(-1) === '읍' || addressArray[2].slice(-1) === '면' ||
+                    addressArray[2].slice(-1) === '동')
+                {
+                    //nation + si + myeon,eup,dong
+                    town.first = addressArray[1];
+                    town.second = addressArray[1];
+                    town.third = addressArray[2];
+                }
+                else {
+                    //nation + si,do + si, gun, gu
+                    town.first = addressArray[1];
+                    town.second = addressArray[2];
+                }
+            }
+            else if (addressArray.length === 2) {
+               //nation + si,do
                 town.first = addressArray[1];
-                town.second = addressArray[1];
-                town.third = addressArray[2];
             }
             else {
                 var err = new Error("Fail to parse address array="+addressArray.toString());
