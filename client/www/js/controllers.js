@@ -814,7 +814,8 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil) {
+    .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
+                                     $location, $cordovaSocialSharing) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -834,9 +835,70 @@ angular.module('starter.controllers', [])
             }
         }, 1000);
 
-        $scope.doTabRefresh = function() {
-            //send event
-            $scope.$broadcast('updateWeatherEvent');
+        $scope.doTabForecast = function() {
+            if ($location.url() === '/tab/forecast') {
+                $scope.$broadcast('updateWeatherEvent');
+            }
+            else {
+                $location.url('/tab/forecast');
+            }
+        };
+
+        $scope.doTabShare = function() {
+            var message = '';
+
+            if ($location.url() === '/tab/forecast') {
+                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
+                if (cityData !== null && cityData.location !== null) {
+                    message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
+                    message += '현재 '+cityData.currentWeather.t1h+'˚ ';
+                    switch (cityData.currentWeather.skyIcon) {
+                        case 'Sun':
+                        case 'Moon':
+                            message += '\u{1F31E}\n';
+                            break;
+                        case 'Cloud':
+                        case 'WindWithCloud':
+                            message += '\u2601\n';
+                            break;
+                        case 'SunWithCloud':
+                        case 'MoonWithCloud':
+                            message += '\u26c5\n';
+                            break;
+                        case 'Lightning':
+                        case 'RainWithLightning':
+                        case 'SnowWithLightning':
+                            message += '\u26c8\n';
+                            break;
+                        case 'Rain':
+                            message += '\u2614\n';
+                            break;
+                        case 'Snow':
+                            message += '\u2603\n';
+                            break;
+                        case 'RainWithSnow':
+                            message += '\u2614\u2603\n';
+                            break;
+                        default:
+                            message += '\n';
+                            break;
+                    }
+                    cityData.dayTable.forEach(function(data) {
+                        if (data.week === '오늘') {
+                            message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
+                        }
+                    });
+                    message += cityData.currentWeather.summary+'\n\n';
+                }
+            }
+
+            $cordovaSocialSharing
+                .share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null)
+                .then(function(result) {
+                    // Success!
+                }, function(err) {
+                    // An error occured
+                });
         };
 
         //$ionicPlatform.ready(function() {
