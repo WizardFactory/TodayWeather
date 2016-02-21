@@ -46,7 +46,8 @@
       "locator": "https://github.com/WizardFactory/cordova-plugin-admob.git",
       "id": "cordova-plugin-admob"
     },
-    "de.appplant.cordova.plugin.local-notification"
+    "de.appplant.cordova.plugin.local-notification",
+    "cordova-plugin-x-socialsharing"
   ],
   "cordovaPlatforms": [
     "android",
