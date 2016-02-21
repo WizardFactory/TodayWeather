@@ -1007,7 +1007,7 @@ ControllerTown.prototype._getTimeTable = function () {
 
     log.info('make time table');
     listResult.push(JSON.parse(JSON.stringify(dateString)));
-    for(i=0 ; i<45 ; i++){
+    for(var i=0 ; i<45 ; i++){
         if(dateString.time === '2100'){
             if(day === 0){
                 currentDate = timeFunction.getWorldTime(-15);
@@ -1553,6 +1553,11 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
         // 과거의 current 데이터를 short 리스트에 넣을 수 있게 리스트를 구성한다
         currentList.forEach(function(curItem, index){
+            if (curItem.date < shortList[0].date) {
+                log.silly('skip');
+                return;
+            }
+
             var newItem = {};
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, curItem.date);
             if (daySummary.taMax < curItem.t1h) {
@@ -1571,17 +1576,14 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                 if(curItem.time === '0000' || (parseInt(curItem.time) % 3) === 0){
                     newItem.time = curItem.time;
                     newItem.date = curItem.date;
-                    if((index === 0) || (index === currentList.length - 1)){
+                    if(index === 0) {
+                        curString.forEach(function(string){
+                            newItem[string] = curItem[string];
+                        });
+                    }
+                    else if (index === 1) {
                         var tmp = {};
-                        if(index === 0){
-                            if(currentList.length === 1){
-                                tmp = curItem;
-                            }else{
-                                tmp = currentList[index + 1];
-                            }
-                        }else{
-                            tmp = currentList[index - 1];
-                        }
+                        tmp = currentList[index - 1];
 
                         if (tmp === undefined || !tmp.hasOwnProperty('sky')) {
                             log.warn(new Error('current is undefined or empty object'));
@@ -1603,21 +1605,22 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                                 newItem[string] = self._getAverage([tmp[string], curItem[string]], -1);
                             }
                         });
-                    }else {
-                        var prv = currentList[index-1];
-                        var next = currentList[index+1];
+                    } else {
+                        var prv1 = currentList[index-2];
+                        var prv2 = currentList[index-1];
+                        //var next = currentList[index+1];
                         curString.forEach(function(string){
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
-                                newItem[string] = self._getMax([prv[string], curItem[string], next[string]], -1);
+                                newItem[string] = self._getMax([prv1[string], prv2[string], curItem[string]], -1);
                             }
                             else if(string === 'uuu' || string === 'vvv') {
-                                newItem[string] = self._getAverage([prv[string], curItem[string], next[string]], -100);
+                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -100);
                             }
                             else if(string === 't1h') {
-                                newItem[string] = self._getAverage([prv[string], curItem[string], next[string]], -50);
+                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -50);
                             }
                             else{
-                                newItem[string] = self._getAverage([prv[string], curItem[string], next[string]], -1);
+                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -1);
                             }
                         });
                     }
