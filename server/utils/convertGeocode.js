@@ -78,7 +78,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
     });
 }
 
-function convertGeocodeByGoogle(first, second, third, callback) {
+function convertGeocodeByGoogle(first, second, third, callback, language) {
     var encodedUrl;
 
     var meta = {};
@@ -88,7 +88,12 @@ function convertGeocodeByGoogle(first, second, third, callback) {
     meta.third = third;
 
     var url = 'https://maps.googleapis.com/maps/api/geocode/xml';
-    url += '?address=' + first + second + third + '&language=ko';
+    if(language) {
+        url += '?address=' + first + second + third + '&language=' + language;
+    }
+    else{
+        url += '?address=' + first + second + third;
+    }
     encodedUrl = encodeURI(url);
 
     req.get(encodedUrl, null, function(err, response, body){
@@ -164,7 +169,7 @@ function convertGeocode(first, second, third, callback){
                     log.error(err);
                 }
                 callback(err, resultXY);
-            });
+            }, 'ko');
             return;
         }
         return callback(err, resultXY);
