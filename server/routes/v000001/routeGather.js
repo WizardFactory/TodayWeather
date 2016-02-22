@@ -3,8 +3,8 @@
  */
 
 var router = require('express').Router();
-var server_key = require('../config/config').keyString.cert_key;
-var normal_key = require('../config/config').keyString.normal;
+var server_key = require('../../config/config').keyString.cert_key;
+var normal_key = require('../../config/config').keyString.normal;
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
@@ -23,7 +23,7 @@ router.get('/current', function(req, res) {
 });
 
 router.get('/past', function(req, res) {
-    var PastConditionGather = require('../lib/PastConditionGather');
+    var PastConditionGather = require('../../lib/PastConditionGather');
     var pastGather = new PastConditionGather();
     pastGather.start(1, server_key, function (err) {
         if (err) {
@@ -122,8 +122,8 @@ router.get('/lifeindex', function (req, res) {
 });
 
 router.get('/invalidateCloudFront/:items', function(req, res){
-    var keydata  = require('../config/config').keyString;
-    var awsData = require('../config/config').aws;
+    var keydata  = require('../../config/config').keyString;
+    var awsData = require('../../config/config').aws;
     var items = [];
     if(req.params.items === 'ALL'){
         items.push('/town/*')
