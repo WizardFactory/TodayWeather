@@ -1,9 +1,9 @@
 /**
- * Created by Peter on 2016. 2. 21..
+ * Created by Peter on 2016. 2. 29..
  */
 "use strict";
 
-var metRequester = require('../../lib/MET/metRequester');
+var owmRequester = require('../../lib/OWM/owmRequester');
 var assert  = require('assert');
 var config = require('../../config/config');
 var Logger = require('../../lib/log');
@@ -11,16 +11,16 @@ var convertGeocode = require('../../utils/convertGeocode');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
-describe('unit test - get town forecast in lib/collect class', function(){
-    it('get weather by MET', function(done){
-        var met = new metRequester;
+describe('unit test - OWM', function(){
+    it('get weather by OWM', function(done){
+        var met = new owmRequester;
         var list = [
+/*
             {
                 address: '221B Baker Street London NW1 England',
                 lat: 51.52,
                 lon: -0.15
             },
-            /*
             {
                 address: 'Place du Palais 84000 Avignon France',
                 lat: 43.95,
@@ -47,12 +47,13 @@ describe('unit test - get town forecast in lib/collect class', function(){
                 lat: 33.57,
                 lon: 130.42
             },
+*/
             {
                 address: 'Kita6Jonishi 4-Chome',
                 lat: 43.06,
                 lon: 141.34
             }
-            */
+
         ];
 
         met.collectForecast(list, function(err, result){
