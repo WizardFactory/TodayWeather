@@ -569,6 +569,30 @@ function ControllerTown() {
         return this;
     };
 
+    this._appendLifeIndexToCurrent = function (current, short, dailyData) {
+        var i;
+        //for (i=0;i<short.length;i++) {
+        //    if (short[i].date === current.date) {
+        //        if (short[i].time >= current.time) {
+        //            //
+        //        }
+        //    }
+        //}
+        for (i=0;i<dailyData.length;i++) {
+            if (dailyData[i].date === current.date) {
+                if (dailyData[i].ultrv) {
+                    current.ultrv = dailyData[i].ultrv;
+                    current.ultrvGrade = dailyData[i].ultrvGrade;
+                    current.ultrvStr = dailyData[i].ultrvStr;
+                }
+                if (dailyData[i].fsn) {
+                    current.fsn = dailyData[i].fsn;
+                    current.fsnGrade = dailyData[i].fsnGrade;
+                    current.fsnStr = dailyData[i].fsnStr;
+                }
+            }
+        }
+    };
     /**
      *
      * @param req
@@ -599,6 +623,10 @@ function ControllerTown() {
                 req.short, req.midData.dailyData, function (err) {
                     if (err) {
                         log.error(err);
+                    }
+                    //add lifeIndex to current
+                    if (req.hasOwnProperty('current')) {
+                        self._appendLifeIndexToCurrent(req.current, req.short, req.midData.dailyData);
                     }
                     next();
                 });

@@ -311,7 +311,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var header = data.Response.Header;
     if (header.SuccessYN === 'N') {
         if (header.ReturnCode === 99) {
-            log.warn("Search result is nothing but continue getting data index="+indexName);
+            log.warn("Search result is nothing but continue getting data index="+indexName+" ErrMsg="+header.ErrMsg);
             log.debug(data);
             return {};
         }
@@ -380,15 +380,16 @@ KmaIndexService.prototype.updateOrAddLifeIndex = function (indexData, newData) {
     var newDataList = newData.data;
 
     newDataList.forEach(function(newData) {
-      for (var i=0; i<indexData.data.length; i++)   {
-          if (indexData.data[i].date === newData.date) {
-              indexData.data[i].value = newData.value;
-              break;
-          }
-          if (i>=indexData.data.length) {
-              indexData.data.push(newData);
-          }
-      }
+        for (var i=0; i<indexData.data.length; i++)   {
+            if (indexData.data[i].date === newData.date) {
+                indexData.data[i].value = newData.value;
+                break;
+            }
+        }
+
+        if (i>=indexData.data.length) {
+            indexData.data.push(newData);
+        }
     });
 
     return indexData;
