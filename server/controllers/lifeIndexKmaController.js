@@ -131,7 +131,7 @@ LifeIndexKmaController._appendFromDb = function(town, callback) {
         }
         var indexData = indexDataList[0];
         if (!indexData) {
-            err = new Error('Fail to find indexData ' + town.toString());
+            err = new Error('Fail to find indexData ' + JSON.stringify(town));
             log.error(err);
             return callback(err);
         }
@@ -143,7 +143,7 @@ LifeIndexKmaController._addIndexData = function (indexData, shortList, midList, 
     var ret = false;
     var self = this;
     try {
-        log.debug(indexData.toString());
+        log.debug(JSON.stringify(indexData));
 
         for (var k in indexData) {
             if (indexData[k] && indexData[k].lastUpdateDate) {
