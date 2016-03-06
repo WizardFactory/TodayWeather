@@ -106,6 +106,7 @@ $ cp ../../../../android/res/values/strings.xml values/strings.xml
 
 add activity and service for widget
 ```bash
+$ cd platforms/android/
 $ vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
 ```
 
