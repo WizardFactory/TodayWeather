@@ -368,7 +368,7 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 7; //yesterday 21h
+                index = 6; //yesterday 21h
 
                 if(hours >= 3) {
                     //start today
