@@ -314,7 +314,7 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
                                     cx2 = currentTime.getHours() % 3;
                                     break;
                                 }
@@ -333,7 +333,7 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
                                     cx2 = currentTime.getHours() % 3;
                                     break;
                                 }
@@ -348,7 +348,7 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
                                     cx2 = currentTime.getHours() % 3;
                                     break;
                                 }
@@ -359,7 +359,7 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3);
+                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
                                     cx2 = currentTime.getHours() % 3;
                                     break;
                                 }

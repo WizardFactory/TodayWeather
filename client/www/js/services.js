@@ -711,12 +711,13 @@ angular.module('starter.services', [])
         obj.parseCurrentTownWeather = function (currentTownWeather, shortList) {
             var currentForecast = {};
             var time;
-            var isNight = time < 7 || time > 18;
+            var isNight;
 
             if (!currentTownWeather) {
                 return currentForecast;
             }
             time = parseInt(currentTownWeather.time.substr(0, 2));
+            isNight = time < 7 || time > 18;
             currentForecast.time = time;
             currentForecast = currentTownWeather;
 
