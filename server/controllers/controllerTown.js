@@ -1356,7 +1356,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
                 log.error('~> getDataFromDB : what happened??', result.length);
             }
 
-            log.debug(result.toString());
+            log.debug(JSON.stringify(result));
 
             if(cb){
                 var ret = [];

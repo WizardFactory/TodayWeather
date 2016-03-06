@@ -11,7 +11,7 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
  * @constructor
  */
 function ControllerTown24h() {
-    //var self = this;
+    var self = this;
 
     ControllerTown.call(this);
 
@@ -81,20 +81,6 @@ function ControllerTown24h() {
             short.tmn = -50;
         });
 
-        req.short.forEach(function (short) {
-            var daySum = self._createOrGetDaySummaryList(daySummaryList, short.date);
-            if (daySum.taMax === -50 || daySum.taMin === -50) {
-                log.error("short date:"+short.date+" fail to get daySummary");
-                return;
-            }
-            if (short.time === "0600") {
-                short.tmn = daySum.taMin;
-            }
-            if (short.time === "1500") {
-                short.tmx = daySum.taMax;
-            }
-        });
-
         //client 하위 버전 지원 못함.
         req.short.forEach(function (short, index) {
 
@@ -125,14 +111,34 @@ function ControllerTown24h() {
                         //skip
                     }
                     else {
-                        //nearest from 1500
-                        //late time
-                        req.short[daySum.tmxIndex].tmx = -50;
+                        //날짜와 무관하게 비교값들의 앞과 뒤 값 중에 큰쪽을 최대온도로 표기
+                        var prvTmx;
+                        var nextTmx;
+                        if (daySum.tmnIndex > 0 && req.short[daySum.tmnIndex-1].t3h > req.short[daySum.tmnIndex].t3h) {
+                           prvTmx = req.short[daySum.tmnIndex-1].t3h;
+                        }
+                        else {
+                            prvTmx = req.short[daySum.tmnIndex].t3h;
+                        }
+                        if (index < req.short.length-1 && req.short[index+1].t3h > short.t3h)  {
+                            nextTmx = req.short[index+1].t3h;
+                        }
+                        else {
+                            nextTmx = short.t3h;
+                        }
+                        if (prvTmx > nextTmx) {
+                           //skip
+                        }
+                        else {
+                             //nearest from 1500
+                            //late time
+                            req.short[daySum.tmxIndex].tmx = -50;
 
-                        daySum.tmxDiff = tmxDiff;
-                        short.tmx = daySum.taMax;
-                        daySum.tmxIndex = index;
-                        log.verbose("put index:"+index+" tmx:"+short.tmx);
+                            daySum.tmxDiff = tmxDiff;
+                            short.tmx = daySum.taMax;
+                            daySum.tmxIndex = index;
+                            log.verbose("put index:"+index+" tmx:"+short.tmx);
+                        }
                     }
                 }
                 else if (daySum.tmxDiff > tmxDiff) {
@@ -164,8 +170,33 @@ function ControllerTown24h() {
                         //skip
                     }
                     else {
-                        //nearest from 0600
-                        //early time
+                        //날짜와 무관하게 비교값들의 앞과 뒤 값 중에 작은 쪽을 최저온도로 표기
+                        var prvTmn;
+                        var nextTmn;
+                        if (daySum.tmnIndex > 0 && req.short[daySum.tmnIndex-1].t3h < req.short[daySum.tmnIndex].t3h) {
+                           prvTmn = req.short[daySum.tmnIndex-1].t3h;
+                        }
+                        else {
+                            prvTmn = req.short[daySum.tmnIndex].t3h;
+                        }
+                        if (index < req.short.length-1 && req.short[index+1].t3h < short.t3h)  {
+                            nextTmn = req.short[index+1].t3h;
+                        }
+                        else {
+                            nextTmn = short.t3h;
+                        }
+                        if (prvTmn > nextTmn) {
+                            req.short[daySum.tmnIndex].tmn = -50;
+
+                            daySum.tmnDiff = tmnDiff;
+                            short.tmn = daySum.taMin;
+                            daySum.tmnIndex = index;
+                            log.verbose("put index:"+index+" tmn:"+short.tmn);
+                        }
+                        else {
+                            //nearest from 0600
+                            //early time
+                        }
                     }
                 }
                 else if (daySum.tmnDiff > tmnDiff) {
