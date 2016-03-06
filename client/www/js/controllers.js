@@ -855,7 +855,7 @@ angular.module('starter.controllers', [])
                     switch (cityData.currentWeather.skyIcon) {
                         case 'Sun':
                         case 'Moon':
-                            message += '\u{1F31E}\n';
+                            message += '\ud83c\udf1e\n';
                             break;
                         case 'Cloud':
                         case 'WindWithCloud':
