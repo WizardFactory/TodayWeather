@@ -313,15 +313,6 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param currentHours
-         * @returns {number}
-         */
-        function getPositionHours(currentHours) {
-            return Math.floor(currentHours / 3) * 3;
-        }
-
-        /**
-         *
          * @param {Date} target
          * @param {Date} current
          * @returns {number}
@@ -353,16 +344,12 @@ angular.module('starter.services', [])
          * @param hours
          * @returns {*}
          */
-        function getDayString(day, hours) {
-            if (hours !== 0) {
-                return "";
-            }
-
+        function getDayString(day) {
             var dayString = ["그제", "어제", "오늘", "내일", "모레", "글피"];
             if (-2 <= day && day <= 3) {
                 return dayString[day + 2];
             }
-            console.error("Fail to get day string day=" + day + " hours=" + hours);
+            console.error("Fail to get day string day=" + day);
             return "";
         }
 
@@ -616,8 +603,8 @@ angular.module('starter.services', [])
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
             //var url = "town";
-            //var url = "http://localhost:3000/town";
-            var url = "http://todayweather.wizardfactory.net/town";
+            //var url = "http://localhost:3000/v000705/town";
+            var url = "http://todayweather.wizardfactory.net/v000705/town";
             url += "/" + town.first;
             if (town.second) {
                 url += "/" + town.second;
@@ -724,12 +711,13 @@ angular.module('starter.services', [])
         obj.parseCurrentTownWeather = function (currentTownWeather, shortList) {
             var currentForecast = {};
             var time;
-            var isNight = time < 7 || time > 18;
+            var isNight;
 
             if (!currentTownWeather) {
                 return currentForecast;
             }
             time = parseInt(currentTownWeather.time.substr(0, 2));
+            isNight = time < 7 || time > 18;
             currentForecast.time = time;
             currentForecast = currentTownWeather;
 
@@ -820,18 +808,20 @@ angular.module('starter.services', [])
          */
         obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
             var data = [];
-            var positionHours = getPositionHours(current.getHours());
             var prevT3H;
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
                 return {timeTable: [], timeChart: []};
             }
 
-            shortForecastList.every(function (shortForecast) {
+            shortForecastList.every(function (shortForecast, index) {
                 var tempObject = {};
                 var time = parseInt(shortForecast.time.slice(0, -2));
                 var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
-                var day = getDayString(diffDays, time);
+                var day = "";
+                if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
+                    day = getDayString(diffDays);
+                }
                 var isNight = time < 7 || time > 18;
                 var dayInfo = getDayInfo(dailyInfoList, shortForecast.date);
                 if (!dayInfo) {

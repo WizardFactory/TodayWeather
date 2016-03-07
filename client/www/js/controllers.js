@@ -368,7 +368,7 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 7; //yesterday 21h
+                index = 6; //yesterday 21h
 
                 if(hours >= 3) {
                     //start today
@@ -855,7 +855,7 @@ angular.module('starter.controllers', [])
                     switch (cityData.currentWeather.skyIcon) {
                         case 'Sun':
                         case 'Moon':
-                            message += '\u{1F31E}\n';
+                            message += '\ud83c\udf1e\n';
                             break;
                         case 'Cloud':
                         case 'WindWithCloud':
