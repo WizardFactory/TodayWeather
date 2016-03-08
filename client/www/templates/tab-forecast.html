@@ -5,38 +5,41 @@
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
                 <div class="col" style="height: 100%">
                     <div class="row row-no-padding top-time" style="height: 16%;"><p ng-style="{'font-size': topTimeSize+'px'}">{{currentTimeString}}</p></div>
-                    <!--<div class="row row-no-padding" style="height: 5%;"></div>-->
-                    <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
-                            <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
-                            {{address}}</p>
-                    </div>
-                    <div class="row row-no-padding" ng-style="{'height':bigDigitSize*0.9+'px'}">
-                        <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
-                            <div class="row row-no-padding" style="height: 100%">
-                                <div class="col big-digit" style="width: 54%; height: 100%">
-                                    <p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p></div>
-                                <div class="col" style="width: 46%;">
-                                    <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
-                                         ng-if="currentWeather.t1h!==undefined">
-                                        <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
-                                    </div>
-                                    <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
-                                         ng-if="currentWeather.skyIcon">
-                                        <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
+                    <div class="row row-no-padding" style="height: 84%; margin: auto">
+                        <div class="col" style="margin: auto">
+                            <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
+                                <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
+                                    {{address}}</p>
+                            </div>
+                            <div class="row row-no-padding" ng-style="{'height':bigDigitSize*0.9+'px'}">
+                                <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
+                                    <div class="row row-no-padding" style="height: 100%">
+                                        <div class="col big-digit" style="width: 54%; height: 100%"><p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
+                                        </div>
+                                        <div class="col" style="width: 46%;">
+                                            <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
+                                                 ng-if="currentWeather.t1h!==undefined">
+                                                <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
+                                            </div>
+                                            <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
+                                                 ng-if="currentWeather.skyIcon">
+                                                <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="row row-no-padding region-sum" ng-style="{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
+                                <p ng-style="{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row row-no-padding region-sum" ng-style="{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
-                        <p ng-style="{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
                     </div>
                 </div>
             </div>
             <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col timeChart" style="padding: 0; height: 100%;">
+                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
                         <div class="row row-no-padding chart-content">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
@@ -73,7 +76,7 @@
                  ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col weeklyChart" style="padding: 0; height: 100%;">
+                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':dayWidth +'px'}">
                         <div class="row row-no-padding chart-content">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
                         </div>

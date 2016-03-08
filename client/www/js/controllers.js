@@ -24,6 +24,9 @@ angular.module('starter.controllers', [])
         //[{values: Object, temp: Number}]
         $scope.dayChart;
 
+        $scope.timeWidth; //total width of timeChart and timeTable
+        $scope.dayWidth; //total width of dayChart and dayTable
+
         var padding = 1;
         //console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
         //console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
@@ -53,17 +56,36 @@ angular.module('starter.controllers', [])
         }
 
         var mainHeight = window.innerHeight - 100;
-        $scope.topTimeSize = mainHeight * 0.026;
-        $scope.regionSize = mainHeight * 0.051 * padding;
-        $scope.regionSumSize = mainHeight * 0.047 * padding;
-        $scope.bigDigitSize = mainHeight * 0.2193 * padding;
-        $scope.bigTempPointSize = mainHeight * 0.0423 * padding;
+
+        var topTimeSize = mainHeight * 0.026;
+        $scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
+
+        var regionSize = mainHeight * 0.051 * padding;
+        $scope.regionSize = regionSize<33.04?regionSize:33.04;
+
+        var regionSumSize = mainHeight * 0.047 * padding;
+        $scope.regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
+
+        var bigDigitSize = mainHeight * 0.2193 * padding;
+        $scope.bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
+
+        var bigTempPointSize = mainHeight * 0.0423 * padding;
+        $scope.bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
+
         //injection img url after setting imgSize.
         $scope.reddot = 'reddot';
-        $scope.bigSkyStateSize = mainHeight * 0.1408 * padding;
-        $scope.smallTimeSize = mainHeight * 0.0299;
-        $scope.smallImageSize = mainHeight * 0.0512;
-        $scope.smallDigitSize = mainHeight * 0.0320;
+
+        var bigSkyStateSize = mainHeight * 0.1408 * padding;
+        $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
+
+        var smallTimeSize = mainHeight * 0.0299;
+        $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
+
+        var smallImageSize = mainHeight * 0.0512;
+        $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
+
+        var smallDigitSize = mainHeight * 0.0320;
+        $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
         var colWidth;
         var cityData;
@@ -152,6 +174,9 @@ angular.module('starter.controllers', [])
             }
 
             console.log("start");
+
+            $scope.timeWidth = getWidthPerCol() * cityData.timeTable.length;
+            $scope.dayWidth = getWidthPerCol() * cityData.dayTable.length;
 
             $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             console.log($scope.address);
@@ -307,7 +332,7 @@ angular.module('starter.controllers', [])
             return deferred.promise;
         }
 
-        var bodyWidth =  window.innerWidth;
+        var bodyWidth = window.innerWidth;
 
         function getWidthPerCol() {
             if (colWidth)  {
@@ -343,7 +368,7 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 7; //yesterday 21h
+                index = 6; //yesterday 21h
 
                 if(hours >= 3) {
                     //start today
@@ -423,7 +448,8 @@ angular.module('starter.controllers', [])
         var runAdmob = true;
         $rootScope.runAdmob = !runAdmob;
         if (runAdmob){
-            $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
+            //좋은 멘트 필요.
+            //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
         }
 
         $scope.doRefresh = function() {
@@ -449,8 +475,9 @@ angular.module('starter.controllers', [])
                     isShowingBar = !isShowingBar;
                     $ionicNavBarDelegate.showBar(isShowingBar);
                 }
+                //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
+                $ionicNavBarDelegate.title("");
                 if (runAdmob) {
-                    $ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
                     if (window.plugins && window.plugins.AdMob) {
                         window.plugins.AdMob.showAd(true,
                             function () {
@@ -640,46 +667,46 @@ angular.module('starter.controllers', [])
             $scope.searchResults = [];
             $scope.isLoading = true;
 
-            var address = result.first;
+            var address = "대한민국"+" "+result.first;
             if (result.second !== "") {
-                address += "+" + result.second;
+                if (result.first.slice(-1) === '도' && result.second.slice(-1) === '구') {
+                    if (result.second.indexOf(' ') > 0) {
+                        //si gu
+                        var aTemp = result.second.split(" ");
+                        address = " " + aTemp[0];
+                        address = " " + aTemp[1];
+                    }
+                    else {
+                        //sigu
+                        address += " " + result.second.substr(0, result.second.indexOf('시')+1);
+                        address += " " + result.second.substr(result.second.indexOf('시')+1, result.second.length);
+                    }
+                }
+                else {
+                    address += " " + result.second;
+                }
             }
             if (result.third !== "") {
-                address += "+" + result.third;
+                address += " " + result.third;
             }
 
-            WeatherUtil.getAddressToGeolocation(address).then(function (location) {
-                WeatherUtil.getAddressFromGeolocation(location.lat, location.long).then(function (address) {
-                    WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
-                        var city = WeatherUtil.convertWeatherData(weatherDatas);
-                        city.currentPosition = false;
-                        city.address = address;
-                        city.location = location;
+            WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                var city = WeatherUtil.convertWeatherData(weatherDatas);
+                city.currentPosition = false;
+                city.address = address;
+                city.location = location;
 
-                        if (WeatherInfo.addCity(city) === false) {
-                            var msg = "이미 동일한 지역이 추가되어 있습니다.";
-                            $scope.showAlert("에러", msg);
-                        }
-                        else {
-                            WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
-                            $location.path('/tab/forecast');
-                        }
-                        $scope.isLoading = false;
-                    }, function () {
-                        var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
-                        $scope.showAlert("에러", msg);
-                        $scope.isLoading = false;
-                    });
-                }, function () {
-                    var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                if (WeatherInfo.addCity(city) === false) {
+                    var msg = "이미 동일한 지역이 추가되어 있습니다.";
                     $scope.showAlert("에러", msg);
-                    $scope.isLoading = false;
-                });
-            }, function () {
-                var msg = "현재 위치를 찾을 수 없습니다.";
-                if (ionic.Platform.isAndroid()) {
-                    str += "<br>WIFI와 위치정보를 켜주세요.";
                 }
+                else {
+                    WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
+                    $location.path('/tab/forecast');
+                }
+                $scope.isLoading = false;
+            }, function () {
+                var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                 $scope.showAlert("에러", msg);
                 $scope.isLoading = false;
             });
@@ -716,7 +743,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser) {
         //sync with config.xml
-        $scope.version  = "0.7.1";
+        $scope.version  = "0.7.6";
 
         //it doesn't work after ionic deploy
         //var deploy = new Ionic.Deploy();
@@ -787,7 +814,8 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil) {
+    .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
+                                     $location, $cordovaSocialSharing) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -807,9 +835,70 @@ angular.module('starter.controllers', [])
             }
         }, 1000);
 
-        $scope.doTabRefresh = function() {
-            //send event
-            $scope.$broadcast('updateWeatherEvent');
+        $scope.doTabForecast = function() {
+            if ($location.url() === '/tab/forecast') {
+                $scope.$broadcast('updateWeatherEvent');
+            }
+            else {
+                $location.url('/tab/forecast');
+            }
+        };
+
+        $scope.doTabShare = function() {
+            var message = '';
+
+            if ($location.url() === '/tab/forecast') {
+                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
+                if (cityData !== null && cityData.location !== null) {
+                    message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
+                    message += '현재 '+cityData.currentWeather.t1h+'˚ ';
+                    switch (cityData.currentWeather.skyIcon) {
+                        case 'Sun':
+                        case 'Moon':
+                            message += '\ud83c\udf1e\n';
+                            break;
+                        case 'Cloud':
+                        case 'WindWithCloud':
+                            message += '\u2601\n';
+                            break;
+                        case 'SunWithCloud':
+                        case 'MoonWithCloud':
+                            message += '\u26c5\n';
+                            break;
+                        case 'Lightning':
+                        case 'RainWithLightning':
+                        case 'SnowWithLightning':
+                            message += '\u26c8\n';
+                            break;
+                        case 'Rain':
+                            message += '\u2614\n';
+                            break;
+                        case 'Snow':
+                            message += '\u2603\n';
+                            break;
+                        case 'RainWithSnow':
+                            message += '\u2614\u2603\n';
+                            break;
+                        default:
+                            message += '\n';
+                            break;
+                    }
+                    cityData.dayTable.forEach(function(data) {
+                        if (data.week === '오늘') {
+                            message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
+                        }
+                    });
+                    message += cityData.currentWeather.summary+'\n\n';
+                }
+            }
+
+            $cordovaSocialSharing
+                .share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null)
+                .then(function(result) {
+                    // Success!
+                }, function(err) {
+                    // An error occured
+                });
         };
 
         //$ionicPlatform.ready(function() {

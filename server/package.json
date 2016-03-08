@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.0.1",
+  "version": "0.7.5",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "async": "^1.4.2",
+    "aws-sdk": "^2.2.35",
     "body-parser": "~1.13.1",
     "compress": "^0.99.0",
     "compression": "^1.5.2",
@@ -32,6 +33,7 @@
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
     "winston": "^1.0.1",
+    "winston-logentries": "^1.0.1",
     "xml2js": "^0.4.9"
   },
   "devDependencies": {

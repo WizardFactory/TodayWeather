@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.7.1",
+  "version": "0.7.6",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "cordova-plugin-device",
     "cordova-plugin-console",
     "cordova-plugin-splashscreen",
-    "com.ionic.keyboard",
+    "ionic-plugin-keyboard",
     "cordova-plugin-geolocation",
     "cordova-plugin-apple-watch",
     "cordova-plugin-statusbar",
@@ -42,11 +42,17 @@
     },
     "ionic-plugin-deploy",
     "cordova-plugin-inappbrowser",
+    "cordova-plugin-googleplayservices",
+    {
+	    "locator": "https://github.com/floatinghotpot/google-admob-sdk.git",
+	    "id": "com.google.admobsdk"
+    },
     {
       "locator": "https://github.com/WizardFactory/cordova-plugin-admob.git",
       "id": "cordova-plugin-admob"
     },
-    "de.appplant.cordova.plugin.local-notification"
+    "de.appplant.cordova.plugin.local-notification",
+    "cordova-plugin-x-socialsharing"
   ],
   "cordovaPlatforms": [
     "android",

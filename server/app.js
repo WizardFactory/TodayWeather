@@ -14,10 +14,6 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 
-var routes = require('./routes/index');
-var users = require('./routes/users');
-
-var townForecast = require('./routes/routeTownForecast');
 var controllerManager = require('./controllers/controllerManager');
 var controllerShortRss = require('./controllers/controllerShortRss');
 /*
@@ -61,9 +57,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', routes);
-app.use('/users', users);
-app.use('/town', townForecast);
+app.use('/', require('./routes/v000001'));
+app.use('/v000001', require('./routes/v000001'));
+app.use('/v000705', require('./routes/v000705'));
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 //global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
@@ -84,40 +80,16 @@ global.landString = ['wf3Am', 'wf3Pm', 'wf4Am', 'wf4Pm', 'wf5Am', 'wf5Pm',
 global.manager = new controllerManager();
 global.townRss = new controllerShortRss();
 
-
-var keyBox = require('./config/config').keyString;
-
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
 }
 
-var taskKmaIndexService = new (require('./lib/lifeIndexKmaRequester'))();
-taskKmaIndexService.setServiceKey(keyBox.cert_key);
-//client요청이 있을때 실행함
-//taskKmaIndexService.start();
-
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Not Found');
+  var err = new Error('Not Found url='+req.originalUrl);
   err.status = 404;
   next(err);
 });
-
-
-if (config.mode === 'gather') {
-    setInterval(
-        function() {
-            var req = require('request');
-            var url = 'http://'+ config.ipAddress + ':' + config.port;
-            log.info('keep alive : ' + url);
-            req(url, function (err, response, body) {
-                if (err) { log.error(err);
-                }
-                log.silly(body);
-            });
-        },
-        1000*60); //check 1 min
-}
 
 // error handlers
 

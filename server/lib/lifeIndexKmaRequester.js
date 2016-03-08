@@ -14,60 +14,13 @@ var async = require('async');
 
 var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 //var config = require('../config/config');
 
 //var DOMAIN_KMA_INDEX_SERVICE = "http://openapi.kma.go.kr";
 var DOMAIN_KMA_INDEX_SERVICE = "http://203.247.66.146";
 var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
-
-/**
- *
- * @param str
- * @returns {*}
- */
-function convertStringToDate(str) {
-    var y = str.substr(0,4),
-        m = str.substr(4,2) - 1,
-        d = str.substr(6,2),
-        h = str.substr(8,2);
-    if (h!== '') {
-        h = str.substr(8,2);
-    }
-    else {
-        h = '0';
-    }
-    var D = new Date(y,m,d, h);
-    return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
-}
-
-/**
- *
- * @param date
- * @returns {string}
- */
-function convertDateToYYYMMDD(date) {
-
-    //I don't know why one more create Date object by aleckim
-    var d = new Date(date);
-    var month = '' + (d.getMonth() + 1);
-    var day = '' + d.getDate();
-    var year = d.getFullYear();
-
-    if (month.length < 2) { month = '0' + month; }
-    if (day.length < 2) { day = '0' + day; }
-
-    return year+month+day;
-}
-
-function convertDateToHHMM(date) {
-    //I don't know why one more create Date object by aleckim
-    var d = new Date(date);
-    var hh = '' + (d.getHours());
-    if (hh.length < 2)  {hh = '0'+hh; }
-
-    return hh+'00';
-}
 
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
@@ -283,9 +236,9 @@ KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexMode
 
     var lastUpdateDate = ''+indexModel.date;
 
-    var today = convertStringToDate(lastUpdateDate);
-    var tomorrowStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
-    var tdatStr = convertDateToYYYMMDD(today.setDate(today.getDate()+1));
+    var today = kmaTimeLib.convertStringToDate(lastUpdateDate);
+    var tomorrowStr = kmaTimeLib.convertDateToYYYYMMDD(today.setDate(today.getDate()+1));
+    var tdatStr = kmaTimeLib.convertDateToYYYYMMDD(today.setDate(today.getDate()+1));
 
 
     if (indexModel.today !== "") {
@@ -310,7 +263,7 @@ KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexMode
 KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexModel) {
     var lastUpdateDate = ''+indexModel.date;
 
-    var startTime = convertStringToDate(lastUpdateDate);
+    var startTime = kmaTimeLib.convertStringToDate(lastUpdateDate);
 
     for (var i=3;i<67;i+=3) {
         var propertyName = 'h'+i;
@@ -321,8 +274,8 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
             continue;
         }
 
-        var data = {date: convertDateToYYYMMDD(startTime),
-                    time: convertDateToHHMM(startTime),
+        var data = {date: kmaTimeLib.convertDateToYYYYMMDD(startTime),
+                    time: kmaTimeLib.convertDateToHHMM(startTime),
                     value: indexModel[propertyName]};
 
         log.silly(data);
@@ -358,7 +311,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var header = data.Response.Header;
     if (header.SuccessYN === 'N') {
         if (header.ReturnCode === 99) {
-            log.warn("Search result is nothing but continue getting data index="+indexName);
+            log.warn("Search result is nothing but continue getting data index="+indexName+" ErrMsg="+header.ErrMsg);
             log.debug(data);
             return {};
         }
@@ -427,15 +380,16 @@ KmaIndexService.prototype.updateOrAddLifeIndex = function (indexData, newData) {
     var newDataList = newData.data;
 
     newDataList.forEach(function(newData) {
-      for (var i=0; i<indexData.data.length; i++)   {
-          if (indexData.data[i].date === newData.date) {
-              indexData.data[i].value = newData.value;
-              break;
-          }
-          if (i>=indexData.data.length) {
-              indexData.data.push(newData);
-          }
-      }
+        for (var i=0; i<indexData.data.length; i++)   {
+            if (indexData.data[i].date === newData.date) {
+                indexData.data[i].value = newData.value;
+                break;
+            }
+        }
+
+        if (i>=indexData.data.length) {
+            indexData.data.push(newData);
+        }
     });
 
     return indexData;
@@ -613,7 +567,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     }
 
     var self = this;
-    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
+    var list = ['ultrv', 'fsn'];
 
     //findAreaNo from town
     this.findAreaByTown(townInfo, function (err, town) {
@@ -647,7 +601,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
  * @param self
  * @returns {*}
  */
-KmaIndexService.prototype.cbMainProcess = function(self) {
+KmaIndexService.prototype.cbMainProcess = function(self, callback) {
     log.info("Called KMA Index service Main process");
     if (!self.serviceKey) {
         return log.error("You have to set KEY first!");
@@ -659,7 +613,7 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
     //RotLife
     //HeatLife
     //AirpollutionLife
-    var list = ['rot', 'ultrv', 'sensorytem', 'dspls', 'fsn'];
+    var list = ['ultrv', 'fsn'];
     async.mapSeries(list,
         function(indexName, cb) {
             self.taskLifeIndex(indexName, function (err, results) {
@@ -674,7 +628,12 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
                 log.error(err);
             }
             log.silly(results);
-            setTimeout(self.cbMainProcess, 60*1000*10, self); //10mins
+            if (callback) {
+               callback(err);
+            }
+            else {
+                setTimeout(self.cbMainProcess, 60*1000*10, self); //10mins
+            }
         });
 };
 
@@ -684,9 +643,10 @@ KmaIndexService.prototype.cbMainProcess = function(self) {
 KmaIndexService.prototype.start = function() {
     log.info('start KMA INDEX SERVICE');
     this.loadAreaList();
-    this.setNextGetTime('rot', new Date());
-    this.setNextGetTime('sensorytem', new Date());
-    this.setNextGetTime('dspls', new Date());
+    //rot, sensorytem, dspls는 routing시에 계산하여 추가.
+    //this.setNextGetTime('rot', new Date());
+    //this.setNextGetTime('sensorytem', new Date());
+    //this.setNextGetTime('dspls', new Date());
     this.setNextGetTime('fsn', new Date());
     this.setNextGetTime('ultrv', new Date());
     setTimeout(this.cbMainProcess, 3*1000, this); //start after 3secs

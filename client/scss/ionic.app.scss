@@ -368,9 +368,9 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .search-content img{
-  display: table-cell;
+  display: block;
   vertical-align: middle;
-  width: 90%;
+  margin: auto;
 }
 
 .search-content p {

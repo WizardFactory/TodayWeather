@@ -49,19 +49,27 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
 
         var dailyData = reqMidData.dailyData;
         midRssData.midData.forEach(function (midData) {
+            if (dailyData.length > 0) {
+                if (parseInt(midData.date)  < parseInt(dailyData[0].date) ) {
+                    //skip old data
+                    return;
+                }
+            }
+
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
-                    dailyData[i].tmn = midData.tmn;
-                    dailyData[i].tmx = midData.tmx;
+                    dailyData[i].taMin = midData.taMin;
+                    dailyData[i].taMax = midData.taMax;
                     dailyData[i].wfAm = midData.wfAm;
                     dailyData[i].wfPm = midData.wfPm;
                     dailyData[i].reliability = midData.reliability;
                     break;
                 }
             }
+
             if (i === dailyData.length) {
                 //create object for removing _id of midData
-                dailyData.push({date:midData.date, tmn:midData.tmn, tmx:midData.tmx, wfAm:midData.wfAm,
+                dailyData.push({date:midData.date, taMin:midData.taMin, taMax:midData.taMax, wfAm:midData.wfAm,
                     wfPm:midData.wfPm, reliability: midData.reliability});
             }
         });
