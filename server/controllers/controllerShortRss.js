@@ -11,6 +11,7 @@
  */
 "use strict";
 var events = require('events');
+var async = require('async');
 var req = require('request');
 var config = require('../config/config');
 var fs = require('fs');
@@ -56,7 +57,7 @@ function TownRss(){
 /*
  *
  */
-TownRss.prototype.loadList = function(){
+TownRss.prototype.loadList = function(completionCallback){
     var self = this;
     self.coordDb = [];
 
@@ -66,12 +67,18 @@ TownRss.prototype.loadList = function(){
          }
 
          log.silly('RSS> coord: ', coordList);
-         coordList.forEach(function(coord){
-            var item = {mCoord: coord};
-             self.coordDb.push(item);
-         });
+         async.mapSeries(coordList,
+             function(coord, cb) {
+                 var item = {mCoord:coord};
+                 self.coordDb.push(item);
+                 cb();
+             }, function(err, result) {
+                 log.info('RSS> coord count : ', self.coordDb.length);
 
-         log.info('RSS> coord count : ', self.coordDb.length);
+                 if(completionCallback) {
+                     completionCallback();
+                 }
+             });
 
          //self.mainTask();
      });
@@ -353,12 +360,15 @@ TownRss.prototype.lastestPubDate = function() {
  *   @param index
  *   @param data
  */
-TownRss.prototype.saveShortRss = function(index, newData){
+TownRss.prototype.saveShortRss = function(index, newData, cb){
     var self = this;
 
     shortRssDb.find({mCoord: newData.mCoord}, function(err, list){
         if(err){
             log.error('fail to db item:', err);
+            if(cb) {
+                cb(err);
+            }
             return;
         }
 
@@ -369,6 +379,10 @@ TownRss.prototype.saveShortRss = function(index, newData){
                     log.error('fail to save');
                 }
             });
+
+            if(cb) {
+                cb();
+            }
             //log.silly('> add new item:', newData);
             return;
         }
@@ -414,15 +428,21 @@ TownRss.prototype.saveShortRss = function(index, newData){
                 }
             });
 
-            dbShortList.shortData.sort(function(a, b){
+            dbShortList.shortData.sort(function(a, b) {
+                var nRet = 0;
+
                 if(a.date > b.date){
-                    return 1;
+                    nRet = 1;
+                }
+                if(a.date < b.date) {
+                    nRet = -1;
                 }
 
-                if(a.date < b.date){
-                    return -1;
+                if(cb) {
+                    cb();
                 }
-                return 0;
+
+                return nRet;
             });
 
             if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
@@ -435,6 +455,10 @@ TownRss.prototype.saveShortRss = function(index, newData){
                 }
             });
         });
+
+        if(cb) {
+            cb();
+        }
     });
 };
 
@@ -469,8 +493,9 @@ TownRss.prototype.makeUrl = function(mx, my){
 /*
  * @param item
  * @param index
+ * @param [optional] callback function for completion.
  */
-TownRss.prototype.getData = function(index, item){
+TownRss.prototype.getData = function(index, item, cb){
     var self = this;
     var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
     self.getShortRss(index, url, function(err, RssData){
@@ -479,18 +504,34 @@ TownRss.prototype.getData = function(index, item){
             if(err == self.RETRY){
                 self.emit('recvFail', index, item);
             }
+
+            if(cb) {
+                cb(err);
+            }
+
             return;
         }
 
         self.parseShortRss(index, RssData, function(err, result){
             if(err){
                 log.error('failed to parse short rss(%d)', index);
+                if(cb) {
+                    cb(err);
+                }
                 return;
             }
+
             self.saveShortRss(index, result, function(err){
                 if(err){
                     log.error('failed to save the data to DB');
+                    if(cb) {
+                        cb(err);
+                    }
                     return;
+                }
+
+                if(cb) {
+                    cb();
                 }
             });
         });
@@ -500,10 +541,11 @@ TownRss.prototype.getData = function(index, item){
 /*
  *
  */
-TownRss.prototype.mainTask = function(){
+TownRss.prototype.mainTask = function(callback){
     var self = this;
     var gridList = [];
 
+    log.info('RSS> start rss!1');
 
     gridList = self.coordDb;
 
@@ -515,24 +557,33 @@ TownRss.prototype.mainTask = function(){
 
     var lastestPubDate = self.lastestPubDate();
 
-    gridList.forEach(function(item, index){
+    var index = 0;
+
+    async.mapSeries(gridList, function(item, cb) {
         log.debug(item);
 
-        shortRssDb.find({mCoord: item.mCoord}, function (err, list) {
-            if ((err)
+        shortRssDb.find({mCoord:item.mCoord}, function(err, list) {
+            index++;
+            if(err
                 || (list.length === 0)
                 || (list[0].pubDate === undefined)) {
-                // log.info('not found rss weather data');
-                self.getData(index, item);
+                log.info('rss : get new data (' + item.mx + ',' + item.my + ')');
+                self.getData(index, item, cb);
             } else {
                 if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                   //  log.info('old rss weather data');
-                    self.getData(index, item);
+                    log.info('rss : get refresh Data (' + item.mx + ',' + item.my + ')');
+                    self.getData(index, item, cb);
                 } else {
-                   // log.info('already updated information to lastest.');
+                    log.info('rss : already lastest data');
+                    cb();
                 }
             }
-        });
+         });
+    }, function(err, result) {
+        log.info('rss: finished !!' + index);
+        if(callback) {
+            callback();
+        }
     });
 };
 
