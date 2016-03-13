@@ -1387,4 +1387,22 @@ angular.module('starter.services', [])
         //endregion
 
         return obj;
+    })
+    .factory('Util', function () {
+        var obj = {};
+        var debug = true;
+
+        //region Function
+
+        //endregion
+
+        //region APIs
+
+        obj.isDebug = function () {
+            return debug;
+        };
+
+        //endregion
+
+        return obj;
     });
