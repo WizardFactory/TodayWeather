@@ -64,23 +64,19 @@ TownRss.prototype.loadList = function(completionCallback){
      town.getCoord(function(err, coordList){
          if(err){
              log.error('RSS> failed to get coord');
-         }
-
-         log.silly('RSS> coord: ', coordList);
-         async.mapSeries(coordList,
-             function(coord, cb) {
-                 var item = {mCoord:coord};
+         } else {
+             log.silly('RSS> coord: ', coordList);
+             coordList.forEach(function (coord) {
+                 var item = {mCoord: coord};
                  self.coordDb.push(item);
-                 cb();
-             }, function(err, result) {
-                 log.info('RSS> coord count : ', self.coordDb.length);
-
-                 if(completionCallback) {
-                     completionCallback();
-                 }
              });
 
-         //self.mainTask();
+             log.info('RSS> coord count : ', self.coordDb.length);
+         }
+
+         if(completionCallback) {
+             completionCallback(err);
+         }
      });
 
     return self;
@@ -433,13 +429,8 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
 
                 if(a.date > b.date){
                     nRet = 1;
-                }
-                if(a.date < b.date) {
+                } else if(a.date < b.date) {
                     nRet = -1;
-                }
-
-                if(cb) {
-                    cb();
                 }
 
                 return nRet;
@@ -541,7 +532,7 @@ TownRss.prototype.getData = function(index, item, cb){
 /*
  *
  */
-TownRss.prototype.mainTask = function(callback){
+TownRss.prototype.mainTask = function(completionCallback){
     var self = this;
     var gridList = [];
 
@@ -559,32 +550,45 @@ TownRss.prototype.mainTask = function(callback){
 
     var index = 0;
 
-    async.mapSeries(gridList, function(item, cb) {
-        log.debug(item);
-
-        shortRssDb.find({mCoord:item.mCoord}, function(err, list) {
-            index++;
-            if(err
-                || (list.length === 0)
-                || (list[0].pubDate === undefined)) {
-                log.info('rss : get new data (' + item.mx + ',' + item.my + ')');
-                self.getData(index, item, cb);
-            } else {
-                if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                    log.info('rss : get refresh Data (' + item.mx + ',' + item.my + ')');
-                    self.getData(index, item, cb);
-                } else {
-                    log.info('rss : already lastest data');
-                    cb();
-                }
+    async.mapSeries(gridList,
+        function(item, callback) {
+            async.waterfall([
+                function(cb) {
+                    shortRssDb.find({mCoord:item.mCoord}, function(err, list) {
+                        index++;
+                        if(err
+                            || (list.length === 0)
+                            || (list[0].pubDate === undefined)) {
+                            cb(err, item);
+                        } else {
+                            if (Number(list[0].pubDate) < Number(lastestPubDate)) {
+                                cb(err, item);
+                            } else {
+                                cb(err);
+                            }
+                        }})},
+                function(item, cb) {
+                    if((item.mCoord !== undefined)
+                        && (item.mCoord.mx !== undefined))
+                    {
+                        log.info('rss : get data(new or refresh)' + index + ' (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                        self.getData(index, item, cb);
+                    } else {
+                        log.info('rss : already lastest data');
+                        cb();
+                    }
+                }],
+                function(err) {
+                    if(callback) {
+                        callback();
+                    }
+                })
+         }, function(err, result) {
+            log.info('rss: finished !!' + index);
+            if(completionCallback) {
+                completionCallback();
             }
-         });
-    }, function(err, result) {
-        log.info('rss: finished !!' + index);
-        if(callback) {
-            callback();
-        }
-    });
+        });
 };
 
 TownRss.prototype.StartShortRss = function(){
