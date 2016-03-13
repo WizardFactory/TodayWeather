@@ -135,6 +135,13 @@ $ cp -rf ../../../applewatch/TodayWeather\ WatchKit\ 1\ Extension ./
 
 ### Publishing
 
+patch
+
+1. add daum key to DAUM_SERVICE_KEY on service.js
+2. set isTesting of AdMob.setOptions to false
+3. enable $ionicAnalytics.register() on app.js
+4. update version info of config.xml, package.json, controller.js
+
 ionic deploy
 ```bash
 $ ionic upload
