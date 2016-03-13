@@ -1649,11 +1649,14 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
         log.info('push short rss');
         self.asyncTasks.push(function (callback) {
             //need to update sync
-            townRss.mainTask();
-            setTimeout(function () {
-                log.info('Finished ShortRss '+new Date());
+            townRss.mainTask(function(){
+                log.info('Rss>complete mainTask for Rss');
                 callback();
-            }, 1000*60); //1min
+            });
+        //    setTimeout(function () {
+       //         log.info('Finished ShortRss '+new Date());
+       //         callback();
+       //     }, 1000*60); //1min
         });
         log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
@@ -1917,7 +1920,9 @@ Manager.prototype.startManager = function(){
 
     midRssKmaRequester.setNextGetTime(new Date());
     self.midRssKmaRequester = midRssKmaRequester;
-    townRss.loadList();
+    townRss.loadList(function(){
+        log.info('Rss> complete loadList for Rss.');
+    });
 
     keco.setServiceKey(config.keyString.normal);
     keco.setDaumApiKey(config.keyString.daum_key);
