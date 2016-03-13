@@ -16,7 +16,7 @@ angular.module('starter', [
     .run(function($ionicPlatform, $ionicAnalytics) {
         $ionicPlatform.ready(function() {
 
-            $ionicAnalytics.register();
+            //$ionicAnalytics.register();
 
             if (ionic.Platform.isIOS()) {
                 if (window.applewatch) {
