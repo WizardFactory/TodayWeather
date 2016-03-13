@@ -13,10 +13,12 @@ angular.module('starter', [
     'starter.services',
     'ngCordova'
 ])
-    .run(function($ionicPlatform, $ionicAnalytics) {
+    .run(function($ionicPlatform, $ionicAnalytics, Util) {
         $ionicPlatform.ready(function() {
 
-            $ionicAnalytics.register();
+            if (!Util.isDebug()) {
+                $ionicAnalytics.register();
+            }
 
             if (ionic.Platform.isIOS()) {
                 if (window.applewatch) {
