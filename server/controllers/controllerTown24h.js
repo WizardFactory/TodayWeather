@@ -210,6 +210,15 @@ function ControllerTown24h() {
             }
         });
 
+        var i = req.short.length - 1;
+        for(;i>=0;i--) {
+            if(req.short[i].reh !== -1) {
+                break;
+            }
+        }
+
+        req.short.splice(i+1, (req.short.length-(i+1)));
+
         next();
         return this;
     };
