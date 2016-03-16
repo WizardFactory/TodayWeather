@@ -58,8 +58,8 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
 
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
-                    dailyData[i].taMin = midData.taMin;
-                    dailyData[i].taMax = midData.taMax;
+                    dailyData[i].taMin = Math.round(midData.taMin);
+                    dailyData[i].taMax = Math.round(midData.taMax);
                     dailyData[i].wfAm = midData.wfAm;
                     dailyData[i].wfPm = midData.wfPm;
                     dailyData[i].reliability = midData.reliability;
