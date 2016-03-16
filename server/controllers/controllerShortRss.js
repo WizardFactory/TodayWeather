@@ -559,11 +559,14 @@ TownRss.prototype.mainTask = function(completionCallback){
                         if(err
                             || (list.length === 0)
                             || (list[0].pubDate === undefined)) {
+                            log.info('rss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                             cb(err, item);
                         } else {
                             if (Number(list[0].pubDate) < Number(lastestPubDate)) {
+                                log.info('rss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                                 cb(err, item);
                             } else {
+                                log.info('rss : already lastest data');
                                 cb(err);
                             }
                         }})},
@@ -571,10 +574,9 @@ TownRss.prototype.mainTask = function(completionCallback){
                     if((item.mCoord !== undefined)
                         && (item.mCoord.mx !== undefined))
                     {
-                        log.info('rss : get data(new or refresh)' + index + ' (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                         self.getData(index, item, cb);
                     } else {
-                        log.info('rss : already lastest data');
+                        log.info('rss : invalid item value.');
                         cb();
                     }
                 }],
