@@ -115,6 +115,15 @@
                             delegate-handle="detailList" style="width:90%;margin: 0 auto;">
                     <div class="list" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;">
                         <div class="item row detail-item">
+                            <div class="col col-33 detail-text"><p>습도</p></div>
+                            <div class="col col-33 detail-image">
+                                <div><img src="img/Humidity-{{currentWeather.reh - currentWeather.reh%10}}.png" style="width: 40px"></div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}
+                                <small>%</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item">
                             <div class="col col-33 detail-text"><p>미세먼지</p></div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
