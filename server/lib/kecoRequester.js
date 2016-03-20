@@ -467,7 +467,7 @@ Keco.prototype.loadTownList = function(lean, callback) {
             log.error("Fail to load townlist");
             return callback(err);
         }
-        log.info("areaList="+townList.length);
+        log.info("keco areaList="+townList.length);
         return callback(err, townList);
     });
 };
@@ -631,7 +631,7 @@ Keco.prototype.updateTownArpltnInfo = function (callback) {
     });
 };
 
-Keco.prototype.cbMainProcess = function (self, callback) {
+Keco.prototype.cbKecoProcess = function (self, callback) {
     //check and update
     var date = new Date();
 
@@ -670,7 +670,7 @@ Keco.prototype.start = function () {
 
     this.getCtprvnSidoList();
 
-    setInterval(this.cbMainProcess, 60*1000*10, this); //10min
+    setInterval(this.cbKecoProcess, 60*1000*10, this); //10min
 };
 
 module.exports = Keco;

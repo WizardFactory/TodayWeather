@@ -86,7 +86,7 @@ router.get('/midsea', function(req, res) {
 });
 
 router.get('/keco', function(req, res) {
-    manager.keco.cbMainProcess(manager.keco, function (err) {
+    manager.keco.cbKecoProcess(manager.keco, function (err) {
         if (err) {
             log.error(err);
         }
@@ -113,7 +113,7 @@ router.get('/shortest', function(req, res) {
 });
 
 router.get('/lifeindex', function (req, res) {
-    manager.taskKmaIndexService.cbMainProcess(manager.taskKmaIndexService, function (err) {
+    manager.taskKmaIndexService.cbKmaIndexProcess(manager.taskKmaIndexService, function (err) {
         if (err) {
             log.error(err);
         }

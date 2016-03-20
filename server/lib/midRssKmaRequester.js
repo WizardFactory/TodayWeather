@@ -268,7 +268,7 @@ MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
     return this;
 };
 
-MidRssKmaRequester.prototype.cbMainProcess = function(self, err) {
+MidRssKmaRequester.prototype.cbMidRssProcess = function(self, err) {
     var nextCheckTime = 10*1000; //10secs;
     if (err) {
         log.error(err);
@@ -276,14 +276,14 @@ MidRssKmaRequester.prototype.cbMainProcess = function(self, err) {
     else {
         nextCheckTime *= 6; //1min
     }
-    setTimeout(self.mainProcess, nextCheckTime, self, self.cbMainProcess);
+    setTimeout(self.mainProcess, nextCheckTime, self, self.cbMidRssProcess);
 };
 
 MidRssKmaRequester.prototype.start = function () {
     log.info('start MID RSS KMA REQUEST');
 
     this.setNextGetTime(new Date());
-    setTimeout(this.mainProcess, 10*1000, this, this.cbMainProcess); //10secs
+    setTimeout(this.mainProcess, 10*1000, this, this.cbMidRssProcess); //10secs
 };
 
 module.exports = MidRssKmaRequester;
