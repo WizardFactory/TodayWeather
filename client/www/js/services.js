@@ -604,7 +604,8 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
             //var url = "town";
             //var url = "http://localhost:3000/v000705/town";
-            var url = "http://todayweather.wizardfactory.net/v000705/town";
+            var url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+            //var url = "http://todayweather.wizardfactory.net/v000705/town";
             url += "/" + town.first;
             if (town.second) {
                 url += "/" + town.second;
@@ -931,7 +932,8 @@ angular.module('starter.services', [])
             }
             midData.dailyData.forEach(function (dayInfo) {
                 var data = {};
-                data.date = dayInfo.date;
+                //data.date = dayInfo.date;
+                data = dayInfo;
 
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
                 if (diffDays < -7 || diffDays > 10) {

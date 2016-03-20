@@ -11,12 +11,14 @@ angular.module('starter', [
     'ionic.service.analytics',
     'starter.controllers',
     'starter.services',
+    'ngMaterial',
     'ngCordova'
 ])
     .run(function($ionicPlatform, $ionicAnalytics) {
         $ionicPlatform.ready(function() {
 
-            $ionicAnalytics.register();
+            //if release version, rollback comment
+            //$ionicAnalytics.register();
 
             if (ionic.Platform.isIOS()) {
                 if (window.applewatch) {
@@ -37,7 +39,7 @@ angular.module('starter', [
             }
             if (window.StatusBar) {
                 // org.apache.cordova.statusbar required
-                StatusBar.backgroundColorByName("black");
+                StatusBar.backgroundColorByHexString('#0288D1');
                 StatusBar.overlaysWebView(false);
             }
 
@@ -62,8 +64,8 @@ angular.module('starter', [
                     window.plugins.AdMob.setOptions({
                         publisherId: bannerAdUnit,
                         interstitialAdId: interstitialAdUnit,
-                        bannerAtTop: true, // set to true, to put banner at top
-                        overlap: true, // set to true, to allow banner overlap webview
+                        bannerAtTop: false, // set to true, to put banner at top
+                        overlap: false, // set to true, to allow banner overlap webview
                         offsetTopBar: true, // set to true to avoid ios7 status bar overlap
                         isTesting: true, // receiving test ad
                         autoShow: false // auto show interstitial ad when loaded
@@ -90,7 +92,7 @@ angular.module('starter', [
                         console.log(JSON.stringify(data));
                     });
 
-                    window.plugins.AdMob.createBannerView({adSize:'BANNER'}, function(e){
+                    window.plugins.AdMob.createBannerView({adSize:'SMART_BANNER'}, function(e){
                             console.log('createBannerView is '+JSON.stringify(e));
                         },
                         function(e) {
@@ -154,17 +156,17 @@ angular.module('starter', [
             })
             .state('tab.update', {
 
-            })
-            .state('tab.setting', {
-                url: '/setting',
-                cache: false,
-                views: {
-                    'tab-setting': {
-                        templateUrl: 'templates/tab-setting.html',
-                        controller: 'SettingCtrl'
-                    }
-                }
             });
+            //.state('tab.setting', {
+            //    url: '/setting',
+            //    cache: false,
+            //    views: {
+            //        'tab-setting': {
+            //            templateUrl: 'templates/tab-setting.html',
+            //            controller: 'SettingCtrl'
+            //        }
+            //    }
+            //});
 
         // if none of the above states are matched, use this as the fallback
         $urlRouterProvider.otherwise('/tab/forecast');
@@ -172,13 +174,21 @@ angular.module('starter', [
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
     })
+    .config(function($mdThemingProvider) {
+        $mdThemingProvider.theme('default')
+            .primaryPalette('light-blue')
+            //.accentPalette('pink')  //default pink
+            //.warnPalette('deep-orange') //default red
+            //.backgroundPalette('blue-grey') //default grey
+            //.dark()
+    })
     .directive('ngShortChart', function() {
         return {
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
-                var duration = 1000;
-                var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                var duration = 0;
+                var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
                 var width, height, x, y;
                 var svg, initLine, line;
 
@@ -281,18 +291,18 @@ angular.module('starter', [
                         .data(function (d) {
                             return d.values;
                         })
-                        .attr('cy', height - margin.bottom);
+                        .attr('cy', height);
 
                     circles.enter()
                         .append('circle')
                         .attr('class', function (d) {
                             return 'circle-' + d.name;
                         })
-                        .attr('r', 2)
+                        .attr('r', 10)
                         .attr('cx', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .attr('cy', height - margin.bottom);
+                        .attr('cy', height);
 
                     circles.transition()
                         .duration(duration)
@@ -321,7 +331,7 @@ angular.module('starter', [
                             }
                             return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                         })
-                        .attr('cy', height - margin.bottom);
+                        .attr('cy', height);
 
                     point.enter()
                         .append('circle')
@@ -340,7 +350,7 @@ angular.module('starter', [
                             }
                             return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                         })
-                        .attr('cy', height - margin.bottom);
+                        .attr('cy', height);
 
                     point.transition()
                         .duration(duration)
@@ -393,17 +403,9 @@ angular.module('starter', [
                         .data(function (d) {
                             return d.values;
                         })
-                        .attr('y', height - margin.bottom - margin.textTop)
+                        .attr('y', height - margin.bottom + margin.textTop)
                         .text(function (d) {
-                            if (d.name === 'today') {
-                                if (d.value.tmn !== -50) {
-                                    return d.value.tmn + '˚';
-                                }
-                                if (d.value.tmx !== -50) {
-                                    return d.value.tmx + '˚';
-                                }
-                            }
-                            return '';
+                            return d.value.t3h;
                         });
 
                     texts.enter()
@@ -416,23 +418,15 @@ angular.module('starter', [
                         .attr('x', function (d, i) {
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
-                        .attr('y', height - margin.bottom - margin.textTop)
+                        .attr('y', height - margin.bottom + margin.textTop)
                         .text(function (d) {
-                            if (d.name === 'today') {
-                                if (d.value.tmn !== -50) {
-                                    return d.value.tmn + '˚';
-                                }
-                                if (d.value.tmx !== -50) {
-                                    return d.value.tmx + '˚';
-                                }
-                            }
-                            return '';
+                            return d.value.t3h;
                         });
 
                     texts.transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top - margin.textTop;
+                            return y(d.value.t3h) - margin.bottom + margin.textTop;
                         });
 
                     texts.exit()
@@ -465,8 +459,8 @@ angular.module('starter', [
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
-                var duration = 1000;
-                var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                var duration = 0;
+                var margin = {top: 5, right: 0, bottom: 5, left: 0, textTop: 15};
                 var width, height, x, y;
                 var svg;
 
@@ -517,18 +511,25 @@ angular.module('starter', [
                         });
 
                     rects.enter().append('rect')
-                        .attr('class', 'rect');
+                        .attr('class', function (d) {
+                            if (d.week == '오늘') {
+                                return 'rect-today';
+                            }
+                            return 'rect-other';
+                        });
 
                     rects.exit().remove();
 
                     rects.attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                            return x.rangeBand() * i + x.rangeBand() / 2 - 10;
                         })
-                        .attr('width', 2)
+                        .attr('width', 20)
                         .attr("y", function (d) {
                             return y(d.tmn);
                         })
                         .attr("height", 0)
+                        .attr("rx", 10)
+                        .attr("ry", 10)
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
@@ -536,6 +537,77 @@ angular.module('starter', [
                         })
                         .attr('height', function (d) {
                             return y(d.tmn) - y(d.tmx);
+                        });
+
+                    // draw triangle-up
+                    var triangleUp = svg.selectAll('.bar-triangle-up')
+                        .data(data);
+
+                    triangleUp.enter()
+                        .append('g')
+                        .attr('class', 'bar-triangle-up');
+
+                    var upPaths = triangleUp.selectAll('path')
+                        .data(function (d) {
+                            return d.values;
+                        });
+
+                    upPaths.enter().append('path')
+                        .attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmn) - margin.textTop - 13;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py + 5) + ' L' + (px + 8) + ' ' + (py + 5) + ' z';
+                        })
+                        .style("fill", "white");
+
+                    upPaths.exit().remove();
+
+                    upPaths.attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmn) - margin.textTop - 13;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py + 5) + ' L' + (px + 8) + ' ' + (py + 5) + ' z';
+                        })
+                        .transition()
+                        .duration(duration)
+                        .attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmx) + 2;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py + 5) + ' L' + (px + 8) + ' ' + (py + 5) + ' z';
+                        });
+
+                    // draw triangle-down
+                    var triangleDown = svg.selectAll('.bar-triangle-down')
+                        .data(data);
+
+                    triangleDown.enter()
+                        .append('g')
+                        .attr('class', 'bar-triangle-down');
+
+                    var downPaths = triangleDown.selectAll('path')
+                        .data(function (d) {
+                            return d.values;
+                        });
+
+                    downPaths.enter().append('path')
+                        .attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmn) - 2;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py - 5) + ' L' + (px + 8) + ' ' + (py - 5) + ' z';
+                        })
+                        .style("fill", "white");
+
+                    downPaths.exit().remove();
+
+                    downPaths.attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmn) - 2;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py - 5) + ' L' + (px + 8) + ' ' + (py - 5) + ' z';
+                        })
+                        .transition()
+                        .attr('d', function(d, i) {
+                            var px = x.rangeBand() * i + x.rangeBand() / 2;
+                            var py = y(d.tmn) - 2;
+                            return 'M' + px +' '+ py + ' L' + (px - 8) + ' ' + (py - 5) + ' L' + (px + 8) + ' ' + (py - 5) + ' z';
                         });
 
                     // draw max value
@@ -560,18 +632,18 @@ angular.module('starter', [
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
-                            return y(d.tmn) - margin.top - margin.textTop;
+                            return y(d.tmn) - margin.textTop;
                         })
                         .attr('dy', margin.top)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
-                            return d.tmx + '˚';
+                            return d.tmx;
                         })
                         .attr('class', 'text-today')
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.tmx) - margin.top - margin.textTop;
+                            return y(d.tmx) + margin.textTop;
                         });
 
                     // draw min value
@@ -596,18 +668,18 @@ angular.module('starter', [
                             return x.rangeBand() * i + x.rangeBand() / 2;
                         })
                         .attr('y', function (d) {
-                            return y(d.tmn);
+                            return y(d.tmn) - margin.textTop;
                         })
                         .attr('dy', margin.bottom)
                         .attr('text-anchor', 'middle')
                         .text(function (d) {
-                            return d.tmn + '˚';
+                            return d.tmn;
                         })
                         .attr('class', 'text-today')
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
-                            return y(d.tmn);
+                            return y(d.tmn) - margin.textTop;
                         });
 
                     // draw point

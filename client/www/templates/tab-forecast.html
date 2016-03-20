@@ -1,193 +1,238 @@
-<ion-view hide-nav-bar="{{runAdmob}}">
-    <ion-content delegate-handle="body" scroll="false">
-        <div class="main-content"
-             ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
-            <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
-                <div class="col" style="height: 100%">
-                    <div class="row row-no-padding top-time" style="height: 16%;"><p ng-style="{'font-size': topTimeSize+'px'}">{{currentTimeString}}</p></div>
-                    <div class="row row-no-padding" style="height: 84%; margin: auto">
-                        <div class="col" style="margin: auto">
-                            <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
-                                <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
-                                    {{address}}</p>
-                            </div>
-                            <div class="row row-no-padding" ng-style="{'height':bigDigitSize*0.9+'px'}">
-                                <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
-                                    <div class="row row-no-padding" style="height: 100%">
-                                        <div class="col big-digit" style="width: 54%; height: 100%"><p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
-                                        </div>
-                                        <div class="col" style="width: 46%;">
-                                            <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
-                                                 ng-if="currentWeather.t1h!==undefined">
-                                                <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
-                                            </div>
-                                            <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
-                                                 ng-if="currentWeather.skyIcon">
-                                                <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row row-no-padding region-sum" ng-style="{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
-                                <p ng-style="{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
-                            </div>
+<ion-view>
+    <md-toolbar style="background-color: rgba(63,81,181,0);">
+        <div class="md-toolbar-tools">
+            <md-button class="md-icon-button" aria-label="Settings" ng-click="toggleLeft()">
+                <md-icon md-svg-icon="img/icons/ic_menu_white_24px.svg"></md-icon>
+            </md-button>
+            <div flex></div>
+            <md-button class="md-icon-button" aria-label="Search" ng-click="toggleRight()">
+                <md-icon md-svg-icon="img/icons/ic_search_white_24px.svg"></md-icon>
+            </md-button>
+        </div>
+    </md-toolbar>
+
+    <section flex layout="row">
+        <md-sidenav class="md-sidenav-left md-whiteframe-4dp" md-component-id="left" md-disable-backdrop>
+            <md-toolbar>
+                <h1 class="md-toolbar-tools">설정</h1>
+            </md-toolbar>
+            <md-content>
+                <md-list ng-controller="SettingCtrl" layout-fill="">
+                    <md-list-item class="secondary-button-padding">
+                        버전
+                        <div flex></div>
+                        {{version}}
+                    </md-list-item>
+                    <md-list-item class="secondary-button-padding" ng-click="openMarket()">
+                        평가하기
+                        <div flex></div>
+                        <md-icon md-svg-src="img/icons/ic_keyboard_arrow_right_black_24px.svg"></md-icon>
+                    </md-list-item>
+                    <md-list-item class="secondary-button-padding" ng-click="openInfo($event)">
+                        정보
+                        <div flex></div>
+                        <md-icon md-svg-src="img/icons/ic_keyboard_arrow_right_black_24px.svg"></md-icon>
+                    </md-list-item>
+                </md-list>
+            </md-content>
+        </md-sidenav>
+
+        <ion-content has-bouncing="false" scrollbar-y="false" direction="y">
+            <md-content flex layout="column">
+                <md-content layout="column" class="md-bg-primary" style="padding: 16px 8px 0px 8px; height: 275px" md-whiteframe="1">
+                    <div flex layout="column" layout-align="center center">
+                        <span class="md-body-1 md-fg-background">{{address}}</span>
+                        <div layout="row" layout-align="center center">
+                            <span class="md-display-3 md-fg-background"
+                                  style="opacity: 0.870588; letter-spacing: -5px"
+                                  ng-if="currentWeather.t1h !== undefined">{{currentWeather.t1h}}
+                            </span>
+                            <span class="md-display-3 md-accent-color" style="opacity: 0.870588">˚</span>
+                            <div layout="column" layout-align="start end" style="height: 48px; width: 48px; background-size: 48px;"
+                                 ng-style="{'background-image':'url(img/'+currentWeather.skyIcon+'-Big.png)'}"></div>
                         </div>
+                        <p class="md-body-2 md-fg-background">{{currentWeather.summary}}</p>
                     </div>
+                    <div layout="row">
+                        <span class="md-caption md-fg-background">{{currentTimeString}}</span>
+                        <span flex></span>
+                        <span class="md-caption md-fg-background">{{dayTable[7].tmn}}˚/{{dayTable[7].tmx}}˚</span>
+                    </div>
+                </md-content>
+                <md-card>
+                    <md-tabs md-selected="selectedTimeIndex" md-autoselect md-dynamic-height md-border-bottom>
+                        <md-tab label="시간별">
+                            <!--<md-tab label="어제">-->
+                            <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
+                                        scrollbar-x="false" style="width: 100%; height: 100%">
+                                <md-list layout="row" ng-style="{'width':timeWidth +'px'}" style="padding: 8px 0px 0px">
+                                    <md-list-item layout="column" style="padding: 0px 5px" ng-repeat="value in timeTable">
+                                        <div class="md-list-item-text">
+                                            <span class="md-fg-background">{{value.time}}</span>
+                                        </div>
+                                        <div layout="column" layout-align="start end" style="height: 40px;width: 40px; background-size: 40px;"
+                                             ng-style="{'background-image':'url(img/'+value.skyIcon+'.png)'}">
+                                            <span class="md-body-2 md-fg-primary-hue-1" ng-if="value.pop !== -1 && value.pop !== 0">{{value.pop}}</span>
+                                            <span class="md-body-2 md-fg-primary-hue-1" ng-if="value.rn1 !== 0">{{value.rn1}}</span>
+                                        </div>
+                                        <!--<img style="height: 40px; width: 40px" ng-src="img/{{value.skyIcon}}.png">-->
+                                    </md-list-item>
+                                </md-list>
+                                <div ng-short-chart style="width: 100%; height: 180px; margin-bottom: 8px"></div>
+                            </ion-scroll>
+                        </md-tab>
+                        <!--<md-tab label="오늘"></md-tab>-->
+                        <!--<md-tab label="내일"></md-tab>-->
+                        <md-tab label="요일별">
+                            <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
+                                        scrollbar-x="false" style="width: 100%; height: 100%">
+                                <md-list layout="row" ng-style="{'width':dayWidth +'px'}" style="padding: 8px 0px 0px">
+                                    <md-list-item layout="column" style="padding: 0px 5px" ng-repeat="value in dayTable">
+                                        <div class="md-list-item-text">
+                                            <span class="md-fg-background">{{value.week}}</span>
+                                        </div>
+                                        <div layout="column" layout-align="start end" style="height: 40px;width: 40px; background-size: 40px;"
+                                             ng-style="{'background-image':'url(img/'+value.skyIcon+'.png)'}">
+                                            <span class="md-body-2 md-fg-primary-hue-1" ng-if="value.pop !== -1 && value.pop !== 0">{{value.pop}}</span>
+                                            <span class="md-body-2 md-fg-primary-hue-1" ng-if="value.rn1 !== -1 && value.rn1 !== 0">{{value.rn1}}</span>
+                                        </div>
+                                    </md-list-item>
+                                </md-list>
+                                <div ng-mid-chart style="width: 100%; height: 180px; margin-bottom: 8px"></div>
+                            </ion-scroll>
+                        </md-tab>
+                    </md-tabs>
+                </md-card>
+                <md-card layout="column">
+                    <md-card-title style="padding: 24px 16px 4px 16px">
+                        <span class="md-subhead">{{currentWeather.time}}</span>
+                    </md-card-title>
+                    <md-card-content layout="column">
+                        <div layout="row" style="padding: 0px 0px 4px">
+                            <div flex="45" layout="column">
+                                <span class="md-body-1">온도 {{currentWeather.t1h}}˚</span>
+                                <span class="md-body-1">체감온도 {{currentWeather.sensorytem}}˚</span>
+                                <span class="md-body-1">바람 {{currentWeather.wsd}}m/s</span>
+                            </div>
+                            <div flex="45" layout="column">
+                                <span class="md-body-1">습도 {{currentWeather.reh}}%</span>
+                                <span class="md-body-1">강수량 {{currentWeather.rn1}}mm</span>
+                            </div>
+                            <div flex="10" layout="column"></div>
+                        </div>
+                        <div layout="row" lang="en">
+                            <div flex="45" layout="column">
+                                <span class="md-body-1">PM10 {{currentWeather.arpltn.pm10Value}}㎍/㎥</span>
+                                <span class="md-body-1">CAI {{currentWeather.arpltn.khaiValue}}</span>
+                                <span class="mb-caption">O3 {{currentWeather.arpltn.o3Value}}ppm</span>
+                                <span class="mb-caption">NO2 {{currentWeather.arpltn.no2Value}}ppm</span>
+                            </div>
+                            <div flex="45" layout="column">
+                                <span class="md-body-1">PM25 {{currentWeather.arpltn.pm25Value}}㎍/㎥</span>
+                                <span class="mb-caption">Station {{currentWeather.arpltn.stationName}}</span>
+                                <span class="mb-caption">CO {{currentWeather.arpltn.coValue}}ppm</span>
+                                <span class="mb-caption">SO2 {{currentWeather.arpltn.so2Value}}ppm</span>
+                            </div>
+                            <div flex="10"></div>
+                        </div>
+                    </md-card-content>
+                    <div layout="column" ng-repeat="dayInfo in dayTable" ng-if="$index>5 && $index < 10">
+                        <md-card-title style="padding: 0px 16px 4px 16px">
+                            <!--yesterday-->
+                            <span class="md-subhead" ng-if="$index == 6" style="opacity: 0.54;">{{dayInfo.date}}</span>
+                            <span class="md-subhead" ng-if="$index > 6">{{dayInfo.date}}</span>
+                        </md-card-title>
+                        <md-card-content layout="column">
+                            <div layout="row" style="padding: 0px 0px 4px">
+                                <div flex="45" layout="column">
+                                    <span class="md-body-1">온도 {{dayInfo.tmn}}˚/{{dayInfo.tmx}}˚</span>
+                                    <span class="md-body-1" ng-if="dayInfo.rn1 >= 0">일강수량 {{dayInfo.rn1}}mm</span>
+                                    <span class="md-body-1" ng-if="dayInfo.ultrvStr">자외선 {{dayInfo.ultrvStr}}</span>
+                                    <!--서버 준비되면 오픈-->
+                                    <!--<span class="md-body-1">미세먼지예보 </span>-->
+                                </div>
+                                <div flex="45" layout="column">
+                                    <!--추후 최저 최고 습도로 변경-->
+                                    <!--<span class="md-body-1">습도 {{dayInfo.rmn}}%/{{dayInfo.rmx}}%</span>-->
+                                    <span class="md-body-1">습도 {{dayInfo.reh}}%</span>
+                                    <span class="md-body-1" ng-if="dayInfo.pop > 0">강수확률 {{dayInfo.pop}}%</span>
+                                    <span class="md-body-1" ng-if="dayInfo.fsnStr">식중독 {{dayInfo.fsnStr}}</span>
+                                </div>
+                                <div flex="10" layout="column"></div>
+                            </div>
+                        </md-card-content>
+                    </div>
+                </md-card>
+            </md-content>
+        </ion-content>
+
+        <md-sidenav class="md-sidenav-right md-whiteframe-4dp" md-component-id="right">
+            <md-toolbar>
+                <h1 class="md-toolbar-tools">도시검색</h1>
+            </md-toolbar>
+            <md-content layout-padding ng-controller="SearchCtrl as ctrl" layout="column">
+                <form ng-submit="$event.preventDefault()">
+                    <md-autocomplete md-selected-item="ctrl.selectedItem"
+                                     md-search-text-change="ctrl.searchTextChange(ctrl.searchText)"
+                                     md-search-text="ctrl.searchText"
+                                     md-selected-item-change="ctrl.selectedItemChange(item)"
+                                     md-items="item in ctrl.querySearch(ctrl.searchText)"
+                                     md-item-text="item.display" md-min-length="0" placeholder="도시명을 입력하세요."
+                                     md-floating-label="도시이름">
+                        <md-item-template>
+                            <span md-highlight-text="searchText" md-highlight-flags="^i">{{item.display}}</span>
+                        </md-item-template>
+                        <!--<md-not-found>-->
+                            <!--No states matching "{{searchText}}" were found.-->
+                        <!--</md-not-found>-->
+                    </md-autocomplete>
+                </form>
+                <div layout="row" layout-align="end">
+                    <md-button class="md-warn" style="margin:0;padding:0">수정</md-button>
                 </div>
-            </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
-                <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
-                            scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
-                        <div class="row row-no-padding chart-content">
-                            <div ng-short-chart style="width: 100%; height: 100%"></div>
-                        </div>
-                        <div class="row row-no-padding table-content">
-                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.day}}</p>
-                                </div>
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.tempIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.skyIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
-                                </div>
+                <ion-scroll class="city-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                            delegate-handle="cityList">
+                    <div layout="column">
+                        <div ng-repeat="city in cityList" ng-click="OnSelectCity($index)" layout="row">
+                            <div flex layout="column" layout-align="center start">
+                                <span class="md-subhead">{{city.address[1]}}</span>
+                                <span class="md-caption">{{city.address[0]}}</span>
+                            </div>
+                            <div flex layout="row" layout-align="center center">
+                                <img ng-if="city.skyIcon" style="width: 48px; height: 48px; background-color: grey" src="img/{{city.skyIcon}}-Big.png">
+                            </div>
+                            <div flex layout="column" layout-align="center end">
+                                <span class="md-body-1">{{city.t1h}}˚</span>
+                                <span class="md-caption">{{city.tmn}}˚/{{city.tmx}}˚</span>
                             </div>
                         </div>
                     </div>
                 </ion-scroll>
-            </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='mid'"
-                 ng-click="changeForecastType()">
-                <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
-                            scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':dayWidth +'px'}">
-                        <div class="row row-no-padding chart-content">
-                            <div ng-mid-chart style="width: 100%; height: 100%"></div>
-                        </div>
-                        <div class="row row-no-padding table-content">
-                            <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p></p>
-                                </div>
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.week}}</p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.skyIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.humidityIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </ion-scroll>
-            </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='detail'"
-                 ng-click="changeForecastType()" style="width: 100%">
-                <ion-scroll class="detail-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
-                            delegate-handle="detailList" style="width:90%;margin: 0 auto;">
-                    <div class="list" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;">
-                        <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>미세먼지</p></div>
-                            <div class="col col-33 detail-image">
-                                <div><img src="img/PM10.png" style="width: 40px"></div>
-                            </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
-                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
-                            </div>
-                        </div>
-                        <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>초미세먼지</p></div>
-                            <div class="col col-33 detail-image">
-                                <div><img src="img/PM10.png" style="width: 40px"></div>
-                            </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
-                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
-                            </div>
-                        </div>
-                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem < 0">
-                                <div class="col col-33 detail-text"><p>체감온도</p></div>
-                                <div class="col col-33 detail-image">
-                                    <div><img src="img/SensoryTem.png" style="width: 40px"></div>
-                                </div>
-                                <div class="col col-33 detail-text"><p>{{currentWeather.sensorytemStr}}
-                                    <br>{{currentWeather.sensorytem}}˚</p>
-                                </div>
-                        </div>
-                        <div class="item row detail-item" ng-if="currentWeather.rn1Str">
-                                <div class="col col-33 detail-text"><p>{{currentWeather.ptyStr}}</p></div>
-                                <div class="col col-33 detail-image">
-                                    <div><img src="img/Umbrella.png" style="width: 40px"></div>
-                                </div>
-                                <div class="col col-33 detail-text"><p>{{currentWeather.rn1Str}}</p>
-                                </div>
-                        </div>
-                        <div class="item row detail-item" ng-if="currentWeather.ultrvStr">
-                            <div class="col col-33 detail-text"><p>자외선</p></div>
-                            <div class="col col-33 detail-image">
-                                <div><img src="img/Ultrv.png" width="40px"></div>
-                            </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
-                        </div>
-                        <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>바람</p></div>
-                            <div class="col col-33 detail-image">
-                                <div><img src="img/Wind.png" width="40px"></div>
-                            </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.wsd}}<small>m/s</small></p>
-                            </div>
-                        </div>
-                    </div>
-                </ion-scroll>
-            </div>
-        </div>
-    </ion-content>
-    <div class="guide-content" ng-if="!skipGuide" ng-click="onClickGuide()">
-        <div class="guide-row" style="height: 15%;">
-            <div class="guide-col guide-col-right-top">
-                <span>현재 위치 및</span><br/>
-                <span>업데이트</span>
-            </div>
-            <div class="guide-col guide-col-left-top">
-                <img src="img/DownGuide.png" class="guide-img-top">
-            </div>
-        </div>
-        <div class="guide-row" style="height: 85%;">
-            <div class="guide-col guide-col-left-middle">
-                <span>어제 날씨</span><br/>
-                <img src="img/LeftGuide.png" class="guide-img">
-            </div>
-            <div class="guide-col guide-col-right-middle">
-                <span>내일 날씨</span><br/>
-                <img src="img/RightGuide.png" class="guide-img">
-            </div>
-        </div>
-    </div>
+            </md-content>
+        </md-sidenav>
+    </section>
+
+    <md-fab-speed-dial id='fab-content' md-direction="up" md-open="isOpen" class="md-fab-bottom-right md-scale" ng-hide="isOpenSideNav()">
+        <md-fab-trigger>
+            <md-button aria-label="Plus" class="md-fab">
+                <md-icon md-svg-src="img/icons/ic_add_white_24px.svg"></md-icon>
+            </md-button>
+        </md-fab-trigger>
+
+        <md-fab-actions>
+            <md-button aria-label="Refresh" class="md-fab md-raised md-mini" ng-click="doRefresh()">
+                <md-tooltip md-visible="tooltipVisible" md-direction="left">
+                    Refresh
+                </md-tooltip>
+                <md-icon md-svg-src="img/icons/ic_refresh_black_24px.svg "></md-icon>
+            </md-button>
+            <md-button aria-label="Share" class="md-fab md-raised md-mini">
+                <md-tooltip md-visible="tooltipVisible" md-direction="left">
+                    Share
+                </md-tooltip>
+                <md-icon md-svg-src="img/icons/ic_share_arrow.svg "></md-icon>
+            </md-button>
+        </md-fab-actions>
+    </md-fab-speed-dial>
+
 </ion-view>

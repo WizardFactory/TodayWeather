@@ -15,26 +15,191 @@ $royal:                           #886aea !default;
 $dark:                            #444 !default;
 */
 
-$bar-height: 50px;
-//for ads on bar
-$ios-statusbar-height: 0px;
+//$bar-height: 56px;
+////for ads on bar
+//$ios-statusbar-height: 0px;
 
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
+/*
+* Noto Sans KR (korean) http://www.google.com/fonts/earlyaccess
+ */
 @font-face {
-  font-family: "Bareun Dotum Pro 1";
-  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 100;
+  src: url(../fonts/NotoSansKR-Thin.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 300;
+  src: url(../fonts/NotoSansKR-Light.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 400;
+  src: url(../fonts/NotoSansKR-Regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 500;
+  src: url(../fonts/NotoSansKR-Medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 700;
+  src: url(../fonts/NotoSansKR-Bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans KR';
+  font-style: normal;
+  font-weight: 900;
+  src: url(../fonts/NotoSansKR-Black.woff2) format('woff2');
 }
 
 @font-face {
-  font-family: "Bareun Dotum Pro 2";
-  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100;
+  src: url(../fonts/Roboto-Thin.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300;
+  src: url(../fonts/Roboto-Light.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: url(../fonts/Roboto-Regular.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  src: url(../fonts/Roboto-Medium.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  src: url(../fonts/Roboto-Bold.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 900;
+  src: url(../fonts/Roboto-Black.ttf) format('truetype');
 }
 
-@font-face {
-  font-family: "Bareun Dotum Pro 3";
-  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
+$font-family-base: 'Noto Sans KR', sans-serif !default;
+
+/*  한국어 */
+:lang(ko) {
+  font-family: 'Noto Sans KR', sans-serif;
+}
+/* 일본어 */
+:lang(ja) {
+  font-family: 'Noto Sans JP', sans-serif;
+}
+/* 중국어 (간체) */
+:lang(zh-Hans) {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+:lang(en) {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+//@font-face {
+//  font-family: 'Material Icons';
+//  font-style: normal;
+//  font-weight: 400;
+//  src: local('Material Icons'), local('MaterialIcons-Regular'), url(../fonts/Material-Icons-v12) format('woff');
+//}
+//
+//.material-icons {
+//  font-family: 'Material Icons';
+//  font-weight: normal;
+//  font-style: normal;
+//  font-size: 24px;
+//  line-height: 1;
+//  letter-spacing: normal;
+//  text-transform: none;
+//  display: inline-block;
+//  white-space: nowrap;
+//  word-wrap: normal;
+//  direction: ltr;
+//  text-rendering: optimizeLegibility;
+//  -webkit-font-smoothing: antialiased;
+//}
+
+
+//var A_LIGHT = [0.87, 0.54, 0.26, 0.12];
+//var A_DARK = [1.0, 0.7, 0.3, 0.12];
+
+$primary-color: #03A9F4; //light blue
+$primary-hue-1: #4FC3F7; //light blue 300
+$primary-hue-2: #0277BD; //light blue 800
+$warn-color: #FF5722; //Deep Orange 500
+$accent-color: #FF5252; //pink A200
+$background-color: #9E9E9E; //grey 500
+$background-hue1: #F5F5F5; //grey 100
+$background-hue2: #9E9E9E; //grey
+
+.md-bg-primary {
+  background-color: $primary-color;
+}
+
+.md-accent-color {
+  color: $accent-color;
+}
+
+.md-fg-background {
+  color: #ffffff;
+}
+
+.md-fg-primary-hue-1 {
+  color: $primary-hue-1;
+}
+
+.md-display-4, .md-display-3, .md-display-2, .md-display-1 {
+  opacity: 0.54;
+}
+
+.md-headline, .md-title, .md-subhead, .md-body-2, .md-body-1 {
+  opacity: 0.870588;
+}
+
+.md-caption {
+  opacity: 0.54;
+}
+
+.md-button {
+  opacity: 0.870588;
+}
+
+.md-display-4, .md-display-3, .md-display-2, .md-display-1 {
+  opacity: 0.54;
+}
+
+.md-headline, .md-title, .md-subhead, .md-body-2, .md-body-1 {
+  opacity: 0.870588;
+}
+
+.md-caption {
+  opacity: 0.54;
+}
+
+.md-button {
+  opacity: 0.870588;
 }
 
 // Include all of Ionic
@@ -52,10 +217,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin-bottom: 0;
 }
 
-.col {
-  font-family: "Bareun Dotum Pro 1";
-}
-
 .row + .row {
    margin-top: 0;
 }
@@ -69,7 +230,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   display: table-cell;
   vertical-align: middle;
   //font-size: 14px;
-  font-family: 'Bareun Dotum Pro 3';
 }
 
 .region {
@@ -82,7 +242,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   text-align: center;
   margin: 0;
   //font-size: 21px;
-  font-family: 'Bareun Dotum Pro 2';
 }
 
 .region-sum {
@@ -95,7 +254,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   text-align: center;
   margin: 0;
   //font-size: 19px;
-  font-family: 'Bareun Dotum Pro 2';
 }
 
 .big-digit {
@@ -105,7 +263,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .big-digit p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'Bareun Dotum Pro 1';
   //font-size: 66px;
   text-align: right;
   margin: 0;
@@ -134,7 +291,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .small-time p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'Bareun Dotum Pro 3';
   text-align: center;
   //font-size: 14px;
   margin: 0;
@@ -162,7 +318,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .small-digit p {
   display: table-cell;
   vertical-align: middle;
-  font-family: 'Bareun Dotum Pro 1';
   text-align: center;
   //font-size: 15px;
   margin: 0;
@@ -175,7 +330,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   background-color: #231815;
   opacity: 0.8;
   color: white;
-  font-family: "Bareun Dotum Pro 1";
 }
 
 .guide-row {
@@ -219,51 +373,49 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 /* time chart style */
 .line-today {
-  stroke: #ffffff;
+  stroke: $primary-color;
   stroke-width: 2px;
   fill: none;
 }
 
 .line-yesterday {
-  stroke: #d0d0d0;
+  stroke: $background-hue1;
   stroke-width: 1px;
   fill: none;
 }
 
 .circle-today {
-  stroke: #ffffff;
+  stroke: $primary-color;
   stroke-width: 1px;
-  fill: #ffffff;
+  fill: $primary-color;
 }
 
 .circle-yesterday {
-  stroke: #d0d0d0;
+  stroke: $background-hue1;
   stroke-width: 1px;
-  fill: #d0d0d0;
+  fill: $background-hue1;
 }
 
 .circle-today-current {
-  stroke: #ffffff;
+  stroke: $accent-color;
   stroke-width: 2px;
-  fill: #ff0000;
+  fill: $accent-color;
 }
 
 .circle-yesterday-current {
-  stroke: #d0d0d0;
+  stroke: $background-hue1;
   stroke-width: 2px;
-  fill: #d0d0d0;
+  fill: $background-hue1;
 }
 
 .text-today {
   fill: #ffffff;
-  font-family: 'Bareun Dotum Pro 1';
-  font-size: 20px;
+  font-size: 14px;
 }
 
 .text-yesterday {
-  fill: #d0d0d0;
-  font-family: 'Bareun Dotum Pro 1';
-  font-size: 20px;
+  fill: #ffffff;
+  font-size: 14px;
 }
 
 .circle-hidden, .text-hidden {
@@ -271,10 +423,15 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 /* day chart style */
-.rect {
-  fill: #ffffff;
+.rect-today {
+  fill: $primary-hue-2;
 }
 
+.rect-other {
+  fill: $primary-hue-1;
+}
+
+/* detail weather style */
 .detail-image {
   height: 100%;
   display: table;
@@ -299,7 +456,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .detail-text p {
   display: table-cell;
   vertical-align: middle;
-  font-family: "Bareun Dotum Pro 3";
   line-height: 24px;
   font-size: 20px;
   padding-left: 5px;
@@ -364,7 +520,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   background-color: transparent;
   color: white;
   font-size: 22px;;
-  font-family: "Bareun Dotum Pro 2";
 }
 
 .search-content img{
@@ -379,7 +534,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   padding-top: 6px;
   padding-left: 4px;
   color: white;
-  font-family: "Bareun Dotum Pro 3";
   line-height: 24px;
   font-size: 20px;
 }
@@ -390,7 +544,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   text-align: center;
   color: white;
   font-size: 20px;
-  font-family: 'Bareun Dotum Pro 3';
 }
 
 .city-list {
@@ -509,3 +662,36 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
     height: 75%;
   }
 }
+
+md-content {
+  background-color: transparent;
+}
+
+md-content md-tabs {
+  background: #80DEEA;
+  //border: 1px solid #e1e1e1;
+}
+
+md-content md-tabs md-tabs-wrapper {
+  background: white;
+}
+
+//md-fab-speed-dial.md-fab-bottom-right {
+//  bottom: 76px;
+//}
+
+md-fab-speed-dial md-fab-trigger {
+  transition: all 0.3s ease-in-out;
+  transform: scale(1);
+}
+
+md-fab-speed-dial.md-scale.ng-hide-add.ng-hide-add-active,
+md-fab-speed-dial.md-fling.ng-hide-add.ng-hide-add-active {
+  display: flex !important;
+}
+
+md-fab-speed-dial.md-scale.ng-hide md-fab-trigger,
+md-fab-speed-dial.md-fling.ng-hide md-fab-trigger {
+  transform: scale(0);
+}
+
