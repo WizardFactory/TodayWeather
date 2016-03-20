@@ -34,10 +34,10 @@ router.get('/past', function(req, res) {
 });
 
 router.get('/shortrss', function(req, res) {
-    townRss.mainTask();
-    setTimeout(function () {
+    townRss.mainTask(function() {
+        log.info("RSS:res.send()");
         res.send();
-    }, 1000*60); //1min
+    });
 });
 
 router.get('/midrss', function(req, res) {

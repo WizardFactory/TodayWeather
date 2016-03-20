@@ -80,6 +80,10 @@ function ControllerTown() {
                             //log.info('found same date');
                             break;
                         }
+                        else if (shortList[i].date >= requestTime.date) {
+                            log.warn('Fail to find current time so start next day from request time');
+                            break;
+                        }
                     }
 
                     log.silly('route S> short remove count :', i);
@@ -190,9 +194,9 @@ function ControllerTown() {
                             req.short[j].sky = rssList[i].sky;
                             req.short[j].t3h = Math.round(rssList[i].temp);
                             if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
-                                req.short[j].tmn = Math.round(rssList[i].tmn);
+                                req.short[j].tmn = rssList[i].tmn;
                             } else if(req.short[j].time === '1500' && rssList[i].tmn != -999) {
-                                req.short[j].tmx = Math.round(rssList[i].tmx);
+                                req.short[j].tmx = rssList[i].tmx;
                             }
                             break;
                         }
@@ -209,12 +213,12 @@ function ControllerTown() {
                         item.sky = rssList[i].sky;
                         item.t3h = Math.round(rssList[i].temp);
                         if(item.time === '0600' && rssList[i].tmn != -999){
-                            item.tmn = Math.round(rssList[i].tmn);
+                            item.tmn = rssList[i].tmn;
                         } else{
                             item.tmn = -50;
                         }
                         if(item.time === '1500' && rssList[i].tmx != -999){
-                            item.tmx = Math.round(rssList[i].tmx);
+                            item.tmx = rssList[i].tmx;
                         }else{
                             item.tmx = -50;
                         }
@@ -332,14 +336,13 @@ function ControllerTown() {
                     }
 
                     log.debug(shortestList.length);
+                    //log.info(listShortest);
 
                     var nowDate = self._getShortestTimeValue(+9);
-                    var resultItem = shortestList.filter(function (shortest) {
+                    req.shortest = shortestList.filter(function (shortest) {
                         return nowDate.date + nowDate.time <= shortest.date + shortest.time;
                     });
 
-                    //log.info(listShortest);
-                    req.shortest = resultItem;
                     next();
                 });
             });
@@ -404,6 +407,8 @@ function ControllerTown() {
                     resultItem.sensorytem = Math.round(self._getNewWCT(resultItem.t1h, resultItem.wsd));
                     resultItem.sensorytemStr = self._parseSensoryTem(resultItem.sensorytem);
                     //log.info(listCurrent);
+                    //지수 계산 이후에 반올림함.
+                    resultItem.t1h = Math.round(resultItem.t1h);
                     req.current = resultItem;
                     next();
                 });
@@ -477,10 +482,7 @@ function ControllerTown() {
 
         var regionName = req.params.region;
         var cityName = req.params.city;
-        var townName = '';
-        if(req.params.town != undefined){
-            townName = req.params.town;
-        }
+
         meta.method = 'getMid';
         meta.region = regionName;
         meta.city = cityName;
@@ -569,6 +571,13 @@ function ControllerTown() {
         return this;
     };
 
+    /**
+     *
+     * @param current
+     * @param short
+     * @param dailyData
+     * @private
+     */
     this._appendLifeIndexToCurrent = function (current, short, dailyData) {
         var i;
         //for (i=0;i<short.length;i++) {
@@ -738,7 +747,13 @@ function ControllerTown() {
                     }
 
                     try {
-                        req.pastData = currentList;
+                        var requestTime = self._getTimeValue(9-7*24); //지난주 동일 요일까지
+
+                        //log.info(parseInt(curItem.date), parseInt(requestTime.date));
+                        req.pastData = currentList.filter(function (current) {
+                            return parseInt(current.date) >= parseInt(requestTime.date);
+                        });
+
                         daySummaryList = self._getDaySummaryList(req.pastData);
                         self._mergeList(req.midData.dailyData, daySummaryList);
                     }
@@ -819,6 +834,9 @@ function ControllerTown() {
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, short.date);
+            daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
+            daySummary.taMin = daySummary.taMin === undefined ? -50:daySummary.taMin;
+
             if (daySummary.taMax < short.t3h) {
                 daySummary.taMax = short.t3h;
             }
@@ -849,6 +867,8 @@ function ControllerTown() {
 
         req.short.forEach(function (short) {
             var daySum = self._createOrGetDaySummaryList(daySummaryList, short.date);
+            daySum.taMax = daySum.taMax === undefined ? -50:daySum.taMax;
+            daySum.taMin = daySum.taMin === undefined ? -50:daySum.taMin;
             if (daySum.taMax === -50 || daySum.taMin === -50) {
                 log.error("short date:"+short.date+" fail to get daySummary");
                 return;
@@ -860,6 +880,15 @@ function ControllerTown() {
                 short.tmx = daySum.taMax;
             }
         });
+
+        var i = req.short.length - 1;
+        for(;i>=0;i--) {
+            if(req.short[i].reh !== -1) {
+                break;
+            }
+        }
+
+        req.short.splice(i+1, (req.short.length - (i+1)));
 
         next();
 
@@ -935,16 +964,14 @@ ControllerTown.prototype._getShortestTimeValue = function(gmt) {
 ControllerTown.prototype._getCurrentTimeValue = function(gmt) {
     var timeFunction = manager;
     var currentDate = timeFunction.getWorldTime(gmt);
-    var dateString = {
+    return {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8, 10) + '00'
     };
-
-    return dateString;
 };
 
 /**
- *
+ * for short
  * @param gmt
  * @returns {{date: *, time: string}}
  */
@@ -990,7 +1017,7 @@ ControllerTown.prototype._getTimeValue = function(gmt) {
 };
 
 /**
- *
+ * for short
  * @returns {Array}
  */
 ControllerTown.prototype._getTimeTable = function () {
@@ -1030,7 +1057,7 @@ ControllerTown.prototype._getTimeTable = function () {
     }
     else{
         log.error('unknown TimeString');
-        return;
+        return listResult;
     }
 
     log.info('make time table');
@@ -1122,15 +1149,91 @@ ControllerTown.prototype._getShortFromDB = function(regionName, cityName, townNa
 /**
  *
  * @param list
+ * @param invalidValue
+ * @returns {*}
+ * @private
+ */
+ControllerTown.prototype._max = function(list, invalidValue) {
+    var ret;
+    var validList;
+
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    validList.forEach(function (data) {
+        if (data > ret || ret === undefined) {
+            ret = data;
+        }
+    });
+
+    if (ret === undefined) {
+        ret = invalidValue;
+    }
+    return ret;
+};
+
+ControllerTown.prototype._min = function(list, invalidValue) {
+    var ret;
+    var validList;
+
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    validList.forEach(function (data) {
+        if (data < ret || ret === undefined) {
+            ret = data;
+        }
+    });
+
+    if (ret === undefined) {
+        ret = invalidValue;
+    }
+    return ret;
+};
+
+/**
+ *
+ * @param list
+ * @param invalidValue
  * @returns {number}
  * @private
  */
-ControllerTown.prototype._sum = function(list) {
+ControllerTown.prototype._sum = function(list, invalidValue) {
     var total = 0;
     if (!Array.isArray(list)) {
         return -1;
     }
-    list.forEach(function (num) {
+    var validList;
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    validList.forEach(function (num) {
         total += num;
     });
     return total;
@@ -1139,16 +1242,28 @@ ControllerTown.prototype._sum = function(list) {
 /**
  *
  * @param list
+ * @param invalidValue
  * @returns {number}
  * @private
  */
-ControllerTown.prototype._average = function(list) {
+ControllerTown.prototype._average = function(list, invalidValue) {
     var self = this;
 
     if (!Array.isArray(list)) {
         return -1;
     }
-    return Math.round(self._sum(list)/list.length);
+
+    var validList;
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    return Math.round(self._sum(validList)/validList.length);
 };
 
 /**
@@ -1187,9 +1302,7 @@ ControllerTown.prototype._mergeList = function(dstList, srcList) {
             if (dstList[i].date === src.date) {
                 for (var key in src) {
                     //copy all the fields
-                    if (src[key] !== -50) {
-                        dstList[i][key] = src[key];
-                    }
+                    dstList[i][key] = src[key];
                 }
                 return;
             }
@@ -1511,55 +1624,6 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, cb){
 };
 
 /**
- *
- * @param list
- * @param invalidValue
- * @returns {*}
- * @private
- */
-ControllerTown.prototype._getMax = function(list, invalidValue) {
-    var ret;
-    list.forEach(function (data) {
-        if (data !== invalidValue && (data > ret || ret === undefined)) {
-            ret = data;
-        }
-    });
-
-    if (ret === undefined) {
-        ret = invalidValue;
-    }
-    return ret;
-};
-
-/**
- *
- * @param list
- * @param invalidValue
- * @returns {number}
- * @private
- */
-ControllerTown.prototype._getAverage = function(list, invalidValue) {
-    var ret=0;
-    var len=0;
-
-    list.forEach(function (data) {
-        if (data !== invalidValue) {
-            ret += data;
-            len++;
-        }
-    });
-
-    if (len > 0) {
-        ret = Math.round(ret/len);
-    }
-    else {
-        ret = invalidValue;
-    }
-
-    return ret;
-};
-
-/**
  * merge short data with current data
  * @param shortList
  * @param currentList
@@ -1588,6 +1652,9 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
             var newItem = {};
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, curItem.date);
+            daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
+            daySummary.taMin = daySummary.taMin === undefined ? -50:daySummary.taMin;
+
             if (daySummary.taMax < curItem.t1h) {
                 daySummary.taMax = curItem.t1h;
             }
@@ -1601,7 +1668,8 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                 ((parseInt(curItem.date) === parseInt(requestTime.date)) &&
                 parseInt(curItem.time) <= parseInt(requestTime.time))){
                 // 시간이 0시 이거나 3의 배수인 시간일때 데이터를 구성한다
-                if(curItem.time === '0000' || (parseInt(curItem.time) % 3) === 0){
+                // 1시, 2시 같은 경우에는 마지막의 있는 1시, 2시 시간을 버린다.
+                if(curItem.time === '0000' || (parseInt(curItem.time) % 3) === 0) {
                     newItem.time = curItem.time;
                     newItem.date = curItem.date;
                     if(index === 0) {
@@ -1609,46 +1677,40 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                             newItem[string] = curItem[string];
                         });
                     }
-                    else if (index === 1) {
-                        var tmp = {};
-                        tmp = currentList[index - 1];
+                    else {
+                        var prv1;
+                        if (index === 1) {
+                            prv1 = {'t1h':-50, 'rn1':-1, 'sky':-1, 'uuu':-100, 'vvv':-100,
+                                'reh':-1, 'pty':-1, 'lgt':-1, 'vec':-1, 'wsd':-1};
+                        }
+                        else {
+                            prv1 = currentList[index-2];
+                        }
 
-                        if (tmp === undefined || !tmp.hasOwnProperty('sky')) {
+                        var prv2 = currentList[index-1];
+
+                        if (prv1 === undefined || !prv1.hasOwnProperty('sky') ||
+                            prv2 === undefined || !prv2.hasOwnProperty('sky'))
+                        {
                             log.warn(new Error('current is undefined or empty object'));
                             return;
                         }
 
-                        //log.info(tmp);
-                        curString.forEach(function(string){
+                        curString.forEach(function(string) {
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
-                                newItem[string] = self._getMax([tmp[string], curItem[string]], -1);
+                                newItem[string] = self._max([prv1[string], prv2[string], curItem[string]], -1);
                             }
                             else if(string === 'uuu' || string === 'vvv') {
-                                newItem[string] = self._getAverage([tmp[string], curItem[string]], -100);
+                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -100);
                             }
                             else if(string === 't1h') {
-                                newItem[string] = self._getAverage([tmp[string], curItem[string]], -50);
+                                newItem[string] = Math.round(curItem[string]);
+                            }
+                            else if(string === 'rn1') {
+                                newItem[string] = self._sum([prv1[string], prv2[string], curItem[string]], -1);
                             }
                             else{
-                                newItem[string] = self._getAverage([tmp[string], curItem[string]], -1);
-                            }
-                        });
-                    } else {
-                        var prv1 = currentList[index-2];
-                        var prv2 = currentList[index-1];
-                        //var next = currentList[index+1];
-                        curString.forEach(function(string){
-                            if(string === 'sky' || string === 'pty' || string === 'lgt') {
-                                newItem[string] = self._getMax([prv1[string], prv2[string], curItem[string]], -1);
-                            }
-                            else if(string === 'uuu' || string === 'vvv') {
-                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -100);
-                            }
-                            else if(string === 't1h') {
-                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -50);
-                            }
-                            else{
-                                newItem[string] = self._getAverage([prv1[string], prv2[string], curItem[string]], -1);
+                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -1);
                             }
                         });
                     }
@@ -1678,6 +1740,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
             if (shortItem.time === '0600') {
                 currentTmn = (self._createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMin;
+                currentTmn = currentTmn === undefined ? -50: currentTmn;
                 if (currentTmn !== -50) {
                     //당일은 측정된 값과, 예보중에 큰값으로 결정.
                     if (shortItem.date === requestTime.date && shortList[index].tmn !== -50) {
@@ -1691,6 +1754,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
             }
             if (shortItem.time === '1500') {
                 currentTmx = (self._createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
+                currentTmx = currentTmx === undefined ? -50: currentTmx;
                 if (currentTmx !== -50) {
                     //당일은 측정된 값과, 예보중에 큰값으로 결정.
                     if (shortItem.date === requestTime.date && shortList[index].tmx !== -50) {
@@ -1954,7 +2018,12 @@ ControllerTown.prototype._mergeShortWithBasicList = function(shortList, basicLis
         basicList.forEach(function(basicItem) {
             if(shortItem.date === basicItem.date && shortItem.time === basicItem.time){
                 shortString.forEach(function(string){
-                    basicItem[string] = shortItem[string];
+                    if (string === 't3h') {
+                        basicItem[string] = Math.round(shortItem[string]);
+                    }
+                    else {
+                        basicItem[string] = shortItem[string];
+                    }
                 });
             }
         });
@@ -2045,51 +2114,76 @@ ControllerTown.prototype._createOrGetDaySummaryList = function(list, date) {
         }
     }
 
-    list.push({date:date, lgt:-1, pty:-1, reh:-1, rn1:-1, sky:-1, pop:-1, s06:-1, wfAm:'', wfPm:'', t1d:-50, wsd:-1, taMax:-50, taMin:-50});
+    list.push({date:date});
     return list[list.length-1];
 };
 
 /**
  * -1, 0, 1
  * @param list
+ * @param invalidValue
  * @returns {*}
  * @private
  */
-ControllerTown.prototype._summaryLgt = function(list) {
+ControllerTown.prototype._summaryLgt = function(list, invalidValue) {
     if (!Array.isArray(list)) {
         return -1;
     }
-    for (var i=0; i<list.length; i++) {
-        if (list[i] > 0) {
-            return list[i];
+
+    var validList;
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    for (var i=0; i<validList.length; i++) {
+        if (validList[i] > 0) {
+            return validList[i];
         }
     }
+
     return 0;
 };
 
 /**
  *  -1, 0, 1, 2, 3
  * @param list
+ * @param invalidValue
  * @returns {number}
  * @private
  */
-ControllerTown.prototype._summaryPty = function(list) {
+ControllerTown.prototype._summaryPty = function(list, invalidValue) {
     var pty = 0;
 
     if (!Array.isArray(list)) {
         return -1;
     }
-    for (var i=0; i<list.length; i++) {
-        if (list[i] === 2) {
+
+    var validList;
+    if (invalidValue != undefined) {
+        validList = list.filter(function (val) {
+            return val !== invalidValue;
+        });
+    }
+    else {
+        validList = list;
+    }
+
+    for (var i=0; i<validList.length; i++) {
+        if (validList[i] === 2) {
             return 2;
         }
-        else if (list[i] === 1) {
+        else if (validList[i] === 1) {
             if (pty === 3) {
                 return 2;
             }
             pty = 1;
         }
-        else if (list[i] === 3) {
+        else if (validList[i] === 3) {
             if (pty === 1) {
                 return  2;
             }
@@ -2119,8 +2213,9 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
     }
     else {
         switch (sky) {
-            case 1: //str = '맑고 ';
+            case 1: str = '구름적고 ';
                 log.warn("It's special case");
+                break;
             case 2: str = '구름적고 ';
                 break;
             case 3: str = '구름많고 ';
@@ -2199,17 +2294,17 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
 
         var daySummary = self._createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
-        daySummary.pop = Math.max.apply(null, dayCondition.pop);
-        daySummary.pty = self._summaryPty(dayCondition.pty);
-        //daySummary.r06 = _sum(dayCondition.r06);
-        daySummary.reh = self._average(dayCondition.reh);
-        //daySummary.s06 = _sum(dayCondition.s06);
-        daySummary.sky = self._average(dayCondition.sky);
+        daySummary.pop = self._max(dayCondition.pop, -1);
+        daySummary.pty = self._summaryPty(dayCondition.pty, -1);
+        daySummary.r06 = self._sum(dayCondition.r06, -1);
+        daySummary.reh = self._average(dayCondition.reh, -1);
+        daySummary.s06 = self._sum(dayCondition.s06, -1);
+        daySummary.sky = self._average(dayCondition.sky, -1);
         daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
         daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.t1d = self._average(dayCondition.t3h);
-        daySummary.taMax = dayCondition.tmx;
-        daySummary.taMin = dayCondition.tmn;
+        daySummary.t1d = self._average(dayCondition.t3h, -50);
+        daySummary.taMax = Math.round(dayCondition.tmx);
+        daySummary.taMin = Math.round(dayCondition.tmn);
     });
 
     return daySummaryList;
@@ -2266,17 +2361,17 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
 
         var daySummary = self._createOrGetDaySummaryList(daySummaryList, dayCondition.date);
 
-        daySummary.lgt = self._summaryLgt(dayCondition.lgt);
-        daySummary.pty = self._summaryPty(dayCondition.pty);
-        daySummary.reh = self._average(dayCondition.reh);
-        daySummary.rn1 = self._sum(dayCondition.rn1);
-        daySummary.sky = self._average(dayCondition.sky);
+        daySummary.lgt = self._summaryLgt(dayCondition.lgt, -1);
+        daySummary.pty = self._summaryPty(dayCondition.pty, -1);
+        daySummary.reh = self._average(dayCondition.reh, -1);
+        daySummary.rn1 = self._sum(dayCondition.rn1, -1);
+        daySummary.sky = self._average(dayCondition.sky, -1);
         daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
         daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.t1d = self._average(dayCondition.t1h);
-        daySummary.wsd = self._average(dayCondition.wsd);
-        daySummary.taMax = Math.max.apply(null, dayCondition.t1h);
-        daySummary.taMin = Math.min.apply(null, dayCondition.t1h);
+        daySummary.t1d = self._average(dayCondition.t1h, -50);
+        daySummary.wsd = self._average(dayCondition.wsd, -1);
+        daySummary.taMax = Math.round(self._max(dayCondition.t1h, -50));
+        daySummary.taMin = Math.round(self._min(dayCondition.t1h, -50));
     });
 
     return daySummaryList;
