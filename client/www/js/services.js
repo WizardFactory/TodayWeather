@@ -1369,8 +1369,9 @@ angular.module('starter.services', [])
             var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
             console.log(midTownWeather);
 
-            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3);
-            currentForecast.summary = makeSummary(currentForecast, shortTownWeather.timeTable[yesterdayIndex]);
+            //0~3시 사이를 위해 그저께 24시(index 7)부터 비교함.
+            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3) + 7;
+            currentForecast.summary = makeSummary(currentForecast, weatherData.short[yesterdayIndex]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;

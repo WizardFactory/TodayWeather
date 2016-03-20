@@ -483,20 +483,20 @@ CollectData.prototype.organizeShortData = function(index, listData){
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'POP') {result.pop = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'PTY') {result.pty = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'R06') {result.r06 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'REH') {result.reh = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'S06') {result.s06 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'T3H') {result.t3h = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'TMN') {result.tmn = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'TMX') {result.tmx = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'UUU') {result.uuu = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'VVV') {result.vvv = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'WAV') {result.wav = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'VEC') {result.vec = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'WSD') {result.wsd = parseInt(item.fcstValue[0]);}
+                if(item.category[0] === 'POP') {result.pop = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'PTY') {result.pty = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'R06') {result.r06 = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'REH') {result.reh = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'S06') {result.s06 = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'T3H') {result.t3h = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMN') {result.tmn = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMX') {result.tmx = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'UUU') {result.uuu = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'VVV') {result.vvv = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'WAV') {result.wav = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.fcstValue[0]);}
                 else{
                     log.error(new Error('Known property', item.category[0]));
                 }
@@ -562,10 +562,10 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'PTY') {result.pty = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'RN1') {result.rn1 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'LGT') {result.lgt = parseInt(item.fcstValue[0]);}
+                if(item.category[0] === 'PTY') {result.pty = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'RN1') {result.rn1 = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'LGT') {result.lgt = parseFloat(item.fcstValue[0]);}
                 else{
                     log.error(new Error('Known property '+item.category[0]));
                 }
@@ -638,16 +638,16 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'T1H') {result.t1h = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'RN1') {result.rn1 = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'UUU') {result.uuu = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'VVV') {result.vvv = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'REH') {result.reh = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'PTY') {result.pty = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'LGT') {result.lgt = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'VEC') {result.vec = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'WSD') {result.wsd = parseInt(item.obsrValue[0]);}
+                if(item.category[0] === 'T1H') {result.t1h = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'RN1') {result.rn1 = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'UUU') {result.uuu = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'VVV') {result.vvv = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'REH') {result.reh = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'PTY') {result.pty = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'LGT') {result.lgt = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.obsrValue[0]);}
                 else{
                     log.error('organizeCurrentData : Known property', item.category[0]);
                 }
@@ -841,22 +841,22 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
             result = template;
             result.regId = item.regId[0];
-            result.taMin3 = parseInt(item.taMin3[0]);
-            result.taMax3 = parseInt(item.taMax3[0]);
-            result.taMin4 = parseInt(item.taMin4[0]);
-            result.taMax4 = parseInt(item.taMax4[0]);
-            result.taMin5 = parseInt(item.taMin5[0]);
-            result.taMax5 = parseInt(item.taMax5[0]);
-            result.taMin6 = parseInt(item.taMin6[0]);
-            result.taMax6 = parseInt(item.taMax6[0]);
-            result.taMin7 = parseInt(item.taMin7[0]);
-            result.taMax7 = parseInt(item.taMax7[0]);
-            result.taMin8 = parseInt(item.taMin8[0]);
-            result.taMax8 = parseInt(item.taMax8[0]);
-            result.taMin9 = parseInt(item.taMin9[0]);
-            result.taMax9 = parseInt(item.taMax9[0]);
-            result.taMin10 = parseInt(item.taMin10[0]);
-            result.taMax10 = parseInt(item.taMax10[0]);
+            result.taMin3 = parseFloat(item.taMin3[0]);
+            result.taMax3 = parseFloat(item.taMax3[0]);
+            result.taMin4 = parseFloat(item.taMin4[0]);
+            result.taMax4 = parseFloat(item.taMax4[0]);
+            result.taMin5 = parseFloat(item.taMin5[0]);
+            result.taMax5 = parseFloat(item.taMax5[0]);
+            result.taMin6 = parseFloat(item.taMin6[0]);
+            result.taMax6 = parseFloat(item.taMax6[0]);
+            result.taMin7 = parseFloat(item.taMin7[0]);
+            result.taMax7 = parseFloat(item.taMax7[0]);
+            result.taMin8 = parseFloat(item.taMin8[0]);
+            result.taMax8 = parseFloat(item.taMax8[0]);
+            result.taMin9 = parseFloat(item.taMin9[0]);
+            result.taMax9 = parseFloat(item.taMax9[0]);
+            result.taMin10 = parseFloat(item.taMin10[0]);
+            result.taMax10 = parseFloat(item.taMax10[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -955,32 +955,32 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             result.wf9 = item.wf9[0];
             result.wf10 = item.wf10[0];
 
-            result.wh3AAm = parseInt(item.wh3AAm[0]);
-            result.wh3APm = parseInt(item.wh3APm[0]);
-            result.wh3BAm = parseInt(item.wh3BAm[0]);
-            result.wh3BPm = parseInt(item.wh3BPm[0]);
-            result.wh4AAm = parseInt(item.wh3AAm[0]);
-            result.wh4APm = parseInt(item.wh3APm[0]);
-            result.wh4BAm = parseInt(item.wh3BAm[0]);
-            result.wh4BPm = parseInt(item.wh3BPm[0]);
-            result.wh5AAm = parseInt(item.wh3AAm[0]);
-            result.wh5APm = parseInt(item.wh3APm[0]);
-            result.wh5BAm = parseInt(item.wh3BAm[0]);
-            result.wh5BPm = parseInt(item.wh3BPm[0]);
-            result.wh6AAm = parseInt(item.wh3AAm[0]);
-            result.wh6APm = parseInt(item.wh3APm[0]);
-            result.wh6BAm = parseInt(item.wh3BAm[0]);
-            result.wh6BPm = parseInt(item.wh3BPm[0]);
-            result.wh7AAm = parseInt(item.wh3AAm[0]);
-            result.wh7APm = parseInt(item.wh3APm[0]);
-            result.wh7BAm = parseInt(item.wh3BAm[0]);
-            result.wh7BPm = parseInt(item.wh3BPm[0]);
-            result.wh8A = parseInt(item.wh8A[0]);
-            result.wh8B = parseInt(item.wh8B[0]);
-            result.wh9A = parseInt(item.wh9A[0]);
-            result.wh9B = parseInt(item.wh9B[0]);
-            result.wh10A = parseInt(item.wh10A[0]);
-            result.wh10B = parseInt(item.wh10B[0]);
+            result.wh3AAm = parseFloat(item.wh3AAm[0]);
+            result.wh3APm = parseFloat(item.wh3APm[0]);
+            result.wh3BAm = parseFloat(item.wh3BAm[0]);
+            result.wh3BPm = parseFloat(item.wh3BPm[0]);
+            result.wh4AAm = parseFloat(item.wh3AAm[0]);
+            result.wh4APm = parseFloat(item.wh3APm[0]);
+            result.wh4BAm = parseFloat(item.wh3BAm[0]);
+            result.wh4BPm = parseFloat(item.wh3BPm[0]);
+            result.wh5AAm = parseFloat(item.wh3AAm[0]);
+            result.wh5APm = parseFloat(item.wh3APm[0]);
+            result.wh5BAm = parseFloat(item.wh3BAm[0]);
+            result.wh5BPm = parseFloat(item.wh3BPm[0]);
+            result.wh6AAm = parseFloat(item.wh3AAm[0]);
+            result.wh6APm = parseFloat(item.wh3APm[0]);
+            result.wh6BAm = parseFloat(item.wh3BAm[0]);
+            result.wh6BPm = parseFloat(item.wh3BPm[0]);
+            result.wh7AAm = parseFloat(item.wh3AAm[0]);
+            result.wh7APm = parseFloat(item.wh3APm[0]);
+            result.wh7BAm = parseFloat(item.wh3BAm[0]);
+            result.wh7BPm = parseFloat(item.wh3BPm[0]);
+            result.wh8A = parseFloat(item.wh8A[0]);
+            result.wh8B = parseFloat(item.wh8B[0]);
+            result.wh9A = parseFloat(item.wh9A[0]);
+            result.wh9B = parseFloat(item.wh9B[0]);
+            result.wh10A = parseFloat(item.wh10A[0]);
+            result.wh10B = parseFloat(item.wh10B[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);

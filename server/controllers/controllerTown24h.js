@@ -53,6 +53,9 @@ function ControllerTown24h() {
             }
 
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, short.date);
+            daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
+            daySummary.taMin = daySummary.taMin === undefined ? -50:daySummary.taMin;
+
             if (daySummary.taMax < short.t3h) {
                 daySummary.taMax = short.t3h;
             }
@@ -85,6 +88,8 @@ function ControllerTown24h() {
         req.short.forEach(function (short, index) {
 
             var daySum = self._createOrGetDaySummaryList(daySummaryList, short.date);
+            daySum.taMax = daySum.taMax === undefined ? -50:daySum.taMax;
+            daySum.taMin = daySum.taMin === undefined ? -50:daySum.taMin;
             if (daySum.taMax === -50 || daySum.taMin === -50) {
                 log.error("short date:"+short.date+" fail to get daySummary");
                 return;
@@ -209,6 +214,15 @@ function ControllerTown24h() {
                 }
             }
         });
+
+        var i = req.short.length - 1;
+        for(;i>=0;i--) {
+            if(req.short[i].reh !== -1) {
+                break;
+            }
+        }
+
+        req.short.splice(i+1, (req.short.length-(i+1)));
 
         next();
         return this;
