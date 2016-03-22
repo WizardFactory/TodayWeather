@@ -104,8 +104,6 @@ arpltnController._mregeData = function(current, arpltnDataList, callback){
         log.silly(JSON.stringify(arpltnData));
 
         current.arpltn = arpltnData.arpltn;
-        current.arpltn.pm10Str = self.parsePm10Info(arpltnData.arpltn.pm10Value, arpltnData.arpltn.pm10Grade);
-        current.arpltn.pm25Str = self.parsePm25Info(arpltnData.arpltn.pm25Value, arpltnData.arpltn.pm25Grade);
         return callback(err, arpltnData);
     }
     catch(e) {
@@ -256,8 +254,6 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         //never mind about save
         var tempTown = { "first" : town.first, "second" : town.second, "third" : town.third};
         var mCoord = {mx: town.mCoord.mx, my:town.mCoord.my};
-        arpltn.pm10Str = self.parsePm10Info(arpltn.pm10Value, arpltn.pm10Grade);
-        arpltn.pm25Str = self.parsePm25Info(arpltn.pm25Value, arpltn.pm25Grade);
 
         keco.saveArpltnTown({town: tempTown, mCoord: mCoord}, arpltn, function (err) {
             if (err) {

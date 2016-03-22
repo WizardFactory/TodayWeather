@@ -215,6 +215,7 @@ angular.module('starter', [
 
                 var chart = function () {
                     var data = scope.timeChart;
+                    var currentTime = parseInt(scope.currentWeather.time)/100;
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
@@ -306,8 +307,6 @@ angular.module('starter', [
                         .remove();
 
                     // draw current point
-                    var currentTime = new Date();
-
                     var point = lineGroups.selectAll('.point')
                         .data(function(d) {
                             return [d];
@@ -316,8 +315,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -335,8 +334,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -350,8 +349,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -361,8 +360,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
