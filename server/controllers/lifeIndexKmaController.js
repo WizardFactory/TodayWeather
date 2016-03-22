@@ -10,7 +10,7 @@ function LifeIndexKmaController() {
 
 }
 
-LifeIndexKmaController._fsnStr = function (grade) {
+LifeIndexKmaController.fsnStr = function (grade) {
     switch(grade) {
         case 0: return "관심";
         case 1: return "주의";
@@ -35,7 +35,7 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
-LifeIndexKmaController._ultrvStr = function (grade) {
+LifeIndexKmaController.ultrvStr = function (grade) {
     switch(grade) {
         case 0: return "낮음";
         case 1: return "보통";
@@ -103,11 +103,9 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
             //add grade
             if (indexName === 'fsn') {
                 (destList[j])['fsnGrade'] = this._fsnGrade(srcList[i].value);
-                (destList[j])['fsnStr'] = this._fsnStr((destList[j])['fsnGrade']);
             }
             else if (indexName === 'ultrv') {
                 (destList[j])['ultrvGrade'] = this._ultrvGrade(srcList[i].value);
-                (destList[j])['ultrvStr'] = this._ultrvStr((destList[j])['ultrvGrade']);
             }
         }
         return true;
