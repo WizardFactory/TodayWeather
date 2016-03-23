@@ -808,6 +808,32 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
+        if (localStorage.getItem("statusBarVisible") !== null) {
+            $scope.statusBarVisible = JSON.parse(localStorage.getItem("statusBarVisible"));
+        }
+        else {
+            $scope.statusBarVisible = {checked: false};
+        }
+
+        $scope.statusBarChange = function () {
+            console.log("statusBarChanged, "+$scope.statusBarVisible.checked);
+            if (window.StatusBar) {
+                if ($scope.statusBarVisible.checked) {
+                    StatusBar.backgroundColorByName("black");
+                    StatusBar.overlaysWebView(false);
+                    StatusBar.show();
+                }
+                else {
+                    StatusBar.hide();
+                    if(ionic && ionic.Platform) {
+                        ionic.Platform.fullScreen();
+                    }
+                }
+            }
+            localStorage.setItem("statusBarVisible", JSON.stringify($scope.statusBarVisible));
+            console.log("set ", localStorage.getItem("statusBarVisible"));
+        };
+
         $ionicPlatform.ready(function() {
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
