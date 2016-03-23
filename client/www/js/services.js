@@ -105,7 +105,7 @@ angular.module('starter.services', [])
                 city.currentPosition = true;
                 city.address = "대한민국 하늘시 중구 구름동";
                 city.location = null;
-                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
+                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음,미세먼지보통"};
 
                 var timeData = [];
                 timeData[0] = {day: "", time: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17, tmx: -50};
@@ -340,8 +340,8 @@ angular.module('starter.services', [])
         }
 
         /**
+         *
          * @param day
-         * @param hours
          * @returns {*}
          */
         function getDayString(day) {
