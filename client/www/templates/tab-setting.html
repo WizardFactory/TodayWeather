@@ -38,6 +38,16 @@
                                 <!--</button>-->
                             </div>
                         </li>
+                        <li class="item item-toggle" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                            상태바
+                            <label class="toggle toggle-dark">
+                                <input type="checkbox" ng-model="statusBarVisible.checked"
+                                                     ng-checked="statusBarVisible.checked" ng-change="statusBarChange()">
+                                <div class="track">
+                                    <div class="handle"></div>
+                                </div>
+                            </label>
+                        </li>
                         <li class="item"  ng-click="openMarket()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">평가하기
                             <!--<img src="img/setting-review.png" style="width: 30px">-->
                         </li>

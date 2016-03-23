@@ -38,9 +38,24 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
+                var statusBarVisible;
+                if (localStorage.getItem("statusBarVisible") !== null) {
+                    statusBarVisible = JSON.parse(localStorage.getItem("statusBarVisible"));
+                }
+                else {
+                    statusBarVisible = {checked: false};
+                }
+
                 // org.apache.cordova.statusbar required
-                StatusBar.backgroundColorByName("black");
-                StatusBar.overlaysWebView(false);
+                if (statusBarVisible.checked) {
+                    StatusBar.backgroundColorByName("black");
+                    StatusBar.overlaysWebView(false);
+                    StatusBar.show();
+                }
+                else {
+                    StatusBar.hide();
+                    ionic.Platform.fullScreen();
+                }
             }
 
             //#367
