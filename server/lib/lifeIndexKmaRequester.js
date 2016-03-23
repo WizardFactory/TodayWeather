@@ -137,7 +137,7 @@ KmaIndexService.prototype.loadAreaList = function(callback) {
  * @returns {boolean}
  */
 KmaIndexService.prototype.checkGetTime = function (indexName, time) {
-  return time >= this[indexName].nextTime;
+  return time.getTime() >= this[indexName].nextTime.getTime();
 };
 
 KmaIndexService.prototype.getLastGetTime = function (indexName) {
@@ -381,7 +381,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
 };
 
 /**
- *
+ * 서버쪽 끊어짐이 심하고(503), request count 체크가 확실하지 않아, timeout 처리 최소화
  * @param indexName
  * @param areaNo
  * @param callback
@@ -391,7 +391,7 @@ KmaIndexService.prototype.getLifeIndex = function (indexName, areaNo, callback) 
 
     log.debug(url);
 
-    req(url, {timeout: 1000*10, json:true}, function (err, response, body) {
+    req(url, {timeout: 1000*30, json:true}, function (err, response, body) {
         if (err) {
             return callback(err);
         }
@@ -619,7 +619,7 @@ KmaIndexService.prototype.taskLifeIndex = function (indexName, callback) {
     var time = new Date();
 
     if (!this.checkGetTime(indexName, time)) {
-        log.debug('skip '+indexName);
+        log.info('skip '+indexName+' nextTime='+ this[indexName].nextTime);
         return callback();
     }
 
