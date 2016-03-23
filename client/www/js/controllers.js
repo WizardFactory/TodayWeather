@@ -28,8 +28,8 @@ angular.module('starter.controllers', [])
         $scope.dayWidth; //total width of dayChart and dayTable
 
         var padding = 1;
-        //console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-        //console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
         //iphone 5 568-20(status bar)
         if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
             padding = 0.90;
@@ -42,14 +42,14 @@ angular.module('starter.controllers', [])
         if ((window.innerHeight === 716 || window.innerHeight === 736) && window.innerWidth === 414) {
             padding = 0.80;
         }
-        //ss note3 640-25
-        if ((window.innerHeight === 615 || window.innerHeight === 640 ) &&
+        //ss note3 640-25 or 24 (from 6.0)
+        if ((window.innerHeight === 616 || window.innerHeight === 615 || window.innerHeight === 640 ) &&
             window.innerWidth === 360 &&
             window.devicePixelRatio === 3) {
             padding = 0.80;
         }
-        //ss uhd 732-25
-        if ((window.innerHeight === 707 || window.innerHeight === 732) &&
+        //ss uhd 732-25 or 24 (from 6.0)
+        if ((window.innerHeight === 708 ||window.innerHeight === 707 || window.innerHeight === 732) &&
             window.innerWidth === 412 &&
             window.devicePixelRatio === 3.5) {
             padding = 0.80;
