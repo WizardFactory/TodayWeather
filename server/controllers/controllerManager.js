@@ -19,7 +19,6 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
-//var keydata = require('../config/keydata');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
@@ -42,9 +41,9 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 33;      //for pop
+    self.MAX_SHORT_COUNT = 64;    //8days * 8times
     self.MAX_CURRENT_COUNT = 192; //8days * 24hours
-    self.MAX_SHORTEST_COUNT = 4; //4 hours
+    self.MAX_SHORTEST_COUNT = 192; //8days * 24 hours
     self.MAX_MID_COUNT = 20;
 
     self.asyncTasks = [];
@@ -1732,7 +1731,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
     if (time === 20 || putAll) {
         log.info('push keco main process');
         self.asyncTasks.push(function (callback) {
-            keco.cbMainProcess(keco, function (err) {
+            keco.cbKmaIndexProcess(keco, function (err) {
                 if (err) {
                     log.error;
                 }
@@ -1915,14 +1914,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 };
 
+/**
+ *
+ * @returns {Manager}
+ */
 Manager.prototype.startManager = function(){
     var self = this;
 
     midRssKmaRequester.setNextGetTime(new Date());
     self.midRssKmaRequester = midRssKmaRequester;
-    townRss.loadList(function(){
-        log.info('Rss> complete loadList for Rss.');
-    });
 
     keco.setServiceKey(config.keyString.normal);
     keco.setDaumApiKey(config.keyString.daum_key);
@@ -1932,21 +1932,37 @@ Manager.prototype.startManager = function(){
             log.error(err);
         }
     });
+
     self.keco = keco;
 
     taskKmaIndexService.setServiceKey(config.keyString.cert_key);
-    taskKmaIndexService.loadAreaList();
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
 
-    //self.checkTimeAndPushTask(true);
-    self.checkTimeAndRequestTask(true);
-    self.task();
+    async.parallel([
+        function (callback) {
+            townRss.loadList(function(){
+                log.info('Rss> complete loadList for Rss.');
+                callback();
+            });
+        },
+        function (callback) {
+            taskKmaIndexService.loadAreaList(function () {
+                log.info('KmaIndex> complete loadAreaList for KMA Index.');
+                callback();
+            });
+        }
+    ], function () {
+        //self.checkTimeAndPushTask(true);
+        self.checkTimeAndRequestTask(true);
+        self.task();
+        setInterval(function() {
+            self.checkTimeAndRequestTask(false) ;
+        }, 1000*60);
+    });
 
-    setInterval(function() {
-       self.checkTimeAndRequestTask(false) ;
-    }, 1000*60);
+    return this;
 };
 
 Manager.prototype.stopManager = function(){

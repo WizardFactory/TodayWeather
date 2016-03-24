@@ -234,36 +234,4 @@ function ControllerTown24h() {
 ControllerTown24h.prototype = Object.create(ControllerTown.prototype);
 ControllerTown24h.prototype.constructor = ControllerTown24h;
 
-/**
- *
- * the day before yesterday 03h ~ the day after tomorrow 24h
- * @returns {Array}
- * @private
- */
-ControllerTown24h.prototype._makeBasicShortList = function() {
-    var result = [];
-    var self = this;
-
-    var currentTime = parseInt(self._getCurrentTimeValue(9).time.slice(0,2));
-
-    for(var i=0 ; i < 40 ; i++){
-        var item = self._getTimeValue(9-currentTime-24*2+(i*3)+3);
-        shortString.forEach(function(string){
-            if(string == 'tmn' || string === 'tmx' || string === 't3h') {
-                item[string] = -50;
-            } else if (string === 'uuu' || string === 'vvv') {
-                item[string] = -100;
-
-            }else{
-                item[string] = -1;
-            }
-        });
-        result.push(item);
-    }
-
-    self._dataListPrint(result, 'route S', 'template short');
-
-    return result;
-};
-
 module.exports = ControllerTown24h;

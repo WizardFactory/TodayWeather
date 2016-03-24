@@ -40,7 +40,7 @@ function TownRss(){
     self.on('recvFail', function(index, item){
         setTimeout(function(){
             self.getData(index, item);
-        }, 60 * 1000);
+        }, 3 * 1000);
     });
 
     self.on('recvSuccess', function(index){
@@ -97,7 +97,8 @@ TownRss.prototype.getShortRss = function(index, url, callback){
     log.verbose('get rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
         if(err){
-            log.error('failed to req (%d)', index);
+            log.warn('failed to req (%d)', index);
+            log.warn(err);
             if(callback){
                 callback(self.RETRY);
             }
@@ -105,7 +106,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
         }
 
         if(!response.statusCode || response.statusCode === 404 || response.statusCode === 403){
-            log.error('ERROR!!! StatusCode : ', statusCode);
+            log.warn('WARN!!! StatusCode : ', statusCode);
             if(callback){
                 callback(self.RETRY);
             }
@@ -115,7 +116,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
         //log.info(body);
         xml2json(body, function(err, result){
             if(err){
-                log.error('>>ERROR : failed to converto to json');
+                log.error('>>ERROR : failed to convert to json');
                 if(callback){
                     callback(self.ERROR);
                 }
@@ -534,7 +535,7 @@ TownRss.prototype.getData = function(index, item, cb){
  */
 TownRss.prototype.mainTask = function(completionCallback){
     var self = this;
-    var gridList = [];
+    var gridList;
 
     log.info('RSS> start rss!1');
 
@@ -550,11 +551,11 @@ TownRss.prototype.mainTask = function(completionCallback){
 
     var index = 0;
 
-    async.mapSeries(gridList,
+    async.map(gridList,
         function(item, callback) {
             async.waterfall([
                 function(cb) {
-                    shortRssDb.find({mCoord:item.mCoord}, function(err, list) {
+                    shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
                         index++;
                         if(err
                             || (list.length === 0)
@@ -563,20 +564,22 @@ TownRss.prototype.mainTask = function(completionCallback){
                             cb(err, item);
                         } else {
                             if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                                log.info('rss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                                log.debug('rss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                                 cb(err, item);
                             } else {
-                                log.info('rss : already lastest data');
-                                cb(err);
+                                log.debug('rss : already latest data');
+                                cb(err, undefined);
                             }
-                        }})},
+                        }
+                    })
+                },
                 function(item, cb) {
-                    if((item.mCoord !== undefined)
-                        && (item.mCoord.mx !== undefined))
+                    if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)
                     {
                         self.getData(index, item, cb);
                     } else {
-                        log.info('rss : invalid item value.');
+                        //already updated
+                        //log.info('rss : invalid item value.');
                         cb();
                     }
                 }],

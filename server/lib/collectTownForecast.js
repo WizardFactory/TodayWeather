@@ -311,7 +311,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
     //log.info(meta);
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
-    req.get(url, {timeout: 1000*5}, function(err, response, body){
+    req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
             log.warn(err);
             //log.error('#', meta);
@@ -562,10 +562,15 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'PTY') {result.pty = parseFloat(item.fcstValue[0]);}
-                else if(item.category[0] === 'RN1') {result.rn1 = parseFloat(item.fcstValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.fcstValue[0]);}
-                else if(item.category[0] === 'LGT') {result.lgt = parseFloat(item.fcstValue[0]);}
+                var val = parseFloat(item.fcstValue[0]);
+                if (val < 0) {
+                    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                }
+
+                if(item.category[0] === 'PTY') {result.pty = val;}
+                else if(item.category[0] === 'RN1') {result.rn1 = val;}
+                else if(item.category[0] === 'SKY') {result.sky = val;}
+                else if(item.category[0] === 'LGT') {result.lgt = val;}
                 else{
                     log.error(new Error('Known property '+item.category[0]));
                 }
