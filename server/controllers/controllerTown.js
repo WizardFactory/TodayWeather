@@ -18,6 +18,9 @@ var modelShortRss = require('../models/modelShortRss');
 
 var convertGeocode = require('../utils/convertGeocode');
 
+var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
+var KecoController = require('../controllers/kecoController');
+
 /**
  * router callback에서 getShort 호출시에, this는 undefined되기 때문에, 생성시에 getShort를 만들어주고, self는 생성자에서 만들어준다.
  * @constructor
@@ -212,7 +215,7 @@ function ControllerTown() {
     };
 
     /**
-     *   merge short/current with shorest.
+     *   merge short/current with shortest.
      * @param req
      * @param res
      * @param next
@@ -247,14 +250,21 @@ function ControllerTown() {
 
                 log.info(shortestList);
                 if(shortestList && shortestList.length > 0){
+
                     if(req.short && req.short.length > 0){
                         shortestList.forEach(function(shortestItem){
-                            if(currentTime.date <= shortestItem.date && currentTime.time <= shortestItem.date){
+                            if(currentTime.date <= shortestItem.date && currentTime.time <= shortestItem.date) {
                                 req.short.forEach(function(shortItem){
                                     if(shortestItem.date === shortItem.date && shortestItem.time === shortItem.time){
                                         log.silly('MRbyST> update short data');
                                         shortestString.forEach(function(string){
-                                            shortItem[string] = shortestItem[string];
+                                            if (shortestItem[string] < 0)  {
+                                                log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
+                                                    ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
+                                            }
+                                            else {
+                                                shortItem[string] = shortestItem[string];
+                                            }
                                         });
                                     }
                                 });
@@ -267,7 +277,13 @@ function ControllerTown() {
                             if(shortestItem.date === req.current.date && shortestItem.time === req.current.time){
                                 log.silly('MRbyST> update current data');
                                 shortestString.forEach(function(string){
-                                    req.current[string] = shortestItem[string];
+                                    if (shortestItem[string] < 0)  {
+                                        log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
+                                            ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
+                                    }
+                                    else {
+                                        req.current[string] = shortestItem[string];
+                                    }
                                 });
                             }
                         });
@@ -323,6 +339,8 @@ function ControllerTown() {
                         return nowDate.date + nowDate.time <= shortest.date + shortest.time;
                     });
 
+                    //재사용을 위해 req에 달아둠..
+                    req.shortestList = shortestList;
                     next();
                 });
             });
@@ -342,7 +360,7 @@ function ControllerTown() {
      * @param next
      * @returns {ControllerTown}
      */
-    this.getCurrent = function(req, res, next){
+    this.getCurrent = function(req, res, next) {
         var meta = {};
 
         var regionName = req.params.region;
@@ -372,29 +390,36 @@ function ControllerTown() {
                     var currentItem = currentList[currentList.length - 1];
                     var resultItem = {};
 
-                    if((nowDate.date !== currentItem.date) ||
-                        (nowDate.date === currentItem.date && acceptedDate.time >= currentItem.time)){
-                        // 없으면 short를 가져다 쓸까?? 일단은 그냥 current꺼 쓰자.
-                        resultItem = currentItem;
-
-                    }else{
-                        // 현재 시간으로 넣어준
+                    if(nowDate.date === currentItem.date && nowDate.time === currentItem.time)  {
                         resultItem = currentItem;
                     }
-                    resultItem.time = nowDate.time;
-                    resultItem.date = currentItem.date;
+                    else {
+                        var kmaTimeLib = require('../lib/kmaTimeLib');
+                        var currentTimeObj = kmaTimeLib.convertStringToDate(currentItem.date+currentItem.time);
+                        var acceptedTimeObj = kmaTimeLib.convertStringToDate(acceptedDate.date+acceptedDate.time);
+                        if (acceptedTimeObj.getTime() < currentTimeObj.getTime()) {
+                            resultItem = currentItem;
+                        }
+                        else {
+                            resultItem = self._makeCurrent(req.short, req.shortestList, nowDate.date, nowDate.time);
+                            resultItem.time = nowDate.time;
+                            resultItem.date = nowDate.date;
+                        }
+                    }
 
                     resultItem.sensorytem = Math.round(self._getNewWCT(resultItem.t1h, resultItem.wsd));
-                    resultItem.sensorytemStr = self._parseSensoryTem(resultItem.sensorytem);
                     //log.info(listCurrent);
                     //지수 계산 이후에 반올림함.
                     resultItem.t1h = Math.round(resultItem.t1h);
                     req.current = resultItem;
+
+                    //재사용을 위해 req에 달아둠.
+                    req.currentList = currentList;
                     next();
                 });
             });
         } catch(e){
-            log.error('ERROE>>', meta);
+            log.error('ERROR>>', meta);
             log.error(e);
             next();
         }
@@ -534,7 +559,7 @@ function ControllerTown() {
     };
 
     /**
-     *
+     * time은 current에 들어있는 것을 써서 24전으로 맞춤.
      * @param req
      * @param res
      * @param next
@@ -544,9 +569,36 @@ function ControllerTown() {
         var meta = {};
 
         meta.method = 'getSummary';
-
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
         log.info('>', meta);
 
+        if (!req.current || !req.currentList)  {
+            var err = new Error("Fail to find current weather or current list "+JSON.stringify(meta));
+            log.warn(err);
+            next();
+            return this;
+        }
+
+        var yesterdayDate = self._getCurrentTimeValue(+9-24);
+        var yesterdayItem;
+        for (var i=0; i<req.currentList.length;i++) {
+            if (req.currentList[i].date == yesterdayDate.date &&
+                parseInt(req.currentList[i].time) >= parseInt(req.current.time))
+            {
+                yesterdayItem =  req.currentList[i];
+                break;
+            }
+        }
+        if (yesterdayItem) {
+            yesterdayItem.t1h = Math.round(yesterdayItem.t1h);
+            req.current.summary = self._makeSummary(req.current, yesterdayItem);
+        }
+        else {
+            log.warn('Fail to gt yesterday weather info');
+            req.current.summary = '';
+        }
         next();
         return this;
     };
@@ -593,7 +645,7 @@ function ControllerTown() {
         //add life index of kma info
 
         var meta = {};
-        meta.method = 'getLifeIndeKma';
+        meta.method = 'getLifeIndexKma';
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
@@ -607,7 +659,6 @@ function ControllerTown() {
         }
 
         try {
-            var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
             LifeIndexKmaController.appendData({third: req.params.town, second: req.params.city, first: req.params.region},
                 req.short, req.midData.dailyData, function (err) {
                     if (err) {
@@ -653,7 +704,6 @@ function ControllerTown() {
         }
 
         try {
-            var KecoController = require('../controllers/kecoController');
             KecoController.appendData({
                     third: req.params.town,
                     second: req.params.city,
@@ -875,6 +925,31 @@ function ControllerTown() {
         return this;
     };
 
+    this.insertStrForData = function (req, res, next) {
+        if(req.short){
+            req.short.forEach(function (data) {
+               self._makeStrForKma(data);
+            });
+        }
+        if(req.shortest){
+            req.shortest.forEach(function (data) {
+                self._makeStrForKma(data);
+            });
+        }
+        if(req.current){
+            self._makeStrForKma(req.current);
+            self._makeArpltnStr(req.current.arpltn);
+        }
+        if(req.midData){
+            req.midData.dailyData.forEach(function (data) {
+                self._makeStrForKma(data);
+            });
+        }
+
+        next();
+        return this;
+    };
+
     this.sendResult = function (req, res) {
         var meta = {};
 
@@ -912,6 +987,300 @@ function ControllerTown() {
         return this;
     }
 }
+
+/**
+ * 어제오늘, 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음), 강수량/적설량, 자외선, 체감온도
+ * @param {Object} current
+ * @param {Object} yesterday
+ * @returns {String}
+ */
+ControllerTown.prototype._makeSummary = function(current, yesterday) {
+    var str = "";
+    var stringList = [];
+
+    if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+        var diffTemp = current.t1h - yesterday.t1h;
+
+        str = "어제";
+        if (diffTemp == 0) {
+            str += "와 동일";
+        }
+        else {
+            str += "보다 " + Math.abs(diffTemp);
+            if (diffTemp < 0) {
+                str += "도 낮음";
+            }
+            else if (diffTemp > 0) {
+                str += "도 높음";
+            }
+        }
+        stringList.push(str);
+    }
+
+    //current.arpltn = {};
+    //current.arpltn.pm10Value = 82;
+    //current.arpltn.pm10Str = "나쁨";
+    //current.arpltn.pm25Value = 82;
+    //current.arpltn.pm25Str = "나쁨";
+    if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Str &&
+        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
+        stringList.push("미세먼지 " + current.arpltn.pm10Str);
+    }
+    else if (current.arpltn && current.arpltn.pm25Value &&
+        (current.arpltn.pm25Value > 50 || current.arpltn.pm25Grade > 2)) {
+        stringList.push("초미세먼지 " + current.arpltn.pm25Str);
+    }
+
+    //current.ptyStr = '강수량'
+    //current.rn1Str = '1mm 미만'
+    if (current.rn1Str) {
+        stringList.push(current.ptyStr + " " + current.rn1Str);
+    }
+
+    //current.ultrv = 6;
+    //current.ultrvStr = "높음";
+    if (current.ultrv && current.ultrv >= 6) {
+        stringList.push("자외선 " + current.ultrvStr);
+    }
+
+    //current.sensorytem = -10;
+    //current.sensorytemStr = "관심";
+    //current.wsd = 10;
+    //current.wsdStr = convertKmaWsdToStr(current.wsd);
+    if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
+        stringList.push("체감온도 " + current.sensorytem +"˚");
+    }
+    else if (current.wsd && current.wsd > 9) {
+        stringList.push("바람이 " + current.wsdStr);
+    }
+
+    if (stringList.length === 1) {
+        //특정 이벤트가 없다면, 미세먼지가 기본으로 추가.
+        if (current.arpltn && current.arpltn.pm10Str && current.arpltn.pm10Value >= 0)  {
+            stringList.push("미세먼지 " + current.arpltn.pm10Str);
+        }
+    }
+
+    if (stringList.length >= 3) {
+        return stringList[1]+", "+stringList[2];
+    }
+    else {
+        return stringList.toString();
+    }
+};
+
+ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {
+    return  nextValue + (nextValue - prvValue)/3*time;
+};
+
+ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, time) {
+        var self = this;
+        var currentItem = {'t1h':-50, 'rn1':-1, 'sky':-1, 'uuu':-100, 'vvv':-100, 'reh':-1, 'pty':-1, 'lgt':-1,
+            'vec':-1, 'wsd':-1};
+        var shortest;
+        var short;
+        var prvShort;
+        var i;
+        var intTime = parseInt(time)/100;
+
+        log.warn('_make Current '+date+time);
+
+        if (!shortestList.length && !shortList.length) {
+            log.error('_makeCurrent list has not items');
+            return;
+        }
+
+        for (i=0;i<shortList.length;i++) {
+            if (shortList[i].date === date && parseInt(shortList[i].time) >= parseInt(time)) {
+                short = shortList[i];
+                if (i>0) {
+                    prvShort = shortList[i-1];
+                }
+                break;
+            }
+        }
+
+        if (short) {
+            currentItem.pty = short.pty;
+            currentItem.sky = short.sky;
+            if (short.time === time) {
+                currentItem.t1h = short.t3h;
+                currentItem.reh = short.reh;
+                currentItem.wsd = short.wsd;
+            }
+            else {
+                currentItem.t3h = Math.round(self._calcValue3hTo1h(intTime%3, short.t3h, prvShort.t3h));
+                currentItem.reh = Math.round(self._calcValue3hTo1h(intTime%3, short.reh, prvShort.reh));
+                currentItem.wsd = Math.round(self._calcValue3hTo1h(intTime%3, short.wsd, prvShort.wsd));
+            }
+        }
+
+        for (i=shortestList.length-1;i>=0;i--) {
+            if (shortestList[i].date === date && shortestList[i].time === time) {
+                shortest = shortestList[i];
+                break;
+            }
+        }
+
+        if (shortest) {
+            currentItem.pty = shortest.pty;
+            currentItem.rn1 = shortest.rn1;
+            currentItem.sky = shortest.sky;
+            currentItem.lgt = shortest.lgt;
+        }
+        return currentItem;
+    };
+
+/**
+ *
+ * @param pty
+ * @returns {*}
+ */
+ControllerTown.prototype._convertKmaPtyToStr = function(pty) {
+    if (pty === 1) {
+        return "강수량";
+    }
+    else if (pty === 2) {
+        return "강수/적설량"
+    }
+    else if (pty === 3) {
+        return "적설량";
+    }
+
+    return "";
+};
+
+/**
+ * short는 r06, s06으로 나뉘고, current, shortest는 분리되지 않음.
+ * @param pty
+ * @param rXX
+ * @returns {*}
+ */
+ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
+    if (pty === 1 || pty === 2) {
+        switch(rXX) {
+            case 0: return "0mm";
+            case 1: return "1mm 미만";
+            case 5: return "1~4mm";
+            case 10: return "5~9mm";
+            case 20: return "10~19mm";
+            case 40: return "20~39mm";
+            case 70: return "40~69mm";
+            case 100: return "70mm 이상";
+            default : console.log('unknown data='+rXX);
+        }
+        /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
+        if (0 < rXX || rXX < 100) {
+            return rXX+"mm 미만";
+        }
+    }
+    else if (pty === 3) {
+        switch (rXX) {
+            case 0: return "0cm";
+            case 1: return "1cm 미만";
+            case 5: return "1~4cm";
+            case 10: return "5~9cm";
+            case 20: return "10~19cm";
+            case 100: return "20cm 이상";
+            default : console.log('unknown data='+rXX);
+        }
+        /* spec에 없지만 2로 오는 경우가 있었음 */
+        if (0 < rXX || rXX < 100) {
+            return rXX+"cm 미만";
+        }
+    }
+
+    return "";
+};
+
+/**
+ *
+ * @param data
+ * @returns {ControllerTown}
+ * @private
+ */
+ControllerTown.prototype._makeArpltnStr = function (data) {
+
+    if (data.hasOwnProperty('pm10Value') && data.hasOwnProperty('pm10Grade')) {
+        data.pm10Str = KecoController.parsePm10Info(data.pm10Value, data.pm10Grade);
+    }
+
+    if (data.hasOwnProperty('pm25Value') && data.hasOwnProperty('pm25Grade')) {
+        data.pm25Str = KecoController.parsePm25Info(data.pm25Value, data.pm25Grade);
+    }
+
+    return this;
+};
+
+ControllerTown.prototype._makeStrForKma = function(data) {
+
+    var self = this;
+
+    if (data.hasOwnProperty('sensorytem') && data.sensorytem < 0) {
+        data.sensorytemStr = self._parseSensoryTem(data.sensorytem);
+    }
+
+    if (data.hasOwnProperty('ultrvGrade')) {
+        data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade);
+    }
+
+    if (data.hasOwnProperty('fsnGrade')) {
+        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade);
+    }
+
+    if (data.hasOwnProperty('wsd')) {
+        data.wsdStr = self._convertKmaWsdToStr(data.wsd);
+    }
+    if (data.hasOwnProperty('pty') && data.pty > 0) {
+        data.ptyStr = self._convertKmaPtyToStr(data.pty);
+        if (data.pty == 1) {
+            if (data.hasOwnProperty('r06')) {
+                data.r06Str = self._convertKmaRxxToStr(data.pty, data.r06);
+            }
+        }
+        else if (data.pty == 2) {
+            if (data.hasOwnProperty('r06')) {
+                data.r06Str = self._convertKmaRxxToStr(1, data.r06);
+            }
+            if (data.hasOwnProperty('s06')) {
+                data.s06Str = self._convertKmaRxxToStr(3, data.s06);
+            }
+        }
+        else if (data.pty == 3) {
+            if (data.hasOwnProperty('s06')) {
+                data.s06Str = self._convertKmaRxxToStr(data.pty, data.s06);
+            }
+        }
+        if (data.hasOwnProperty('rn1')) {
+            data.rn1Str = self._convertKmaRxxToStr(data.pty, data.rn1);
+        }
+    }
+
+    return this;
+};
+
+/**
+ *
+ * @param wsd
+ * @returns {*}
+ */
+ControllerTown.prototype._convertKmaWsdToStr = function (wsd) {
+    if (wsd < 0) {
+       return '';
+    }
+    else if (wsd < 4) {
+        return '약함';
+    }
+    else if(wsd < 9) {
+        return '약간강함';
+    }
+    else if(wsd < 14) {
+        return '강함';
+    }
+    else {
+        return '매우강함';
+    }
+};
 
 /**
  *
@@ -1731,6 +2100,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                         shortList[index].tmn = currentTmn;
                     }
                 }
+                shortList[index].tmn = shortList[index].tmn.toFixed(1);
             }
             if (shortItem.time === '1500') {
                 currentTmx = (self._createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
@@ -1746,6 +2116,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
                     }
                 }
+                shortList[index].tmx = shortList[index].tmx.toFixed(1);
             }
         });
 
@@ -2027,6 +2398,11 @@ ControllerTown.prototype._dataListPrint = function(list, name, title){
 };
 
 ControllerTown.prototype._getNewWCT = function(Tdum,Wdum) {
+    if (Wdum < 0) {
+        log.warn('Wdum is invalid');
+        return Tdum;
+    }
+
     var T = Tdum;
     var W = Wdum*3.6;
     var result = 0.0;
