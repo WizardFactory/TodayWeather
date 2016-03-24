@@ -55,7 +55,6 @@ function ControllerTown() {
              * 이는 DB에 데이터가 빠진 부분이 있어도 최종 개수 및 데이터 시간 테이블을 맞추기 위함
              */
             var basicShortlist = self._makeBasicShortList();
-            var requestTime = self._getTimeValue(9);
 
             self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
@@ -70,26 +69,7 @@ function ControllerTown() {
                         return next();
                     }
 
-                    var i;
-
                     self._dataListPrint(shortList, 'route S', 'original short');
-
-                    for(i=0 ; i < shortList.length ; i++){
-                        //log.info(shortList[i]);
-                        if(shortList[i].date === requestTime.date && shortList[i].time >= requestTime.time){
-                            //log.info('found same date');
-                            break;
-                        }
-                        else if (shortList[i].date >= requestTime.date) {
-                            log.warn('Fail to find current time so start next day from request time');
-                            break;
-                        }
-                    }
-
-                    log.silly('route S> short remove count :', i);
-                    for(var j=0 ; j<i ; j++){
-                        shortList.shift();
-                    }
 
                     basicShortlist = self._mergeShortWithBasicList(shortList,basicShortlist);
                     self._dataListPrint(basicShortlist, 'route S', 'First, merged short');

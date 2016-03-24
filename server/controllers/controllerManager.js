@@ -19,7 +19,6 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
-//var keydata = require('../config/keydata');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
@@ -42,9 +41,9 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 33;      //for pop
+    self.MAX_SHORT_COUNT = 64;    //8days * 8times
     self.MAX_CURRENT_COUNT = 192; //8days * 24hours
-    self.MAX_SHORTEST_COUNT = 4; //4 hours
+    self.MAX_SHORTEST_COUNT = 192; //8days * 24 hours
     self.MAX_MID_COUNT = 20;
 
     self.asyncTasks = [];
