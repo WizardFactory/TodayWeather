@@ -1043,6 +1043,12 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         stringList.push("자외선 " + current.ultrvStr);
     }
 
+    if (current.fsnGrade && current.fsnGrade >=2 ) {
+        if (current.fsnStr) {
+            stringList.push("식중독 " + current.fsnStr);
+        }
+    }
+
     //current.sensorytem = -10;
     //current.sensorytemStr = "관심";
     //current.wsd = 10;
