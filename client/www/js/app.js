@@ -215,7 +215,7 @@ angular.module('starter', [
 
                 var chart = function () {
                     var data = scope.timeChart;
-                    var currentTime = parseInt(scope.currentWeather.time)/100;
+                    var currentTime = scope.currentWeather.time;
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
