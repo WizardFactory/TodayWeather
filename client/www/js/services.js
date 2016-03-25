@@ -340,14 +340,14 @@ angular.module('starter.services', [])
         }
 
         /**
-         *
+         * day시작 값이 index 0부터 시작하도록, padding value을 맞추어야 함.
          * @param day
          * @returns {*}
          */
         function getDayString(day) {
             var dayString = ["엊그제", "그제", "어제", "오늘", "내일", "모레", "글피"];
             if (-3 <= day && day <= 3) {
-                return dayString[day + 2];
+                return dayString[day + 3];
             }
             console.error("Fail to get day string day=" + day);
             return "";
@@ -533,7 +533,7 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 5000})
+            $http({method: 'GET', url: url, timeout: 10*1000})
                 .success(function (data) {
                     console.log(data);
                     deferred.resolve({data: data});
@@ -571,8 +571,9 @@ angular.module('starter.services', [])
             }
             time = parseInt(currentTownWeather.time.substr(0, 2));
             isNight = time < 7 || time > 18;
-            currentForecast.time = time;
             currentForecast = currentTownWeather;
+            //time is used in ngShortChart
+            currentForecast.time = time;
 
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
