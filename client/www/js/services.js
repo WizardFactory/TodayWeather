@@ -238,7 +238,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http) {
+    .factory('WeatherUtil', function ($q, $http, Util) {
         var obj = {};
 
         //region Function
@@ -521,9 +521,16 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            //var url = "town";
-            //var url = "http://localhost:3000/v000705/town";
-            var url = "http://todayweather.wizardfactory.net/v000705/town";
+            var url;
+            if (Util.isDebug()) {
+                //url = "town";
+                //url = "http://localhost:3000/v000705/town";
+                url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+            }
+            else {
+                url = "http://todayweather.wizardfactory.net/v000705/town";
+            }
+
             url += "/" + town.first;
             if (town.second) {
                 url += "/" + town.second;

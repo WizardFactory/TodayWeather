@@ -38,24 +38,9 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
-                var statusBarVisible;
-                if (localStorage.getItem("statusBarVisible") !== null) {
-                    statusBarVisible = JSON.parse(localStorage.getItem("statusBarVisible"));
-                }
-                else {
-                    statusBarVisible = {checked: false};
-                }
-
-                // org.apache.cordova.statusbar required
-                if (statusBarVisible.checked) {
-                    StatusBar.backgroundColorByName("black");
-                    StatusBar.overlaysWebView(false);
-                    StatusBar.show();
-                }
-                else {
-                    StatusBar.hide();
-                    ionic.Platform.fullScreen();
-                }
+                // org.apache.cordova.statusbar required #670
+                StatusBar.backgroundColorByName("black");
+                StatusBar.overlaysWebView(false);
             }
 
             //#367
@@ -82,7 +67,7 @@ angular.module('starter', [
                         bannerAtTop: true, // set to true, to put banner at top
                         overlap: true, // set to true, to allow banner overlap webview
                         offsetTopBar: true, // set to true to avoid ios7 status bar overlap
-                        isTesting: true, // receiving test ad
+                        isTesting: Util.isDebug(), // receiving test ad
                         autoShow: false // auto show interstitial ad when loaded
                     }, function(e) {
                         console.log('setOptions is '+JSON.stringify(e));
