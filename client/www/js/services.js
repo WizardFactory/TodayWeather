@@ -105,7 +105,7 @@ angular.module('starter.services', [])
                 city.currentPosition = true;
                 city.address = "대한민국 하늘시 중구 구름동";
                 city.location = null;
-                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음"};
+                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunWithCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음,미세먼지보통"};
 
                 var timeData = [];
                 timeData[0] = {day: "", time: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17, tmx: -50};
@@ -238,7 +238,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http) {
+    .factory('WeatherUtil', function ($q, $http, Util) {
         var obj = {};
 
         //region Function
@@ -340,14 +340,14 @@ angular.module('starter.services', [])
         }
 
         /**
+         * day시작 값이 index 0부터 시작하도록, padding value을 맞추어야 함.
          * @param day
-         * @param hours
          * @returns {*}
          */
         function getDayString(day) {
-            var dayString = ["그제", "어제", "오늘", "내일", "모레", "글피"];
-            if (-2 <= day && day <= 3) {
-                return dayString[day + 2];
+            var dayString = ["엊그제", "그제", "어제", "오늘", "내일", "모레", "글피"];
+            if (-3 <= day && day <= 3) {
+                return dayString[day + 3];
             }
             console.error("Fail to get day string day=" + day);
             return "";
@@ -480,87 +480,6 @@ angular.module('starter.services', [])
         }
 
         /**
-         * 어제오늘, 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음), 강수량/적설량, 자외선, 체감온도
-         * @param {Object} current
-         * @param {Object} yesterday
-         * @returns {String}
-         */
-        function makeSummary(current, yesterday) {
-            var str = "";
-            var stringList = [];
-
-            if (current.t1h !== undefined && yesterday && yesterday.t3h !== undefined) {
-                var diffTemp = current.t1h - yesterday.t3h;
-
-                str = "어제";
-                if (diffTemp == 0) {
-                    str += "와 동일";
-                }
-                else {
-                    str += "보다 " + Math.abs(diffTemp);
-                    if (diffTemp < 0) {
-                        str += "도 낮음";
-                    }
-                    else if (diffTemp > 0) {
-                        str += "도 높음";
-                    }
-                }
-                stringList.push(str);
-            }
-
-            //current.arpltn = {};
-            //current.arpltn.pm10Value = 82;
-            //current.arpltn.pm10Str = "나쁨";
-            //current.arpltn.pm25Value = 82;
-            //current.arpltn.pm25Str = "나쁨";
-            if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Str &&
-                        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
-                stringList.push("미세먼지 " + current.arpltn.pm10Str);
-            }
-            else if (current.arpltn && current.arpltn.pm25Value &&
-                        (current.arpltn.pm25Value > 50 || current.arpltn.pm25Grade > 2)) {
-                stringList.push("초미세먼지 " + current.arpltn.pm25Str);
-            }
-
-            //current.ptyStr = '강수량'
-            //current.rn1Str = '1mm 미만'
-            if (current.rn1Str) {
-                stringList.push(current.ptyStr + " " + current.rn1Str);
-            }
-
-            //current.ultrv = 6;
-            //current.ultrvStr = "높음";
-            if (current.ultrv && current.ultrv >= 6) {
-                stringList.push("자외선 " + current.ultrvStr);
-            }
-
-            //current.sensorytem = -10;
-            //current.sensorytemStr = "관심";
-            //current.wsd = 10;
-            //current.wsdStr = convertKmaWsdToStr(current.wsd);
-            if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
-                stringList.push("체감온도 " + current.sensorytem +"˚");
-            }
-            else if (current.wsd && current.wsd > 9) {
-                stringList.push("바람이 " + current.wsdStr);
-            }
-
-            if (stringList.length === 1) {
-                //특정 이벤트가 없다면, 미세먼지가 기본으로 추가.
-                if (current.arpltn && current.arpltn.pm10Str && current.arpltn.pm10Value >= 0)  {
-                    stringList.push("미세먼지 " + current.arpltn.pm10Str);
-                }
-            }
-
-            if (stringList.length >= 3) {
-                return stringList[1]+", "+stringList[2];
-            }
-            else {
-               return stringList.toString();
-            }
-        }
-
-        /**
          * It's supporting only korean lang
          * @param {Object[]} results
          * @returns {string}
@@ -602,9 +521,16 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            //var url = "town";
-            //var url = "http://localhost:3000/v000705/town";
-            var url = "http://todayweather.wizardfactory.net/v000705/town";
+            var url;
+            if (Util.isDebug()) {
+                //url = "town";
+                //url = "http://localhost:3000/v000705/town";
+                url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+            }
+            else {
+                url = "http://todayweather.wizardfactory.net/v000705/town";
+            }
+
             url += "/" + town.first;
             if (town.second) {
                 url += "/" + town.second;
@@ -614,7 +540,7 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 5000})
+            $http({method: 'GET', url: url, timeout: 10*1000})
                 .success(function (data) {
                     console.log(data);
                     deferred.resolve({data: data});
@@ -629,71 +555,6 @@ angular.module('starter.services', [])
 
             return deferred.promise;
         }
-
-        function convertKmaPtyToStr(pty) {
-           if (pty === 1 || pty ===2) {
-               return "강수량";
-           }
-            else if (pty === 3) {
-               return "적설량";
-           }
-        }
-
-        /**
-         *
-         * @param pty
-         * @param rXX
-         * @returns {*}
-         */
-        function convertKmaRxxToStr(pty, rXX) {
-            if (pty === 1 || pty === 2) {
-                switch(rXX) {
-                    case 0: return "0mm";
-                    case 1: return "1mm 미만";
-                    case 5: return "1~4mm";
-                    case 10: return "5~9mm";
-                    case 20: return "10~19mm";
-                    case 40: return "20~39mm";
-                    case 70: return "40~69mm";
-                    case 100: return "70mm 이상";
-                    default : console.log('unknown data='+rXX);
-                }
-                /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
-                if (0 < rXX || rXX < 100) {
-                    return rXX+"mm 미만";
-                }
-            }
-            else if (pty === 3) {
-                switch (rXX) {
-                    case 0: return "0cm";
-                    case 1: return "1cm 미만";
-                    case 5: return "1~4cm";
-                    case 10: return "5~9cm";
-                    case 20: return "10~19cm";
-                    case 100: return "20cm 이상";
-                    default : console.log('unknown data='+rXX);
-                }
-                /* spec에 없지만 2로 오는 경우가 있었음 */
-                if (0 < rXX || rXX < 100) {
-                    return rXX+"cm 미만";
-                }
-            }
-        }
-
-        function convertKmaWsdToStr(wsd) {
-            if (wsd < 4) {
-                return '약함';
-            }
-            else if(wsd < 9) {
-                return '약간강함';
-            }
-            else if(wsd < 14) {
-                return '강함';
-            }
-            else {
-                return '매우강함';
-            }
-        }
         //endregion
 
         //region APIs
@@ -705,10 +566,9 @@ angular.module('starter.services', [])
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
          *          wsd: Number}
          * @param {Object} currentTownWeather
-         * @param shortList
          * @returns {{}}
          */
-        obj.parseCurrentTownWeather = function (currentTownWeather, shortList) {
+        obj.parseCurrentTownWeather = function (currentTownWeather) {
             var currentForecast = {};
             var time;
             var isNight;
@@ -718,32 +578,10 @@ angular.module('starter.services', [])
             }
             time = parseInt(currentTownWeather.time.substr(0, 2));
             isNight = time < 7 || time > 18;
-            currentForecast.time = time;
             currentForecast = currentTownWeather;
+            //time is used in ngShortChart
+            currentForecast.time = time;
 
-            //related to #379
-            if (currentForecast.t1h === -50) {
-                //set near data of short
-                for(var i = 0; i < shortList.length; i++) {
-                    var short = shortList[i];
-                    if (short.date === currentForecast.date) {
-                        if (short.time === currentForecast.time) {
-                            currentForecast.t1h = short.t3h;
-                            console.log('set t1h to ' + short.t3h + ' of short t3h');
-                            break;
-                        }
-                        if (short.time > currentForecast.time) {
-                            currentForecast.t1h = shortList[i-1].t3h;
-                            console.log('set t1h to ' + shortList[i-1].t3h + ' of short time='+ shortList[i-1].time);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            currentForecast.wsdStr = convertKmaWsdToStr(currentForecast.wsd);
-            currentForecast.ptyStr = convertKmaPtyToStr(currentForecast.pty);
-            currentForecast.rn1Str = convertKmaRxxToStr(currentForecast.pty, currentForecast.rn1);
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
 
@@ -751,71 +589,21 @@ angular.module('starter.services', [])
         };
 
         /**
-         *
-         * @param shortForecastList
-         * @param currentTime
-         * @returns {Array}
-         */
-        obj.parsePreShortTownWeather = function (shortForecastList, currentTime) {
-            // {date: String, sky: String, tmx: Number, tmn: Number, reh: Number}
-            var dailyTemp = [];
-            if (!shortForecastList || !Array.isArray(shortForecastList)) {
-               return dailyTemp;
-            }
-
-            shortForecastList.forEach(function (shortForecast) {
-                var dayInfo = getDayInfo(dailyTemp, shortForecast.date);
-                if (!dayInfo) {
-                    var data = {date: shortForecast.date, skyIcon: "Sun", tmx: null, tmn: null, pop: 0, reh: 0};
-                    dailyTemp.push(data);
-                    dayInfo = dailyTemp[dailyTemp.length - 1];
-                    dayInfo.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
-                }
-
-                var diffDays = getDiffDays(convertStringToDate(dayInfo.date), currentTime);
-                if (diffDays == 0) {
-                    dayInfo.week = "오늘";
-                }
-                else {
-                    dayInfo.week = dayToString(convertStringToDate(dayInfo.date).getDay());
-                }
-
-                if (shortForecast.tmx !== -50) {
-                    dayInfo.tmx = shortForecast.tmx;
-                }
-                if (shortForecast.tmn !== -50) {
-                    dayInfo.tmn = shortForecast.tmn;
-                }
-
-                if (shortForecast.pty > 0) {
-                    dayInfo.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, false);
-                }
-                dayInfo.pop = shortForecast.pop > dayInfo.pop ? shortForecast.pop : dayInfo.pop;
-                dayInfo.reh = shortForecast.reh > dayInfo.reh ? shortForecast.reh : dayInfo.reh;
-            });
-
-            console.log(dailyTemp);
-            return dailyTemp;
-        };
-
-        /**
-         * r06 6시간 강수량, s06 6시간 신적설, Sensorytem 체감온도, 부패, 동상가능, 열, 불쾌, 동파가능, 대기확산
          * @param {Object[]} shortForecastList
          * @param {Date} currentForecast
          * @param {Date} current
-         * @param {Object[]} dailyInfoList
+         * @param {Object[]} midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
          */
         obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
             var data = [];
-            var prevT3H;
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
                 return {timeTable: [], timeChart: []};
             }
 
             shortForecastList.every(function (shortForecast, index) {
-                var tempObject = {};
+                var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
                 var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
                 var day = "";
@@ -826,68 +614,13 @@ angular.module('starter.services', [])
                 var dayInfo = getDayInfo(dailyInfoList, shortForecast.date);
                 if (!dayInfo) {
                     console.log("Fail to find dayInfo date=" + shortForecast.date);
-                    dayInfo = {date: shortForecast.date, tmx: 100, tmn: -49};
+                    dayInfo = {date: shortForecast.date, taMax: 100, taMin: -49};
                 }
 
-                //It means invalid data
-                if (!shortForecast.pop && !shortForecast.sky && !shortForecast.pty && !shortForecast.reh && !shortForecast.t3h) {
-                    tempObject.pop = undefined;
-                    tempObject.pty = undefined;
-                    tempObject.r06 = undefined;
-                    tempObject.reh = undefined;
-                    tempObject.s06 = undefined;
-                    tempObject.sky = undefined;
-                    tempObject.t3h = undefined;
-                    tempObject.tmx = undefined;
-                    tempObject.tmn = undefined;
-                    tempObject.uuu = undefined;
-                    tempObject.vvv = undefined;
-                    tempObject.wav = undefined;
-                    tempObject.vec = undefined;
-                    tempObject.wsd = undefined;
-                    tempObject.skyIcon = "Sun";
-                    tempObject.tempIcon = "Temp-01";
-                    //past condition from current
-                    tempObject.rn1 = undefined;
-                    tempObject.lgt = undefined;
-                    tempObject.wsd = undefined;
-                    tempObject.vec = undefined;
+                tempObject = shortForecast;
 
-                    //related to #402
-                    if (prevT3H) {
-                        tempObject.t3h = prevT3H;
-                    }
-                }
-                else {
-                    tempObject = shortForecast;
-
-                    //related to #379
-                    if (tempObject.t3h === -50) {
-                        console.log('t3h is invalid');
-                        tempObject.t3h = prevT3H;
-                    }
-                    else {
-                        prevT3H = tempObject.t3h;
-                    }
-
-                    if (tempObject.pty === 1 || tempObject.pty === 2) {
-
-                        tempObject.ptyStr = convertKmaPtyToStr(shortForecast.pty);
-                        tempObject.rnsStr = convertKmaRxxToStr(shortForecast.pty, shortForecast.r06);
-                    }
-                    else if (tempObject.pty === 3) {
-                        tempObject.ptyStr = convertKmaPtyToStr(shortForecast.pty);
-                        tempObject.rnsStr = convertKmaRxxToStr(shortForecast.pty, shortForecast.s06);
-                    }
-                    else {
-                        tempObject.rnsStr = undefined;
-                    }
-
-                    tempObject.wsdStr = convertKmaWsdToStr(shortForecast.wsd);
-
-                    tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                    tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.tmx, dayInfo.tmn);
-                }
+                tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
+                tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
 
                 tempObject.day = day;
                 tempObject.time = time + "시";
@@ -918,25 +651,21 @@ angular.module('starter.services', [])
         /**
          * 식중독, ultra 자외선,
          * @param midData
-         * @param dailyInfoList
          * @param currentTime
-         * @param currentWeather
          * @returns {Array}
          */
-        obj.parseMidTownWeather = function (midData, dailyInfoList, currentTime, currentWeather) {
+        obj.parseMidTownWeather = function (midData, currentTime) {
             var tmpDayTable = [];
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
                 return tmpDayTable;
             }
             midData.dailyData.forEach(function (dayInfo) {
-                var data = {};
-                data.date = dayInfo.date;
+                var data;
+                data = dayInfo;
 
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
-                if (diffDays < -7 || diffDays > 10) {
-                    return;
-                }
+
                 if (diffDays == 0) {
                     data.week = "오늘";
                 }
@@ -947,34 +676,15 @@ angular.module('starter.services', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.skyIcon = getHighPrioritySky(skyAm, skyPm);
-                if (diffDays === 0) {
-                    data.tmx = currentWeather.t1h>dayInfo.taMax?currentWeather.t1h:dayInfo.taMax;
-                    data.tmn = currentWeather.t1h<dayInfo.taMin?currentWeather.t1h:dayInfo.taMin;
-                }
-                else {
-                    data.tmx = dayInfo.taMax;
-                    data.tmn = dayInfo.taMin;
-                }
 
-                if (dayInfo.reh !== undefined) {
-                    data.reh = dayInfo.reh;
-                }
-                if (dayInfo.pop !== undefined && dayInfo.pop !== -1) {
-                   data.pop = dayInfo.pop;
-                }
+                data.tmx = dayInfo.taMax;
+                data.tmn = dayInfo.taMin;
 
                 if (data.reh !== undefined) {
                     data.humidityIcon = decideHumidityIcon(data.reh);
                 }
                 else {
                     data.humidityIcon = "Humidity-00";
-                }
-
-                if (dayInfo.rn1 !== undefined && dayInfo.rn1 !== -1) {
-                    data.rn1 = dayInfo.rn1;
-                }
-                if (dayInfo.pty !== undefined && dayInfo.pty !== -1) {
-                    data.pty = dayInfo.pty;
                 }
 
                 tmpDayTable.push(data);
@@ -1352,26 +1062,19 @@ angular.module('starter.services', [])
                 }
             });
 
-            var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.short);
-            var dailyInfoArray = that.parsePreShortTownWeather(weatherData.short, currentTime);
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
 
             /**
-             * parseShortWeather에서 currentForcast에 체감온도를 추가 함, scope에 적용전에 parseShortTownWeather를 해야 함
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, dailyInfoArray);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, weatherData.midData.dailyData);
             console.log(shortTownWeather);
 
             /**
-             * parseMidTownWeather에서 currentForecast에 자외선지수를 추가 함
              * @type {Array}
              */
-            var midTownWeather = that.parseMidTownWeather(weatherData.midData, dailyInfoArray, currentTime, currentForecast);
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
             console.log(midTownWeather);
-
-            //0~3시 사이를 위해 그저께 24시(index 7)부터 비교함.
-            var yesterdayIndex = parseInt(parseInt(currentForecast.time)/100/3) + 7;
-            currentForecast.summary = makeSummary(currentForecast, weatherData.short[yesterdayIndex]);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;

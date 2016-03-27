@@ -28,31 +28,20 @@ angular.module('starter.controllers', [])
         $scope.dayWidth; //total width of dayChart and dayTable
 
         var padding = 1;
-        //console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-        //console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+
+        //iphone 4 480-20(status bar)
+        if ((window.innerHeight === 460 || window.innerHeight === 480) && window.innerWidth === 320) {
+            padding = 1.125;
+        }
         //iphone 5 568-20(status bar)
         if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
-            padding = 0.90;
+            padding = 1.125;
         }
         //iphone 6 667-20
         if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
-            padding = 0.85;
-        }
-        //iphone 6+ 736-20
-        if ((window.innerHeight === 716 || window.innerHeight === 736) && window.innerWidth === 414) {
-            padding = 0.80;
-        }
-        //ss note3 640-25
-        if ((window.innerHeight === 615 || window.innerHeight === 640 ) &&
-            window.innerWidth === 360 &&
-            window.devicePixelRatio === 3) {
-            padding = 0.80;
-        }
-        //ss uhd 732-25
-        if ((window.innerHeight === 707 || window.innerHeight === 732) &&
-            window.innerWidth === 412 &&
-            window.devicePixelRatio === 3.5) {
-            padding = 0.80;
+            padding = 1.0625;
         }
 
         var mainHeight = window.innerHeight - 100;
@@ -60,22 +49,22 @@ angular.module('starter.controllers', [])
         var topTimeSize = mainHeight * 0.026;
         $scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
 
-        var regionSize = mainHeight * 0.051 * padding;
+        var regionSize = mainHeight * 0.0408 * padding; //0.051
         $scope.regionSize = regionSize<33.04?regionSize:33.04;
 
-        var regionSumSize = mainHeight * 0.047 * padding;
+        var regionSumSize = mainHeight * 0.0376 * padding; //0.047
         $scope.regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
 
-        var bigDigitSize = mainHeight * 0.2193 * padding;
+        var bigDigitSize = mainHeight * 0.17544 * padding; //0.2193
         $scope.bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
 
-        var bigTempPointSize = mainHeight * 0.0423 * padding;
+        var bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
         $scope.bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
 
         //injection img url after setting imgSize.
         $scope.reddot = 'reddot';
 
-        var bigSkyStateSize = mainHeight * 0.1408 * padding;
+        var bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
         $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
         var smallTimeSize = mainHeight * 0.0299;

@@ -19,7 +19,6 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidLand = require('../models/modelMidLand');
 var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
-//var keydata = require('../config/keydata');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
 var PastConditionGather = require('../lib/PastConditionGather');
@@ -42,9 +41,9 @@ function Manager(){
     };
 
     self.saveOnlyLastOne = true;
-    self.MAX_SHORT_COUNT = 33;      //for pop
+    self.MAX_SHORT_COUNT = 64;    //8days * 8times
     self.MAX_CURRENT_COUNT = 192; //8days * 24hours
-    self.MAX_SHORTEST_COUNT = 4; //4 hours
+    self.MAX_SHORTEST_COUNT = 192; //8days * 24 hours
     self.MAX_MID_COUNT = 20;
 
     self.asyncTasks = [];
@@ -564,10 +563,11 @@ Manager.prototype.saveShortest = function(newData, callback){
 
             list.forEach(function(dbShortestList){
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
-                if (self.saveOnlyLastOne) {
-                    dbShortestList.shortestData = newData;
-                }
-                else {
+                //if (self.saveOnlyLastOne) {
+                //    dbShortestList.shortestData = newData;
+                //}
+                //else
+                {
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('ST> newItem : ', newItem);
@@ -1732,7 +1732,7 @@ Manager.prototype.checkTimeAndPushTask = function (putAll) {
     if (time === 20 || putAll) {
         log.info('push keco main process');
         self.asyncTasks.push(function (callback) {
-            keco.cbMainProcess(keco, function (err) {
+            keco.cbKmaIndexProcess(keco, function (err) {
                 if (err) {
                     log.error;
                 }
@@ -1832,23 +1832,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     log.verbose('check time and request task');
 
     if (time === 1 || putAll) {
-        log.info('push short rss');
+        log.info('push past');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("shortrss", callback);
-        });
-
-        log.info('push mid rss');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("midrss", callback);
+            self._requestApi("past", callback);
         });
 
         log.info('push life index');
         self.asyncTasks.push(function (callback) {
             self._requestApi("lifeindex", callback);
         });
-    }
 
-    if (time === 2 || putAll) {
         log.info('push mid temp');
         self.asyncTasks.push(function (callback) {
             self._requestApi("midtemp", callback);
@@ -1865,12 +1858,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("midsea", callback);
         });
-    }
 
-    if (time === 10 || putAll) {
-        log.info('push past');
+        log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("past", callback);
+            self._requestApi("midrss", callback);
+        });
+
+        log.info('push short rss');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("shortrss", callback);
         });
     }
 
@@ -1882,21 +1878,20 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 31 || putAll) {
-        log.info('push short');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("short", callback);
-        });
-    }
-
     if (time === 35 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);
         });
+
         log.info('push current');
         self.asyncTasks.push(function (callback) {
             self._requestApi("current", callback);
+        });
+
+        log.info('push short');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("short", callback);
         });
     }
 
@@ -1915,14 +1910,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 };
 
+/**
+ *
+ * @returns {Manager}
+ */
 Manager.prototype.startManager = function(){
     var self = this;
 
     midRssKmaRequester.setNextGetTime(new Date());
     self.midRssKmaRequester = midRssKmaRequester;
-    townRss.loadList(function(){
-        log.info('Rss> complete loadList for Rss.');
-    });
 
     keco.setServiceKey(config.keyString.normal);
     keco.setDaumApiKey(config.keyString.daum_key);
@@ -1932,21 +1928,37 @@ Manager.prototype.startManager = function(){
             log.error(err);
         }
     });
+
     self.keco = keco;
 
     taskKmaIndexService.setServiceKey(config.keyString.cert_key);
-    taskKmaIndexService.loadAreaList();
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
 
-    //self.checkTimeAndPushTask(true);
-    self.checkTimeAndRequestTask(true);
-    self.task();
+    async.parallel([
+        function (callback) {
+            townRss.loadList(function(){
+                log.info('Rss> complete loadList for Rss.');
+                callback();
+            });
+        },
+        function (callback) {
+            taskKmaIndexService.loadAreaList(function () {
+                log.info('KmaIndex> complete loadAreaList for KMA Index.');
+                callback();
+            });
+        }
+    ], function () {
+        //self.checkTimeAndPushTask(true);
+        self.checkTimeAndRequestTask(true);
+        self.task();
+        setInterval(function() {
+            self.checkTimeAndRequestTask(false) ;
+        }, 1000*60);
+    });
 
-    setInterval(function() {
-       self.checkTimeAndRequestTask(false) ;
-    }, 1000*60);
+    return this;
 };
 
 Manager.prototype.stopManager = function(){

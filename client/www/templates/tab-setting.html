@@ -29,19 +29,20 @@
                                 <!--<option>10일까지 표시</option>-->
                             <!--</select>-->
                         <!--</label>-->
-                        <li class="item" style="background-color: inherit; color: inherit">
-                            <div class="row row-no-padding">
-                                <div class="col col-66" style="line-height: 24px; font-size:20px;">버전</div>
-                                <div class="col col-33" style="line-height: 24px; font-size:20px;">{{version}}</div>
-                                <!--<button class="button button-energized">-->
-                                <!--<i class="ion-ios-download-outline"></i>-->
-                                <!--</button>-->
-                            </div>
+                        <li class="item item-icon-right" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                            버전<span class="item-note" style="color:white; line-height: 24px; font-size:20px">{{version}}</span>
                         </li>
-                        <li class="item"  ng-click="openMarket()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">평가하기
+                        <a class="item item-icon-right" href="mailto:todayweather@wizardfactory.net" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                            의견보내기
+                            <i class="icon ion-chevron-right"></i>
+                        </a>
+                        <li class="item item-icon-right"  ng-click="openMarket()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                            별점주기
+                            <i class="icon ion-chevron-right"></i>
                             <!--<img src="img/setting-review.png" style="width: 30px">-->
                         </li>
-                        <li class="item"  ng-click="openInfo()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">정보
+                        <li class="item item-icon-right"  ng-click="openInfo()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">정보
+                            <i class="icon ion-chevron-right"></i>
                         </li>
                     </ul>
                 </div>

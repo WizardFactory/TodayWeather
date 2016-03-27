@@ -25,7 +25,7 @@ var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
 /**
  * fsn 식중독지수, rot 부패지수, Sensorytem 체감온도, Frostbite 동상가능 지수, Heat 열, Dspls 불쾌
  * Winter 동파, Ultrv 자외선, Airpollution 대기 확산
- * _areaList(townList), nextTime - 데이터를 가지고 올 다음 시간, areaIndex - 다음에 가지고올 순서,
+ * _areaList(townList), nextTime - 데이터를 가지고 올 다음 시간,
  * @constructor
  */
 function KmaIndexService() {
@@ -34,15 +34,13 @@ function KmaIndexService() {
 
     this.fsn = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 2, end: 10}, //3~11
-        updateTimeTable: [5, 20],   //kr 06, 18
+        updateTimeTable: [9, 21],   //kr 06, 18
         urlPath: 'getFsnLifeList'
     };
 
     this.rot = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 2, end: 10}, //3~11
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getRotLifeList'
@@ -50,7 +48,6 @@ function KmaIndexService() {
 
     this.sensorytem = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 10, end: 3}, //3~11
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getSensorytemLifeList'
@@ -58,7 +55,6 @@ function KmaIndexService() {
 
      this.frostbite = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 11, end: 1}, //12~2
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getFrostbiteLifeList'
@@ -66,7 +62,6 @@ function KmaIndexService() {
 
     this.heat = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 5, end: 8}, //6~9
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getHeatLifeList'
@@ -74,7 +69,6 @@ function KmaIndexService() {
 
     this.dspls = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 5, end: 8}, //6~9
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getDsplsLifeList'
@@ -82,7 +76,6 @@ function KmaIndexService() {
 
     this.winter = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 11, end: 1},
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getWinterLifeList'
@@ -90,15 +83,13 @@ function KmaIndexService() {
 
     this.ultrv = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 2, end: 10},
-        updateTimeTable: [9, 21], //kr 7, 19
+        updateTimeTable: [10, 22], //kr 7, 19
         urlPath: 'getUltrvLifeList'
     };
 
     this.airpollution = {
         nextTime: null,
-        areaIndex: 0,
         offerMonth: {start: 10, end: 4},
         updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
         urlPath: 'getAirpollutionLifeList'
@@ -120,18 +111,23 @@ KmaIndexService.prototype.setServiceKey = function(key) {
 /**
  *
  */
-KmaIndexService.prototype.loadAreaList = function() {
+KmaIndexService.prototype.loadAreaList = function(callback) {
     log.info("LOAD AREA LIST");
 
     var self = this;
-    Town.find({}, function(err, townList) {
+    Town.find({},{_id:0}).lean().exec(function(err, townList) {
         if (err)  {
-            log.error("Fail to load townlist");
+            log.error("Fail to load town list");
             return err;
         }
         self._areaList = townList;
-        log.info("areaList="+self._areaList.length);
+        log.info("kma index  areaList="+self._areaList.length);
+        if (callback) {
+            callback();
+        }
     });
+
+    return this;
 };
 
 /**
@@ -141,7 +137,43 @@ KmaIndexService.prototype.loadAreaList = function() {
  * @returns {boolean}
  */
 KmaIndexService.prototype.checkGetTime = function (indexName, time) {
-  return time >= this[indexName].nextTime;
+  return time.getTime() >= this[indexName].nextTime.getTime();
+};
+
+KmaIndexService.prototype.getLastGetTime = function (indexName) {
+    var l = this[indexName];
+    var time = new Date();
+    time.setUTCMinutes(0);
+    time.setUTCSeconds(0);
+    time.setUTCMilliseconds(0);
+
+    if (time.getUTCHours() < l.updateTimeTable[0]) {
+        time.setUTCDate(time.getUTCDate()-1);
+        time.setUTCHours(l.updateTimeTable[l.updateTimeTable.length-1]);
+    }
+    else if (time.getUTCHours() >= l.updateTimeTable[l.updateTimeTable.length-1]) {
+        time.setUTCHours(l.updateTimeTable[l.updateTimeTable.length-1]);
+    }
+    else {
+        for (var i=l.updateTimeTable.length-1; i>=0; i--) {
+            if (l.updateTimeTable[i] < time.getUTCHours()) {
+                time.setUTCHours(l.updateTimeTable[i]);
+                break;
+            }
+        }
+    }
+
+    if (time.getUTCMonth() < l.offerMonth.start) {
+        time.setUTCFullYear(time.getFullYear()-1);
+        time.setUTCMonth(l.offerMonth.end+1);
+        time.setUTCDate(0); //the last hour of the previous month
+    }
+    else if (time.getUTCMonth() > l.offerMonth.end) {
+        time.setUTCMonth(l.offerMonth.end+1);
+        time.setUTCDate(0); //the last hour of the previous month
+    }
+
+    return time;
 };
 
 /**
@@ -170,6 +202,7 @@ KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
         }
         l.nextTime.setUTCMinutes(10);
         l.nextTime.setUTCSeconds(0);
+        l.nextTime.setUTCMilliseconds(0);
     }
 
     //check offerMonth
@@ -317,6 +350,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
         }
         else {
             err = new Error("ReturnCode="+header.ReturnCode+" ErrMsg="+header.ErrMsg);
+            err.ReturnCode = header.ReturnCode;
             log.error(err);
             return {error: err};
         }
@@ -347,7 +381,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
 };
 
 /**
- *
+ * 서버쪽 끊어짐이 심하고(503), request count 체크가 확실하지 않아, timeout 처리 최소화
  * @param indexName
  * @param areaNo
  * @param callback
@@ -357,12 +391,14 @@ KmaIndexService.prototype.getLifeIndex = function (indexName, areaNo, callback) 
 
     log.debug(url);
 
-    req(url, {json:true}, function (err, response, body) {
+    req(url, {timeout: 1000*30, json:true}, function (err, response, body) {
         if (err) {
             return callback(err);
         }
         if (response.statusCode >= 400) {
-           return callback(new Error("response status Code="+response.statusCode));
+            err = new Error("response status Code="+response.statusCode);
+            err.statusCode = response.statusCode;
+           return callback(err);
         }
         callback(undefined, body);
     });
@@ -437,7 +473,8 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
             if (lifeIndex[indexName].lastUpdateDate === data[indexName].lastUpdateDate &&
                 lifeIndex[indexName].data.length !== 0)
             {
-                log.debug(indexName+' life index has not updated yet');
+                log.error('areaNo='+data.areaNo+' '+indexName+' life index has not updated yet lastUpdateDate='+
+                            lifeIndex[indexName].lastUpdateDate);
                 return;
             }
 
@@ -446,18 +483,51 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
                 if (err) {
                     log.error(err);
                 }
+                return callback();
             });
         });
-        return callback();
     });
+
+    return this;
 };
 
+/**
+ *
+ * @param indexName
+ * @param town
+ * @param callback
+ */
 KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, town, callback) {
     var self = this;
 
     async.waterfall([
         function(cb) {
+            LifeIndexKma.find({areaNo: town.areaNo}).lean().exec(function(err, lifeIndexList) {
+                if (err) {
+                    return cb(err);
+                }
+                if (lifeIndexList.length === 0) {
+                    log.info('Fail to find areaNo='+town.areaNo+' so get first time');
+                    return cb();
+                }
+                var lastUpdateTime = kmaTimeLib.convertStringToDate(lifeIndexList[0][indexName].lastUpdateDate);
+                var lastPublicTime = self.getLastGetTime.call(self, indexName);
+                if (lastUpdateTime.getTime() < lastPublicTime.getTime()) {
+                    //go to get new data
+                }
+                else {
+                    log.info('areaNo='+town.areaNo+' life index data already updated skip '+indexName+
+                        ' lateUpdateDate='+lifeIndexList[0][indexName].lastUpdateDate);
+                    return cb('skip', lifeIndexList[indexName]);
+                }
+                return cb();
+            });
+        },
+        function(cb) {
             self.getLifeIndex(indexName, town.areaNo, function(err, body){
+                if (err) {
+                    return cb(err, undefined);
+                }
                 cb(err, body);
             });
         },
@@ -467,29 +537,80 @@ KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, to
         },
         function(data, cb) {
             if (!data) {
-                log.debug('it means skip of ' + indexName);
+                log.debug('areaNo='+town.areaNo+' it means skip of ' + indexName);
                 return cb();
             }
             self.saveLifeIndex(indexName, town, data, function (err) {
-                //todo : need to check save
-                if (err) {
-                    log.error(err);
-                }
+                cb(err, data[indexName]);
             });
-
-            cb(undefined, data[indexName]);
         }
     ], function(err, result) {
-        if(err) {
-            log.error(err);
+        if (err === 'skip') {
+           err = undefined;
         }
         return callback(err, {area: town, indexData: result});
     });
 };
+
+KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, retryCount, callback) {
+    var self = this;
+    var failList = [];
+
+    async.map(list,
+        function (area, cBack) {
+            self.getLifeIndexByIndexNameAreaNo(indexName, area, function (err, data) {
+                if (err) {
+                    err.message += ' indexName=' +indexName +' area'+ JSON.stringify(area);
+                    if (err.ReturnCode && (err.ReturnCode == '01' || err.ReturnCode == '99')) {
+                        var errStr = 'Can not retry get life index of '+indexName;
+                        if (err.ReturnCode == '01') {
+                            log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
+                        }
+                        else if (err.ReturnCode == '99') {
+                            log.silly(errStr+': There is no result');
+                        }
+                        log.error(err);
+                    }
+                    else {
+                        failList.push(area);
+                        if (err.statusCode && err.statusCode === 503) {
+                            log.warn(err.message);
+                        }
+                        else {
+                            log.error(err);
+                        }
+                    }
+                }
+                else {
+                    log.silly(JSON.stringify(data));
+                }
+                cBack(undefined, area);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err, results);
+            }
+            log.debug('rcv results.length='+results.length);
+            if (failList.length != 0) {
+                retryCount--;
+                if (retryCount <=0) {
+                    err = new Error('Retry count is zero');
+                    return callback(err, results);
+                }
+                log.warn('retry to get kma life index failList.length='+failList.length+' retryCount='+retryCount);
+                return self._recursiveGetLifeIndex(indexName, failList, retryCount, callback);
+            }
+            return callback(err);
+        }
+    );
+};
+
 /**
  * townList를 돌면서, kma의 데이터를 가지고 와서, parsing하고 save한다, 중간에 오류가 발생하면,
- * town에 대한 index를 저장해서 다음에 index부터 시작한다
- * @param indexName
+ * recursiveGetLifeIndex에서 재시도한다.
+ * 재시도에도 모두 가지고 오지 못하면, getTime은 update하지 않는다. 현재는 1시간마다, lifeIndex를 체크하기 때문에 1시간후에 재시도 된다.
+ * @param indexName ultrv, fsn
  * @param callback
  * @returns {*}
  */
@@ -498,33 +619,24 @@ KmaIndexService.prototype.taskLifeIndex = function (indexName, callback) {
     var time = new Date();
 
     if (!this.checkGetTime(indexName, time)) {
-        log.debug('skip '+indexName);
+        log.info('skip '+indexName+' nextTime='+ this[indexName].nextTime);
         return callback();
     }
 
-    log.info('start to get '+indexName+' life list ' + time);
+    var list = this._areaList;
+    log.info('start to get '+indexName+' life length='+list.length+' time=' + time);
 
-    var list = this._areaList.slice(this[indexName].areaIndex);
-    log.info(list.length);
+    self._recursiveGetLifeIndex(indexName, list, 30, function (err) {
+        if (err) {
+            return callback(err);
+        }
 
-    async.mapSeries(list,
-        function(area, cBack) {
-            self.getLifeIndexByIndexNameAreaNo(indexName, area, function (err, data) {
-                cBack(err, data.area);
-            });
-        },
-        function(err, results) {
-            if (err) {
-                log.error(err);
-                self[indexName].areaIndex = self._areaList.indexOf(results[results.length-1].area);
-                log.info('next index='+self[indexName].areaIndex);
-                return callback(err);
-            }
-            log.info('get all data of '+indexName);
-            self.setNextGetTime(indexName);
-            self[indexName].areaIndex = 0;
-            callback(err, results);
-        });
+        log.info('get all data of '+indexName);
+        self.setNextGetTime(indexName);
+        return callback(err);
+    });
+
+    return this;
 };
 
 KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
@@ -601,7 +713,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
  * @param self
  * @returns {*}
  */
-KmaIndexService.prototype.cbMainProcess = function(self, callback) {
+KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {
     log.info("Called KMA Index service Main process");
     if (!self.serviceKey) {
         return log.error("You have to set KEY first!");
@@ -616,11 +728,11 @@ KmaIndexService.prototype.cbMainProcess = function(self, callback) {
     var list = ['ultrv', 'fsn'];
     async.mapSeries(list,
         function(indexName, cb) {
-            self.taskLifeIndex(indexName, function (err, results) {
+            self.taskLifeIndex(indexName, function (err) {
                 if(err) {
                     log.error(err);
                 }
-                cb(undefined, results); //keep continue for next index service
+                cb();
             });
         },
         function(err, results) {
@@ -632,7 +744,7 @@ KmaIndexService.prototype.cbMainProcess = function(self, callback) {
                callback(err);
             }
             else {
-                setTimeout(self.cbMainProcess, 60*1000*10, self); //10mins
+                setTimeout(self.cbKmaIndexProcess, 60*1000*10, self); //10mins
             }
         });
 };
@@ -649,7 +761,7 @@ KmaIndexService.prototype.start = function() {
     //this.setNextGetTime('dspls', new Date());
     this.setNextGetTime('fsn', new Date());
     this.setNextGetTime('ultrv', new Date());
-    setTimeout(this.cbMainProcess, 3*1000, this); //start after 3secs
+    setTimeout(this.cbKmaIndexProcess, 3*1000, this); //start after 3secs
 };
 
 module.exports = KmaIndexService;
