@@ -121,12 +121,13 @@
                                          style="width: 40px">
                                 </div>
                             </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}
-                                <small>%</small></p>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}<small>%</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>미세먼지</p></div>
+                            <div class="col col-33 detail-text"><p>미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm10StationName?currentWeather.arpltn.pm10StationName:currentWeather.arpltn.stationName}}</small></p>
+                            </div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
@@ -135,7 +136,10 @@
                             </div>
                         </div>
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>초미세먼지</p></div>
+                            <div class="col col-33 detail-text"><p>초미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm25StationName?currentWeather.arpltn.pm25StationName:currentWeather.arpltn.stationName}}</small>
+                                </p>
+                            </div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>

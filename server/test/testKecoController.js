@@ -17,14 +17,23 @@ describe('unit test - keco controller', function() {
     //    if (err) {
     //        console.error('Could not connect to MongoDB!');
     //        console.log(err);
-    //        done();
     //    }
     //});
     //mongoose.connection.on('error', function(err) {
     //    console.error('MongoDB connection error: ' + err);
-    //    done();
     //});
-    //
+
+    //it('test get arpltn info', function (done) {
+    //    var town = { "first" : "경기도", "second" : "성남시분당구", "third" : "수내1동"};
+    //    kecoController.getArpLtnInfo(town, new Date(), function (err, arpltn) {
+    //        if (err) {
+    //            log.error (err);
+    //        }
+    //        console.log(JSON.stringify(arpltn));
+    //        done();
+    //    });
+    //});
+
     //it('test appendData', function(done) {
     //    this.timeout(4*1000);
     //    var town = { "first" : "경기도", "second" : "안성시", "third" : "안성3동"};

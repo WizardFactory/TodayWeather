@@ -4,7 +4,13 @@
 
 'use strict';
 
-var arpltn = require('../models/arpltnTownKeco');
+var Town = require('../models/town');
+var arpltnTown = require('../models/arpltnTownKeco');
+var Arpltn = require('../models/arpltnKeco.js');
+var MsrStn = require('../models/modelMsrStnInfo.js');
+
+var async = require('async');
+
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
@@ -85,8 +91,7 @@ arpltnController.parsePm25Info = function (pm25Value, pm25Grade) {
     return "-";
 };
 
-arpltnController._mregeData = function(current, arpltnDataList, callback){
-    var self = this;
+arpltnController._mregeData = function(town, current, arpltnDataList, callback){
     var err = undefined;
 
     try {
@@ -111,13 +116,174 @@ arpltnController._mregeData = function(current, arpltnDataList, callback){
     }
 };
 
+/**
+ *
+ * @param msrStnList
+ * @param callback
+ * @returns {arpltnController}
+ * @private
+ */
+arpltnController._getArpLtnList = function (msrStnList, callback) {
+    if (!Array.isArray(msrStnList)) {
+        callback(new Error("mstStnList is not array"));
+        return this;
+    }
+
+    async.mapSeries(msrStnList,
+        function(msrStn, cb) {
+            Arpltn.find({stationName: msrStn.stationName}).limit(1).lean().exec(function (err, arpltnList) {
+                if (err) {
+                    log.error(err);
+                }
+                cb(err, arpltnList[0]);
+            });
+        },
+        function(err, results) {
+            if (err) {
+                return callback(err);
+            }
+            //results.sort(function (a, b) {
+            //    if (a.index < b.index) {
+            //        return -1;
+            //    }
+            //    else if (a.index > b.index) {
+            //        return 1;
+            //    }
+            //    return 0;
+            //});
+            callback(err, results);
+        });
+
+    return this;
+};
+
+/**
+ *
+ * @param arpltn
+ * @returns {boolean}
+ * @private
+ */
+arpltnController._checkArpltnDataValid = function (arpltn) {
+    for (var key in arpltn) {
+        if (typeof arpltn[key] === 'number' && arpltn[key] === -1) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
+/**
+ * 8시간 이내의 경우 사용
+ * @param dateTime
+ * @param arpltn
+ * @returns {boolean}
+ * @private
+ */
+arpltnController._checkDateTime = function(arpltn, dateTime) {
+    var arpltnTime = new Date(arpltn.dataTime);
+    dateTime.setHours(dateTime.getHours()-8);
+    if (dateTime.getTime() < arpltnTime.getTime()) {
+        return true;
+    }
+    return false;
+};
+
+/**
+ *
+ * @param arpltnList
+ * @returns {*}
+ * @private
+ */
+arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
+    var arpltn;
+    var self = this;
+
+    if (!Array.isArray(arpltnList)) {
+        log.error(new Error("arpltn is not array"));
+        return arpltn;
+    }
+
+    for (var i=0; i<arpltnList.length; i++) {
+        var src = arpltnList[i];
+
+        if(self._checkDateTime(src, currentTime)) {
+            if (arpltn === undefined) {
+                arpltn =  new Object(src);
+            }
+            else {
+                ['co', 'khai', 'no2', 'o3', 'pm10', 'pm25', 'so2'].forEach(function (name) {
+                    if (arpltn[name+'Value'] === -1 && src[name+'Value'] !== -1) {
+                        arpltn[name+'Value'] = src[name+'Value'];
+                        arpltn[name+'Grade'] = src[name+'Grade'];
+                        arpltn[name+'StationName'] = src.stationName;
+                    }
+                });
+            }
+        }
+
+        if (arpltn && self._checkArpltnDataValid(arpltn)) {
+            break;
+        }
+    }
+
+    return arpltn;
+};
+
+arpltnController.getArpLtnInfo = function (town, dateTime, callback) {
+    var self = this;
+
+    async.waterfall([
+            function(cb) {
+                Town.find({"town.first":town.first, "town.second":town.second, "town.third":town.third}).
+                    limit(1).lean().exec(function (err, townInfo) {
+                        if (err) {
+                            return cb(err);
+                        }
+                        if(townInfo.length === 0) {
+                            err = new Error("Fail to find town="+JSON.stringify(town));
+                            return cb(err);
+                        }
+                        return cb(err, townInfo[0]);
+                    });
+            },
+            function(townInfo, cb) {
+                var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+                MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(10).lean().exec(function (err, msrStnList) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    return cb(err, msrStnList);
+                });
+            },
+            function (msrStnList, cb) {
+                self._getArpLtnList(msrStnList, function (err, arpltnList) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    return cb(err, arpltnList);
+                });
+            },
+            function (arpltnList, cb) {
+                var arpltn = self._mergeArpltnList(arpltnList, dateTime);
+                return cb(undefined, arpltn);
+            }],
+        function(err, arpltn) {
+            if (err)  {
+                return callback(err);
+            }
+            callback(err, arpltn);
+        });
+
+    return this;
+};
+
 arpltnController._appendFromDb = function(town, current, callback) {
     var self = this;
-    var async = require('async');
 
     async.waterfall([
             function(cb){
-                arpltn.find({town:town}).limit(1).lean().exec(function (err, arpltnDataList) {
+                arpltnTown.find({town:town}).limit(1).lean().exec(function (err, arpltnDataList) {
                     if(err || arpltnDataList.length === 0){
                         log.warn(err);
                         return cb(null);
@@ -133,7 +299,7 @@ arpltnController._appendFromDb = function(town, current, callback) {
                         return cb(null);
                     }
 
-                    arpltn.find({'mCoord.mx':result.mx, 'mCoord.my':result.my}).limit(1).lean().exec(function (err, arpltnDataList) {
+                    arpltnTown.find({'mCoord.mx':result.mx, 'mCoord.my':result.my}).limit(1).lean().exec(function (err, arpltnDataList) {
                         if(err || arpltnDataList.length === 0){
                             log.warn(err);
                             return cb(null);
@@ -147,7 +313,7 @@ arpltnController._appendFromDb = function(town, current, callback) {
         ],
     function(err, result){
         if(result){
-            self._mregeData(current, result, callback);
+            self._mregeData(town, current, result, callback);
             return;
         }
 
@@ -161,8 +327,6 @@ arpltnController._appendFromKeco = function(town, current, callback) {
     var keco = new (require('../lib/kecoRequester.js'))();
     keco.setServiceKey(keyBox.normal);
     keco.setDaumApiKey(keyBox.daum_key);
-
-    var async = require('async');
 
     async.waterfall([
         function(cb) {
@@ -194,7 +358,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(xmlStationInfoList, cb) {
-            keco.parseMsrstn(xmlStationInfoList, function (err, stationName) {
+            keco.getStationNameFromMsrstn(xmlStationInfoList, function (err, stationName) {
                 if (err) {
                     return cb(err);}
                 log.debug(stationName);
@@ -250,16 +414,6 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         }
 
         log.debug(arpltn);
-
-        //never mind about save
-        var tempTown = { "first" : town.first, "second" : town.second, "third" : town.third};
-        var mCoord = {mx: town.mCoord.mx, my:town.mCoord.my};
-
-        keco.saveArpltnTown({town: tempTown, mCoord: mCoord}, arpltn, function (err) {
-            if (err) {
-                log.warn(err);
-            }
-        });
 
         callback(err, arpltn);
     });
