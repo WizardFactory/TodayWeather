@@ -574,6 +574,13 @@ angular.module('starter.controllers', [])
         });
 
         identifyUser();
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'forecast'
+        });
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
@@ -727,6 +734,13 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
         });
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'search'
+        });
     })
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
@@ -801,6 +815,13 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
         });
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'setting'
+        });
     })
 
     .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
@@ -827,6 +848,13 @@ angular.module('starter.controllers', [])
         $scope.doTabForecast = function() {
             if ($location.url() === '/tab/forecast') {
                 $scope.$broadcast('updateWeatherEvent');
+
+                ga('send', {
+                    hitType: 'event',
+                    eventCategory: 'page',
+                    eventAction: 'tab',
+                    eventLabel: 'reload'
+                });
             }
             else {
                 $location.url('/tab/forecast');
@@ -888,6 +916,13 @@ angular.module('starter.controllers', [])
                 }, function(err) {
                     // An error occured
                 });
+
+            ga('send', {
+                hitType: 'event',
+                eventCategory: 'page',
+                eventAction: 'tab',
+                eventLabel: 'share'
+            });
         };
 
         //$ionicPlatform.ready(function() {
