@@ -194,4 +194,48 @@ LifeIndexKmaController.appendData = function (town, shortList, midList, callback
     });
 };
 
+/**
+ * @brief 불쾌지수를 구하는 함수
+ * @param temperature       온도
+ * @param humidity          습도
+ * @returns {unsined int}   불퀘지수
+ */
+LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
+    if(temperature === undefined
+        || humidity === undefined
+        || temperature < -50
+        || humidity < 0)
+    {
+        log.debug('DiscomfortIndex > invalid parameter.');
+        return -1;
+    }
+
+    var discomfortIndex = (9/5*temperature)-(0.55*(1-humidity/100)*(9/5*temperature-26))+32;
+
+    return discomfortIndex.toFixed(1);
+};
+
+LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex) {
+    if(discomfortIndex === undefined
+        || discomfortIndex < 0)
+    {
+        log.debug('DiscomfortString > invalid parameter');
+        return "";
+    }
+
+    var discomfortString;
+
+    if(discomfortIndex < 68) {
+        discomfortString = "낮음";
+    } else if(discomfortIndex < 75) {
+        discomfortString = "보통";
+    } else if(discomfortIndex < 80) {
+        discomfortString = "높음";
+    } else {
+        discomfortString = "매우높음";
+    }
+
+    return discomfortString;
+};
+
 module.exports = LifeIndexKmaController;
