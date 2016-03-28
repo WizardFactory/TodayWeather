@@ -93,6 +93,13 @@ function ControllerTown() {
 
                             self._dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
+                            var i;
+                            // discomfort index(불쾌지수)
+                            for(i=0 ; i < resultShortList.length ; i++){
+                                resultShortList[i].dspls = LifeIndexKmaController.getDiscomfortIndex(resultShortList[i].t3h, resultShortList[i].reh);
+                                resultShortList[i].dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultShortList[i].dspls);
+                            }
+
                             req.short = resultShortList;
                             next();
                         });
@@ -411,6 +418,11 @@ function ControllerTown() {
                     //log.info(listCurrent);
                     //지수 계산 이후에 반올림함.
                     resultItem.t1h = Math.round(resultItem.t1h);
+
+                    // get discomfort index(불괘지수)
+                    resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
+                    resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
+
                     req.current = resultItem;
 
                     //재사용을 위해 req에 달아둠.
