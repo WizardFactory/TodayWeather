@@ -53,8 +53,8 @@ function CollectData(options, callback){
     self.listAreaCode = Object.freeze(
         [
             {name: '경기도', code: '11B00000'},
-            {name: '강원도 영서', code: '11D10000'},
-            {name: '강원도 영동', code: '11D20000'},
+            {name: '강원도 영서', code: '11D10000'}, //춘천
+            {name: '강원도 영동', code: '11D20000'}, //강릉
             {name: '충청남도', code: '11C20000'},
             {name: '충청북도', code: '11C10000'},
             {name: '전라남도', code: '11F20000'},
@@ -181,7 +181,7 @@ function CollectData(options, callback){
             self.recvFailed = true;
             self.receivedCount++;
 
-            log.warn('ignore this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
+            log.debug('will retry this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
 
             if(self.receivedCount === self.listCount){
                 self.emit('dataCompleted');
