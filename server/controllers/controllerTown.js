@@ -704,17 +704,17 @@ function ControllerTown() {
         }
 
         try {
-            KecoController.appendData({
-                    third: req.params.town,
-                    second: req.params.city,
-                    first: req.params.region
-                }, req.current,
-                function (err) {
-                    if (err) {
-                        log.error(err);
-                    }
-                    next();
-                });
+            KecoController.getArpLtnInfo({
+                third: req.params.town,
+                second: req.params.city,
+                first: req.params.region
+            }, new Date(), function (err, arpltn) {
+                if (err) {
+                    log.error(err);
+                }
+                req.current.arpltn = arpltn;
+                next();
+            });
         }
         catch(e) {
             if (e) {

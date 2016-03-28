@@ -1923,11 +1923,6 @@ Manager.prototype.startManager = function(){
     keco.setServiceKey(config.keyString.normal);
     keco.setDaumApiKey(config.keyString.daum_key);
     keco.getCtprvnSidoList();
-    keco.addMsrstnInfoToTown(function (err) {
-        if (err) {
-            log.error(err);
-        }
-    });
 
     self.keco = keco;
 
@@ -1937,6 +1932,17 @@ Manager.prototype.startManager = function(){
     self.taskKmaIndexService = taskKmaIndexService;
 
     async.parallel([
+        function (callback) {
+            keco.getAllMsrStnInfo(function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                else {
+                    log.info('keco get all msr stn info list');
+                }
+                callback();
+            });
+        },
         function (callback) {
             townRss.loadList(function(){
                 log.info('Rss> complete loadList for Rss.');
