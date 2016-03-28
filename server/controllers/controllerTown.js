@@ -248,7 +248,7 @@ function ControllerTown() {
                     return next();
                 }
 
-                log.info(shortestList);
+                log.verbose(shortestList);
                 if(shortestList && shortestList.length > 0){
 
                     if(req.short && req.short.length > 0){
@@ -900,7 +900,7 @@ function ControllerTown() {
             daySum.taMax = daySum.taMax === undefined ? -50:daySum.taMax;
             daySum.taMin = daySum.taMin === undefined ? -50:daySum.taMin;
             if (daySum.taMax === -50 || daySum.taMin === -50) {
-                log.error("short date:"+short.date+" fail to get daySummary");
+                log.warn("short date:"+short.date+" fail to get daySummary");
                 return;
             }
             if (short.time === "0600") {
