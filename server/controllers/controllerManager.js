@@ -563,10 +563,11 @@ Manager.prototype.saveShortest = function(newData, callback){
 
             list.forEach(function(dbShortestList){
                 //log.info('ST> coord :', dbShortestList.mCoord.mx, dbShortestList.mCoord.my);
-                if (self.saveOnlyLastOne) {
-                    dbShortestList.shortestData = newData;
-                }
-                else {
+                //if (self.saveOnlyLastOne) {
+                //    dbShortestList.shortestData = newData;
+                //}
+                //else
+                {
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('ST> newItem : ', newItem);
@@ -1831,23 +1832,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     log.verbose('check time and request task');
 
     if (time === 1 || putAll) {
-        log.info('push short rss');
+        log.info('push past');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("shortrss", callback);
-        });
-
-        log.info('push mid rss');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("midrss", callback);
+            self._requestApi("past", callback);
         });
 
         log.info('push life index');
         self.asyncTasks.push(function (callback) {
             self._requestApi("lifeindex", callback);
         });
-    }
 
-    if (time === 2 || putAll) {
         log.info('push mid temp');
         self.asyncTasks.push(function (callback) {
             self._requestApi("midtemp", callback);
@@ -1864,12 +1858,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("midsea", callback);
         });
-    }
 
-    if (time === 10 || putAll) {
-        log.info('push past');
+        log.info('push mid rss');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("past", callback);
+            self._requestApi("midrss", callback);
+        });
+
+        log.info('push short rss');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("shortrss", callback);
         });
     }
 
@@ -1881,21 +1878,20 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 31 || putAll) {
-        log.info('push short');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("short", callback);
-        });
-    }
-
     if (time === 35 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);
         });
+
         log.info('push current');
         self.asyncTasks.push(function (callback) {
             self._requestApi("current", callback);
+        });
+
+        log.info('push short');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("short", callback);
         });
     }
 
@@ -1927,11 +1923,6 @@ Manager.prototype.startManager = function(){
     keco.setServiceKey(config.keyString.normal);
     keco.setDaumApiKey(config.keyString.daum_key);
     keco.getCtprvnSidoList();
-    keco.addMsrstnInfoToTown(function (err) {
-        if (err) {
-            log.error(err);
-        }
-    });
 
     self.keco = keco;
 
@@ -1941,6 +1932,17 @@ Manager.prototype.startManager = function(){
     self.taskKmaIndexService = taskKmaIndexService;
 
     async.parallel([
+        function (callback) {
+            keco.getAllMsrStnInfo(function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                else {
+                    log.info('keco get all msr stn info list');
+                }
+                callback();
+            });
+        },
         function (callback) {
             townRss.loadList(function(){
                 log.info('Rss> complete loadList for Rss.');

@@ -19,11 +19,11 @@
                                         <div class="col" style="width: 46%;">
                                             <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
                                                  ng-if="currentWeather.t1h!==undefined">
-                                                <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" src="img/{{reddot}}.png">
+                                                <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" ng-src="img/{{reddot}}.png">
                                             </div>
                                             <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
                                                  ng-if="currentWeather.skyIcon">
-                                                <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" src="img/{{currentWeather.skyIcon}}-Big.png">
+                                                <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
                                             </div>
                                         </div>
                                     </div>
@@ -53,13 +53,13 @@
                                     <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.tempIcon}}.png"></div>
+                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 16%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
@@ -90,7 +90,7 @@
                                     <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.week}}</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
@@ -99,7 +99,7 @@
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 16%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" src="img/{{value.humidityIcon}}.png"></div>
+                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 16%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
@@ -117,14 +117,17 @@
                         <div class="item row detail-item">
                             <div class="col col-33 detail-text"><p>습도</p></div>
                             <div class="col col-33 detail-image">
-                                <div><img src="img/Humidity-{{currentWeather.reh - currentWeather.reh%10}}.png" style="width: 40px"></div>
+                                <div><img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
+                                         style="width: 40px">
+                                </div>
                             </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}
-                                <small>%</small></p>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}<small>%</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>미세먼지</p></div>
+                            <div class="col col-33 detail-text"><p>미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm10StationName?currentWeather.arpltn.pm10StationName:currentWeather.arpltn.stationName}}</small></p>
+                            </div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
@@ -133,7 +136,10 @@
                             </div>
                         </div>
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>초미세먼지</p></div>
+                            <div class="col col-33 detail-text"><p>초미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm25StationName?currentWeather.arpltn.pm25StationName:currentWeather.arpltn.stationName}}</small>
+                                </p>
+                            </div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>

@@ -10,7 +10,7 @@ function LifeIndexKmaController() {
 
 }
 
-LifeIndexKmaController._fsnStr = function (grade) {
+LifeIndexKmaController.fsnStr = function (grade) {
     switch(grade) {
         case 0: return "관심";
         case 1: return "주의";
@@ -35,7 +35,7 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
-LifeIndexKmaController._ultrvStr = function (grade) {
+LifeIndexKmaController.ultrvStr = function (grade) {
     switch(grade) {
         case 0: return "낮음";
         case 1: return "보통";
@@ -103,11 +103,9 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
             //add grade
             if (indexName === 'fsn') {
                 (destList[j])['fsnGrade'] = this._fsnGrade(srcList[i].value);
-                (destList[j])['fsnStr'] = this._fsnStr((destList[j])['fsnGrade']);
             }
             else if (indexName === 'ultrv') {
                 (destList[j])['ultrvGrade'] = this._ultrvGrade(srcList[i].value);
-                (destList[j])['ultrvStr'] = this._ultrvStr((destList[j])['ultrvGrade']);
             }
         }
         return true;
@@ -194,6 +192,50 @@ LifeIndexKmaController.appendData = function (town, shortList, midList, callback
             self._addIndexData(indexData, shortList, midList, callback);
         }
     });
+};
+
+/**
+ * @brief 불쾌지수를 구하는 함수
+ * @param temperature       온도
+ * @param humidity          습도
+ * @returns {unsined int}   불퀘지수
+ */
+LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
+    if(temperature === undefined
+        || humidity === undefined
+        || temperature < -50
+        || humidity < 0)
+    {
+        log.debug('DiscomfortIndex > invalid parameter.');
+        return -1;
+    }
+
+    var discomfortIndex = (9/5*temperature)-(0.55*(1-humidity/100)*(9/5*temperature-26))+32;
+
+    return discomfortIndex.toFixed(1);
+};
+
+LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex) {
+    if(discomfortIndex === undefined
+        || discomfortIndex < 0)
+    {
+        log.debug('DiscomfortString > invalid parameter');
+        return "";
+    }
+
+    var discomfortString;
+
+    if(discomfortIndex < 68) {
+        discomfortString = "낮음";
+    } else if(discomfortIndex < 75) {
+        discomfortString = "보통";
+    } else if(discomfortIndex < 80) {
+        discomfortString = "높음";
+    } else {
+        discomfortString = "매우높음";
+    }
+
+    return discomfortString;
 };
 
 module.exports = LifeIndexKmaController;

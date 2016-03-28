@@ -23,6 +23,191 @@ describe('unit test - keco requester', function() {
         keco.setServiceKey(key);
         assert.equal(key, keco.getServiceKey(), '');
     });
+
+    //it ('get Msrstn List', function (done) {
+    //    keco.getMsrstnList(keco.getServiceKey(), function (err, body) {
+    //        if (err) {
+    //            console.log(err);
+    //        }
+    //        assert.equal('number', typeof body.list.length, 'Fail to get length of msr stn list');
+    //        done();
+    //    });
+    //});
+
+    var parsedList;
+    it ('parse msr stn list', function () {
+        var msrStnList= [{
+            "_returnType": "xml",
+            "addr": "경남 창원시 의창구 두대동145번지 시설관리공단 내 실내수영장 앞(원이대로 480)",
+            "districtNum": "",
+            "dmX": "35.232222",
+            "dmY": "128.671389",
+            "item": "SO2, CO, O3, NO2, PM10",
+            "mangName": "도로변대기",
+            "map": "http://www.airkorea.or.kr/airkorea/station_map/238145.gif",
+            "numOfRows": "10",
+            "oper": "경상남도보건환경연구원",
+            "pageNo": "1",
+            "photo": "http://www.airkorea.or.kr/airkorea/station_photo/NAMIS/station_images/238145/INSIDE_OTHER_1.jpg",
+            "resultCode": "",
+            "resultMsg": "",
+            "rnum": 0,
+            "serviceKey": "",
+            "sggName": "",
+            "sidoName": "",
+            "stationCode": "",
+            "stationName": "반송로",
+            "tm": 0,
+            "tmX": "",
+            "tmY": "",
+            "totalCount": "",
+            "umdName": "",
+            "vrml": "",
+            "year": "2008"
+        }, {
+            "_returnType": "xml",
+            "addr": "경남 창원시 성산구 사파동(창이대로 706길)106-1(16-23)",
+            "districtNum": "",
+            "dmX": "35.221729",
+            "dmY": "128.69825",
+            "item": "SO2, CO, O3, NO2, PM10",
+            "mangName": "도시대기",
+            "map": "http://www.airkorea.or.kr/airkorea/station_map/238146.gif",
+            "numOfRows": "10",
+            "oper": "경상남도보건환경연구원",
+            "pageNo": "1",
+            "photo": "http://www.airkorea.or.kr/airkorea/station_photo/NAMIS/station_images/238146/INSIDE_OTHER_1.jpg",
+            "resultCode": "",
+            "resultMsg": "",
+            "rnum": 0,
+            "serviceKey": "",
+            "sggName": "",
+            "sidoName": "",
+            "stationCode": "",
+            "stationName": "사파동",
+            "tm": 0,
+            "tmX": "",
+            "tmY": "",
+            "totalCount": "",
+            "umdName": "",
+            "vrml": "",
+            "year": "2009"
+        }];
+        parsedList = keco.parseMsrstnList(msrStnList);
+
+        assert.equal(2, parsedList.length, 'Fail to parse msr stn list');
+    });
+
+    //it('complete geo msr stn info', function (done) {
+    //    var msrStn = {
+    //        "_returnType": "xml",
+    //        "addr": "강원 춘천시 중앙로 3가67-1(춘천시보건소 3층 옥상)",
+    //        "districtNum": "",
+    //        "dmX": "",
+    //        "dmY": "",
+    //        "item": "SO2, CO, O3, NO2, PM10",
+    //        "mangName": "도시대기",
+    //        "map": "http://www.airkorea.or.kr/airkorea/station_map/132112.gif",
+    //        "numOfRows": "10",
+    //        "oper": "강원도보건환경연구원",
+    //        "pageNo": "1",
+    //        "photo": "http://www.airkorea.or.kr/airkorea/station_photo/NAMIS/station_images/132112/INSIDE_OTHER_1.jpg",
+    //        "resultCode": "",
+    //        "resultMsg": "",
+    //        "rnum": 0,
+    //        "serviceKey": "",
+    //        "sggName": "",
+    //        "sidoName": "",
+    //        "stationCode": "",
+    //        "stationName": "중앙로",
+    //        "tm": 0,
+    //        "tmX": "",
+    //        "tmY": "",
+    //        "totalCount": "",
+    //        "umdName": "",
+    //        "vrml": "http://www.airkorea.or.kr/airkorea/vrml/132112.swf",
+    //        "year": "2003"
+    //    };
+    //    //keco.getGeoInfo(msrStn.addr, function (err, result) {
+    //    //    if (err) {
+    //    //        log.error(err);
+    //    //    }
+    //    //    console.log(result);
+    //    //    done();
+    //    //});
+    //
+    //    keco.completeGeoMsrStnInfo([msrStn], function(err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        console.log(results);
+    //        done();
+    //    });
+    //});
+
+    //it('save msr stn list', function (done) {
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            done();
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        if (err) {
+    //            console.error('MongoDB connection error: ' + err);
+    //            done();
+    //        }
+    //    });
+    //
+    //    var coords = parsedList[1].geo;
+    //
+    //    keco.saveMsrstnList(parsedList, function(err, results) {
+    //        if (err) {
+    //            console.log(err);
+    //        }
+    //
+    //        assert.equal(1, results[results.length-1].ok, 'Fail to save msr stn list');
+    //        done();
+    //
+    //        //var MsrStn = require('../models/modelMsrStnInfo.js');
+    //        //console.log(coords);
+    //        //
+    //        //MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).lean().exec(function (err, msrStnList) {
+    //        //    if (err) {
+    //        //        console.log(err);
+    //        //    }
+    //        //    console.log(JSON.stringify(msrStnList));
+    //        //    done();
+    //        //});
+    //    });
+    //});
+
+    //it ('get all msr stn list', function (done) {
+    //    this.timeout(10*60*1000);
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            done();
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        if (err) {
+    //            console.error('MongoDB connection error: ' + err);
+    //            done();
+    //        }
+    //    });
+    //    keco.getAllMsrStnInfo(function (err, result) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        console.log('saved msr stn list len=', result.length);
+    //        assert.equal('number', typeof result.length, 'Fail to get all msr stn list');
+    //        done();
+    //    });
+    //});
+
     it('get sido list', function () {
         list = keco.getCtprvnSidoList();
         assert.equal(list.length, keco._sidoList.length, '');
@@ -66,7 +251,7 @@ describe('unit test - keco requester', function() {
             '<addr>강원 삼척시 남양동339-1 (남양동 주민센터 3층 옥상)</addr> <tm>42.8</tm> </item> </items> '+'' +
             '<numOfRows>999</numOfRows> <pageNo>1</pageNo> <totalCount>3</totalCount> </body> </response>';
 
-        keco.parseMsrstn(body, function (err, result) {
+        keco.getStationNameFromMsrstn(body, function (err, result) {
             if (err) {
                 console.error(err);
             }
@@ -77,28 +262,6 @@ describe('unit test - keco requester', function() {
         });
     });
 
-    //it('load town list', function(done) {
-    //    this.timeout(60*1000); //1min
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //        process.exit(-1);
-    //    });
-    //
-    //    keco.loadTownList(function (err, townList) {
-    //        console.log(err);
-    //        console.log(townList.length);
-    //        done();
-    //    });
-    //});
-
        // it('get Near By Msrstn', function (done) {
    //
    //     this.timeout(10*1000);
@@ -107,44 +270,13 @@ describe('unit test - keco requester', function() {
    //     keco.getNearbyMsrstn(keco.getServiceKey(), tmCoord.y, tmCoord.x, function (err, body) {
    //         if (err) {console.log(err);}
    //
-   //         keco.parseMsrstn(body, function (err, result) {
+   //         keco.getStationNameFromMsrstn(body, function (err, result) {
    //             console.log(err);
    //             console.log(result);
    //             done();
    //         });
    //     });
    //});
-
-    //it('add msrstn info to town', function(done) {
-    //    this.timeout(60*1000*10); //10min
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //            done();
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //        done();
-    //    });
-    //
-    //    keco.setDaumApiKey(require('../config/config').keyString.daum_key);
-    //
-    //    keco.addMsrstnInfoToTown(function (err, result) {
-    //        if (err) {
-    //            console.log(err);
-    //        }
-    //        else {
-    //            console.log(result);
-    //        }
-    //
-    //        mongoose.disconnect();
-    //        done();
-    //    });
-    //});
 
     //it('get All data from keco', function(done) {
     //    this.timeout(60*1000); //1min
@@ -175,79 +307,4 @@ describe('unit test - keco requester', function() {
     //    });
     //});
 
-    //it('save arpltn.town', function (done) {
-    //    this.timeout(60*1000);
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            done();
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        if (err) {
-    //            console.error('MongoDB connection error: ' + err);
-    //            done();
-    //        }
-    //    });
-    //
-    //    var Town = require('../models/town');
-    //    var Arpltn = require('../models/arpltn.keco');
-    //    var ArpltnTown = require('../models/arpltn.town.keco');
-    //
-    //    Town.find({}, function(err, townList) {
-    //        var town = townList[0];
-    //        town.kecoStationName = '영등포구';
-    //        console.log(town.toString());
-    //
-    //        Arpltn.findOne({stationName: town.kecoStationName}, function (err, arpltn) {
-    //            console.log(arpltn.toString());
-    //            keco.saveArpltnTown(town, arpltn, function (err, raw) {
-    //                if (err) {
-    //                    console.log(err);
-    //                    return done();
-    //                }
-    //                console.log(raw);
-    //
-    //                ArpltnTown.findOne({}, function (err, arpltntown) {
-    //                    console.log("findONE!!");
-    //                    console.log(arpltntown.town);
-    //                    console.log(arpltntown.arpltn);
-    //                    done();
-    //                });
-    //            });
-    //        });
-    //    });
-    //});
-
-    //it('update arpltn.town', function (done) {
-    //   this.timeout(60*1000);
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            done();
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        if (err) {
-    //            console.error('MongoDB connection error: ' + err);
-    //            done();
-    //        }
-    //    });
-    //
-    //    keco.updateTownArpltnInfo(function (err) {
-    //        if (err)  {
-    //            console.error(err);
-    //        }
-    //
-    //        var ArpltnTown = require('../models/arpltn.town.keco');
-    //        ArpltnTown.find({}, function (err, arpltnTownList) {
-    //            console.log(arpltnTownList[0].toString());
-    //            done();
-    //        });
-    //    });
-    //});
 });

@@ -126,24 +126,24 @@ angular.module('starter.controllers', [])
         /**
          * Identifies a user with the Ionic User service
          */
-        function identifyUser() {
-            console.log("User: Identifying with User service");
-
-            // kick off the platform web client
-            Ionic.io();
-
-            // this will give you a fresh user or the previously saved 'current user'
-            var user = Ionic.User.current();
-
-            // if the user doesn't have an id, you'll need to give it one.
-            if (!user.id) {
-                user.id = Ionic.User.anonymousId();
-                // user.id = "your-custom-user-id";
-            }
-
-            //persist the user
-            user.save();
-        }
+        //function identifyUser() {
+        //    console.log("User: Identifying with User service");
+        //
+        //    // kick off the platform web client
+        //    Ionic.io();
+        //
+        //    // this will give you a fresh user or the previously saved 'current user'
+        //    var user = Ionic.User.current();
+        //
+        //    // if the user doesn't have an id, you'll need to give it one.
+        //    if (!user.id) {
+        //        user.id = Ionic.User.anonymousId();
+        //        // user.id = "your-custom-user-id";
+        //    }
+        //
+        //    //persist the user
+        //    user.save();
+        //}
 
         function setUserDefaults(obj) {
             if (window.applewatch) {
@@ -573,7 +573,14 @@ angular.module('starter.controllers', [])
             }
         });
 
-        identifyUser();
+        //identifyUser();
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'forecast'
+        });
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
@@ -727,6 +734,13 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
         });
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'search'
+        });
     })
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
@@ -797,35 +811,16 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
-        if (localStorage.getItem("statusBarVisible") !== null) {
-            $scope.statusBarVisible = JSON.parse(localStorage.getItem("statusBarVisible"));
-        }
-        else {
-            $scope.statusBarVisible = {checked: false};
-        }
-
-        $scope.statusBarChange = function () {
-            console.log("statusBarChanged, "+$scope.statusBarVisible.checked);
-            if (window.StatusBar) {
-                if ($scope.statusBarVisible.checked) {
-                    StatusBar.backgroundColorByName("black");
-                    StatusBar.overlaysWebView(false);
-                    StatusBar.show();
-                }
-                else {
-                    StatusBar.hide();
-                    if(ionic && ionic.Platform) {
-                        ionic.Platform.fullScreen();
-                    }
-                }
-            }
-            localStorage.setItem("statusBarVisible", JSON.stringify($scope.statusBarVisible));
-            console.log("set ", localStorage.getItem("statusBarVisible"));
-        };
-
         $ionicPlatform.ready(function() {
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
+        });
+
+        ga('send', {
+            hitType: 'event',
+            eventCategory: 'page',
+            eventAction: 'tab',
+            eventLabel: 'setting'
         });
     })
 
@@ -853,6 +848,13 @@ angular.module('starter.controllers', [])
         $scope.doTabForecast = function() {
             if ($location.url() === '/tab/forecast') {
                 $scope.$broadcast('updateWeatherEvent');
+
+                ga('send', {
+                    hitType: 'event',
+                    eventCategory: 'page',
+                    eventAction: 'tab',
+                    eventLabel: 'reload'
+                });
             }
             else {
                 $location.url('/tab/forecast');
@@ -914,6 +916,13 @@ angular.module('starter.controllers', [])
                 }, function(err) {
                     // An error occured
                 });
+
+            ga('send', {
+                hitType: 'event',
+                eventCategory: 'page',
+                eventAction: 'tab',
+                eventLabel: 'share'
+            });
         };
 
         //$ionicPlatform.ready(function() {

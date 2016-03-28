@@ -43,25 +43,34 @@ router.get('/', [cTown.getSummary], function(req, res) {
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                         cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                         cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                        cTown.mergeByShortest, cTown.sendResult]);
+                        cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.insertStrForData,
+                            cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                 cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                 cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                cTown.mergeByShortest, cTown.sendResult]);
+                                cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.insertStrForData,
+                                cTown.getSummary, cTown.sendResult]);
 
+/**
+ * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
+ * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
+ */
 router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                     cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.sendResult]);
+                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.insertStrForData,
+                                        cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
-                                    cTown.mergeMidWithShort, cTown.sendResult]);
+                                            cTown.mergeMidWithShort, cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.adjustShort, cTown.sendResult]);
+router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.adjustShort,
+                                            cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.sendResult]);
+router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKeco, cTown.sendResult]);
+router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKeco, cTown.insertStrForData,
+                                                cTown.getSummary, cTown.sendResult]);
 
 module.exports = router;

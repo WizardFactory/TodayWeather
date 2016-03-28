@@ -38,24 +38,9 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
-                var statusBarVisible;
-                if (localStorage.getItem("statusBarVisible") !== null) {
-                    statusBarVisible = JSON.parse(localStorage.getItem("statusBarVisible"));
-                }
-                else {
-                    statusBarVisible = {checked: false};
-                }
-
-                // org.apache.cordova.statusbar required
-                if (statusBarVisible.checked) {
-                    StatusBar.backgroundColorByName("black");
-                    StatusBar.overlaysWebView(false);
-                    StatusBar.show();
-                }
-                else {
-                    StatusBar.hide();
-                    ionic.Platform.fullScreen();
-                }
+                // org.apache.cordova.statusbar required #670
+                StatusBar.backgroundColorByName("black");
+                StatusBar.overlaysWebView(false);
             }
 
             //#367
@@ -82,7 +67,7 @@ angular.module('starter', [
                         bannerAtTop: true, // set to true, to put banner at top
                         overlap: true, // set to true, to allow banner overlap webview
                         offsetTopBar: true, // set to true to avoid ios7 status bar overlap
-                        isTesting: true, // receiving test ad
+                        isTesting: Util.isDebug(), // receiving test ad
                         autoShow: false // auto show interstitial ad when loaded
                     }, function(e) {
                         console.log('setOptions is '+JSON.stringify(e));
@@ -230,6 +215,7 @@ angular.module('starter', [
 
                 var chart = function () {
                     var data = scope.timeChart;
+                    var currentTime = scope.currentWeather.time;
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
@@ -321,8 +307,6 @@ angular.module('starter', [
                         .remove();
 
                     // draw current point
-                    var currentTime = new Date();
-
                     var point = lineGroups.selectAll('.point')
                         .data(function(d) {
                             return [d];
@@ -331,8 +315,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -350,8 +334,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -365,8 +349,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }
@@ -376,8 +360,8 @@ angular.module('starter', [
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === "오늘") {
-                                    cx1 = i + Math.floor(currentTime.getHours() / 3) - 1;
-                                    cx2 = currentTime.getHours() % 3;
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
                                     break;
                                 }
                             }

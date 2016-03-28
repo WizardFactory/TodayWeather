@@ -11,11 +11,13 @@ var async = require('async');
 var req = require('request');
 
 var Arpltn = require('../models/arpltnKeco.js');
+var MsrStn = require('../models/modelMsrStnInfo.js');
 
 var DOMAIN_ARPLTN_KECO = 'http://openapi.airkorea.or.kr/openapi/services/rest';
 
 var PATH_MSRSTN_INFO_INQIRE_SVC = 'MsrstnInfoInqireSvc';
 var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';
+var MSRSTN_LIST = 'getMsrstnList';
 
 var PATH_ARPLTN_INFOR_INQIRE_SVC = 'ArpltnInforInqireSvc';
 var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';
@@ -150,7 +152,7 @@ Keco.prototype.getUrlCtprvn = function(sido, key) {
  * @returns {boolean}
  */
 Keco.prototype.checkGetCtprvnTime = function(time) {
-    return time >= this._nextGetCtprvnTime;
+    return time.getTime() >= this._nextGetCtprvnTime.getTime();
 };
 
 /**
@@ -297,6 +299,202 @@ Keco.prototype.saveCtprvn = function (arpltnList, callback) {
 
 /**
  *
+ * @param key
+ * @param callback
+ */
+Keco.prototype.getMsrstnList = function(key, callback) {
+    var url = DOMAIN_ARPLTN_KECO + '/' + PATH_MSRSTN_INFO_INQIRE_SVC + '/' + MSRSTN_LIST +
+        '?ServiceKey='+key +
+        '&ver=1.0'+
+        '&numOfRows='+999 +
+        '&_returnType=json';
+
+    log.debug(url);
+
+    req(url, {json:true}, function(err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if ( response.statusCode >= 400) {
+            return callback(new Error(body));
+        }
+        return callback(err, body);
+    });
+};
+
+/**
+ *
+ * @param MsrStnList
+ * @returns {*}
+ */
+Keco.prototype.parseMsrstnList = function(MsrStnList) {
+    var parsedMsrStnList = [];
+
+    if (!Array.isArray(MsrStnList))  {
+        var err = new Error("msr stn list is not array");
+        log.error(err);
+        return parsedMsrStnList;
+    }
+
+    MsrStnList.forEach(function (msrStn) {
+        var parsedMsrStn = {};
+        if (!msrStn.stationName || !msrStn.dmY || !msrStn.dmX) {
+            return log.error('stationName or dmY, dmX is invalid msrStn=',JSON.stringify(msrStn));
+        }
+        parsedMsrStn.stationName = msrStn.stationName;
+        parsedMsrStn.geo = [parseFloat(msrStn.dmY), parseFloat(msrStn.dmX)];
+        if (typeof msrStn.item === 'string')  {
+            parsedMsrStn.item = msrStn.item.split(",");
+        }
+        else {
+            log.warn('item is not string msrStn=',JSON.stringify(msrStn));
+        }
+        parsedMsrStn.addr = msrStn.addr;
+        parsedMsrStn.mangName = msrStn.mangName;
+        parsedMsrStn.map = msrStn.map;
+        parsedMsrStn.oper = msrStn.oper;
+        parsedMsrStn.photo = msrStn.photo;
+        parsedMsrStn.year = msrStn.year;
+        parsedMsrStnList.push(parsedMsrStn);
+    });
+
+    log.info('parsed msr stn list length=', parsedMsrStnList.length);
+    return parsedMsrStnList;
+};
+
+/**
+ *
+ * @param msrStnList
+ * @param callback
+ * @returns {*}
+ */
+Keco.prototype.saveMsrstnList = function(msrStnList, callback) {
+    if (!Array.isArray(msrStnList))  {
+        var err = new Error("msr stn list is not array");
+        return callback(err);
+    }
+
+    log.info('save msr stn list length=', msrStnList.length);
+
+    async.map(msrStnList,
+        function(msrStn, cb) {
+            log.silly('save msr stn =', JSON.stringify(msrStn));
+            MsrStn.update({stationName: msrStn.stationName}, msrStn, {upsert:true}, function (err, raw) {
+                if (err) {
+                    return cb(err);
+                }
+                log.silly('The raw response from Mongo was ', JSON.stringify(raw));
+                cb(err, raw);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            callback(err, results);
+        });
+
+};
+
+Keco.prototype.getGeoInfo = function(address, callback) {
+    var convert = require('../utils/convertGeocode');
+
+    log.info(address);
+    convert(address,'','', function (err, result) {
+        if (err) {
+            return callback(err);
+        }
+        log.info(JSON.stringify(result));
+        callback(err, {lat:result.lat, lon:result.lon});
+    });
+};
+
+Keco.prototype.completeGeoMsrStnInfo = function(list, callback) {
+    var self = this;
+    async.map(list,
+        function (msrStn, cb) {
+            if (msrStn.dmY !== '' && msrStn.dmX !== '') {
+                return cb(undefined, msrStn);
+            }
+
+            self.getGeoInfo(msrStn.addr, function (err, result) {
+                if (err) {
+                    log.error(err);
+                    //when get error just print err message
+                }
+                else {
+                    msrStn.dmY = result.lon;
+                    msrStn.dmX = result.lat;
+                }
+                return cb(err, msrStn);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(err, results);
+        });
+
+    return this;
+};
+
+Keco.prototype.getAllMsrStnInfo = function(callback) {
+    var self = this;
+
+    async.waterfall([
+        function (cb) {
+            log.info('get msr stn list');
+            self.getMsrstnList(self.getServiceKey(), function (err, body) {
+                if (err) {
+                    return cb(err);
+                }
+                if (!body.list || !Array.isArray(body.list)) {
+                    return cb(new Error("body of get msr stn list is not array"));
+                }
+
+                return cb(err, body.list);
+            });
+        },
+        function (msrStnList, cb) {
+            self.completeGeoMsrStnInfo(msrStnList, function (err, list) {
+               if (err)  {
+                   return cb(err);
+               }
+                return cb(err, list);
+            });
+        },
+        function (msrStnList, cb) {
+            log.info('parse msr stn list');
+            var parsedList = self.parseMsrstnList(msrStnList);
+            if (parsedList.length === 0) {
+                return cb(new Error("Fail to parse msr stn list"));
+            }
+            return cb(undefined, parsedList);
+        },
+        function (parsedMsrStnList, cb) {
+            //log.info('save msr stn list');
+            self.saveMsrstnList(parsedMsrStnList, function (err, results) {
+                if (err) {
+                   return cb(err) ;
+                }
+
+                cb(err, results);
+            });
+        }
+    ], function (err, result) {
+        if (err) {
+            return callback(err);
+        }
+        log.info('saved msr stn list length=', result.length);
+        callback(err, result);
+    });
+
+    return this;
+};
+
+/**
+ *
  * @param list
  * @param index
  * @param callback
@@ -423,7 +621,7 @@ Keco.prototype.getNearbyMsrstn = function(key, my, mx, callback)  {
  * @param data
  * @param callback
  */
-Keco.prototype.parseMsrstn = function(data, callback) {
+Keco.prototype.getStationNameFromMsrstn = function(data, callback) {
     xml2json(data, function (err, result) {
         if (err) {
             return callback(err);
@@ -446,32 +644,11 @@ Keco.prototype.parseMsrstn = function(data, callback) {
 
 /**
  *
- * @param lean
+ * @param key
+ * @param y
+ * @param x
  * @param callback
  */
-Keco.prototype.loadTownList = function(lean, callback) {
-    var Town = require('../models/town');
-    var q;
-    if (typeof lean === 'function') {
-        callback = lean;
-        lean = undefined;
-    }
-    if (lean) {
-        q = Town.find({}, {_id:0}).lean();
-    }
-    else {
-        q = Town.find({});
-    }
-    q.exec(function(err, townList) {
-        if (err)  {
-            log.error("Fail to load townlist");
-            return callback(err);
-        }
-        log.info("keco areaList="+townList.length);
-        return callback(err, townList);
-    });
-};
-
 Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     var url = 'https://apis.daum.net/local/geo/transcoord';
     url += '?apiKey='+key;
@@ -495,142 +672,12 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     });
 };
 
-Keco.prototype.addMsrstnInfoToTown = function(callback) {
-    var self = this;
-
-    this.loadTownList(function (err, townList) {
-        if (err) {
-            return callback(err);
-        }
-
-        log.info('loaded town list');
-
-        async.mapLimit(townList, 400,
-            function(town, mapCallback) {
-
-                //서버 시작할때매다, 갱신함.
-                //if (town.kecoStationName) {
-                //    log.verbose('skip this town='+town.town);
-                //    return mapCallback(undefined, {town: town});
-                //}
-
-                async.waterfall([
-                    function(cb) {
-                       self.getTmPointFromWgs84(self.getDaumApiKey(), town.gCoord.lat, town.gCoord.lon,
-                                function (err, body) {
-                           if (err) {
-                               return cb(err);}
-
-                           //body = {x: Number, y:Number}
-                           log.silly(body);
-                           town.tmCoord = {x:body.x, y:body.y};
-                           cb(err, town.tmCoord);
-                       });
-                    },
-                    function(tmCoord, cb) {
-                        self.getNearbyMsrstn(self.getServiceKey(), tmCoord.y, tmCoord.x, function(err, result) {
-                            if (err) {
-                                return cb(err);}
-
-                            log.silly(result);
-                            cb(err, result);
-                        });
-                    },
-                    function(xmlStationInfoList, cb) {
-                        self.parseMsrstn(xmlStationInfoList, function (err, stationName) {
-                            if (err) {
-                                return cb(err);}
-                            town.kecoStationName = stationName;
-                            cb(err);
-                        });
-                    },
-                    function (cb) {
-                        log.debug(town.toString());
-                        town.save(function (err) {
-                            cb(err);
-                        });
-                    }
-                ], function(err) {
-                    return mapCallback(err, {town: town.toJSON()});
-                });
-            },
-            function (err, results) {
-                if(err) {
-                    log.error(err);
-                    return callback(err);
-                }
-                log.debug(JSON.stringify(results));
-                log.info('Finished add Msrstn info to town');
-                return callback(err, results);
-            });
-    });
-};
-
-Keco.prototype.saveArpltnTown = function(town, arpltn, callback)  {
-    var ArpltnTown = require('../models/arpltnTownKeco.js');
-
-    var arpltnTown = {town: town.town, mCoord: town.mCoord, arpltn: arpltn};
-
-    log.verbose(arpltnTown.town);
-    log.verbose(arpltnTown.mCoord);
-    log.verbose(arpltnTown.arpltn.stationName);
-
-    ArpltnTown.update({town: town.town}, arpltnTown, {upsert:true}, function (err, raw) {
-        if (err) {
-            log.error(err);
-            return callback(err);
-        }
-        log.debug('The raw response from Mongo was ', raw);
-        return callback(err, raw);
-    });
-};
-
-Keco.prototype.updateTownArpltnInfo = function (callback) {
-    //loadTown
-    var self = this;
-
-    this.loadTownList(true, function (err, townList) {
-        if (err) {
-            return callback(err);
-        }
-
-        //townList = townList.slice(0,1);
-        async.mapSeries(townList,
-            function(town, callback1) {
-                if (!town.kecoStationName) {
-                    log.warn('Fail to get stationName town='+town.town.toString());
-                    return callback1(undefined, town);
-                }
-                //log.debug(town.toString());
-                log.debug(town.kecoStationName);
-                Arpltn.findOne({stationName: town.kecoStationName}).lean().exec(function (err, arpltn) {
-                    if (err) {
-                        return callback1(err);
-                    }
-                    if(!arpltn) {
-                        log.warn("Fail to find arpltn stationName="+town.kecoStationName);
-                        return callback1(undefined);
-                    }
-
-                    //log.info(JSON.stringify(arpltn));
-
-                    self.saveArpltnTown(town, arpltn, function (err, raw) {
-                        return callback1(err, raw);
-                    });
-                });
-            },
-            function(err, results) {
-                if (err) {
-                    log.error(err);
-                    return callback(err);
-                }
-
-                log.info('Finished update arpltn town info');
-                return callback(err, results);
-            });
-    });
-};
-
+/**
+ *
+ * @param self
+ * @param callback
+ * @returns {Keco}
+ */
 Keco.prototype.cbKecoProcess = function (self, callback) {
     //check and update
     var date = new Date();
@@ -643,12 +690,7 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
                 log.warn('Stopped index='+self._currentSidoIndex);
                 return callback(err);
             }
-            self.updateTownArpltnInfo(function (err) {
-                if (err) {
-                    log.warn(err);
-                }
-                callback(err);
-            });
+            callback(err);
         });
     }
     else {
@@ -664,8 +706,13 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
 Keco.prototype.start = function () {
     log.info('start KECO SERVICE');
 
-    this.addMsrstnInfoToTown(function (err) {
-       log.error(err);
+    this.getAllMsrStnInfo(function (err) {
+        if (err) {
+            log.error(err);
+        }
+        else {
+            log.info('keco get all msr stn info list');
+        }
     });
 
     this.getCtprvnSidoList();
