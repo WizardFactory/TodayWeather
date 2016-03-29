@@ -748,7 +748,11 @@ Manager.prototype.saveMid = function(db, newData, callback){
                 return;
             }
 
-            list.forEach(function(dbMidList){
+            if (list.length > 1) {
+               log.error("DB has two data about regid=",regId);
+            }
+
+            list.forEach(function(dbMidList, index){
                 if (self.saveOnlyLastOne) {
                     dbMidList.data = [newData];
                 }
@@ -801,7 +805,7 @@ Manager.prototype.saveMid = function(db, newData, callback){
                     if(err){
                         log.error('M> fail to save');
                     }
-                    if (callback) {
+                    if (callback && index === 0) {
                         callback(err);
                     }
                 });

@@ -13,11 +13,11 @@ var lSchema = new mongoose.Schema({
         second: String,
         third: String
     },
-    mCoord: {
+    mCoord: {           //unused it
         mx: Number,
         my: Number
     },
-    areaNo: String,
+    areaNo: String, //it's unique key
     fsn: { /* 식중독 food poisoning */
         lastUpdateDate: String,
         data: [ {date: String, value: Number} ] //daily
@@ -53,7 +53,12 @@ var lSchema = new mongoose.Schema({
     airpollution: { /* 확산 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number}] //3hours
-    }
+    },
+    geo: {
+        type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
+        index: '2d'         // create the geospatial index
+    },
+    activated: {type : Boolean, default : true} //provider가 데이터를 제공하지 않으면 false처리 할 예정.
 });
 
 module.exports = mongoose.model('LifeIndexKma', lSchema);

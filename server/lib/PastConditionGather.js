@@ -15,6 +15,11 @@ function PastConditionGather() {
     this.updateList = []; //{mCoord: {mx,my}, baseTimeList: {date, time}}
 }
 
+/**
+ * kma 1.2부터는 23시간 전까지만 제공함.
+ * @param days
+ * @returns {Array}
+ */
 PastConditionGather.prototype.makePubDateList = function (days) {
     var pubDateList = [];
     var counts = days*24;
@@ -22,6 +27,10 @@ PastConditionGather.prototype.makePubDateList = function (days) {
     var startOffset;
     var currentDate;
     var dateString;
+
+    if (days === 1) {
+        counts -= 1;
+    }
 
     if (currentMins > 40) {
         startOffset = 9;
