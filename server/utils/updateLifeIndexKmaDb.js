@@ -1,7 +1,7 @@
 /**
  * Created by aleckim on 2016. 3. 28..
  * db에 life index 관련 데이터를 갱신함. areaNoKma 한 후에 최신인 KMA_INDEX_AREA_NO를 함.
- *
+ * areaNoKma에 있는 위도,경도 좌표가 맞지 않아서 base.csv에 있는 것 사용함.
  */
 
 var fs = require('fs');
@@ -82,7 +82,7 @@ function updateLifeIndexDb() {
                         if (area.length <=4) {
                             //get geo info
                             var baseGeo = findGeoInfo(area[0], area[1], area[2]);
-                            if (base) {
+                            if (baseGeo) {
                                 geoInfo.push(parseFloat(baseGeo[4]));
                                 geoInfo.push(parseFloat(baseGeo[3]));
                             }
@@ -91,8 +91,15 @@ function updateLifeIndexDb() {
                         }
                         else {
                             areaNo = parseInt(area[5]).toString();
-                            geoInfo.push(parseFloat(area[4]));
-                            geoInfo.push(parseFloat(area[3]));
+                            var baseGeo = findGeoInfo(area[0], area[1], area[2]);
+                            if (baseGeo) {
+                                geoInfo.push(parseFloat(baseGeo[4]));
+                                geoInfo.push(parseFloat(baseGeo[3]));
+                            }
+                            //else {
+                            //    geoInfo.push(parseFloat(area[4]));
+                            //    geoInfo.push(parseFloat(area[3]));
+                            //}
                         }
                         lifeIndexKmaList[i].geo = geoInfo;
                         lifeIndexKmaList[i].save(function (err) {
@@ -100,14 +107,14 @@ function updateLifeIndexDb() {
                                 console.log(err);
                             }
 
-                            console.log('update areaNo='+areaNo);
+                            //console.log('update areaNo='+areaNo);
                         });
                     }
                     break;
                 }
             }
             if (i>=lifeIndexKmaList.length) {
-                console.log('add new area=', areaInfo);
+                //console.log('add new area=', areaInfo);
                 var town = {};
                 var areaNo;
                 var geoInfo=[];
@@ -128,8 +135,13 @@ function updateLifeIndexDb() {
                 }
                 else {
                     areaNo = parseInt(area[5]).toString();
-                    geoInfo.push(parseFloat(area[4]));
-                    geoInfo.push(parseFloat(area[3]));
+                    var baseGeo = findGeoInfo(area[0], area[1], area[2]);
+                    if (baseGeo) {
+                        geoInfo.push(parseFloat(baseGeo[4]));
+                        geoInfo.push(parseFloat(baseGeo[3]));
+                    }
+                    //geoInfo.push(parseFloat(area[4]));
+                    //geoInfo.push(parseFloat(area[3]));
                 }
                 //console.log(JSON.stringify(town)+' '+areaNo+' '+geoInfo.toString());
                 var lifeIndex =  new LifeIndexKma({town: town, areaNo: areaNo, geo:geoInfo});
