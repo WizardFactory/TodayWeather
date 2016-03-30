@@ -5,6 +5,7 @@
 'use strict';
 
 var LifeIndexKma = require('../models/lifeIndexKma');
+var async = require('async');
 
 function LifeIndexKmaController() {
 
@@ -121,22 +122,59 @@ LifeIndexKmaController._appendFromKma = function (town, callback){
     lifeIndexKma.getLifeIndexByTown(town, callback);
 };
 
+/**
+ *
+ * @param town
+ * @param callback
+ * @private
+ */
 LifeIndexKmaController._appendFromDb = function(town, callback) {
-    LifeIndexKma.find({'town.first':town.first, 'town.second':town.second, 'town.third':town.third}).lean().exec(function (err, indexDataList) {
-        if (err) {
-            log.error(err);
+
+    async.waterfall([
+        function(cb)   {
+            LifeIndexKma.find({'areaNo':town.areaNo}).lean().exec(function (err, indexDataList) {
+                if (err || indexDataList.length === 0 || !(indexDataList[0].fsn.lastUpdateDate)) {
+                    log.warn("it is not invalid town="+JSON.stringify(town));
+                    return cb();
+                }
+                return cb('pass data', indexDataList[0]);
+            });
+        },
+        function(cb) {
+            var coords = [town.gCoord.lon, town.gCoord.lat];
+            LifeIndexKma.find({geo: {$near:coords, $maxDistance: 1}}).limit(3).lean().exec(function (err, indexDataList) {
+                if (err)  {
+                    return cb(err);
+                }
+                if (indexDataList.length === 0) {
+                    return cb(new Error("Fail to find life index town="+JSON.stringify(town)));
+                }
+                for (var i=0; i<indexDataList.length; i++) {
+                    if (indexDataList[i].fsn.lastUpdateDate) {
+                        return cb(err, indexDataList[i]);
+                    }
+                }
+            });
+        }
+    ], function(err, result) {
+        if (result === undefined) {
+            if (!err) {
+                err = new Error("Fail to find life index town="+JSON.stringify(town));
+            }
             return callback(err);
         }
-        var indexData = indexDataList[0];
-        if (!indexData) {
-            err = new Error('Fail to find indexData ' + JSON.stringify(town));
-            log.error(err);
-            return callback(err);
-        }
-        return callback(undefined, indexData);
+        return callback(undefined, result);
     });
 };
 
+/**
+ *
+ * @param indexData
+ * @param shortList
+ * @param midList
+ * @param callback
+ * @private
+ */
 LifeIndexKmaController._addIndexData = function (indexData, shortList, midList, callback) {
     var ret = false;
     var self = this;
@@ -174,6 +212,11 @@ LifeIndexKmaController._addIndexData = function (indexData, shortList, midList, 
     }
 };
 
+/**
+ *
+ * @param indexData
+ * @returns {boolean}
+ */
 LifeIndexKmaController.needToUpdate = function(indexData) {
    //todo: check time
     if(indexData) {
@@ -182,6 +225,13 @@ LifeIndexKmaController.needToUpdate = function(indexData) {
     return true;
 };
 
+/**
+ *
+ * @param town
+ * @param shortList
+ * @param midList
+ * @param callback
+ */
 LifeIndexKmaController.appendData = function (town, shortList, midList, callback) {
     var self = this;
     this._appendFromDb(town, function(err, indexData) {
@@ -215,6 +265,11 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
     return discomfortIndex.toFixed(1);
 };
 
+/**
+ *
+ * @param discomfortIndex
+ * @returns {*}
+ */
 LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex) {
     if(discomfortIndex === undefined
         || discomfortIndex < 0)

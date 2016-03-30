@@ -10,6 +10,10 @@ var kmaTimeLib = {};
  * @returns {*}
  */
 kmaTimeLib.convertStringToDate = function(str) {
+    if (!str) {
+        return new Date(0);
+    }
+
     var y = str.substr(0,4),
         m = str.substr(4,2) - 1,
         d = str.substr(6,2),
