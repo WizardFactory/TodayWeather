@@ -91,7 +91,7 @@ function ControllerTown24h() {
             daySum.taMax = daySum.taMax === undefined ? -50:daySum.taMax;
             daySum.taMin = daySum.taMin === undefined ? -50:daySum.taMin;
             if (daySum.taMax === -50 || daySum.taMin === -50) {
-                log.error("short date:"+short.date+" fail to get daySummary");
+                log.warn("short date:"+short.date+" fail to get daySummary");
                 return;
             }
             var tmxDiff = Math.abs(daySum.taMax - short.t3h);
