@@ -108,9 +108,9 @@ describe('unit test - controller manager', function() {
        });
     });
 
-    it('test check time and push tasks of controller manager', function () {
-        manager.checkTimeAndPushTask(true);
-    });
+    //it('test check time and push tasks of controller manager', function () {
+    //    manager.checkTimeAndPushTask(true);
+    //});
 
     //it('test start of controller manager', function (done) {
     //    this.timeout(1000*60*60*3); //3hours
