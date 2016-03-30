@@ -16,7 +16,7 @@ function PastConditionGather() {
 }
 
 /**
- * kma 1.2부터는 23시간 전까지만 제공함.
+ * kma 1.2부터는 23시간 전까지만 제공함, kma 1.0도 8일에 한시간 부족하게 있음
  * @param days
  * @returns {Array}
  */
@@ -28,9 +28,7 @@ PastConditionGather.prototype.makePubDateList = function (days) {
     var currentDate;
     var dateString;
 
-    if (days === 1) {
-        counts -= 1;
-    }
+    counts -= 1;
 
     if (currentMins > 40) {
         startOffset = 9;
