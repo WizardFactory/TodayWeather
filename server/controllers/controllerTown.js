@@ -1199,7 +1199,7 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             default : console.log('convert Kma Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
-        if (0 < rXX || rXX < 100) {
+        if (0 < rXX && rXX < 100) {
             return rXX+"mm 미만";
         }
     }
@@ -1214,7 +1214,7 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             default : console.log('convert Km Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 */
-        if (0 < rXX || rXX < 100) {
+        if (0 < rXX && rXX < 100) {
             return rXX+"cm 미만";
         }
     }
