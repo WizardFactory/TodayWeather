@@ -256,7 +256,7 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.debug('DiscomfortIndex > invalid parameter.');
+        log.warn('DiscomfortIndex > invalid parameter.');
         return -1;
     }
 
@@ -274,7 +274,7 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.debug('DiscomfortString > invalid parameter');
+        log.warn('DiscomfortString > invalid parameter');
         return "";
     }
 
@@ -292,5 +292,45 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
 
     return discomfortString;
 };
+
+LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
+    if(temperature === undefined
+        || humidity === undefined
+        || temperature < -50
+        || humidity < 0)
+    {
+        log.warn('DecompositionIndex > invalid parameter.');
+        return -1;
+    }
+
+    var index = (humidity - 65)/14*(Math.pow(1.054, temperature));
+    
+    if(index < 0) {
+        index = 0;
+    }
+
+    return index.toFixed(1);
+}
+
+LifeIndexKmaController.convertStringFromDecompositionIndex = function(DecompositionIndex) {
+    if(DecompositionIndex === undefined
+        || DecompositionIndex < 0)
+    {
+        log.warn('DecompositionString > invalid parameter');
+        return "";
+    }
+
+    var decompositionString;
+
+    if(DecompositionIndex > 7) {
+        decompositionString = "높음";
+    } else if(DecompositionIndex > 3) {
+        decompositionString = "보통";
+    } else {
+        decompositionString = "낮음";
+    }
+
+    return decompositionString;
+}
 
 module.exports = LifeIndexKmaController;

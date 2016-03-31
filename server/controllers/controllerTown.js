@@ -94,10 +94,15 @@ function ControllerTown() {
                             self._dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
                             var i;
-                            // discomfort index(불쾌지수)
+
                             for(i=0 ; i < resultShortList.length ; i++){
+                                // discomfort index(불쾌지수)
                                 resultShortList[i].dspls = LifeIndexKmaController.getDiscomfortIndex(resultShortList[i].t3h, resultShortList[i].reh);
                                 resultShortList[i].dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultShortList[i].dspls);
+
+                                // decomposition index(부패지수)
+                                resultShortList[i].decpsn = LifeIndexKmaController.getDecompositionIndex(resultShortList[i].t3h, resultShortList[i].reh);
+                                resultShortList[i].decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultShortList[i].decpsn);
                             }
 
                             req.short = resultShortList;
@@ -422,6 +427,10 @@ function ControllerTown() {
                     // get discomfort index(불괘지수)
                     resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
                     resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
+
+                    // get decomposition index(부패지수)
+                    resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
+                    resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
 
                     req.current = resultItem;
 
