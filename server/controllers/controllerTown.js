@@ -722,16 +722,19 @@ function ControllerTown() {
         }
 
         try {
-            KecoController.getArpLtnInfo({
-                third: req.params.town,
-                second: req.params.city,
-                first: req.params.region
-            }, new Date(), function (err, arpltn) {
+            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
                     log.error(err);
+                    next();
+                    return;
                 }
-                req.current.arpltn = arpltn;
-                next();
+                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltn) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    req.current.arpltn = arpltn;
+                    next();
+                });
             });
         }
         catch(e) {
@@ -956,7 +959,9 @@ function ControllerTown() {
         }
         if(req.current){
             self._makeStrForKma(req.current);
-            self._makeArpltnStr(req.current.arpltn);
+            if (req.current.arpltn) {
+                self._makeArpltnStr(req.current.arpltn);
+            }
         }
         if(req.midData){
             req.midData.dailyData.forEach(function (data) {

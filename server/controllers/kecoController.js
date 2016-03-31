@@ -129,11 +129,16 @@ arpltnController._getArpLtnList = function (msrStnList, callback) {
         return this;
     }
 
+    //순서를 위해서 mapSeries를 사용
     async.mapSeries(msrStnList,
         function(msrStn, cb) {
             Arpltn.find({stationName: msrStn.stationName}).limit(1).lean().exec(function (err, arpltnList) {
                 if (err) {
                     log.error(err);
+                }
+                if (arpltnList.length === 0) {
+                    log.error("Fail to find arpltn stationName="+msrStn.stationName);
+                    return cb();
                 }
                 cb(err, arpltnList[0]);
             });
@@ -142,15 +147,11 @@ arpltnController._getArpLtnList = function (msrStnList, callback) {
             if (err) {
                 return callback(err);
             }
-            //results.sort(function (a, b) {
-            //    if (a.index < b.index) {
-            //        return -1;
-            //    }
-            //    else if (a.index > b.index) {
-            //        return 1;
-            //    }
-            //    return 0;
-            //});
+
+            results = results.filter(function (arpltn) {
+                return !!arpltn;
+            });
+
             callback(err, results);
         });
 
@@ -230,24 +231,18 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
     return arpltn;
 };
 
-arpltnController.getArpLtnInfo = function (town, dateTime, callback) {
+/**
+ *
+ * @param townInfo
+ * @param dateTime
+ * @param callback
+ * @returns {arpltnController}
+ */
+arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
     var self = this;
 
     async.waterfall([
             function(cb) {
-                Town.find({"town.first":town.first, "town.second":town.second, "town.third":town.third}).
-                    limit(1).lean().exec(function (err, townInfo) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        if(townInfo.length === 0) {
-                            err = new Error("Fail to find town="+JSON.stringify(town));
-                            return cb(err);
-                        }
-                        return cb(err, townInfo[0]);
-                    });
-            },
-            function(townInfo, cb) {
                 var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
                 MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(10).lean().exec(function (err, msrStnList) {
                     if (err) {
