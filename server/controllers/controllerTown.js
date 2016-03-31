@@ -1609,7 +1609,13 @@ ControllerTown.prototype._sum = function(list, invalidValue) {
     validList.forEach(function (num) {
         total += num;
     });
-    return total.toFixed(1);
+
+    if (total === 0) {
+        return Math.round(total);
+    }
+    else {
+        return total.toFixed(1);
+    }
 };
 
 /**
