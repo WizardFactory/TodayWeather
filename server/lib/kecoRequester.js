@@ -12,12 +12,14 @@ var req = require('request');
 
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
+var Frcst = require('../models/modelMinuDustFrcst');
 
 var DOMAIN_ARPLTN_KECO = 'http://openapi.airkorea.or.kr/openapi/services/rest';
 
 var PATH_MSRSTN_INFO_INQIRE_SVC = 'MsrstnInfoInqireSvc';
 var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';
 var MSRSTN_LIST = 'getMsrstnList';
+var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';
 
 var PATH_ARPLTN_INFOR_INQIRE_SVC = 'ArpltnInforInqireSvc';
 var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';
@@ -487,6 +489,206 @@ Keco.prototype.getAllMsrStnInfo = function(callback) {
             return callback(err);
         }
         log.info('saved msr stn list length=', result.length);
+        callback(err, result);
+    });
+
+    return this;
+};
+
+/**
+ *
+ * @param callback
+ * @returns {Keco}
+ * @private
+ */
+Keco.prototype._checkDataTime = function (callback) {
+    var dataDate;
+    var now = new Date();
+    var tz = now.getTime() + (now.getTimezoneOffset() * 60000) + (9* 3600000);
+    now.setTime(tz);
+
+    var dataHours;
+    var currentHours = now.getHours();
+    if (currentHours < 5) {
+        //yesterday 23
+        now.setDate(now.getDate()-1);
+        dataHours = '23시 발표';
+    }
+    else if (currentHours < 11) {
+        dataHours = '05시 발표';
+    }
+    else if (currentHours < 17) {
+        dataHours = '11시 발표';
+    }
+    else if (currentHours < 23) {
+        dataHours = '17시 발표';
+    }
+    else {
+        dataHours = '23시 발표';
+    }
+
+    dataDate = now.getFullYear()+
+        '-'+manager.leadingZeros(now.getMonth()+1, 2)+
+        '-'+manager.leadingZeros(now.getDate(), 2);
+
+    log.info('minu dust frcst latest data time = '+dataDate+' '+dataHours);
+
+    Frcst.find({dataTime: dataDate+' '+dataHours}).lean().exec(function (err, frcstList) {
+        if (err)  {
+            return callback(err);
+        }
+        if (frcstList.length == 0) {
+            return callback(err, {isLatest: false, dataTime:{dataDate: dataDate, dataHours: dataHours}});
+        }
+
+        return callback(err, {isLatest: true, dataTime:{dataDate: dataDate, dataHours: dataHours}});
+    });
+
+    return this;
+};
+
+/**
+ * date format is YYYY-MM-DD
+ * @param key
+ * @param date
+ * @param callback
+ * @private
+ */
+Keco.prototype._getFrcst = function(key, date, callback) {
+    var url =  DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + MINU_DUST_FRCST_DSPTH +
+        '?ServiceKey='+key +
+        '&searchDate=' + date +
+        '&ver=1.0'+
+        '&pageNo='+ 1 +
+        '&numOfRows='+999 +
+        '&_returnType=json';
+
+    log.debug(url);
+
+    req(url, {json:true}, function(err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if ( response.statusCode >= 400) {
+            return callback(new Error(body));
+        }
+        return callback(err, body);
+    });
+
+    return this;
+};
+
+Keco.prototype._parseFrcst = function (rawData, dataTime) {
+    var rawDataList = rawData.list;
+    var parsedList = [];
+
+    //remove old time frcst
+    rawDataList = rawDataList.filter(function (rawData) {
+        return rawData.dataTime === dataTime;
+    });
+
+    rawDataList.forEach(function (rawData) {
+        var parsedData = {};
+        parsedData.dataTime = rawData.dataTime;
+        parsedData.informCode = rawData.informCode;
+        parsedData.informData = rawData.informData;
+        parsedData.informCause = rawData.informCause;
+        parsedData.informOverall = rawData.informOverall;
+        parsedData.informGrade = [];
+        var gradeList = rawData.informGrade.split(",");
+        gradeList.forEach(function (grade) {
+            var gradeObjectList = grade.split(" : ") ;
+            parsedData.informGrade.push({"region":gradeObjectList[0], "grade":gradeObjectList[1]});
+        });
+        parsedData.imageUrl = [];
+        parsedData.imageUrl.push(rawData.imageUrl1);
+        parsedData.imageUrl.push(rawData.imageUrl2);
+        parsedData.imageUrl.push(rawData.imageUrl3);
+        parsedData.imageUrl.push(rawData.imageUrl4);
+        parsedData.imageUrl.push(rawData.imageUrl5);
+        parsedData.imageUrl.push(rawData.imageUrl6);
+
+        parsedList.push(parsedData);
+    });
+
+    return parsedList;
+};
+
+Keco.prototype._saveFrcst = function(frcstList, callback) {
+    async.map(frcstList,
+        function (objFrcst, cb) {
+            Frcst.find({informData:objFrcst.informData, informCode: objFrcst.informCode}).exec(function (err, shFrcstList) {
+                if (err) {
+                    return cb(err);
+                }
+                if (shFrcstList.length == 0) {
+                    log.verbose('save new minu dust frcst'+ objFrcst.informData + ' '+ objFrcst.informCode);
+                    var shFrcst = new Frcst(objFrcst);
+                    shFrcst.save(function (err) {
+                        cb(err, objFrcst);
+                    });
+                }
+                else {
+                    log.verbose('update minu dust frcst '+ objFrcst.informData + ' '+ objFrcst.informCode);
+                    if (shFrcstList.length > 1) {
+                        log.error("minu dust frcst dspth is duplicated!!");
+                    }
+                    for (var name in objFrcst) {
+                        shFrcstList[0][name] = objFrcst[name];
+                    }
+                    shFrcstList[0].save(function (err) {
+                        cb(err, objFrcst.informData);
+                    });
+                }
+            });
+        },
+        function (err, results) {
+            if (err)  {
+                return callback(err);
+            }
+            callback(err, results);
+        });
+
+    return this;
+};
+
+Keco.prototype.getMinuDustFrcstDspth = function(callback) {
+    var self = this;
+
+    async.waterfall([function (cb) {
+        self._checkDataTime(function (err, result) {
+            if (err) {
+                return cb(err);
+            }
+            if (result.isLatest) {
+                return cb('already latest');
+            }
+            cb(undefined, result.dataTime);
+        });
+    }, function (dataTime, cb) {
+        self._getFrcst(self.getServiceKey(), dataTime.dataDate, function (err, body) {
+            if (err) {
+                return cb(err);
+            }
+            return cb(err, body, dataTime);
+        });
+    }, function (body, dataTime, cb) {
+        var parsedList = self._parseFrcst(body, dataTime.dataDate+' '+dataTime.dataHours);
+        if (!parsedList) {
+            return cb(new Error("Fail to parse minu dust frcst dspth"));
+        }
+        return cb(undefined, parsedList);
+    }, function (parsedFrcstList, cb) {
+        self._saveFrcst(parsedFrcstList, function (err, result) {
+            if (err) {
+                return cb(err);
+            }
+            cb(err, result);
+        });
+    }], function (err, result) {
+        if (err) {
+            return callback(err);
+        }
         callback(err, result);
     });
 
