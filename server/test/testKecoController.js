@@ -12,17 +12,35 @@ var assert  = require('assert');
 var kecoController = require('../controllers/kecoController');
 
 describe('unit test - keco controller', function() {
-    //var mongoose = require('mongoose');
-    //mongoose.connect('localhost/todayweather', function(err) {
-    //    if (err) {
-    //        console.error('Could not connect to MongoDB!');
-    //        console.log(err);
-    //    }
-    //});
-    //mongoose.connection.on('error', function(err) {
-    //    console.error('MongoDB connection error: ' + err);
-    //});
+    var mongoose = require('mongoose');
+    mongoose.connect('localhost/todayweather', function(err) {
+        if (err) {
+            console.error('Could not connect to MongoDB!');
+            console.log(err);
+        }
+    });
+    mongoose.connection.on('error', function(err) {
+        console.error('MongoDB connection error: ' + err);
+    });
 
+    it('test _convertDustFrcstRegion', function () {
+        var controllerManager = require('../controllers/controllerManager');
+        global.manager = new controllerManager();
+        var siDo;
+        siDo = kecoController._convertDustFrcstRegion('강원도','강릉시');
+        assert.equal(siDo, '영동', '');
+    });
+
+    it('test get dust forecast', function (done) {
+        var dateList = ['20160331', '20160401', '20160402', '20160403', '20160404'];
+       kecoController.getDustFrcst({region:'강원도', city:'강릉시'}, dateList, function (err, results) {
+           if (err) {
+               console.log(err);
+           }
+           console.log(results);
+           done();
+       });
+    });
     //it('test get arpltn info', function (done) {
     //    var town = { "first" : "경기도", "second" : "성남시분당구", "third" : "수내1동"};
     //    kecoController.getArpLtnInfo(town, new Date(), function (err, arpltn) {

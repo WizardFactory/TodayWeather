@@ -13,6 +13,7 @@ var req = require('request');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
 var Frcst = require('../models/modelMinuDustFrcst');
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var DOMAIN_ARPLTN_KECO = 'http://openapi.airkorea.or.kr/openapi/services/rest';
 
@@ -503,9 +504,7 @@ Keco.prototype.getAllMsrStnInfo = function(callback) {
  */
 Keco.prototype._checkDataTime = function (callback) {
     var dataDate;
-    var now = new Date();
-    var tz = now.getTime() + (now.getTimezoneOffset() * 60000) + (9* 3600000);
-    now.setTime(tz);
+    var now = kmaTimeLib.toTimeZone(9);
 
     var dataHours;
     var currentHours = now.getHours();
@@ -527,9 +526,7 @@ Keco.prototype._checkDataTime = function (callback) {
         dataHours = '23시 발표';
     }
 
-    dataDate = now.getFullYear()+
-        '-'+manager.leadingZeros(now.getMonth()+1, 2)+
-        '-'+manager.leadingZeros(now.getDate(), 2);
+    dataDate = kmaTimeLib.convertDateToYYYY_MM_DD(now);
 
     log.info('minu dust frcst latest data time = '+dataDate+' '+dataHours);
 
