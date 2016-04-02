@@ -171,7 +171,7 @@
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
                         </div>
-                        <div class="item row detail-item">
+                        <div class="item row detail-item" ng-if="currentWeather.wsd != -1">
                             <div class="col col-33 detail-text"><p>바람</p></div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/Wind.png" width="40px"></div>
