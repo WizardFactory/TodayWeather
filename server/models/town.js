@@ -1,4 +1,4 @@
-/*
+/**
  *
  *  how to use ...
  *
@@ -8,7 +8,10 @@
  *      if(err) console.log(err);
  *      console.log(res);
  *      });
- * */
+ *  town.js는 데이터 참조용으로 사용해야함. town name외에 모두 중복 될수 있음.
+ *  mCoord, gCoord, areaNo, tmCoord, kecoStationName
+ *  동일한 동이 다른 이름으로 들어 갈 수 있음. 예)창신제1동,창신1동
+ */
 
 "use strict";
 
@@ -20,7 +23,7 @@ var tSchema = new mongoose.Schema({
     gCoord: {lat: Number, lon: Number},
     areaNo: String,
     tmCoord:{x: Number, y: Number},
-    kecoStationName: String
+    kecoStationName: String //unused it;
 });
 
 var mCoord = [];

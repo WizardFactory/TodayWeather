@@ -21,14 +21,16 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 describe('unit test - controller town', function() {
 
     it('test _getShortestTimeValue ', function() {
-        var ret = cTown._getShortestTimeValue(9);
-        var today = kmaTimeLib.convertDateToYYYYMMDD(new Date());
+        var date = new Date();
+        var ret = cTown._getShortestTimeValue(date.getTimezoneOffset()/60*-1);
+        var today = kmaTimeLib.convertDateToYYYYMMDD(date);
         assert.equal(ret.date, today, 'Fail get time value');
     });
 
     it('test _getCurrentTimeValue', function () {
-        var ret = cTown._getCurrentTimeValue(9);
-        var today = kmaTimeLib.convertDateToYYYYMMDD(new Date());
+        var date = new Date();
+        var ret = cTown._getCurrentTimeValue(date.getTimezoneOffset()/60*-1);
+        var today = kmaTimeLib.convertDateToYYYYMMDD(date);
         assert.equal(ret.date, today, 'Fail get time value');
     });
 

@@ -156,7 +156,13 @@ describe('unit test - requester of kma index service class', function() {
     //        done();
     //    });
     //
-    //    var town = {third: '구미동', second: '성남시분당구', first: '경기도'};
+    //    //대구광역시,북구,대현1동,35.8821477,128.6058093,2723064000
+    //    //강원도,강릉시,구정면,37.7155333,128.8823861,4215033000
+    //    var townInfo = {
+    //        town:{third: '대현1동', second: '북구', first: '대구광역시'},
+    //        gCoord:{lon:128.8823861, lat: 37.7155333},
+    //        areaNo: "4215033000"
+    //    };
     //    //var town = { "first" : "경기도", "second" : "안성시", "third" : "안성3동"};
     //    var fsn = {
     //        "lastUpdateDate": "2015103006",
@@ -200,7 +206,7 @@ describe('unit test - requester of kma index service class', function() {
     //    //            {"date":"20151108","wfAm":"구름많음","wfPm":"구름많음","taMin":11,"taMax":15},
     //    //            {"date":"20151109","wfAm":"구름많음","wfPm":"구름많음","taMin":11,"taMax":15}];
     //
-    //    LifeIndexController.appendData(town, shortList, midList, function (err, data) {
+    //    LifeIndexController.appendData(townInfo, shortList, midList, function (err, data) {
     //        console.log(err + ' ' + data);
     //        console.log(shortList);
     //        done();

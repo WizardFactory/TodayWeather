@@ -12,7 +12,6 @@
 var req = require('request');
 var async = require('async');
 
-var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -109,18 +108,22 @@ KmaIndexService.prototype.setServiceKey = function(key) {
 };
 
 /**
- *
+ * 원래는 자신의 디비에서 리스트 뽑아서 업데이트하면 되는데, 기존에 잘 못된 구조로, list를 따로 가지는 형태로 진행.
  */
 KmaIndexService.prototype.loadAreaList = function(callback) {
     log.info("LOAD AREA LIST");
 
     var self = this;
-    Town.find({},{_id:0}).lean().exec(function(err, townList) {
+    LifeIndexKma.find({},{_id:0}).lean().exec(function(err, lifeIndexList) {
         if (err)  {
             log.error("Fail to load town list");
             return err;
         }
-        self._areaList = townList;
+
+        self._areaList = lifeIndexList.filter(function (lifeIndex) {
+           return lifeIndex.activated;
+        });
+
         log.info("kma index  areaList="+self._areaList.length);
         if (callback) {
             callback();
@@ -516,7 +519,7 @@ KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, to
                     //go to get new data
                 }
                 else {
-                    log.info('areaNo='+town.areaNo+' life index data already updated skip '+indexName+
+                    log.verbose('areaNo='+town.areaNo+' life index data already updated skip '+indexName+
                         ' lateUpdateDate='+lifeIndexList[0][indexName].lastUpdateDate);
                     return cb('skip', lifeIndexList[indexName]);
                 }
@@ -574,7 +577,7 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
                     else {
                         failList.push(area);
                         if (err.statusCode && err.statusCode === 503) {
-                            log.warn(err.message);
+                            log.debug(err.message);
                         }
                         else {
                             log.error(err);
@@ -642,7 +645,7 @@ KmaIndexService.prototype.taskLifeIndex = function (indexName, callback) {
 KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
     log.info("LOAD town info " +townInfo.toString());
 
-    Town.find({town: townInfo}, function(err, townList) {
+    LifeIndexKma.find({town: townInfo}, function(err, townList) {
         if (err)  {
             log.error("Fail to load townlist");
             return err;
@@ -672,6 +675,12 @@ KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
     });
 };
 
+/**
+ * 없어져야 함.
+ * @param townInfo
+ * @param callback
+ * @returns {*}
+ */
 KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
     log.info("Called KMA Index service By Town");
     if (!this.serviceKey) {

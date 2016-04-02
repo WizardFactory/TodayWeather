@@ -94,10 +94,15 @@ function ControllerTown() {
                             self._dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
                             var i;
-                            // discomfort index(불쾌지수)
+
                             for(i=0 ; i < resultShortList.length ; i++){
+                                // discomfort index(불쾌지수)
                                 resultShortList[i].dspls = LifeIndexKmaController.getDiscomfortIndex(resultShortList[i].t3h, resultShortList[i].reh);
                                 resultShortList[i].dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultShortList[i].dspls);
+
+                                // decomposition index(부패지수)
+                                resultShortList[i].decpsn = LifeIndexKmaController.getDecompositionIndex(resultShortList[i].t3h, resultShortList[i].reh);
+                                resultShortList[i].decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultShortList[i].decpsn);
                             }
 
                             req.short = resultShortList;
@@ -423,6 +428,10 @@ function ControllerTown() {
                     resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
                     resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
 
+                    // get decomposition index(부패지수)
+                    resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
+                    resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
+
                     req.current = resultItem;
 
                     //재사용을 위해 req에 달아둠.
@@ -671,8 +680,13 @@ function ControllerTown() {
         }
 
         try {
-            LifeIndexKmaController.appendData({third: req.params.town, second: req.params.city, first: req.params.region},
-                req.short, req.midData.dailyData, function (err) {
+            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+                if (err) {
+                    log.error(err) ;
+                    next();
+                    return;
+                }
+                LifeIndexKmaController.appendData(townInfo, req.short, req.midData.dailyData, function (err) {
                     if (err) {
                         log.error(err);
                     }
@@ -682,6 +696,7 @@ function ControllerTown() {
                     }
                     next();
                 });
+            });
         }
         catch(e) {
             if (e) {
@@ -716,16 +731,19 @@ function ControllerTown() {
         }
 
         try {
-            KecoController.getArpLtnInfo({
-                third: req.params.town,
-                second: req.params.city,
-                first: req.params.region
-            }, new Date(), function (err, arpltn) {
+            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
                     log.error(err);
+                    next();
+                    return;
                 }
-                req.current.arpltn = arpltn;
-                next();
+                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltn) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    req.current.arpltn = arpltn;
+                    next();
+                });
             });
         }
         catch(e) {
@@ -738,6 +756,53 @@ function ControllerTown() {
         return this;
     };
 
+    this.getKecoDustForecast = function (req, res, next) {
+        var meta = {};
+        meta.method = 'getKecoDustForecast';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>', meta);
+
+        if (!req.midData)  {
+            var err = new Error("Fail to find midData weather "+JSON.stringify(meta));
+            log.warn(err);
+            next();
+            return this;
+        }
+
+        try {
+            var dateList = [];
+            req.midData.dailyData.forEach(function (dailyData) {
+               dateList.push(dailyData.date);
+            });
+
+            KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
+                if (err) {
+                    log.error(err);
+                    next();
+                    return;
+                }
+                results.forEach(function (result) {
+                    req.midData.dailyData.forEach(function (dailyData) {
+                        if (dailyData.date === result.date) {
+                            dailyData.dustForecast = result.dustForecast;
+                        }
+                    });
+                });
+                next();
+                return;
+            });
+        }
+        catch(e) {
+            if (e) {
+                log.warn(e);
+            }
+            next();
+        }
+
+        return this;
+    };
     /**
      *
      * @param req
@@ -950,7 +1015,9 @@ function ControllerTown() {
         }
         if(req.current){
             self._makeStrForKma(req.current);
-            self._makeArpltnStr(req.current.arpltn);
+            if (req.current.arpltn) {
+                self._makeArpltnStr(req.current.arpltn);
+            }
         }
         if(req.midData){
             req.midData.dailyData.forEach(function (data) {
@@ -1185,10 +1252,10 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             case 40: return "20~39mm";
             case 70: return "40~69mm";
             case 100: return "70mm 이상";
-            default : console.log('unknown data='+rXX);
+            default : console.log('convert Kma Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
-        if (0 < rXX || rXX < 100) {
+        if (0 < rXX && rXX < 100) {
             return rXX+"mm 미만";
         }
     }
@@ -1200,10 +1267,10 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             case 10: return "5~9cm";
             case 20: return "10~19cm";
             case 100: return "20cm 이상";
-            default : console.log('unknown data='+rXX);
+            default : console.log('convert Km Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 */
-        if (0 < rXX || rXX < 100) {
+        if (0 < rXX && rXX < 100) {
             return rXX+"cm 미만";
         }
     }
@@ -1603,7 +1670,13 @@ ControllerTown.prototype._sum = function(list, invalidValue) {
     validList.forEach(function (num) {
         total += num;
     });
-    return total;
+
+    if (total === 0) {
+        return Math.round(total);
+    }
+    else {
+        return total.toFixed(1);
+    }
 };
 
 /**
@@ -1691,7 +1764,7 @@ ControllerTown.prototype._mergeList = function(dstList, srcList) {
  * @returns {*}
  * @private
  */
-ControllerTown.prototype._findTownCode = function(list, region, city, town, cb) {
+ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
     if (list.length <= 0) {
         return cb(new Error("list length is zero"));
     }
@@ -1703,22 +1776,26 @@ ControllerTown.prototype._findTownCode = function(list, region, city, town, cb) 
                 var dbTown = list[i];
                 if (dbTown.town.first === region && dbTown.town.second === city && dbTown.town.third === town) {
                     log.silly('_findCode : ', dbTown.mCoord);
-                    callback('goto exit', dbTown.mCoord);
+                    callback('goto exit', dbTown);
                     return;
                 }
             }
-            log.error("_findTownCode : Fail to find " + region + city + town);
+            log.error("_findTown : Fail to find " + region + city + town);
             callback(null);
         },
         function(callback){
             log.silly('get getcode');
             convertGeocode(region, city, town, function (err, result) {
                 if(err){
-                    log.error('_findTownCode : Cannot get mx, my ' + region + city + town + " "+err.message);
+                    log.error('_findTown : Cannot get mx, my ' + region + city + town + " "+err.message);
                     return callback(null);
                 }
 
                 var newTown = {
+                    gCoord: {
+                        lat: result.lat,
+                        lon: result.lon
+                    },
                     mCoord: {
                         mx: result.mx,
                         my: result.my
@@ -1731,20 +1808,72 @@ ControllerTown.prototype._findTownCode = function(list, region, city, town, cb) 
                 };
 
                 list.push(newTown);
-                log.silly('_findCode XY>',result);
-                callback('goto exit', {mx:result.mx, my: result.my});
+                log.silly('_findTown XY>',result);
+                callback('goto exit', newTown);
             });
         }
     ],
     function(err, result){
-        log.silly('FindCode>', result);
+        log.silly('FindTown>', result);
         if(result){
             cb(0, result);
             return;
         }
 
-        cb(new Error("can not find code"));
+        cb(new Error("can not find Town"));
     });
+};
+
+ControllerTown.prototype._getTownInfo = function(region, city, town, cb) {
+    var meta = {};
+    meta.method = '_getTownInfo';
+    meta.region = region;
+    meta.city = city;
+    meta.town = town;
+
+    var self = this;
+
+    try{
+        if (self.dbTownList.length > 0) {
+            self._findTown(self.dbTownList, region, city, town, function (err, towninfo) {
+                cb(err, towninfo);
+            });
+            return this;
+        }
+        else {
+            dbTown.find({}, {_id:0}).lean().exec(function (err, tList) {
+                if(err){
+                    log.error('~> _getCoord : fail to find db item');
+                    if(cb){
+                        cb(err);
+                    }
+                    return;
+                }
+
+                if(tList.length === 0){
+                    log.error('~> there is no data', tList.length);
+                    if(cb){
+                        cb(new Error("there is no data"));
+                    }
+                    return;
+                }
+                self.dbTownList = tList;
+                self._findTown(self.dbTownList, region, city, town, function (err, towninfo){
+                    cb(err, towninfo);
+                });
+            });
+            return this;
+        }
+    }catch(e){
+        if (cb) {
+            cb(e);
+        }
+        else {
+            log.error(e);
+        }
+    }
+
+    return this;
 };
 
 /**
@@ -1766,7 +1895,15 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
 
     try{
         if (self.dbTownList.length > 0) {
-            self._findTownCode(self.dbTownList, region, city, town, cb);
+            self._findTown(self.dbTownList, region, city, town, function(err, townInfo){
+                if (err) {
+                   cb(err);
+                }
+                else {
+                    cb(err, townInfo.mCoord);
+                }
+
+            });
             return this;
         }
         else {
@@ -1787,7 +1924,12 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                     return;
                 }
                 self.dbTownList = tList;
-                self._findTownCode(self.dbTownList, region, city, town, cb);
+                self._findTown(self.dbTownList, region, city, town, function (err, townInfo) {
+                   if (err)  {
+                      return  cb(err);
+                   }
+                    return cb(err, townInfo.mCoord);
+                });
             });
             return this;
         }
