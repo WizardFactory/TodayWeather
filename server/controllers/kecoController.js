@@ -4,12 +4,15 @@
 
 'use strict';
 
+var async = require('async');
+
 var Town = require('../models/town');
 var arpltnTown = require('../models/arpltnTownKeco');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
-
-var async = require('async');
+var Frcst = require('../models/modelMinuDustFrcst');
+var keco = new (require('../lib/kecoRequester.js'))();
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -231,6 +234,122 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
     return arpltn;
 };
 
+arpltnController._convertDustFrcstRegion = function (region, city) {
+    var sido = keco.convertRegionToSido(region);
+
+    if (sido ==='강원' || sido ==='경기') {
+        var regionName;
+        city = city.slice(0,3);
+        for (var i=0; i<manager.codeTable.length; i++) {
+            var codeItem =  manager.codeTable[i];
+            if (codeItem.first === region && codeItem.second === city) {
+                regionName = codeItem.regionName;
+                break;
+            }
+        }
+        switch (regionName) {
+            case '강원동부':
+                sido = '영동';
+                break;
+            case '강원서부':
+            case '강원남서':
+                sido = '영서';
+                break;
+            case '경기북부':
+                sido = '경기북부';
+                break;
+            case '경기서부':
+            case '경기남부':
+                sido = '경기남부';
+                break;
+            default :
+                log.error("dust forecast region : Fail to find region sido="+sido);
+                break;
+        }
+   }
+
+    return sido;
+};
+
+arpltnController._convertDustForecastStrToGrade = function (str) {
+    switch (str) {
+        case "좋음":
+            return 0;
+            break;
+        case "보통":
+            return 1;
+            break;
+        case "나쁨":
+            return 2;
+            break;
+        case "매우나쁨":
+            return 3;
+            break;
+        default:
+            log.error("Fail to convert dust forecast str="+str);
+            break;
+    }
+    return "";
+};
+
+arpltnController.getDustFrcst = function (town, dateList, callback) {
+    var region = this._convertDustFrcstRegion(town.region, town.city);
+    var informDataList = [];
+    var self = this;
+
+    dateList.forEach(function (date) {
+        informDataList.push(kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date));
+    });
+
+    async.map(informDataList, function (informData, cb) {
+        Frcst.find({informData: informData}, {_id:0}).lean().exec(function (err, dustFrcstList) {
+            if (err) {
+                return cb(err)
+            }
+
+            if (dustFrcstList.length === 0) {
+                return cb(err);
+            }
+
+            var result = {};
+            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(informData);
+
+            dustFrcstList.forEach(function (dustFrcst) {
+                for (var i=0; i<dustFrcst.informGrade.length;i++) {
+                    if (dustFrcst.informGrade[i].region === region)  {
+                        if (dustFrcst.informGrade[i].grade != '예보없음') {
+                            if (result.dustForecast === undefined) {
+                                result.dustForecast = {};
+                            }
+                            var keyGradeStr = dustFrcst.informCode+"Grade";
+                            var keyStrStr = dustFrcst.informCode+"Str";
+                            result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
+                            result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
+                        }
+                        return;
+                    }
+                }
+            });
+
+            if (result.dustForecast == undefined) {
+                return cb(err);
+            }
+            result.dustForecast.sido = region;
+            cb(err, result);
+        });
+    }, function (err, results) {
+        if (err) {
+            return callback(err);
+        }
+        results = results.filter(function (result) {
+            return !!result;
+        });
+        return callback(err, results);
+    });
+
+    return this;
+};
+
 /**
  *
  * @param townInfo
@@ -319,7 +438,6 @@ arpltnController._appendFromDb = function(town, current, callback) {
 arpltnController._appendFromKeco = function(town, current, callback) {
 
     var keyBox = require('../config/config').keyString;
-    var keco = new (require('../lib/kecoRequester.js'))();
     keco.setServiceKey(keyBox.normal);
     keco.setDaumApiKey(keyBox.daum_key);
 

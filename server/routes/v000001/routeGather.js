@@ -94,6 +94,16 @@ router.get('/keco', function(req, res) {
     });
 });
 
+router.get('/kecoForecast', function(req, res) {
+    manager.keco.getMinuDustFrcstDspth.call(manager.keco, function (err) {
+        if (err) {
+            log.error(err);
+        }
+
+        res.send();
+    });
+});
+
 router.get('/short', function(req, res) {
     manager.getTownShortData(9, server_key, function (err) {
         if (err) {

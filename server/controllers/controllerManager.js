@@ -1837,6 +1837,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     log.verbose('check time and request task');
 
     if (time === 1 || putAll) {
+        log.info('push keco forecast');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("kecoForecast", callback);
+        });
+
         log.info('push past');
         self.asyncTasks.push(function (callback) {
             self._requestApi("past", callback);
@@ -1907,11 +1912,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //    })
     //}
 
-    if (self.asyncTasks.length <= 12) {
+    if (self.asyncTasks.length <= 14) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {
-        log.error('wait '+self.asyncTasks.length+' tasks');
+        log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
+        log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
+        log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
     }
 };
 

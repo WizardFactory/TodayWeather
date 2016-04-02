@@ -56,4 +56,38 @@ kmaTimeLib.convertDateToHHMM = function(date) {
     return hh+'00';
 };
 
+kmaTimeLib.toTimeZone = function (zone, time) {
+    if (time == undefined) {
+       time = new Date();
+    }
+
+    var tz = time.getTime() + (time.getTimezoneOffset() * 60000) + (9* 3600000);
+    time.setTime(tz);
+
+    return time;
+};
+
+/**
+ * return format YYYY-MM-DD
+ * @param date
+ * @returns {string}
+ */
+kmaTimeLib.convertDateToYYYY_MM_DD = function (date) {
+    if (date == undefined) {
+        date = new Date();
+    }
+
+    return date.getFullYear()+
+        '-'+manager.leadingZeros(date.getMonth()+1, 2)+
+        '-'+manager.leadingZeros(date.getDate(), 2);
+};
+
+kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD = function (dateStr) {
+    return dateStr.substr(0,4)+'-'+dateStr.substr(4,2)+'-'+dateStr.substr(6,2);
+};
+
+kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD = function (dateStr) {
+    return dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
+};
+
 module.exports = kmaTimeLib;

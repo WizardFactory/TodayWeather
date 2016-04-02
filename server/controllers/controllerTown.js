@@ -756,6 +756,53 @@ function ControllerTown() {
         return this;
     };
 
+    this.getKecoDustForecast = function (req, res, next) {
+        var meta = {};
+        meta.method = 'getKecoDustForecast';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>', meta);
+
+        if (!req.midData)  {
+            var err = new Error("Fail to find midData weather "+JSON.stringify(meta));
+            log.warn(err);
+            next();
+            return this;
+        }
+
+        try {
+            var dateList = [];
+            req.midData.dailyData.forEach(function (dailyData) {
+               dateList.push(dailyData.date);
+            });
+
+            KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
+                if (err) {
+                    log.error(err);
+                    next();
+                    return;
+                }
+                results.forEach(function (result) {
+                    req.midData.dailyData.forEach(function (dailyData) {
+                        if (dailyData.date === result.date) {
+                            dailyData.dustForecast = result.dustForecast;
+                        }
+                    });
+                });
+                next();
+                return;
+            });
+        }
+        catch(e) {
+            if (e) {
+                log.warn(e);
+            }
+            next();
+        }
+
+        return this;
+    };
     /**
      *
      * @param req
