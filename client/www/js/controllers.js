@@ -494,10 +494,10 @@ angular.module('starter.controllers', [])
             }
 
             if (WeatherInfo.cityIndex === WeatherInfo.getCityCount() - 1) {
-                WeatherInfo.cityIndex = 0;
+                WeatherInfo.setCityIndex(0);
             }
             else {
-                WeatherInfo.cityIndex += 1;
+                WeatherInfo.setCityIndex(WeatherInfo.cityIndex + 1);
             }
 
             loadWeatherData();
@@ -509,10 +509,10 @@ angular.module('starter.controllers', [])
             }
 
             if (WeatherInfo.cityIndex === 0) {
-                WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
+                WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
             }
             else {
-                WeatherInfo.cityIndex -= 1;
+                WeatherInfo.setCityIndex(WeatherInfo.cityIndex - 1);
             }
 
             loadWeatherData();
@@ -527,7 +527,7 @@ angular.module('starter.controllers', [])
                 WeatherInfo.updateCities();
 
                 if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
-                    WeatherInfo.cityIndex = $stateParams.fav;
+                    WeatherInfo.setCityIndex($stateParams.fav);
                 }
 
                 loadWeatherData();
@@ -699,7 +699,7 @@ angular.module('starter.controllers', [])
                     $scope.showAlert("에러", msg);
                 }
                 else {
-                    WeatherInfo.cityIndex = WeatherInfo.getCityCount() - 1;
+                    WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
                     $location.path('/tab/forecast');
                 }
                 $scope.isLoading = false;
@@ -718,7 +718,7 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnSelectCity = function(index) {
-            WeatherInfo.cityIndex = index;
+            WeatherInfo.setCityIndex(index);
             $location.path('/tab/forecast');
         };
 
@@ -727,7 +727,7 @@ angular.module('starter.controllers', [])
             WeatherInfo.removeCity(index);
 
             if (WeatherInfo.cityIndex === WeatherInfo.getCityCount()) {
-                WeatherInfo.cityIndex = 0;
+                WeatherInfo.setCityIndex(0);
             }
             return false; //OnSelectCity가 호출되지 않도록 이벤트 막음
         };

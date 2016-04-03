@@ -194,6 +194,12 @@ angular.module('starter.services', [])
                 that.cities = [];
                 that.cities.push(city);
             }
+
+            // load last cityIndex
+            that.cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
+            if (that.cityIndex === null) {
+                that.setCityIndex(0);
+            }
         };
 
         obj.saveCities = function() {
@@ -232,6 +238,16 @@ angular.module('starter.services', [])
                 });
 
             return deferred.promise;
+        };
+
+        obj.setCityIndex = function (index) {
+            var that = this;
+
+            if (index >= 0 && index < that.cities.length) {
+                that.cityIndex = index;
+                // save current cityIndex
+                localStorage.setItem("cityIndex", JSON.stringify(that.cityIndex));
+            }
         };
 
         //endregion
