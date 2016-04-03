@@ -816,6 +816,24 @@ angular.module('starter.controllers', [])
         ga_storage._trackEvent('page', 'tab', 'setting');
     })
 
+    .controller('TutorialCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location) {
+        $scope.nextSlide = function() {
+            $ionicSlideBoxDelegate.next();
+        };
+
+        $scope.quit = function () {
+            console.log('quit');
+            $scope.showTutorial = false;
+            $rootScope.showTutorial = false;
+            $location.url('/tab/forecast');
+        };
+
+        $scope.init = function() {
+            console.log('init');
+            $ionicNavBarDelegate.showBar(false);
+        };
+    })
+
     .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
                                      $location, $cordovaSocialSharing) {
         // With the new view caching in Ionic, Controllers are only called
