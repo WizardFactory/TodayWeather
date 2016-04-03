@@ -145,7 +145,7 @@ angular.module('starter', [
                 }
             })
             .state('tab.forecast', {
-                url: '/forecast',
+                url: '/forecast?fav',
                 cache: false,
                 views: {
                     'tab-forecast': {

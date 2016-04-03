@@ -2,7 +2,7 @@
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil) {
+                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, $stateParams) {
 
         $scope.skipGuide = true;
         if(typeof(Storage) !== "undefined") {
@@ -525,6 +525,11 @@ angular.module('starter.controllers', [])
             WeatherInfo.loadCities();
             WeatherInfo.loadTowns().then(function () {
                 WeatherInfo.updateCities();
+
+                if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
+                    WeatherInfo.cityIndex = $stateParams.fav;
+                }
+
                 loadWeatherData();
                 checkForUpdates().finally(function () {
                     updateWeatherData(false).finally(function () {
@@ -833,7 +838,7 @@ angular.module('starter.controllers', [])
         }, 1000);
 
         $scope.doTabForecast = function() {
-            if ($location.url() === '/tab/forecast') {
+            if ($location.url().indexOf('/tab/forecast') >= 0) {
                 $scope.$broadcast('updateWeatherEvent');
 
                 ga_storage._trackEvent('page', 'tab', 'reload');
@@ -846,7 +851,7 @@ angular.module('starter.controllers', [])
         $scope.doTabShare = function() {
             var message = '';
 
-            if ($location.url() === '/tab/forecast') {
+            if ($location.url().indexOf('/tab/forecast') >= 0) {
                 var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
                 if (cityData !== null && cityData.location !== null) {
                     message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
