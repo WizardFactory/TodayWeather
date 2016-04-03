@@ -221,6 +221,8 @@ angular.module('starter.controllers', [])
                     $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                 }
             },0);
+
+            ga_storage._trackEvent('weather', 'load', $scope.address, WeatherInfo.cityIndex);
         }
 
         function updateWeatherData(isForce) {
@@ -575,12 +577,7 @@ angular.module('starter.controllers', [])
 
         //identifyUser();
 
-        ga('send', {
-            hitType: 'event',
-            eventCategory: 'page',
-            eventAction: 'tab',
-            eventLabel: 'forecast'
-        });
+        ga_storage._trackEvent('page', 'tab', 'forecast');
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
@@ -735,12 +732,7 @@ angular.module('starter.controllers', [])
             console.log(ionic.Platform);
         });
 
-        ga('send', {
-            hitType: 'event',
-            eventCategory: 'page',
-            eventAction: 'tab',
-            eventLabel: 'search'
-        });
+        ga_storage._trackEvent('page', 'tab', 'search');
     })
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
@@ -816,12 +808,7 @@ angular.module('starter.controllers', [])
             console.log(ionic.Platform);
         });
 
-        ga('send', {
-            hitType: 'event',
-            eventCategory: 'page',
-            eventAction: 'tab',
-            eventLabel: 'setting'
-        });
+        ga_storage._trackEvent('page', 'tab', 'setting');
     })
 
     .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
@@ -849,12 +836,7 @@ angular.module('starter.controllers', [])
             if ($location.url() === '/tab/forecast') {
                 $scope.$broadcast('updateWeatherEvent');
 
-                ga('send', {
-                    hitType: 'event',
-                    eventCategory: 'page',
-                    eventAction: 'tab',
-                    eventLabel: 'reload'
-                });
+                ga_storage._trackEvent('page', 'tab', 'reload');
             }
             else {
                 $location.url('/tab/forecast');
@@ -917,12 +899,7 @@ angular.module('starter.controllers', [])
                     // An error occured
                 });
 
-            ga('send', {
-                hitType: 'event',
-                eventCategory: 'page',
-                eventAction: 'tab',
-                eventLabel: 'share'
-            });
+            ga_storage._trackEvent('page', 'tab', 'share');
         };
 
         //$ionicPlatform.ready(function() {
