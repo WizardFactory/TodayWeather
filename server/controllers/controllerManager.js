@@ -1878,6 +1878,10 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortrss", callback);
         });
+
+        self.asyncTasks.push(function (callback) {
+            self._requestApi('kmaStnHourly', callback);
+        });
     }
 
     //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.

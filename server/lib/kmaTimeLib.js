@@ -74,7 +74,7 @@ kmaTimeLib.toTimeZone = function (zone, time) {
  */
 kmaTimeLib.convertDateToYYYY_MM_DD = function (date) {
     if (date == undefined) {
-        date = new Date();
+        date = kmaTimeLib.toTimeZone(9);
     }
 
     return date.getFullYear()+
@@ -88,6 +88,23 @@ kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD = function (dateStr) {
 
 kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD = function (dateStr) {
     return dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
+};
+
+/**
+ * for kma scraper
+ * @param date
+ * @returns {string}
+ */
+kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ = function (date) {
+    if (date == undefined) {
+        date = kmaTimeLib.toTimeZone(9);
+    }
+
+    return date.getFullYear()+
+        '.'+manager.leadingZeros(date.getMonth()+1, 2)+
+        '.'+manager.leadingZeros(date.getDate(), 2) +
+        '.'+manager.leadingZeros(date.getHours(), 2) +
+        ':00';
 };
 
 module.exports = kmaTimeLib;
