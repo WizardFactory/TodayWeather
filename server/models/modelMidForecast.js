@@ -15,4 +15,6 @@ var midForecastSchema = mongoose.Schema({
     }]
 });
 
+midForecastSchema.index({regId:1});
+
 module.exports = mongoose.model('midForecast', midForecastSchema);
