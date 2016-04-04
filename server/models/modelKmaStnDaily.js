@@ -29,4 +29,6 @@ var ksdwSchema = new mongoose.Schema({
     }]
 });
 
+ksdwSchema.index({stnId:1});
+
 module.exports = mongoose.model('KmaStnDaily', ksdwSchema);

@@ -375,16 +375,16 @@ KmaScraper.prototype._checkPubdate = function(date, callback)  {
     return this;
 };
 
-
 /**
  *
+ * @param pubDate
  * @param stnWeatherInfo
  * @returns {{date: *, weather: *, visibility: (*|string), cloud: *, heavyCloud: *, t1h: *, dpt: *, sensoryTem: *, dspls: (*|lSchema.dspls|{lastUpdateDate, data}), r1d: *, s1d: *, reh: *, wdd: *, vec: (*|vec|{type, default}), wsd: *, hPa: *, rs1h: *, rs1d: *, rns: *}}
  * @private
  */
-KmaScraper.prototype._makeDailyData = function(stnWeatherInfo) {
+KmaScraper.prototype._makeDailyData = function(pubDate, stnWeatherInfo) {
     return {
-        date : stnWeatherInfo.pubDate,
+        date : pubDate,
         weather : stnWeatherInfo.weather,
         visibility : stnWeatherInfo.visibility,
         cloud : stnWeatherInfo.cloud,
@@ -510,7 +510,7 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
                 hourlyData: []
             });
 
-            kmaStnHourly.hourlyData.push(self._makeDailyData(stnWeatherInfo));
+            kmaStnHourly.hourlyData.push(self._makeDailyData(pubDate, stnWeatherInfo));
             kmaStnHourly.save(function (err) {
                 if (err) {
                     return callback(err);
@@ -534,7 +534,7 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
         });
 
         stnHourlyList[0].pubDate = pubDate;
-        stnHourlyList[0].hourlyData.push(self._makeDailyData(stnWeatherInfo));
+        stnHourlyList[0].hourlyData.push(self._makeDailyData(pubDate, stnWeatherInfo));
         stnHourlyList[0].save(function (err) {
             if (err) {
                 return callback(err);

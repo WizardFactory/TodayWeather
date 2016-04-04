@@ -15,5 +15,9 @@ var ksiSchema = new mongoose.Schema({
     }
 });
 
+ksiSchema.index({stnId:1});
+ksiSchema.index({stnName:1});
+ksiSchema.index({isCityWeather:1});
+
 module.exports = mongoose.model('KmaStnInfo', ksiSchema);
 
