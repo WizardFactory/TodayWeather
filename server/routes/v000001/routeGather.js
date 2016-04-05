@@ -6,6 +6,8 @@ var router = require('express').Router();
 var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
 
+var Scrape = require('../../lib/kmaScraper');
+
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
     log.info('+ gather > request | Time[', printTime.toISOString(), ']');
@@ -126,6 +128,19 @@ router.get('/lifeindex', function (req, res) {
     manager.taskKmaIndexService.cbKmaIndexProcess(manager.taskKmaIndexService, function (err) {
         if (err) {
             log.error(err);
+        }
+        res.send();
+    });
+});
+
+router.get('/kmaStnHourly', function (req, res) {
+    var scrape = new Scrape();
+    scrape.getStnHourlyWeather(function (err, results) {
+        if (err) {
+            log.error(err);
+        }
+        else {
+            log.silly(results);
         }
         res.send();
     });

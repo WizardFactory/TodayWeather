@@ -43,13 +43,15 @@ router.get('/', [cTown.getSummary], function(req, res) {
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                         cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                         cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                        cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.getKecoDustForecast, cTown.insertStrForData,
+                        cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.getKecoDustForecast,
+                        cTown.getKmaStnHourlyWeather, cTown.insertStrForData,
                             cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                 cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                 cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast, cTown.insertStrForData,
+                                cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
+                                cTown.getKmaStnHourlyWeather, cTown.insertStrForData,
                                 cTown.getSummary, cTown.sendResult]);
 
 /**
@@ -60,7 +62,7 @@ router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.get
                                     cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                     cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                                    cTown.insertStrForData, cTown.getSummary, cTown.sendResult]);
+                                    cTown.getKmaStnHourlyWeather, cTown.insertStrForData, cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
                                             cTown.mergeMidWithShort, cTown.getKecoDustForecast,

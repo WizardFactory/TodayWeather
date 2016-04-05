@@ -1836,7 +1836,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    if (time === 1 || putAll) {
+    if (time === 2 || putAll) {
         log.info('push keco forecast');
         self.asyncTasks.push(function (callback) {
             self._requestApi("kecoForecast", callback);
@@ -1877,6 +1877,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.info('push short rss');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortrss", callback);
+        });
+
+        log.info('push kma stn hourly');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi('kmaStnHourly', callback);
         });
     }
 

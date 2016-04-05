@@ -20,6 +20,9 @@ var convertGeocode = require('../utils/convertGeocode');
 
 var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
 var KecoController = require('../controllers/kecoController');
+var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
+
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 /**
  * router callback에서 getShort 호출시에, this는 undefined되기 때문에, 생성시에 getShort를 만들어주고, self는 생성자에서 만들어준다.
@@ -615,6 +618,7 @@ function ControllerTown() {
         if (yesterdayItem) {
             yesterdayItem.t1h = Math.round(yesterdayItem.t1h);
             req.current.summary = self._makeSummary(req.current, yesterdayItem);
+            req.current.yesterday = yesterdayItem;
         }
         else {
             log.warn('Fail to gt yesterday weather info');
@@ -707,6 +711,73 @@ function ControllerTown() {
         return this;
     };
 
+    /**
+     *  5분전으로 dateTime을 생성하여 정각에 데이터가 아직 gather전에 에러나는 것 방지
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown}
+     */
+    this.getKmaStnHourlyWeather = function (req, res, next) {
+        var meta = {};
+        meta.method = 'getKmaStnHourlyWeather';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>', meta);
+
+        if (!req.current)  {
+            var err = new Error("Fail to find current weather "+JSON.stringify(meta));
+            log.warn(err);
+            next();
+            return this;
+        }
+
+        try {
+            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+                if (err) {
+                    log.error(err);
+                    next();
+                    return;
+                }
+
+                var now = new Date();
+                now = now.setMinutes(now.getMinutes()-5);
+                var date = kmaTimeLib.convertDateToYYYYMMDD(now);
+                var time = kmaTimeLib.convertDateToHHMM(now);
+                log.info(date+time);
+                controllerKmaStnWeather.getStnHourly(townInfo, date+time, function (err, stnWeatherInfo) {
+                    if (err) {
+                        log.error(err);
+                        next();
+                        return;
+                    }
+                    for (var key in stnWeatherInfo) {
+                        req.current[key] = stnWeatherInfo[key];
+                    }
+                    req.current.time = time;
+                    // get discomfort index(불괘지수)
+                    req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
+                    req.current.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(req.current.dspls);
+
+                    // get decomposition index(부패지수)
+                    req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
+                    req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
+
+                    req.current.t1h = Math.round(req.current.t1h);
+                   //merge to req.current
+                    next();
+                });
+            });
+        }
+        catch(e) {
+            if (e) {
+                log.warn(e);
+            }
+            next();
+        }
+
+    };
     /**
      *
      * @param req
@@ -1078,7 +1149,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     var stringList = [];
 
     if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-        var diffTemp = current.t1h - yesterday.t1h;
+        var diffTemp = Math.round(current.t1h - yesterday.t1h);
 
         str = "어제";
         if (diffTemp == 0) {
