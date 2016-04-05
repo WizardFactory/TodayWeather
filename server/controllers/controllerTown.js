@@ -106,6 +106,10 @@ function ControllerTown() {
                                 // decomposition index(부패지수)
                                 resultShortList[i].decpsn = LifeIndexKmaController.getDecompositionIndex(resultShortList[i].t3h, resultShortList[i].reh);
                                 resultShortList[i].decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultShortList[i].decpsn);
+
+                                // heat Index(열지수)
+                                resultShortList[i].heatIndex = LifeIndexKmaController.getHeatIndex(resultShortList[i].t3h, resultShortList[i].reh);
+                                resultShortList[i].heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultShortList[i].heatIndex);
                             }
 
                             req.short = resultShortList;
@@ -434,6 +438,10 @@ function ControllerTown() {
                     // get decomposition index(부패지수)
                     resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
                     resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
+
+                    // get heat index(열지수)
+                    resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
+                    resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
 
                     req.current = resultItem;
 
