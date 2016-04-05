@@ -752,9 +752,22 @@ function ControllerTown() {
                         next();
                         return;
                     }
-                    for (var key in stnWeatherInfo) {
-                        req.current[key] = stnWeatherInfo[key];
+
+                    var stnHourlyFirst = true;
+                    if (req.current.time === time) {
+                        log.verbose('use api first, just append new data of stn hourly weather info');
+                        stnHourlyFirst = false;
                     }
+                    else {
+                        log.verbose('overwrite all data');
+                    }
+
+                    for (var key in stnWeatherInfo) {
+                        if (stnHourlyFirst || req.current[key] == undefined) {
+                            req.current[key] = stnWeatherInfo[key];
+                        }
+                    }
+
                     req.current.time = time;
                     // get discomfort index(불괘지수)
                     req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
@@ -765,6 +778,38 @@ function ControllerTown() {
                     req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
 
                     req.current.t1h = Math.round(req.current.t1h);
+
+                    if (stnHourlyFirst) {
+                        if (req.current.rns === true) {
+                            if (req.current.pty === 0) {
+                                log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
+                                    req.params.region + req.params.city + req.params.town);
+
+                                //대충 잡은 값임. 추후 최적화 필요함.
+                                if (req.current.t1h > 2) {
+                                    req.current.pty = 1;
+                                }
+                                else if (req.current.t1h > -1) {
+                                    req.current.pty = 2;
+                                }
+                                else {
+                                    req.current.pty = 3;
+                                }
+                                if (req.current.sky === 1) {
+                                    req.current.sky = 2;
+                                }
+                            }
+                            req.current.rn1 = req.current.rs1h;
+                        }
+                        else {
+                            if (req.current.pty != 0) {
+                                log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
+                                    req.params.region + req.params.city + req.params.town);
+                                req.current.pty = 1;
+                            }
+                        }
+                    }
+
                    //merge to req.current
                     next();
                 });
@@ -862,7 +907,6 @@ function ControllerTown() {
                     });
                 });
                 next();
-                return;
             });
         }
         catch(e) {
@@ -1139,7 +1183,8 @@ function ControllerTown() {
 }
 
 /**
- * 어제오늘, 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음), 강수량/적설량, 자외선, 체감온도
+ * 어제오늘(맨앞에 들어가지만 우선순위는 꼴찌), 날씨(박무, 연무,..), 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음),
+ * 강수량/적설량, 체감온도, 불쾌지수, 자외선, 바람, 감기, 식중독, 부패,
  * @param {Object} current
  * @param {Object} yesterday
  * @returns {String}
@@ -1158,13 +1203,25 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         else {
             str += "보다 " + Math.abs(diffTemp);
             if (diffTemp < 0) {
-                str += "도 낮음";
+                str += "˚낮음";
             }
             else if (diffTemp > 0) {
-                str += "도 높음";
+                str += "˚높음";
             }
         }
         stringList.push(str);
+    }
+
+    if (current.weather) {
+        if(current.weather == '구름많음' ||
+            current.weather == '구름조금' ||
+            current.weather == '맑음' ||
+            current.weather == '흐림') {
+            //skip
+        }
+        else {
+            stringList.push(current.weather);
+        }
     }
 
     //current.arpltn = {};
@@ -1172,31 +1229,22 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     //current.arpltn.pm10Str = "나쁨";
     //current.arpltn.pm25Value = 82;
     //current.arpltn.pm25Str = "나쁨";
+    var haveAQI = false;
     if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Str &&
         (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
         stringList.push("미세먼지 " + current.arpltn.pm10Str);
+        haveAQI = true;
     }
     else if (current.arpltn && current.arpltn.pm25Value &&
         (current.arpltn.pm25Value > 50 || current.arpltn.pm25Grade > 2)) {
         stringList.push("초미세먼지 " + current.arpltn.pm25Str);
+        haveAQI = true;
     }
 
     //current.ptyStr = '강수량'
     //current.rn1Str = '1mm 미만'
     if (current.rn1Str) {
         stringList.push(current.ptyStr + " " + current.rn1Str);
-    }
-
-    //current.ultrv = 6;
-    //current.ultrvStr = "높음";
-    if (current.ultrv && current.ultrv >= 6) {
-        stringList.push("자외선 " + current.ultrvStr);
-    }
-
-    if (current.fsnGrade && current.fsnGrade >=2 ) {
-        if (current.fsnStr) {
-            stringList.push("식중독 " + current.fsnStr);
-        }
     }
 
     //current.sensorytem = -10;
@@ -1206,12 +1254,31 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
         stringList.push("체감온도 " + current.sensorytem +"˚");
     }
-    else if (current.wsd && current.wsd > 9) {
+
+    //불쾌지수
+
+    //current.ultrv = 6;
+    //current.ultrvStr = "높음";
+    if (current.ultrv && current.ultrv >= 6) {
+        stringList.push("자외선 " + current.ultrvStr);
+    }
+
+    if (current.wsd && current.wsd > 9) {
         stringList.push("바람이 " + current.wsdStr);
     }
 
-    if (stringList.length === 1) {
-        //특정 이벤트가 없다면, 미세먼지가 기본으로 추가.
+    //감기
+
+    if (current.fsnGrade && current.fsnGrade >=2 ) {
+        if (current.fsnStr) {
+            stringList.push("식중독 " + current.fsnStr);
+        }
+    }
+
+    //부패
+
+    //특정 이벤트가 없다면, 미세먼지가 기본으로 추가, 미세먼지가 어제 오늘 온도비교보다 우선순위 높음.
+    if (haveAQI === false) {
         if (current.arpltn && current.arpltn.pm10Str && current.arpltn.pm10Value >= 0)  {
             stringList.push("미세먼지 " + current.arpltn.pm10Str);
         }
