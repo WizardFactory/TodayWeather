@@ -22,4 +22,6 @@ var mdfSchema = new mongoose.Schema({
     imageUrl: [String]
 });
 
+mdfSchema.index({dataTime:1});
+
 module.exports = mongoose.model('MinuDustFrcst', mdfSchema);

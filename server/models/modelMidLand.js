@@ -26,4 +26,6 @@ var midLandSchema = mongoose.Schema({
     }]
 });
 
+midLandSchema.index({regId:1});
+
 module.exports = mongoose.model('midLand', midLandSchema);

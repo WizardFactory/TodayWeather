@@ -63,5 +63,8 @@ var shortRssSchema = new mongoose.Schema({
     }]
 });
 
+shortRssSchema.index({mCoord:1});
+shortRssSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+
 module.exports = mongoose.model('shortRss', shortRssSchema);
 

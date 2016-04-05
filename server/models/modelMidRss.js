@@ -30,4 +30,6 @@ var midRssKmaSchema = mongoose.Schema({
     ]
 });
 
+midRssKmaSchema.index({regId:1});
+
 module.exports = mongoose.model('midRssKma', midRssKmaSchema);

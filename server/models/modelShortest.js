@@ -22,4 +22,7 @@ var shortestSchema = new mongoose.Schema({
     }]
 });
 
+shortestSchema.index({mCoord:1});
+shortestSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+
 module.exports = mongoose.model('shortest', shortestSchema);
