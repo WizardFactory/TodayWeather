@@ -20,6 +20,176 @@ function arpltnController() {
 
 }
 
+arpltnController.parseSo2Info = function (so2Value, so2Grade) {
+    if (so2Value < 0) {
+        return "-";
+    }
+    else if (so2Value <= 0.02) {
+        return "좋음";
+    }
+    else if(so2Value <= 0.05) {
+        return "보통";
+    }
+    else if(so2Value <= 0.15) {
+        return "나쁨";
+    }
+    else if(so2Value > 0.15) {
+        return "매우나쁨";
+    }
+    else {
+        log.warn("Fail to parse so2Value="+so2Value);
+        switch (so2Grade) {
+            case 1:
+                return "좋음";
+            case 2:
+                return "보통";
+            case 3:
+                return "나쁨";
+            case 4:
+                return "매우나쁨";
+            default :
+                log.error("Unknown so2Grade="+so2Grade);
+        }
+    }
+    return "-";
+};
+
+arpltnController.parseCoInfo = function (coValue, coGrade) {
+      if (coValue < 0) {
+        return "-";
+    }
+    else if (coValue <= 2) {
+        return "좋음";
+    }
+    else if(coValue <= 9) {
+        return "보통";
+    }
+    else if(coValue <= 15) {
+        return "나쁨";
+    }
+    else if(coValue > 15) {
+        return "매우나쁨";
+    }
+    else {
+        log.warn("Fail to parse coValue="+coValue);
+        switch (coGrade) {
+            case 1:
+                return "좋음";
+            case 2:
+                return "보통";
+            case 3:
+                return "나쁨";
+            case 4:
+                return "매우나쁨";
+            default :
+                log.error("Unknown coGrade="+coGrade);
+        }
+    }
+    return "-";
+};
+
+arpltnController.parseNo2Info = function (no2Value, no2Grade) {
+    if (no2Value < 0) {
+        return "-";
+    }
+    else if (no2Value <= 0.03) {
+        return "좋음";
+    }
+    else if(no2Value <= 0.06) {
+        return "보통";
+    }
+    else if(no2Value <= 0.2) {
+        return "나쁨";
+    }
+    else if(no2Value > 0.2) {
+        return "매우나쁨";
+    }
+    else {
+        log.warn("Fail to parse no2Value="+no2Value);
+        switch (no2Grade) {
+            case 1:
+                return "좋음";
+            case 2:
+                return "보통";
+            case 3:
+                return "나쁨";
+            case 4:
+                return "매우나쁨";
+            default :
+                log.error("Unknown no2Grade="+no2Grade);
+        }
+    }
+    return "-";
+};
+
+arpltnController.parseO3Info = function (o3Value, o3Grade) {
+      if (o3Value < 0) {
+        return "-";
+    }
+    else if (o3Value <= 0.03) {
+        return "좋음";
+    }
+    else if(o3Value <= 0.09) {
+        return "보통";
+    }
+    else if(o3Value <= 0.15) {
+        return "나쁨";
+    }
+    else if(o3Value > 0.15) {
+        return "매우나쁨";
+    }
+    else {
+        log.warn("Fail to parse o3Value="+o3Value);
+        switch (o3Grade) {
+            case 1:
+                return "좋음";
+            case 2:
+                return "보통";
+            case 3:
+                return "나쁨";
+            case 4:
+                return "매우나쁨";
+            default :
+                log.error("Unknown o3Grade="+o3Grade);
+        }
+    }
+    return "-";
+};
+
+arpltnController.parseKhaiInfo = function (khaiValue, khaiGrade) {
+      if (khaiValue < 0) {
+        return "-";
+    }
+    else if (khaiValue <= 50) {
+        return "좋음";
+    }
+    else if(khaiValue <= 100) {
+        return "보통";
+    }
+    else if(khaiValue <= 250) {
+        return "나쁨";
+    }
+    else if(khaiValue > 250) {
+        return "매우나쁨";
+    }
+    else {
+        log.warn("Fail to parse khaiValue="+khaiValue);
+        switch (khaiGrade) {
+            case 1:
+                return "좋음";
+            case 2:
+                return "보통";
+            case 3:
+                return "나쁨";
+            case 4:
+                return "매우나쁨";
+            default :
+                log.error("Unknown khaiGrade="+khaiGrade);
+        }
+    }
+    return "-";
+};
+
 /**
  *
  * @param pm10Value
