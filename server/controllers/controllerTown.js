@@ -69,23 +69,28 @@ function ControllerTown() {
                 }
                 log.silly('S> coord : ',coord);
 
-                self._getTownDataFromDB(modelShort, coord, function(err, shortList){
+                self._getTownDataFromDB(modelShort, coord, function(err, shortInfo){
                     if (err) {
                         log.error(new Error('error to get short '+ err.message));
                         return next();
                     }
+
+                    var shortList=shortInfo.ret;
 
                     self._dataListPrint(shortList, 'route S', 'original short');
 
                     basicShortlist = self._mergeShortWithBasicList(shortList,basicShortlist);
                     self._dataListPrint(basicShortlist, 'route S', 'First, merged short');
 
-                    self._getTownDataFromDB(modelCurrent, coord, function(err, currentList){
+                    req.shortPubDate = shortInfo.pubDate;
+
+                    self._getTownDataFromDB(modelCurrent, coord, function(err, currentInfo){
                         if (err) {
                             log.error(new Error('error to get current '+err.message));
                             return next();
                         }
 
+                        var currentList = currentInfo.ret;
                         self._dataListPrint(currentList, 'route S', 'Original Current');
 
                         self._mergeShortWithCurrent(basicShortlist, currentList, function(err, resultShortList) {
@@ -115,7 +120,7 @@ function ControllerTown() {
                 });
             });
         } catch(e){
-            log.error('ERROE>>', meta);
+            log.error('ERROR>>', meta);
             log.error(e);
             next();
         }
@@ -151,11 +156,18 @@ function ControllerTown() {
             }
 
             // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
-            self._getTownDataFromDB(modelShortRss, coord, function(err, rssList) {
+            self._getTownDataFromDB(modelShortRss, coord, function(err, shortRssInfo) {
                 if(err) {
                     log.error(new Error('error to get short RSS '+ err.message));
                     return next();
                 }
+
+                if (parseInt(shortRssInfo.pubDate) < parseInt(req.shortPubDate)) {
+                    log.error('short rss was updated yet!! rss pubDate=', shortRssInfo.pubDate);
+                    return next();
+                }
+
+                var rssList = shortRssInfo.ret;
 
                 var i;
                 var requestTime = self._getTimeValue(9);
@@ -175,6 +187,8 @@ function ControllerTown() {
 
                 var j;
                 var found;
+
+                req.shortRssPubDate = shortRssInfo.pubDate;
 
                 // rss 데이터를 모두 가져온다.
                 for(i;i<rssList.length;i++) {
@@ -257,11 +271,13 @@ function ControllerTown() {
                 log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                 return next();
             }
-            self._getTownDataFromDB(modelShortest, coord, function(err, shortestList) {
+            self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
                 if (err) {
                     log.error(new Error('error to get shortest for merge'+err.message));
                     return next();
                 }
+
+                var shortestList = shortestInfo.ret;
 
                 log.verbose(shortestList);
                 if(shortestList && shortestList.length > 0){
@@ -340,11 +356,13 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, function(err, shortestList){
+                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo){
                     if (err) {
                         log.error(new Error('error to get shortest '+ err.message));
                         return next();
                     }
+
+                    var shortestList = shortestInfo.ret;
 
                     log.debug(shortestList.length);
                     //log.info(listShortest);
@@ -356,6 +374,7 @@ function ControllerTown() {
 
                     //재사용을 위해 req에 달아둠..
                     req.shortestList = shortestList;
+                    req.shortestPubDate = shortestInfo.pubDate;
                     next();
                 });
             });
@@ -395,11 +414,14 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, function(err, currentList) {
+                self._getTownDataFromDB(modelCurrent, coord, function(err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current ' + err.message));
                         return next();
                     }
+
+                    var currentList = currentInfo.ret;
+
                     var nowDate = self._getCurrentTimeValue(+9);
                     var acceptedDate = self._getCurrentTimeValue(+6);
                     var currentItem = currentList[currentList.length - 1];
@@ -436,6 +458,7 @@ function ControllerTown() {
                     resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
 
                     req.current = resultItem;
+                    req.currentPubDate = currentInfo.pubDate;
 
                     //재사용을 위해 req에 달아둠.
                     req.currentList = currentList;
@@ -525,12 +548,13 @@ function ControllerTown() {
                     return next();
                 }
 
-                self._getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastList){
+                self._getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastInfo){
                     if(err){
                         log.error('RM> no forecast data '+err.message);
                         return next();
                     }
 
+                    var forecastList = forecastInfo.ret;
                     //log.info(forecastList);
                     req.midData = {};
                     req.midData.forecast = forecastList[forecastList.length - 1];
@@ -546,18 +570,20 @@ function ControllerTown() {
                         areaCode = code.cityCode.slice(0, 4) + '0000';
                     }
 
-                    self._getMidDataFromDB(modelMidLand, areaCode, function(err, landList){
+                    self._getMidDataFromDB(modelMidLand, areaCode, function(err, landInfo){
                         if(err){
                             log.error('RM> no land data ' + err.message);
                             return next();
                         }
+                        var landList = landInfo.ret;
                         //log.info(landList);
-                        self._getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempList){
+                        self._getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempInfo){
                             if(err){
                                 log.error('RM> no temp data ' + err.message);
                                 log.error(meta);
                                 return next();
                             }
+                            var tempList = tempInfo.ret;
                             //log.info(tempList);
                             self._mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
@@ -567,6 +593,8 @@ function ControllerTown() {
                                 }
                                 //log.info(dataList);
                                 req.midData.dailyData = dataList;
+                                req.midData.landPubDate = landInfo.pubDate;
+                                req.midData.tempPubDate = tempInfo.pubDate;
                                 next();
                             });
                         });
@@ -574,7 +602,7 @@ function ControllerTown() {
                 })
             });
         }catch(e){
-            log.error('ERROE>>', meta);
+            log.error('ERROR>>', meta);
             log.error(e);
             next();
         }
@@ -918,13 +946,15 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, function (err, currentList) {
+                self._getTownDataFromDB(modelCurrent, coord, function (err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current for past' + err.message));
                         return next();
                     }
 
                     try {
+                        var currentList = currentInfo.ret;
+
                         var requestTime = self._getTimeValue(9-7*24); //지난주 동일 요일까지
 
                         //log.info(parseInt(curItem.date), parseInt(requestTime.date));
@@ -1119,11 +1149,23 @@ function ControllerTown() {
         result.cityName = cityName;
         result.townName = townName;
 
+        if(req.shortPubDate) {
+            result.shortPubDate = req.shortPubDate;
+        }
+        if(req.shortRssPubDate) {
+            result.shortRssPubDate = req.shortRssPubDate;
+        }
         if(req.short){
             result.short = req.short;
         }
+        if (req.shortestPubDate) {
+            result.shortestPubDate = req.shortestPubDate;
+        }
         if(req.shortest){
             result.shortest = req.shortest;
+        }
+        if(req.currentPubDate) {
+            result.currentPubDate = req.currentPubDate;
         }
         if(req.current){
             result.current = req.current;
@@ -2106,7 +2148,7 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
                     return [];
                 }
                 //log.info(ret);
-                cb(0, ret);
+                cb(0, {pubDate: result[0].pubDate, ret:ret});
             }
             return result[0];
         });
@@ -2186,7 +2228,7 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, cb){
                     ret.push(newItem);
                 });
 
-                cb(0, ret);
+                cb(0, {pubDate: result[0].pubDate, ret: ret});
             }
             return result[0];
         });
