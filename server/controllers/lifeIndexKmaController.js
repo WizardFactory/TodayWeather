@@ -333,4 +333,63 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     return decompositionString;
 }
 
+LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
+    if(temperature === undefined
+        || humidity === undefined
+        || temperature < -50
+        || humidity < 0)
+    {
+        log.warn('DecompositionIndex > invalid parameter.');
+        return -1;
+    }
+
+    var t2 = (9.0/5.0)*temperature + 32;
+    var v2 = humidity;
+    var v3 = -42.379 + (2.04901523*t2) + (10.14333127*v2)-(0.22475541*t2*v2) - (0.00683783*t2*t2) - (0.05481717*v2*v2) + (0.00122874*t2*t2*v2)+(0.00085282*t2*v2*v2) - (0.00000199*t2*t2*v2*v2);
+
+    var f_adj = 0.0;
+
+    if(v2 < 13 && t2 >= 80 && t2 <= 112) {
+        f_adj = 0.25*(13-v2) * Math.sqrt((17-Math.abs(t2-95.0))/17.0);
+        v3 = v3 - f_adj;
+    }
+
+    if(v2 > 85.0 && t2 >= 80.0 && t2 <= 87) {
+        f_adj = (v2-85)/10.0 * (87-t2) / 5.0;
+        v3 = v3 + f_adj;
+    }
+
+    if(t2 < 80.0) {
+        v3 = t2;
+    }
+
+    v3 = (v3-32)*(5.0/9.0);
+    v3 = Math.round(v3*10) / 10.0;
+
+    return v3.toFixed(1);
+}
+
+LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
+    if(heatIndex === undefined
+        || heatIndex < 0) 
+    {
+        log.warn('HeatIndexString > invalid parameter');
+        return "";
+    }
+        
+    var heatIndexString;
+    
+    if(heatIndex >= 54) {
+        heatIndexString = "매우높음";
+    } else if(heatIndex >= 41 && heatIndex < 54) {
+        heatIndexString = "높음";
+    } else if(heatIndex >= 32 && heatIndex < 41) {
+        heatIndexString = "보통";
+    } else {
+        heatIndexString = "낮음";
+    }
+    
+    return heatIndexString;
+}
+
 module.exports = LifeIndexKmaController;
