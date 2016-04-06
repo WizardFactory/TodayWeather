@@ -157,7 +157,7 @@ arpltnController.parseO3Info = function (o3Value, o3Grade) {
 };
 
 arpltnController.parseKhaiInfo = function (khaiValue, khaiGrade) {
-      if (khaiValue < 0) {
+    if (khaiValue < 0) {
         return "-";
     }
     else if (khaiValue <= 50) {
