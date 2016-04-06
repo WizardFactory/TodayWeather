@@ -540,7 +540,7 @@ angular.module('starter.services', [])
             var url;
             if (Util.isDebug()) {
                 //url = "town";
-                //url = "http://localhost:3000/v000705/town";
+                //url = "http://tw-wzdfac.rhcloud.com/v000705/town";
                 url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
             }
             else {
@@ -741,14 +741,20 @@ angular.module('starter.services', [])
          * @returns {*}
          * @private
          */
-        obj._getShortSiName = function(name) {
+        obj._getShortSiDoName = function(name) {
             //특별시, 특별자치시, 광역시,
-            var aStr = ["특별시", "광역시", "특별자치시"];
+            var aStr = ["특별시", "광역시", "특별자치시", "특별자치도"];
             for (var i=0; i<aStr.length; i++) {
                 if (name.slice(-1*aStr[i].length) === aStr[i]) {
-                    return name.replace(aStr[i], "시");
+                    if (i === aStr.length-1) {
+                        return name.replace(aStr[i], "도");
+                    }
+                    else {
+                        return name.replace(aStr[i], "시");
+                    }
                 }
             }
+
             return name;
         };
 
@@ -769,27 +775,27 @@ angular.module('starter.services', [])
 
             if (parsedAddress.length === 5) {
                 //nation + do + si + gu + dong
-                return that._getShortSiName(parsedAddress[2])+","+parsedAddress[4];
+                return that._getShortSiDoName(parsedAddress[2])+","+parsedAddress[4];
             }
             else if (parsedAddress.length === 4) {
                 if (parsedAddress[1].slice(-1) === '도') {
                     //nation + do + si + gu
-                    return parsedAddress[2]+","+parsedAddress[3];
+                    return that._getShortSiDoName(parsedAddress[2])+","+parsedAddress[3];
                 }
                 else {
                     //nation + si + gu + dong
-                    return that._getShortSiName(parsedAddress[1])+","+parsedAddress[3];
+                    return that._getShortSiDoName(parsedAddress[1])+","+parsedAddress[3];
                 }
             }
             else if (parsedAddress.length === 3) {
                 //nation + do + si
                 //nation + si + gu
                 //nation + si + eup,myeon
-                return that._getShortSiName(parsedAddress[1])+","+parsedAddress[2];
+                return that._getShortSiDoName(parsedAddress[1])+","+parsedAddress[2];
             }
             else if (parsedAddress.length === 2) {
                 //nation + si,do
-                return that._getShortSiName(parsedAddress[1]);
+                return that._getShortSiDoName(parsedAddress[1]);
             }
             else {
                 console.log("Fail to get shorten from ="+fullAddress);
