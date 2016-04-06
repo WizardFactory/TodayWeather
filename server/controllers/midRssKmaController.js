@@ -41,7 +41,7 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
             return callback(err);
         }
 
-        reqMidData.pubDate = midRssData.pubDate;
+        reqMidData.rssPubDate = midRssData.pubDate;
         reqMidData.province = midRssData.province;
         reqMidData.city = midRssData.city;
         reqMidData.stnId = midRssData.stnId;
