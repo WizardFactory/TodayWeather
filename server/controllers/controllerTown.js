@@ -1230,6 +1230,21 @@ function ControllerTown() {
         if (req.midData.pubDate == undefined) {
             req.midData.pubDate = req.midData.tempPubDate;
         }
+        if (req.midData.province == undefined) {
+           req.midData.province = '';
+        }
+        if (req.midData.city == undefined) {
+            req.midData.city = '';
+        }
+        if (req.midData.stnId == undefined) {
+            req.midData.stnId = '';
+        }
+        if (req.midData.regId == undefined) {
+            req.midData.regId = '';
+        }
+        if (req.midData.pubDate == undefined) {
+            req.midData.pubDate = '';
+        }
 
         res.json(result);
 
