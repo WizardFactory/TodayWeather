@@ -228,6 +228,54 @@ function ControllerTown24h() {
         return this;
     };
 
+    this.sendResult = function (req, res) {
+        var meta = {};
+
+        var result = {};
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = '/:region/:city/:town';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        log.info('##', decodeURI(req.originalUrl));
+
+        result.regionName = regionName;
+        result.cityName = cityName;
+        result.townName = townName;
+
+        if(req.shortPubDate) {
+            result.shortPubDate = req.shortPubDate;
+        }
+        if(req.shortRssPubDate) {
+            result.shortRssPubDate = req.shortRssPubDate;
+        }
+        if(req.short){
+            result.short = req.short;
+        }
+        if (req.shortestPubDate) {
+            result.shortestPubDate = req.shortestPubDate;
+        }
+        if(req.shortest){
+            result.shortest = req.shortest;
+        }
+        if(req.currentPubDate) {
+            result.currentPubDate = req.currentPubDate;
+        }
+        if(req.current){
+            result.current = req.current;
+        }
+        if(req.midData){
+            result.midData = req.midData;
+        }
+
+        res.json(result);
+
+        return this;
+    };
 }
 
 // subclass extends superclass

@@ -1227,11 +1227,14 @@ function ControllerTown() {
         if(req.midData){
             result.midData = req.midData;
         }
+        if (req.midData.pubDate == undefined) {
+            req.midData.pubDate = req.midData.tempPubDate;
+        }
 
         res.json(result);
 
         return this;
-    }
+    };
 }
 
 /**
