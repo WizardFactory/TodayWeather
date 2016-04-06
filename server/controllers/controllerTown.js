@@ -1479,11 +1479,24 @@ ControllerTown.prototype._makeArpltnStr = function (data) {
     if (data.hasOwnProperty('pm10Value') && data.hasOwnProperty('pm10Grade')) {
         data.pm10Str = KecoController.parsePm10Info(data.pm10Value, data.pm10Grade);
     }
-
     if (data.hasOwnProperty('pm25Value') && data.hasOwnProperty('pm25Grade')) {
         data.pm25Str = KecoController.parsePm25Info(data.pm25Value, data.pm25Grade);
     }
-
+    if (data.hasOwnProperty('khaiValue') && data.hasOwnProperty('khaiGrade')) {
+        data.khaiStr = KecoController.parsePm25Info(data.khaiValue, data.khaiGrade);
+    }
+    if (data.hasOwnProperty('o3Value') && data.hasOwnProperty('o3Grade')) {
+        data.o3Str = KecoController.parsePm25Info(data.o3Value, data.o3Grade);
+    }
+    if (data.hasOwnProperty('no2Value') && data.hasOwnProperty('no2Grade')) {
+        data.no2Str = KecoController.parsePm25Info(data.no2Value, data.no2Grade);
+    }
+    if (data.hasOwnProperty('coValue') && data.hasOwnProperty('coGrade')) {
+        data.coStr = KecoController.parsePm25Info(data.coValue, data.coGrade);
+    }
+    if (data.hasOwnProperty('so2Value') && data.hasOwnProperty('so2Grade')) {
+        data.so2Str = KecoController.parsePm25Info(data.so2Value, data.so2Grade);
+    }
     return this;
 };
 
