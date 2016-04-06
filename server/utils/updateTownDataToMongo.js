@@ -11,6 +11,7 @@ var config = require('../config/config');
 var convert = require('./coordinate2xy');
 var targetName = './utils/data/base.csv';
 
+console.log('db connect '+config.db.path);
 mongoose.connect(config.db.path, config.db.options, function(err){
     if(err){
         console.error('could net connect to MongoDB');
@@ -33,6 +34,7 @@ var tDoc = require('../models/town');
 function updateTowns() {
 
     var saveCount = 0;
+    var wantToUpdate = false;
 
     tDoc.find({}).exec(function (err, townList) {
         if (err) {
@@ -51,30 +53,35 @@ function updateTowns() {
                     dbTown.town.second === newTownInfo[1] &&
                     dbTown.town.third === newTownInfo[2]) {
 
-                    dbTown.gCoord.lat = parseFloat(newTownInfo[3]);
-                    dbTown.gCoord.lon = parseFloat(newTownInfo[4]);
-                    if (newTownInfo[5]) {
-                        dbTown.areaNo = parseInt(newTownInfo[5]).toString();
+                    if (wantToUpdate) {
+                        dbTown.gCoord.lat = parseFloat(newTownInfo[3]);
+                        dbTown.gCoord.lon = parseFloat(newTownInfo[4]);
+                        if (newTownInfo[5]) {
+                            dbTown.areaNo = parseInt(newTownInfo[5]).toString();
+                        }
+                        else {
+                            dbTown.areaNo = undefined;
+                        }
+
+                        conv = new convert(dbTown.gCoord, {}).toLocation();
+                        dbTown.mCoord.mx = conv.getLocation().x;
+                        dbTown.mCoord.my = conv.getLocation().y;
+                        saveCount++;
+
+                        console.log('update town info='+dbTown.toString());
+                        dbTown.save(function(err) {
+                            if (err) {
+                                console.log(err);
+                            }
+                            saveCount--;
+                            if (saveCount === 0) {
+                                mongoose.disconnect();
+                            }
+                        });
                     }
                     else {
-                        dbTown.areaNo = undefined;
+                        //console.log('skip town info='+dbTown.town.toString());
                     }
-
-                    conv = new convert(dbTown.gCoord, {}).toLocation();
-                    dbTown.mCoord.mx = conv.getLocation().x;
-                    dbTown.mCoord.my = conv.getLocation().y;
-                    saveCount++;
-
-                    console.log('update town info='+dbTown.toString());
-                    dbTown.save(function(err) {
-                        if (err) {
-                            console.log(err);
-                        }
-                        saveCount--;
-                        if (saveCount === 0) {
-                           mongoose.disconnect();
-                        }
-                    });
                     break;
                 }
             }
@@ -106,6 +113,7 @@ function updateTowns() {
                 });
             }
         });
+        console.log('finish loop, waiting for saving');
     });
 }
 
