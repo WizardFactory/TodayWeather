@@ -310,7 +310,7 @@ arpltnController._getArpLtnList = function (msrStnList, callback) {
                     log.error(err);
                 }
                 if (arpltnList.length === 0) {
-                    log.error("Fail to find arpltn stationName="+msrStn.stationName);
+                    log.warn("Fail to find arpltn stationName="+msrStn.stationName);
                     return cb();
                 }
                 cb(err, arpltnList[0]);
