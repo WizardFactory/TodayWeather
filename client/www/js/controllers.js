@@ -76,6 +76,13 @@ angular.module('starter.controllers', [])
         var smallDigitSize = mainHeight * 0.0320;
         $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
+        $scope.isIOS = function() {
+            if (ionic.Platform.isIOS()) {
+                return true;
+            }
+            return false;
+        };
+
         var colWidth;
         var cityData;
         var deploy = new Ionic.Deploy();
@@ -406,12 +413,14 @@ angular.module('starter.controllers', [])
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#22a1db';
+            StatusBar.backgroundColorByHexString('#0288D1');
         });
 
         $scope.changeForecastType = function() {
             if ($scope.forecastType === 'short') {
                 $scope.forecastType = 'mid';
-                $rootScope.viewColor = '#0fbe96';
+                $rootScope.viewColor = '#8BC34A';
+                StatusBar.backgroundColorByHexString('#689F38');
                 //async drawing for preventing screen cut #544
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
@@ -419,11 +428,13 @@ angular.module('starter.controllers', [])
             }
             else if ($scope.forecastType === 'mid') {
                 $scope.forecastType = 'detail';
-                $rootScope.viewColor = '#8dc63f';
+                $rootScope.viewColor = '#00BCD4';
+                StatusBar.backgroundColorByHexString('#0097A7');
             }
             else if ($scope.forecastType === 'detail') {
                 $scope.forecastType = 'short';
-                $rootScope.viewColor = '#22a1db';
+                $rootScope.viewColor = '#03A9F4';
+                StatusBar.backgroundColorByHexString('#0288D1');
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                 }, 0);
@@ -435,49 +446,11 @@ angular.module('starter.controllers', [])
             $scope.doRefresh();
         });
 
-        var isShowingBar = false;
-        var runAdmob = true;
-        $rootScope.runAdmob = !runAdmob;
-        if (runAdmob){
-            //좋은 멘트 필요.
-            //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
-        }
-
         $scope.doRefresh = function() {
-            if (runAdmob) {
-                if ( window.plugins && window.plugins.AdMob ) {
-                    window.plugins.AdMob.showAd(false,
-                        function(){},
-                        function(e){
-                            console.log(JSON.stringify(e));
-                        });
-                }
-            }
-
-            $ionicNavBarDelegate.title("위치,날씨정보 업데이트 중");
-            if (!runAdmob) {
-                isShowingBar = !isShowingBar;
-                $ionicNavBarDelegate.showBar(isShowingBar);
-            }
+            $scope.isLoading = true;
             updateWeatherData(true).finally(function () {
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-
-                if (!runAdmob) {
-                    isShowingBar = !isShowingBar;
-                    $ionicNavBarDelegate.showBar(isShowingBar);
-                }
-                //$ionicNavBarDelegate.title("광고로 운영되고 있습니다.");
-                $ionicNavBarDelegate.title("");
-                if (runAdmob) {
-                    if (window.plugins && window.plugins.AdMob) {
-                        window.plugins.AdMob.showAd(true,
-                            function () {
-                            },
-                            function (e) {
-                                console.log(JSON.stringify(e));
-                            });
-                    }
-                }
+                $scope.isLoading = false;
             });
         };
 
@@ -628,6 +601,7 @@ angular.module('starter.controllers', [])
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ec72a8';
+            StatusBar.backgroundColorByHexString('#EC407A');
         });
 
         $scope.OnChangeSearchWord = function() {
@@ -770,7 +744,8 @@ angular.module('starter.controllers', [])
         }
 
         $scope.$on('$ionicView.enter', function() {
-            $rootScope.viewColor = '#ea9623';
+            $rootScope.viewColor = '#FFA726';
+            StatusBar.backgroundColorByHexString('#FB8C00');
         });
 
         $scope.openMarket = function() {

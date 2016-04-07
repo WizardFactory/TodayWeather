@@ -1,48 +1,40 @@
-<ion-view hide-nav-bar="{{runAdmob}}">
-    <ion-content scroll="false">
-        <div class="main-content search">
-            <div class="list list-inset" style="background-color: transparent;">
-                <div class="item row" style="background-color: inherit;">
-                    <div class="search-icon" style="width: 32px;">
-                        <img  src="img/Search.png">
-                    </div>
-                    <div class="search-content" style="width: 82%; margin-left: 5%">
-                        <input type="text" placeholder="도시명을 입력하세요" ng-model="$parent.searchWord"
-                               style="line-height: normal" ng-change="OnChangeSearchWord()">
-                    </div>
+<ion-view hide-nav-bar="true">
+    <ion-header-bar style="background-color: #EC407A; padding-bottom: 10px; background-image: none;">
+        <label class="item-input-wrapper">
+            <i class="icon ion-ios-search placeholder-icon"></i>
+            <input type="text" placeholder="도시명을 입력하세요" style="background-color: transparent;"
+                  ng-model="searchWord" ng-change="OnChangeSearchWord()">
+        </label>
+    </ion-header-bar>
+    <ion-content style="color:white;" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false" delegate-handle="cityList" on-scroll="OnScrollResults()" >
+        <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-show="searchWord!==undefined">
+            <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
+                <div class="row">
+                    <div class="col search-content" style="text-align: left;"><p>{{result.first}} {{result.second}} {{result.third}}</p></div>
                 </div>
             </div>
-            <ion-scroll class="city-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
-                        delegate-handle="cityList" on-scroll="OnScrollResults()">
-                <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-show="searchWord!==undefined">
-                    <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
-                        <div class="row">
-                            <div class="col search-content" style="text-align: left;"><p>{{result.first}} {{result.second}} {{result.third}}</p></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-show="searchWord===undefined">
-                    <div class="item" style="background-color: inherit;" ng-repeat="city in cityList"
-                         ng-click="OnSelectCity($index)" on-swipe-left="OnSwipeCity(city)" on-swipe-right="OnSwipeCity(city)">
-                        <div class="row row-no-padding">
-                            <div class="col search-content" style="text-align: left; width: 40%;">
-                                <p>{{city.address[0]}}<br>{{city.address[1]}}
-                                    <a class="icon ion-ios-location-outline" style="color: white;" ng-if="city.currentPosition"></a>
-                                </p>
-                            </div>
-                            <div class="col search-content" style="width: 20%"><img style="width: 48px" src="img/{{city.skyIcon}}-Big.png"></div>
-                            <div class="col search-content" style="width: 40%;" ng-show="city.delete===false"><p class="search-digit">{{city.t1h}}˚<br><span style="font-size: 16px; font-family: inherit">{{city.tmn}}˚/{{city.tmx}}˚</span></p>
-                            </div>
-                            <button class="button button-energized" style="width: 40%; font-size:20px; font-family: 'Bareun Dotum Pro 1'"
-                                    ng-show="city.delete===true" ng-click="OnDeleteCity($index)">삭제
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div style="text-align: center" ng-show="searchWord===undefined">삭제하고 싶은 지역은 왼쪽으로 밀어주세요.</div>
-            </ion-scroll>
         </div>
-        <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%"
-                     ng-show="isLoading===true"/>
+        <div style="height:16px;" ng-show="searchWord===undefined"></div>
+        <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-show="searchWord===undefined">
+            <div class="item" style="background-color: inherit;" ng-repeat="city in cityList"
+                 ng-click="OnSelectCity($index)" on-swipe-left="OnSwipeCity(city)" on-swipe-right="OnSwipeCity(city)">
+                <div class="row row-no-padding">
+                    <div class="col search-content" style="text-align: left; width: 40%;">
+                        <p>{{city.address[0]}}<br>{{city.address[1]}}
+                            <a class="icon ion-ios-location-outline" style="color: white;" ng-if="city.currentPosition"></a>
+                        </p>
+                    </div>
+                    <div class="col search-content" style="width: 20%"><img style="width: 48px" ng-src="img/{{city.skyIcon}}-Big.png"></div>
+                    <div class="col search-content" style="width: 40%;" ng-show="city.delete===false"><p class="search-digit">{{city.t1h}}˚<br><span style="font-size: 16px; font-family: inherit">{{city.tmn}}˚/{{city.tmx}}˚</span></p>
+                    </div>
+                    <button class="button button-energized" style="width: 40%; font-size:20px; font-family: 'Bareun Dotum Pro 1'"
+                            ng-show="city.delete===true" ng-click="OnDeleteCity($index)">삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div style="text-align: center" ng-show="searchWord===undefined"><p>삭제하고 싶은 지역은 왼쪽으로 밀어주세요.</p></div>
     </ion-content>
+    <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%"
+                 ng-show="isLoading===true"/>
 </ion-view>
