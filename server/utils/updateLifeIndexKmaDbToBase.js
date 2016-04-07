@@ -64,6 +64,7 @@ function updateAreaNoByDb() {
            if (err) {
                return;
            }
+           townInfo[3] = parseFloat(townInfo[3]).toFixed(7).toString();
            townInfo[4] = parseFloat(townInfo[4]).toFixed(7).toString();
            townInfo[5] = areaNo;
            lineList[index] = townInfo.toString();
