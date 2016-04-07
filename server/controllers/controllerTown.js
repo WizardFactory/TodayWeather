@@ -1471,33 +1471,33 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
     if (pty === 1 || pty === 2) {
         switch(rXX) {
             case 0: return "0mm";
-            case 1: return "1mm 미만";
+            case 1: return "~1mm";
             case 5: return "1~4mm";
             case 10: return "5~9mm";
             case 20: return "10~19mm";
             case 40: return "20~39mm";
             case 70: return "40~69mm";
-            case 100: return "70mm 이상";
+            case 100: return "70~?mm";
             default : console.log('convert Kma Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
         if (0 < rXX && rXX < 100) {
-            return rXX+"mm 미만";
+            return "~"+rXX+"mm";
         }
     }
     else if (pty === 3) {
         switch (rXX) {
             case 0: return "0cm";
-            case 1: return "1cm 미만";
+            case 1: return "~1cm";
             case 5: return "1~4cm";
             case 10: return "5~9cm";
             case 20: return "10~19cm";
-            case 100: return "20cm 이상";
+            case 100: return "20~?cm";
             default : console.log('convert Km Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 */
         if (0 < rXX && rXX < 100) {
-            return rXX+"cm 미만";
+            return "~"+rXX+"cm";
         }
     }
 
