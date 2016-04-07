@@ -1,12 +1,12 @@
-<ion-view hide-nav-bar="{{runAdmob}}">
+<ion-view hide-nav-bar="true">
     <ion-content delegate-handle="body" scroll="false">
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
                 <div class="col" style="height: 100%">
-                    <div class="row row-no-padding top-time" style="height: 16%;"><p ng-style="{'font-size': topTimeSize+'px'}">{{currentTimeString}}</p></div>
-                    <div class="row row-no-padding" style="height: 84%; margin: auto">
+                    <div class="row row-no-padding" style="height: 100%; margin: auto">
                         <div class="col" style="margin: auto">
+                            <div style="height: 20px" ng-if="isIOS()"></div>
                             <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
                                 <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
                                     {{address}}</p>
@@ -205,4 +205,6 @@
             </div>
         </div>
     </div>
+    <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%;"
+                 ng-show="isLoading===true"/>
 </ion-view>

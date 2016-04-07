@@ -38,9 +38,8 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
-                // org.apache.cordova.statusbar required #670
-                StatusBar.backgroundColorByName("black");
                 StatusBar.overlaysWebView(false);
+                StatusBar.backgroundColorByHexString('#0288D1');
             }
 
             //#367
@@ -64,9 +63,9 @@ angular.module('starter', [
                     window.plugins.AdMob.setOptions({
                         publisherId: bannerAdUnit,
                         interstitialAdId: interstitialAdUnit,
-                        bannerAtTop: true, // set to true, to put banner at top
+                        bannerAtTop: false, // set to true, to put banner at top
                         overlap: true, // set to true, to allow banner overlap webview
-                        offsetTopBar: true, // set to true to avoid ios7 status bar overlap
+                        offsetTopBar: false, // set to true to avoid ios7 status bar overlap
                         isTesting: Util.isDebug(), // receiving test ad
                         autoShow: false // auto show interstitial ad when loaded
                     }, function(e) {

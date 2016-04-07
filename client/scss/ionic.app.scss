@@ -15,10 +15,6 @@ $royal:                           #886aea !default;
 $dark:                            #444 !default;
 */
 
-$bar-height: 50px;
-//for ads on bar
-$ios-statusbar-height: 0px;
-
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
@@ -323,30 +319,19 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .current-content {
-  height: 38.19%;
+  height: 42%;
 }
 
 .extend-content {
-  height: 61.80%;
+  height: 58%;
 }
 
 .chart-content {
-  height: 55%;
+  height: 52%;
 }
 
 .table-content {
-  height: 45%;
-}
-
-/* search */
-.search-icon {
-  background-color: white;
-  padding: 0;
-  width: 15%;
-}
-
-.search-icon img {
-  width: 100%;
+  height: 48%;
 }
 
 .search-content {
@@ -354,17 +339,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin: auto;
   background-color: transparent;
   color: white;
-}
-
-.search-content input {
-  display: table-cell;
-  vertical-align: middle;
-  border: 0;
-  padding: 0;
-  background-color: transparent;
-  color: white;
-  font-size: 22px;;
-  font-family: "Bareun Dotum Pro 2";
 }
 
 .search-content img{
@@ -395,21 +369,16 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .city-list {
   width: 100%;
-  height: 70%
 }
-
-//.city-content {
-//  vertical-align: middle;
-//  text-align: center;
-//  margin: 5px 0px;
-//  padding: 0;
-//  background-color: transparent;
-//  color: white;
-//}
 
 .tabs-dark .tabs {
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-color: transparent;
+  margin-bottom: 50px;
+}
+
+.has-tabs {
+  bottom: 100px;
 }
 
 .pane, .view {
@@ -440,10 +409,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   .weeklyChart {
     width: 954px; //53px per col * 18
   }
-
-  .city-list {
-    height: 75%;
-  }
 }
 
 //iphone 6
@@ -455,10 +420,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .weeklyChart {
     width: 954px; //53px per col * 18
-  }
-
-  .city-list {
-    height: 75%;
   }
 }
 
@@ -472,26 +433,16 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   .weeklyChart {
     width: 1062px; //59px per col * 18
   }
-
-  .city-list {
-    height: 75%;
-  }
 }
 
 /* SS S3, note2*/
 @media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 2)
 {
-  .city-list {
-    height: 75%;
-  }
 }
 
 /* SS Galaxy Note3, S5, S4, S6 */
 @media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 3)
 {
-  .city-list {
-    height: 75%;
-  }
 }
 
 /* SS Galaxy Note5, G6, .. QHD */
@@ -503,9 +454,5 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
   .weeklyChart {
     width: 1059px; //58.85px per col * 18
-  }
-
-  .city-list {
-    height: 75%;
   }
 }
