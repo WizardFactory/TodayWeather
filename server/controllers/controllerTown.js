@@ -846,6 +846,42 @@ function ControllerTown() {
                                 req.current.pty = 1;
                             }
                         }
+
+                        var i;
+                        //update tmx, tmn of today short
+                        if (req.short && Array.isArray(req.short)) {
+                            for (i=0; i<req.short.length; i++) {
+                                if (req.short[i].date === req.current.date) {
+                                    if (req.short[i].tmx != -50 && req.short[i].tmx < req.current.t1h) {
+                                        req.short[i].tmx = req.current.t1h;
+                                        log.info('stn hourly weather update tmx to ', req.current.t1h);
+                                    }
+                                    if (req.short[i].tmn != -50 && req.short[i].tmn > req.current.t1h) {
+                                        req.short[i].tmn = req.current.t1h;
+                                        log.info('stn hourly weather update tmn to ', req.current.t1h);
+                                    }
+                                }
+                                if (req.short[i].date > req.current.date) {
+                                    break;
+                                }
+                            }
+                        }
+                        //update tmx, tmn of today mid
+                        if (req.midData && req.midData.dailyData && Array.isArray(req.midData.dailyData)) {
+                            for (i=0; i<req.midData.dailyData.length; i++) {
+                                if (req.midData.dailyData[i].date === req.current.date) {
+                                    if(req.midData.dailyData[i].taMax < req.current.t1h) {
+                                        req.midData.dailyData[i].taMax = req.current.t1h;
+                                        log.info('stn hourly weather update taMax to ', req.current.t1h);
+                                    }
+                                    if(req.midData.dailyData[i].taMin > req.current.t1h) {
+                                        req.midData.dailyData[i].taMin = req.current.t1h;
+                                        log.info('stn hourly weather update taMin to ', req.current.t1h);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                    //merge to req.current
