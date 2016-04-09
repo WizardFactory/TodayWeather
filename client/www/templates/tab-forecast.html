@@ -205,7 +205,8 @@
                             </div>
                             <div class="col col-50 detail-text">
                                 <p style="font-size:14px">
-                                    <span ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span><br>
+                                    측정소명 <span
+                                        ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span><br>
                                     SO2 {{currentWeather.arpltn.so2Str}}<span
                                         ng-if="currentWeather.arpltn.so2Value != -1">({{currentWeather.arpltn.so2Value}})</span><br>
                                     NO2 {{currentWeather.arpltn.no2Str}}<span
