@@ -40,31 +40,37 @@
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
-                        <div class="row row-no-padding chart-content">
+                        <div class="row row-no-padding" style="height: 54%">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding table-content">
-                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.day}}</p>
+                        <div class="row row-no-padding" style="height: 6%">
+                            <div style="width: 26px;"></div>
+                            <div class="col" ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date" ng-repeat="value in dayTable" style="height: 100%;">
+                                <div style="display: table;height: 100%; line-height: normal">
+                                    <p ng-style="{'font-size':smallTimeSize+'px'}" style="margin: 0; display: table-cell; vertical-align: bottom; opacity: 0.84">{{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span></p>
                                 </div>
+                            </div>
+                            <div style="width: 26px;"></div>
+                        </div>
+                        <div class="row row-no-padding" style="height: 40%">
+                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
+                                <div class="row row-no-padding small-time" style="height: 20%;">
                                     <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
                                             style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
                                             style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
@@ -84,28 +90,30 @@
                         </div>
                         <div class="row row-no-padding table-content">
                             <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p></p>
-                                </div>
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.week}}</p>
+                                <div class="row row-no-padding" style="height: 20%;">
+                                    <div class="small-time" style="margin: auto; padding-bottom: 2px"
+                                         ng-style="{'width':(smallTimeSize+6)+'px'}">
+                                        <p ng-style="{'font-size':smallTimeSize+'px',
+                                                    'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
+                                                    'opacity':value.fromToday===0?'1':'0.84'}">{{value.week}}</p>
+                                    </div>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
                                             style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
                                             style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
                                 </div>
                             </div>

@@ -491,6 +491,26 @@ angular.module('starter.controllers', [])
             loadWeatherData();
         };
 
+        $scope.getDayText = function (value) {
+            return value.fromTodayStr + ' ' + value.date.substr(4,2) + '.' + value.date.substr(6,2);
+        };
+
+        $scope.getDayForecast = function (value) {
+            var str = '';
+            if (value.fromToday === 0 || value.fromToday === 1) {
+                if (value.dustForecast && value.dustForecast.PM10Str) {
+                   str +=  '미세예보:'+value.dustForecast.PM10Str + ',';
+                }
+
+                if (value.ultrvStr) {
+                    str += '자외선:'+value.ultrvStr;
+                }
+                return str;
+            }
+
+            return str;
+        };
+
         $ionicPlatform.ready(function() {
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);

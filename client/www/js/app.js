@@ -620,7 +620,7 @@ angular.module('starter', [
                         .attr('class', 'circle circle-today-current')
                         .attr('cx', function (d) {
                             for (var i = 0; i < d.values.length; i++) {
-                                if (d.values[i].week === "오늘") {
+                                if (d.values[i].fromToday === 0) {
                                     return x.rangeBand() * i + x.rangeBand() / 2;
                                 }
                             }
