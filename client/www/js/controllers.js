@@ -413,14 +413,18 @@ angular.module('starter.controllers', [])
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#22a1db';
-            StatusBar.backgroundColorByHexString('#0288D1');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#0288D1');
+            }
         });
 
         $scope.changeForecastType = function() {
             if ($scope.forecastType === 'short') {
                 $scope.forecastType = 'mid';
                 $rootScope.viewColor = '#8BC34A';
-                StatusBar.backgroundColorByHexString('#689F38');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#689F38');
+                }
                 //async drawing for preventing screen cut #544
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
@@ -429,12 +433,16 @@ angular.module('starter.controllers', [])
             else if ($scope.forecastType === 'mid') {
                 $scope.forecastType = 'detail';
                 $rootScope.viewColor = '#00BCD4';
-                StatusBar.backgroundColorByHexString('#0097A7');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0097A7');
+                }
             }
             else if ($scope.forecastType === 'detail') {
                 $scope.forecastType = 'short';
                 $rootScope.viewColor = '#03A9F4';
-                StatusBar.backgroundColorByHexString('#0288D1');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0288D1');
+                }
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                 }, 0);
@@ -621,7 +629,9 @@ angular.module('starter.controllers', [])
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#ec72a8';
-            StatusBar.backgroundColorByHexString('#EC407A');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#EC407A');
+            }
         });
 
         $scope.OnChangeSearchWord = function() {
@@ -765,7 +775,9 @@ angular.module('starter.controllers', [])
 
         $scope.$on('$ionicView.enter', function() {
             $rootScope.viewColor = '#FFA726';
-            StatusBar.backgroundColorByHexString('#FB8C00');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#FB8C00');
+            }
         });
 
         $scope.openMarket = function() {
