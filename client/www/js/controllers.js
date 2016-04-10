@@ -655,6 +655,12 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnSelectResult = function(result) {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) { 
+                if (cordova.plugins.Keyboard.isVisible) {
+                    return cordova.plugins.Keyboard.close(); 
+                }
+            }
+
             $scope.searchWord = undefined;
             $scope.searchResults = [];
             $scope.isLoading = true;
@@ -712,6 +718,12 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnSelectCity = function(index) {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                if (cordova.plugins.Keyboard.isVisible) {
+                    return cordova.plugins.Keyboard.close();
+                }
+            }
+
             WeatherInfo.setCityIndex(index);
             $location.path('/tab/forecast');
         };
