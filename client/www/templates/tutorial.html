@@ -1,0 +1,22 @@
+<ion-nav-view title="tutorial" hide-nav-bar="true">
+    <ion-content scroll="false">
+        <ion-slide-box on-slide-changed="slideHasChanged($index)" style="height: 100%">
+            <ion-slide style="background-color: blue">
+                <div class="box blue">
+                    <h1>BLUE</h1>
+                </div>
+            </ion-slide>
+            <ion-slide style="background-color: yellow">
+                <div class="box yellow">
+                    <h1>YELLOW</h1>
+                </div>
+            </ion-slide>
+            <ion-slide style="background-color: pink">
+                <div class="box pink">
+                    <h1>PINK</h1>
+                    <div ng-click="quit()"><h2>close</h2></div>
+                </div>
+            </ion-slide>
+        </ion-slide-box>
+    </ion-content>
+</ion-nav-view>

@@ -123,7 +123,16 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controllers.js
         $stateProvider
-
+            .state('tutorial', {
+                url:'/tutorial',
+                cache: true,
+                views: {
+                    'tutorial': {
+                        templateUrl: 'templates/tutorial.html',
+                        controller:'TutorialCtrl'
+                    }
+                }
+            })
             // setup an abstract state for the tabs directive
             .state('tab', {
                 url: '/tab',
@@ -169,6 +178,7 @@ angular.module('starter', [
 
         // if none of the above states are matched, use this as the fallback
         $urlRouterProvider.otherwise('/tab/forecast');
+        //$urlRouterProvider.otherwise('/tutorial');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
