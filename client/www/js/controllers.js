@@ -207,7 +207,7 @@ angular.module('starter.controllers', [])
                 setUserDefaults({"TomorrowMinTemp": "0"});
 
                 for (var i = 0; i < $scope.dayTable.length; i++) {
-                    if ($scope.dayTable[i].week === "오늘") {
+                    if ($scope.dayTable[i].fromToday === 0) {
                         setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i - 1].tmx || 99)});
                         setUserDefaults({"TodayMinTemp": String($scope.dayTable[i - 1].tmn || 0)});
                         setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx || 99)});
@@ -598,7 +598,7 @@ angular.module('starter.controllers', [])
         WeatherInfo.cities.forEach(function (city) {
             var address = WeatherUtil.getShortenAddress(city.address).split(",");
             var todayData = city.dayTable.filter(function (data) {
-                return (data.week === "오늘");
+                return (data.fromToday === 0);
             });
 
             if (!city.currentWeather) {
@@ -895,7 +895,7 @@ angular.module('starter.controllers', [])
                             break;
                     }
                     cityData.dayTable.forEach(function(data) {
-                        if (data.week === '오늘') {
+                        if (data.fromToday === 0) {
                             message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
                         }
                     });
