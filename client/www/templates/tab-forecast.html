@@ -14,9 +14,14 @@
                             <div class="row row-no-padding" ng-style="{'height':bigDigitSize*0.9+'px'}">
                                 <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
                                     <div class="row row-no-padding" style="height: 100%">
-                                        <div class="col big-digit" style="width: 54%; height: 100%"><p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
+                                        <div style="width: 10%; height: 100%; display:table; text-align: center;" ng-click="onSwipeLeft()">
+                                            <span class="icon-left ion-chevron-left" style="display:table-cell; vertical-align: middle">
+                                            </span>
                                         </div>
-                                        <div class="col" style="width: 46%;">
+                                        <div class="big-digit" style="width: 44%; height: 100%">
+                                            <p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
+                                        </div>
+                                        <div style="width: 36%;">
                                             <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
                                                  ng-if="currentWeather.t1h!==undefined">
                                                 <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" ng-src="img/{{reddot}}.png">
@@ -25,6 +30,10 @@
                                                  ng-if="currentWeather.skyIcon">
                                                 <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
                                             </div>
+                                        </div>
+                                        <div style="width: 10%; height: 100%; display:table; text-align: center;" ng-click="onSwipeRight()">
+                                            <span class="icon-right ion-chevron-right" style="display:table-cell; vertical-align: middle">
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
