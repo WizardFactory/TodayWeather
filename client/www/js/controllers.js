@@ -3,13 +3,6 @@ angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, $stateParams) {
-
-        $scope.skipGuide = true;
-        if(typeof(Storage) !== "undefined") {
-            if (localStorage.getItem("skipGuide") !== null) {
-                $scope.skipGuide = localStorage.getItem("skipGuide");
-            }
-        }
         $scope.forecastType = "short"; //mid, detail
         $scope.address = "";
 
@@ -452,13 +445,6 @@ angular.module('starter.controllers', [])
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                 $scope.isLoading = false;
             });
-        };
-
-        $scope.onClickGuide = function() {
-            if(typeof(Storage) !== "undefined") {
-                localStorage.setItem("skipGuide", true);
-            }
-            $scope.skipGuide = true;
         };
 
         $scope.onSwipeLeft = function() {
@@ -933,5 +919,65 @@ angular.module('starter.controllers', [])
                 callback(res);
             });
         };
+    })
+
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location) {
+        var version = 1.0;
+
+        $scope.onSlideChanged = function() {
+            update();
+        };
+
+        $scope.onLeftClick = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                $ionicSlideBoxDelegate.previous();
+            } else {
+                close();
+            }
+        };
+
+        $scope.onRightClick = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                close();
+            } else {
+                $ionicSlideBoxDelegate.next();
+            }
+        };
+
+        var close = function() {
+            if(typeof(Storage) !== "undefined") {
+                localStorage.setItem("guideVersion", version.toString());
+            }
+
+            $location.url('/tab/forecast');
+        };
+
+        var update = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                $scope.leftText = "<"
+                $scope.rightText = "CLOSE";
+            } else {
+                $scope.leftText = "SKIP"
+                $scope.rightText = ">";
+            }
+        };
+
+        var init = function() {
+            if(typeof(Storage) !== "undefined") {
+                if (localStorage.getItem("guideVersion") !== null) {
+                    var guideVersion = Number(localStorage.getItem("guideVersion"));
+                    if (version <= guideVersion) {
+                        $location.url('/tab/forecast');
+                        return;
+                    }
+                }
+            }
+
+            $scope.bigFont = (window.innerHeight - 56) * 0.0512;
+            $scope.smallFont = (window.innerHeight - 56) * 0.0299;
+            update();
+        };
+
+        init();
     });
 

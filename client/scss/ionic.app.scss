@@ -164,53 +164,47 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   margin: 0;
 }
 
+/* guide */
 .guide-content {
-  width: 100%;
-  height: 100%;
-  padding: 13px;
-  background-color: #231815;
-  opacity: 0.8;
-  color: white;
-  font-family: "Bareun Dotum Pro 1";
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  right: 0px;
+  bottom: 55px;
+  overflow: hidden;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 
-.guide-row {
+.guide-content-text {
   width: 100%;
-  display: table;
+  margin: 0 0 5px;
   text-align: center;
+  color: inherit;
 }
 
-.guide-col {
-  width: 50%;
-  display: table-cell;
+.guide-pager {
+  width: 100%;
+  height: 56px;
+  position: absolute;
+  bottom: 0;
+  border-top: 1px lightgray solid;
+  z-index: 2;
 }
 
-.guide-col-left-top {
-  text-align: left;
-  vertical-align: top;
-}
-
-.guide-col-right-top {
+.guide-pager-left {
+  width: 30%;
+  padding: 20px;
+  float: left;
   text-align: right;
-  vertical-align: top;
 }
 
-.guide-col-left-middle {
+.guide-pager-right {
+  width: 30%;
+  padding: 20px;
+  float: right;
   text-align: left;
-  vertical-align: middle;
-}
-
-.guide-col-right-middle {
-  text-align: right;
-  vertical-align: middle;
-}
-
-.guide-img-top {
-  width: 30px;
-}
-
-.guide-img {
-  width: 60px;
 }
 
 /* time chart style */
