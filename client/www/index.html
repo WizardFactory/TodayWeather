@@ -7,25 +7,10 @@
     <title>TodayWeather</title>
 
     <!-- Google Analytics -->
+    <script type="text/javascript" src="lib/ga-localstorage/GALocalStorage.js"></script>
     <script>
-        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-                    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-                m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        })(window,document,'script','http://www.google-analytics.com/analytics.js','ga');
-
-        ga('create', {
-            trackingId: 'UA-70746703-1',
-            cookieDomain: 'auto'
-        });
-
-        ga(function(tracker) {
-            ga('send', {
-                hitType: 'event',
-                eventCategory: 'page',
-                eventAction: 'load',
-                eventLabel: 'index.html'
-            });
-        });
+        ga_storage._setAccount('[GOOGLE_ANALYTICS_KEY]');
+        ga_storage._trackPageview('/index.html');
     </script>
     <!-- End Google Analytics -->
 
@@ -54,17 +39,21 @@
         <!--BODY {width : 364px; height:486px;}-->
     <!--</style>-->
 </head>
-<body ng-app="starter" style="background-color: #22a1db; line-height: 0;" ng-style="{'background-color': viewColor}">
+<body ng-app="starter" style="background-color: #22a1db; line-height: normal;" ng-style="{'background-color': viewColor}">
 <!--
   The nav bar that will be updated as we navigate between views.
 -->
-<ion-nav-bar class="bar-dark" align-title="center">
-</ion-nav-bar>
+<!--<ion-nav-bar class="bar-dark" align-title="center">-->
+<!--</ion-nav-bar>-->
+
 <!--
   The views will be rendered in the <ion-nav-view> directive below
   Templates are in the /templates folder (but you could also
   have templates inline in this html file if you'd like).
 -->
 <ion-nav-view></ion-nav-view>
+<div style="background-color: #444; width: 100%; height: 50px; position: absolute; bottom: 0; text-align: center">
+    <h4 style="color: white; opacity: 0.84">TodayWeather WizardFactory</h4>
+</div>
 </body>
 </html>

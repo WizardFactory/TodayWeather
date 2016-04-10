@@ -1836,7 +1836,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    if (time === 1 || putAll) {
+    if (time === 2 || putAll) {
+        log.info('push keco');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("keco", callback);
+        });
+
         log.info('push keco forecast');
         self.asyncTasks.push(function (callback) {
             self._requestApi("kecoForecast", callback);
@@ -1878,9 +1883,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortrss", callback);
         });
+
+        log.info('push kma stn hourly');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi('kmaStnHourly', callback);
+        });
     }
 
-    //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.
     if (time === 20 || putAll) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
@@ -1889,6 +1898,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 35 || putAll) {
+        log.info('push keco');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("keco", callback);
+        });
+
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);
@@ -1912,7 +1926,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //    })
     //}
 
-    if (self.asyncTasks.length <= 14) {
+    if (self.asyncTasks.length <= 16) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {

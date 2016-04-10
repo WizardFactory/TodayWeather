@@ -52,4 +52,6 @@ var msSchema = new mongoose.Schema({
     year: String
 });
 
+msSchema.index({stationName:1});
+
 module.exports = mongoose.model('MsrStnInfo', msSchema);

@@ -31,4 +31,8 @@ var shortSchema = new mongoose.Schema({
         wsd: {type : Number, default : -1}
     }]
 });
+
+shortSchema.index({mCoord:1});
+shortSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+
 module.exports = mongoose.model('short', shortSchema);

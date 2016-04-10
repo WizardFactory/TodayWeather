@@ -31,4 +31,6 @@ var midTempSchema = mongoose.Schema({
     }]
 });
 
+midTempSchema.index({regId:1});
+
 module.exports = mongoose.model('midTemp', midTempSchema);

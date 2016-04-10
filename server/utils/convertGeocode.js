@@ -34,7 +34,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
         }
         var statusCode = response.statusCode;
 
-        if (statusCode === 404 || statusCode === 403 || statusCode === 400) {
+        if (statusCode >= 400) {
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
             err = new Error("StatusCode="+statusCode);
@@ -54,6 +54,10 @@ function convertGeocodeByDaum(first, second, third, callback) {
             my: 0
         };
         try {
+            if (body.channel.item.length === 0) {
+                err = new Error("Fail to find geocode addr="+first+second+third);
+                return;
+            }
             geocode.lat = body.channel.item[0].lat;
             geocode.lon = body.channel.item[0].lng;
 
@@ -65,10 +69,11 @@ function convertGeocodeByDaum(first, second, third, callback) {
             resultXY.mx = conv.getLocation().x;
             resultXY.my = conv.getLocation().y;
 
-            log.info('ConvertDaum >', 'mx:', resultXY.mx, 'my :', resultXY.my);
+            log.debug('ConvertDaum >', 'mx:', resultXY.mx, 'my :', resultXY.my);
         }
         catch (e) {
             log.error('## Error!!!', meta);
+            log.error(e);
         }
         finally {
             if (callback) {
@@ -108,7 +113,7 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
         }
         var statusCode = response.statusCode;
 
-        if(statusCode === 404 || statusCode === 403 || statusCode === 400){
+        if(statusCode >= 400){
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
             err = new Error("StatusCode="+statusCode);
@@ -120,7 +125,7 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
         }
 
         log.silly(body);
-        xml2json(body, function(err, result){
+        xml2json(body, function(err, result) {
             var geocode = {
                 lat: 0,
                 lon: 0
@@ -134,11 +139,18 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
                 //log.info(result.GeocodeResponse.result[0].geometry[0].location[0]);
                 //log.info('lat : ' + result.GeocodeResponse.result[0].geometry[0].location[0].lat[0]);
                 //log.info('lng : ' + result.GeocodeResponse.result[0].geometry[0].location[0].lng[0]);
-
+                if (result.GeocodeResponse.error_message) {
+                    err = new Error(result.GeocodeResponse.error_message[0]);
+                    return;
+                }
+                if (result.GeocodeResponse.status[0] == 'ZERO_RESULTS') {
+                    err = new Error(result.GeocodeResponse.status[0]);
+                    return;
+                }
                 geocode.lat = parseFloat(result.GeocodeResponse.result[0].geometry[0].location[0].lat[0]);
                 geocode.lon = parseFloat(result.GeocodeResponse.result[0].geometry[0].location[0].lng[0]);
 
-                log.info('lat:', geocode.lat, 'lon:', geocode.lon);
+                log.debug('convert geo by google lat:', geocode.lat, 'lon:', geocode.lon);
                 resultXY.lat = geocode.lat;
                 resultXY.lon = geocode.lon;
 
@@ -146,10 +158,11 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
                 resultXY.mx = conv.getLocation().x;
                 resultXY.my = conv.getLocation().y;
 
-                log.info('mx:', resultXY.mx, 'my :', resultXY.my);
+                log.debug('convert geo by google mx:', resultXY.mx, 'my :', resultXY.my);
             }
             catch(e){
                 log.error('## Error!!!', meta);
+                log.error(e);
             }
             finally{
                 if(callback){
@@ -166,7 +179,7 @@ function convertGeocode(first, second, third, callback){
             log.warn(err);
             convertGeocodeByGoogle(first, second, third, function(err, resultXY){
                 if (err) {
-                    log.error(err);
+                    return callback(err);
                 }
                 callback(err, resultXY);
             }, 'ko');

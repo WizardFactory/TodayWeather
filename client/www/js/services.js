@@ -194,6 +194,12 @@ angular.module('starter.services', [])
                 that.cities = [];
                 that.cities.push(city);
             }
+
+            // load last cityIndex
+            that.cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
+            if (that.cityIndex === null) {
+                that.setCityIndex(0);
+            }
         };
 
         obj.saveCities = function() {
@@ -232,6 +238,16 @@ angular.module('starter.services', [])
                 });
 
             return deferred.promise;
+        };
+
+        obj.setCityIndex = function (index) {
+            var that = this;
+
+            if (index >= 0 && index < that.cities.length) {
+                that.cityIndex = index;
+                // save current cityIndex
+                localStorage.setItem("cityIndex", JSON.stringify(that.cityIndex));
+            }
         };
 
         //endregion
@@ -348,6 +364,14 @@ angular.module('starter.services', [])
             var dayString = ["엊그제", "그제", "어제", "오늘", "내일", "모레", "글피"];
             if (-3 <= day && day <= 3) {
                 return dayString[day + 3];
+            }
+            else {
+                if (day < 0) {
+                    return Math.abs(day)+"일 전";
+                }
+                else if (day > 0) {
+                    return Math.abs(day)+"일 후";
+                }
             }
             console.error("Fail to get day string day=" + day);
             return "";
@@ -524,8 +548,8 @@ angular.module('starter.services', [])
             var url;
             if (Util.isDebug()) {
                 //url = "town";
-                //url = "http://localhost:3000/v000705/town";
-                url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+                //url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+                url = "http://tw-wzdfac.rhcloud.com/v000705/town";
             }
             else {
                 url = "http://todayweather.wizardfactory.net/v000705/town";
@@ -666,12 +690,9 @@ angular.module('starter.services', [])
 
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
 
-                if (diffDays == 0) {
-                    data.week = "오늘";
-                }
-                else {
-                    data.week = dayToString(convertStringToDate(data.date).getDay());
-                }
+                data.fromToday = diffDays;
+                data.fromTodayStr = getDayString(diffDays);
+                data.week = dayToString(convertStringToDate(data.date).getDay());
 
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
@@ -725,14 +746,20 @@ angular.module('starter.services', [])
          * @returns {*}
          * @private
          */
-        obj._getShortSiName = function(name) {
+        obj._getShortSiDoName = function(name) {
             //특별시, 특별자치시, 광역시,
-            var aStr = ["특별시", "광역시", "특별자치시"];
+            var aStr = ["특별시", "광역시", "특별자치시", "특별자치도"];
             for (var i=0; i<aStr.length; i++) {
                 if (name.slice(-1*aStr[i].length) === aStr[i]) {
-                    return name.replace(aStr[i], "시");
+                    if (i === aStr.length-1) {
+                        return name.replace(aStr[i], "도");
+                    }
+                    else {
+                        return name.replace(aStr[i], "시");
+                    }
                 }
             }
+
             return name;
         };
 
@@ -753,27 +780,27 @@ angular.module('starter.services', [])
 
             if (parsedAddress.length === 5) {
                 //nation + do + si + gu + dong
-                return that._getShortSiName(parsedAddress[2])+","+parsedAddress[4];
+                return that._getShortSiDoName(parsedAddress[2])+","+parsedAddress[4];
             }
             else if (parsedAddress.length === 4) {
                 if (parsedAddress[1].slice(-1) === '도') {
                     //nation + do + si + gu
-                    return parsedAddress[2]+","+parsedAddress[3];
+                    return that._getShortSiDoName(parsedAddress[2])+","+parsedAddress[3];
                 }
                 else {
                     //nation + si + gu + dong
-                    return that._getShortSiName(parsedAddress[1])+","+parsedAddress[3];
+                    return that._getShortSiDoName(parsedAddress[1])+","+parsedAddress[3];
                 }
             }
             else if (parsedAddress.length === 3) {
                 //nation + do + si
                 //nation + si + gu
                 //nation + si + eup,myeon
-                return that._getShortSiName(parsedAddress[1])+","+parsedAddress[2];
+                return that._getShortSiDoName(parsedAddress[1])+","+parsedAddress[2];
             }
             else if (parsedAddress.length === 2) {
                 //nation + si,do
-                return that._getShortSiName(parsedAddress[1]);
+                return that._getShortSiDoName(parsedAddress[1]);
             }
             else {
                 console.log("Fail to get shorten from ="+fullAddress);

@@ -281,7 +281,7 @@ Keco.prototype.parseCtprvn = function (data, callback) {
 Keco.prototype.saveCtprvn = function (arpltnList, callback) {
     log.debug('save Ctpvrn');
 
-    async.mapSeries(arpltnList,
+    async.map(arpltnList,
         function(arpltn, callback) {
             Arpltn.update({stationName: arpltn.stationName}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
@@ -658,7 +658,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                 return cb(err);
             }
             if (result.isLatest) {
-                return cb('already latest');
+                return cb('minu dust forecast is already latest ');
             }
             cb(undefined, result.dataTime);
         });
@@ -720,7 +720,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
 
     log.info('get all Ctprvn start from '+list[0]);
 
-    async.mapSeries(list,
+    async.map(list,
         function(sido, callback) {
             async.waterfall([
                 function(cb) {
@@ -872,29 +872,22 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
 };
 
 /**
- *
+ * 20분에도 데이터가 갱신되지 않은 경우가 있어서, 2분 가장 마지막, 35분 초기에도 시도함.
  * @param self
  * @param callback
  * @returns {Keco}
  */
 Keco.prototype.cbKecoProcess = function (self, callback) {
-    //check and update
-    var date = new Date();
 
     callback = callback || function(){};
 
-    if (self.checkGetCtprvnTime(date)) {
-        self.getAllCtprvn(function (err) {
-            if (err) {
-                log.warn('Stopped index='+self._currentSidoIndex);
-                return callback(err);
-            }
-            callback(err);
-        });
-    }
-    else {
-        callback();
-    }
+    self.getAllCtprvn(function (err) {
+        if (err) {
+            log.warn('Stopped index='+self._currentSidoIndex);
+            return callback(err);
+        }
+        callback(err);
+    });
 
     return this;
 };

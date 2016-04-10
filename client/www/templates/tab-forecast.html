@@ -1,12 +1,12 @@
-<ion-view hide-nav-bar="{{runAdmob}}">
+<ion-view hide-nav-bar="true">
     <ion-content delegate-handle="body" scroll="false">
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
                 <div class="col" style="height: 100%">
-                    <div class="row row-no-padding top-time" style="height: 16%;"><p ng-style="{'font-size': topTimeSize+'px'}">{{currentTimeString}}</p></div>
-                    <div class="row row-no-padding" style="height: 84%; margin: auto">
+                    <div class="row row-no-padding" style="height: 100%; margin: auto">
                         <div class="col" style="margin: auto">
+                            <div style="height: 20px" ng-if="isIOS()"></div>
                             <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
                                 <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
                                     {{address}}</p>
@@ -40,32 +40,40 @@
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
                     <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
-                        <div class="row row-no-padding chart-content">
+                        <div class="row row-no-padding" style="height: 54%">
                             <div ng-short-chart style="width: 100%; height: 100%"></div>
                         </div>
-                        <div class="row row-no-padding table-content">
-                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.day}}</p>
+                        <div class="row row-no-padding" style="height: 6%">
+                            <div style="width: 26px;"></div>
+                            <div class="col" ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date" ng-repeat="value in dayTable" style="height: 100%;">
+                                <div style="display: table;height: 100%; line-height: normal">
+                                    <p ng-style="{'font-size':smallTimeSize+'px'}" style="margin: 0; display: table-cell; vertical-align: bottom; opacity: 0.84">{{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span></p>
                                 </div>
+                            </div>
+                            <div style="width: 26px;"></div>
+                        </div>
+                        <div class="row row-no-padding" style="height: 40%">
+                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
+                                <div class="row row-no-padding small-time" style="height: 20%;">
                                     <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
+                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
+                                            style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
+                                            style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
                                 </div>
                             </div>
                         </div>
@@ -82,26 +90,30 @@
                         </div>
                         <div class="row row-no-padding table-content">
                             <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p></p>
-                                </div>
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.week}}</p>
+                                <div class="row row-no-padding" style="height: 20%;">
+                                    <div class="small-time" style="margin: auto; padding-bottom: 2px"
+                                         ng-style="{'width':(smallTimeSize+6)+'px'}">
+                                        <p ng-style="{'font-size':smallTimeSize+'px',
+                                                    'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
+                                                    'opacity':value.fromToday===0?'1':'0.84'}">{{value.week}}</p>
+                                    </div>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 16%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<small ng-show="value.pty !== 3">mm</small><small ng-show="value.pty === 3">cm</small></p>
+                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
+                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
+                                            style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
+                                            style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
                                 </div>
-                                <div class="row row-no-padding small-image" style="height: 16%;">
+                                <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" style="height: 16%;">
+                                <div class="row row-no-padding small-digit" style="height: 20%;">
                                     <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
                                 </div>
                             </div>
@@ -115,16 +127,6 @@
                             delegate-handle="detailList" style="width:90%;margin: 0 auto;">
                     <div class="list" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;">
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>습도</p></div>
-                            <div class="col col-33 detail-image">
-                                <div><img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
-                                         style="width: 40px">
-                                </div>
-                            </div>
-                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}<small>%</small></p>
-                            </div>
-                        </div>
-                        <div class="item row detail-item">
                             <div class="col col-33 detail-text"><p>미세먼지
                                 <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm10StationName?currentWeather.arpltn.pm10StationName:currentWeather.arpltn.stationName}}</small></p>
                             </div>
@@ -136,7 +138,7 @@
                             </div>
                         </div>
                         <div class="item row detail-item">
-                            <div class="col col-33 detail-text"><p>초미세먼지
+                            <div class="col col-33 detail-text"><p style="font-size: 17px">초미세먼지
                                 <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm25StationName?currentWeather.arpltn.pm25StationName:currentWeather.arpltn.stationName}}</small>
                                 </p>
                             </div>
@@ -147,21 +149,30 @@
                                 <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
-                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem < 0">
+                        <div class="item row detail-item" ng-if="currentWeather.rn1Str">
+                                <div class="col col-33 detail-text"><p>{{currentWeather.ptyStr}}</p>
+                                </div>
+                                <div class="col col-33 detail-image">
+                                    <div><img src="img/Umbrella.png" style="width: 40px"></div>
+                                </div>
+                                <div class="col col-33 detail-text"><p style="font-size: 18px">{{currentWeather.rn1Str}}</p>
+                                </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem != currentWeather.t1h">
                                 <div class="col col-33 detail-text"><p>체감온도</p></div>
                                 <div class="col col-33 detail-image">
                                     <div><img src="img/SensoryTem.png" style="width: 40px"></div>
                                 </div>
-                                <div class="col col-33 detail-text"><p>{{currentWeather.sensorytemStr}}
-                                    <br>{{currentWeather.sensorytem}}˚</p>
+                                <div class="col col-33 detail-text"><p><span ng-if="currentWeather.sensorytemStr">{{currentWeather.sensorytemStr}}</span>
+                                    <br ng-if="currentWeather.sensorytemStr">{{currentWeather.sensorytem}}˚</p>
                                 </div>
                         </div>
-                        <div class="item row detail-item" ng-if="currentWeather.rn1Str">
-                                <div class="col col-33 detail-text"><p>{{currentWeather.ptyStr}}</p></div>
+                        <div class="item row detail-item" ng-if="currentWeather.dspls && currentWeather.dspls > 60 && currentWeather.sensorytem == currentWeather.t1h">
+                                <div class="col col-33 detail-text"><p>불쾌지수</p></div>
                                 <div class="col col-33 detail-image">
-                                    <div><img src="img/Umbrella.png" style="width: 40px"></div>
                                 </div>
-                                <div class="col col-33 detail-text"><p>{{currentWeather.rn1Str}}</p>
+                                <div class="col col-33 detail-text"><p><span ng-if="currentWeather.dsplsStr">{{currentWeather.dsplsStr}}</span>
+                                    <br ng-if="currentWeather.dsplsStr">{{currentWeather.dspls}}</p>
                                 </div>
                         </div>
                         <div class="item row detail-item" ng-if="currentWeather.ultrvStr">
@@ -172,11 +183,69 @@
                             <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
                         </div>
                         <div class="item row detail-item">
+                            <div class="col col-33 detail-text"><p>습도</p></div>
+                            <div class="col col-33 detail-image">
+                                <div><img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
+                                          style="width: 40px">
+                                </div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}<small>%</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.wsd != -1">
                             <div class="col col-33 detail-text"><p>바람</p></div>
                             <div class="col col-33 detail-image">
                                 <div><img src="img/Wind.png" width="40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.wsd}}<small>m/s</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.arpltn != undefined">
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    CAI {{currentWeather.arpltn.khaiStr}}<span
+                                        ng-if="currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue}})</span><br>
+                                    O3 {{currentWeather.arpltn.o3Str}}<span
+                                        ng-if="currentWeather.arpltn.o3Value != -1">({{currentWeather.arpltn.o3Value}})</span><br>
+                                    CO {{currentWeather.arpltn.coStr}}<span
+                                        ng-if="currentWeather.arpltn.coValue != -1">({{currentWeather.arpltn.coValue}})</span>
+                                </p>
+                            </div>
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    측정소명 <span
+                                        ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span><br>
+                                    SO2 {{currentWeather.arpltn.so2Str}}<span
+                                        ng-if="currentWeather.arpltn.so2Value != -1">({{currentWeather.arpltn.so2Value}})</span><br>
+                                    NO2 {{currentWeather.arpltn.no2Str}}<span
+                                        ng-if="currentWeather.arpltn.no2Value != -1">({{currentWeather.arpltn.no2Value}})</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item">
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    <span ng-if="currentWeather.visibility">가시거리 {{currentWeather.visibility}}km<br></span>
+                                    <span ng-if="currentWeather.hPa">기압 {{currentWeather.hPa}}hPa<br></span>
+                                    <span ng-if="currentWeather.s1d > 0">일적설량 {{currentWeather.s1d}}cm<br></span>
+                                    <span ng-if="currentWeather.r1d > 0">일강수량 {{currentWeather.r1d}}mm<br></span>
+                                </p>
+                                <!-- 일강수,적설-->
+                            </div>
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    <span ng-if="currentWeather.dspls &&
+                                                currentWeather.dspls > 60 &&
+                                                currentWeather.sensorytem != currentWeather.t1h"
+                                            >불쾌지수 {{currentWeather.dsplsStr}}({{currentWeather.dspls}})<br>
+                                    </span>
+                                    <span ng-if="currentWeather.fsnStr"
+                                            >식중독지수 {{currentWeather.fsnStr}}({{currentWeather.fsn}})<br>
+                                    </span>
+                                    <span ng-if="currentWeather.decpsnStr"
+                                            >부패지수 {{currentWeather.decpsnStr}}({{currentWeather.decpsn}})
+                                    </span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -205,4 +274,6 @@
             </div>
         </div>
     </div>
+    <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%;"
+                 ng-show="isLoading===true"/>
 </ion-view>
