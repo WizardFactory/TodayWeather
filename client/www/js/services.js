@@ -365,6 +365,14 @@ angular.module('starter.services', [])
             if (-3 <= day && day <= 3) {
                 return dayString[day + 3];
             }
+            else {
+                if (day < 0) {
+                    return Math.abs(day)+"일 전";
+                }
+                else if (day > 0) {
+                    return Math.abs(day)+"일 후";
+                }
+            }
             console.error("Fail to get day string day=" + day);
             return "";
         }
@@ -540,8 +548,8 @@ angular.module('starter.services', [])
             var url;
             if (Util.isDebug()) {
                 //url = "town";
-                //url = "http://tw-wzdfac.rhcloud.com/v000705/town";
-                url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+                //url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
+                url = "http://tw-wzdfac.rhcloud.com/v000705/town";
             }
             else {
                 url = "http://todayweather.wizardfactory.net/v000705/town";
@@ -682,12 +690,9 @@ angular.module('starter.services', [])
 
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
 
-                if (diffDays == 0) {
-                    data.week = "오늘";
-                }
-                else {
-                    data.week = dayToString(convertStringToDate(data.date).getDay());
-                }
+                data.fromToday = diffDays;
+                data.fromTodayStr = getDayString(diffDays);
+                data.week = dayToString(convertStringToDate(data.date).getDay());
 
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
