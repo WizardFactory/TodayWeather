@@ -177,6 +177,9 @@ angular.module('starter', [
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
+
+        // Enable Native Scrolling on Android
+        $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
     })
     .directive('ngShortChart', function() {
         return {
