@@ -137,7 +137,12 @@ router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
     scrape.getStnHourlyWeather(function (err, results) {
         if (err) {
-            log.error(err);
+            if (err === 'skip') {
+                log.info('stn hourly weather info is already updated');
+            }
+            else {
+                log.error(err);
+            }
         }
         else {
             log.silly(results);

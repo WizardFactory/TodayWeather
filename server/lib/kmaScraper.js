@@ -32,12 +32,16 @@ function KmaScraper() {
  * @returns {KmaScraper}
  * @private
  */
-KmaScraper.prototype._parseStnMinInfo = function($, callback) {
+KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     var stnWeatherList = {pubDate: '', stnList: []};
 
     var strAr = $('.ehead').text().split(" ");
     stnWeatherList.pubDate = strAr[strAr.length-1];
+    if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
+        var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+        return callback(err);
+    }
 
     log.info(stnWeatherList.pubDate);
 
@@ -117,7 +121,7 @@ KmaScraper.prototype._parseStnMinInfo = function($, callback) {
  * @returns {KmaScraper}
  * @private
  */
-KmaScraper.prototype._parseStnDayInfo = function ($, callback) {
+KmaScraper.prototype._parseStnDayInfo = function (pubDate, $, callback) {
     callback(new Error('It is not support yet'));
 
     //var stnWeatherList = {pubDate: '', stnList: []};
@@ -166,7 +170,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
 
             var $ = cheerio.load(strContents);
             if (type === 'daily') {
-                self._parseStnDayInfo($, function (err, results) {
+                self._parseStnDayInfo(dateTime, $, function (err, results) {
                     if (err) {
                         return callback(err);
                     }
@@ -174,7 +178,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
                 });
             }
             else {
-               self._parseStnMinInfo($, function (err, results) {
+               self._parseStnMinInfo(dateTime, $, function (err, results) {
                    if (err) {
                        return callback(err);
                    }
@@ -203,7 +207,7 @@ KmaScraper.prototype._convertKrToEng = function (str) {
  * parsing city weather
  * @param callback
  */
-KmaScraper.prototype.getCityWeather = function(callback) {
+KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     var self = this;
     var url = 'http://www.kma.go.kr/weather/observation/currentweather.jsp';
     req(url, {encoding: 'binary'}, function (err, response, body) {
@@ -220,6 +224,11 @@ KmaScraper.prototype.getCityWeather = function(callback) {
 
             var $ = cheerio.load(strContents);
             cityWeatherList.pubDate = $('.table_topinfo').text();
+            if ((new Date(cityWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
+                err = new Error('city weather is not updated yes pubDate='+cityWeatherList.pubDate);
+                log.warn(err);
+                return callback(err);
+            }
             var propertyName = ['stnName'];
 
             $('.table_develop3 thead #table_header2 th').each(function () {
@@ -363,12 +372,12 @@ KmaScraper.prototype._checkPubdate = function(date, callback)  {
 
         for (var i=0; i<stnHourlyList.length; i++) {
             if (stnHourlyList[i].pubDate != date) {
-                log.info('stnId='+stnHourlyList[i]+' pubDate='+stnHourlyList[i].pubDate+' current='+date);
+                log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
                 return  callback(err, false);
             }
         }
 
-        log.info('kma stn weather already updated');
+        log.debug('check pub date : kma stn weather already updated');
         return callback(err, true);
     });
 
@@ -643,7 +652,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (callback) {
             return cb(err, weatherList);
         });
     }, function (awsWeatherList, cb) {
-        self.getCityWeather(function (err, cityWeatherList) {
+        self.getCityWeather(pubDate, function (err, cityWeatherList) {
             if (err) {
                 return cb(err);
             }
