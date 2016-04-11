@@ -7,11 +7,11 @@
                     <div class="row row-no-padding" style="height: 100%; margin: auto">
                         <div class="col" style="margin: auto">
                             <div style="height: 20px" ng-if="isIOS()"></div>
-                            <div class="row row-no-padding region" ng-style="{'height':regionSize*1.3+'px'}">
-                                <p ng-style="{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
+                            <div class="row row-no-padding region" ng-style="::{'height':regionSize*1.3+'px'}">
+                                <p ng-style="::{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
                                     {{address}}</p>
                             </div>
-                            <div class="row row-no-padding" ng-style="{'height':bigDigitSize*0.9+'px'}">
+                            <div class="row row-no-padding" ng-style="::{'height':bigDigitSize*0.9+'px'}">
                                 <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
                                     <div class="row row-no-padding" style="height: 100%">
                                         <div style="width: 10%; height: 100%; display:table; text-align: center;" ng-click="onSwipeLeft()">
@@ -19,16 +19,16 @@
                                             </span>
                                         </div>
                                         <div class="big-digit" style="width: 44%; height: 100%">
-                                            <p ng-style="{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
+                                            <p ng-style="::{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
                                         </div>
                                         <div style="width: 36%;">
-                                            <div class="row-no-padding big-temp-point" ng-style="{'height':bigTempPointSize+'px'}"
+                                            <div class="row-no-padding big-temp-point" ng-style="::{'height':bigTempPointSize+'px'}"
                                                  ng-if="currentWeather.t1h!==undefined">
-                                                <img ng-style="{'height':bigTempPointSize+'px'}" style="width: auto" ng-src="img/{{reddot}}.png">
+                                                <img ng-style="::{'height':bigTempPointSize+'px'}" style="width: auto" ng-src="img/{{::reddot}}.png">
                                             </div>
-                                            <div class="row-no-padding big-temp-sky-state" ng-style="{'height': bigSkyStateSize+'px'}"
+                                            <div class="row-no-padding big-temp-sky-state" ng-style="::{'height': bigSkyStateSize+'px'}"
                                                  ng-if="currentWeather.skyIcon">
-                                                <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
+                                                <img ng-style="::{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
                                             </div>
                                         </div>
                                         <div style="width: 10%; height: 100%; display: table; text-align: center;" ng-click="onSwipeRight()">
@@ -38,8 +38,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="row row-no-padding region-sum" ng-style="{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
-                                <p ng-style="{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
+                            <div class="row row-no-padding region-sum" ng-style="::{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
+                                <p ng-style="::{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
                             </div>
                         </div>
                     </div>
@@ -56,7 +56,7 @@
                             <div style="width: 26px;"></div>
                             <div class="col" ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date" ng-repeat="value in dayTable" style="height: 100%;">
                                 <div style="display: table;height: 100%; line-height: normal">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}" style="margin: 0; display: table-cell; vertical-align: bottom; opacity: 0.84">{{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span></p>
+                                    <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: 0; display: table-cell; vertical-align: bottom; opacity: 0.84">{{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span></p>
                                 </div>
                             </div>
                             <div style="width: 26px;"></div>
@@ -65,22 +65,22 @@
                             <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                                 <div class="row row-no-padding small-time" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
+                                    <p ng-style="::{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
+                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
+                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
+                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
                                             style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
                                             style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
                                 </div>
@@ -92,7 +92,7 @@
             <div class="row row-no-padding extend-content" ng-show="forecastType==='mid'"
                  ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
-                            scrollbar-x="false" style="width: 100%; height: 100%">
+                            scrollbar-x="false" style="width: 100%; height: 100%" overflow-scroll="false">
                     <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':dayWidth +'px'}">
                         <div class="row row-no-padding chart-content">
                             <div ng-mid-chart style="width: 100%; height: 100%"></div>
@@ -102,28 +102,28 @@
                                 <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                                 <div class="row row-no-padding" style="height: 20%;">
                                     <div class="small-time" style="margin: auto; padding-bottom: 2px"
-                                         ng-style="{'width':(smallTimeSize+6)+'px'}">
-                                        <p ng-style="{'font-size':smallTimeSize+'px',
+                                         ng-style="::{'width':(smallTimeSize+6)+'px'}">
+                                        <p ng-style="::{'font-size':smallTimeSize+'px',
                                                     'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
                                                     'opacity':value.fromToday===0?'1':'0.84'}">{{value.week}}</p>
                                     </div>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
+                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
+                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
                                             style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
                                             style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" style="height: 20%;">
-                                    <p ng-style="{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
+                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
                                 </div>
                             </div>
                         </div>
@@ -143,7 +143,8 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
-                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small
+                                        ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
@@ -155,7 +156,8 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
-                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
+                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small
+                                        ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item" ng-if="currentWeather.rn1Str">
