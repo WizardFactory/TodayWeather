@@ -404,7 +404,7 @@ angular.module('starter.controllers', [])
             return getWidthPerCol()*index;
         }
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#22a1db';
             if (window.StatusBar) {
                 StatusBar.backgroundColorByHexString('#0288D1');
@@ -613,7 +613,7 @@ angular.module('starter.controllers', [])
             $scope.cityList.push(data);
         });
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#ec72a8';
             if (window.StatusBar) {
                 StatusBar.backgroundColorByHexString('#EC407A');
@@ -771,7 +771,7 @@ angular.module('starter.controllers', [])
             }
         }
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#FFA726';
             if (window.StatusBar) {
                 StatusBar.backgroundColorByHexString('#FB8C00');
