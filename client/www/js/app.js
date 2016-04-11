@@ -124,6 +124,11 @@ angular.module('starter', [
         // Each state's controller can be found in controllers.js
         $stateProvider
 
+            .state('guide', {
+                url: '/guide',
+                templateUrl: 'templates/guide.html',
+                controller: "GuideCtrl"
+            })
             // setup an abstract state for the tabs directive
             .state('tab', {
                 url: '/tab',
@@ -168,7 +173,7 @@ angular.module('starter', [
             });
 
         // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('/tab/forecast');
+        $urlRouterProvider.otherwise('/guide');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');

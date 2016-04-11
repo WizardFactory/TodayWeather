@@ -31,8 +31,8 @@
                                                 <img ng-style="{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
                                             </div>
                                         </div>
-                                        <div style="width: 10%; height: 100%; display:table; text-align: center;" ng-click="onSwipeRight()">
-                                            <span class="icon-right ion-chevron-right" style="display:table-cell; vertical-align: middle">
+                                        <div style="width: 10%; height: 100%; display: table; text-align: center;" ng-click="onSwipeRight()">
+                                            <span class="icon-right ion-chevron-right" style="display: table-cell; vertical-align: middle">
                                             </span>
                                         </div>
                                     </div>
@@ -262,27 +262,6 @@
             </div>
         </div>
     </ion-content>
-    <div class="guide-content" ng-if="!skipGuide" ng-click="onClickGuide()">
-        <div class="guide-row" style="height: 15%;">
-            <div class="guide-col guide-col-right-top">
-                <span>현재 위치 및</span><br/>
-                <span>업데이트</span>
-            </div>
-            <div class="guide-col guide-col-left-top">
-                <img src="img/DownGuide.png" class="guide-img-top">
-            </div>
-        </div>
-        <div class="guide-row" style="height: 85%;">
-            <div class="guide-col guide-col-left-middle">
-                <span>어제 날씨</span><br/>
-                <img src="img/LeftGuide.png" class="guide-img">
-            </div>
-            <div class="guide-col guide-col-right-middle">
-                <span>내일 날씨</span><br/>
-                <img src="img/RightGuide.png" class="guide-img">
-            </div>
-        </div>
-    </div>
     <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%;"
                  ng-show="isLoading===true"/>
 </ion-view>
