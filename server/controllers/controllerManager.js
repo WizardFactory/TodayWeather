@@ -1890,7 +1890,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 20 || putAll) {
+    if (time === 5) {
+        log.info('push kma stn hourly');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi('kmaStnHourly', callback);
+        });
+    }
+
+    if (time === 20) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
             self._requestApi("keco", callback);

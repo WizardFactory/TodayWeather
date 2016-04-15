@@ -3,13 +3,6 @@ angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, $stateParams) {
-
-        $scope.skipGuide = true;
-        if(typeof(Storage) !== "undefined") {
-            if (localStorage.getItem("skipGuide") !== null) {
-                $scope.skipGuide = localStorage.getItem("skipGuide");
-            }
-        }
         $scope.forecastType = "short"; //mid, detail
         $scope.address = "";
 
@@ -207,7 +200,7 @@ angular.module('starter.controllers', [])
                 setUserDefaults({"TomorrowMinTemp": "0"});
 
                 for (var i = 0; i < $scope.dayTable.length; i++) {
-                    if ($scope.dayTable[i].week === "오늘") {
+                    if ($scope.dayTable[i].fromToday === 0) {
                         setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i - 1].tmx || 99)});
                         setUserDefaults({"TodayMinTemp": String($scope.dayTable[i - 1].tmn || 0)});
                         setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx || 99)});
@@ -411,16 +404,20 @@ angular.module('starter.controllers', [])
             return getWidthPerCol()*index;
         }
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#22a1db';
-            StatusBar.backgroundColorByHexString('#0288D1');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#0288D1');
+            }
         });
 
         $scope.changeForecastType = function() {
             if ($scope.forecastType === 'short') {
                 $scope.forecastType = 'mid';
                 $rootScope.viewColor = '#8BC34A';
-                StatusBar.backgroundColorByHexString('#689F38');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#689F38');
+                }
                 //async drawing for preventing screen cut #544
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
@@ -429,12 +426,16 @@ angular.module('starter.controllers', [])
             else if ($scope.forecastType === 'mid') {
                 $scope.forecastType = 'detail';
                 $rootScope.viewColor = '#00BCD4';
-                StatusBar.backgroundColorByHexString('#0097A7');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0097A7');
+                }
             }
             else if ($scope.forecastType === 'detail') {
                 $scope.forecastType = 'short';
                 $rootScope.viewColor = '#03A9F4';
-                StatusBar.backgroundColorByHexString('#0288D1');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0288D1');
+                }
                 setTimeout(function () {
                     $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                 }, 0);
@@ -452,13 +453,6 @@ angular.module('starter.controllers', [])
                 $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                 $scope.isLoading = false;
             });
-        };
-
-        $scope.onClickGuide = function() {
-            if(typeof(Storage) !== "undefined") {
-                localStorage.setItem("skipGuide", true);
-            }
-            $scope.skipGuide = true;
         };
 
         $scope.onSwipeLeft = function() {
@@ -590,7 +584,7 @@ angular.module('starter.controllers', [])
         WeatherInfo.cities.forEach(function (city) {
             var address = WeatherUtil.getShortenAddress(city.address).split(",");
             var todayData = city.dayTable.filter(function (data) {
-                return (data.week === "오늘");
+                return (data.fromToday === 0);
             });
 
             if (!city.currentWeather) {
@@ -619,9 +613,11 @@ angular.module('starter.controllers', [])
             $scope.cityList.push(data);
         });
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#ec72a8';
-            StatusBar.backgroundColorByHexString('#EC407A');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#EC407A');
+            }
         });
 
         $scope.OnChangeSearchWord = function() {
@@ -655,6 +651,12 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnSelectResult = function(result) {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) { 
+                if (cordova.plugins.Keyboard.isVisible) {
+                    return cordova.plugins.Keyboard.close(); 
+                }
+            }
+
             $scope.searchWord = undefined;
             $scope.searchResults = [];
             $scope.isLoading = true;
@@ -712,6 +714,12 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnSelectCity = function(index) {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                if (cordova.plugins.Keyboard.isVisible) {
+                    return cordova.plugins.Keyboard.close();
+                }
+            }
+
             WeatherInfo.setCityIndex(index);
             $location.path('/tab/forecast');
         };
@@ -763,9 +771,11 @@ angular.module('starter.controllers', [])
             }
         }
 
-        $scope.$on('$ionicView.enter', function() {
+        $scope.$on('$ionicView.loaded', function() {
             $rootScope.viewColor = '#FFA726';
-            StatusBar.backgroundColorByHexString('#FB8C00');
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#FB8C00');
+            }
         });
 
         $scope.openMarket = function() {
@@ -883,7 +893,7 @@ angular.module('starter.controllers', [])
                             break;
                     }
                     cityData.dayTable.forEach(function(data) {
-                        if (data.week === '오늘') {
+                        if (data.fromToday === 0) {
                             message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
                         }
                     });
@@ -933,5 +943,65 @@ angular.module('starter.controllers', [])
                 callback(res);
             });
         };
+    })
+
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location) {
+        var version = 1.0;
+
+        $scope.onSlideChanged = function() {
+            update();
+        };
+
+        $scope.onLeftClick = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                $ionicSlideBoxDelegate.previous();
+            } else {
+                close();
+            }
+        };
+
+        $scope.onRightClick = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                close();
+            } else {
+                $ionicSlideBoxDelegate.next();
+            }
+        };
+
+        var close = function() {
+            if(typeof(Storage) !== "undefined") {
+                localStorage.setItem("guideVersion", version.toString());
+            }
+
+            $location.url('/tab/forecast');
+        };
+
+        var update = function() {
+            if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                $scope.leftText = "<"
+                $scope.rightText = "CLOSE";
+            } else {
+                $scope.leftText = "SKIP"
+                $scope.rightText = ">";
+            }
+        };
+
+        var init = function() {
+            if(typeof(Storage) !== "undefined") {
+                if (localStorage.getItem("guideVersion") !== null) {
+                    var guideVersion = Number(localStorage.getItem("guideVersion"));
+                    if (version <= guideVersion) {
+                        $location.url('/tab/forecast');
+                        return;
+                    }
+                }
+            }
+
+            $scope.bigFont = (window.innerHeight - 56) * 0.0512;
+            $scope.smallFont = (window.innerHeight - 56) * 0.0299;
+            update();
+        };
+
+        init();
     });
 
