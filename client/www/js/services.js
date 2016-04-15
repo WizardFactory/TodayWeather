@@ -1135,5 +1135,9 @@ angular.module('starter.services', [])
 
         //endregion
 
+        obj.guideVersion = 1.0;
+
+        obj.showAd;
+
         return obj;
     });
