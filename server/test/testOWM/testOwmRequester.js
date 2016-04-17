@@ -47,11 +47,16 @@ describe('unit test - OWM', function(){
                 lat: 33.57,
                 lon: 130.42
             },
-*/
             {
                 address: 'Kita6Jonishi 4-Chome',
                 lat: 43.06,
                 lon: 141.34
+            },
+*/
+            {
+                address : 'Beijing West Railway Station Lianhuachi East Road, Feeder Road, Beijing',
+                lat:39.66,
+                lon:116.40
             }
 
         ];
