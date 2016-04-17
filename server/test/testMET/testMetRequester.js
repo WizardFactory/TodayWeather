@@ -15,12 +15,12 @@ describe('unit test - get town forecast in lib/collect class', function(){
     it('get weather by MET', function(done){
         var met = new metRequester;
         var list = [
+            /*
             {
                 address: '221B Baker Street London NW1 England',
                 lat: 51.52,
                 lon: -0.15
             },
-            /*
             {
                 address: 'Place du Palais 84000 Avignon France',
                 lat: 43.95,
@@ -51,8 +51,13 @@ describe('unit test - get town forecast in lib/collect class', function(){
                 address: 'Kita6Jonishi 4-Chome',
                 lat: 43.06,
                 lon: 141.34
-            }
+            },
             */
+            {
+                address : 'Beijing West Railway Station Lianhuachi East Road, Feeder Road, Beijing',
+                lat:39.66,
+                lon:116.40
+            }
         ];
 
         met.collectForecast(list, function(err, result){
@@ -64,7 +69,7 @@ describe('unit test - get town forecast in lib/collect class', function(){
             }
 
             log.info('!!! Successed to get weather data');
-            //log.info(result);
+            log.info(result);
             done();
 
         });
