@@ -13,9 +13,8 @@ angular.module('starter', [
     'starter.services',
     'ngCordova'
 ])
-    .run(function($ionicPlatform, $ionicAnalytics, Util) {
+    .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
         $ionicPlatform.ready(function() {
-
             if (!Util.isDebug()) {
                 $ionicAnalytics.register();
             }
@@ -23,10 +22,10 @@ angular.module('starter', [
             if (ionic.Platform.isIOS()) {
                 if (window.applewatch) {
                     applewatch.init(function () {
-                        console.log("Succeeded to initialize for apple-watch");
+                        console.log('Succeeded to initialize for apple-watch');
                     }, function (err) {
                         console.log('Failed to initialize apple-watch', err);
-                    }, "group.net.wizardfactory.todayweather");
+                    }, 'group.net.wizardfactory.todayweather');
                 }
             }
 
@@ -48,16 +47,16 @@ angular.module('starter', [
             var runAdmob = true;
 
             if (runAdmob) {
-                if ( window.plugins && window.plugins.AdMob ) {
+                if (window.plugins && window.plugins.AdMob) {
                     var bannerAdUnit;
                     var interstitialAdUnit;
                     if (ionic.Platform.isIOS()) {
-                        bannerAdUnit = "ca-app-pub-3300619349648096/7636193363";
-                        interstitialAdUnit = "ca-app-pub-3300619349648096/3066392962";
+                        bannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
+                        interstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
                     }
                     else if (ionic.Platform.isAndroid()) {
-                        bannerAdUnit = "ca-app-pub-3300619349648096/9569086167";
-                        interstitialAdUnit = "ca-app-pub-3300619349648096/2045819361";
+                        bannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
+                        interstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
                     }
 
                     window.plugins.AdMob.setOptions({
@@ -109,7 +108,18 @@ angular.module('starter', [
                     //    });
                 }
                 else {
-                    console.log( 'admob plugin not ready' );
+                    console.log('admob plugin not ready');
+                }
+            }
+        });
+
+        $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
+            if (fromState.name === '' && toState.name === 'tab.forecast') {
+                if(typeof(Storage) !== 'undefined') {
+                    var guideVersion = localStorage.getItem('guideVersion');
+                    if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
+                        $location.path('/guide');
+                    }
                 }
             }
         });
@@ -118,8 +128,10 @@ angular.module('starter', [
     .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider) {
 
         //for chrome extension
-        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
-        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+        if (window.chrome && chrome.extension) {
+            $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+            $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+        }
 
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
@@ -130,14 +142,14 @@ angular.module('starter', [
             .state('guide', {
                 url: '/guide',
                 templateUrl: 'templates/guide.html',
-                controller: "GuideCtrl"
+                controller: 'GuideCtrl'
             })
             // setup an abstract state for the tabs directive
             .state('tab', {
                 url: '/tab',
                 abstract: true,
                 templateUrl: 'templates/tabs.html',
-                controller: "TabCtrl"
+                controller: 'TabCtrl'
             })
 
             // Each tab has its own nav history stack:
@@ -160,9 +172,6 @@ angular.module('starter', [
                         controller: 'ForecastCtrl'
                     }
                 }
-            })
-            .state('tab.update', {
-
             })
             .state('tab.setting', {
                 url: '/setting',
@@ -324,7 +333,7 @@ angular.module('starter', [
                         .attr('cx', function (d) {
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === "오늘") {
+                                if (d.values[i].value.day === '오늘') {
                                     cx1 = i + Math.floor(currentTime / 3) - 1;
                                     cx2 = currentTime % 3;
                                     break;
@@ -343,7 +352,7 @@ angular.module('starter', [
                         .attr('cx', function (d) {
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === "오늘") {
+                                if (d.values[i].value.day === '오늘') {
                                     cx1 = i + Math.floor(currentTime / 3) - 1;
                                     cx2 = currentTime % 3;
                                     break;
@@ -358,7 +367,7 @@ angular.module('starter', [
                         .attr('cx', function (d) {
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === "오늘") {
+                                if (d.values[i].value.day === '오늘') {
                                     cx1 = i + Math.floor(currentTime / 3) - 1;
                                     cx2 = currentTime % 3;
                                     break;
@@ -369,7 +378,7 @@ angular.module('starter', [
                         .attr('cy', function (d) {
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === "오늘") {
+                                if (d.values[i].value.day === '오늘') {
                                     cx1 = i + Math.floor(currentTime / 3) - 1;
                                     cx2 = currentTime % 3;
                                     break;
@@ -536,10 +545,10 @@ angular.module('starter', [
                             return x.rangeBand() * i + x.rangeBand() / 2 - 1;
                         })
                         .attr('width', 2)
-                        .attr("y", function (d) {
+                        .attr('y', function (d) {
                             return y(d.tmn);
                         })
-                        .attr("height", 0)
+                        .attr('height', 0)
                         .transition()
                         .duration(duration)
                         .attr('y', function (d) {
