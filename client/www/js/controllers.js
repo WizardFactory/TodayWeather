@@ -23,6 +23,8 @@ angular.module('starter.controllers', [])
         $scope.timeWidth; //total width of timeChart and timeTable
         $scope.dayWidth; //total width of dayChart and dayTable
 
+        $scope.imgPath = 'img/weatherIcon';
+
         var padding = 1;
         console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
         console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
