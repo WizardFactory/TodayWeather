@@ -2,7 +2,10 @@
 angular.module('starter.controllers', [])
 
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, $stateParams) {
+                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util, $stateParams, $location) {
+
+        var guideVersion;
+
         $scope.forecastType = "short"; //mid, detail
         $scope.address = "";
 
@@ -506,6 +509,23 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
+            //if new page load before ready, plugins will be reset
+            if(typeof(Storage) !== "undefined" && guideVersion == undefined) {
+                if (localStorage.getItem("guideVersion") == null) {
+                    guideVersion = Util.guideVersion;
+                    console.log('go guide by local');
+                    $location.url('/guide');
+                    return;
+                }
+
+                guideVersion = Number(localStorage.getItem("guideVersion"));
+                if (Util.guideVersion > guideVersion) {
+                    console.log('go guide by version');
+                    $location.url('/guide');
+                    return;
+                }
+            }
+
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
 
@@ -945,8 +965,7 @@ angular.module('starter.controllers', [])
         };
     })
 
-    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location) {
-        var version = 1.0;
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location, $ionicHistory, Util) {
 
         $scope.onSlideChanged = function() {
             update();
@@ -968,35 +987,54 @@ angular.module('starter.controllers', [])
             }
         };
 
-        var close = function() {
-            if(typeof(Storage) !== "undefined") {
-                localStorage.setItem("guideVersion", version.toString());
+        $scope.$on('$ionicView.enter', function() {
+            $ionicSlideBoxDelegate.slide(0);
+
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#0288D1');
             }
 
-            $location.url('/tab/forecast');
+            console.log('show ad false');
+            Util.showAd = false;
+            if ( window.plugins && window.plugins.AdMob ) {
+                window.plugins.AdMob.showAd(false,
+                    function () {
+                    },
+                    function (e) {
+                        console.log(JSON.stringify(e));
+                    });
+            }
+        });
+
+        var close = function() {
+            if(typeof(Storage) !== "undefined") {
+                localStorage.setItem("guideVersion", Util.guideVersion.toString());
+            }
+
+            Util.showAd = true;
+            if ( window.plugins && window.plugins.AdMob ) {
+                window.plugins.AdMob.showAd(true,
+                    function () {
+                    },
+                    function (e) {
+                        console.log(JSON.stringify(e));
+                    });
+            }
+
+            $ionicHistory.goBack();
         };
 
         var update = function() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
-                $scope.leftText = "<"
+                $scope.leftText = "<";
                 $scope.rightText = "CLOSE";
             } else {
-                $scope.leftText = "SKIP"
+                $scope.leftText = "SKIP";
                 $scope.rightText = ">";
             }
         };
 
         var init = function() {
-            if(typeof(Storage) !== "undefined") {
-                if (localStorage.getItem("guideVersion") !== null) {
-                    var guideVersion = Number(localStorage.getItem("guideVersion"));
-                    if (version <= guideVersion) {
-                        $location.url('/tab/forecast');
-                        return;
-                    }
-                }
-            }
-
             $scope.bigFont = (window.innerHeight - 56) * 0.0512;
             $scope.smallFont = (window.innerHeight - 56) * 0.0299;
             update();

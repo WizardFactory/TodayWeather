@@ -68,8 +68,8 @@ angular.module('starter', [
                         offsetTopBar: false, // set to true to avoid ios7 status bar overlap
                         isTesting: Util.isDebug(), // receiving test ad
                         autoShow: false // auto show interstitial ad when loaded
-                    }, function(e) {
-                        console.log('setOptions is '+JSON.stringify(e));
+                    }, function() {
+                        console.log('admob set options');
                     }, function(e) {
                         console.log(JSON.stringify(e));
                     });
@@ -79,11 +79,13 @@ angular.module('starter', [
                     document.addEventListener('onReceiveAd', function(){
                         if (isFirstReceiveAd) {
                             isFirstReceiveAd = false;
-                            window.plugins.AdMob.showAd(true,
-                                function(){},
-                                function(e){
-                                    console.log(JSON.stringify(e));
-                                });
+                            if (Util.showAd === true) {
+                                window.plugins.AdMob.showAd(true,
+                                    function(){},
+                                    function(e){
+                                        console.log(JSON.stringify(e));
+                                    });
+                            }
                         }
                     });
 
@@ -91,19 +93,20 @@ angular.module('starter', [
                         console.log(JSON.stringify(data));
                     });
 
-                    window.plugins.AdMob.createBannerView({adSize:'BANNER'}, function(e){
-                            console.log('createBannerView is '+JSON.stringify(e));
+                    window.plugins.AdMob.createBannerView({adSize:'BANNER'}, function(){
+                            console.log('create banner view');
                         },
                         function(e) {
                             console.log(JSON.stringify(e));
                         });
 
-                    window.plugins.AdMob.createInterstitialView({}, function(e){
-                            console.log('createInterstitialView is '+JSON.stringify(e));
-                        },
-                        function(e) {
-                            console.log(JSON.stringify(e));
-                        });
+                    // we don't use yet
+                    //window.plugins.AdMob.createInterstitialView({}, function(e){
+                    //        console.log('createInterstitialView is '+JSON.stringify(e));
+                    //    },
+                    //    function(e) {
+                    //        console.log(JSON.stringify(e));
+                    //    });
                 }
                 else {
                     console.log( 'admob plugin not ready' );
@@ -173,7 +176,7 @@ angular.module('starter', [
             });
 
         // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('/guide');
+        $urlRouterProvider.otherwise('tab/forecast');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
