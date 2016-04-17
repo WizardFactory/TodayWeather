@@ -28,7 +28,7 @@
                                             </div>
                                             <div class="row-no-padding big-temp-sky-state" ng-style="::{'height': bigSkyStateSize+'px'}"
                                                  ng-if="currentWeather.skyIcon">
-                                                <img ng-style="::{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="img/{{currentWeather.skyIcon}}-Big.png">
+                                                <img ng-style="::{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
                                             </div>
                                         </div>
                                         <div style="width: 10%; height: 100%; display: table; text-align: center;" ng-click="onSwipeRight()">
@@ -74,7 +74,7 @@
                                     <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
@@ -109,7 +109,7 @@
                                     </div>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.skyIcon}}.png"></div>
+                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
                                 </div>
                                 <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
