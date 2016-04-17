@@ -27,6 +27,8 @@ angular.module('starter.controllers', [])
         $scope.timeWidth; //total width of timeChart and timeTable
         $scope.dayWidth; //total width of dayChart and dayTable
 
+        $scope.imgPath = 'img/weatherIcon';
+
         function init() {
             ga_storage._trackEvent('page', 'tab', 'forecast');
 
@@ -923,6 +925,13 @@ angular.module('starter.controllers', [])
 
             ga_storage._trackEvent('page', 'tab', 'share');
         };
+
+        //$ionicPlatform.ready(function() {
+        //    WeatherInfo.loadCities();
+        //    WeatherInfo.loadTowns().then(function () {
+        //        WeatherInfo.updateCities();
+        //    });
+        //});
 
         $scope.showAlert = function(title, msg) {
             var alertPopup = $ionicPopup.alert({
