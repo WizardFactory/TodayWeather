@@ -926,13 +926,6 @@ angular.module('starter.controllers', [])
             ga_storage._trackEvent('page', 'tab', 'share');
         };
 
-        //$ionicPlatform.ready(function() {
-        //    WeatherInfo.loadCities();
-        //    WeatherInfo.loadTowns().then(function () {
-        //        WeatherInfo.updateCities();
-        //    });
-        //});
-
         $scope.showAlert = function(title, msg) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
