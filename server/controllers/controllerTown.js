@@ -21,7 +21,6 @@ var convertGeocode = require('../utils/convertGeocode');
 var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
 var KecoController = require('../controllers/kecoController');
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
-
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
 /**
@@ -101,9 +100,15 @@ function ControllerTown() {
 
                             self._dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
+                            var tempDate = '';
+                            var yesterdayMinTemperature = -50;
                             var i;
 
                             for(i=0 ; i < resultShortList.length ; i++){
+                                if(resultShortList[i].reh === -1) {
+                                    continue;
+                                }
+                                
                                 // discomfort index(불쾌지수)
                                 resultShortList[i].dspls = LifeIndexKmaController.getDiscomfortIndex(resultShortList[i].t3h, resultShortList[i].reh);
                                 resultShortList[i].dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultShortList[i].dspls);
@@ -115,6 +120,32 @@ function ControllerTown() {
                                 // heat Index(열지수)
                                 resultShortList[i].heatIndex = LifeIndexKmaController.getHeatIndex(resultShortList[i].t3h, resultShortList[i].reh);
                                 resultShortList[i].heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultShortList[i].heatIndex);
+                                
+                                // frost String(동상가능지수)
+                                if(tempDate !== resultShortList[i].date) {
+                                    var yesterday = kmaTimeLib.convertStringToDate(resultShortList[i].date);
+
+                                    tempDate = resultShortList[i].date;
+
+                                    yesterday.setDate(yesterday.getDate() - 1);
+
+                                    // convert yesterday string from Date object
+                                    var yesterdayString = kmaTimeLib.convertDateToYYYYMMDD(yesterday);
+
+                                    for (var j = i; j >= 0; j--) {
+                                        if ((resultShortList[j].date === yesterdayString)
+                                            && (resultShortList[j].reh !== -1)) {
+                                            yesterdayMinTemperature = resultShortList[j].tmn;
+                                            break;
+                                        }
+                                    }
+                                    // 값이 없을 경우 0
+                                    if(yesterdayMinTemperature === -50) {
+                                        yesterdayMinTemperature = 0;
+                                    }
+                                }
+
+                                resultShortList[i].freezeStr = LifeIndexKmaController.getFreezeString(resultShortList[i].t3h,yesterdayMinTemperature);
                             }
 
                             req.short = resultShortList;
@@ -435,7 +466,7 @@ function ControllerTown() {
                         resultItem = currentItem;
                     }
                     else {
-                        var kmaTimeLib = require('../lib/kmaTimeLib');
+                     //   var kmaTimeLib = require('../lib/kmaTimeLib');
                         var currentTimeObj = kmaTimeLib.convertStringToDate(currentItem.date+currentItem.time);
                         var acceptedTimeObj = kmaTimeLib.convertStringToDate(acceptedDate.date+acceptedDate.time);
                         if (acceptedTimeObj.getTime() < currentTimeObj.getTime()) {
@@ -456,7 +487,7 @@ function ControllerTown() {
                     // get discomfort index(불괘지수)
                     resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
                     resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
-
+                    
                     // get decomposition index(부패지수)
                     resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
                     resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
@@ -464,6 +495,35 @@ function ControllerTown() {
                     // get heat index(열지수)
                     resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
                     resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
+
+                    // get frost string(동상가능지수)
+                    resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
+
+                    // get freeze string(동파가능지수)
+                    if(req.short !== undefined) {
+                        var yesterday = kmaTimeLib.convertStringToDate(resultItem.date);
+                        var yesterdayMinTemperature = -50;
+
+                        yesterday.setDate(yesterday.getDate()-1);
+
+                        // convert yesterday string from Date object
+                        var yesterdayString = kmaTimeLib.convertDateToYYYYMMDD(yesterday);
+
+                        for(var i=0;i<req.short.length;i++) {
+                            if((req.short[i].date ===  yesterdayString)
+                                && (req.short[i].reh !== -1))
+                            {
+                                yesterdayMinTemperature = req.short[i].tmn;
+                                break;
+                            }
+                        }
+                        // 값이 없을 경우 0
+                        if(yesterdayMinTemperature === -50) {
+                            yesterdayMinTemperature = 0;
+                        }
+                        
+                        resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
+                    }
 
                     req.current = resultItem;
                     req.currentPubDate = currentInfo.pubDate;

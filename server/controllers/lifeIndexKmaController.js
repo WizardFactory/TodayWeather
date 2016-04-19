@@ -281,13 +281,13 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     var discomfortString;
 
     if(discomfortIndex < 68) {
-        discomfortString = "낮음";
+        discomfortString = '낮음';
     } else if(discomfortIndex < 75) {
-        discomfortString = "보통";
+        discomfortString = '보통';
     } else if(discomfortIndex < 80) {
-        discomfortString = "높음";
+        discomfortString = '높음';
     } else {
-        discomfortString = "매우높음";
+        discomfortString = '매우높음';
     }
 
     return discomfortString;
@@ -323,11 +323,11 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     var decompositionString;
 
     if(DecompositionIndex > 7) {
-        decompositionString = "높음";
+        decompositionString = '높음';
     } else if(DecompositionIndex > 3) {
-        decompositionString = "보통";
+        decompositionString = '보통';
     } else {
-        decompositionString = "낮음";
+        decompositionString = '낮음';
     }
 
     return decompositionString;
@@ -380,16 +380,64 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     var heatIndexString;
     
     if(heatIndex >= 54) {
-        heatIndexString = "매우높음";
+        heatIndexString = '매우높음';
     } else if(heatIndex >= 41 && heatIndex < 54) {
-        heatIndexString = "높음";
+        heatIndexString = '높음';
     } else if(heatIndex >= 32 && heatIndex < 41) {
-        heatIndexString = "보통";
+        heatIndexString = '보통';
     } else {
-        heatIndexString = "낮음";
+        heatIndexString = '낮음';
     }
     
     return heatIndexString;
+}
+
+LifeIndexKmaController.getFrostString = function(temperature) {
+    if(temperature === undefined
+        || temperature < -50)
+    {
+        log.warn('FrostString > invalid parameter.');
+        return -1;
+    }
+
+    var frostString;
+
+    if(temperature < -5) {
+        frostString = '높음';
+    } else if(temperature < -1.5) {
+        frostString = '보통';
+    } else {
+        frostString = '낮음';
+    }
+
+    return frostString;
+}
+
+LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperature) {
+    if(temperature === undefined
+        || temperature < -50)
+    {
+        log.warn('FrostString > invalid parameter.');
+        return -1;
+    }
+
+    var freezeString;
+
+    if(temperature <= -10) {
+        freezeString = '매우높음';
+    } else if((temperature <= -5)
+                && (yesterMinTemperature < -5))
+    {
+        freezeString = '높음';
+    } else if((temperature <= -5)
+                && (yesterMinTemperature >= -5))
+    {
+        freezeString = '보통';
+    } else {
+        freezeString = '낮음';
+    }
+
+    return freezeString;
 }
 
 module.exports = LifeIndexKmaController;
