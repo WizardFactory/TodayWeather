@@ -32,6 +32,6 @@ var kshwSchema = new mongoose.Schema({
     }]
 });
 
-kshwSchema.index({stnId:1});
+kshwSchema.index({stnId: 'text'});
 
 module.exports = mongoose.model('KmaStnHourly', kshwSchema);

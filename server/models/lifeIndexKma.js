@@ -61,7 +61,7 @@ var lSchema = new mongoose.Schema({
     activated: {type : Boolean, default : true} //provider가 데이터를 제공하지 않으면 false처리 할 예정.
 });
 
-lSchema.index({areaNo:1});
+lSchema.index({areaNo: 'text'});
 
 module.exports = mongoose.model('LifeIndexKma', lSchema);
 
