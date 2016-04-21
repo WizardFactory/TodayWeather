@@ -295,6 +295,9 @@ angular.module('starter.services', [])
             }
 
             switch (pty) {
+                case 0:
+                    //nothing
+                    break;
                 case 1:
                     skyIconName += "Rain";
                     break;
