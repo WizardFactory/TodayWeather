@@ -52,6 +52,6 @@ var midSeaSchema = mongoose.Schema({
     }]
 });
 
-midSeaSchema.index({regId:1});
+midSeaSchema.index({regId: 'text'});
 
 module.exports = mongoose.model('midSea', midSeaSchema);

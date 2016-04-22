@@ -52,6 +52,6 @@ var msSchema = new mongoose.Schema({
     year: String
 });
 
-msSchema.index({stationName:1});
+msSchema.index({stationName: 'text'}, {default_language: 'none'});
 
 module.exports = mongoose.model('MsrStnInfo', msSchema);

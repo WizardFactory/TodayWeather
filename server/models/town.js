@@ -26,6 +26,11 @@ var tSchema = new mongoose.Schema({
     kecoStationName: String //unused it;
 });
 
+tSchema.index({mCoord:1});
+tSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
+tSchema.index({town:1});
+tSchema.index({"town.first": 'text', "town.second": 'text', "town.third": 'text'}, {default_language: 'none'});
+
 var mCoord = [];
 var areaCode = [];
 
