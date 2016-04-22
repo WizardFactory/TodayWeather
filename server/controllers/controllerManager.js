@@ -1883,14 +1883,10 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortrss", callback);
         });
-
-        log.info('push kma stn hourly');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi('kmaStnHourly', callback);
-        });
     }
 
     if (time === 5) {
+        //related issue #754 aws is not updated at correct time
         log.info('push kma stn hourly');
         self.asyncTasks.push(function (callback) {
             self._requestApi('kmaStnHourly', callback);
