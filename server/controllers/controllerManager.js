@@ -1885,8 +1885,9 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 5 || putAll) {
+    if (time === 6 || time === 10 || putAll) {
         //related issue #754 aws is not updated at correct time
+        //overwrite
         log.info('push kma stn hourly');
         self.asyncTasks.push(function (callback) {
             self._requestApi('kmaStnHourly', callback);
