@@ -533,16 +533,20 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
             log.error('stnHourlyInfo is duplicated stnId=', stnWeatherInfo.stnId);
         }
 
-        stnHourlyList[0].hourlyData.forEach(function (dbHourlyData) {
+        var dataLen = stnHourlyList[0].hourlyData.length;
+        for (var i=dataLen-1; i>=0; i--) {
+            var dbHourlyData = stnHourlyList[0].hourlyData[i];
             if (dbHourlyData.date === pubDate) {
                 log.warn('stn weather info is already saved stnId=', stnWeatherInfo.stnId,
                     ' pubDate=', pubDate);
 
                 return callback(err, {stnId:stnWeatherInfo.stnId, pubDate: pubDate});
             }
-        });
+        }
 
         stnHourlyList[0].pubDate = pubDate;
+        //reset array for memory
+        stnHourlyList[0].hourlyData = [];
         stnHourlyList[0].hourlyData.push(self._makeDailyData(pubDate, stnWeatherInfo));
         stnHourlyList[0].save(function (err) {
             if (err) {
