@@ -23,6 +23,6 @@ var aSchema = new mongoose.Schema({
     pm25Grade: Number
 });
 
-aSchema.index({stationName:1});
+aSchema.index({stationName: 'text'}, { default_language: 'none' });
 
 module.exports = mongoose.model('ArpltnKeco', aSchema);
