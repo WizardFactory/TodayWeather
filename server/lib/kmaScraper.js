@@ -533,16 +533,21 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
             log.error('stnHourlyInfo is duplicated stnId=', stnWeatherInfo.stnId);
         }
 
-        stnHourlyList[0].hourlyData.forEach(function (dbHourlyData) {
-            if (dbHourlyData.date === pubDate) {
-                log.warn('stn weather info is already saved stnId=', stnWeatherInfo.stnId,
-                    ' pubDate=', pubDate);
-
-                return callback(err, {stnId:stnWeatherInfo.stnId, pubDate: pubDate});
-            }
-        });
+        //skip check date to overwrite new data
+        //var dataLen = stnHourlyList[0].hourlyData.length;
+        //for (var i=dataLen-1; i>=0; i--) {
+        //    var dbHourlyData = stnHourlyList[0].hourlyData[i];
+        //    if (dbHourlyData.date === pubDate) {
+        //        log.warn('stn weather info is already saved stnId=', stnWeatherInfo.stnId,
+        //            ' pubDate=', pubDate);
+        //
+        //        return callback(err, {stnId:stnWeatherInfo.stnId, pubDate: pubDate});
+        //    }
+        //}
 
         stnHourlyList[0].pubDate = pubDate;
+        //reset array for memory
+        stnHourlyList[0].hourlyData = [];
         stnHourlyList[0].hourlyData.push(self._makeDailyData(pubDate, stnWeatherInfo));
         stnHourlyList[0].save(function (err) {
             if (err) {
@@ -632,50 +637,52 @@ KmaScraper.prototype.getStnHourlyWeather = function (callback) {
 
     log.info('get stn hourly weather');
 
-    async.waterfall([function (cb) {
-        //check update time
-        self._checkPubdate(pubDate, function (err, isLatest) {
-            if (err) {
-                return cb(err);
-            }
-            if (isLatest) {
-                return cb('skip');
-            }
-            cb();
-        });
-    }, function (cb) {
-        log.info('get aws weather');
-        self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
-           if (err)  {
-               return cb(err);
-           }
-            return cb(err, weatherList);
-        });
-    }, function (awsWeatherList, cb) {
-        self.getCityWeather(pubDate, function (err, cityWeatherList) {
-            if (err) {
-                return cb(err);
-            }
-            if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
-                log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
-                    " city.pubDate=", cityWeatherList.pubDate);
-            }
+    async.waterfall([
+        //skip check pubdate to overwrite new data
+        //function (cb) {
+        //    //check update time
+        //    self._checkPubdate(pubDate, function (err, isLatest) {
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        if (isLatest) {
+        //            return cb('skip');
+        //        }
+        //        cb();
+        //    });},
+        function (cb) {
+            log.info('get aws weather');
+            self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
+                if (err)  {
+                    return cb(err);
+                }
+                return cb(err, weatherList);
+            });},
+        function (awsWeatherList, cb) {
+            self.getCityWeather(pubDate, function (err, cityWeatherList) {
+                if (err) {
+                    return cb(err);
+                }
+                if (awsWeatherList.pubDate != cityWeatherList.pubDate) {
+                    log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
+                        " city.pubDate=", cityWeatherList.pubDate);
+                }
 
-            var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
-            //weatherList.forEach(function (awsInfo) {
-            //   log.info(JSON.stringify(awsInfo)) ;
-            //});
-            cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
-        })
-    }, function (weatherList, cb) {
-        log.info('wl stnlist='+weatherList.stnList.length);
-        self._saveKmaStnHourlyList(weatherList, function (err, results) {
-            if (err) {
-                return cb(err);
-            }
-            return cb(err, results);
-        });
-    }], function (err, results) {
+                var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
+                //weatherList.forEach(function (awsInfo) {
+                //   log.info(JSON.stringify(awsInfo)) ;
+                //});
+                cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
+            })},
+        function (weatherList, cb) {
+            log.info('wl stnlist='+weatherList.stnList.length);
+            self._saveKmaStnHourlyList(weatherList, function (err, results) {
+                if (err) {
+                    return cb(err);
+                }
+                return cb(err, results);
+            });}
+    ], function (err, results) {
         if (err) {
             return callback(err);
         }
