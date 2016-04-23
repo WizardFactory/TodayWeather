@@ -355,7 +355,17 @@ arpltnController._checkArpltnDataValid = function (arpltn) {
  * @private
  */
 arpltnController._checkDateTime = function(arpltn, dateTime) {
-    var arpltnTime = new Date(arpltn.dataTime);
+    var arpltnTime;
+    if (arpltn.dataTime.indexOf('24:00') >= 0) {
+        //set 00:00 of next date
+        arpltnTime = new Date(arpltn.dataTime.substr(0,10));
+        arpltnTime.setDate(arpltnTime.getDate()+1);
+        arpltnTime.setHours(0);
+    }
+    else {
+        arpltnTime = new Date(arpltn.dataTime);
+    }
+
     dateTime.setHours(dateTime.getHours()-8);
     if (dateTime.getTime() < arpltnTime.getTime()) {
         return true;
