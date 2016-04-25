@@ -10,7 +10,7 @@ var config = require('../config/config');
 var controllerManager = require('../controllers/controllerManager');
 var PastConditionGather = require('../lib/PastConditionGather');
 
-global.manager = new controllerManager();
+//global.manager = new controllerManager();
 
 describe('unit test - past condition gather', function() {
     //var mongoose = require('mongoose');

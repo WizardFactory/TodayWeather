@@ -12,7 +12,7 @@ var MidRssKmaRequester  = require('../lib/midRssKmaRequester');
 
 describe('unit test - requester of MID RSS KMA service class', function() {
 
-    var midRssKma = new MidRssKmaRequester();
+    //var midRssKma = new MidRssKmaRequester();
 
     //var mongoose = require('mongoose');
     //mongoose.connect('localhost/todayweather', function(err) {

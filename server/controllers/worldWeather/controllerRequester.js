@@ -7,7 +7,7 @@ var events = require('events');
 var req = require('request');
 var async = require('async');
 
-var commandCategory = ['MET','OWM'];
+var commandCategory = ['ALL','MET','OWM','WU'];
 var command = ['get_all','get', 'req_code'];
 
 function ControllerRequester(){
@@ -30,7 +30,7 @@ function ControllerRequester(){
                 break;
             case 'req_code':
                 if(!self.getCode(req)){
-                    log.error('There are no code');
+                    log.error('RQ> There are no code');
                     next();
                 }
                 break;
@@ -43,11 +43,11 @@ function ControllerRequester(){
 
         if(req.query.key === undefined){
             req.validReq = false;
-            log.error('Unknown user connect to the server');
+            log.error('RQ> Unknown user connect to the server');
             return next();
         }
 
-        log.info('key : ', req.query.key);
+        log.info('RQ> key : ', req.query.key);
 
         //todo: Check user key.
         // !!! CAUTION !!! This is Administrator's KEY.
@@ -62,7 +62,7 @@ function ControllerRequester(){
             res.json(req.result);
         }
 
-        res.json({error:'fail to request'});
+        res.json({error:'RQ> fail to request'});
         return this;
     };
 
@@ -95,7 +95,7 @@ ControllerRequester.prototype.isValidCommand = function(req){
 
 ControllerRequester.prototype.getCode = function(req){
     if(req.query.gcode === undefined){
-        log.error('There are no geocode');
+        log.error('RQ> There are no geocode');
         return false;
     }
     var geocodeString = req.query.gcode;
@@ -103,7 +103,7 @@ ControllerRequester.prototype.getCode = function(req){
     log.info('code:', geocodeString);
     var codelist = geocodeString.split(',');
     if(codelist.length !== 2){
-        log.error('geocode has somthing wrong : ', codelist);
+        log.error('RQ> geocode has somthing wrong : ', codelist);
         return false;
     }
 

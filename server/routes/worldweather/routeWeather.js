@@ -17,7 +17,8 @@ router.get('/', function(req, res) {
     res.render('index', { title: 'TodayWeather' });
 });
 
-router.get('/:version', [worldWeather.checkApiVersion, worldWeather.showUsage, worldWeather.sendResult]);
+router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand, worldWeather.showUsage, worldWeather.sendResult]);
 router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather, worldWeather.sendResult]);
+
 
 module.exports = router;
