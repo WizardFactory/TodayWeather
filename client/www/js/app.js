@@ -188,6 +188,8 @@ angular.module('starter', [
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
 
+        $ionicConfigProvider.views.transition("android");
+
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
     })
