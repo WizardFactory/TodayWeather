@@ -228,6 +228,54 @@ function ControllerTown24h() {
         return this;
     };
 
+    this.sendDailySummaryResult = function (req, res) {
+        var meta = {};
+
+        var result = {};
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = '/:region/:city/:town';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        log.info('##', decodeURI(req.originalUrl));
+
+        result.regionName = regionName;
+        result.cityName = cityName;
+        result.townName = townName;
+
+        var time = parseInt(req.current.time.substr(0, 2));
+        req.current.skyIcon = self._parseSkyState(req.current.sky, req.current.pty, req.current.lgt, time < 7 || time > 18);
+
+        var dustFcst;
+        for (var i=6; i<9; i++) {
+            dustFcst = req.midData.dailyData[i].dustForecast;
+            if (dustFcst) {
+                if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+                }
+                else if (dustFcst.PM10Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM10Str;
+                }
+                else if (dustFcst.PM25Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM25Str;
+                }
+            }
+        }
+
+        result.current = req.current;
+        result.yesterday = req.midData.dailyData[6];
+        result.today =  req.midData.dailyData[7];
+        result.tomorrow =  req.midData.dailyData[8];
+
+        res.json(result);
+
+        return this;
+    };
+
     this.sendResult = function (req, res) {
         var meta = {};
 
@@ -281,5 +329,58 @@ function ControllerTown24h() {
 // subclass extends superclass
 ControllerTown24h.prototype = Object.create(ControllerTown.prototype);
 ControllerTown24h.prototype.constructor = ControllerTown24h;
+
+ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
+    var skyIconName = "";
+
+    if (isNight) {
+        skyIconName = "Moon";
+    }
+    else {
+        skyIconName = "Sun";
+    }
+
+    switch (sky) {
+        case 1:
+            skyIconName;
+            break;
+        case 2:
+            skyIconName += "SmallCloud";
+            break;
+        case 3:
+            skyIconName += "BigCloud"; //Todo need new icon
+            break;
+        case 4:
+            skyIconName = "Cloud";
+            break;
+        default:
+            console.log('Fail to parse sky='+sky);
+            break;
+    }
+
+    switch (pty) {
+        case 0:
+            //nothing
+            break;
+        case 1:
+            skyIconName += "Rain";
+            break;
+        case 2:
+            skyIconName += "RainSnow"; //Todo need RainWithSnow icon";
+            break;
+        case 3:
+            skyIconName += "Snow";
+            break;
+        default:
+            console.log('Fail to parse pty='+pty);
+            break;
+    }
+
+    if (lgt === 1) {
+        skyIconName += "Lightning";
+    }
+
+    return skyIconName;
+};
 
 module.exports = ControllerTown24h;
