@@ -833,7 +833,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, $cordovaSocialSharing) {
+                                     $location, $cordovaSocialSharing, TwAds, $rootScope) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -951,19 +951,27 @@ angular.module('starter.controllers', [])
             });
         };
 
-        //$ionicPlatform.ready(function() {
-        //    WeatherInfo.loadCities();
-        //    WeatherInfo.loadTowns().then(function () {
-        //        WeatherInfo.updateCities();
-        //    });
-        //});
+        $ionicPlatform.ready(function() {
+
+            $rootScope.viewAdsBanner = TwAds.enableAds;
+            $rootScope.contentBottom = TwAds.enableAds?100:50;
+            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.showAds?'50px':'0px');
+
+            //WeatherInfo.loadCities();
+            //WeatherInfo.loadTowns().then(function () {
+            //    WeatherInfo.updateCities();
+            //});
+        });
 
         init();
     })
 
-    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $location, $ionicHistory, Util) {
-
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
+                                      $location, $ionicHistory, Util, TwAds)
+    {
         function init() {
+            //for fast close ads when first loading
+            TwAds.setShowAds(false);
             ga_storage._trackEvent('page', 'tab', 'guide');
 
             $scope.bigFont = (window.innerHeight - 56) * 0.0512;
@@ -972,15 +980,7 @@ angular.module('starter.controllers', [])
         }
 
         function close() {
-            Util.showAd = true;
-            if (window.plugins && window.plugins.AdMob) {
-                window.plugins.AdMob.showAd(true,
-                    function () {
-                    },
-                    function (e) {
-                        console.log(JSON.stringify(e));
-                    });
-            }
+            TwAds.setShowAds(true);
 
             if(typeof(Storage) !== "undefined") {
                 var guideVersion = localStorage.getItem("guideVersion");
@@ -1025,22 +1025,11 @@ angular.module('starter.controllers', [])
         };
 
         $scope.$on('$ionicView.enter', function() {
-            $ionicSlideBoxDelegate.slide(0);
-
+            TwAds.setShowAds(false);
             if (window.StatusBar) {
                 StatusBar.backgroundColorByHexString('#0288D1');
             }
-
-            console.log('show ad false');
-            Util.showAd = false;
-            if (window.plugins && window.plugins.AdMob) {
-                window.plugins.AdMob.showAd(false,
-                    function () {
-                    },
-                    function (e) {
-                        console.log(JSON.stringify(e));
-                    });
-            }
+            $ionicSlideBoxDelegate.slide(0);
         });
 
         init();
