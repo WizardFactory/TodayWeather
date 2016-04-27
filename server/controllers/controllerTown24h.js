@@ -247,31 +247,29 @@ function ControllerTown24h() {
         result.cityName = cityName;
         result.townName = townName;
 
-        var date = req.current.stnDateTime?req.current.stnDateTime:req.currentPubDate;
-        var todayInfo = req.midData.dailyData[7];
-        var dustFcst = todayInfo.dustForecast;
-        var pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
-        var time;
-        if (req.current.stnDateTime) {
-            time = (new Date(req.current.stnDateTime)).getHours();
-        }
-        else {
-            time = parseInt(req.currentPubDate.substr(8, 2));
+        var time = parseInt(req.current.time.substr(0, 2));
+        req.current.skyIcon = self._parseSkyState(req.current.sky, req.current.pty, req.current.lgt, time < 7 || time > 18);
+
+        var dustFcst;
+        for (var i=6; i<9; i++) {
+            dustFcst = req.midData.dailyData[i].dustForecast;
+            if (dustFcst) {
+                if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+                }
+                else if (dustFcst.PM10Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM10Str;
+                }
+                else if (dustFcst.PM25Grade) {
+                    req.midData.dailyData[i].pmStr = dustFcst.PM25Str;
+                }
+            }
         }
 
-        var skyIcon = self._parseSkyState(req.current.sky, req.current.pty, req.current.lgt, time < 7 || time > 18);
-        var dailySummary = {
-            date: date,
-            skyIcon: skyIcon,
-            summary: req.current.summary,
-            t1h: req.current.t1h,
-            tmn: todayInfo.taMin,
-            tmx: todayInfo.taMax,
-            pop: todayInfo.pop,
-            pmForecast: pmStr,
-        };
-
-        result.dailySummary = dailySummary;
+        result.current = req.current;
+        result.yesterday = req.midData.dailyData[6];
+        result.today =  req.midData.dailyData[7];
+        result.tomorrow =  req.midData.dailyData[8];
 
         res.json(result);
 
