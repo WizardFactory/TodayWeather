@@ -28,7 +28,7 @@ router.get('/town/*', [divideParams, cTown.getShort, cTown.getShortRss, cTown.ge
                                     cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
                                     cTown.getKmaStnHourlyWeather, cTown.insertStrForData, cTown.getSummary,
-                                    cTown.sendDailySummaryResult]);
+                                    cTown.makeDailySummary, cTown.sendDailySummaryResult]);
 
 router.get('/geo/:lat/:lon', [], function(req, res) {
 
