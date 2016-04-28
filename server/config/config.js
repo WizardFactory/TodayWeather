@@ -28,5 +28,9 @@ module.exports = {
         distribution_id:(process.env.AWS_DISTRIBUTION_ID || 'You need to set the distributionid of CloudFront'),
         region: (process.env.AWS_REGION || 'us-east-1'),
         cloudfront_api_version:(process.env.AWS_CLOUDFRONT_API_VERSION || 'latest')
+    },
+    platforms: {
+        applePassword: (process.env.APPLE_PASSWORD || 'Your apple password'),
+        googlePublicKey: (process.env.APPLE_PASSWORD || 'Your google public key')
     }
 };
