@@ -838,7 +838,6 @@ function ControllerTown() {
                 }
 
                 var now = new Date();
-                now.setMinutes(now.getMinutes()-5);
                 now = kmaTimeLib.toTimeZone(9, now);
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);

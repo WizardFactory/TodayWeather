@@ -95,18 +95,21 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
                log.warn('It does not have any data stnName=', stnInfo.stnName);
                return mCallback();
            }
-           if ((new Date(stnWeatherList[0].pubDate)).getTime() < (new Date(dateTime)).getTime()) {
-               log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
-               return mCallback();
-           }
 
-           var hourlyData;
-           for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
-               if (stnWeatherList[0].hourlyData[i].date === dateTime) {
-                   hourlyData = stnWeatherList[0].hourlyData[i];
-                   break;
-               }
-           }
+           //if ((new Date(stnWeatherList[0].pubDate)).getTime() < (new Date(dateTime)).getTime()) {
+           //    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
+           //    return mCallback();
+           //}
+
+           var hourlyData = stnWeatherList[0].hourlyData[0];
+
+           //for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
+           //    if (stnWeatherList[0].hourlyData[i].date === dateTime) {
+           //        hourlyData = stnWeatherList[0].hourlyData[i];
+           //        break;
+           //    }
+           //}
+
            if (hourlyData == undefined) {
                log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
                return mCallback();
