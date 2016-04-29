@@ -1885,7 +1885,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 6 || time === 10 || putAll) {
+    if (time === 3 || time === 6 || time === 9 || putAll) {
         //related issue #754 aws is not updated at correct time
         //overwrite
         log.info('push kma stn hourly');
