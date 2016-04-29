@@ -36,36 +36,19 @@
     "cordova-plugin-geolocation",
     "cordova-plugin-apple-watch",
     "cordova-plugin-statusbar",
-    {
-      "locator": "https://github.com/apache/cordova-plugin-whitelist.git",
-      "id": "cordova-plugin-whitelist"
-    },
+    "cordova-plugin-whitelist",
     "ionic-plugin-deploy",
-    "cordova-plugin-inappbrowser",
-    "cordova-plugin-googleplayservices",
-    {
-	    "locator": "https://github.com/floatinghotpot/google-admob-sdk.git",
-	    "id": "com.google.admobsdk"
-    },
-    {
-      "locator": "https://github.com/WizardFactory/cordova-plugin-admob.git",
-      "id": "cordova-plugin-admob"
-    },
-    "de.appplant.cordova.plugin.local-notification",
-    "cordova-plugin-x-socialsharing"
+    "cordova-plugin-x-socialsharing",
+    "cordova-plugin-inappbrowser@1.4.0",
+    "de.appplant.cordova.plugin.local-notification"
   ],
   "cordovaPlatforms": [
     "android",
-    "ios",
     {
       "platform": "android",
       "version": "",
       "locator": "android"
     },
-    {
-      "platform": "ios",
-      "version": "",
-      "locator": "ios"
-    }
+    "ios"
   ]
 }

@@ -11,6 +11,8 @@ angular.module('starter', [
     'ionic.service.analytics',
     'starter.controllers',
     'starter.services',
+    'service.localnotification',
+    'ionic-timepicker',
     'ngCordova'
 ])
     .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
