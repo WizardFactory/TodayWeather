@@ -245,9 +245,13 @@ angular.module('starter.services', [])
 
             if (index >= 0 && index < that.cities.length) {
                 that.cityIndex = index;
+                console.log('set city index='+index+' cities='+ that.cities.length);
                 // save current cityIndex
                 localStorage.setItem("cityIndex", JSON.stringify(that.cityIndex));
+                return;
             }
+
+            console.log('Fail to find city index='+index+' cities='+ that.cities.length);
         };
 
         //endregion
@@ -563,15 +567,7 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url;
-            if (Util.isDebug()) {
-                //url = "town";
-                //url = "http://todayweather-wizardfactory.rhcloud.com/v000705/town";
-                url = "http://tw-wzdfac.rhcloud.com/v000705/town";
-            }
-            else {
-                url = "http://todayweather.wizardfactory.net/v000705/town";
-            }
+            var url = Util.url +'/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -1133,6 +1129,34 @@ angular.module('starter.services', [])
             return data;
         };
 
+        obj.getWeatherEmoji = function (skyIcon) {
+            if (skyIcon.indexOf('Lightning') != -1) {
+                return '\u26c8';
+            }
+            else if (skyIcon.indexOf('RainSnow') != -1) {
+                return '\u2614\u2603';
+            }
+            else if (skyIcon.indexOf('Rain') != -1) {
+                return '\u2614';
+            }
+            else if (skyIcon.indexOf('Snow') != -1) {
+                return '\u2603';
+            }
+            else if (skyIcon.indexOf('Cloud') != -1) {
+                if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+                    return '\u26c5';
+                }
+                else {
+                    return '\u2601';
+                }
+            }
+            else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+                return '\ud83c\udf1e';
+            }
+
+            console.log('Fail to find emoji skyIcon='+skyIcon);
+            return '';
+        };
         //endregion
 
         return obj;
@@ -1153,11 +1177,22 @@ angular.module('starter.services', [])
 
         //endregion
 
+        obj.imgPath = 'img/weatherIcon';
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
         obj.admobAndroidBannerAdUnit = '';
         obj.admobAndroidInterstitialAdUnit = '';
+
+        if (debug) {
+            //obj.url = "./";
+            //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
+            obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
+            //obj.url = "http://172.24.3.49:3000/v000705";
+        }
+        else {
+            obj.url = "http://todayweather.wizardfactory.net/v000705";
+        }
 
         return obj;
     });
