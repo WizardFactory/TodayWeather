@@ -94,7 +94,7 @@ angular.module('service.twads', [])
         obj._setAdMobShowAd = function(show) {
             console.log('set ad mob show ='+show);
 
-            if ( !(admob) ) {
+            if ( !(window.admob) ) {
                 console.log('admob plugin not ready : set Enable Ads');
                 return;
             }
@@ -136,7 +136,7 @@ angular.module('service.twads', [])
                 return;
             }
 
-            if ( !(admob) ) {
+            if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
                 return;
             }
