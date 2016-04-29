@@ -11,6 +11,8 @@ angular.module('starter', [
     'ionic.service.analytics',
     'starter.controllers',
     'starter.services',
+    'controller.purchase',
+    'service.twads',
     'ngCordova'
 ])
     .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
@@ -39,77 +41,6 @@ angular.module('starter', [
             if (window.StatusBar) {
                 StatusBar.overlaysWebView(false);
                 StatusBar.backgroundColorByHexString('#0288D1');
-            }
-
-            //#367
-            //todo: height 기준으로 layout 재계산
-            //todo: header hide상태를 해제하여 bannerAd가 overlap되도록 변경
-            var runAdmob = true;
-
-            if (runAdmob) {
-                if (window.plugins && window.plugins.AdMob) {
-                    var bannerAdUnit;
-                    var interstitialAdUnit;
-                    if (ionic.Platform.isIOS()) {
-                        bannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
-                        interstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
-                    }
-                    else if (ionic.Platform.isAndroid()) {
-                        bannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
-                        interstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
-                    }
-
-                    window.plugins.AdMob.setOptions({
-                        publisherId: bannerAdUnit,
-                        interstitialAdId: interstitialAdUnit,
-                        bannerAtTop: false, // set to true, to put banner at top
-                        overlap: true, // set to true, to allow banner overlap webview
-                        offsetTopBar: false, // set to true to avoid ios7 status bar overlap
-                        isTesting: Util.isDebug(), // receiving test ad
-                        autoShow: false // auto show interstitial ad when loaded
-                    }, function() {
-                        console.log('admob set options');
-                    }, function(e) {
-                        console.log(JSON.stringify(e));
-                    });
-
-                    //Android에서는 ReceivedAd에서 광고를 show하지 않으면, 한 텀(1min)동안 안나옴.
-                    var isFirstReceiveAd = true;
-                    document.addEventListener('onReceiveAd', function(){
-                        if (isFirstReceiveAd) {
-                            isFirstReceiveAd = false;
-                            if (Util.showAd === true) {
-                                window.plugins.AdMob.showAd(true,
-                                    function(){},
-                                    function(e){
-                                        console.log(JSON.stringify(e));
-                                    });
-                            }
-                        }
-                    });
-
-                    document.addEventListener('onFailedToReceiveAd', function(data){
-                        console.log(JSON.stringify(data));
-                    });
-
-                    window.plugins.AdMob.createBannerView({adSize:'BANNER'}, function(){
-                            console.log('create banner view');
-                        },
-                        function(e) {
-                            console.log(JSON.stringify(e));
-                        });
-
-                    // we don't use yet
-                    //window.plugins.AdMob.createInterstitialView({}, function(e){
-                    //        console.log('createInterstitialView is '+JSON.stringify(e));
-                    //    },
-                    //    function(e) {
-                    //        console.log(JSON.stringify(e));
-                    //    });
-                }
-                else {
-                    console.log('admob plugin not ready');
-                }
             }
         });
 
@@ -141,6 +72,11 @@ angular.module('starter', [
                 url: '/guide',
                 templateUrl: 'templates/guide.html',
                 controller: 'GuideCtrl'
+            })
+            .state('purchase', {
+                url: '/purchase',
+                templateUrl: 'templates/purchase.html',
+                controller: "PurchaseCtrl"
             })
             // setup an abstract state for the tabs directive
             .state('tab', {

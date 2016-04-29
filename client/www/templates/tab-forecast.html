@@ -1,5 +1,5 @@
 <ion-view hide-nav-bar="true">
-    <ion-content delegate-handle="body" scroll="false">
+    <ion-content delegate-handle="body" scroll="false" ng-style="{'bottom':contentBottom+'px'}">
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
