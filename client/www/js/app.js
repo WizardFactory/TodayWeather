@@ -14,6 +14,7 @@ angular.module('starter', [
     'controller.purchase',
     'service.twads',
     'service.localnotification',
+    'service.backgroundfetch',
     'ionic-timepicker',
     'ngCordova'
 ])

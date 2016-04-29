@@ -736,7 +736,7 @@ angular.module('starter.controllers', [])
                 }
             };
             if ($scope.cityList[index].notification != undefined) {
-                var date = new Date($scope.cityList[index].notification.at);
+                var date = new Date($scope.cityList[index].notification.at*1000);
                 ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
             }
             else {
