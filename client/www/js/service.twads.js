@@ -122,7 +122,7 @@ angular.module('service.twads', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, TwAds) {
+    .run(function($ionicPlatform, TwAds, Util) {
 
         $ionicPlatform.ready(function() {
             //Purchase.setAccountLevel('lover');
@@ -150,12 +150,12 @@ angular.module('service.twads', [])
             var bannerAdUnit;
             var interstitialAdUnit;
             if (ionic.Platform.isIOS()) {
-                bannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
-                interstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
+                bannerAdUnit = Util.admobIOSBannerAdUnit;
+                interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                bannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
-                interstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
+                bannerAdUnit = Util.admobAndroidBannerAdUnit;
+                interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
             }
             admob.initAdmob(bannerAdUnit, interstitialAdUnit, function () {
                 console.log('init admob');

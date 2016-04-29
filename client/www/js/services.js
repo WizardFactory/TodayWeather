@@ -1154,6 +1154,10 @@ angular.module('starter.services', [])
         //endregion
 
         obj.guideVersion = 1.0;
+        obj.admobIOSBannerAdUnit = '';
+        obj.admobIOSInterstitialAdUnit = '';
+        obj.admobAndroidBannerAdUnit = '';
+        obj.admobAndroidInterstitialAdUnit = '';
 
         return obj;
     });
