@@ -27,7 +27,7 @@ angular.module('starter.controllers', [])
         $scope.timeWidth; //total width of timeChart and timeTable
         $scope.dayWidth; //total width of dayChart and dayTable
 
-        $scope.imgPath = 'img/weatherIcon';
+        $scope.imgPath = Util.imgPath;
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'forecast');
@@ -517,6 +517,11 @@ angular.module('starter.controllers', [])
             console.log($ionicAnalytics.globalProperties);
             console.log(ionic.Platform);
 
+            $rootScope.viewColor = '#22a1db';
+            if (window.StatusBar) {
+                StatusBar.backgroundColorByHexString('#0288D1');
+            }
+
             WeatherInfo.loadCities();
             WeatherInfo.loadTowns().then(function () {
                 WeatherInfo.updateCities();
@@ -532,65 +537,26 @@ angular.module('starter.controllers', [])
                     });
                 });
             });
-
-            var runLocalNotification = false;
-
-            if (runLocalNotification) {
-                //todo: notification setting on settings, load setting info from local storage, make user story
-                //todo: move to service or app(consider updateWeatherData func)
-                if (cordova && cordova.plugins && cordova.plugins.notification && cordova.plugins.notification.local) {
-                    cordova.plugins.notification.local.hasPermission(function (granted) {
-                        console.log('hasPermission '+ granted ? 'Yes' : 'No');
-                    });
-
-                    cordova.plugins.notification.local.registerPermission(function (granted) {
-                        console.log('registerPermission '+ granted ? 'Yes' : 'No');
-
-                        cordova.plugins.notification.local.schedule({
-                            id: 1,
-                            text: 'My first notification',
-                            //firstAt: today_at_1_am,
-                            every: "minute"
-                        });
-                    });
-
-                    cordova.plugins.notification.local.on('trigger', function (notification) {
-                        console.log('triggered: ' + notification.id);
-
-                        updateWeatherData(true).finally(function () {
-                            cordova.plugins.notification.local.update({
-                                id: 1,
-                                text: $scope.currentWeather.summary
-                            });
-                        });
-                    }, this);
-
-                    cordova.plugins.notification.local.on('click', function (notification) {
-                        console.log('clicked: ' + notification.id);
-                    }, this);
-                }
-                else {
-                    console.log('local notification plugin was unloaded');
-                }
-            }
         });
 
         init();
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                        $location, WeatherInfo, WeatherUtil, Util) {
+                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, LocalNotification) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
         $scope.isLoading = false;
+        $scope.imgPath = Util.imgPath;
+
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'search');
 
-            WeatherInfo.cities.forEach(function (city) {
+            WeatherInfo.cities.forEach(function (city, index) {
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
                 var todayData = city.dayTable.filter(function (data) {
                     return (data.fromToday === 0);
@@ -620,6 +586,9 @@ angular.module('starter.controllers', [])
                     delete: false
                 };
                 $scope.cityList.push(data);
+                LocalNotification.getSchedule(index, function (notification) {
+                   $scope.cityList[index].notification = notification;
+                });
             });
         }
 
@@ -729,12 +698,52 @@ angular.module('starter.controllers', [])
 
         $scope.OnDeleteCity = function(index) {
             $scope.cityList.splice(index, 1);
+            LocalNotification.cancelSchedule(index);
             WeatherInfo.removeCity(index);
 
             if (WeatherInfo.cityIndex === WeatherInfo.getCityCount()) {
                 WeatherInfo.setCityIndex(0);
             }
             return false; //OnSelectCity가 호출되지 않도록 이벤트 막음
+        };
+
+        $scope.openTimePicker = function (index) {
+            var ipObj1 = {
+                callback: function (val) {      //Mandatory
+                    if (typeof (val) === 'undefined') {
+                        console.log('Time not selected');
+                        LocalNotification.cancelSchedule(index);
+                        $scope.cityList[index].notification = undefined;
+                    } else {
+                        var currentAt = (((new Date()).getHours() * 60 * 60) + ((new Date()).getMinutes() * 60));
+                        //set tomorrow
+                        var selectedTime = new Date();
+                        if (val <= currentAt) {
+                            selectedTime.setDate(selectedTime.getDate()+1);
+                        }
+                        selectedTime.setHours(0,0,0,0);
+                        selectedTime.setSeconds(val);
+
+                        //var selectedTime = new Date(val * 1000);
+                        console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
+                                    selectedTime.toString());
+
+                        LocalNotification.updateSchedule(index, WeatherInfo.cities[index], selectedTime, function (notification) {
+                            console.log('notification='+JSON.stringify(notification));
+                            $scope.cityList[index].notification = notification;
+                        });
+                    }
+                }
+            };
+            if ($scope.cityList[index].notification != undefined) {
+                var date = new Date($scope.cityList[index].notification.at);
+                ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
+            }
+            else {
+                ipObj1.inputTime = 8*60*60; //AM 8:00
+            }
+
+            ionicTimePicker.openTimePicker(ipObj1);
         };
 
         $scope.$on('$ionicView.loaded', function() {
@@ -875,37 +884,7 @@ angular.module('starter.controllers', [])
                 if (cityData !== null && cityData.location !== null) {
                     message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
                     message += '현재 '+cityData.currentWeather.t1h+'˚ ';
-                    switch (cityData.currentWeather.skyIcon) {
-                        case 'Sun':
-                        case 'Moon':
-                            message += '\ud83c\udf1e\n';
-                            break;
-                        case 'Cloud':
-                        case 'WindWithCloud':
-                            message += '\u2601\n';
-                            break;
-                        case 'SunWithCloud':
-                        case 'MoonWithCloud':
-                            message += '\u26c5\n';
-                            break;
-                        case 'Lightning':
-                        case 'RainWithLightning':
-                        case 'SnowWithLightning':
-                            message += '\u26c8\n';
-                            break;
-                        case 'Rain':
-                            message += '\u2614\n';
-                            break;
-                        case 'Snow':
-                            message += '\u2603\n';
-                            break;
-                        case 'RainWithSnow':
-                            message += '\u2614\u2603\n';
-                            break;
-                        default:
-                            message += '\n';
-                            break;
-                    }
+                    message += WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon)+'\n';
                     cityData.dayTable.forEach(function(data) {
                         if (data.fromToday === 0) {
                             message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
