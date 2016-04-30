@@ -290,19 +290,26 @@ function controllerWorldWeather(){
         var base_url = config.url.requester;
         var key = 'abcdefg';
 
-        var url = base_url + 'req/ALL/req_code?key=' + key + '&gcode=' + req.geocode.lat + ',' + req.geocode.lon;
+        var url = base_url + 'req/ALL/req_add_geocode?key=' + key + '&gcode=' + req.geocode.lat + ',' + req.geocode.lon;
 
         log.info('WW> req url : ', url);
         try{
-            request.get(url, {timeout: 1000 * 1}, function(err, response, body){
+            request.get(url, {timeout: 1000 * 5}, function(err, response, body){
                 if(err){
                     log.error('WW> Fail to request adding geocode to db');
                     callback(err);
                     return;
                 }
 
-                log.info('WW> request success');
-                callback(0);
+                var result = JSON.parse(body);
+                log.silly('WW> request success');
+                log.silly(result);
+                if(result.res == 'OK'){
+                    // adding geocode OK
+                    callback(0);
+                }else{
+                    callback(new Error('fail(receive fail message from requester'));
+                }
             });
         }
         catch(e){
