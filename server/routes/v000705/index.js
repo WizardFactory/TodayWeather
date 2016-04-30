@@ -12,6 +12,8 @@ router.get('/', function(req, res) {
 
 router.use('/gather', require('../v000001/routeGather'));
 router.use('/town', require('./routeTownForecast'));
+router.use('/daily', require('./dailySummary'));
+router.use('/check-purchase', require('./receiptValidation'));
 
 module.exports = router;
 

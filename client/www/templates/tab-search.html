@@ -6,7 +6,8 @@
                   ng-model="searchWord" ng-change="OnChangeSearchWord()">
         </label>
     </ion-header-bar>
-    <ion-content style="color:white;" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false" delegate-handle="cityList" on-scroll="OnScrollResults()" >
+    <ion-content style="color:white;" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentBottom+'px'}">
         <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-show="searchWord!==undefined">
             <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row">

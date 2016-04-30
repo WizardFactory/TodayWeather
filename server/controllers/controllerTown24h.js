@@ -228,6 +228,84 @@ function ControllerTown24h() {
         return this;
     };
 
+    this.makeDailySummary = function (req, res, next) {
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        var meta = {};
+        meta.method = 'makeDailySummary';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+        log.info('>', meta);
+
+        var time = parseInt(req.current.time.substr(0, 2));
+        req.current.skyIcon = self._parseSkyState(req.current.sky, req.current.pty, req.current.lgt, time < 7 || time > 18);
+
+        var dustFcst;
+        dustFcst = req.midData.dailyData[7].dustForecast;
+        if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
+            req.midData.dailyData[7].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+        }
+        else if (dustFcst.PM10Grade) {
+            req.midData.dailyData[7].pmStr = dustFcst.PM10Str;
+        }
+        else if (dustFcst.PM25Grade) {
+            req.midData.dailyData[7].pmStr = dustFcst.PM25Str;
+        }
+
+        var text = '';
+
+        if (townName && townName != '') {
+            text += townName+' ';
+        }
+        else if (cityName && cityName != '') {
+            text += cityName+' ';
+        }
+        else if (regionName && regionName != '') {
+            text += regionName+' ';
+        }
+
+        text += self._getWeatherEmoji(req.current.skyIcon)+',';
+        text += req.current.t1h+'˚,';
+        text += self._getEmoji('DownwardsArrow')+req.midData.dailyData[7].taMin+'˚/'+
+                self._getEmoji('UpwardsArrow')+req.midData.dailyData[7].taMax+'˚ ';
+        text += '미세예보:'+req.midData.dailyData[7].pmStr;
+
+        var date = req.current.stnDateTime?req.current.stnDateTime:req.currentPubDate;
+        var yesterday = {tmn: req.midData.dailyData[6].taMin, tmx: req.midData.dailyData[6].taMax};
+        var today = {tmn: req.midData.dailyData[7].taMin, tmx: req.midData.dailyData[7].taMax};
+        var tomorrow = {tmn: req.midData.dailyData[8].taMin, tmx: req.midData.dailyData[8].taMax};
+
+        req.dailySummary = {title: req.current.summary, text: text, date: date, yesterday: yesterday, today: today,
+                            tomorrow: tomorrow};
+
+        return next();
+    };
+
+    this.sendDailySummaryResult = function (req, res) {
+        var meta = {};
+
+        var result = {};
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = '/:region/:city/:town';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        result.regionName = regionName;
+        result.cityName = cityName;
+        result.townName = townName;
+        result.dailySummary = req.dailySummary;
+        res.json(result);
+
+        return this;
+    };
+
     this.sendResult = function (req, res) {
         var meta = {};
 
@@ -253,25 +331,27 @@ function ControllerTown24h() {
         if(req.shortRssPubDate) {
             result.shortRssPubDate = req.shortRssPubDate;
         }
-        if(req.short){
+        if(req.short) {
             result.short = req.short;
         }
         if (req.shortestPubDate) {
             result.shortestPubDate = req.shortestPubDate;
         }
-        if(req.shortest){
+        if(req.shortest) {
             result.shortest = req.shortest;
         }
         if(req.currentPubDate) {
             result.currentPubDate = req.currentPubDate;
         }
-        if(req.current){
+        if(req.current) {
             result.current = req.current;
         }
-        if(req.midData){
+        if(req.midData) {
             result.midData = req.midData;
         }
-
+        if (req.dailySummary) {
+            result.dailySummary = req.dailySummary;
+        }
         res.json(result);
 
         return this;
@@ -281,5 +361,99 @@ function ControllerTown24h() {
 // subclass extends superclass
 ControllerTown24h.prototype = Object.create(ControllerTown.prototype);
 ControllerTown24h.prototype.constructor = ControllerTown24h;
+
+ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
+    var skyIconName = "";
+
+    if (isNight) {
+        skyIconName = "Moon";
+    }
+    else {
+        skyIconName = "Sun";
+    }
+
+    switch (sky) {
+        case 1:
+            skyIconName;
+            break;
+        case 2:
+            skyIconName += "SmallCloud";
+            break;
+        case 3:
+            skyIconName += "BigCloud"; //Todo need new icon
+            break;
+        case 4:
+            skyIconName = "Cloud";
+            break;
+        default:
+            console.log('Fail to parse sky='+sky);
+            break;
+    }
+
+    switch (pty) {
+        case 0:
+            //nothing
+            break;
+        case 1:
+            skyIconName += "Rain";
+            break;
+        case 2:
+            skyIconName += "RainSnow"; //Todo need RainWithSnow icon";
+            break;
+        case 3:
+            skyIconName += "Snow";
+            break;
+        default:
+            console.log('Fail to parse pty='+pty);
+            break;
+    }
+
+    if (lgt === 1) {
+        skyIconName += "Lightning";
+    }
+
+    return skyIconName;
+};
+
+ControllerTown24h.prototype._getEmoji = function (name) {
+    switch (name) {
+        case 'UpwardsArrow':
+            return '\u2191';
+        case 'DownwardsArrow':
+            return '\u2193';
+        default:
+            log.error('Fail to find emoji name='+name);
+    }
+    return '';
+};
+
+ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
+    if (skyIcon.indexOf('Lightning') != -1) {
+        return '\u26c8';
+    }
+    else if (skyIcon.indexOf('RainSnow') != -1) {
+        return '\u2614\u2603';
+    }
+    else if (skyIcon.indexOf('Rain') != -1) {
+        return '\u2614';
+    }
+    else if (skyIcon.indexOf('Snow') != -1) {
+        return '\u2603';
+    }
+    else if (skyIcon.indexOf('Cloud') != -1) {
+        if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+            return '\u26c5';
+        }
+        else {
+            return '\u2601';
+        }
+    }
+    else if (skyIcon.indexOf('Sun') != -1 || skyIcon.indexOf('Moon') != -1) {
+        return '\ud83c\udf1e';
+    }
+
+    log.error('Fail to find emoji skyIcon='+skyIcon);
+    return '';
+};
 
 module.exports = ControllerTown24h;

@@ -278,13 +278,13 @@ angular.module('starter.services', [])
 
             switch (sky) {
                 case 1:
-                    skyIconName;
+                    skyIconName += "";
                     break;
                 case 2:
                     skyIconName += "SmallCloud";
                     break;
                 case 3:
-                    skyIconName += "BigCloud"; //Todo need new icon
+                    skyIconName += "BigCloud";
                     break;
                 case 4:
                     skyIconName = "Cloud";
@@ -296,13 +296,13 @@ angular.module('starter.services', [])
 
             switch (pty) {
                 case 0:
-                    //nothing
+                    skyIconName += "";
                     break;
                 case 1:
                     skyIconName += "Rain";
                     break;
                 case 2:
-                    skyIconName += "RainSnow"; //Todo need RainWithSnow icon";
+                    skyIconName += "RainSnow";
                     break;
                 case 3:
                     skyIconName += "Snow";
@@ -634,7 +634,7 @@ angular.module('starter.services', [])
          * @param {Object[]} shortForecastList
          * @param {Date} currentForecast
          * @param {Date} current
-         * @param {Object[]} midData.dailyData
+         * @param {Object[]} dailyInfoList midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
          */
         obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
@@ -1154,8 +1154,10 @@ angular.module('starter.services', [])
         //endregion
 
         obj.guideVersion = 1.0;
-
-        obj.showAd;
+        obj.admobIOSBannerAdUnit = '';
+        obj.admobIOSInterstitialAdUnit = '';
+        obj.admobAndroidBannerAdUnit = '';
+        obj.admobAndroidInterstitialAdUnit = '';
 
         return obj;
     });
