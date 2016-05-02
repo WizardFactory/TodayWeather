@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "ngCordova": "~0.1.20-alpha",
-    "d3": "~3.5.6",
-    "ga-localstorage": "*"
+    "d3": "~3.5.6"
   }
 }
