@@ -37,7 +37,7 @@
     "cordova-plugin-apple-watch",
     "cordova-plugin-statusbar",
     "ionic-plugin-deploy",
-    "cordova-plugin-inappbrowser@1.3.0",
+    "cordova-plugin-inappbrowser@1.4.0",
     "de.appplant.cordova.plugin.local-notification",
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",

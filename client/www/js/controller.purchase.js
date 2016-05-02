@@ -208,7 +208,7 @@ angular.module('controller.purchase', [])
                 return;
             }
 
-            if (!inAppPurchase) {
+            if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
                 return;
             }
