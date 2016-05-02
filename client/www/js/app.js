@@ -17,11 +17,14 @@ angular.module('starter', [
 ])
     .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
         $ionicPlatform.ready(function() {
-            if (!Util.isDebug()) {
+            if (Util.isDebug()) {
+                Util.ga.debugMode();
+            } else {
                 $ionicAnalytics.register();
             }
 
             if (ionic.Platform.isIOS()) {
+                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_IOS_KEY]');
                 if (window.applewatch) {
                     applewatch.init(function () {
                         console.log('Succeeded to initialize for apple-watch');
@@ -29,6 +32,8 @@ angular.module('starter', [
                         console.log('Failed to initialize apple-watch', err);
                     }, 'group.net.wizardfactory.todayweather');
                 }
+            } else if (ionic.Platform.isAndroid()) {
+                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
             }
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
