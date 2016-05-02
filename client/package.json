@@ -42,7 +42,7 @@
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",
     "cordova-plugin-whitelist",
-    "com.admob.plugin"
+    "cordova-admob"
   ],
   "cordovaPlatforms": [
     "android",

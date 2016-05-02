@@ -30,19 +30,19 @@ angular.module('service.twads', [])
                     obj.setEnableAds(twAdsInfo.enable);
                 }
             }
-
-            if (obj.requestShow != undefined) {
-                obj.setShowAds(obj.requestShow);
-            }
-            else {
-                obj.setShowAds(obj.enableAds);
-            }
         };
 
         obj.saveTwAdsInfo = function (enable) {
             var twAdsInfo = {enable: enable};
             localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
         };
+
+        function _setLayout(enable) {
+            //close bottom box
+            $rootScope.viewAdsBanner = enable;
+            $rootScope.contentBottom = enable?100:50;
+            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', enable?'50px':'0px');
+        }
 
         obj.setEnableAds = function (enable) {
             console.log('set enable ads enable='+enable);
@@ -59,13 +59,33 @@ angular.module('service.twads', [])
 
             if (enable === false) {
                 obj.setShowAds(false);
+                admob.destroyBannerView(function () {
+                    console.log('destroy banner view');
+                }, function (e) {
+                    console.log('Fail to destroy banner');
+                    console.log(e);
+                });
+                obj.enableAds = enable;
+                _setLayout(enable);
             }
-            obj.enableAds = enable;
+            else {
+                admob.createBannerView(function () {
+                    console.log('create banner view');
+                    obj.enableAds = enable;
+                    _setLayout(enable);
 
-            //close bottom box
-            $rootScope.viewAdsBanner = obj.enableAds;
-            $rootScope.contentBottom = obj.enableAds?100:50;
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', obj.enableAds?'50px':'0px');
+                    if (obj.requestShow != undefined) {
+                        obj.setShowAds(obj.requestShow);
+                    }
+                    else {
+                        obj.setShowAds(obj.enableAds);
+                    }
+
+                }, function (e) {
+                    console.log('Fail to create banner view');
+                    console.log(e);
+                });
+            }
         };
 
         obj.setShowAds = function(show) {
@@ -99,25 +119,12 @@ angular.module('service.twads', [])
                 return;
             }
 
-            if (show) {
-                var admobParam = new admob.Params();
-                admobParam.isTesting = Util.isDebug();
-
-                admob.showBanner(admob.BannerSize.BANNER, admob.Position.BOTTOM_CENTER, admobParam, function () {
-
-                }, function (e) {
-                    console.log('fail to show ad mob');
-                    console.log(JSON.stringify(e));
-                });
-            }
-            else {
-                admob.hideBanner(function () {
-
-                }, function (e) {
-                    console.log('fail to hide ad mob');
-                    console.log(JSON.stringify(e));
-                });
-            }
+            admob.showBannerAd(show, function () {
+                console.log('show/hide about ad mob show='+show);
+            }, function (e) {
+                console.log('fail to show/hide about ad mob show='+show);
+                console.log(JSON.stringify(e));
+            });
         };
 
         return obj;
@@ -157,18 +164,31 @@ angular.module('service.twads', [])
                 bannerAdUnit = Util.admobAndroidBannerAdUnit;
                 interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
             }
-            admob.initAdmob(bannerAdUnit, interstitialAdUnit, function () {
-                console.log('init admob');
+
+            admob.setOptions({
+                publisherId:          bannerAdUnit,  // Required
+                interstitialAdId:     interstitialAdUnit,  // Optional
+                adSize:               admob.AD_SIZE.BANNER,
+                bannerAtTop:          false,
+                overlap:              true,
+                offsetStatusBar:      false,
+                isTesting:            Util.isDebug(),
+                adExtras :            {},
+                autoShowBanner:       false,
+                autoShowInterstitial: false,
+            }, function () {
+                console.log('Set options of admob');
                 TwAds.loadTwAdsInfo();
             }, function (e) {
-                console.log('fail to init admob : '+ e);
+                console.log('Fail to set options of admob');
+                console.log(e);
             });
 
-            document.addEventListener(admob.Event.onBannerReceive, function(message){
+            document.addEventListener(admob.events.onAdLoaded, function(message){
                 console.log('on banner receive msg='+JSON.stringify(message));
             });
 
-            document.addEventListener(admob.Event.onBannerFailedReceive, function(message){
+            document.addEventListener(admob.events.onAdFailedToLoad, function(message){
                 console.log('on banner Failed Receive Ad msg='+JSON.stringify(message));
             });
         });
