@@ -30,7 +30,7 @@ angular.module('starter.controllers', [])
         $scope.imgPath = 'img/weatherIcon';
 
         function init() {
-            ga_storage._trackEvent('page', 'tab', 'forecast');
+            Util.ga.trackEvent('page', 'tab', 'forecast');
 
             //identifyUser();
             $ionicHistory.clearHistory();
@@ -232,7 +232,7 @@ angular.module('starter.controllers', [])
                 }
             },0);
 
-            ga_storage._trackEvent('weather', 'load', $scope.address, WeatherInfo.cityIndex);
+            Util.ga.trackEvent('weather', 'load', $scope.address, WeatherInfo.cityIndex);
         }
 
         function updateWeatherData(isForce) {
@@ -579,7 +579,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                        $location, WeatherInfo, WeatherUtil) {
+                                        $location, WeatherInfo, WeatherUtil, Util) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
@@ -588,7 +588,7 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
-            ga_storage._trackEvent('page', 'tab', 'search');
+            Util.ga.trackEvent('page', 'tab', 'search');
 
             WeatherInfo.cities.forEach(function (city) {
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
@@ -753,7 +753,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
-                                        $cordovaInAppBrowser) {
+                                        $cordovaInAppBrowser, Util) {
         //sync with config.xml
         $scope.version  = "0.7.9";
 
@@ -769,7 +769,7 @@ angular.module('starter.controllers', [])
         //}, function() {}, function() {});
 
         function init() {
-            ga_storage._trackEvent('page', 'tab', 'setting');
+            Util.ga.trackEvent('page', 'tab', 'setting');
 
             //for chrome extension
             if (window.chrome && chrome.extension) {
@@ -833,7 +833,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('TabCtrl', function ($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, $cordovaSocialSharing, TwAds, $rootScope) {
+                                     $location, $cordovaSocialSharing, TwAds, $rootScope, Util) {
         // With the new view caching in Ionic, Controllers are only called
         // when they are recreated or on app start, instead of every page change.
         // To listen for when this page is active (for example, to refresh data),
@@ -860,7 +860,7 @@ angular.module('starter.controllers', [])
             if ($location.path() === '/tab/forecast') {
                 $scope.$broadcast('updateWeatherEvent');
 
-                ga_storage._trackEvent('page', 'tab', 'reload');
+                Util.ga.trackEvent('page', 'tab', 'reload');
             }
             else {
                 $location.path('/tab/forecast');
@@ -923,7 +923,7 @@ angular.module('starter.controllers', [])
                     // An error occured
                 });
 
-            ga_storage._trackEvent('page', 'tab', 'share');
+            Util.ga.trackEvent('page', 'tab', 'share');
         };
 
         $scope.showAlert = function(title, msg) {
@@ -972,7 +972,7 @@ angular.module('starter.controllers', [])
         function init() {
             //for fast close ads when first loading
             TwAds.setShowAds(false);
-            ga_storage._trackEvent('page', 'tab', 'guide');
+            Util.ga.trackEvent('page', 'tab', 'guide');
 
             $scope.bigFont = (window.innerHeight - 56) * 0.0512;
             $scope.smallFont = (window.innerHeight - 56) * 0.0299;

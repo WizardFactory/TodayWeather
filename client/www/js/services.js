@@ -1137,7 +1137,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('Util', function () {
+    .factory('Util', function ($window, $cordovaGoogleAnalytics) {
         var obj = {};
         var debug = true;
 
@@ -1149,6 +1149,59 @@ angular.module('starter.services', [])
 
         obj.isDebug = function () {
             return debug;
+        };
+
+        obj.ga = {
+            startTrackerWithId: function (id) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.startTrackerWithId(id);
+                }
+            },
+            setUserId: function (id) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.setUserId(id);
+                }
+            },
+            debugMode: function () {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.debugMode();
+                }
+            },
+            trackView: function (screenName) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.trackView(screenName);
+                }
+            },
+            addCustomDimension: function (key, value) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.addCustomDimension(key, value);
+                }
+            },
+            trackEvent: function (category, action, label, value) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.trackEvent(category, action, label, value);
+                }
+            },
+            trackException: function (description, fatal) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.trackException(description, fatal);
+                }
+            },
+            trackTiming: function (category, milliseconds, variable, label) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.trackTiming(category, milliseconds, variable, label);
+                }
+            },
+            addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode);
+                }
+            },
+            addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $cordovaGoogleAnalytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode);
+                }
+            }
         };
 
         //endregion

@@ -87,12 +87,10 @@
         </config-file>
     </platform>
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />
-    <plugin name="cordova-plugin-whitelist" spec="https://github.com/apache/cordova-plugin-whitelist.git" />
     <allow-navigation href="*" />
     <allow-intent href="mailto:*" />
     <preference name="xwalkVersion" value="14+" />
     <preference name="xwalkCommandLine" value="--disable-pull-to-refresh-effect" />
     <preference name="xwalkMode" value="embedded" />
     <preference name="xwalkMultipleApk" value="true" />
-    <plugin name="cordova-plugin-inappbrowser" spec="~1.0.1" />
 </widget>
