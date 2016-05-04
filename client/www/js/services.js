@@ -1236,12 +1236,12 @@ angular.module('starter.services', [])
         obj.admobIOSInterstitialAdUnit = '';
         obj.admobAndroidBannerAdUnit = '';
         obj.admobAndroidInterstitialAdUnit = '';
+        obj.googleSenderId = '';
 
         if (debug) {
             //obj.url = "./";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
-            //obj.url = "http://172.24.3.49:3000/v000705";
         }
         else {
             obj.url = "http://todayweather.wizardfactory.net/v000705";

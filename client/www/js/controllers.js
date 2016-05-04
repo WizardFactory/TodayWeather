@@ -1,6 +1,5 @@
 
 angular.module('starter.controllers', [])
-
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           $stateParams, $location, $ionicHistory) {
@@ -543,7 +542,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
-                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, LocalNotification) {
+                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
@@ -586,9 +585,7 @@ angular.module('starter.controllers', [])
                     delete: false
                 };
                 $scope.cityList.push(data);
-                LocalNotification.getSchedule(index, function (notification) {
-                   $scope.cityList[index].notification = notification;
-                });
+                $scope.cityList[index].alarmInfo = Push.getAlarm(index);
             });
         }
 
@@ -697,8 +694,8 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnDeleteCity = function(index) {
+            Push.removeAlarm($scope.cityList[index].alarmInfo);
             $scope.cityList.splice(index, 1);
-            LocalNotification.cancelSchedule(index);
             WeatherInfo.removeCity(index);
 
             if (WeatherInfo.cityIndex === WeatherInfo.getCityCount()) {
@@ -712,32 +709,30 @@ angular.module('starter.controllers', [])
                 callback: function (val) {      //Mandatory
                     if (typeof (val) === 'undefined') {
                         console.log('Time not selected');
-                        LocalNotification.cancelSchedule(index);
-                        $scope.cityList[index].notification = undefined;
+                        Push.removeAlarm($scope.cityList[index].alarmInfo);
+                        $scope.cityList[index].alarmInfo = undefined;
                     } else {
-                        var currentAt = (((new Date()).getHours() * 60 * 60) + ((new Date()).getMinutes() * 60));
-                        //set tomorrow
                         var selectedTime = new Date();
-                        if (val <= currentAt) {
-                            selectedTime.setDate(selectedTime.getDate()+1);
-                        }
                         selectedTime.setHours(0,0,0,0);
                         selectedTime.setSeconds(val);
 
-                        //var selectedTime = new Date(val * 1000);
                         console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
                                     selectedTime.toString());
 
-                        LocalNotification.updateSchedule(index, WeatherInfo.cities[index], selectedTime, function (notification) {
-                            console.log('notification='+JSON.stringify(notification));
-                            $scope.cityList[index].notification = notification;
+
+                        Push.updateAlarm(index, WeatherInfo.cities[index], selectedTime, function (alarmInfo) {
+                            console.log('alarm='+JSON.stringify(alarmInfo));
+                            $scope.cityList[index].alarmInfo = alarmInfo;
                         });
                     }
                 }
             };
-            if ($scope.cityList[index].notification != undefined) {
-                var date = new Date($scope.cityList[index].notification.at*1000);
+            if ($scope.cityList[index].alarmInfo != undefined) {
+                var date = new Date($scope.cityList[index].alarmInfo.time);
+                console.log(date);
+                console.log(date.toString);
                 ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
+                console.log('inputTime='+ipObj1.inputTime);
             }
             else {
                 ipObj1.inputTime = 8*60*60; //AM 8:00

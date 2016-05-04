@@ -13,8 +13,7 @@ angular.module('starter', [
     'starter.services',
     'controller.purchase',
     'service.twads',
-    'service.localnotification',
-    'service.backgroundfetch',
+    'service.push',
     'ionic-timepicker',
     'ngCordova'
 ])
@@ -64,7 +63,7 @@ angular.module('starter', [
         });
     })
 
-    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider) {
+    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider, ionicTimePickerProvider) {
 
         //for chrome extension
         $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
@@ -136,6 +135,14 @@ angular.module('starter', [
 
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
+
+        var timePickerObj = {
+            format: 12,
+            step: 5,
+            setLabel: '설정',
+            closeLabel: '삭제/닫기'
+        };
+        ionicTimePickerProvider.configTimePicker(timePickerObj);
     })
     .directive('ngShortChart', function() {
         return {
