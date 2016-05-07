@@ -112,30 +112,31 @@ controllerPush.prototype.getPushByTime = function (time, callback) {
     return this;
 };
 
+/**
+ * node-gcm에 나와야 있는 data, notification분리 방법으로 보내면 안됨. phonegap-plugin-push에 나와야 있는 예제를 따라해야 함.
+ * @param pushInfo
+ * @param notification
+ * @param callback
+ * @returns {controllerPush}
+ */
 controllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
     log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
                 ' notification='+JSON.stringify(notification));
+
+    var data = {
+        title: notification.title,
+        body: notification.text,
+        //"image": "www/img/weatherIcon/Sun.png", //it working but small icon has some problems
+        cityIndex: pushInfo.cityIndex,
+        "notId": pushInfo.cityIndex,
+        'content-available': '1'
+    };
+
     var message = new gcm.Message({
-        //collapseKey: 'demo',
-        //priority: 'high',
-        //delayWhileIdle: true,
-        //timeToLive: 3,
-        //restrictedPackageName: "somePackageName",
-        //dryRun: true,
-        data: {
-            cityIndex: pushInfo.cityIndex,
-        },
-        notification: {
-            title: notification.title,
-            body: notification.text,
-            //icon: 'sun', //image to the Android drawables folder
-            //icon: 'www/img/weatherIcon/'+notification.icon+'.png',
-            //sound
-            //badge(ios)
-            //tag
-            //color
-            //click_action
-        }
+        priority     : 'high',
+        timeToLive   : 86400,
+        sound        : 'default',
+        data         : data
     });
 
     /**
@@ -162,9 +163,10 @@ controllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
 
     var note = new apn.Notification();
     //note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
-    //note.badge = 3;
-    //note.sound = 'ping.aiff"
+    //note.badge = 1;
+    note.sound = "ping.aiff";
     note.alert = notification.title+'\n'+notification.text;
+    note.contentAvailable = true;
     note.payload = {cityIndex: pushInfo.cityIndex};
     apnConnection.pushNotification(note, myDevice);
     callback(undefined, 'sent');
