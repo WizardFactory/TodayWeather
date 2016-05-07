@@ -719,8 +719,7 @@ angular.module('starter.controllers', [])
                         console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
                                     selectedTime.toString());
 
-
-                        Push.updateAlarm(index, WeatherInfo.cities[index], selectedTime, function (alarmInfo) {
+                        Push.updateAlarm(index, WeatherInfo.cities[index].address, selectedTime, function (err, alarmInfo) {
                             console.log('alarm='+JSON.stringify(alarmInfo));
                             $scope.cityList[index].alarmInfo = alarmInfo;
                         });

@@ -58,6 +58,12 @@ angular.module('starter.services', [])
                 city.dayChart = weatherData.dayChart;
             }
 
+            if (window.push && city.currentPosition == true) {
+                if (window.push.getAlarm(index)) {
+                    window.push.updateAlarm(index, city.address);
+                }
+            }
+
             that.saveCities();
         };
 

@@ -15,16 +15,19 @@ angular.module('service.push', [])
                 //"forceShow": true,
             },
             "ios": {
-                "alert": "false",
-                "badge": "false",
-                "sound": "false"
+                "alert": "true",
+                "badge": "true",
+                "sound": "true",
+                "clearBadge": "true"
             },
             "windows": {}
         };
 
-        //obj.pushUrl = Util.url + '/push';
-        obj.pushUrl = "http://192.168.0.5:3000/v000705" + '/push';
-        obj.push;
+        obj.pushUrl = Util.url + '/push';
+
+        //attach push object to the window object for android event
+        //obj.push;
+
         //obj.alarmInfo = {'time': new Date(0), 'cityIndex': -1, 'town': {'first':'','second':'', 'third':'}};
         obj.pushData = {registrationId: '', type: '', alarmList: []};
         //obj.registrationId;
@@ -38,6 +41,10 @@ angular.module('service.push', [])
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
                 self.pushData.alarmList = pushData.alarmList;
+                self.pushData.alarmList.forEach(function (alarmInfo) {
+                    alarmInfo.time = new Date(alarmInfo.time);
+                });
+
                 //update alarmInfo to server for sync
                 if (self.pushData.alarmList.length > 0) {
                     setTimeout(function() {
@@ -62,15 +69,8 @@ angular.module('service.push', [])
          * @param alarmInfo
          */
         function postPushInfo(alarmInfo) {
-            var pushTime;
-            var time;
-            if (alarmInfo.time instanceof Date) {
-                time = alarmInfo.time;
-            }
-            else {
-                time = new Date(alarmInfo.time);
-            }
-            pushTime = time.getUTCHours() * 60 * 60 + time.getUTCMinutes() * 60;
+            var time = alarmInfo.time;
+            var pushTime = time.getUTCHours() * 60 * 60 + time.getUTCMinutes() * 60;
 
             var pushInfo = { registrationId: obj.pushData.registrationId,
                 type: obj.pushData.type,
@@ -145,9 +145,9 @@ angular.module('service.push', [])
                 return;
             }
 
-            self.push = PushNotification.init(self.config);
+            window.push = PushNotification.init(self.config);
 
-            self.push.on('registration', function(data) {
+            window.push.on('registration', function(data) {
                 console.log(JSON.stringify(data));
                 if (self.pushData.registrationId != data.registrationId) {
                     updateRegistrationId(data.registrationId);
@@ -156,7 +156,7 @@ angular.module('service.push', [])
             });
 
             //android에서는 background->foreground 넘어올 때 event 발생하지 않음
-            self.push.on('notification', function(data) {
+            window.push.on('notification', function(data) {
                 console.log('notification = '+JSON.stringify(data));
                 // data.message,
                 // data.title,
@@ -167,6 +167,11 @@ angular.module('service.push', [])
                 // data.additionalData.coldstart
                 // data.additionalData.cityIndex
                 if (data.additionalData.foreground === false) {
+                    //clicked 인지 아닌지 구분 필요.
+                    //ios의 경우 badge 업데이트
+                    //현재위치의 경우 데이타 업데이트 가능? 체크
+
+
                     //if have additionalData go to index page
                     var url = '/tab/forecast?fav='+data.additionalData.cityIndex;
                     //setCityIndex 와 url fav 까지 해야 이동됨 on ios
@@ -176,10 +181,25 @@ angular.module('service.push', [])
                 }
             });
 
-            self.push.on('error', function(e) {
+            window.push.on('error', function(e) {
                 console.log('notification error='+JSON.stringify(e));
                 // e.message
             });
+
+            /**
+             * WeatherInfo 와 circular dependency 제거용.
+             * @param cityIndex
+             * @param address
+             * @param time
+             * @param callback
+             */
+            window.push.updateAlarm = function (cityIndex, address, time, callback) {
+                return obj.updateAlarm(cityIndex, address, time, callback);
+            };
+
+            window.push.getAlarm = function (cityIndex) {
+                return obj.getAlarm(cityIndex);
+            };
         };
 
         obj.unregister = function () {
@@ -187,7 +207,7 @@ angular.module('service.push', [])
             return;
             //var self = this;
             //console.log('push unregister');
-            //self.push.unregister(function() {
+            //window.push.unregister(function() {
             //    console.log('push unregister success');
             //    self.push = undefined;
             //}, function(e) {
@@ -196,10 +216,18 @@ angular.module('service.push', [])
             //});
         };
 
-        obj.updateAlarm = function (cityIndex, cityData, time, callback) {
-            var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(cityData.address));
+        obj.updateAlarm = function (cityIndex, address, time, callback) {
+            var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(address));
             var alarmInfo = {cityIndex: cityIndex, town: town, time: time};
             var self = this;
+
+            if (!callback) {
+                callback = function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                };
+            }
 
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
@@ -212,24 +240,38 @@ angular.module('service.push', [])
                     }
                 }
                 if (i<self.pushData.alarmList.length) {
+                    if (!time) {
+                        alarmInfo.time = self.pushData.alarmList[i].time;
+                    }
+
+                    if (alarmInfo.time.getTime() == self.pushData.alarmList[i].time.getTime() &&
+                        JSON.stringify(alarmInfo.town) == JSON.stringify(self.pushData.alarmList[i].town)) {
+                        console.log('alarmInfo is already latest');
+                        return callback(undefined, alarmInfo);
+                    }
                     self.pushData.alarmList[i] = alarmInfo;
                 }
                 else {
+                    if (!time) {
+                        var err = new Error("You have to set time for add alarm");
+                        return callback(err);
+                    }
                     self.pushData.alarmList.push(alarmInfo);
                 }
                 //check alarm in list
             }
-            if (!self.push) {
+
+            if (!window.push) {
                 self.register(function () {
                     postPushInfo(alarmInfo);
                     self.savePushInfo();
-                    return callback(alarmInfo);
+                    return callback(undefined, alarmInfo);
                 });
             }
             else {
                 postPushInfo(alarmInfo);
                 self.savePushInfo();
-                return callback(alarmInfo);
+                return callback(undefined, alarmInfo);
             }
         };
 
@@ -299,7 +341,7 @@ angular.module('service.push', [])
                     }
                 });
 
-                if (Push.push) {
+                if (window.push) {
                     console.log('Already set push notification');
                     return;
                 }
