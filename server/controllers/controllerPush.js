@@ -166,7 +166,7 @@ controllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
     //note.badge = 1;
     note.sound = "ping.aiff";
     note.alert = notification.title+'\n'+notification.text;
-    note.contentAvailable = true;
+    //note.contentAvailable = true;
     note.payload = {cityIndex: pushInfo.cityIndex};
     apnConnection.pushNotification(note, myDevice);
     callback(undefined, 'sent');
