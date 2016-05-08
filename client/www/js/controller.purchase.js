@@ -6,7 +6,7 @@
 angular.module('controller.purchase', [])
     .factory('Purchase', function($rootScope, $http, $q, TwAds) {
         var obj = {};
-        obj.ACCOUNT_LEVEL_LOVER = 'lover';
+        obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
         obj.accountLevel;
         obj.productId;
@@ -19,7 +19,7 @@ angular.module('controller.purchase', [])
                 console.log('set account level ='+accountLevel);
                 //update accountLevel
                 obj.accountLevel = accountLevel;
-                if (accountLevel === obj.ACCOUNT_LEVEL_LOVER) {
+                if (accountLevel === obj.ACCOUNT_LEVEL_FREE) {
                     TwAds.setEnableAds(true);
                 }
                 else if (accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
@@ -65,12 +65,12 @@ angular.module('controller.purchase', [])
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
-                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_LOVER;
+                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
                 }
                 obj.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
-                obj.accountLevel = obj.ACCOUNT_LEVEL_LOVER;
+                obj.accountLevel = obj.ACCOUNT_LEVEL_FREE;
             }
         };
 
@@ -182,7 +182,7 @@ angular.module('controller.purchase', [])
                     if (!receiptInfo.ok) {
                         //downgrade by canceled, refund ..
                         console.log(JSON.stringify(receiptInfo.data));
-                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_LOVER);
+                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
 
                         $ionicPopup.alert({
@@ -213,7 +213,7 @@ angular.module('controller.purchase', [])
                 return;
             }
 
-            Purchase.productId = 'non1year';
+            Purchase.productId = 'tw1year';
             console.log('productId='+Purchase.productId);
 
             inAppPurchase
@@ -232,7 +232,7 @@ angular.module('controller.purchase', [])
                     console.log(err);
                 });
 
-            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_LOVER) {
+            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
                 console.log('account Level is '+Purchase.accountLevel);
                 Purchase.loaded = true;
                 return;
@@ -353,5 +353,7 @@ angular.module('controller.purchase', [])
             $scope.expirationDate = (new Date(Purchase.expirationDate)).toLocaleDateString();
 
             $scope.product = Purchase.products[0];
+
+            $scope.listWidth = window.innerWidth;
         });
     });
