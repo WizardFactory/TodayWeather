@@ -32,5 +32,8 @@ module.exports = {
     platforms: {
         applePassword: (process.env.APPLE_PASSWORD || 'Your apple password'),
         googlePublicKey: (process.env.APPLE_PASSWORD || 'Your google public key')
+    },
+    push: {
+        gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key'),
     }
 };
