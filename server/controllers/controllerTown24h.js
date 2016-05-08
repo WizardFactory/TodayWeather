@@ -245,14 +245,16 @@ function ControllerTown24h() {
 
         var dustFcst;
         dustFcst = req.midData.dailyData[7].dustForecast;
-        if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
-            req.midData.dailyData[7].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
-        }
-        else if (dustFcst.PM10Grade) {
-            req.midData.dailyData[7].pmStr = dustFcst.PM10Str;
-        }
-        else if (dustFcst.PM25Grade) {
-            req.midData.dailyData[7].pmStr = dustFcst.PM25Str;
+        if (dustFcst) {
+            if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
+                req.midData.dailyData[7].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+            }
+            else if (dustFcst.PM10Grade) {
+                req.midData.dailyData[7].pmStr = dustFcst.PM10Str;
+            }
+            else if (dustFcst.PM25Grade) {
+                req.midData.dailyData[7].pmStr = dustFcst.PM25Str;
+            }
         }
 
         var text = '';
@@ -268,18 +270,30 @@ function ControllerTown24h() {
         }
 
         text += self._getWeatherEmoji(req.current.skyIcon)+',';
-        text += req.current.t1h+'˚,';
-        text += self._getEmoji('DownwardsArrow')+req.midData.dailyData[7].taMin+'˚/'+
-                self._getEmoji('UpwardsArrow')+req.midData.dailyData[7].taMax+'˚ ';
-        text += '미세예보:'+req.midData.dailyData[7].pmStr;
+        text += req.current.t1h+'˚';
+        if (req.midData.dailyData.length > 7) {
+            text += ',';
+            text += self._getEmoji('DownwardsArrow')+req.midData.dailyData[7].taMin+'˚/'+
+                self._getEmoji('UpwardsArrow')+req.midData.dailyData[7].taMax+'˚';
+            if (req.midData.dailyData[7].pmStr) {
+                text += ' ';
+                text += '미세예보:'+req.midData.dailyData[7].pmStr;
+            }
+        }
 
         var date = req.current.stnDateTime?req.current.stnDateTime:req.currentPubDate;
-        var yesterday = {tmn: req.midData.dailyData[6].taMin, tmx: req.midData.dailyData[6].taMax};
-        var today = {tmn: req.midData.dailyData[7].taMin, tmx: req.midData.dailyData[7].taMax};
-        var tomorrow = {tmn: req.midData.dailyData[8].taMin, tmx: req.midData.dailyData[8].taMax};
+        if (req.midData.dailyData.length > 6) {
+            var yesterday = {tmn: req.midData.dailyData[6].taMin, tmx: req.midData.dailyData[6].taMax};
+        }
+        if (req.midData.dailyData.length > 7) {
+            var today = {tmn: req.midData.dailyData[7].taMin, tmx: req.midData.dailyData[7].taMax};
+        }
+        if (req.midData.dailyData.length > 8) {
+            var tomorrow = {tmn: req.midData.dailyData[8].taMin, tmx: req.midData.dailyData[8].taMax};
+        }
 
-        req.dailySummary = {title: req.current.summary, text: text, date: date, yesterday: yesterday, today: today,
-                            tomorrow: tomorrow};
+        req.dailySummary = {title: req.current.summary, text: text, date: date, icon: req.current.skyIcon,
+                            yesterday: yesterday, today: today, tomorrow: tomorrow};
 
         return next();
     };

@@ -17,6 +17,7 @@
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {
+    "apn": "^1.7.5",
     "async": "^1.4.2",
     "aws-sdk": "^2.2.35",
     "body-parser": "~1.13.1",
@@ -33,6 +34,7 @@
     "mongoose": "^4.3.4",
     "morgan": "~1.6.1",
     "newrelic": "^1.24.1",
+    "node-gcm": "^0.14.0",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
     "winston": "^1.0.1",
