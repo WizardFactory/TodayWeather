@@ -11,8 +11,8 @@
   ],
   "proxies": [
     {
-      "path": "/town",
-      "proxyUrl": "http://localhost:3000/v000705/town"
+      "path": "./",
+      "proxyUrl": "http://localhost:3000/v000705"
     }
   ],
   "browsers": [

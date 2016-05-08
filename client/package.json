@@ -38,15 +38,21 @@
     "cordova-plugin-statusbar",
     "ionic-plugin-deploy",
     "cordova-plugin-inappbrowser@1.4.0",
-    "de.appplant.cordova.plugin.local-notification",
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",
     "cordova-plugin-whitelist",
-    "cordova-admob",
-    "cordova-plugin-google-analytics"
+    "cordova-plugin-google-analytics",
+    {
+      "variables": {
+        "SENDER_ID": "YOUR_SENDER_ID"
+      },
+      "locator": "phonegap-plugin-push",
+      "id": "phonegap-plugin-push"
+    },
+    "cordova-admob"
   ],
   "cordovaPlatforms": [
-    "android",
-    "ios"
+    "ios",
+    "android"
   ]
 }
