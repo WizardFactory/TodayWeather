@@ -1,6 +1,6 @@
 <ion-view title="Purchase" hide-nav-bar="true">
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
-        <div class="centering-vh">
+        <div style="margin-top: 72px;">
             <img class="item-center" width="96px" src="img/app-icon.png" style="margin-bottom: 16px">
             <div ng-style="::{'width':listWidth+'px'}"
                  style="padding: 16px; border-width: 1px; border-color:#ddd; border-style: solid;">
@@ -24,13 +24,18 @@
         </div>
     </ion-content>
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel == 'premium'">
-        <div class="centering-vh">
+        <div style="margin-top: 72px;">
             <img class="item-center" width="96px" src="img/app-icon.png">
-            <div style="padding-left: 16px; padding-right: 16px">
-                <h4 style="opacity: 0.87">오늘날씨를 사용해주셔서 감사합니다</h4>
+            <div  ng-style="::{'width':listWidth+'px'}" style="padding: 16px;">
+                <h4 style="opacity: 0.87; text-align: center">오늘날씨를 사용해주셔서 감사합니다</h4>
+                <button class="button button-outline button-dark item-center" disabled="true" style="opacity: 0.84">
+                    {{product.title}} 기간 : {{expirationDate}}
+                </button>
             </div>
-            <button class="button button-outline button-positive item-center" disabled="true" style="opacity: 0.84">
-                {{product.title}} 기간 : {{expirationDate}}
+        </div>
+        <div style="position: absolute; bottom: 16px; width: 100%" ng-if="showRenew == true">
+            <button class="button button-outline button-positive item-center" style="opacity: 0.84" ng-click="order()">
+                갱신
             </button>
         </div>
     </ion-content>

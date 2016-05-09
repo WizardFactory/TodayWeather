@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="0.7.9" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="net.wizardfactory.todayweather" version="0.7.11" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>TodayWeather</name>
     <description>
-        Inform how warm or cold it's today than yesterday.
+        Inform how warm or cold it is today than yesterday.
     </description>
     <author email="todayweather@wizardfactory.net" href="https://github.com/WizardFactory">
         WizardFactory TodayWeather Team
@@ -15,8 +15,8 @@
     <preference name="android-minSdkVersion" value="14" />
     <preference name="BackupWebStorage" value="local" />
     <preference name="SplashScreen" value="screen" />
-    <preference name="FadeSplashScreen" value="false"/>
-    <preference name="ShowSplashScreenSpinner" value="false"/>
+    <preference name="FadeSplashScreen" value="false" />
+    <preference name="ShowSplashScreenSpinner" value="false" />
     <preference name="orientation" value="portrait" />
     <preference name="target-device" value="universal" />
     <feature name="StatusBar">
@@ -73,7 +73,7 @@
         <config-file parent="NSAppTransportSecurity" platform="ios" target="*-Info.plist">
             <dict>
                 <key>NSAllowsArbitraryLoads</key>
-                <true/>
+                <true />
             </dict>
         </config-file>
         <config-file parent="CFBundleDevelopmentRegion" platform="ios" target="*-Info.plist">
