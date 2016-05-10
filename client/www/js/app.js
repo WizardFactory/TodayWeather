@@ -154,17 +154,29 @@ angular.module('starter', [
                 var width, height, x, y;
                 var svg, initLine, line;
 
-                // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
-                // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function() {
+                //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
+                //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
+                //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
+                scope.$watch(function () {
+                    return iElement[0].getBoundingClientRect().height;
+                }, function(newValue) {
+                    if (newValue === 0 || newValue === height) {
+                        return;
+                    }
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                     y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
-                    svg = d3.select(iElement[0]).append('svg')
-                        .attr('width', width)
-                        .attr('height', height);
+                    if (svg != undefined) {
+                        svg.selectAll("*").remove();
+                        svg.attr('height', height);
+                    }
+                    else {
+                        svg = d3.select(iElement[0]).append('svg')
+                            .attr('width', width)
+                            .attr('height', height);
+                    }
 
                     initLine = d3.svg.line()
                         .interpolate('linear')
@@ -181,11 +193,17 @@ angular.module('starter', [
                         .y(function (d) {
                             return y(d.value.t3h);
                         });
+
+                    chart();
                 });
 
                 var chart = function () {
                     var data = scope.timeChart;
                     var currentTime = scope.currentWeather.time;
+
+                    if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                        return;
+                    }
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
@@ -414,7 +432,9 @@ angular.module('starter', [
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
 
-                    svg.attr('width', width);
+                    if (svg) {
+                        svg.attr('width', width);
+                    }
                 });
 
                 scope.$watch('timeChart', function (newVal) {
@@ -441,21 +461,35 @@ angular.module('starter', [
                 var width, height, x, y;
                 var svg;
 
-                // document가 rendering이 될 때 tabs가 있으면 ion-content에 has-tabs class가 추가됨
-                // has-tabs에 의해 ion-content의 영역이 tabs을 제외한 나머지 영역으로 설정되므로 그 후에 차트를 생성하도록 함
-                scope.$watch('$hasTabs', function() {
+                //shortChart 주석 참고.
+                scope.$watch(function () {
+                    return iElement[0].getBoundingClientRect().height;
+                }, function(newValue) {
+                    if (newValue === 0 || height === newValue) {
+                        return;
+                    }
                     width = iElement[0].getBoundingClientRect().width;
                     height = iElement[0].getBoundingClientRect().height;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                     y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
-                    svg = d3.select(iElement[0]).append('svg')
-                        .attr('width', width)
-                        .attr('height', height);
+                    if (svg != undefined) {
+                        svg.selectAll("*").remove();
+                        svg.attr('height', height);
+                    }
+                    else {
+                        svg = d3.select(iElement[0]).append('svg')
+                            .attr('width', width)
+                            .attr('height', height);
+                    }
+                    chart();
                 });
 
                 var chart = function () {
                     var data = scope.dayChart;
+                    if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                        return;
+                    }
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
@@ -609,8 +643,9 @@ angular.module('starter', [
                 scope.$watch('dayWidth', function(newValue) {
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-
-                    svg.attr('width', width);
+                    if (svg) {
+                        svg.attr('width', width);
+                    }
                 });
 
                 scope.$watch('dayChart', function (newVal) {
