@@ -338,24 +338,9 @@ angular.module('starter.controllers', [])
             }
 
             console.log("body of width="+bodyWidth);
-
-            switch (bodyWidth) {
-                case 320:   //iphone 4,5
-                    colWidth = 53;
-                    break;
-                case 375:   //iphone 6
-                    colWidth = 53;
-                    break;
-                case 412:   //SS note5
-                    colWidth = 58.85;
-                    break;
-                case 414:   //iphone 6+
-                    colWidth =  59;
-                    break;
-                case 360:   //s4, note3
-                default:
-                    colWidth = 52;
-                    break;
+            colWidth = bodyWidth/7;
+            if (colWidth > 60) {
+                colWidth = 60;
             }
             return colWidth;
         }
@@ -366,7 +351,12 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 6; //yesterday 21h
+                index = 7; //yesterday 21h
+
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return getWidthPerCol()*index;
+                }
 
                 if(hours >= 3) {
                     //start today
@@ -378,17 +368,21 @@ angular.module('starter.controllers', [])
                 if (hours >= 9) {
                     index += 1;
                 }
-                if (hours > 15 && bodyWidth < 360) {
-                    index += 1;
-                }
+
                 return getWidthPerCol()*index;
             }
             else if ($scope.forecastType === 'mid') {
 
-                //monday는 토요일부터 표시
-                var day = time.getDay();
-                var dayPadding = 2;
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return 0;
+                }
 
+                // Sunday is 0
+                var day = time.getDay();
+                var dayPadding = 1;
+
+                //monday는 토요일부터 표시
                 if (day === 1) {
                     index = 5;
                 }
@@ -400,10 +394,6 @@ angular.module('starter.controllers', [])
                         dayPadding += 1;
                     }
 
-                    // 6 cells 에서는 수요일부터는 화,수,목,금,토,일 표시
-                    if (day > 2 && bodyWidth < 360) {
-                        dayPadding += 1;
-                    }
                     index = 6 + dayPadding - day;
                 }
                 return getWidthPerCol()*index;
