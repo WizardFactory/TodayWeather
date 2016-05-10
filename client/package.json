@@ -34,7 +34,6 @@
     "cordova-plugin-splashscreen",
     "ionic-plugin-keyboard",
     "cordova-plugin-geolocation",
-    "cordova-plugin-apple-watch",
     "cordova-plugin-statusbar",
     "ionic-plugin-deploy",
     "cordova-plugin-inappbrowser@1.4.0",
