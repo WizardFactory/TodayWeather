@@ -199,11 +199,12 @@ angular.module('starter', [
 
                 var chart = function () {
                     var data = scope.timeChart;
-                    var currentTime = scope.currentWeather.time;
 
                     if (x == undefined || y == undefined || svg == undefined || data == undefined) {
                         return;
                     }
+
+                    var currentTime = scope.currentWeather.time;
 
                     x.domain(d3.range(data[0].values.length));
                     y.domain([
