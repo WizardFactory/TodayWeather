@@ -55,6 +55,10 @@ function makeNewBase (list) {
             var address = townArray[0]+","+townArray[1]+","+townArray[2];
             console.log(address);
 
+            //if town had geo info, skip getting geo info
+            if (townArray[3]) {
+                return callback();
+            }
             getGeoCodeFromDaum(address, function (err, body) {
                 if (err) {
                     console.log(err);
@@ -63,8 +67,8 @@ function makeNewBase (list) {
                 }
                 try {
                     console.log(body.channel.item[0].lat);
-                    var output = townArray[0]+","+townArray[1]+","+townArray[2]+","+body.channel.item[0].lat.toFixed(2)+","+
-                        body.channel.item[0].lng.toFixed(2)+","+townArray[5];
+                    var output = townArray[0]+","+townArray[1]+","+townArray[2]+","+body.channel.item[0].lat.toFixed(7)+","+
+                        body.channel.item[0].lng.toFixed(7);
                         //+","+body.channel.item[0].title;
                     console.log(output);
                     baseList.push(output);
