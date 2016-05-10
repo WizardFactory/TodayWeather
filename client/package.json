@@ -49,7 +49,7 @@
       "locator": "phonegap-plugin-push",
       "id": "phonegap-plugin-push"
     },
-    "cordova-admob"
+    "cordova-plugin-admobpro"
   ],
   "cordovaPlatforms": [
     "ios",
