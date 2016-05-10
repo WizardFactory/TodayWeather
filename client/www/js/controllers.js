@@ -4,7 +4,6 @@ angular.module('starter.controllers', [])
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           $stateParams, $location, $ionicHistory) {
 
-        var deploy = new Ionic.Deploy();
         var bodyWidth = window.innerWidth;
         var colWidth;
         var cityData;
@@ -90,72 +89,6 @@ angular.module('starter.controllers', [])
                 return ionic.Platform.isIOS();
             };
         }
-
-        // "dev" is the channel tag for the Dev channel.
-        //deploy.setChannel("Dev");
-        // Check Ionic Deploy for new code
-        function checkForUpdates() {
-            var deferred = $q.defer();
-
-            console.log("Ionic Deploy: Checking for updates");
-            deploy.info().then(function(deployInfo) {
-                console.log(deployInfo);
-            }, function() {}, function() {});
-
-            deploy.check().then(function(hasUpdate) {
-                console.log("Ionic Deploy: Update available: " + hasUpdate);
-                if (hasUpdate) {
-                    $scope.showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
-                        if (res)   {
-                            // Update app code with new release from Ionic Deploy
-                            $scope.currentWeather.summary = "업데이트 시작";
-                            deploy.update().then(function (res) {
-                                $scope.currentWeather.summary = "최신버젼으로 업데이트 되었습니다! " + res;
-                                deferred.resolve();
-                            }, function (err) {
-                                $scope.currentWeather.summary = "업데이트 실패 " + err;
-                                deferred.reject();
-                            }, function (prog) {
-                                $scope.currentWeather.summary = "업데이트중 " + prog + "%";
-                            });
-                        }
-                        else {
-                            deferred.reject();
-                        }
-                    });
-                }
-                else {
-                    deferred.resolve();
-                }
-            }, function(err) {
-                console.log("Ionic Deploy: Unable to check for updates", err);
-                deferred.reject();
-            });
-
-            return deferred.promise;
-        }
-
-        /**
-         * Identifies a user with the Ionic User service
-         */
-        //function identifyUser() {
-        //    console.log("User: Identifying with User service");
-        //
-        //    // kick off the platform web client
-        //    Ionic.io();
-        //
-        //    // this will give you a fresh user or the previously saved 'current user'
-        //    var user = Ionic.User.current();
-        //
-        //    // if the user doesn't have an id, you'll need to give it one.
-        //    if (!user.id) {
-        //        user.id = Ionic.User.anonymousId();
-        //        // user.id = "your-custom-user-id";
-        //    }
-        //
-        //    //persist the user
-        //    user.save();
-        //}
 
         function loadWeatherData() {
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.cityIndex);
@@ -485,10 +418,9 @@ angular.module('starter.controllers', [])
                 }
 
                 loadWeatherData();
-                checkForUpdates().finally(function () {
-                    updateWeatherData(false).finally(function () {
-                        $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-                    });
+
+                updateWeatherData(false).finally(function () {
+                    $scope.address = WeatherUtil.getShortenAddress(cityData.address);
                 });
             });
         });
@@ -714,17 +646,6 @@ angular.module('starter.controllers', [])
                                         $cordovaInAppBrowser, Util) {
         //sync with config.xml
         $scope.version  = "0.7.11";
-
-        //it doesn't work after ionic deploy
-        //var deploy = new Ionic.Deploy();
-        //deploy.info().then(function(deployInfo) {
-        //    console.log("DeployInfo" + deployInfo);
-        //    $scope.version = deployInfo.binary_version;
-        //}, function() {}, function() {});
-        //
-        //deploy.getVersions().then(function(versions) {
-        //    console.log("version:" + versions);
-        //}, function() {}, function() {});
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'setting');
