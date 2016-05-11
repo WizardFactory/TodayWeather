@@ -35,16 +35,19 @@ angular.module('starter.controllers', [])
             $ionicHistory.clearHistory();
 
             var padding = 1;
+            var smallPadding = 1;
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
 
             //iphone 4 480-20(status bar)
             if ((window.innerHeight === 460 || window.innerHeight === 480) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 5 568-20(status bar)
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 6 667-20
             if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
@@ -74,13 +77,13 @@ angular.module('starter.controllers', [])
             var bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
             $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
-            var smallTimeSize = mainHeight * 0.0299;
+            var smallTimeSize = mainHeight * 0.0299 * smallPadding;
             $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
 
-            var smallImageSize = mainHeight * 0.0512;
+            var smallImageSize = mainHeight * 0.0512 * smallPadding;
             $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
 
-            var smallDigitSize = mainHeight * 0.0320;
+            var smallDigitSize = mainHeight * 0.0320 * smallPadding;
             $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
             $scope.isIOS = function() {
@@ -300,24 +303,9 @@ angular.module('starter.controllers', [])
             }
 
             console.log("body of width="+bodyWidth);
-
-            switch (bodyWidth) {
-                case 320:   //iphone 4,5
-                    colWidth = 53;
-                    break;
-                case 375:   //iphone 6
-                    colWidth = 53;
-                    break;
-                case 412:   //SS note5
-                    colWidth = 58.85;
-                    break;
-                case 414:   //iphone 6+
-                    colWidth =  59;
-                    break;
-                case 360:   //s4, note3
-                default:
-                    colWidth = 52;
-                    break;
+            colWidth = bodyWidth/7;
+            if (colWidth > 60) {
+                colWidth = 60;
             }
             return colWidth;
         }
@@ -328,7 +316,12 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 6; //yesterday 21h
+                index = 7; //yesterday 21h
+
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return getWidthPerCol()*index;
+                }
 
                 if(hours >= 3) {
                     //start today
@@ -340,17 +333,21 @@ angular.module('starter.controllers', [])
                 if (hours >= 9) {
                     index += 1;
                 }
-                if (hours > 15 && bodyWidth < 360) {
-                    index += 1;
-                }
+
                 return getWidthPerCol()*index;
             }
             else if ($scope.forecastType === 'mid') {
 
-                //monday는 토요일부터 표시
-                var day = time.getDay();
-                var dayPadding = 2;
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return 0;
+                }
 
+                // Sunday is 0
+                var day = time.getDay();
+                var dayPadding = 1;
+
+                //monday는 토요일부터 표시
                 if (day === 1) {
                     index = 5;
                 }
@@ -362,10 +359,6 @@ angular.module('starter.controllers', [])
                         dayPadding += 1;
                     }
 
-                    // 6 cells 에서는 수요일부터는 화,수,목,금,토,일 표시
-                    if (day > 2 && bodyWidth < 360) {
-                        dayPadding += 1;
-                    }
                     index = 6 + dayPadding - day;
                 }
                 return getWidthPerCol()*index;
