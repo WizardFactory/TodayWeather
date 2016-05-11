@@ -35,16 +35,19 @@ angular.module('starter.controllers', [])
             $ionicHistory.clearHistory();
 
             var padding = 1;
+            var smallPadding = 1;
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
 
             //iphone 4 480-20(status bar)
             if ((window.innerHeight === 460 || window.innerHeight === 480) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 5 568-20(status bar)
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 6 667-20
             if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
@@ -74,13 +77,13 @@ angular.module('starter.controllers', [])
             var bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
             $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
-            var smallTimeSize = mainHeight * 0.0299;
+            var smallTimeSize = mainHeight * 0.0299 * smallPadding;
             $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
 
-            var smallImageSize = mainHeight * 0.0512;
+            var smallImageSize = mainHeight * 0.0512 * smallPadding;
             $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
 
-            var smallDigitSize = mainHeight * 0.0320;
+            var smallDigitSize = mainHeight * 0.0320 * smallPadding;
             $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
             $scope.isIOS = function() {
