@@ -73,7 +73,7 @@ angular.module('service.twads', [])
             else {
                 AdMob.createBanner({
                         adId: obj.bannerAdUnit,
-                        autoShow: true
+                        autoShow:       false
                     },
                     function () {
                         console.log('create banner view');

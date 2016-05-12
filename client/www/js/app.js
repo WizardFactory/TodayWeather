@@ -430,11 +430,37 @@ angular.module('starter', [
                 };
 
                 scope.$watch('timeWidth', function(newValue) {
+                    console.log('timeWidth='+newValue);
+                    //guide에서 나올때, 점들이 모이는 증상이 있음.
+                    if (newValue == undefined || newValue == width) {
+                        console.log('new value is undefined or already set same width='+width);
+                        return;
+                    }
+
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
 
                     if (svg) {
                         svg.attr('width', width);
+                        svg.selectAll("*").remove();
+
+                        initLine = d3.svg.line()
+                            .interpolate('linear')
+                            .x(function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .y(height);
+
+                        line = d3.svg.line()
+                            .interpolate('linear')
+                            .x(function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .y(function (d) {
+                                return y(d.value.t3h);
+                            });
+
+                        chart();
                     }
                 });
 
@@ -642,6 +668,11 @@ angular.module('starter', [
                 };
 
                 scope.$watch('dayWidth', function(newValue) {
+                    if (newValue == undefined || newValue == width) {
+                        console.log('new value is undefined or already set same width='+width);
+                        return;
+                    }
+
                     width = newValue;
                     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                     if (svg) {
