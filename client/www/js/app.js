@@ -149,7 +149,6 @@ angular.module('starter', [
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
-                var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
                 var width, height, x, y;
                 var svg, initLine, line;
@@ -253,9 +252,7 @@ angular.module('starter', [
                             return initLine(d.values);
                         });
 
-                    lines.transition()
-                        .duration(duration)
-                        .attr('d', function (d) {
+                    lines.attr('d', function (d) {
                             return line(d.values);
                         });
 
@@ -286,9 +283,7 @@ angular.module('starter', [
                         })
                         .attr('cy', height - margin.bottom);
 
-                    circles.transition()
-                        .duration(duration)
-                        .attr('cy', function (d) {
+                    circles.attr('cy', function (d) {
                             return y(d.value.t3h);
                         });
 
@@ -332,9 +327,7 @@ angular.module('starter', [
                         })
                         .attr('cy', height - margin.bottom);
 
-                    point.transition()
-                        .duration(duration)
-                        .attr('cx', function (d) {
+                    point.attr('cx', function (d) {
                             var cx1, cx2;
                             for (var i = 0; i < d.values.length; i = i + 1) {
                                 if (d.values[i].value.day === '오늘') {
@@ -419,9 +412,7 @@ angular.module('starter', [
                             return '';
                         });
 
-                    texts.transition()
-                        .duration(duration)
-                        .attr('y', function (d) {
+                    texts.attr('y', function (d) {
                             return y(d.value.t3h) - margin.top - margin.textTop;
                         });
 
@@ -483,7 +474,6 @@ angular.module('starter', [
             restrict: 'A',
             transclude: true,
             link: function (scope, iElement) {
-                var duration = 1000;
                 var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
                 var width, height, x, y;
                 var svg;
@@ -561,8 +551,6 @@ angular.module('starter', [
                             return y(d.tmn);
                         })
                         .attr('height', 0)
-                        .transition()
-                        .duration(duration)
                         .attr('y', function (d) {
                             return y(d.tmx);
                         })
@@ -600,8 +588,6 @@ angular.module('starter', [
                             return d.tmx + '˚';
                         })
                         .attr('class', 'text-today')
-                        .transition()
-                        .duration(duration)
                         .attr('y', function (d) {
                             return y(d.tmx) - margin.top - margin.textTop;
                         });
@@ -636,8 +622,6 @@ angular.module('starter', [
                             return d.tmn + '˚';
                         })
                         .attr('class', 'text-today')
-                        .transition()
-                        .duration(duration)
                         .attr('y', function (d) {
                             return y(d.tmn);
                         });
@@ -662,8 +646,6 @@ angular.module('starter', [
                             return y(d.temp);
                         })
                         .attr('r', 0)
-                        .transition()
-                        .delay(duration)
                         .attr('r', 5);
                 };
 
