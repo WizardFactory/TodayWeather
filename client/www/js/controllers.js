@@ -376,10 +376,11 @@ angular.module('starter.controllers', [])
             var str = '';
             if (value.fromToday === 0 || value.fromToday === 1) {
                 if (value.dustForecast && value.dustForecast.PM10Str) {
-                   str +=  '미세예보:'+value.dustForecast.PM10Str + ',';
+                   str +=  '미세예보:'+value.dustForecast.PM10Str;
                 }
 
                 if (value.ultrvStr) {
+                    str += ', ';
                     str += '자외선:'+value.ultrvStr;
                 }
                 return str;
