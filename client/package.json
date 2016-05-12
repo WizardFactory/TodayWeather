@@ -35,7 +35,6 @@
     "ionic-plugin-keyboard",
     "cordova-plugin-geolocation",
     "cordova-plugin-statusbar",
-    "ionic-plugin-deploy",
     "cordova-plugin-inappbrowser@1.4.0",
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",
