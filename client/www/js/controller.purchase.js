@@ -101,6 +101,15 @@ angular.module('controller.purchase', [])
                     return inAppPurchase.restorePurchases().then(function(data) {
                         console.log('Purchases INFO!!!');
                         console.log(JSON.stringify(data));
+                        console.log('receipt count='+data.length);
+                        data.forEach(function (purchase) {
+                            var inReceipt = JSON.parse(purchase.receipt);
+                            console.log('receipt: '+JSON.stringify(inReceipt));
+                            console.log('purchaseTime='+new Date(inReceipt.purchaseTime));
+                        });
+                        if (data.length == 0) {
+                            return undefined;
+                        }
                         //if you have many product find by product id
                         return {type: 'android', id: obj.productId, receipt: data};
                     });
@@ -147,12 +156,6 @@ angular.module('controller.purchase', [])
 
                 console.log('Purchases INFO!!!');
                 console.log(JSON.stringify(storeReceipt));
-                console.log('receipt count='+storeReceipt.length);
-                storeReceipt.forEach(function (purchase) {
-                    var inReceipt = JSON.parse(purchase.receipt);
-                    console.log('receipt: '+JSON.stringify(inReceipt));
-                    console.log('purchaseTime='+new Date(inReceipt.purchaseTime));
-                });
 
                 updatePurchaseInfo = function () {
                     var deferred = $q.defer();
