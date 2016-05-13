@@ -14,12 +14,5 @@
       "path": "./",
       "proxyUrl": "http://localhost:3000/v000705"
     }
-  ],
-  "browsers": [
-    {
-      "platform": "android",
-      "browser": "crosswalk",
-      "version": "12.41.296.5"
-    }
   ]
 }
