@@ -9,7 +9,7 @@ var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 
 var commandCategory = ['ALL','MET','OWM','WU'];
-var command = ['get_all','get', 'req_add_geocode'];
+var command = ['get_all','get', 'req_add'];
 
 function ControllerRequester(){
     var self = this;
@@ -29,8 +29,8 @@ function ControllerRequester(){
                 break;
             case 'get':
                 break;
-            case 'req_add_geocode':
-                self.addGeocode(req, function(err){
+            case 'req_add':
+                self.addLocation(req, function(err){
                     if(err){
                         log.info('RQ>  fail to run req_add_geocode');
                     }
@@ -103,12 +103,12 @@ ControllerRequester.prototype.isValidCommand = function(req){
 
 ControllerRequester.prototype.parseGeocode = function(req){
     if(req.query.gcode === undefined){
-        log.error('RQ> There are no geocode');
+        log.silly('RQ> There are no geocode');
         return false;
     }
     var geocodeString = req.query.gcode;
 
-    log.info('code:', geocodeString);
+    //log.info('code:', geocodeString);
     var codelist = geocodeString.split(',');
     if(codelist.length !== 2){
         log.error('RQ> geocode has somthing wrong : ', codelist);
@@ -120,7 +120,33 @@ ControllerRequester.prototype.parseGeocode = function(req){
         lon: codelist[1]
     };
 
-    log.info(req.geocode);
+    log.info('RQ> ', req.geocode);
+
+    return true;
+};
+
+ControllerRequester.prototype.parseAddress = function(req){
+    if(req.query.city === undefined){
+        log.silly('RQ> There are no city name');
+        return false;
+    }
+
+    var address = {};
+
+    address.city = req.query.city;
+    if(req.query.country){
+        address.country = req.query.country;
+    }
+    if(req.query.zipcode){
+        address.country = req.query.zipcode;
+    }
+    if(req.query.postcode){
+        address.postcode = req.query.postcode;
+    }
+
+    req.address = address;
+
+    log.info('RQ> ', req.address);
 
     return true;
 };
@@ -138,30 +164,61 @@ ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, callb
     });
 
     newGeocodeItem.save(function(err){
-        log.silly('RQ> save geocode :', err);
+        log.info('RQ> save geocode :', err);
         callback(err);
     });
 };
 
-ControllerRequester.prototype.addGeocode = function(req, callback){
+ControllerRequester.prototype.addLocation = function(req, callback){
     var self = this;
 
     async.waterfall([
             function(cb){
                 // 1. paese geocode from URL
-                if(self.parseGeocode(req)){
-                    cb(null);
+                if(!self.parseGeocode(req)){
+                    log.silly('There are no geocode');
+                    cb(undefined, false);
                 }else{
-                    req.error = new Error('RQ> Can not parse Geocode from URL');
-                    cb('err_exit_parse');
+                    cb(undefined, true);
                 }
+            },
+            function(isGeocode, cb){
+                if(!self.parseAddress(req)){
+                    log.silly('There are no address');
+                    if(isGeocode){
+                        log.info('Only have geocode');
+                        cb(null);
+                        return;
+                    }else{
+                        log.error('There are no geocode or city name');
+                        cb('err_exit_no_parameter');
+                        return;
+                    }
+                }
+                cb(null);
             },
             function(cb){
                 // 2. save Geocode to DB
-                self.saveGeocodeToDb(req.geocode, {country:'', city:'', zipcode:'', postcode:''}, function(err){
+                var address = {country:'', city:'', zipcode:'', postcode:''};
+                var geocode = {lat:1, lon:1};
+
+                if(req.address){
+                    if(req.address.country){
+                        address.country = req.address.country;
+                    }
+                    if(req.address.city){
+                        address.city = req.address.city;
+                    }
+                }
+                if(req.geocode){
+                    geocode = req.geocode;
+                }
+
+                self.saveGeocodeToDb(geocode, address, function(err){
                     if(err){
                         req.err = new Error('RQ> Can not save geocode to DB');
                         cb('err_exit_save');
+                        return;
                     }
                     cb(null);
                 });
