@@ -1,5 +1,8 @@
 
 angular.module('starter.controllers', [])
+    .run(function (WeatherInfo) {
+        WeatherInfo.loadTowns();
+    })
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           $stateParams, $location, $ionicHistory) {
@@ -411,18 +414,16 @@ angular.module('starter.controllers', [])
             }
 
             WeatherInfo.loadCities();
-            WeatherInfo.loadTowns().then(function () {
-                WeatherInfo.updateCities();
+            WeatherInfo.updateCities();
 
-                if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
-                    WeatherInfo.setCityIndex($stateParams.fav);
-                }
+            if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
+                WeatherInfo.setCityIndex($stateParams.fav);
+            }
 
-                loadWeatherData();
+            loadWeatherData();
 
-                updateWeatherData(false).finally(function () {
-                    $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-                });
+            updateWeatherData(false).finally(function () {
+                $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             });
         });
 

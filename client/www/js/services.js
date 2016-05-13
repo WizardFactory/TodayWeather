@@ -233,17 +233,7 @@ angular.module('starter.services', [])
 
         obj.loadTowns = function() {
             var that = this;
-            var deferred = $q.defer();
-
-            $http.get('data/town.json')
-                .then(function (res) {
-                    that.towns = res.data;
-                    deferred.resolve();
-                }, function () {
-                    deferred.reject();
-                });
-
-            return deferred.promise;
+            that.towns = window.towns;
         };
 
         obj.setCityIndex = function (index) {
