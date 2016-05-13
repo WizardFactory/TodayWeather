@@ -34,10 +34,8 @@ function controllerWorldWeather(){
             req.result = {};
         }
         req.result.usage = [
-            '/{API version}/{code}/[options]',
-            'example 1 > /010000/39.66,116.40',
-            'example 2 > /010000/39.66,116.40/short',
-            'example 3 > /010000/39.66,116.40/current'
+            '/{API version}/{categroy}',
+            'example 3 > /010000/current?key={key}&code={lat},{lon}&country={country_name}&city={city_name}'
         ];
 
         next();
@@ -79,9 +77,15 @@ function controllerWorldWeather(){
             return next();
         }
 
-        if(!self.getCode(req)){
-            log.error('WW> There is no geocode');
-            return next();
+        self.getCode(req);
+        self.getCountry(req);
+        self.getCity(req);
+
+        if(!req.geocode && !req.city){
+            log.error('It is not valid request');
+            req.error = 'It is not valid request';
+            next();
+            return;
         }
 
         log.info('geocode : ', req.geocode);
@@ -94,28 +98,40 @@ function controllerWorldWeather(){
                             if(err){
                                 req.error = err;
                                 callback('err_exit');
+                                return;
                             }
+                            log.info('WW> load geocode, count:', self.geocodeList.length);
+                            callback(null);
                         });
+                    }else{
+                        // goto next step
+                        callback(null);
                     }
-                    log.info('WW> load geocode');
-                    // goto next step
-                    callback(null);
                 },
                 // 2. check geocode if it is in the geocodelist or not.
                 function(callback){
-                    if(self.checkGeocode(req.geocode)){
+                    if(req.city !== undefined && self.checkCityName(req.city)){
+                        log.info('WW> matched by city name');
                         callback(null);
+                        return;
+                    }
+
+                    if(req.geocode !== undefined && self.checkGeocode(req.geocode)){
+                        log.info('WW> matched by geocode');
+                        callback(null);
+                        return;
                     }
 
                     // Need to send request to add this geocode.
-                    log.error('WW> It is the fist request, will collect weather for this geocode :', req.geocode);
+                    log.error('WW> It is the fist request, will collect weather for this geocode :', req.geocode, req.city);
                     req.error = new Error('WW> It is the fist request, will collect weather for this geocode');
 
                     self.requestAddingGeocode(req, function(err){
                         if(err){
                             log.error('WW> fail to reqeust');
                         }
-                        callback('err_exit');
+                        req.error = {res: 'fail', msg:'this is the first request of geocode'};
+                        callback('err_exit_req_add_geocode');
                     });
                 },
                 // 3. get MET data from DB by using geocode.
@@ -200,8 +216,7 @@ function controllerWorldWeather(){
 
     self.getCode = function(req){
         if(req.query.gcode === undefined){
-            log.error('WW> can not find geocode from qurey');
-            req.error = 'WW> Can not find geocode from query';
+            log.silly('WW> can not find geocode from qurey');
             return false;
         }
 
@@ -217,6 +232,28 @@ function controllerWorldWeather(){
         return true;
     };
 
+    self.getCountry = function(req){
+        if(req.query.country === undefined){
+            log.silly('WW> can not find country name from qurey');
+            return false;
+        }
+
+        req.country = req.query.country;
+
+        return true;
+    };
+
+    self.getCity = function(req){
+        if(req.query.city === undefined){
+            log.silly('WW> can not find city name from qurey');
+            return false;
+        }
+
+        req.city = req.query.city;
+
+        return true;
+    };
+
     self.loadGeocodeList = function(callback){
         log.silly('WW> IN loadGeocodeList');
 
@@ -228,13 +265,14 @@ function controllerWorldWeather(){
                     return;
                 }
 
-                if(tList.length <= 0){
-                    log.error('WW> There are no geocode in the DB');
-                    callback(new Error('WW> There are no geocode in the DB'));
-                    return;
-                }
+                //if(tList.length <= 0){
+                //    log.error('WW> There are no geocode in the DB');
+                //    callback(new Error('WW> There are no geocode in the DB'));
+                //    return;
+                //}
 
                 self.geocodeList = tList;
+                log.info('WW> ', JSON.stringify(self.geocodeList));
                 callback(0);
             });
         }
@@ -243,9 +281,19 @@ function controllerWorldWeather(){
         }
     };
 
+    self.checkCityName = function(city){
+        for(var i = 0; i < self.geocodeList.length ; i++){
+            if(self.geocodeList[i].address.city === city){
+                return true;
+            }
+        }
+
+        return false;
+    };
+
     self.checkGeocode = function(geocode){
         for(var i = 0; i < self.geocodeList.length ; i++){
-            if((self.geocodeList[i].lon === geocode.lon) && (self.geocodeList[i].lat === geocode.lat)){
+            if((self.geocodeList[i].geocode.lon === geocode.lon) && (self.geocodeList[i].geocode.lat === geocode.lat)){
                 return true;
             }
         }
@@ -290,7 +338,19 @@ function controllerWorldWeather(){
         var base_url = config.url.requester;
         var key = 'abcdefg';
 
-        var url = base_url + 'req/ALL/req_add_geocode?key=' + key + '&gcode=' + req.geocode.lat + ',' + req.geocode.lon;
+        var url = base_url + 'req/ALL/req_add?key=' + key;
+
+        if(req.geocode){
+            url += '&gcode=' + req.geocode.lat + ',' + req.geocode.lon;
+        }
+
+        if(req.country){
+            url += '&country=' + req.country;
+        }
+
+        if(req.city){
+            url += '&city=' + req.city;
+        }
 
         log.info('WW> req url : ', url);
         try{
