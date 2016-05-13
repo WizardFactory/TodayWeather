@@ -87,30 +87,31 @@ $ ionic build --release ios
 
 ### import android widget
 
-copy widget files
+copy widget files and overwrite strings.xml
 ```bash
-$ cd platforms/android/src/net/wizardfactory/todayweather/
-$ cp -af ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
-$ cd platforms/android/res/drawable-xhdpi
-$ cp ../../../../../android/res/drawable-xhdpi/* ./
-$ cd platforms/android/res
-$ cp -af ../../../../android/res/layout ./
-$ cp ../../../../android/res/xml/w2x1_widget_provider.xml xml/
-```  
-
-overwrite strings.xml
-```bash
-$ cd platforms/android/res
-$ cp ../../../../android/res/values/strings.xml values/strings.xml 
+cd platforms/android/src/net/wizardfactory/todayweather/
+cp -af ../../../../../../../android/src/net/wizardfactory/todayweather/widget ./
+cd -
+cd platforms/android/res/drawable-xhdpi
+cp ../../../../../android/res/drawable-xhdpi/* ./
+cd -
+cd platforms/android/res
+cp -af ../../../../android/res/layout ./
+cp ../../../../android/res/xml/w2x1_widget_provider.xml xml/
+cd -
+cd platforms/android/res
+cp ../../../../android/res/values/strings.xml values/strings.xml 
 ```
 
 add activity and service for widget
 ```bash
-$ cd platforms/android/
-$ vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
+cd platforms/android/
+vimdiff AndroidManifest.xml ../../../android/AndroidManifest.xml
 ```
 
 ### import apple watch app
+
+현재 동작오류로 유보하였음.
 
 1. ionic build ios에 의해서 생성된 xcode 프로젝트에서 File/New/Target -> WatchKit App for watchOS1을 선택
 2. WatchKit App을 선택할 경우 정상적으로 실행되지 않습니다(시뮬레이터는 실행됩니다.). 아래의 에러코드 발생
@@ -160,7 +161,8 @@ $ ~/Library/Android/sdk/build-tools/VERSION/zipalign android-armv7-release-unsig
 ios
 
 1. run xcode
-2. general -> device : iPhone, check Hide status bar
+2. general -> device : iPhone, status bar style light
+3. Capabilities Push Notifications on, Background Modes off
 3. connect iPhone by USB
 4. Menu -> Product -> Archive
 

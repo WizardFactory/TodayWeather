@@ -1,10 +1,12 @@
 
 angular.module('starter.controllers', [])
+    .run(function (WeatherInfo) {
+        WeatherInfo.loadTowns();
+    })
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           $stateParams, $location, $ionicHistory) {
 
-        var deploy = new Ionic.Deploy();
         var bodyWidth = window.innerWidth;
         var colWidth;
         var cityData;
@@ -35,16 +37,19 @@ angular.module('starter.controllers', [])
             $ionicHistory.clearHistory();
 
             var padding = 1;
+            var smallPadding = 1;
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
 
             //iphone 4 480-20(status bar)
             if ((window.innerHeight === 460 || window.innerHeight === 480) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 5 568-20(status bar)
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
                 padding = 1.125;
+                smallPadding = 1.1;
             }
             //iphone 6 667-20
             if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
@@ -74,94 +79,18 @@ angular.module('starter.controllers', [])
             var bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
             $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
-            var smallTimeSize = mainHeight * 0.0299;
+            var smallTimeSize = mainHeight * 0.0299 * smallPadding;
             $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
 
-            var smallImageSize = mainHeight * 0.0512;
+            var smallImageSize = mainHeight * 0.0512 * smallPadding;
             $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
 
-            var smallDigitSize = mainHeight * 0.0320;
+            var smallDigitSize = mainHeight * 0.0320 * smallPadding;
             $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
             $scope.isIOS = function() {
                 return ionic.Platform.isIOS();
             };
-        }
-
-        // "dev" is the channel tag for the Dev channel.
-        //deploy.setChannel("Dev");
-        // Check Ionic Deploy for new code
-        function checkForUpdates() {
-            var deferred = $q.defer();
-
-            console.log("Ionic Deploy: Checking for updates");
-            deploy.info().then(function(deployInfo) {
-                console.log(deployInfo);
-            }, function() {}, function() {});
-
-            deploy.check().then(function(hasUpdate) {
-                console.log("Ionic Deploy: Update available: " + hasUpdate);
-                if (hasUpdate) {
-                    $scope.showConfirm("업데이트", "새로운 버전이 확인되었습니다. 업데이트 하시겠습니까?", function (res) {
-                        if (res)   {
-                            // Update app code with new release from Ionic Deploy
-                            $scope.currentWeather.summary = "업데이트 시작";
-                            deploy.update().then(function (res) {
-                                $scope.currentWeather.summary = "최신버젼으로 업데이트 되었습니다! " + res;
-                                deferred.resolve();
-                            }, function (err) {
-                                $scope.currentWeather.summary = "업데이트 실패 " + err;
-                                deferred.reject();
-                            }, function (prog) {
-                                $scope.currentWeather.summary = "업데이트중 " + prog + "%";
-                            });
-                        }
-                        else {
-                            deferred.reject();
-                        }
-                    });
-                }
-                else {
-                    deferred.resolve();
-                }
-            }, function(err) {
-                console.log("Ionic Deploy: Unable to check for updates", err);
-                deferred.reject();
-            });
-
-            return deferred.promise;
-        }
-
-        /**
-         * Identifies a user with the Ionic User service
-         */
-        //function identifyUser() {
-        //    console.log("User: Identifying with User service");
-        //
-        //    // kick off the platform web client
-        //    Ionic.io();
-        //
-        //    // this will give you a fresh user or the previously saved 'current user'
-        //    var user = Ionic.User.current();
-        //
-        //    // if the user doesn't have an id, you'll need to give it one.
-        //    if (!user.id) {
-        //        user.id = Ionic.User.anonymousId();
-        //        // user.id = "your-custom-user-id";
-        //    }
-        //
-        //    //persist the user
-        //    user.save();
-        //}
-
-        function setUserDefaults(obj) {
-            if (window.applewatch) {
-                applewatch.sendUserDefaults(function() {
-                    console.log(obj);
-                }, function() {
-                    console.log("Failed to sendUserDefault");
-                }, obj, "group.net.wizardfactory.todayweather");
-            }
         }
 
         function loadWeatherData() {
@@ -192,35 +121,7 @@ angular.module('starter.controllers', [])
             $scope.currentPosition = cityData.currentPosition;
 
             // To share weather information for apple watch.
-            if (ionic.Platform.isIOS()) {
-                var shortestAddress = $scope.address.split(",")[1];
-                if (!shortestAddress) { shortestAddress = $scope.address.split(",")[0];
-                }
-                setUserDefaults({"Location": shortestAddress || "구름동"});
-                setUserDefaults({"Temperature": String(cityData.currentWeather.t1h)+'˚' || "33˚"});
-                setUserDefaults({"WeatherComment": cityData.currentWeather.summary || "어제과 같음"});
-                setUserDefaults({"WeatherImage": cityData.currentWeather.skyIcon || "Snow"});
-
-                setUserDefaults({"TodayMaxTemp": "99"});
-                setUserDefaults({"TodayMinTemp": "0"});
-                setUserDefaults({"YesterdayMaxTemp": "99"});
-                setUserDefaults({"YesterdayMinTemp": "0"});
-                setUserDefaults({"TomorrowMaxTemp": "99"});
-                setUserDefaults({"TomorrowMinTemp": "0"});
-
-                for (var i = 0; i < $scope.dayTable.length; i++) {
-                    if ($scope.dayTable[i].fromToday === 0) {
-                        setUserDefaults({"TodayMaxTemp": String($scope.dayTable[i - 1].tmx || 99)});
-                        setUserDefaults({"TodayMinTemp": String($scope.dayTable[i - 1].tmn || 0)});
-                        setUserDefaults({"YesterdayMaxTemp": String($scope.dayTable[i].tmx || 99)});
-                        setUserDefaults({"YesterdayMinTemp": String($scope.dayTable[i].tmn || 0)});
-                        setUserDefaults({"TomorrowMaxTemp": String($scope.dayTable[i + 1].tmx || 99)});
-                        setUserDefaults({"TomorrowMinTemp": String($scope.dayTable[i + 1].tmn || 0)});
-                        break;
-                    }
-                }
-            }
-            // end for apple watch
+            // AppleWatch.setWeatherData(cityData);
 
             $timeout(function() {
                 if ($scope.forecastType === 'short') {
@@ -338,24 +239,9 @@ angular.module('starter.controllers', [])
             }
 
             console.log("body of width="+bodyWidth);
-
-            switch (bodyWidth) {
-                case 320:   //iphone 4,5
-                    colWidth = 53;
-                    break;
-                case 375:   //iphone 6
-                    colWidth = 53;
-                    break;
-                case 412:   //SS note5
-                    colWidth = 58.85;
-                    break;
-                case 414:   //iphone 6+
-                    colWidth =  59;
-                    break;
-                case 360:   //s4, note3
-                default:
-                    colWidth = 52;
-                    break;
+            colWidth = bodyWidth/7;
+            if (colWidth > 60) {
+                colWidth = 60;
             }
             return colWidth;
         }
@@ -366,7 +252,12 @@ angular.module('starter.controllers', [])
 
             if ($scope.forecastType === 'short') {
                 var hours = time.getHours();
-                index = 6; //yesterday 21h
+                index = 7; //yesterday 21h
+
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return getWidthPerCol()*index;
+                }
 
                 if(hours >= 3) {
                     //start today
@@ -378,17 +269,21 @@ angular.module('starter.controllers', [])
                 if (hours >= 9) {
                     index += 1;
                 }
-                if (hours > 15 && bodyWidth < 360) {
-                    index += 1;
-                }
+
                 return getWidthPerCol()*index;
             }
             else if ($scope.forecastType === 'mid') {
 
-                //monday는 토요일부터 표시
-                var day = time.getDay();
-                var dayPadding = 2;
+                //large tablet
+                if (bodyWidth >= 720) {
+                    return 0;
+                }
 
+                // Sunday is 0
+                var day = time.getDay();
+                var dayPadding = 1;
+
+                //monday는 토요일부터 표시
                 if (day === 1) {
                     index = 5;
                 }
@@ -400,10 +295,6 @@ angular.module('starter.controllers', [])
                         dayPadding += 1;
                     }
 
-                    // 6 cells 에서는 수요일부터는 화,수,목,금,토,일 표시
-                    if (day > 2 && bodyWidth < 360) {
-                        dayPadding += 1;
-                    }
                     index = 6 + dayPadding - day;
                 }
                 return getWidthPerCol()*index;
@@ -488,10 +379,11 @@ angular.module('starter.controllers', [])
             var str = '';
             if (value.fromToday === 0 || value.fromToday === 1) {
                 if (value.dustForecast && value.dustForecast.PM10Str) {
-                   str +=  '미세예보:'+value.dustForecast.PM10Str + ',';
+                   str +=  '미세예보:'+value.dustForecast.PM10Str;
                 }
 
                 if (value.ultrvStr) {
+                    str += ', ';
                     str += '자외선:'+value.ultrvStr;
                 }
                 return str;
@@ -522,19 +414,16 @@ angular.module('starter.controllers', [])
             }
 
             WeatherInfo.loadCities();
-            WeatherInfo.loadTowns().then(function () {
-                WeatherInfo.updateCities();
+            WeatherInfo.updateCities();
 
-                if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
-                    WeatherInfo.setCityIndex($stateParams.fav);
-                }
+            if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
+                WeatherInfo.setCityIndex($stateParams.fav);
+            }
 
-                loadWeatherData();
-                checkForUpdates().finally(function () {
-                    updateWeatherData(false).finally(function () {
-                        $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-                    });
-                });
+            loadWeatherData();
+
+            updateWeatherData(false).finally(function () {
+                $scope.address = WeatherUtil.getShortenAddress(cityData.address);
             });
         });
 
@@ -758,18 +647,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser, Util) {
         //sync with config.xml
-        $scope.version  = "0.7.9";
-
-        //it doesn't work after ionic deploy
-        //var deploy = new Ionic.Deploy();
-        //deploy.info().then(function(deployInfo) {
-        //    console.log("DeployInfo" + deployInfo);
-        //    $scope.version = deployInfo.binary_version;
-        //}, function() {}, function() {});
-        //
-        //deploy.getVersions().then(function(versions) {
-        //    console.log("version:" + versions);
-        //}, function() {}, function() {});
+        $scope.version  = "0.7.11";
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'setting');
@@ -925,7 +803,6 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-
             $rootScope.viewAdsBanner = TwAds.enableAds;
             $rootScope.contentBottom = TwAds.enableAds?100:50;
             angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.showAds?'50px':'0px');

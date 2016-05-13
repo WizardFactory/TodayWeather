@@ -4,9 +4,9 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds) {
+    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
         var obj = {};
-        obj.ACCOUNT_LEVEL_LOVER = 'lover';
+        obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
         obj.accountLevel;
         obj.productId;
@@ -19,7 +19,7 @@ angular.module('controller.purchase', [])
                 console.log('set account level ='+accountLevel);
                 //update accountLevel
                 obj.accountLevel = accountLevel;
-                if (accountLevel === obj.ACCOUNT_LEVEL_LOVER) {
+                if (accountLevel === obj.ACCOUNT_LEVEL_FREE) {
                     TwAds.setEnableAds(true);
                 }
                 else if (accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
@@ -32,10 +32,11 @@ angular.module('controller.purchase', [])
         };
 
         obj.checkReceiptValidation = function(storeReceipt, callback) {
+            var url = Util.url  + '/check-purchase';
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                url: "http://192.168.0.5:3000/v000705/check-purchase",
+                url: url,
                 data: storeReceipt,
                 timeout: 10*1000
             })
@@ -65,12 +66,12 @@ angular.module('controller.purchase', [])
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
-                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_LOVER;
+                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
                 }
                 obj.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
-                obj.accountLevel = obj.ACCOUNT_LEVEL_LOVER;
+                obj.accountLevel = obj.ACCOUNT_LEVEL_FREE;
             }
         };
 
@@ -102,7 +103,7 @@ angular.module('controller.purchase', [])
                         console.log(JSON.stringify(data));
                         console.log('receipt count='+data.length);
                         data.forEach(function (purchase) {
-                           var inReceipt = JSON.parse(purchase.receipt);
+                            var inReceipt = JSON.parse(purchase.receipt);
                             console.log('receipt: '+JSON.stringify(inReceipt));
                             console.log('purchaseTime='+new Date(inReceipt.purchaseTime));
                         });
@@ -143,6 +144,9 @@ angular.module('controller.purchase', [])
 
         Purchase.loadPurchaseInfo();
 
+        /**
+         * check validation receipt by saved data in local storage
+         */
         function checkPurchase() {
             var storeReceipt;
             var updatePurchaseInfo;
@@ -152,12 +156,6 @@ angular.module('controller.purchase', [])
 
                 console.log('Purchases INFO!!!');
                 console.log(JSON.stringify(storeReceipt));
-                console.log('receipt count='+storeReceipt.length);
-                storeReceipt.forEach(function (purchase) {
-                    var inReceipt = JSON.parse(purchase.receipt);
-                    console.log('receipt: '+JSON.stringify(inReceipt));
-                    console.log('purchaseTime='+new Date(inReceipt.purchaseTime));
-                });
 
                 updatePurchaseInfo = function () {
                     var deferred = $q.defer();
@@ -182,13 +180,13 @@ angular.module('controller.purchase', [])
                     if (!receiptInfo.ok) {
                         //downgrade by canceled, refund ..
                         console.log(JSON.stringify(receiptInfo.data));
-                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_LOVER);
+                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
 
-                        $ionicPopup.alert({
-                            title: 'check purchase',
-                            template: receiptInfo.data.message
-                        });
+                        //$ionicPopup.alert({
+                        //    title: 'check purchase',
+                        //    template: receiptInfo.data.message
+                        //});
                     }
                     else {
                         console.log('welcome premium user');
@@ -208,20 +206,20 @@ angular.module('controller.purchase', [])
                 return;
             }
 
+            Purchase.productId = 'tw1year';
+            console.log('productId='+Purchase.productId);
+
             if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
                 return;
             }
-
-            Purchase.productId = 'non1year';
-            console.log('productId='+Purchase.productId);
 
             inAppPurchase
                 .getProducts([Purchase.productId])
                 .then(function (products) {
                     console.log(JSON.stringify(products));
                     Purchase.products =  products;
-                    if (storeReceipt == undefined && Purchase.loaded === false) {
+                    if (Purchase.loaded === false) {
                         //It seems fail to check purchase info
                         //retry check purchase info
                         checkPurchase();
@@ -229,10 +227,11 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     console.log('Fail to get products of id='+Purchase.productId);
-                    console.log(err);
+                    console.log(JSON.stringify(err));
                 });
 
-            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_LOVER) {
+            //if saved accountLevel skip checkPurchase but, have to get products
+            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
                 console.log('account Level is '+Purchase.accountLevel);
                 Purchase.loaded = true;
                 return;
@@ -254,10 +253,10 @@ angular.module('controller.purchase', [])
                 .then(function (data) {
                     console.log('subscribe ok!');
                     console.log(JSON.stringify(data));
-                    $ionicPopup.alert({
-                        title: 'subscribe',
-                        template: JSON.stringify(data)
-                    });
+                    //$ionicPopup.alert({
+                    //    title: 'subscribe',
+                    //    template: JSON.stringify(data)
+                    //});
                     if (ionic.Platform.isIOS()) {
                        return {type: 'ios', id: Purchase.productId, receipt: data.receipt};
                     }
@@ -267,13 +266,14 @@ angular.module('controller.purchase', [])
                 })
                 .then(function (storeReceipt) {
                     //$ionicLoading.hide();
-                    console.log(storeReceipt);
+                    console.log(JSON.stringify(storeReceipt));
                     Purchase.saveStoreReceipt(storeReceipt);
                     Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
                         $ionicLoading.hide();
                         if (err) {
-                            console.log(err);
-                            throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
+                            console.log(JSON.stringify(err));
+                            //throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
+                            throw new Error('구매확인 서버에 연결되지 않습니다. 1~2분후에 구매 복원하기 해주세요.');
                         }
                         console.log(JSON.stringify(receiptInfo));
                         if (!receiptInfo.ok) {
@@ -292,9 +292,9 @@ angular.module('controller.purchase', [])
                 .catch(function (err) {
                     $ionicLoading.hide();
                     console.log('subscribe error');
-                    console.log(err);
+                    console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: 'subscribe error',
+                        title: '구매 오류',
                         template: err.message
                     });
                 });
@@ -310,7 +310,6 @@ angular.module('controller.purchase', [])
                     if (!receiptInfo.ok) {
                         console.log(JSON.stringify(receiptInfo.data));
                         throw new Error(receiptInfo.data.message);
-                        return;
                     }
                     else {
                         Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_PREMIUM);
@@ -323,9 +322,10 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
-                    console.log(err);
+                    console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: 'restore error',
+                        //title: 'restore error',
+                        title: '복원오류',
                         template: err.message
                     });
                 });
@@ -352,6 +352,17 @@ angular.module('controller.purchase', [])
             $scope.accountLevel = Purchase.accountLevel;
             $scope.expirationDate = (new Date(Purchase.expirationDate)).toLocaleDateString();
 
-            $scope.product = Purchase.products[0];
+            //Todo: check expire date for ios, check autoRenewing and expire date for android
+            $scope.showRenew = false;
+
+            if (!window.inAppPurchase) {
+                //for develop mode
+                $scope.product = {title:'프리미엄',  price: '$1.09', description: '지금 바로 프리미엄 서비스를 신청하시고, 1년간 광고 없이 사용하세요.'};
+            }
+            else {
+                $scope.product = Purchase.products[0];
+            }
+
+            $scope.listWidth = window.innerWidth;
         });
     });

@@ -11,6 +11,8 @@ angular.module('service.twads', [])
         obj.requestShow;
         obj.loaded = false;
         obj.ready = false;
+        obj.bannerAdUnit = '';
+        obj.interstitialAdUnit = '';
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
@@ -59,7 +61,7 @@ angular.module('service.twads', [])
 
             if (enable === false) {
                 obj.setShowAds(false);
-                admob.destroyBannerView(function () {
+                AdMob.removeBanner(function () {
                     console.log('destroy banner view');
                 }, function (e) {
                     console.log('Fail to destroy banner');
@@ -69,22 +71,27 @@ angular.module('service.twads', [])
                 _setLayout(enable);
             }
             else {
-                admob.createBannerView(function () {
-                    console.log('create banner view');
-                    obj.enableAds = enable;
-                    _setLayout(enable);
+                AdMob.createBanner({
+                        adId: obj.bannerAdUnit,
+                        autoShow:       false
+                    },
+                    function () {
+                        console.log('create banner view');
+                        obj.enableAds = enable;
+                        _setLayout(enable);
 
-                    if (obj.requestShow != undefined) {
-                        obj.setShowAds(obj.requestShow);
-                    }
-                    else {
-                        obj.setShowAds(obj.enableAds);
-                    }
+                        if (obj.requestShow != undefined) {
+                            obj.setShowAds(obj.requestShow);
+                        }
+                        else {
+                            obj.setShowAds(obj.enableAds);
+                        }
 
-                }, function (e) {
-                    console.log('Fail to create banner view');
-                    console.log(e);
-                });
+                    },
+                    function (e) {
+                        console.log('Fail to create banner view');
+                        console.log(e);
+                    });
             }
         };
 
@@ -106,25 +113,33 @@ angular.module('service.twads', [])
             }
 
             obj.showAds = show;
-
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', show?'50px':'0px');
             obj._setAdMobShowAd(show);
         };
 
         obj._setAdMobShowAd = function(show) {
             console.log('set ad mob show ='+show);
 
-            if ( !(window.admob) ) {
-                console.log('admob plugin not ready : set Enable Ads');
+            if ( !(window.AdMob) ) {
+                console.log('Admob plugin not ready : set Enable Ads');
                 return;
             }
 
-            admob.showBannerAd(show, function () {
-                console.log('show/hide about ad mob show='+show);
-            }, function (e) {
-                console.log('fail to show/hide about ad mob show='+show);
-                console.log(JSON.stringify(e));
-            });
+            if (show === true) {
+                AdMob.showBanner(AdMob.AD_POSITION.BOTTOM_CENTER, function () {
+                    console.log('show about ad mob show='+show);
+                }, function (e) {
+                    console.log('fail to show about ad mob show='+show);
+                    console.log(JSON.stringify(e));
+                });
+            }
+            else {
+                AdMob.hideBanner(function () {
+                    console.log('hide about ad mob show='+show);
+                }, function (e) {
+                    console.log('fail to hide about ad mob show='+show);
+                    console.log(JSON.stringify(e));
+                });
+            }
         };
 
         return obj;
@@ -132,18 +147,14 @@ angular.module('service.twads', [])
     .run(function($ionicPlatform, TwAds, Util) {
 
         $ionicPlatform.ready(function() {
-            //Purchase.setAccountLevel('lover');
-            //#367
-            //todo: height 기준으로 layout 재계산
-            //todo: header hide상태를 해제하여 bannerAd가 overlap되도록 변경
             var runAdmob = true;
 
             if (!runAdmob) {
-                console.log('admob is unused');
+                console.log('Ad mob is unused');
                 return;
             }
 
-            if ( !(window.admob) ) {
+            if ( !(window.AdMob) ) {
                 console.log('ad mob plugin not ready');
                 return;
             }
@@ -154,43 +165,49 @@ angular.module('service.twads', [])
             }
             TwAds.loaded = true;
 
-            var bannerAdUnit;
-            var interstitialAdUnit;
             if (ionic.Platform.isIOS()) {
-                bannerAdUnit = Util.admobIOSBannerAdUnit;
-                interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
+                TwAds.bannerAdUnit = Util.admobIOSBannerAdUnit;
+                TwAds.interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                bannerAdUnit = Util.admobAndroidBannerAdUnit;
-                interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
+                TwAds.bannerAdUnit = Util.admobAndroidBannerAdUnit;
+                TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
             }
 
-            admob.setOptions({
-                publisherId:          bannerAdUnit,  // Required
-                interstitialAdId:     interstitialAdUnit,  // Optional
-                adSize:               admob.AD_SIZE.BANNER,
-                bannerAtTop:          false,
-                overlap:              true,
-                offsetStatusBar:      false,
-                isTesting:            Util.isDebug(),
-                adExtras :            {},
-                autoShowBanner:       false,
-                autoShowInterstitial: false,
+            AdMob.setOptions({
+                adSize:         'BANNER',
+                overlap:        true,
+                isTesting:      Util.isDebug(),
+                autoShow:       false,
             }, function () {
-                console.log('Set options of admob');
+                console.log('Set options of Ad mob');
                 TwAds.loadTwAdsInfo();
             }, function (e) {
-                console.log('Fail to set options of admob');
+                console.log('Fail to set options of Ad mob');
                 console.log(e);
             });
 
-            document.addEventListener(admob.events.onAdLoaded, function(message){
-                console.log('on banner receive msg='+JSON.stringify(message));
+            document.addEventListener('onAdFailLoad',function(data){
+                console.log('on Failed Load Ad msg='+JSON.stringify(data));
+                //if(data.adType == 'banner') AdMob.hideBanner();
+                //else if(data.adType == 'interstitial') interstitialIsReady = false;
             });
 
-            document.addEventListener(admob.events.onAdFailedToLoad, function(message){
-                console.log('on banner Failed Receive Ad msg='+JSON.stringify(message));
+            document.addEventListener('onAdLoaded',function(data){
+                if(data.adType == 'banner')  {
+                    if (TwAds.showAds === true) {
+                       TwAds._setAdMobShowAd(true);
+                    }
+                }
+                else if(data.adType == 'interstitial') {
+                    //interstitialIsReady = true;
+                }
             });
+
+            document.addEventListener('onAdPresent',function(data){
+                console.log('on Ad present msg='+JSON.stringify(data));
+            });
+
         });
     });
 

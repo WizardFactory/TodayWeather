@@ -33,7 +33,7 @@ function getAreaNo(town, gCoord, callback) {
     LifeIndexKma.find({'town.first':town.first, 'town.second':town.second, 'town.third':town.third}).lean().exec(function (err, indexDataList) {
         if (err || indexDataList.length == 0)  {
             console.log('Fail to find town='+JSON.stringify(town));
-            LifeIndexKma.find({geo: {$near:coords, $maxDistance: 1}}).limit(3).lean().exec(function (err, indexDataList) {
+            LifeIndexKma.find({geo: {$near:coords, $maxDistance: 0.1}}).limit(3).lean().exec(function (err, indexDataList) {
                 if (err) {
                     console.log(err);
                     return callback(err);

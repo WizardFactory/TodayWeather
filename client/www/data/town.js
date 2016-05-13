@@ -1,4 +1,4 @@
-[{"first":"강원도","second":"강릉시","third":"","lat":37.75,"long":128.88,"areaNo":4215000000},
+window.towns=[{"first":"강원도","second":"강릉시","third":"","lat":37.75,"long":128.88,"areaNo":4215000000},
 {"first":"강원도","second":"강릉시","third":"강남동","lat":37.74,"long":128.91,"areaNo":4215061500},
 {"first":"강원도","second":"강릉시","third":"강동면","lat":37.73,"long":128.95,"areaNo":4215034000},
 {"first":"강원도","second":"강릉시","third":"경포동","lat":37.78,"long":128.88,"areaNo":4215066500},

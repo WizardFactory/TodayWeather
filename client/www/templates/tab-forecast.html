@@ -76,13 +76,13 @@
                                 <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
+                                <div class="row row-no-padding small-digit" ng-if="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
+                                <div class="row row-no-padding small-digit" ng-if="value.rn1 !== undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
-                                            style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
-                                            style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
+                                            style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
+                                            style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
                                 </div>
                             </div>
                         </div>
@@ -111,13 +111,13 @@
                                 <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 === undefined" style="height: 20%;">
+                                <div class="row row-no-padding small-digit" ng-if="value.rn1 === undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
                                 </div>
-                                <div class="row row-no-padding small-digit" ng-show="value.rn1 !== undefined" style="height: 20%;">
+                                <div class="row row-no-padding small-digit" ng-if="value.rn1 !== undefined" style="height: 20%;">
                                     <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
-                                            style="font-size:10px" ng-show="value.pty !== 3">mm</span><span
-                                            style="font-size:10px" ng-show="value.pty === 3">cm</span></p>
+                                            style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
+                                            style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
                                 </div>
                                 <div class="row row-no-padding small-image" style="height: 20%;">
                                     <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
@@ -143,8 +143,8 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
-                                <br ng-show="currentWeather.arpltn.pm10Value>=0"><small
-                                        ng-show="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
+                                <br ng-if="currentWeather.arpltn.pm10Value>=0"><small
+                                        ng-if="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item">
@@ -156,8 +156,8 @@
                                 <div><img src="img/PM10.png" style="width: 40px"></div>
                             </div>
                             <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
-                                <br ng-show="currentWeather.arpltn.pm25Value>=0"><small
-                                        ng-show="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
+                                <br ng-if="currentWeather.arpltn.pm25Value>=0"><small
+                                        ng-if="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
                             </div>
                         </div>
                         <div class="item row detail-item" ng-if="currentWeather.rn1Str">
@@ -181,6 +181,7 @@
                         <div class="item row detail-item" ng-if="currentWeather.dspls && currentWeather.dspls > 60 && currentWeather.sensorytem == currentWeather.t1h">
                                 <div class="col col-33 detail-text"><p>불쾌지수</p></div>
                                 <div class="col col-33 detail-image">
+                                    <div><img src="img/angry.svg" style="width: 32px"></div>
                                 </div>
                                 <div class="col col-33 detail-text"><p><span ng-if="currentWeather.dsplsStr">{{currentWeather.dsplsStr}}</span>
                                     <br ng-if="currentWeather.dsplsStr">{{currentWeather.dspls}}</p>
@@ -265,5 +266,5 @@
         </div>
     </ion-content>
     <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%;"
-                 ng-show="isLoading===true"/>
+                 ng-if="isLoading===true"/>
 </ion-view>

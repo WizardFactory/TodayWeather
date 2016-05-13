@@ -81,8 +81,7 @@ global.townRss = new controllerShortRss();
 
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
-}
-else if (config.mode === 'service') {
+
     var ControllerPush = require('./controllers/controllerPush');
     var co = new ControllerPush();
     co.start();
