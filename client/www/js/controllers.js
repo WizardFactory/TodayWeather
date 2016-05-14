@@ -583,7 +583,9 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnDeleteCity = function(index) {
-            Push.removeAlarm($scope.cityList[index].alarmInfo);
+            if ($scope.cityList[index].alarmInfo != undefined) {
+                Push.removeAlarm($scope.cityList[index].alarmInfo);
+            }
             $scope.cityList.splice(index, 1);
             WeatherInfo.removeCity(index);
 
@@ -598,8 +600,10 @@ angular.module('starter.controllers', [])
                 callback: function (val) {      //Mandatory
                     if (typeof (val) === 'undefined') {
                         console.log('Time not selected');
-                        Push.removeAlarm($scope.cityList[index].alarmInfo);
-                        $scope.cityList[index].alarmInfo = undefined;
+                        if ($scope.cityList[index].alarmInfo != undefined) {
+                            Push.removeAlarm($scope.cityList[index].alarmInfo);
+                            $scope.cityList[index].alarmInfo = undefined;
+                        }
                     } else {
                         var selectedTime = new Date();
                         selectedTime.setHours(0,0,0,0);
