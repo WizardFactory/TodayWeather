@@ -3,8 +3,9 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, Util) {
+    .factory('TwAds', function($rootScope, $cordovaNetwork) {
         var obj = {};
+        //상태 천이 변경 개선 필요
         obj.enableAds;
         obj.showAds;
         obj.requestEnable;
@@ -13,6 +14,7 @@ angular.module('service.twads', [])
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
+        obj.bannerCreated = false;
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
@@ -46,6 +48,28 @@ angular.module('service.twads', [])
             angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', enable?'50px':'0px');
         }
 
+        obj._admobCreateBanner = function() {
+            AdMob.createBanner({
+                    adId: obj.bannerAdUnit,
+                    autoShow: false
+                },
+                function () {
+                    console.log('create banner view');
+                    obj.bannerCreated = true;
+                    if (obj.requestShow != undefined) {
+                        obj.setShowAds(obj.requestShow);
+                    }
+                    else {
+                        obj.setShowAds(obj.enableAds);
+                    }
+
+                },
+                function (e) {
+                    console.log('Fail to create banner view');
+                    console.log(e);
+                });
+        };
+
         obj.setEnableAds = function (enable) {
             console.log('set enable ads enable='+enable);
             if (enable == obj.enableAds)  {
@@ -67,31 +91,18 @@ angular.module('service.twads', [])
                     console.log('Fail to destroy banner');
                     console.log(e);
                 });
+
                 obj.enableAds = enable;
+                obj.bannerCreated = false;
                 _setLayout(enable);
             }
             else {
-                AdMob.createBanner({
-                        adId: obj.bannerAdUnit,
-                        autoShow:       false
-                    },
-                    function () {
-                        console.log('create banner view');
-                        obj.enableAds = enable;
-                        _setLayout(enable);
-
-                        if (obj.requestShow != undefined) {
-                            obj.setShowAds(obj.requestShow);
-                        }
-                        else {
-                            obj.setShowAds(obj.enableAds);
-                        }
-
-                    },
-                    function (e) {
-                        console.log('Fail to create banner view');
-                        console.log(e);
-                    });
+                obj.enableAds = enable;
+                _setLayout(enable);
+                //hangup on android sdk 4.4.x
+                if ($cordovaNetwork.isOnline()) {
+                   obj._admobCreateBanner();
+                }
             }
         };
 
@@ -208,6 +219,11 @@ angular.module('service.twads', [])
                 console.log('on Ad present msg='+JSON.stringify(data));
             });
 
+            document.addEventListener("online", function () {
+                if (TwAds.enableAds === true && TwAds.bannerCreated === false) {
+                    TwAds._admobCreateBanner();
+                }
+            }, false);
         });
     });
 
