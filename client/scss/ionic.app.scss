@@ -329,36 +329,17 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .search-content {
-  display: table;
   margin: auto;
   background-color: transparent;
   color: white;
+  font-family: "Bareun Dotum Pro 3";
+  font-size: 17px;
+  opacity: 0.84;
 }
 
 .search-content img{
   display: block;
-  vertical-align: middle;
   margin: auto;
-}
-
-.search-content p {
-  display: table-cell;
-  vertical-align: middle;
-  padding-top: 6px;
-  padding-left: 4px;
-  color: white;
-  font-family: "Bareun Dotum Pro 3";
-  line-height: 24px;
-  font-size: 20px;
-}
-
-.search-content .search-digit {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
-  color: white;
-  font-size: 20px;
-  font-family: 'Bareun Dotum Pro 3';
 }
 
 .city-list {
