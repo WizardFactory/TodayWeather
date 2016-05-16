@@ -105,6 +105,11 @@ angular.module('starter.services', [])
             }
 
             var that = this;
+            //if (that.cities.length > 0) {
+            //    console.log('already loaded');
+            //    return;
+            //}
+
             that.cities = JSON.parse(localStorage.getItem("cities"));
             if (that.cities === null) { // set guide data
                 var city = {};
@@ -222,6 +227,10 @@ angular.module('starter.services', [])
             var city = that.cities[++that.loadIndex];
 
             if (city) {
+                //if (city.currentWeather) {
+                //    return that.updateCities();
+                //}
+
                 WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
                     that.updateCity(that.loadIndex, city);
@@ -576,7 +585,7 @@ angular.module('starter.services', [])
 
             $http({method: 'GET', url: url, timeout: 10*1000})
                 .success(function (data) {
-                    console.log(data);
+                    //console.log(data);
                     deferred.resolve({data: data});
                 })
                 .error(function (error) {
@@ -721,7 +730,7 @@ angular.module('starter.services', [])
                 tmpDayTable.push(data);
             });
 
-            console.log(tmpDayTable);
+            //console.log(tmpDayTable);
             return tmpDayTable;
         };
 
@@ -1105,13 +1114,13 @@ angular.module('starter.services', [])
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
             var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, weatherData.midData.dailyData);
-            console.log(shortTownWeather);
+            //console.log(shortTownWeather);
 
             /**
              * @type {Array}
              */
             var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
-            console.log(midTownWeather);
+            //console.log(midTownWeather);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;

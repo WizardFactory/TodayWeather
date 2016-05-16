@@ -17,6 +17,7 @@
     <preference name="SplashScreen" value="screen" />
     <preference name="FadeSplashScreen" value="false" />
     <preference name="ShowSplashScreenSpinner" value="false" />
+    <preference name="AutoHideSplashScreen" value="false" />
     <preference name="orientation" value="portrait" />
     <preference name="target-device" value="universal" />
     <feature name="StatusBar">
