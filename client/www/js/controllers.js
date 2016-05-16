@@ -592,8 +592,6 @@ angular.module('starter.controllers', [])
             }
 
             loadWeatherData();
-
-            $scope.doRefresh();
         });
     })
 
@@ -976,6 +974,10 @@ angular.module('starter.controllers', [])
             $rootScope.viewAdsBanner = TwAds.enableAds;
             $rootScope.contentBottom = TwAds.enableAds?100:50;
             angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.showAds?'50px':'0px');
+
+            setTimeout(function () {
+                $scope.$broadcast('updateWeatherEvent');
+            }, 200);
         });
 
         init();
