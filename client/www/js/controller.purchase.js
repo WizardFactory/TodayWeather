@@ -332,6 +332,7 @@ angular.module('controller.purchase', [])
         };
 
         $scope.goBack = function() {
+            TwAds.setShowAds(true);
             $ionicHistory.goBack();
         };
 
