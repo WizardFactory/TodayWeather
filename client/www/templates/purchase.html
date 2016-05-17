@@ -2,7 +2,7 @@
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
         <div style="margin-top: 72px;">
             <img class="item-center" width="96px" src="img/app-icon.png" style="margin-bottom: 16px">
-            <div ng-style="::{'width':listWidth+'px'}"
+            <div ng-style="::{'width':listWidth+'px'}" ng-if="product != undefined"
                  style="padding: 16px; border-width: 1px; border-color:#ddd; border-style: solid;">
                 <h4 style="opacity: 0.87">{{product.description}}</h4>
                 <button class="button button-outline button-positive item-center" ng-click="order()">
@@ -15,7 +15,7 @@
                 <button class="button button-outline button-positive" disabled="true">구매</button>
             </div>
         </div>
-        <div style="position: absolute; bottom: 16px; width: 100%">
+        <div style="position: absolute; bottom: 16px; width: 100%" ng-if="product != undefined">
             <p style="padding-left: 16px; padding-right: 16px; text-align: center; opacity: 0.87"
                     >이미 {{product.title}} 사용자시라면, 구매내역 복원하세요.</p>
             <button class="button button-outline button-positive item-center" ng-click="restore()">

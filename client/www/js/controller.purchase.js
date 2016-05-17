@@ -360,7 +360,12 @@ angular.module('controller.purchase', [])
                 $scope.product = {title:'프리미엄',  price: '$1.09', description: '지금 바로 프리미엄 서비스를 신청하시고, 1년간 광고 없이 사용하세요.'};
             }
             else {
-                $scope.product = Purchase.products[0];
+                if (Purchase.products && Purchase.products.length) {
+                    $scope.product = Purchase.products[0];
+                }
+                else {
+                    console.log("Failed to get product info at start");
+                }
             }
 
             $scope.listWidth = window.innerWidth;
