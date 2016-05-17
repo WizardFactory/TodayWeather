@@ -8,6 +8,6 @@
   "dependencies": {
     "ngCordova": "~0.1.20-alpha",
     "d3": "~3.5.6",
-    "ionic-timepicker": "https://github.com/WizardFactory/ionic-timepicker.git#935a00a"
+    "ionic-timepicker": "https://github.com/WizardFactory/ionic-timepicker.git#cb42d5a"
   }
 }
