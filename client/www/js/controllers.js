@@ -764,7 +764,9 @@ angular.module('starter.controllers', [])
             var ipObj1 = {
                 callback: function (val) {      //Mandatory
                     if (typeof (val) === 'undefined') {
-                        console.log('Time not selected');
+                        console.log('closed');
+                    } else if (val == 0) {
+                        console.log('cityIndex='+index+' alarm canceled');
                         if ($scope.cityList[index].alarmInfo != undefined) {
                             Push.removeAlarm($scope.cityList[index].alarmInfo);
                             $scope.cityList[index].alarmInfo = undefined;

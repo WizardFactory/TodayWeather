@@ -681,7 +681,9 @@ angular.module('starter', [
             format: 12,
             step: 5,
             setLabel: '설정',
-            closeLabel: '삭제/닫기'
+            cancelLabel: '삭제',
+            closeLabel: '닫기',
+            buttons: 3
         };
         ionicTimePickerProvider.configTimePicker(timePickerObj);
     });
