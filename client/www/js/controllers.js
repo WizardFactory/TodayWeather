@@ -112,6 +112,9 @@ angular.module('starter.controllers', [])
         function getTopMainBox() {
             var str = '';
             console.log('address='+shortenAddress);
+            if (ionic.Platform.isIOS()) {
+                str += '<div style="height: 20px"></div>';
+            }
             str += '<p class="textFont" style="font-size:'+regionSize+'px; margin: 0">';
             if (cityData.currentPosition) {
                 str += '<a class="icon ion-ios-location-outline" style="color: white;"></a>';
@@ -1042,6 +1045,10 @@ angular.module('starter.controllers', [])
                 $ionicSlideBoxDelegate.next();
             }
         };
+
+        $scope.$on('$ionicView.leave', function() {
+            TwAds.setShowAds(true);
+        });
 
         $scope.$on('$ionicView.enter', function() {
             TwAds.setShowAds(false);
