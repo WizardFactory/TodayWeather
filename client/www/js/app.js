@@ -51,7 +51,6 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
-                StatusBar.overlaysWebView(false);
                 StatusBar.backgroundColorByHexString('#0288D1');
             }
         });
