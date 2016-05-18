@@ -666,7 +666,8 @@ angular.module('starter.services', [])
                 tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
 
                 tempObject.day = day;
-                tempObject.time = time + "시";
+                tempObject.time = time;
+                tempObject.timeStr = time + "시";
                 data.push(tempObject);
 
                 return true;

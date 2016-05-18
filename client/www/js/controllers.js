@@ -183,12 +183,14 @@ angular.module('starter.controllers', [])
             for (i=0; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
                 str += '<div class="col table-items">';
-                str += '<p style="font-size: '+smallTimeSize+'px; margin:auto">'+value.time+'</p>';
+                str += '<p style="font-size: '+smallTimeSize+'px; margin:auto">'+value.timeStr+'</p>';
                 str += '<img width='+smallImageSize+'px style="margin: auto" src="img/'+value.tempIcon+'.png">';
                 str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.t3h+'˚</p>';
                 str += '<img width='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+
                         value.skyIcon+'.png">';
-                if (value.rn1) {
+                if (value.rn1 != undefined &&
+                    (value.date < cityData.currentWeather.date || value.time <= cityData.currentWeather.time))
+                {
                     str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
                     str += '<span style="font-size:10px">';
                     if (value.pty === 3) {
