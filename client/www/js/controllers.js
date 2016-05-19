@@ -822,7 +822,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser, Util) {
         //sync with config.xml
-        $scope.version  = "0.7.11";
+        $scope.version  = "0.8.2";
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'setting');
