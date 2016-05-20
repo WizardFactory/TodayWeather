@@ -99,6 +99,11 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
 
     if (foundStartPoint) {
         for (; i<srcList.length && j<destList.length; i++, j++) {
+            if (srcList[i].date != destList[j].date) {
+                log.error('Fail to find lifeIndex data of date='+destList[j].date);
+                continue;
+            }
+
             log.debug('add data ' + srcList[i].value + ' to ' + destList[j].date + ' ' + indexName);
             (destList[j])[indexName] = srcList[i].value;
             //add grade
