@@ -56,63 +56,24 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
    margin-top: 0;
 }
 
-.top-time {
-  display: table;
-  margin-left: 5px;
-}
-
-.top-time p {
-  display: table-cell;
-  vertical-align: middle;
-  //font-size: 14px;
-  font-family: 'Bareun Dotum Pro 3';
-}
-
-.region {
-  display: table;
-}
-
-.region p {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
-  margin: 0;
-  //font-size: 21px;
+.textFont {
   font-family: 'Bareun Dotum Pro 2';
 }
 
-.region-sum {
-  display: table;
-}
-
-.region-sum p {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
-  margin: 0;
-  //font-size: 19px;
-  font-family: 'Bareun Dotum Pro 2';
-}
-
-.big-digit {
-  display: table;
-}
-
-.big-digit p {
-  display: table-cell;
-  vertical-align: middle;
+.digitFont {
   font-family: 'Bareun Dotum Pro 1';
-  //font-size: 66px;
-  text-align: right;
-  margin: 0;
 }
 
-.big-temp-point img {
-  //height: 12px;
+.cityArrow {
+  width: 10%;
+  margin: auto;
+  text-align: center;
 }
 
-.big-temp-sky-state img {
-  //height: 32px;
+.topMainBox {
+  width: 80%;
+  margin: auto;
+  text-align: center;
 }
 
 .timeChart {
@@ -121,47 +82,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .weeklyChart {
   width: 936px; //52px per col * 18
-}
-
-.small-time {
-  display: table;
-}
-
-.small-time p {
-  display: table-cell;
-  vertical-align: middle;
-  font-family: 'Bareun Dotum Pro 3';
-  text-align: center;
-  //font-size: 14px;
-  margin: 0;
-}
-
-.small-image {
-  display: table;
-}
-
-.small-image div {
-  display: table-cell;
-  vertical-align: middle;
-}
-
-.small-image div img {
-  //height: 24px;
-  margin: 0 auto;
-  display: block;
-}
-
-.small-digit {
-  display: table;
-}
-
-.small-digit p {
-  display: table-cell;
-  vertical-align: middle;
-  font-family: 'Bareun Dotum Pro 1';
-  text-align: center;
-  //font-size: 15px;
-  margin: 0;
 }
 
 /* guide */
@@ -321,44 +241,44 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .chart-content {
-  height: 60%;
+  height: 54%;
+  width: 100%;
+  margin: 0 0 5px;
+}
+
+.chartBox {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .table-content {
-  height: 40%;
+  flex : 1;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-items {
+  height: inherit;
+  display: flex;
+  flex-direction: column;
 }
 
 .search-content {
-  display: table;
   margin: auto;
   background-color: transparent;
   color: white;
+  font-family: "Bareun Dotum Pro 3";
+  font-size: 17px;
+  opacity: 0.84;
 }
 
 .search-content img{
   display: block;
-  vertical-align: middle;
   margin: auto;
-}
-
-.search-content p {
-  display: table-cell;
-  vertical-align: middle;
-  padding-top: 6px;
-  padding-left: 4px;
-  color: white;
-  font-family: "Bareun Dotum Pro 3";
-  line-height: 24px;
-  font-size: 20px;
-}
-
-.search-content .search-digit {
-  display: table-cell;
-  vertical-align: middle;
-  text-align: center;
-  color: white;
-  font-size: 20px;
-  font-family: 'Bareun Dotum Pro 3';
 }
 
 .city-list {

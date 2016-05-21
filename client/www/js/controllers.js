@@ -2,24 +2,26 @@
 angular.module('starter.controllers', [])
     .run(function (WeatherInfo) {
         WeatherInfo.loadTowns();
+        WeatherInfo.loadCities();
+        WeatherInfo.updateCities();
     })
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
-                                          $stateParams, $location, $ionicHistory) {
+                                          $stateParams, $location, $ionicHistory, $sce) {
 
         var bodyWidth = window.innerWidth;
         var colWidth;
         var cityData;
 
         $scope.forecastType = "short"; //mid, detail
-        $scope.address = "";
+        var shortenAddress = "";
 
         //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
         $scope.currentWeather;
         //{day: String, time: Number, t3h: Number, skyIcon: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
-        $scope.timeTable = [];
+        //$scope.timeTable = [];
         //{week: String, skyIcon:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
-        $scope.dayTable = [];
+        //$scope.dayTable = [];
         //[{name: String, values:[{name: String, value: Number}]}]
         $scope.timeChart;
         //[{values: Object, temp: Number}]
@@ -28,9 +30,16 @@ angular.module('starter.controllers', [])
         $scope.timeWidth; //total width of timeChart and timeTable
         $scope.dayWidth; //total width of dayChart and dayTable
 
-        $scope.imgPath = Util.imgPath;
+        var regionSize;
+        var regionSumSize;
+        var bigDigitSize;
+        var bigTempPointSize;
+        var bigSkyStateSize;
+        var smallTimeSize;
+        var smallImageSize;
+        var smallDigitSize;
 
-        function init() {
+        (function init() {
             Util.ga.trackEvent('page', 'tab', 'forecast');
 
             //identifyUser();
@@ -48,49 +57,221 @@ angular.module('starter.controllers', [])
             }
             //iphone 5 568-20(status bar)
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
-                padding = 1.125;
                 smallPadding = 1.1;
             }
             //iphone 6 667-20
-            if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
-                padding = 1.0625;
-            }
+            //if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
+            //    padding = 1.0625;
+            //}
 
             var mainHeight = window.innerHeight - 100;
 
-            var topTimeSize = mainHeight * 0.026;
-            $scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
+            //var topTimeSize = mainHeight * 0.026;
+            //$scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
 
-            var regionSize = mainHeight * 0.0408 * padding; //0.051
-            $scope.regionSize = regionSize<33.04?regionSize:33.04;
+            regionSize = mainHeight * 0.0408 * padding; //0.051
+            regionSize = regionSize<33.04?regionSize:33.04;
 
-            var regionSumSize = mainHeight * 0.0376 * padding; //0.047
-            $scope.regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
+            regionSumSize = mainHeight * 0.0376 * padding; //0.047
+            regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
 
-            var bigDigitSize = mainHeight * 0.17544 * padding; //0.2193
-            $scope.bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
+            bigDigitSize = mainHeight * 0.17544 * padding; //0.2193
+            bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
 
-            var bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
-            $scope.bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
+            bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
+            bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
 
-            //injection img url after setting imgSize.
-            $scope.reddot = 'reddot';
+            bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
+            bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
-            var bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
-            $scope.bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
+            smallTimeSize = mainHeight * 0.0299 * smallPadding;
+            smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
 
-            var smallTimeSize = mainHeight * 0.0299 * smallPadding;
-            $scope.smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
+            smallImageSize = mainHeight * 0.0512 * smallPadding;
+            smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
 
-            var smallImageSize = mainHeight * 0.0512 * smallPadding;
-            $scope.smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
+            smallDigitSize = mainHeight * 0.0320 * smallPadding;
+            smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
+        })();
 
-            var smallDigitSize = mainHeight * 0.0320 * smallPadding;
-            $scope.smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
+        //<p class="textFont" ng-style="::{'font-size':regionSize+'px'}" style="margin: 0">
+        //    <a class="icon ion-ios-location-outline" style="color: white;" ng-if="currentPosition"></a>{{address}}</p>
+        //<div class="row row-no-padding">
+        //    <div style="margin: auto">
+        //        <div class="row row-no-padding">
+        //            <p ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0">{{currentWeather.t1h}}</p>
+        //            <div style="text-align: left; margin: auto">
+        //                <img ng-if="currentWeather.t1h!==undefined" ng-style="::{'height':bigTempPointSize+'px'}"  ng-src="img/{{::reddot}}.png">
+        //                <br>
+        //                <img ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
+        //            </div>
+        //        </div>
+        //    </div>
+        //</div>
+        //<p class="textFont" ng-style="::{'font-size':regionSumSize+'px'}" style="margin: 0;">{{currentWeather.summary}}</p>
+        function getTopMainBox() {
+            var str = '';
+            console.log('address='+shortenAddress);
+            if (ionic.Platform.isIOS()) {
+                str += '<div style="height: 20px"></div>';
+            }
+            str += '<p class="textFont" style="font-size:'+regionSize+'px; margin: 0">';
+            if (cityData.currentPosition) {
+                str += '<a class="icon ion-ios-location-outline" style="color: white;"></a>';
+            }
+            str += shortenAddress+'</p>';
+            str += '<div class="row row-no-padding"> <div style="margin: auto"> <div class="row row-no-padding">';
+            str +=      '<p style="font-size: '+bigDigitSize+'px; margin: 0">'+cityData.currentWeather.t1h+'</p>';
+            str +=      '<div style="text-align: left; margin: auto">';
+            str +=          '<img style="height: '+bigTempPointSize+'px" src="img/reddot.png">';
+            str +=          '<br>';
+            str +=          '<img style="height: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
+                                cityData.currentWeather.skyIcon+'.png">';
+            str +=      '</div>'
+            str += '</div></div></div>';
+            str += '<p class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
+                $scope.currentWeather.summary+'</p>';
+            return str;
+        }
+        //<div class="row row-no-padding">
+        //                        <div style="width: 26px;"></div>
+        //                        <div class="col"
+        //                             ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date"
+        //                             ng-repeat="value in dayTable">
+        //                                <p ng-style="::{'font-size':smallTimeSize+'px'}"
+        //                                   style="margin: 0; opacity: 0.84">
+        //                                    {{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span>
+        //                                </p>
+        //                        </div>
+        //                        <div style="width: 26px;"></div>
+        //                    </div>
+        //                    <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+        //                    <div class="row row-no-padding" style="flex: 1">
+        //                        <div class="col table-items" ng-repeat="value in timeTable">
+        //                            <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: auto">{{value.time}}</p>
+        //                            <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.tempIcon}}.png">
+        //                            <p ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.t3h}}˚</p>
+        //                            <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
+        //                            <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
+        //                            <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.rn1}}<span
+        //                                    style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
+        //                                    style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
+        //                        </div>
+        //                    </div>
+        function getShortTable() {
+            var i;
+            var value;
+            var str = '';
 
-            $scope.isIOS = function() {
-                return ionic.Platform.isIOS();
-            };
+            str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
+            for (i=0; i<cityData.dayTable.length; i++) {
+                value = cityData.dayTable[i];
+                if (value.date > cityData.timeTable[0].date && value.date <= cityData.timeTable[cityData.timeTable.length-1].date) {
+                    str += '<div class="col">';
+                    str +=   '<p style="font-size: '+smallTimeSize+'px; margin: 0; opacity: 0.84">';
+                    str +=       $scope.getDayText(value);
+                    str +=       ' <span style="font-size: 13px; opacity: 0.54">';
+                    str +=           $scope.getDayForecast(value);
+                    str +=       '</span></p></div>';
+                }
+            }
+            str += '<div style="width: '+colWidth/2+'px;"></div> </div>';
+
+            str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
+
+            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            for (i=0; i<cityData.timeTable.length; i++) {
+                value = cityData.timeTable[i];
+                str += '<div class="col table-items">';
+                str += '<p style="font-size: '+smallTimeSize+'px; margin:auto">'+value.timeStr+'</p>';
+                str += '<img width='+smallImageSize+'px style="margin: auto" src="img/'+value.tempIcon+'.png">';
+                str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.t3h+'˚</p>';
+                str += '<img width='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+
+                        value.skyIcon+'.png">';
+                if (value.rn1 != undefined &&
+                    (value.date < cityData.currentWeather.date || value.time <= cityData.currentWeather.time))
+                {
+                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
+                    str += '<span style="font-size:10px">';
+                    if (value.pty === 3) {
+                        str += 'cm';
+                    }
+                    else {
+                        str += 'mm';
+                    }
+                    str += '</span></p>'
+                }
+                else {
+                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.pop+
+                            '<small>%</small></p>';
+                }
+                str += '</div>';
+            }
+            str += '</div>';
+            return str;
+        }
+
+        //<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+        //<div class="row row-no-padding" style="flex: 1">
+        //    <div class="col table-items" ng-repeat="value in dayTable">
+        //        <p ng-style="::{'font-size':smallTimeSize+'px',
+        //                'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
+        //                'opacity':value.fromToday===0?'1':'0.84'}" style="margin: auto">{{value.week}}</p>
+
+        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto;" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
+        //        <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
+        //        <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">
+        //            {{value.rn1}}
+        //            <span style="font-size:10px" ng-if="value.pty !== 3">mm</span>
+        //            <span style="font-size:10px" ng-if="value.pty === 3">cm</span>
+        //        </p>
+        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.humidityIcon}}.png">
+        //        <p ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">{{value.reh}}<small>%</small></p>
+        //    </div>
+        //</div>
+        function getMidTable() {
+            var str = '';
+            var i;
+            var value;
+            var tmpStr = '-';
+            str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
+            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            for (i=0; i<cityData.dayTable.length; i++) {
+                value = cityData.dayTable[i];
+                str += '<div class="col table-items">';
+                str +=  '<p style="margin: auto; font-size: '+smallTimeSize+'px;';
+                if (value.fromToday === 0)  {
+                    str += ' border-bottom: 1px solid rgba(255,255,255,0.8);';
+                    str += ' opacity: 1;">';
+                }
+                else {
+                    str += ' opacity: 0.84;">';
+                }
+                str +=  value.week + '</p>';
+                str += '<img style="width: '+smallImageSize+'px; margin: auto;" src="'+
+                            Util.imgPath+'/'+value.skyIcon+'.png">';
+                if (value.rn1 != undefined) {
+                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
+                    str += '<span style="font-size:10px">';
+                    if (value.pty === 3) {
+                       str += 'cm';
+                    }
+                    else {
+                       str += 'mm';
+                    }
+                    str += '</span></p>';
+                }
+                else {
+                    tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
+                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
+                }
+                str += '<img style="width: '+smallImageSize+'px; margin: auto" src="img/'+value.humidityIcon+'.png">';
+                tmpStr = value.reh == undefined?'-':value.reh+'<small>%</small>';
+                str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
+                str += '</div>';
+            }
+            str += '</div>';
+            return str;
         }
 
         function loadWeatherData() {
@@ -105,34 +286,37 @@ angular.module('starter.controllers', [])
             $scope.timeWidth = getWidthPerCol() * cityData.timeTable.length;
             $scope.dayWidth = getWidthPerCol() * cityData.dayTable.length;
 
-            $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-            console.log($scope.address);
+            shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
+            console.log(shortenAddress);
             $scope.currentWeather = cityData.currentWeather;
-            console.log($scope.currentWeather);
-            $scope.timeTable = cityData.timeTable;
-            console.log($scope.timeTable);
+            //console.log($scope.currentWeather);
+            //$scope.timeTable = cityData.timeTable;
+            //console.log($scope.timeTable);
             $scope.timeChart = cityData.timeChart;
-            console.log($scope.timeChart);
-            $scope.dayTable = cityData.dayTable;
-            console.log($scope.dayTable);
+            //console.log($scope.timeChart);
+            //$scope.dayTable = cityData.dayTable;
+            //console.log($scope.dayTable);
             $scope.dayChart = cityData.dayChart;
-            console.log($scope.dayChart);
+            //console.log($scope.dayChart);
 
             $scope.currentPosition = cityData.currentPosition;
 
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
-            $timeout(function() {
+            setTimeout(function () {
+                $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
+                $scope.shortTable =  $sce.trustAsHtml(getShortTable());
+                $scope.midTable = $sce.trustAsHtml(getMidTable());
+
                 if ($scope.forecastType === 'short') {
                     $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                 }
                 else if ($scope.forecastType === 'mid') {
                     $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                 }
-            },0);
-
-            Util.ga.trackEvent('weather', 'load', $scope.address, WeatherInfo.cityIndex);
+            }, 100);
+            Util.ga.trackEvent('weather', 'load', shortenAddress, WeatherInfo.cityIndex);
         }
 
         function updateWeatherData(isForce) {
@@ -168,9 +352,7 @@ angular.module('starter.controllers', [])
                 if (addressUpdate === true) {
                     deferred.resolve();
                 }
-                else {
-                    $scope.address = "위치 찾는 중";
-                }
+
             }, function () {
                 // 1: resolved, 2: rejected
                 if (deferred.promise.$$state.status === 1 || deferred.promise.$$state.status === 2) {
@@ -189,8 +371,6 @@ angular.module('starter.controllers', [])
             });
 
             if (cityData.currentPosition === true) {
-                $scope.address = "위치 찾는 중";
-
                 WeatherUtil.getCurrentPosition().then(function (coords) {
                     WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
                         if (cityData.address === address) {
@@ -336,7 +516,7 @@ angular.module('starter.controllers', [])
         $scope.doRefresh = function() {
             $scope.isLoading = true;
             updateWeatherData(true).finally(function () {
-                $scope.address = WeatherUtil.getShortenAddress(cityData.address);
+                shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
                 $scope.isLoading = false;
             });
         };
@@ -376,20 +556,19 @@ angular.module('starter.controllers', [])
         };
 
         $scope.getDayForecast = function (value) {
-            var str = '';
+            var str = [];
             if (value.fromToday === 0 || value.fromToday === 1) {
                 if (value.dustForecast && value.dustForecast.PM10Str) {
-                   str +=  '미세예보:'+value.dustForecast.PM10Str;
+                   str.push('미세예보:'+value.dustForecast.PM10Str);
                 }
 
                 if (value.ultrvStr) {
-                    str += ', ';
-                    str += '자외선:'+value.ultrvStr;
+                    str.push('자외선:'+value.ultrvStr);
                 }
-                return str;
+                return str.toString();
             }
 
-            return str;
+            return str.toString();
         };
 
         $scope.$on('$ionicView.loaded', function() {
@@ -413,21 +592,12 @@ angular.module('starter.controllers', [])
                 StatusBar.backgroundColorByHexString('#0288D1');
             }
 
-            WeatherInfo.loadCities();
-            WeatherInfo.updateCities();
-
             if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
                 WeatherInfo.setCityIndex($stateParams.fav);
             }
 
             loadWeatherData();
-
-            updateWeatherData(false).finally(function () {
-                $scope.address = WeatherUtil.getShortenAddress(cityData.address);
-            });
         });
-
-        init();
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $ionicScrollDelegate,
@@ -599,7 +769,9 @@ angular.module('starter.controllers', [])
             var ipObj1 = {
                 callback: function (val) {      //Mandatory
                     if (typeof (val) === 'undefined') {
-                        console.log('Time not selected');
+                        console.log('closed');
+                    } else if (val == 0) {
+                        console.log('cityIndex='+index+' alarm canceled');
                         if ($scope.cityList[index].alarmInfo != undefined) {
                             Push.removeAlarm($scope.cityList[index].alarmInfo);
                             $scope.cityList[index].alarmInfo = undefined;
@@ -622,7 +794,6 @@ angular.module('starter.controllers', [])
             if ($scope.cityList[index].alarmInfo != undefined) {
                 var date = new Date($scope.cityList[index].alarmInfo.time);
                 console.log(date);
-                console.log(date.toString);
                 ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
                 console.log('inputTime='+ipObj1.inputTime);
             }
@@ -651,7 +822,7 @@ angular.module('starter.controllers', [])
     .controller('SettingCtrl', function($scope, $rootScope, $ionicPlatform, $ionicAnalytics, $http,
                                         $cordovaInAppBrowser, Util) {
         //sync with config.xml
-        $scope.version  = "0.7.11";
+        $scope.version  = "0.8.2";
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'setting');
@@ -811,10 +982,9 @@ angular.module('starter.controllers', [])
             $rootScope.contentBottom = TwAds.enableAds?100:50;
             angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.showAds?'50px':'0px');
 
-            //WeatherInfo.loadCities();
-            //WeatherInfo.loadTowns().then(function () {
-            //    WeatherInfo.updateCities();
-            //});
+            setTimeout(function () {
+                $scope.$broadcast('updateWeatherEvent');
+            }, 200);
         });
 
         init();
@@ -877,6 +1047,10 @@ angular.module('starter.controllers', [])
                 $ionicSlideBoxDelegate.next();
             }
         };
+
+        $scope.$on('$ionicView.leave', function() {
+            TwAds.setShowAds(true);
+        });
 
         $scope.$on('$ionicView.enter', function() {
             TwAds.setShowAds(false);

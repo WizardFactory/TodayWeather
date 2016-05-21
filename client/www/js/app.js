@@ -19,6 +19,11 @@ angular.module('starter', [
 ])
     .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
         $ionicPlatform.ready(function() {
+
+            if (navigator.splashscreen) {
+                navigator.splashscreen.hide();
+            }
+
             if (Util.isDebug()) {
                 Util.ga.debugMode();
             } else {
@@ -46,7 +51,6 @@ angular.module('starter', [
 
             }
             if (window.StatusBar) {
-                StatusBar.overlaysWebView(false);
                 StatusBar.backgroundColorByHexString('#0288D1');
             }
         });
@@ -65,16 +69,552 @@ angular.module('starter', [
 
     .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider, ionicTimePickerProvider) {
 
-        //for chrome extension
+        //$compileProvider.debugInfoEnabled(Util.isDebug());
+        $compileProvider.debugInfoEnabled(false);
+
+        //add chrome-extension for chrome extension
         $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
         $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+
+        $compileProvider.directive('ngShortChart', function() {
+            return {
+                restrict: 'A',
+                transclude: true,
+                link: function (scope, iElement) {
+                    var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                    var width, height, x, y;
+                    var svg, initLine, line;
+
+                    //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
+                    //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
+                    //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || newValue === height) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+
+                        initLine = d3.svg.line()
+                            .interpolate('linear')
+                            .x(function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .y(height);
+
+                        line = d3.svg.line()
+                            .interpolate('linear')
+                            .x(function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .y(function (d) {
+                                return y(d.value.t3h);
+                            });
+
+                        chart();
+                    });
+
+                    var chart = function () {
+                        var data = scope.timeChart;
+
+                        if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                            return;
+                        }
+
+                        var currentTime = scope.currentWeather.time;
+
+                        x.domain(d3.range(data[0].values.length));
+                        y.domain([
+                            d3.min(data, function (c) {
+                                return d3.min(c.values, function (v) {
+                                    return v.value.t3h;
+                                });
+                            }),
+                            d3.max(data, function (c) {
+                                return d3.max(c.values, function (v) {
+                                    return v.value.t3h;
+                                });
+                            })
+                        ]).nice();
+
+                        d3.svg.axis()
+                            .scale(x)
+                            .orient('bottom');
+
+                        d3.svg.axis()
+                            .scale(y)
+                            .orient('left');
+
+                        var lineGroups = svg.selectAll('.line-group')
+                            .data(data);
+
+                        lineGroups.enter()
+                            .append('g')
+                            .attr('class', 'line-group');
+
+                        // draw line
+                        var lines = lineGroups.selectAll('.line')
+                            .data(function(d) {
+                                return [d];
+                            })
+                            .attr('d', function (d) {
+                                return initLine(d.values);
+                            });
+
+                        lines.enter()
+                            .append('path')
+                            .attr('class', function (d) {
+                                return 'line line-' + d.name;
+                            })
+                            .attr('d', function (d) {
+                                return initLine(d.values);
+                            });
+
+                        lines.attr('d', function (d) {
+                            return line(d.values);
+                        });
+
+                        // draw point
+                        var linePoints = lineGroups.selectAll('.line-point')
+                            .data(function (d) {
+                                return [d];
+                            });
+
+                        linePoints.enter()
+                            .append('g')
+                            .attr('class', 'line-point');
+
+                        var circles = linePoints.selectAll('circle')
+                            .data(function (d) {
+                                return d.values;
+                            })
+                            .attr('cy', height - margin.bottom);
+
+                        circles.enter()
+                            .append('circle')
+                            .attr('class', function (d) {
+                                return 'circle-' + d.name;
+                            })
+                            .attr('r', 2)
+                            .attr('cx', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr('cy', height - margin.bottom);
+
+                        circles.attr('cy', function (d) {
+                            return y(d.value.t3h);
+                        });
+
+                        circles.exit()
+                            .remove();
+
+                        // draw current point
+                        var point = lineGroups.selectAll('.point')
+                            .data(function(d) {
+                                return [d];
+                            })
+                            .attr('cx', function (d) {
+                                var cx1, cx2;
+                                for (var i = 0; i < d.values.length; i = i + 1) {
+                                    if (d.values[i].value.day === '오늘') {
+                                        cx1 = i + Math.floor(currentTime / 3) - 1;
+                                        cx2 = currentTime % 3;
+                                        break;
+                                    }
+                                }
+                                return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                            })
+                            .attr('cy', height - margin.bottom);
+
+                        point.enter()
+                            .append('circle')
+                            .attr('class', function (d) {
+                                return 'point circle-' + d.name + '-current';
+                            })
+                            .attr('r', 5)
+                            .attr('cx', function (d) {
+                                var cx1, cx2;
+                                for (var i = 0; i < d.values.length; i = i + 1) {
+                                    if (d.values[i].value.day === '오늘') {
+                                        cx1 = i + Math.floor(currentTime / 3) - 1;
+                                        cx2 = currentTime % 3;
+                                        break;
+                                    }
+                                }
+                                return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                            })
+                            .attr('cy', height - margin.bottom);
+
+                        point.attr('cx', function (d) {
+                            var cx1, cx2;
+                            for (var i = 0; i < d.values.length; i = i + 1) {
+                                if (d.values[i].value.day === '오늘') {
+                                    cx1 = i + Math.floor(currentTime / 3) - 1;
+                                    cx2 = currentTime % 3;
+                                    break;
+                                }
+                            }
+                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                        })
+                            .attr('cy', function (d) {
+                                var cx1, cx2;
+                                for (var i = 0; i < d.values.length; i = i + 1) {
+                                    if (d.values[i].value.day === '오늘') {
+                                        cx1 = i + Math.floor(currentTime / 3) - 1;
+                                        cx2 = currentTime % 3;
+                                        break;
+                                    }
+                                }
+                                var cy1 = d.values[cx1].value.t3h;
+                                var cy2 = d.values[cx1+1].value.t3h;
+
+                                if (cx2 === 1) {
+                                    return y(cy1 + (cy2 - cy1) / 3);
+                                }
+                                else if (cx2 === 2) {
+                                    return y(cy1 + (cy2 - cy1) / 3 * 2);
+                                }
+                                return y(cy1);
+                            });
+
+                        point.exit()
+                            .remove();
+
+                        // draw value
+                        var lineValues = lineGroups.selectAll('.line-value')
+                            .data(function (d) {
+                                return [d];
+                            });
+
+                        lineValues.enter()
+                            .append('g')
+                            .attr('class', 'line-value');
+
+                        var texts = lineValues.selectAll('text')
+                            .data(function (d) {
+                                return d.values;
+                            })
+                            .attr('y', height - margin.bottom - margin.textTop)
+                            .text(function (d) {
+                                if (d.name === 'today') {
+                                    if (d.value.tmn !== -50) {
+                                        return d.value.tmn + '˚';
+                                    }
+                                    if (d.value.tmx !== -50) {
+                                        return d.value.tmx + '˚';
+                                    }
+                                }
+                                return '';
+                            });
+
+                        texts.enter()
+                            .append('text')
+                            .attr('class', function (d) {
+                                return 'text-' + d.name;
+                            })
+                            .attr('text-anchor', 'middle')
+                            .attr('dy', margin.top)
+                            .attr('x', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr('y', height - margin.bottom - margin.textTop)
+                            .text(function (d) {
+                                if (d.name === 'today') {
+                                    if (d.value.tmn !== -50) {
+                                        return d.value.tmn + '˚';
+                                    }
+                                    if (d.value.tmx !== -50) {
+                                        return d.value.tmx + '˚';
+                                    }
+                                }
+                                return '';
+                            });
+
+                        texts.attr('y', function (d) {
+                            return y(d.value.t3h) - margin.top - margin.textTop;
+                        });
+
+                        texts.exit()
+                            .remove();
+                    };
+
+                    scope.$watch('timeWidth', function(newValue) {
+                        console.log('timeWidth='+newValue);
+                        //guide에서 나올때, 점들이 모이는 증상이 있음.
+                        if (newValue == undefined || newValue == width) {
+                            console.log('new value is undefined or already set same width='+width);
+                            return;
+                        }
+
+                        width = newValue;
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+
+                        if (svg) {
+                            svg.attr('width', width);
+                            svg.selectAll("*").remove();
+
+                            initLine = d3.svg.line()
+                                .interpolate('linear')
+                                .x(function (d, i) {
+                                    return x.rangeBand() * i + x.rangeBand() / 2;
+                                })
+                                .y(height);
+
+                            line = d3.svg.line()
+                                .interpolate('linear')
+                                .x(function (d, i) {
+                                    return x.rangeBand() * i + x.rangeBand() / 2;
+                                })
+                                .y(function (d) {
+                                    return y(d.value.t3h);
+                                });
+
+                            chart();
+                        }
+                    });
+
+                    scope.$watch('timeChart', function (newVal) {
+                        if (newVal) {
+                            chart();
+                        }
+                    });
+
+                    scope.$watch('forecastType', function (newVal) {
+                        if (newVal === true) {
+                            chart();
+                        }
+                    });
+                }
+            };
+        });
+
+        $compileProvider.directive('ngMidChart', function() {
+            return {
+                restrict: 'A',
+                transclude: true,
+                link: function (scope, iElement) {
+                    var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                    var width, height, x, y;
+                    var svg;
+
+                    //shortChart 주석 참고.
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || height === newValue) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+                        chart();
+                    });
+
+                    var chart = function () {
+                        var data = scope.dayChart;
+                        if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                            return;
+                        }
+
+                        x.domain(d3.range(data[0].values.length));
+                        y.domain([
+                            d3.min(data[0].values, function (c) {
+                                return c.tmn;
+                            }),
+                            d3.max(data[0].values, function (c) {
+                                return c.tmx;
+                            })
+                        ]).nice();
+
+                        d3.svg.axis()
+                            .scale(x)
+                            .orient('bottom');
+
+                        d3.svg.axis()
+                            .scale(y)
+                            .orient('left');
+
+                        // draw bar
+                        var group = svg.selectAll('.bar-group')
+                            .data(data);
+
+                        group.enter().append('g')
+                            .attr('class', 'bar-group');
+
+                        var rects = group.selectAll('rect')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        rects.enter().append('rect')
+                            .attr('class', 'rect');
+
+                        rects.exit().remove();
+
+                        rects.attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                        })
+                            .attr('width', 2)
+                            .attr('y', function (d) {
+                                return y(d.tmn);
+                            })
+                            .attr('height', 0)
+                            .attr('y', function (d) {
+                                return y(d.tmx);
+                            })
+                            .attr('height', function (d) {
+                                return y(d.tmn) - y(d.tmx);
+                            });
+
+                        // draw max value
+                        var maxValue = svg.selectAll('.bar-max-value')
+                            .data(data);
+
+                        maxValue.enter()
+                            .append('g')
+                            .attr('class', 'bar-max-value');
+
+                        var maxTexts = maxValue.selectAll('text')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        maxTexts.enter().append('text')
+                            .attr('class', 'text');
+
+                        maxTexts.exit().remove();
+
+                        maxTexts.attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                            .attr('y', function (d) {
+                                return y(d.tmn) - margin.top - margin.textTop;
+                            })
+                            .attr('dy', margin.top)
+                            .attr('text-anchor', 'middle')
+                            .text(function (d) {
+                                return d.tmx + '˚';
+                            })
+                            .attr('class', 'text-today')
+                            .attr('y', function (d) {
+                                return y(d.tmx) - margin.top - margin.textTop;
+                            });
+
+                        // draw min value
+                        var minValue = svg.selectAll('.bar-min-value')
+                            .data(data);
+
+                        minValue.enter()
+                            .append('g')
+                            .attr('class', 'bar-min-value');
+
+                        var minTexts = minValue.selectAll('text')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        minTexts.enter().append('text')
+                            .attr('class', 'text');
+
+                        minTexts.exit().remove();
+
+                        minTexts.attr('x', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2;
+                        })
+                            .attr('y', function (d) {
+                                return y(d.tmn);
+                            })
+                            .attr('dy', margin.bottom)
+                            .attr('text-anchor', 'middle')
+                            .text(function (d) {
+                                return d.tmn + '˚';
+                            })
+                            .attr('class', 'text-today')
+                            .attr('y', function (d) {
+                                return y(d.tmn);
+                            });
+
+                        // draw point
+                        var circle = svg.selectAll('circle')
+                            .data(data)
+                            .enter().append('circle');
+
+                        svg.selectAll('circle')
+                            .data(data)
+                            .attr('class', 'circle circle-today-current')
+                            .attr('cx', function (d) {
+                                for (var i = 0; i < d.values.length; i++) {
+                                    if (d.values[i].fromToday === 0) {
+                                        return x.rangeBand() * i + x.rangeBand() / 2;
+                                    }
+                                }
+                                return 0;
+                            })
+                            .attr('cy', function (d) {
+                                return y(d.temp);
+                            })
+                            .attr('r', 0)
+                            .attr('r', 5);
+                    };
+
+                    scope.$watch('dayWidth', function(newValue) {
+                        if (newValue == undefined || newValue == width) {
+                            console.log('new value is undefined or already set same width='+width);
+                            return;
+                        }
+
+                        width = newValue;
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        if (svg) {
+                            svg.attr('width', width);
+                        }
+                    });
+
+                    scope.$watch('dayChart', function (newVal) {
+                        if (newVal) {
+                            chart();
+                        }
+                    });
+
+                    scope.$watch('forecastType', function (newVal) {
+                        if (newVal === false) {
+                            chart();
+                        }
+                    });
+                }
+            };
+        });
 
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controllers.js
         $stateProvider
-
             .state('guide', {
                 url: '/guide',
                 templateUrl: 'templates/guide.html',
@@ -140,539 +680,9 @@ angular.module('starter', [
             format: 12,
             step: 5,
             setLabel: '설정',
-            closeLabel: '삭제/닫기'
+            cancelLabel: '삭제',
+            closeLabel: '닫기',
+            buttons: 3
         };
         ionicTimePickerProvider.configTimePicker(timePickerObj);
-    })
-    .directive('ngShortChart', function() {
-        return {
-            restrict: 'A',
-            transclude: true,
-            link: function (scope, iElement) {
-                var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
-                var width, height, x, y;
-                var svg, initLine, line;
-
-                //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
-                //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
-                //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
-                scope.$watch(function () {
-                    return iElement[0].getBoundingClientRect().height;
-                }, function(newValue) {
-                    if (newValue === 0 || newValue === height) {
-                        return;
-                    }
-                    width = iElement[0].getBoundingClientRect().width;
-                    height = iElement[0].getBoundingClientRect().height;
-                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                    y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-
-                    if (svg != undefined) {
-                        svg.selectAll("*").remove();
-                        svg.attr('height', height);
-                    }
-                    else {
-                        svg = d3.select(iElement[0]).append('svg')
-                            .attr('width', width)
-                            .attr('height', height);
-                    }
-
-                    initLine = d3.svg.line()
-                        .interpolate('linear')
-                        .x(function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .y(height);
-
-                    line = d3.svg.line()
-                        .interpolate('linear')
-                        .x(function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .y(function (d) {
-                            return y(d.value.t3h);
-                        });
-
-                    chart();
-                });
-
-                var chart = function () {
-                    var data = scope.timeChart;
-
-                    if (x == undefined || y == undefined || svg == undefined || data == undefined) {
-                        return;
-                    }
-
-                    var currentTime = scope.currentWeather.time;
-
-                    x.domain(d3.range(data[0].values.length));
-                    y.domain([
-                        d3.min(data, function (c) {
-                            return d3.min(c.values, function (v) {
-                                return v.value.t3h;
-                            });
-                        }),
-                        d3.max(data, function (c) {
-                            return d3.max(c.values, function (v) {
-                                return v.value.t3h;
-                            });
-                        })
-                    ]).nice();
-
-                    d3.svg.axis()
-                        .scale(x)
-                        .orient('bottom');
-
-                    d3.svg.axis()
-                        .scale(y)
-                        .orient('left');
-
-                    var lineGroups = svg.selectAll('.line-group')
-                        .data(data);
-
-                    lineGroups.enter()
-                        .append('g')
-                        .attr('class', 'line-group');
-
-                    // draw line
-                    var lines = lineGroups.selectAll('.line')
-                        .data(function(d) {
-                            return [d];
-                        })
-                        .attr('d', function (d) {
-                            return initLine(d.values);
-                        });
-
-                    lines.enter()
-                        .append('path')
-                        .attr('class', function (d) {
-                            return 'line line-' + d.name;
-                        })
-                        .attr('d', function (d) {
-                            return initLine(d.values);
-                        });
-
-                    lines.attr('d', function (d) {
-                            return line(d.values);
-                        });
-
-                    // draw point
-                    var linePoints = lineGroups.selectAll('.line-point')
-                        .data(function (d) {
-                            return [d];
-                        });
-
-                    linePoints.enter()
-                        .append('g')
-                        .attr('class', 'line-point');
-
-                    var circles = linePoints.selectAll('circle')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .attr('cy', height - margin.bottom);
-
-                    circles.enter()
-                        .append('circle')
-                        .attr('class', function (d) {
-                            return 'circle-' + d.name;
-                        })
-                        .attr('r', 2)
-                        .attr('cx', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .attr('cy', height - margin.bottom);
-
-                    circles.attr('cy', function (d) {
-                            return y(d.value.t3h);
-                        });
-
-                    circles.exit()
-                        .remove();
-
-                    // draw current point
-                    var point = lineGroups.selectAll('.point')
-                        .data(function(d) {
-                            return [d];
-                        })
-                        .attr('cx', function (d) {
-                            var cx1, cx2;
-                            for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === '오늘') {
-                                    cx1 = i + Math.floor(currentTime / 3) - 1;
-                                    cx2 = currentTime % 3;
-                                    break;
-                                }
-                            }
-                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
-                        })
-                        .attr('cy', height - margin.bottom);
-
-                    point.enter()
-                        .append('circle')
-                        .attr('class', function (d) {
-                            return 'point circle-' + d.name + '-current';
-                        })
-                        .attr('r', 5)
-                        .attr('cx', function (d) {
-                            var cx1, cx2;
-                            for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === '오늘') {
-                                    cx1 = i + Math.floor(currentTime / 3) - 1;
-                                    cx2 = currentTime % 3;
-                                    break;
-                                }
-                            }
-                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
-                        })
-                        .attr('cy', height - margin.bottom);
-
-                    point.attr('cx', function (d) {
-                            var cx1, cx2;
-                            for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === '오늘') {
-                                    cx1 = i + Math.floor(currentTime / 3) - 1;
-                                    cx2 = currentTime % 3;
-                                    break;
-                                }
-                            }
-                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
-                        })
-                        .attr('cy', function (d) {
-                            var cx1, cx2;
-                            for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === '오늘') {
-                                    cx1 = i + Math.floor(currentTime / 3) - 1;
-                                    cx2 = currentTime % 3;
-                                    break;
-                                }
-                            }
-                            var cy1 = d.values[cx1].value.t3h;
-                            var cy2 = d.values[cx1+1].value.t3h;
-
-                            if (cx2 === 1) {
-                                return y(cy1 + (cy2 - cy1) / 3);
-                            }
-                            else if (cx2 === 2) {
-                                return y(cy1 + (cy2 - cy1) / 3 * 2);
-                            }
-                            return y(cy1);
-                        });
-
-                    point.exit()
-                        .remove();
-
-                    // draw value
-                    var lineValues = lineGroups.selectAll('.line-value')
-                        .data(function (d) {
-                            return [d];
-                        });
-
-                    lineValues.enter()
-                        .append('g')
-                        .attr('class', 'line-value');
-
-                    var texts = lineValues.selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        })
-                        .attr('y', height - margin.bottom - margin.textTop)
-                        .text(function (d) {
-                            if (d.name === 'today') {
-                                if (d.value.tmn !== -50) {
-                                    return d.value.tmn + '˚';
-                                }
-                                if (d.value.tmx !== -50) {
-                                    return d.value.tmx + '˚';
-                                }
-                            }
-                            return '';
-                        });
-
-                    texts.enter()
-                        .append('text')
-                        .attr('class', function (d) {
-                            return 'text-' + d.name;
-                        })
-                        .attr('text-anchor', 'middle')
-                        .attr('dy', margin.top)
-                        .attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .attr('y', height - margin.bottom - margin.textTop)
-                        .text(function (d) {
-                            if (d.name === 'today') {
-                                if (d.value.tmn !== -50) {
-                                    return d.value.tmn + '˚';
-                                }
-                                if (d.value.tmx !== -50) {
-                                    return d.value.tmx + '˚';
-                                }
-                            }
-                            return '';
-                        });
-
-                    texts.attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top - margin.textTop;
-                        });
-
-                    texts.exit()
-                        .remove();
-                };
-
-                scope.$watch('timeWidth', function(newValue) {
-                    console.log('timeWidth='+newValue);
-                    //guide에서 나올때, 점들이 모이는 증상이 있음.
-                    if (newValue == undefined || newValue == width) {
-                        console.log('new value is undefined or already set same width='+width);
-                        return;
-                    }
-
-                    width = newValue;
-                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-
-                    if (svg) {
-                        svg.attr('width', width);
-                        svg.selectAll("*").remove();
-
-                        initLine = d3.svg.line()
-                            .interpolate('linear')
-                            .x(function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2;
-                            })
-                            .y(height);
-
-                        line = d3.svg.line()
-                            .interpolate('linear')
-                            .x(function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2;
-                            })
-                            .y(function (d) {
-                                return y(d.value.t3h);
-                            });
-
-                        chart();
-                    }
-                });
-
-                scope.$watch('timeChart', function (newVal) {
-                    if (newVal) {
-                        chart();
-                    }
-                });
-
-                scope.$watch('forecastType', function (newVal) {
-                    if (newVal === true) {
-                        chart();
-                    }
-                });
-            }
-        };
-    })
-    .directive('ngMidChart', function() {
-        return {
-            restrict: 'A',
-            transclude: true,
-            link: function (scope, iElement) {
-                var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
-                var width, height, x, y;
-                var svg;
-
-                //shortChart 주석 참고.
-                scope.$watch(function () {
-                    return iElement[0].getBoundingClientRect().height;
-                }, function(newValue) {
-                    if (newValue === 0 || height === newValue) {
-                        return;
-                    }
-                    width = iElement[0].getBoundingClientRect().width;
-                    height = iElement[0].getBoundingClientRect().height;
-                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                    y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-
-                    if (svg != undefined) {
-                        svg.selectAll("*").remove();
-                        svg.attr('height', height);
-                    }
-                    else {
-                        svg = d3.select(iElement[0]).append('svg')
-                            .attr('width', width)
-                            .attr('height', height);
-                    }
-                    chart();
-                });
-
-                var chart = function () {
-                    var data = scope.dayChart;
-                    if (x == undefined || y == undefined || svg == undefined || data == undefined) {
-                        return;
-                    }
-
-                    x.domain(d3.range(data[0].values.length));
-                    y.domain([
-                        d3.min(data[0].values, function (c) {
-                            return c.tmn;
-                        }),
-                        d3.max(data[0].values, function (c) {
-                            return c.tmx;
-                        })
-                    ]).nice();
-
-                    d3.svg.axis()
-                        .scale(x)
-                        .orient('bottom');
-
-                    d3.svg.axis()
-                        .scale(y)
-                        .orient('left');
-
-                    // draw bar
-                    var group = svg.selectAll('.bar-group')
-                        .data(data);
-
-                    group.enter().append('g')
-                        .attr('class', 'bar-group');
-
-                    var rects = group.selectAll('rect')
-                        .data(function (d) {
-                            return d.values;
-                        });
-
-                    rects.enter().append('rect')
-                        .attr('class', 'rect');
-
-                    rects.exit().remove();
-
-                    rects.attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2 - 1;
-                        })
-                        .attr('width', 2)
-                        .attr('y', function (d) {
-                            return y(d.tmn);
-                        })
-                        .attr('height', 0)
-                        .attr('y', function (d) {
-                            return y(d.tmx);
-                        })
-                        .attr('height', function (d) {
-                            return y(d.tmn) - y(d.tmx);
-                        });
-
-                    // draw max value
-                    var maxValue = svg.selectAll('.bar-max-value')
-                        .data(data);
-
-                    maxValue.enter()
-                        .append('g')
-                        .attr('class', 'bar-max-value');
-
-                    var maxTexts = maxValue.selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        });
-
-                    maxTexts.enter().append('text')
-                        .attr('class', 'text');
-
-                    maxTexts.exit().remove();
-
-                    maxTexts.attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .attr('y', function (d) {
-                            return y(d.tmn) - margin.top - margin.textTop;
-                        })
-                        .attr('dy', margin.top)
-                        .attr('text-anchor', 'middle')
-                        .text(function (d) {
-                            return d.tmx + '˚';
-                        })
-                        .attr('class', 'text-today')
-                        .attr('y', function (d) {
-                            return y(d.tmx) - margin.top - margin.textTop;
-                        });
-
-                    // draw min value
-                    var minValue = svg.selectAll('.bar-min-value')
-                        .data(data);
-
-                    minValue.enter()
-                        .append('g')
-                        .attr('class', 'bar-min-value');
-
-                    var minTexts = minValue.selectAll('text')
-                        .data(function (d) {
-                            return d.values;
-                        });
-
-                    minTexts.enter().append('text')
-                        .attr('class', 'text');
-
-                    minTexts.exit().remove();
-
-                    minTexts.attr('x', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2;
-                        })
-                        .attr('y', function (d) {
-                            return y(d.tmn);
-                        })
-                        .attr('dy', margin.bottom)
-                        .attr('text-anchor', 'middle')
-                        .text(function (d) {
-                            return d.tmn + '˚';
-                        })
-                        .attr('class', 'text-today')
-                        .attr('y', function (d) {
-                            return y(d.tmn);
-                        });
-
-                    // draw point
-                    var circle = svg.selectAll('circle')
-                        .data(data)
-                        .enter().append('circle');
-
-                    svg.selectAll('circle')
-                        .data(data)
-                        .attr('class', 'circle circle-today-current')
-                        .attr('cx', function (d) {
-                            for (var i = 0; i < d.values.length; i++) {
-                                if (d.values[i].fromToday === 0) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                }
-                            }
-                            return 0;
-                        })
-                        .attr('cy', function (d) {
-                            return y(d.temp);
-                        })
-                        .attr('r', 0)
-                        .attr('r', 5);
-                };
-
-                scope.$watch('dayWidth', function(newValue) {
-                    if (newValue == undefined || newValue == width) {
-                        console.log('new value is undefined or already set same width='+width);
-                        return;
-                    }
-
-                    width = newValue;
-                    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                    if (svg) {
-                        svg.attr('width', width);
-                    }
-                });
-
-                scope.$watch('dayChart', function (newVal) {
-                    if (newVal) {
-                        chart();
-                    }
-                });
-
-                scope.$watch('forecastType', function (newVal) {
-                    if (newVal === false) {
-                        chart();
-                    }
-                });
-            }
-        };
     });

@@ -3,134 +3,33 @@
         <div class="main-content"
              ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
             <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
-                <div class="col" style="height: 100%">
-                    <div class="row row-no-padding" style="height: 100%; margin: auto">
-                        <div class="col" style="margin: auto">
-                            <div style="height: 20px" ng-if="isIOS()"></div>
-                            <div class="row row-no-padding region" ng-style="::{'height':regionSize*1.3+'px'}">
-                                <p ng-style="::{'font-size':regionSize+'px'}"><a class="icon ion-ios-location-outline" style="color: white" ng-if="currentPosition"></a>
-                                    {{address}}</p>
-                            </div>
-                            <div class="row row-no-padding" ng-style="::{'height':bigDigitSize*0.9+'px'}">
-                                <div class="col" style="padding: 0; height: 100%; margin-top: 1.5%;">
-                                    <div class="row row-no-padding" style="height: 100%">
-                                        <div style="width: 10%; height: 100%; display:table; text-align: center;" ng-click="onSwipeLeft()">
-                                            <span class="icon-left ion-chevron-left" style="display:table-cell; vertical-align: middle">
-                                            </span>
-                                        </div>
-                                        <div class="big-digit" style="width: 44%; height: 100%">
-                                            <p ng-style="::{'font-size':bigDigitSize+'px'}">{{currentWeather.t1h}}</p>
-                                        </div>
-                                        <div style="width: 36%;">
-                                            <div class="row-no-padding big-temp-point" ng-style="::{'height':bigTempPointSize+'px'}"
-                                                 ng-if="currentWeather.t1h!==undefined">
-                                                <img ng-style="::{'height':bigTempPointSize+'px'}" style="width: auto" ng-src="img/{{::reddot}}.png">
-                                            </div>
-                                            <div class="row-no-padding big-temp-sky-state" ng-style="::{'height': bigSkyStateSize+'px'}"
-                                                 ng-if="currentWeather.skyIcon">
-                                                <img ng-style="::{'height':bigSkyStateSize+'px'}" style="width: auto" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
-                                            </div>
-                                        </div>
-                                        <div style="width: 10%; height: 100%; display: table; text-align: center;" ng-click="onSwipeRight()">
-                                            <span class="icon-right ion-chevron-right" style="display: table-cell; vertical-align: middle">
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row row-no-padding region-sum" ng-style="::{'height': regionSumSize*1.3+'px', 'line-height':regionSumSize*1.3+'px'}">
-                                <p ng-style="::{'font-size':regionSumSize+'px'}">{{currentWeather.summary}}</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="cityArrow" ng-click="onSwipeLeft()">
+                    <span class="icon-left ion-chevron-left"></span>
+                </div>
+                <div class="topMainBox" ng-bind-html="topMainBox"></div>
+                <div class="cityArrow" ng-click="onSwipeRight()">
+                    <span class="icon-right ion-chevron-right"></span>
                 </div>
             </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='short'" ng-click="changeForecastType()">
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='short'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
                             scrollbar-x="false" style="width: 100%; height: 100%">
-                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':timeWidth +'px'}">
-                        <div class="row row-no-padding" style="height: 54%">
-                            <div ng-short-chart style="width: 100%; height: 100%"></div>
-                        </div>
-                        <div class="row row-no-padding" style="height: 6%">
-                            <div style="width: 26px;"></div>
-                            <div class="col" ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date" ng-repeat="value in dayTable" style="height: 100%;">
-                                <div style="display: table;height: 100%; line-height: normal">
-                                    <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: 0; display: table-cell; vertical-align: bottom; opacity: 0.84">{{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span></p>
-                                </div>
-                            </div>
-                            <div style="width: 26px;"></div>
-                        </div>
-                        <div class="row row-no-padding" style="height: 40%">
-                            <div class="col" ng-repeat="value in timeTable" style="height: 100%;">
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding small-time" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallTimeSize+'px'}">{{value.time}}</p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.tempIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.t3h}}˚</p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-if="value.rn1 === undefined" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.pop}}<small>%</small></p>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-if="value.rn1 !== undefined" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize +'px'}">{{value.rn1}}<span
-                                            style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
-                                            style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col chartBox" ng-style="{'width':timeWidth +'px'}">
+                        <div ng-short-chart class="chart-content"></div>
+                        <div id="shortTable" class="col table-content" ng-bind-html="shortTable"></div>
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='mid'"
-                 ng-click="changeForecastType()">
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='mid'" ng-click="changeForecastType()">
                 <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
-                            scrollbar-x="false" style="width: 100%; height: 100%" overflow-scroll="false">
-                    <div class="col" style="padding: 0; height: 100%;" ng-style="{'width':dayWidth +'px'}">
-                        <div class="row row-no-padding chart-content">
-                            <div ng-mid-chart style="width: 100%; height: 100%"></div>
-                        </div>
-                        <div class="row row-no-padding table-content">
-                            <div class="col" ng-repeat="value in dayTable" style="height: 100%;">
-                                <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-                                <div class="row row-no-padding" style="height: 20%;">
-                                    <div class="small-time" style="margin: auto; padding-bottom: 2px"
-                                         ng-style="::{'width':(smallTimeSize+6)+'px'}">
-                                        <p ng-style="::{'font-size':smallTimeSize+'px',
-                                                    'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
-                                                    'opacity':value.fromToday===0?'1':'0.84'}">{{value.week}}</p>
-                                    </div>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="{{::imgPath}}/{{value.skyIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-if="value.rn1 === undefined" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.pop}}<small>%</small></p>
-                                </div>
-                                <div class="row row-no-padding small-digit" ng-if="value.rn1 !== undefined" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.rn1}}<span
-                                            style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
-                                            style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
-                                </div>
-                                <div class="row row-no-padding small-image" style="height: 20%;">
-                                    <div><img ng-style="::{'width':smallImageSize+'px'}" ng-src="img/{{value.humidityIcon}}.png"></div>
-                                </div>
-                                <div class="row row-no-padding small-digit" style="height: 20%;">
-                                    <p ng-style="::{'font-size':smallDigitSize+'px'}">{{value.reh}}<small>%</small></p>
-                                </div>
-                            </div>
-                        </div>
+                            scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col chartBox" ng-style="{'width':dayWidth +'px'}">
+                        <div ng-mid-chart class="chart-content"></div>
+                        <div id="midTable" class="col table-content" ng-bind-html="midTable"></div>
                     </div>
                 </ion-scroll>
             </div>
-            <div class="row row-no-padding extend-content" ng-show="forecastType==='detail'"
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='detail'"
                  ng-click="changeForecastType()" style="width: 100%">
                 <ion-scroll class="detail-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                             delegate-handle="detailList" style="width:90%;margin: 0 auto;">
