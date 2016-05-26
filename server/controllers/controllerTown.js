@@ -479,25 +479,59 @@ function ControllerTown() {
                         }
                     }
 
+                    if (resultItem.t1h == -50) {
+                       resultItem.t1h = undefined;
+                    }
+                    if (resultItem.rn1 == -1) {
+                        resultItem.rn1 = undefined;
+                    }
+                    if (resultItem.sky == -1) {
+                        resultItem.sky = undefined;
+                    }
+                    if (resultItem.uuu == -100) {
+                        resultItem.uuu = undefined;
+                    }
+                    if (resultItem.vvv == -100) {
+                        resultItem.vvv = undefined;
+                    }
+                    if (resultItem.reh == -1) {
+                        resultItem.reh = undefined;
+                    }
+                    if (resultItem.pty == -1) {
+                        resultItem.pty = undefined;
+                    }
+                    if (resultItem.lgt == -1) {
+                        resultItem.lgt = undefined;
+                    }
+                    if (resultItem.vec == -1) {
+                        resultItem.vec = undefined;
+                    }
+                    if (resultItem.wsd == -1) {
+                        resultItem.wsd = undefined;
+                    }
+
                     resultItem.sensorytem = Math.round(self._getNewWCT(resultItem.t1h, resultItem.wsd));
                     //log.info(listCurrent);
                     //지수 계산 이후에 반올림함.
-                    resultItem.t1h = Math.round(resultItem.t1h);
+                    if (resultItem.t1h != undefined) {
+                        resultItem.t1h = Math.round(resultItem.t1h);
 
-                    // get discomfort index(불괘지수)
-                    resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
-                    
-                    // get decomposition index(부패지수)
-                    resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
+                        // get discomfort index(불괘지수)
+                        resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
 
-                    // get heat index(열지수)
-                    resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
+                        // get decomposition index(부패지수)
+                        resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
 
-                    // get frost string(동상가능지수)
-                    resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
+                        // get heat index(열지수)
+                        resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
+
+                        // get frost string(동상가능지수)
+                        resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
+
+                    }
 
                     // get freeze string(동파가능지수)
                     if(req.short !== undefined) {
@@ -521,8 +555,10 @@ function ControllerTown() {
                         if(yesterdayMinTemperature === -50) {
                             yesterdayMinTemperature = 0;
                         }
-                        
-                        resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
+
+                        if (resultItem.t1h != undefined) {
+                            resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
+                        }
                     }
 
                     req.current = resultItem;
@@ -874,6 +910,7 @@ function ControllerTown() {
                     req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
                     req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
 
+                    req.current.sensorytem = Math.round(self._getNewWCT(req.current.t1h, req.current.wsd));
                     req.current.t1h = Math.round(req.current.t1h);
 
                     if (stnHourlyFirst) {
