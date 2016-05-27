@@ -96,10 +96,10 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
                return mCallback();
            }
 
-           //if ((new Date(stnWeatherList[0].pubDate)).getTime() < (new Date(dateTime)).getTime()) {
-           //    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
-           //    return mCallback();
-           //}
+           if ((new Date(stnWeatherList[0].pubDate)).getTime()+3600000 < (new Date(dateTime)).getTime()) {
+               log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
+               return mCallback();
+           }
 
            var hourlyData = stnWeatherList[0].hourlyData[0];
 
@@ -181,7 +181,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, callback) {
             return cb(new Error('Fail to make stn Weather info town='+JSON.stringify(townInfo)));
         }
         else {
-            mergedStnWeather.stnDateTime = stnDateTime;
+            mergedStnWeather.stnDateTime = stnHourWeatherList[0].date;
         }
         cb(undefined, mergedStnWeather);
     }], function (err, result) {

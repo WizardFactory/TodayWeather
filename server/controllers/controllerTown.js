@@ -887,12 +887,20 @@ function ControllerTown() {
                     }
 
                     var stnHourlyFirst = true;
-                    if (req.current.time === time) {
-                        log.verbose('use api first, just append new data of stn hourly weather info');
+                    var stnWeatherInfoTime = stnWeatherInfo.stnDateTime.substr(11,2);
+                    var currentTime = req.current.time.substr(0,2);
+
+                    if (Number(currentTime) >= Number(stnWeatherInfoTime)) {
+                        log.info('use api first, just append new data of stn hourly weather info');
                         stnHourlyFirst = false;
                     }
                     else {
-                        log.verbose('overwrite all data');
+                        log.info('overwrite all data');
+                    }
+
+                    if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
+                        log.error('stnWeatherInfo is invalid!');
+                        stnHourlyFirst = false;
                     }
 
                     for (var key in stnWeatherInfo) {
