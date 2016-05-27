@@ -60,6 +60,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', require('./routes/v000001'));
 app.use('/v000001', require('./routes/v000001'));
 app.use('/v000705', require('./routes/v000705'));
+app.use('/v000803', require('./routes/v000803'));
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
