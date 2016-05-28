@@ -5,6 +5,7 @@ import { Logger } from "../core/logger";
 import { EventEmitter } from "../core/events";
 import { APIRequest } from "../core/request";
 import { DeferredPromise } from "../core/promise";
+import { User } from "../core/user";
 
 import { PushToken } from "./push-token";
 import { PushMessage } from "./push-message";
@@ -14,10 +15,13 @@ var settings = new Settings();
 
 var DEFER_INIT = "DEFER_INIT";
 
-var pushAPIBase = settings.getURL('api') + '/api/v1/app/' + settings.get('app_id') + '/push';
+var pushAPIBase = settings.getURL('platform-api') + '/push';
 var pushAPIEndpoints = {
+  'saveToken': function() {
+    return pushAPIBase + '/tokens';
+  },
   'invalidateToken': function() {
-    return pushAPIBase + '/invalidate-token';
+    return pushAPIBase + '/tokens/invalidate';
   }
 };
 
@@ -76,8 +80,10 @@ export class Push {
     this._isReady = false;
     this._tokenReady = false;
     this._blockRegistration = false;
+    this._blockSaveToken = false;
     this._registered = false;
     this._emitter = new EventEmitter();
+    this._plugin = null;
     if (config !== DEFER_INIT) {
       var self = this;
       IonicPlatform.getMain().onReady(function() {
@@ -150,26 +156,45 @@ export class Push {
     return this;
   }
 
-  /**
-   * Store the currently registered device token with a User
-   *
-   * @param {IonicUser} user The User the token should be associated with
-   * @return {void}
-   */
-  addTokenToUser(user) {
-    if (!this._token) {
-      this.logger.info('a token must be registered before you can add it to a user.');
+  saveToken(token, options) {
+    var deferred = new DeferredPromise();
+    var opts = options || {};
+    if (token.token) {
+      token = token.token;
     }
-    if (typeof user === 'object') {
-      if (IonicPlatform.isAndroidDevice()) {
-        user.addPushToken(this._token, 'android');
-      } else if (IonicPlatform.isIOSDevice()) {
-        user.addPushToken(this._token, 'ios');
-      } else {
-        this.logger.info('token is not a valid Android or iOS registration id. Cannot save to user.');
+
+    var tokenData = {
+      'token': token,
+      'app_id': settings.get('app_id')
+    };
+
+    if (!opts.ignore_user) {
+      var user = User.current();
+      if (user.isAuthenticated()) {
+        tokenData.user_id = user.id; // eslint-disable-line
       }
+    }
+
+    if (!self._blockSaveToken) {
+      new APIRequest({
+        'uri': pushAPIEndpoints.saveToken(),
+        'method': 'POST',
+        'json': tokenData
+      }).then(function(result) {
+        self._blockSaveToken = false;
+        self.logger.info('saved push token: ' + token);
+        if (tokenData.user_id) {
+          self.logger.info('added push token to user: ' + tokenData.user_id);
+        }
+        deferred.resolve(result);
+      }, function(error) {
+        self._blockSaveToken = false;
+        self.logger.error(error);
+        deferred.reject(error);
+      });
     } else {
-      this.logger.info('invalid $ionicUser object passed to $ionicPush.addToUser()');
+      self.logger.info("a token save operation is already in progress.");
+      deferred.reject(false);
     }
   }
 
@@ -196,7 +221,7 @@ export class Push {
         self._blockRegistration = false;
         self._tokenReady = true;
       } else {
-        self._plugin = PushNotification.init(self._config.pluginConfig);
+        self._plugin = self._getPushPlugin().init(self._config.pluginConfig);
         self._plugin.on('registration', function(data) {
           self._blockRegistration = false;
           self.token = new PushToken(data.registrationId);
@@ -237,16 +262,12 @@ export class Push {
         this._plugin.unregister(function() {}, function() {});
       }
       new APIRequest({
-        'uri': pushAPIEndpoints.invalidateToken(self),
+        'uri': pushAPIEndpoints.invalidateToken(),
         'method': 'POST',
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        'body': JSON.stringify({
+        'json': {
           'platform': platform,
           'token': self.getStorageToken().token
-        })
+        }
       }).then(function(result) {
         self._blockUnregister = false;
         self.logger.info('unregistered push token: ' + self.getStorageToken().token);
@@ -438,12 +459,7 @@ export class Push {
     this._emitter.emit('ionic_push:processNotification', notification);
   }
 
-  /**
-   * Fetch the phonegap-push-plugin interface
-   * Internal Method
-   *
-   * @return {PushNotification} PushNotification instance
-   */
+  /* Deprecated in favor of `getPushPlugin` */
   _getPushPlugin() {
     var self = this;
     var PushPlugin = false;
@@ -457,6 +473,15 @@ export class Push {
       self.logger.error("PushNotification plugin is required. Have you run `ionic plugin add phonegap-plugin-push` ?");
     }
     return PushPlugin;
+  }
+
+  /**
+   * Fetch the phonegap-push-plugin interface
+   *
+   * @return {PushNotification} PushNotification instance
+   */
+  getPushPlugin() {
+    return this._plugin;
   }
 
   /**

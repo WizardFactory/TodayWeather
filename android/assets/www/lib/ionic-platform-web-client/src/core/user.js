@@ -1,20 +1,21 @@
+import { Auth } from "../auth/auth";
 import { APIRequest } from "./request";
 import { DeferredPromise } from "./promise";
 import { Settings } from "./settings";
-import { IonicPlatform } from "./core";
 import { Storage } from "./storage";
 import { Logger } from "./logger";
-import { PushToken } from "../push/push-token";
 import { DataType } from "./data-types.js";
 
-var Core = IonicPlatform;
 var AppUserContext = null;
 var settings = new Settings();
 var storage = new Storage();
 
-var userAPIBase = settings.getURL('api') + '/api/v1/app/' + settings.get('app_id') + '/users';
+var userAPIBase = settings.getURL('platform-api') + '/auth/users';
 var userAPIEndpoints = {
-  'load': function(userModel) {
+  'self': function() {
+    return userAPIBase + '/self';
+  },
+  'get': function(userModel) {
     return userAPIBase + '/' + userModel.id;
   },
   'remove': function(userModel) {
@@ -23,11 +24,8 @@ var userAPIEndpoints = {
   'save': function(userModel) {
     return userAPIBase + '/' + userModel.id;
   },
-  'identify': function() {
-    return userAPIBase + '/identify';
-  },
-  'addToken': function() {
-    return userAPIBase + '/pushUnique';
+  'passwordReset': function(userModel) {
+    return userAPIBase + '/' + userModel.id + '/password-reset';
   }
 };
 
@@ -41,115 +39,36 @@ class UserContext {
   }
 
   static store() {
+    if (UserContext.getRawData()) {
+      UserContext.storeLegacyData(UserContext.getRawData());
+    }
+    if (User.current().data.data.__ionic_user_migrated) {
+      storage.storeObject(UserContext.label + '_legacy', { '__ionic_user_migrated': true });
+    }
     storage.storeObject(UserContext.label, User.current());
+  }
+
+  static storeLegacyData(data) {
+    if (!UserContext.getRawLegacyData()) {
+      storage.storeObject(UserContext.label + '_legacy', data);
+    }
   }
 
   static getRawData() {
     return storage.retrieveObject(UserContext.label) || false;
   }
 
+  static getRawLegacyData() {
+    return storage.retrieveObject(UserContext.label + '_legacy') || false;
+  }
+
   static load() {
     var data = storage.retrieveObject(UserContext.label) || false;
     if (data) {
+      UserContext.storeLegacyData(data);
       return User.fromContext(data);
     }
     return false;
-  }
-}
-
-class PushData {
-
-  /**
-   * Push Data Object
-   *
-   * Holds push data to use in conjunction with Ionic User models.
-   * @constructor
-   * @param {object} tokens Formatted token data
-   */
-  constructor(tokens) {
-    this.logger = new Logger({
-      'prefix': 'Ionic Push Token:'
-    });
-    this.tokens = {
-      'android': [],
-      'ios': []
-    };
-    if (tokens && (typeof tokens === 'object')) {
-      this.tokens = tokens;
-    }
-  }
-
-  /**
-   * Add a new token to the current list of tokens
-   * Duplicates are not added, but still return as succesfully added.
-   *
-   * @param {ionic.io.push.Token} token Push Token
-   * @return {boolean} False on error, otherwise true
-   */
-  addToken(token) {
-    var platform = null;
-
-    if ((typeof token === 'undefined') || !token || token === '') {
-      this.logger.info('you need to pass a valid token to addToken()');
-      return false;
-    }
-
-    if (token.token) {
-      token = token.token;
-    }
-
-    // check if this is a dev token
-    if (token.slice(0,3) === 'DEV') {
-      this.logger.info('dev tokens cannot be saved to a user as they are a temporary resource');
-      return false;
-    }
-
-    if (Core.isAndroidDevice()) {
-      platform = 'android';
-    } else if (Core.isIOSDevice()) {
-      platform = 'ios';
-    }
-
-    if (platform === null || !this.tokens.hasOwnProperty(platform)) {
-      this.logger.info('cannot determine the token platform. Are you running on an Android or iOS device?');
-      return false;
-    }
-
-    var platformTokens = this.tokens[platform];
-    var hasToken = false;
-    var testToken = null;
-
-    for (testToken in platformTokens) {
-      if (platformTokens[testToken] === token) {
-        hasToken = true;
-      }
-    }
-    if (!hasToken) {
-      platformTokens.push(token);
-    }
-
-    return true;
-  }
-
-  /**
-   * Remove the specified token if it exists in any platform token listing
-   * If it does not exist, nothing is removed, but we will still return success
-   *
-   * @param {ionic.io.push.Token} token Push Token
-   * @return {boolean} true
-   */
-  removeToken(token) {
-    var x;
-    for (x in this.tokens) {
-      var platform = this.tokens[x];
-      var testToken;
-      for (testToken in platform) {
-        if (platform[testToken] === token.token) {
-          platform.splice(testToken, 1);
-        }
-      }
-    }
-    return true;
   }
 }
 
@@ -192,6 +111,9 @@ class UserData {
     if (this.data.hasOwnProperty(key)) {
       return this.data[key];
     } else {
+      if (defaultValue === 0 || defaultValue === false) {
+        return defaultValue;
+      }
       return defaultValue || null;
     }
   }
@@ -208,12 +130,26 @@ export class User {
     this._dirty = false;
     this._fresh = true;
     this._unset = {};
-    this.push = new PushData();
     this.data = new UserData();
   }
 
   isDirty() {
     return this._dirty;
+  }
+
+  isAnonymous() {
+    if (!this.id) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  isAuthenticated() {
+    if (this === User.current()) {
+      return Auth.isAuthenticated();
+    }
+    return false;
   }
 
   static current(user) {
@@ -236,10 +172,45 @@ export class User {
     var user = new User();
     user.id = data._id;
     user.data = new UserData(data.data.data);
-    user.push = new PushData(data.push.tokens);
+    user.details = data.details || {};
     user._fresh = data._fresh;
     user._dirty = data._dirty;
     return user;
+  }
+
+  static self() {
+    var deferred = new DeferredPromise();
+    var tempUser = new User();
+
+    if (!tempUser._blockLoad) {
+      tempUser._blockLoad = true;
+      new APIRequest({
+        'uri': userAPIEndpoints.self(),
+        'method': 'GET',
+        'json': true
+      }).then(function(result) {
+        tempUser._blockLoad = false;
+        tempUser.logger.info('loaded user');
+
+        // set the custom data
+        tempUser.id = result.payload.data.uuid;
+        tempUser.data = new UserData(result.payload.data.custom);
+        tempUser.details = result.payload.data.details;
+        tempUser._fresh = false;
+
+        User.current(tempUser);
+        deferred.resolve(tempUser);
+      }, function(error) {
+        tempUser._blockLoad = false;
+        tempUser.logger.error(error);
+        deferred.reject(error);
+      });
+    } else {
+      tempUser.logger.info("a load operation is already in progress for " + this + ".");
+      deferred.reject(false);
+    }
+
+    return deferred.promise;
   }
 
   static load(id) {
@@ -251,29 +222,16 @@ export class User {
     if (!tempUser._blockLoad) {
       tempUser._blockLoad = true;
       new APIRequest({
-        'uri': userAPIEndpoints.load(tempUser),
+        'uri': userAPIEndpoints.get(tempUser),
         'method': 'GET',
-        'json': true,
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        'json': true
       }).then(function(result) {
         tempUser._blockLoad = false;
         tempUser.logger.info('loaded user');
 
         // set the custom data
-        tempUser.data = new UserData(result.payload.custom_data);
-
-        // set the push tokens
-        if (result.payload._push && result.payload._push.android_tokens) {
-          tempUser.push.tokens.android = result.payload._push.android_tokens;
-        }
-        if (result.payload._push && result.payload._push.ios_tokens) {
-          tempUser.push.tokens.ios = result.payload._push.ios_tokens;
-        }
-
-        tempUser.image = result.payload.image;
+        tempUser.data = new UserData(result.payload.data.custom);
+        tempUser.details = result.payload.data.details;
         tempUser._fresh = false;
 
         deferred.resolve(tempUser);
@@ -302,37 +260,38 @@ export class User {
   }
 
   getAPIFormat() {
-    var self = this;
-    var data = this.data.data;
-    data.user_id = this.id; // eslint-disable-line camelcase
-    data._push = {
-      'android_tokens': this.push.tokens.android,
-      'ios_tokens': this.push.tokens.ios
-    };
-
-    if (!this.isFresh()) {
-      return { 'update': data, 'remove': self._unset };
+    var apiFormat = {};
+    for (var key in this.details) {
+      apiFormat[key] = this.details[key];
     }
-    return data;
+    apiFormat.custom = this.data.data;
+    return apiFormat;
   }
 
   getFormat(format) {
     var self = this;
     var formatted = null;
     switch (format) {
-      case 'api':
+      case 'api-save':
         formatted = self.getAPIFormat();
         break;
     }
     return formatted;
   }
 
-  static anonymousId() {
-    // this is not guaranteed to be unique
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8); //eslint-disable-line
-      return v.toString(16);
-    });
+  migrate() {
+    var rawData = UserContext.getRawLegacyData();
+    if (rawData.__ionic_user_migrated) {
+      return true;
+    }
+    if (rawData) {
+      var currentUser = Ionic.User.current();
+      var userData = new UserData(rawData.data.data);
+      for (var key in userData.data) {
+        currentUser.set(key, userData.data[key]);
+      }
+      currentUser.set('__ionic_user_migrated', true);
+    }
   }
 
   delete() {
@@ -349,10 +308,7 @@ export class User {
       new APIRequest({
         'uri': userAPIEndpoints.remove(this),
         'method': 'DELETE',
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+        'json': true
       }).then(function(result) {
         self._blockDelete = false;
         self.logger.info('deleted ' + self);
@@ -389,20 +345,10 @@ export class User {
     if (!self._blockSave) {
       self._blockSave = true;
       self._store();
-      var saveURL = userAPIEndpoints.save(this);
-      var saveMethod = 'PUT';
-      if (self.isFresh()) {
-        saveURL = userAPIEndpoints.identify(this);
-        saveMethod = 'POST';
-      }
       new APIRequest({
-        'uri': saveURL,
-        'method': saveMethod,
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        'body': JSON.stringify(self.getFormat('api'))
+        'uri': userAPIEndpoints.save(this),
+        'method': 'PATCH',
+        'json': self.getFormat('api-save')
       }).then(function(result) {
         self._dirty = false;
         if (!self.isFresh()) {
@@ -426,6 +372,24 @@ export class User {
     return deferred.promise;
   }
 
+  resetPassword() {
+    var self = this;
+    var deferred = new DeferredPromise();
+
+    new APIRequest({
+      'uri': userAPIEndpoints.passwordReset(this),
+      'method': 'POST'
+    }).then(function(result) {
+      self.logger.info('password reset for user');
+      deferred.resolve(result);
+    }, function(error) {
+      self.logger.error(error);
+      deferred.reject(error);
+    });
+
+    return deferred.promise;
+  }
+
   set id(v) {
     if (v && (typeof v === 'string') && v !== '') {
       this._id = v;
@@ -441,17 +405,6 @@ export class User {
 
   toString() {
     return '<IonicUser [\'' + this.id + '\']>';
-  }
-
-  addPushToken(token) {
-    return this.push.addToken(token);
-  }
-
-  removePushToken(token) {
-    if (!(token instanceof PushToken)) {
-      token = new PushToken(token);
-    }
-    return this.push.removeToken(token);
   }
 
   set(key, value) {

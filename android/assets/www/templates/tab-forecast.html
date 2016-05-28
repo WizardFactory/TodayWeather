@@ -1,0 +1,169 @@
+<ion-view hide-nav-bar="true">
+    <ion-content delegate-handle="body" scroll="false" ng-style="{'bottom':contentBottom+'px'}">
+        <div class="main-content"
+             ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
+            <div class="row row-no-padding current-content" on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()">
+                <div class="cityArrow" ng-click="onSwipeLeft()">
+                    <span class="icon-left ion-chevron-left"></span>
+                </div>
+                <div class="topMainBox" ng-bind-html="topMainBox"></div>
+                <div class="cityArrow" ng-click="onSwipeRight()">
+                    <span class="icon-right ion-chevron-right"></span>
+                </div>
+            </div>
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='short'" ng-click="changeForecastType()">
+                <ion-scroll delegate-handle="timeChart" zooming="false" direction="x" has-bouncing="false"
+                            scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col chartBox" ng-style="{'width':timeWidth +'px'}">
+                        <div ng-short-chart class="chart-content"></div>
+                        <div id="shortTable" class="col table-content" ng-bind-html="shortTable"></div>
+                    </div>
+                </ion-scroll>
+            </div>
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='mid'" ng-click="changeForecastType()">
+                <ion-scroll delegate-handle="weeklyChart" zooming="false" direction="x" has-bouncing="false"
+                            scrollbar-x="false" style="width: 100%; height: 100%">
+                    <div class="col chartBox" ng-style="{'width':dayWidth +'px'}">
+                        <div ng-mid-chart class="chart-content"></div>
+                        <div id="midTable" class="col table-content" ng-bind-html="midTable"></div>
+                    </div>
+                </ion-scroll>
+            </div>
+            <div class="row row-no-padding extend-content" ng-if="forecastType==='detail'"
+                 ng-click="changeForecastType()" style="width: 100%">
+                <ion-scroll class="detail-list" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                            delegate-handle="detailList" style="width:90%;margin: 0 auto;">
+                    <div class="list" style="background-color: transparent; margin-bottom: 10px; margin-top: 10px;">
+                        <div class="item row detail-item">
+                            <div class="col col-33 detail-text"><p>미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm10StationName?currentWeather.arpltn.pm10StationName:currentWeather.arpltn.stationName}}</small></p>
+                            </div>
+                            <div class="col col-33 detail-image">
+                                <div><img src="img/PM10.png" style="width: 40px"></div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm10Str}}
+                                <br ng-if="currentWeather.arpltn.pm10Value>=0"><small
+                                        ng-if="currentWeather.arpltn.pm10Value>=0">{{currentWeather.arpltn.pm10Value}}㎍/㎥</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item">
+                            <div class="col col-33 detail-text"><p style="font-size: 17px">초미세먼지
+                                <br><small style="font-size:14px;opacity: 0.6">{{currentWeather.arpltn.pm25StationName?currentWeather.arpltn.pm25StationName:currentWeather.arpltn.stationName}}</small>
+                                </p>
+                            </div>
+                            <div class="col col-33 detail-image">
+                                <div><img src="img/PM10.png" style="width: 40px"></div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.arpltn.pm25Str}}
+                                <br ng-if="currentWeather.arpltn.pm25Value>=0"><small
+                                        ng-if="currentWeather.arpltn.pm25Value>=0">{{currentWeather.arpltn.pm25Value}}㎍/㎥</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.rn1Str">
+                                <div class="col col-33 detail-text"><p>{{currentWeather.ptyStr}}</p>
+                                </div>
+                                <div class="col col-33 detail-image">
+                                    <div><img src="img/Umbrella.png" style="width: 40px"></div>
+                                </div>
+                                <div class="col col-33 detail-text"><p style="font-size: 18px">{{currentWeather.rn1Str}}</p>
+                                </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.sensorytem && currentWeather.sensorytem != currentWeather.t1h">
+                                <div class="col col-33 detail-text"><p>체감온도</p></div>
+                                <div class="col col-33 detail-image">
+                                    <div><img src="img/SensoryTem.png" style="width: 40px"></div>
+                                </div>
+                                <div class="col col-33 detail-text"><p><span ng-if="currentWeather.sensorytemStr">{{currentWeather.sensorytemStr}}</span>
+                                    <br ng-if="currentWeather.sensorytemStr">{{currentWeather.sensorytem}}˚</p>
+                                </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.dspls && currentWeather.dspls > 60 && currentWeather.sensorytem == currentWeather.t1h">
+                                <div class="col col-33 detail-text"><p>불쾌지수</p></div>
+                                <div class="col col-33 detail-image">
+                                    <div><img src="img/angry.svg" style="width: 32px"></div>
+                                </div>
+                                <div class="col col-33 detail-text"><p><span ng-if="currentWeather.dsplsStr">{{currentWeather.dsplsStr}}</span>
+                                    <br ng-if="currentWeather.dsplsStr">{{currentWeather.dspls}}</p>
+                                </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.ultrvStr">
+                            <div class="col col-33 detail-text"><p>자외선</p></div>
+                            <div class="col col-33 detail-image">
+                                <div><img src="img/Ultrv.png" width="40px"></div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.ultrvStr}}</p></div>
+                        </div>
+                        <div class="item row detail-item">
+                            <div class="col col-33 detail-text"><p>습도</p></div>
+                            <div class="col col-33 detail-image">
+                                <div><img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
+                                          style="width: 40px">
+                                </div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.reh}}<small>%</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.wsd != -1">
+                            <div class="col col-33 detail-text"><p>바람</p></div>
+                            <div class="col col-33 detail-image">
+                                <div><img src="img/Wind.png" width="40px"></div>
+                            </div>
+                            <div class="col col-33 detail-text"><p>{{currentWeather.wsd}}<small>m/s</small></p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item" ng-if="currentWeather.arpltn != undefined">
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    CAI {{currentWeather.arpltn.khaiStr}}<span
+                                        ng-if="currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue}})</span><br>
+                                    O3 {{currentWeather.arpltn.o3Str}}<span
+                                        ng-if="currentWeather.arpltn.o3Value != -1">({{currentWeather.arpltn.o3Value}})</span><br>
+                                    CO {{currentWeather.arpltn.coStr}}<span
+                                        ng-if="currentWeather.arpltn.coValue != -1">({{currentWeather.arpltn.coValue}})</span>
+                                </p>
+                            </div>
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    측정소명 <span
+                                        ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span><br>
+                                    SO2 {{currentWeather.arpltn.so2Str}}<span
+                                        ng-if="currentWeather.arpltn.so2Value != -1">({{currentWeather.arpltn.so2Value}})</span><br>
+                                    NO2 {{currentWeather.arpltn.no2Str}}<span
+                                        ng-if="currentWeather.arpltn.no2Value != -1">({{currentWeather.arpltn.no2Value}})</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="item row detail-item">
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    <span ng-if="currentWeather.visibility">가시거리 {{currentWeather.visibility}}km<br></span>
+                                    <span ng-if="currentWeather.hPa">기압 {{currentWeather.hPa}}hPa<br></span>
+                                    <span ng-if="currentWeather.s1d > 0">일적설량 {{currentWeather.s1d}}cm<br></span>
+                                    <span ng-if="currentWeather.r1d > 0">일강수량 {{currentWeather.r1d}}mm<br></span>
+                                </p>
+                                <!-- 일강수,적설-->
+                            </div>
+                            <div class="col col-50 detail-text">
+                                <p style="font-size:14px">
+                                    <span ng-if="currentWeather.dspls &&
+                                                currentWeather.dspls > 60 &&
+                                                currentWeather.sensorytem != currentWeather.t1h"
+                                            >불쾌지수 {{currentWeather.dsplsStr}}({{currentWeather.dspls}})<br>
+                                    </span>
+                                    <span ng-if="currentWeather.fsnStr"
+                                            >식중독지수 {{currentWeather.fsnStr}}({{currentWeather.fsn}})<br>
+                                    </span>
+                                    <span ng-if="currentWeather.decpsnStr"
+                                            >부패지수 {{currentWeather.decpsnStr}}({{currentWeather.decpsn}})
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </ion-scroll>
+            </div>
+        </div>
+    </ion-content>
+    <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%;"
+                 ng-if="isLoading===true"/>
+</ion-view>
