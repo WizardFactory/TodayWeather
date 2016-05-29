@@ -26,6 +26,7 @@ function controllerWorldWeather(){
             return;
         }
 
+        res.json({result: 'Unknow result'});
         return;
     };
 
@@ -123,15 +124,29 @@ function controllerWorldWeather(){
                     }
 
                     // Need to send request to add this geocode.
-                    log.error('WW> It is the fist request, will collect weather for this geocode :', req.geocode, req.city);
-                    req.error = new Error('WW> It is the fist request, will collect weather for this geocode');
+                    req.error = 'WW> It is the fist request, will collect weather for this geocode :', req.geocode, req.city;
+                    log.error(req.error);
 
-                    self.requestAddingGeocode(req, function(err){
+                    self.requestAddingGeocode(req, function(err, result){
                         if(err){
                             log.error('WW> fail to reqeust');
+                            req.error = {res: 'fail', msg:'this is the first request of geocode'};
+                            callback('err_exit : Fail to requestAddingGeocode()');
+                            return;
                         }
-                        req.error = {res: 'fail', msg:'this is the first request of geocode'};
-                        callback('err_exit_req_add_geocode');
+
+                        // need to update location list
+                        // TODO : Maybe it'll take for long time, so need to find out other way to update.
+                        self.loadGeocodeList(function(err){
+                            if(err){
+                                log.error('WW> Fail to update geocode list, count:', self.geocodeList.length);
+                            }else{
+                                log.silly('WW> update geocode list, count:', self.geocodeList.length);
+                            }
+
+                            req.error = undefined;
+                            callback('skip_get_data', result);
+                        });
                     });
                 },
                 // 3. get MET data from DB by using geocode.
@@ -160,15 +175,24 @@ function controllerWorldWeather(){
                         // goto next step
                         callback(null);
                     });
-                },
-                // 5. merge weather data
-                function(callback){
-                    self.makeDefault(req);
-                    self.mergeWeather(req);
-                    callback(null);
                 }
         ],
         function(err, result){
+            if(err){
+                log.info('WW> queryWeather Error : ', err);
+            }else{
+                log.silly('WW> queryWeather no error')
+            }
+
+            // merge weather data
+            if(result){
+                self.makeDefault(req);
+                self.mergeWeather(req);
+
+                req.result = result;
+                log.info(req.result);
+            }
+
             log.info('WW> Finish to make weather data');
             next();
         });
@@ -272,7 +296,7 @@ function controllerWorldWeather(){
                 //}
 
                 self.geocodeList = tList;
-                log.info('WW> ', JSON.stringify(self.geocodeList));
+                log.silly('WW> ', JSON.stringify(self.geocodeList));
                 callback(0);
             });
         }
@@ -364,9 +388,9 @@ function controllerWorldWeather(){
                 var result = JSON.parse(body);
                 log.silly('WW> request success');
                 log.silly(result);
-                if(result.res == 'OK'){
+                if(result.status == 'OK'){
                     // adding geocode OK
-                    callback(0);
+                    callback(0, result);
                 }else{
                     callback(new Error('fail(receive fail message from requester'));
                 }
