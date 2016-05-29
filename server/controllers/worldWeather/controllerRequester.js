@@ -30,12 +30,12 @@ function ControllerRequester(){
             case 'get':
                 break;
             case 'req_add':
-                self.addLocation(req, function(err){
+                self.addNewLocation(req, function(err){
                     if(err){
                         log.info('RQ>  fail to run req_add_geocode');
                     }
                     log.info('RQ> success adding geocode');
-                    req.result = {res: 'OK', cmd: req.params.command};
+                    req.result = {status: 'OK', cmd: req.params.command};
                     next();
                 });
                 break;
@@ -233,6 +233,44 @@ ControllerRequester.prototype.addLocation = function(req, callback){
                 log.info('RQ> end of adding geocode :', err);
             }else{
                 log.silly('RQ> success adding geocode :', err);
+            }
+
+            if(callback){
+                callback(err, result);
+            }
+        }
+    );
+};
+
+ControllerRequester.prototype.addNewLocation = function(req, callback){
+    var self = this;
+
+    async.waterfall([
+            function(cb){
+                // 1. add location to DB
+                self.addLocation(req, function(err){
+                    if(err){
+                        log.info('RQ>  fail to run req_add_geocode');
+                        cb('err_exit_fail to add');
+                        return;
+                    }
+                    cb(null);
+                });
+            },
+            function(cb){
+                // 2. get weather data from provider.
+                cb(null);
+            },
+            function(cb){
+                // 3. adjust weather data for client.
+                cb(null);
+            }
+        ],
+        function(err, result){
+            if(err){
+                log.error('Fail to add and get weather for new location : ', err);
+            }else{
+                log.silly('Success to add and get weather');
             }
 
             if(callback){

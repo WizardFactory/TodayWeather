@@ -105,8 +105,13 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
             pIndex++;
         });
         //log.info(JSON.stringify(stnMinInfo));
-        stnWeatherList.stnList.push(stnMinInfo);
-        stnIndex++;
+        if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
+           log.error('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
+        }
+        else {
+            stnWeatherList.stnList.push(stnMinInfo);
+            stnIndex++;
+        }
     });
 
     callback(undefined, stnWeatherList);
@@ -229,7 +234,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                 log.warn(err);
                 return callback(err);
             }
-            var propertyName = ['stnName'];
+            var propertyName = ['stnId', 'stnName'];
 
             $('.table_develop3 thead #table_header2 th').each(function () {
                 var thName = $(this).text().replace(/\s+/, "");
@@ -298,6 +303,22 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                     tdText = tdText.replace(/\s+/, "");
 
                     if ($(this).children().first().is('a')) {
+                        tdText = $(this).children().first().attr('href');
+                        var textArray = tdText.split('&');
+                        for (var j=0; j<textArray.length; j++) {
+                            if (textArray[j].indexOf('stn=') == 0) {
+                                tdText = textArray[j].slice(4);
+                                cityWeather[propertyName[i]] = tdText;
+                                i++;
+                                break;
+                            }
+                        }
+                        if (j === textArray.length) {
+                            log.error('Fail to find stnId for getting city weather!!');
+                            //skip stnId property
+                            i++;
+                        }
+
                         tdText = $(this).children().first().text().replace(/\s+/, "");
                         tdText = tdText.replace(/(\r\n|\n|\r)/gm,"");
                         tdText = tdText.replace(/\s+/, "");
@@ -341,7 +362,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                     }
                     i++;
                 });
-                if (cityWeather.stnName) {
+                if (cityWeather.stnId) {
                     //log.info(JSON.stringify(cityWeather));
                     cityWeatherList.cityList.push(cityWeather);
                 }
@@ -456,6 +477,12 @@ KmaScraper.prototype._recursiveConvertGeoCode = function(addr, retryCount, callb
  */
 KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
     var self = this;
+
+    //AWS가 고장났을때, 도시날씨만 동작하므로 addr이 없음. stnInfo는 skip함.
+    if (stnWeatherInfo.stnId == undefined || stnWeatherInfo.addr == undefined) {
+        log.error("stnWeatherInfo don't have stnId or addr, skip save stnInfo");
+        return callback();
+    }
 
     KmaStnInfo.find({stnId: stnWeatherInfo.stnId}, function (err, stnList) {
         if (err) {
@@ -610,7 +637,7 @@ KmaScraper.prototype._saveKmaStnHourlyList = function (weatherList, callback) {
 KmaScraper.prototype._mergeAWSandCity = function(awsList, cityList) {
     cityList.forEach(function (cityWeatherInfo) {
         for (var i=0; i<awsList.length; i++)  {
-            if (cityWeatherInfo.stnName === awsList[i].stnName) {
+            if (cityWeatherInfo.stnId === awsList[i].stnId) {
                 for (var key in cityWeatherInfo ) {
                     awsList[i][key] = cityWeatherInfo[key];
                 }
@@ -620,7 +647,9 @@ KmaScraper.prototype._mergeAWSandCity = function(awsList, cityList) {
             }
         }
         if (i >= awsList.length) {
-            log.error("AWS and City Fail to find stnName=[", cityWeatherInfo.stnName,"]");
+            log.warn("AWS and City Fail to find stnId=["+cityWeatherInfo.stnId+"] stnName=[", cityWeatherInfo.stnName,"]");
+            awsList.push(cityWeatherInfo);
+            awsList[awsList.length-1].isCityWeather = true;
         }
     });
 

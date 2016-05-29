@@ -479,25 +479,59 @@ function ControllerTown() {
                         }
                     }
 
+                    if (resultItem.t1h == -50) {
+                       resultItem.t1h = undefined;
+                    }
+                    if (resultItem.rn1 == -1) {
+                        resultItem.rn1 = undefined;
+                    }
+                    if (resultItem.sky == -1) {
+                        resultItem.sky = undefined;
+                    }
+                    if (resultItem.uuu == -100) {
+                        resultItem.uuu = undefined;
+                    }
+                    if (resultItem.vvv == -100) {
+                        resultItem.vvv = undefined;
+                    }
+                    if (resultItem.reh == -1) {
+                        resultItem.reh = undefined;
+                    }
+                    if (resultItem.pty == -1) {
+                        resultItem.pty = undefined;
+                    }
+                    if (resultItem.lgt == -1) {
+                        resultItem.lgt = undefined;
+                    }
+                    if (resultItem.vec == -1) {
+                        resultItem.vec = undefined;
+                    }
+                    if (resultItem.wsd == -1) {
+                        resultItem.wsd = undefined;
+                    }
+
                     resultItem.sensorytem = Math.round(self._getNewWCT(resultItem.t1h, resultItem.wsd));
                     //log.info(listCurrent);
                     //지수 계산 이후에 반올림함.
-                    resultItem.t1h = Math.round(resultItem.t1h);
+                    if (resultItem.t1h != undefined) {
+                        resultItem.t1h = Math.round(resultItem.t1h);
 
-                    // get discomfort index(불괘지수)
-                    resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
-                    
-                    // get decomposition index(부패지수)
-                    resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
+                        // get discomfort index(불괘지수)
+                        resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
 
-                    // get heat index(열지수)
-                    resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
-                    resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
+                        // get decomposition index(부패지수)
+                        resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
 
-                    // get frost string(동상가능지수)
-                    resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
+                        // get heat index(열지수)
+                        resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
+                        resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
+
+                        // get frost string(동상가능지수)
+                        resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
+
+                    }
 
                     // get freeze string(동파가능지수)
                     if(req.short !== undefined) {
@@ -521,8 +555,10 @@ function ControllerTown() {
                         if(yesterdayMinTemperature === -50) {
                             yesterdayMinTemperature = 0;
                         }
-                        
-                        resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
+
+                        if (resultItem.t1h != undefined) {
+                            resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
+                        }
                     }
 
                     req.current = resultItem;
@@ -851,12 +887,20 @@ function ControllerTown() {
                     }
 
                     var stnHourlyFirst = true;
-                    if (req.current.time === time) {
-                        log.verbose('use api first, just append new data of stn hourly weather info');
+                    var stnWeatherInfoTime = stnWeatherInfo.stnDateTime.substr(11,2);
+                    var currentTime = req.current.time.substr(0,2);
+
+                    if (Number(currentTime) >= Number(stnWeatherInfoTime)) {
+                        log.info('use api first, just append new data of stn hourly weather info');
                         stnHourlyFirst = false;
                     }
                     else {
-                        log.verbose('overwrite all data');
+                        log.info('overwrite all data');
+                    }
+
+                    if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
+                        log.error('stnWeatherInfo is invalid!');
+                        stnHourlyFirst = false;
                     }
 
                     for (var key in stnWeatherInfo) {
@@ -874,6 +918,7 @@ function ControllerTown() {
                     req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
                     req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
 
+                    req.current.sensorytem = Math.round(self._getNewWCT(req.current.t1h, req.current.wsd));
                     req.current.t1h = Math.round(req.current.t1h);
 
                     if (stnHourlyFirst) {
@@ -1991,7 +2036,7 @@ ControllerTown.prototype._sum = function(list, invalidValue) {
         return Math.round(total);
     }
     else {
-        return total.toFixed(1);
+        return +total.toFixed(1);
     }
 };
 
@@ -2576,7 +2621,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                         shortList[index].tmn = currentTmn;
                     }
                 }
-                shortList[index].tmn = shortList[index].tmn.toFixed(1);
+                shortList[index].tmn = +shortList[index].tmn.toFixed(1);
             }
             if (shortItem.time === '1500') {
                 currentTmx = (self._createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
@@ -2592,7 +2637,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
                     }
                 }
-                shortList[index].tmx = shortList[index].tmx.toFixed(1);
+                shortList[index].tmx = +shortList[index].tmx.toFixed(1);
             }
         });
 
@@ -3077,13 +3122,13 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     var self = this;
     var dayConditionList = [];
     var daySummaryList = [];
-    var dateInfo = self._getCurrentTimeValue(9);
+    //var dateInfo = self._getCurrentTimeValue(9);
 
     shortList.forEach(function (short, i) {
-        if (short.date < dateInfo.date) {
-            log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
-            return;
-        }
+        //if (short.date < dateInfo.date) {
+        //    log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
+        //    return;
+        //}
         if (i === shortList.length-1 && short.time === '0000') {
             //todo update way
            return;
@@ -3121,6 +3166,12 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     dayConditionList.forEach(function (dayCondition) {
         if (dayCondition.reh.length === 0) {
             log.warn(new Error("dayCondition is empty :" + dayCondition.date));
+            return;
+        }
+
+        //24시 때문에 short에서 data가 하루 뿐인 경우가 있음.
+        if (dayCondition.t3h.length < 8) {
+            log.debug("skip current dayCondition  :" + dayCondition.date);
             return;
         }
 

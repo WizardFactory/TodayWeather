@@ -425,7 +425,7 @@ angular.module('starter.services', [])
             var p = Math.max(1, Math.ceil(cur / max * 10));
 
             if (p > 9) {
-                return "Temp-" + p;
+                return "Temp-10";
             }
             else {
                 return "Temp-0" + p;
