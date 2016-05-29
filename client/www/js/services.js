@@ -1,20 +1,150 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($q, $http, WeatherUtil) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil) {
+        var cities = [];
+        var cityIndex = -1;
         var obj = {
-            cities: [],
             towns: [],
-            cityIndex: 0, // 최초 지역은 현재 위치가 보여지도록 함
-            loadIndex: -1 // 초기 로드 중인 city index
+            isLoadComplete: false
+        };
+
+        var createCity = function (item) {
+            var city = {};
+
+            if (item === undefined) {
+                city.currentPosition = true;
+                city.address = null;
+                city.location = null;
+                city.currentWeather = null;
+                city.timeTable = null;
+                city.timeChart = null;
+                city.dayTable = null;
+                city.dayChart = null;
+                city.disable = true; // 현재 위치 off
+            } else {
+                city.currentPosition = item.currentPosition;
+                city.address = item.address;
+                city.location = item.location;
+                city.currentWeather = item.currentWeather;
+                city.timeTable = item.timeTable;
+                city.timeChart = item.timeChart;
+                city.dayTable = item.dayTable;
+                city.dayChart = item.dayChart;
+                city.disable = item.disable === undefined ? false : item.disable;
+            }
+            city.loadTime = null;
+            cities.push(city);
         };
 
         //region APIs
+
+        obj.getIndexOfCity = function (city) {
+            for (var i = 0; i < cities.length; i += 1) {
+                if (cities[i].currentPosition === true) {
+                    if (city.currentPosition === true) {
+                        return i;
+                    }
+                }
+                else {
+                    if (cities[i].address === city.address) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        };
+
+        obj.getCityOfIndex = function (index) {
+            if (index < 0 || index >= cities.length) {
+                return null;
+            }
+            return cities[index];
+        };
+
+        obj.getCityCount = function () {
+            return cities.length;
+        };
+
+        obj.getEnabledCityCount = function () {
+            var count = cities.length;
+
+            for (var i = 0; i < cities.length; i += 1) {
+                if (cities[i].disable === true) {
+                    count -= 1;
+                }
+            }
+            return count;
+        };
+
+        obj.getCityIndex = function () {
+            return cityIndex;
+        };
+
+        obj.setCityIndex = function (index) {
+            if (index >= -1 && index < cities.length) {
+                cityIndex = index;
+                // save current cityIndex
+                localStorage.setItem("cityIndex", JSON.stringify(cityIndex));
+                console.log("cityIndex = " + cityIndex);
+            }
+        };
+
+        obj.setFirstCityIndex = function () {
+            var that = this;
+            var city = cities[0];
+
+            if (city.disable === true) {
+                if (cities.length === 1) {
+                    that.setCityIndex(-1);
+                } else {
+                    that.setCityIndex(1);
+                }
+            } else {
+                that.setCityIndex(0);
+            }
+        };
+
+        obj.setPrevCityIndex = function () {
+            var that = this;
+            var city = cities[0];
+
+            if (cityIndex === 0 || (cityIndex === 1 && city.disable === true)) {
+                that.setCityIndex(cities.length - 1);
+            }
+            else {
+                that.setCityIndex(cityIndex - 1);
+            }
+        };
+
+        obj.setNextCityIndex = function () {
+            var that = this;
+
+            if (cityIndex === cities.length - 1) {
+                that.setFirstCityIndex();
+            }
+            else {
+                that.setCityIndex(cityIndex + 1);
+            }
+        };
+
+        obj.canLoadCity = function (index) {
+            var city = cities[index];
+
+            if (city.disable === true) {
+                return false;
+            }
+
+            var time = new Date();
+            return !!(city.loadTime === null || time.getTime() - city.loadTime.getTime() > (10 * 60 * 1000));
+        };
 
         obj.addCity = function (city) {
             var that = this;
 
             if (that.getIndexOfCity(city) === -1) {
-                that.cities.push(city);
+                city.disable = false;
+                city.loadTime = null;
+                cities.push(city);
                 that.saveCities();
                 return true;
             }
@@ -25,16 +155,37 @@ angular.module('starter.services', [])
             var that = this;
 
             if (index !== -1) {
-                that.cities.splice(index, 1);
+                cities.splice(index, 1);
                 that.saveCities();
+
+                if (cityIndex === that.getCityCount()) {
+                    that.setFirstCityIndex();
+                }
                 return true;
             }
             return false;
         };
 
+        obj.disableCity = function (disable) {
+            var that = this;
+
+            cities[0].disable = disable;
+            that.saveCities();
+
+            if (cityIndex <= 0) {
+                that.setFirstCityIndex();
+            }
+        };
+
+        obj.reloadCity = function (index) {
+            var city = cities[index];
+
+            city.loadTime = null;
+        };
+
         obj.updateCity = function (index, weatherData) {
             var that = this;
-            var city = that.cities[index];
+            var city = cities[index];
 
             if (weatherData.address) {
                 city.address = weatherData.address;
@@ -57,206 +208,65 @@ angular.module('starter.services', [])
             if (weatherData.dayChart) {
                 city.dayChart = weatherData.dayChart;
             }
-
             if (window.push && city.currentPosition == true) {
                 if (window.push.getAlarm(index)) {
                     window.push.updateAlarm(index, city.address);
                 }
             }
+            city.loadTime = new Date();
 
             that.saveCities();
         };
 
-        obj.getIndexOfCity = function (city) {
-            var that = this;
-
-            for (var i = 0; i < that.cities.length; i += 1) {
-                if (that.cities[i].currentPosition === true) {
-                    if (city.currentPosition === true) {
-                        return i;
-                    }
-                }
-                else {
-                    if (that.cities[i].address === city.address) {
-                        return i;
-                    }
-                }
-            }
-            return -1;
-        };
-
-        obj.getCityOfIndex = function (index) {
-            var that = this;
-
-            if (index < 0 || index >= that.cities.length) {
-                return null;
-            }
-            return that.cities[index];
-        };
-
-        obj.getCityCount = function () {
-            var that = this;
-            return that.cities.length;
-        };
-
         obj.loadCities = function() {
-            if (typeof(Storage) === "undefined") {
-                return false;
-            }
-
             var that = this;
-            //if (that.cities.length > 0) {
-            //    console.log('already loaded');
-            //    return;
-            //}
+            var items = JSON.parse(localStorage.getItem("cities"));
 
-            that.cities = JSON.parse(localStorage.getItem("cities"));
-            if (that.cities === null) { // set guide data
-                var city = {};
-                city.currentPosition = true;
-                city.address = "대한민국 하늘시 중구 구름동";
-                city.location = null;
-                city.currentWeather = {time: 7, t1h: 19, skyIcon: "SunBigCloud", tmn: 14, tmx: 28, summary: "어제보다 1도 낮음,미세먼지보통"};
-
-                var timeData = [];
-                timeData[0] = {day: "", time: 6, timeStr: "6시", t3h: 17, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-01", tmn: 17, tmx: -50};
-                timeData[1] = {day: "", time: 9, timeStr: "9시", t3h: 21, skyIcon:"CloudLightning", pop: 20, tempIcon:"Temp-02", tmn: -50, tmx:-50};
-                timeData[2] = {day: "", time: 12, timeStr: "12시", t3h: 26, skyIcon:"Moon", pop: 30, tempIcon:"Temp-03", tmn: -50, tmx:-50};
-                timeData[3] = {day: "", time: 15, timeStr: "15시", t3h: 28, skyIcon:"MoonBigCloud", pop: 40, tempIcon:"Temp-04", tmn:-50, tmx: 28};
-                timeData[4] = {day: "", time: 18, timeStr: "18시", t3h: 26, skyIcon:"CloudRain", pop: 50, tempIcon:"Temp-05", tmn: -50, tmx:-50};
-                timeData[5] = {day: "", time: 21, timeStr: "21시", t3h: 21, skyIcon:"CloudRainLightning", pop: 60, tempIcon:"Temp-06", tmn: -50, tmx:-50};
-                timeData[6] = {day: "어제", time: 0, timeStr: "0시", t3h: 18, skyIcon:"CloudRainSnow", pop: 70, tempIcon:"Temp-07", tmn: -50, tmx:-50};
-                timeData[7] = {day: "", time: 3, timeStr: "3시", t3h: 16, skyIcon:"CloudSnow", pop: 80, tempIcon:"Temp-08", tmn: -50, tmx:-50};
-                timeData[8] = {day: "", time: 6, timeStr: "6시", t3h: 15, skyIcon:"CloudSnowLightning", pop: 90, tempIcon:"Temp-09", tmn: 15, tmx:-50};
-                timeData[9] = {day: "", time: 9, timeStr: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-10", tmn: -50, tmx:-50};
-                timeData[10] = {day: "", time: 12, timeStr: "12시", t3h: 26, skyIcon:"SunBigCloud", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
-                timeData[11] = {day: "", time: 15, timeStr: "15시", t3h: 28, skyIcon:"Cloud", pop: 30, tempIcon:"Temp-01", tmn: -50, tmx:-50};
-                timeData[12] = {day: "", time: 18, timeStr: "18시", t3h: 29, skyIcon:"CloudRain", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx: 29};
-                timeData[13] = {day: "", time: 21, timeStr: "21시", t3h: 21, skyIcon:"CloudRainLightning", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
-                timeData[14] = {day: "오늘", time: 0, timeStr: "0시", t3h: 18, skyIcon:"CloudRainSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
-                timeData[15] = {day: "", time: 3, timeStr: "3시", t3h: 15, skyIcon:"CloudSnow", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
-                timeData[16] = {day: "", time: 6, timeStr: "6시", t3h: 14, skyIcon:"CloudSnowLightning", pop: 90, tempIcon:"Temp-08", tmn: 14, tmx:-50};
-                timeData[17] = {day: "", time: 9, timeStr: "9시", t3h: 21, skyIcon:"Cloud", pop: 10, tempIcon:"Temp-09", tmn: -50, tmx:-50};
-                timeData[18] = {day: "", time: 12, timeStr: "12시", t3h: 26, skyIcon:"CloudLightning", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
-                timeData[19] = {day: "", time: 15, timeStr: "15시", t3h: 29, skyIcon:"Moon", pop: 30, tempIcon:"Temp-01", tmn:-50, tmx: 29};
-                timeData[20] = {day: "", time: 18, timeStr: "18시", t3h: 28, skyIcon:"MoonBigCloud", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx:-50};
-                timeData[21] = {day: "", time: 21, timeStr: "21시", t3h: 22, skyIcon:"CloudRain", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
-                timeData[22] = {day: "내일", time: 0, timeStr: "0시", t3h: 20, skyIcon:"CloudRainSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
-                timeData[23] = {day: "", time: 3, timeStr: "3시", t3h: 18, skyIcon:"CloudRainLightning", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
-                timeData[24] = {day: "", time: 6, timeStr: "6시", t3h: 17, skyIcon:"CloudSnowLightning", pop: 90, tempIcon:"Temp-08", tmn: 17, tmx:-50};
-                timeData[25] = {day: "", time: 9, timeStr: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09", tmn: -50, tmx:-50};
-                timeData[26] = {day: "", time: 12, timeStr: "12시", t3h: 27, skyIcon:"SunBigCloud", pop: 20, tempIcon:"Temp-10", tmn: -50, tmx:-50};
-                timeData[27] = {day: "", time: 15, timeStr: "15시", t3h: 29, skyIcon:"Cloud", pop: 30, tempIcon:"Temp-01", tmn: -50, tmx: 29};
-                timeData[28] = {day: "", time: 18, timeStr: "18시", t3h: 28, skyIcon:"CloudRain", pop: 50, tempIcon:"Temp-04", tmn: -50, tmx:-50};
-                timeData[29] = {day: "", time: 21, timeStr: "21시", t3h: 24, skyIcon:"CloudRainLightning", pop: 60, tempIcon:"Temp-05", tmn: -50, tmx:-50};
-                timeData[30] = {day: "모레", time: 0, timeStr: "0시", t3h: 21, skyIcon:"CloudRainSnow", pop: 70, tempIcon:"Temp-06", tmn: -50, tmx:-50};
-                timeData[31] = {day: "", time: 3, timeStr: "3시", t3h: 18, skyIcon:"CloudSnow", pop: 80, tempIcon:"Temp-07", tmn: -50, tmx:-50};
-                //timeData[32] = {day: "", time: 6, timeStr: "6시", t3h: 17, skyIcon:"CloudSnowLightning", pop: 90, tempIcon:"Temp-08"};
-                //timeData[33] = {day: "", time: 9, timeStr: "9시", t3h: 21, skyIcon:"Sun", pop: 10, tempIcon:"Temp-09"};
-                //timeData[34] = {day: "", time: 12, timeStr: "12시", t3h: 26, skyIcon:"SunBigCloud", pop: 20, tempIcon:"Temp-10"};
-                //timeData[35] = {day: "", time: 15, timeStr: "15시", t3h: 29, skyIcon:"Cloud", pop: 30, tempIcon:"Temp-01"};
-                //timeData[36] = {day: "", time: 18, timeStr: "18시", t3h: 26, skyIcon:"CloudRain", pop: 50, tempIcon:"Temp-04"};
-                //timeData[37] = {day: "", time: 21, timeStr: "21시", t3h: 23, skyIcon:"CloudRainLightning", pop: 60, tempIcon:"Temp-05"};
-                //timeData[38] = {day: "글피", time: 0, timeStr: "0시", t3h: 18, skyIcon:"CloudRainSnow", pop: 70, tempIcon:"Temp-06"};
-                //timeData[39] = {day: "", time: 3, timeStr: "3시", t3h: 18, skyIcon:"CloudSnow", pop: 80, tempIcon:"Temp-07"};
-
-                city.timeTable = timeData.slice(8);
-                city.timeChart = [
-                    {
-                        name: "yesterday",
-                        values: timeData.slice(0, timeData.length - 8).map(function (d) {
-                            return { name: "yesterday", value: d };
-                        })
-                    },
-                    {
-                        name: "today",
-                        values: timeData.slice(8).map(function (d) {
-                            return { name: "today", value: d };
-                        })
-                    }
-                ];
-
-                var dayData = [];
-                dayData[0] = {week: "목", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 10, tmx: 28};
-                dayData[1] = {week: "금", skyIcon:"CloudLightning", pop: 20, humidityIcon:"Humidity-20", reh: 10, tmn: 17, tmx: 26};
-                dayData[2] = {week: "토", skyIcon:"Moon", pop: 30, humidityIcon:"Humidity-30", reh: 10, tmn: 16, tmx: 23};
-                dayData[3] = {week: "일", skyIcon:"MoonBigCloud", pop: 40, humidityIcon:"Humidity-40", reh: 10, tmn: 14, tmx: 22};
-                dayData[4] = {week: "월", skyIcon:"CloudRain", pop: 50, humidityIcon:"Humidity-50", reh: 10, tmn: 14, tmx: 22};
-                dayData[5] = {week: "화", skyIcon:"CloudRainLightning", pop: 60, humidityIcon:"Humidity-60", reh: 10, tmn: 12, tmx: 22};
-                dayData[6] = {week: "수", skyIcon:"CloudRainSnow", pop: 70, humidityIcon:"Humidity-70", reh: 10, tmn: 15, tmx: 27};
-                dayData[7] = {week: "목", fromToday:0, skyIcon:"CloudSnow", pop: 80, humidityIcon:"Humidity-80", reh: 10, tmn: 15, tmx: 25};
-                dayData[8] = {week: "금", skyIcon:"CloudSnowLightning", pop: 90, humidityIcon:"Humidity-90", reh: 10, tmn: 15, tmx: 22};
-                dayData[9] = {week: "토", skyIcon:"Sun", pop: 10, humidityIcon:"Humidity-10", reh: 10, tmn: 12, tmx: 22};
-                dayData[10] = {week: "일", skyIcon:"SunBigCloud", pop: 20, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 28};
-                dayData[11] = {week: "월", skyIcon:"Cloud", pop: 30, humidityIcon:"Humidity-10", reh: 10, tmn: 17, tmx: 27};
-                dayData[12] = {week: "화", skyIcon:"CloudRain", pop: 50, humidityIcon:"Humidity-40", reh: 10, tmn: 17, tmx: 26};
-                dayData[13] = {week: "수", skyIcon:"CloudRainLightning", pop: 60, humidityIcon:"Humidity-50", reh: 10, tmn: 16, tmx: 24};
-                dayData[14] = {week: "목", skyIcon:"CloudRainSnow", pop: 70, humidityIcon:"Humidity-60", reh: 10, tmn: 15, tmx: 28};
-                dayData[15] = {week: "금", skyIcon:"CloudSnow", pop: 80, humidityIcon:"Humidity-70", reh: 10, tmn: 17, tmx: 26};
-                dayData[16] = {week: "토", skyIcon:"CloudSnowLightning", pop: 90, humidityIcon:"Humidity-80", reh: 10, tmn: 13, tmx: 24};
-                dayData[17] = {week: "일", skyIcon:"Cloud", pop: 10, humidityIcon:"Humidity-90", reh: 10, tmn: 12, tmx: 25};
-
-                city.dayTable = dayData;
-                city.dayChart = [{
-                    values: dayData,
-                    temp: city.currentWeather.t1h
-                }];
-
-                that.cities = [];
-                that.cities.push(city);
+            if (items === null) {
+                createCity();
+            } else {
+                items.forEach(function (item) {
+                    createCity(item);
+                });
             }
 
             // load last cityIndex
-            that.cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
-            if (that.cityIndex === null) {
-                that.setCityIndex(0);
+            cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
+            if (cityIndex === null) {
+                that.setFirstCityIndex();
             }
         };
 
         obj.saveCities = function() {
-            if (typeof(Storage) === "undefined") {
-                return false;
-            }
-
-            var that = this;
-            localStorage.setItem("cities", JSON.stringify(that.cities));
+            localStorage.setItem("cities", JSON.stringify(cities));
         };
 
-        obj.updateCities = function() {
+        obj.updateCities = function(index) {
             var that = this;
-            var city = that.cities[++that.loadIndex];
+            var city = cities[index];
 
-            if (city) {
-                //if (city.currentWeather) {
-                //    return that.updateCities();
-                //}
+            if (city === undefined) {
+                that.isLoadComplete = true;
+                $rootScope.$broadcast('loadCompleteEvent');
+                return;
+            }
 
+            if (that.canLoadCity(index) && !city.currentPosition) {
                 WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
-                    that.updateCity(that.loadIndex, city);
-                }).finally(function() {
-                    that.updateCities();
+                    that.updateCity(index, city);
+                }).finally(function () {
+                    that.updateCities(index + 1);
                 });
+            } else {
+                that.updateCities(index + 1);
             }
         };
 
         obj.loadTowns = function() {
             var that = this;
+
             that.towns = window.towns;
-        };
-
-        obj.setCityIndex = function (index) {
-            var that = this;
-
-            if (index >= 0 && index < that.cities.length) {
-                that.cityIndex = index;
-                console.log('set city index='+index+' cities='+ that.cities.length);
-                // save current cityIndex
-                localStorage.setItem("cityIndex", JSON.stringify(that.cityIndex));
-                return;
-            }
-
-            console.log('Fail to find city index='+index+' cities='+ that.cities.length);
         };
 
         //endregion
@@ -1237,6 +1247,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon';
+        obj.version = '0.8.2'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1254,4 +1265,9 @@ angular.module('starter.services', [])
         }
 
         return obj;
+    })
+    .run(function(WeatherInfo) {
+        WeatherInfo.loadCities();
+        WeatherInfo.loadTowns();
+        WeatherInfo.updateCities(0);
     });
