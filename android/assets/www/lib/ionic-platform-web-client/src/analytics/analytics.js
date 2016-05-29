@@ -5,6 +5,7 @@ import { IonicPlatform } from "../core/core";
 import { Logger } from "../core/logger";
 import { BucketStorage } from "./storage";
 import { User } from "../core/user";
+import { deepExtend } from "../util/util";
 
 var settings = new Settings();
 
@@ -136,8 +137,7 @@ export class Analytics {
     var requestOptions = {
       "method": 'POST',
       "url": self._serviceHost + '/api/v1/events/' + settings.get('app_id'),
-      "body": payload,
-      "json": true,
+      "json": payload,
       "headers": {
         "Authorization": ANALYTICS_KEY
       }
@@ -155,8 +155,7 @@ export class Analytics {
     var requestOptions = {
       "method": 'POST',
       "url": self._serviceHost + '/api/v1/events/' + settings.get('app_id'),
-      "body": events,
-      "json": true,
+      "json": events,
       "headers": {
         "Authorization": ANALYTICS_KEY
       }
@@ -299,11 +298,16 @@ export class Analytics {
 
   track(eventCollection, eventData) {
     var self = this;
+
+
     if (!this.hasValidSettings) {
       return false;
     }
     if (!eventData) {
       eventData = {};
+    } else {
+      // Clone the event data to avoid modifying it
+      eventData = deepExtend({}, eventData);
     }
 
     for (var key in globalProperties) {

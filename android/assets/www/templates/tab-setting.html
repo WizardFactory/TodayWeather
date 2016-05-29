@@ -1,0 +1,60 @@
+<ion-view hide-nav-bar="true">
+    <ion-content scroll="true" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                 ng-style="{'bottom':contentBottom+'px'}" style="color: white;">
+        <div class="row" style="height: 10%"></div>
+        <div class="row" style="height: 15%">
+            <div class="col" style="height: 100%; text-align: center;">
+                <h2 style="color: #ffffff">TodayWeather</h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-10"></div>
+            <div class="col">
+                <ul class="list">
+                    <!--<label class="item item-input item-select"  style="background-color: inherit; color: inherit">-->
+                    <!--<div class="input-label" style="color: inherit">-->
+                    <!--일간날씨-->
+                    <!--</div>-->
+                    <!--<select style="background-color: inherit; color: inherit">-->
+                    <!--<option selected>내일까지 표시</option>-->
+                    <!--<option>모레까지 표시</option>-->
+                    <!--</select>-->
+                    <!--</label>-->
+                    <!--<label class="item item-input item-select" style="background-color: inherit; color: inherit">-->
+                    <!--<div class="input-label" style="background-color: inherit; color: inherit">-->
+                    <!--주간날씨-->
+                    <!--</div>-->
+                    <!--<select style="background-color: inherit; color: inherit">-->
+                    <!--<option selected>7일까지 표시</option>-->
+                    <!--<option>10일까지 표시</option>-->
+                    <!--</select>-->
+                    <!--</label>-->
+                    <li class="item item-icon-right" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                        버전<span class="item-note" style="color:white; line-height: 24px; font-size:20px">{{version}}</span>
+                    </li>
+                    <a class="item item-icon-right" href="#/guide" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                        가이드 보기
+                        <i class="icon ion-chevron-right" style="font-size: 20px"></i>
+                    </a>
+                    <a class="item item-icon-right" href="#/purchase" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                        광고제거
+                        <i class="icon ion-chevron-right" style="font-size: 20px"></i>
+                    </a>
+                    <a class="item item-icon-right" href="mailto:todayweather@wizardfactory.net" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                        의견보내기
+                        <i class="icon ion-chevron-right" style="font-size: 20px"></i>
+                    </a>
+                    <li class="item item-icon-right"  ng-click="openMarket()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">
+                        별점주기
+                        <i class="icon ion-chevron-right" style="font-size: 20px"></i>
+                        <!--<img src="img/setting-review.png" style="width: 30px">-->
+                    </li>
+                    <li class="item item-icon-right"  ng-click="openInfo()" style="background-color: inherit; color: inherit; line-height: 24px; font-size:20px">정보
+                        <i class="icon ion-chevron-right" style="font-size: 20px"></i>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-10"></div>
+        </div>
+    </ion-content>
+</ion-view>

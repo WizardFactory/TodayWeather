@@ -10,13 +10,13 @@ navigation history that also transitions its views in and out.
         <ion-nav-view name="tab-search"></ion-nav-view>
     </ion-tab>
 
-    <!-- Forecast Tab -->
-    <ion-tab title="Forecast" icon-off="ion-ios-partlysunny-outline" icon-on="ion-ios-partlysunny-outline" href="#/tab/forecast">
+    <!-- Forecast/Reload Tab -->
+    <ion-tab title="Forecast" icon-off="ion-android-sunny" icon-on="ion-ios-reload" ng-click="doTabForecast()">
         <ion-nav-view name="tab-forecast"></ion-nav-view>
     </ion-tab>
 
-    <!--Update tab-->
-    <ion-tab title="Update" icon-off="ion-ios-reload" icon-on="ion-ios-reload" ng-click="doTabRefresh()">
+    <!-- Share tab-->
+    <ion-tab title="Update" icon-off="ion-ios-upload-outline" icon-on="ion-ios-upload-outline" ng-click="doTabShare()">
     </ion-tab>
 
     <!-- Setting Tab -->
