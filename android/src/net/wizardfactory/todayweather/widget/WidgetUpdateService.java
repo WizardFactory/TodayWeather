@@ -36,8 +36,8 @@ public class WidgetUpdateService extends Service {
     // if find not location in this time, service is terminated.
     private final static int LOCATION_TIMEOUT = 30 * 1000; // 20sec
 
-    private LocationManager mLocationMaanger = null;
-    private boolean mIsLocationMagagerRemoveUpdates = false;
+    private LocationManager mLocationManager = null;
+    private boolean mIsLocationManagerRemoveUpdates = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -56,7 +56,7 @@ public class WidgetUpdateService extends Service {
         // if location do not found in LOCATION_TIMEOUT, this service is stop.
         Runnable myRunnable = new Runnable() {
             public void run() {
-                mLocationMaanger.removeUpdates(locationListener);
+                mLocationManager.removeUpdates(locationListener);
                 stopSelf();
             }
         };
@@ -65,21 +65,27 @@ public class WidgetUpdateService extends Service {
     }
 
     private void registerLocationUpdates() {
-        if (mLocationMaanger == null) {
-            mLocationMaanger = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (mLocationManager == null) {
+            mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         }
 
         // once widget update by last location
-        Location lastLoc = mLocationMaanger.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        Location lastLoc = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         if (lastLoc != null) {
-            Log.i("Service" , "success last location");
-            double lat = lastLoc.getLatitude();
-            double lon = lastLoc.getLongitude();
-            findAddressAndWeatherUpdate(lat, lon);
+            Log.i("Service" , "success last location from NETWORK");
+            findAddressAndWeatherUpdate(lastLoc.getLatitude(), lastLoc.getLongitude());
+        }
+        else {
+            lastLoc = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (lastLoc != null) {
+                Log.i("Service", "success last location from gps");
+                findAddressAndWeatherUpdate(lastLoc.getLatitude(), lastLoc.getLongitude());
+            }
         }
 
         try {
-            mLocationMaanger.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+            mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 300, 0, locationListener);
+            mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
         }
         catch (SecurityException e) {
             Log.e("Service" , e.toString());
@@ -89,21 +95,19 @@ public class WidgetUpdateService extends Service {
 
     private final LocationListener locationListener = new LocationListener() {
         public void onLocationChanged(Location location) {
-            if (location.getProvider().equals(LocationManager.NETWORK_PROVIDER)) {
-                double lon = location.getLongitude();
-                double lat = location.getLatitude();
+            double lon = location.getLongitude();
+            double lat = location.getLatitude();
 
-                Log.e("Service", "Loc listen lat : " + lat + ", lon: " + lon);
+            Log.e("Service", "Loc listen lat : " + lat + ", lon: " + lon + " provider "+location.getProvider());
 
-                if (mIsLocationMagagerRemoveUpdates == false) {
-                    // for duplicated call do not occur.
-                    // flag setting and method call.
-                    mIsLocationMagagerRemoveUpdates = true;
-                    mLocationMaanger.removeUpdates(locationListener);
+            if (mIsLocationManagerRemoveUpdates == false) {
+                // for duplicated call do not occur.
+                // flag setting and method call.
+                mIsLocationManagerRemoveUpdates = true;
+                mLocationManager.removeUpdates(locationListener);
 
-                    findAddressAndWeatherUpdate(lat, lon);
-                    stopSelf();
-                }
+                findAddressAndWeatherUpdate(lat, lon);
+                stopSelf();
             }
         }
         public void onProviderDisabled(String provider) {
@@ -130,6 +134,11 @@ public class WidgetUpdateService extends Service {
             String retJson = new GetHttpsServerAysncTask(geourl).execute().get();
 
             AddressesElement addrsElement = AddressesElement.parsingAddressJson2String(retJson);
+            if (addrsElement == null || addrsElement.getAddrs() == null) {
+                Log.e("Service", "Fail to get address of lat : "+ lat + ", lon " + lon);
+                return retAddr;
+            }
+
             if (addrsElement != null) {
                 retAddr = addrsElement.findDongAddressFromGoogleGeoCodeResults();
                 retAddr = addrsElement.makeUrlAddress(retAddr);
