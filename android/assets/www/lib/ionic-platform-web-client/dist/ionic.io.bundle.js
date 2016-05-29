@@ -1886,6 +1886,8 @@ var _storage = require("./storage");
 
 var _coreUser = require("../core/user");
 
+var _utilUtil = require("../util/util");
+
 var settings = new _coreSettings.Settings();
 
 var ANALYTICS_KEY = null;
@@ -1989,8 +1991,7 @@ var Analytics = (function () {
       var requestOptions = {
         "method": 'POST',
         "url": self._serviceHost + '/api/v1/events/' + settings.get('app_id'),
-        "body": payload,
-        "json": true,
+        "json": payload,
         "headers": {
           "Authorization": ANALYTICS_KEY
         }
@@ -2009,8 +2010,7 @@ var Analytics = (function () {
       var requestOptions = {
         "method": 'POST',
         "url": self._serviceHost + '/api/v1/events/' + settings.get('app_id'),
-        "body": events,
-        "json": true,
+        "json": events,
         "headers": {
           "Authorization": ANALYTICS_KEY
         }
@@ -2160,11 +2160,15 @@ var Analytics = (function () {
     key: "track",
     value: function track(eventCollection, eventData) {
       var self = this;
+
       if (!this.hasValidSettings) {
         return false;
       }
       if (!eventData) {
         eventData = {};
+      } else {
+        // Clone the event data to avoid modifying it
+        eventData = (0, _utilUtil.deepExtend)({}, eventData);
       }
 
       for (var key in globalProperties) {
@@ -2259,7 +2263,7 @@ var Analytics = (function () {
 
 exports.Analytics = Analytics;
 
-},{"../core/core":12,"../core/logger":16,"../core/promise":17,"../core/request":18,"../core/settings":19,"../core/user":21,"./storage":9}],6:[function(require,module,exports){
+},{"../core/core":15,"../core/logger":19,"../core/promise":20,"../core/request":21,"../core/settings":22,"../core/user":24,"../util/util":34,"./storage":9}],6:[function(require,module,exports){
 // Add Angular integrations if Angular is available
 'use strict';
 
@@ -2589,7 +2593,468 @@ var BucketStorage = (function () {
 
 exports.BucketStorage = BucketStorage;
 
-},{"../core/core":12,"../core/settings":19}],10:[function(require,module,exports){
+},{"../core/core":15,"../core/settings":22}],10:[function(require,module,exports){
+// Add Angular integrations if Angular is available
+'use strict';
+
+if (typeof angular === 'object' && angular.module) {
+
+  var IonicAngularAuth = null;
+
+  angular.module('ionic.service.auth', []).factory('$ionicAuth', [function () {
+    if (!IonicAngularAuth) {
+      IonicAngularAuth = Ionic.Auth;
+    }
+    return IonicAngularAuth;
+  }]);
+}
+
+},{}],11:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _coreRequest = require("../core/request");
+
+var _corePromise = require("../core/promise");
+
+var _coreSettings = require("../core/settings");
+
+var _coreStorage = require("../core/storage");
+
+var _coreUser = require("../core/user");
+
+var settings = new _coreSettings.Settings();
+var storage = new _coreStorage.PlatformLocalStorageStrategy();
+var sessionStorage = new _coreStorage.LocalSessionStorageStrategy();
+
+var __authModules = {};
+var __authToken = null;
+
+var authAPIBase = settings.getURL('platform-api') + '/auth';
+var authAPIEndpoints = {
+  'login': function login(provider) {
+    if (provider) {
+      return authAPIBase + '/login/' + provider;
+    }
+    return authAPIBase + '/login';
+  },
+  'signup': function signup() {
+    return authAPIBase + '/users';
+  }
+};
+
+var TempTokenContext = (function () {
+  function TempTokenContext() {
+    _classCallCheck(this, TempTokenContext);
+  }
+
+  _createClass(TempTokenContext, null, [{
+    key: "delete",
+    value: function _delete() {
+      sessionStorage.remove(TempTokenContext.label);
+    }
+  }, {
+    key: "store",
+    value: function store() {
+      sessionStorage.set(TempTokenContext.label, __authToken);
+    }
+  }, {
+    key: "getRawData",
+    value: function getRawData() {
+      return sessionStorage.get(TempTokenContext.label) || false;
+    }
+  }, {
+    key: "label",
+    get: function get() {
+      return "ionic_io_auth_" + settings.get('app_id');
+    }
+  }]);
+
+  return TempTokenContext;
+})();
+
+exports.TempTokenContext = TempTokenContext;
+
+var TokenContext = (function () {
+  function TokenContext() {
+    _classCallCheck(this, TokenContext);
+  }
+
+  _createClass(TokenContext, null, [{
+    key: "delete",
+    value: function _delete() {
+      storage.remove(TokenContext.label);
+    }
+  }, {
+    key: "store",
+    value: function store() {
+      storage.set(TokenContext.label, __authToken);
+    }
+  }, {
+    key: "getRawData",
+    value: function getRawData() {
+      return storage.get(TokenContext.label) || false;
+    }
+  }, {
+    key: "label",
+    get: function get() {
+      return "ionic_io_auth_" + settings.get('app_id');
+    }
+  }]);
+
+  return TokenContext;
+})();
+
+exports.TokenContext = TokenContext;
+
+function storeToken(options, token) {
+  __authToken = token;
+  if (typeof options === 'object' && options.remember) {
+    TokenContext.store();
+  } else {
+    TempTokenContext.store();
+  }
+}
+
+var InAppBrowserFlow = function InAppBrowserFlow(authOptions, options, data) {
+  _classCallCheck(this, InAppBrowserFlow);
+
+  var deferred = new _corePromise.DeferredPromise();
+
+  if (!window || !window.cordova || !window.cordova.InAppBrowser) {
+    deferred.reject("Missing InAppBrowser plugin");
+  } else {
+    new _coreRequest.APIRequest({
+      'uri': authAPIEndpoints.login(options.provider),
+      'method': options.uri_method || 'POST',
+      'json': {
+        'app_id': settings.get('app_id'),
+        'callback': options.callback_uri || window.location.href,
+        'data': data
+      }
+    }).then(function (data) {
+      var loc = data.payload.data.url;
+      var tempBrowser = window.cordova.InAppBrowser.open(loc, '_blank', 'location=no');
+      tempBrowser.addEventListener('loadstart', function (data) {
+        if (data.url.slice(0, 20) === 'http://auth.ionic.io') {
+          var queryString = data.url.split('#')[0].split('?')[1];
+          var paramParts = queryString.split('&');
+          var params = {};
+          for (var i = 0; i < paramParts.length; i++) {
+            var part = paramParts[i].split('=');
+            params[part[0]] = part[1];
+          }
+          storeToken(authOptions, params.token);
+          tempBrowser.close();
+          deferred.resolve(true);
+        }
+      });
+    }, function (err) {
+      deferred.reject(err);
+    });
+  }
+
+  return deferred.promise;
+};
+
+function getAuthErrorDetails(err) {
+  var details = [];
+  try {
+    details = err.response.body.error.details;
+  } catch (e) {
+    e;
+  }
+  return details;
+}
+
+var Auth = (function () {
+  function Auth() {
+    _classCallCheck(this, Auth);
+  }
+
+  _createClass(Auth, null, [{
+    key: "isAuthenticated",
+    value: function isAuthenticated() {
+      var token = TokenContext.getRawData();
+      var tempToken = TempTokenContext.getRawData();
+      if (tempToken || token) {
+        return true;
+      }
+      return false;
+    }
+  }, {
+    key: "login",
+    value: function login(moduleId, options, data) {
+      var deferred = new _corePromise.DeferredPromise();
+      var context = __authModules[moduleId] || false;
+      if (!context) {
+        throw new Error("Authentication class is invalid or missing:" + context);
+      }
+      context.authenticate.apply(context, [options, data]).then(function () {
+        _coreUser.User.self().then(function (user) {
+          deferred.resolve(user);
+        }, function (err) {
+          deferred.reject(err);
+        });
+      }, function (err) {
+        deferred.reject(err);
+      });
+      return deferred.promise;
+    }
+  }, {
+    key: "signup",
+    value: function signup(data) {
+      var context = __authModules.basic || false;
+      if (!context) {
+        throw new Error("Authentication class is invalid or missing:" + context);
+      }
+      return context.signup.apply(context, [data]);
+    }
+  }, {
+    key: "logout",
+    value: function logout() {
+      TokenContext["delete"]();
+      TempTokenContext["delete"]();
+    }
+  }, {
+    key: "register",
+    value: function register(moduleId, module) {
+      if (!__authModules[moduleId]) {
+        __authModules[moduleId] = module;
+      }
+    }
+  }, {
+    key: "getUserToken",
+    value: function getUserToken() {
+      var usertoken = TokenContext.getRawData();
+      var temptoken = TempTokenContext.getRawData();
+      var token = temptoken || usertoken;
+      if (token) {
+        return token;
+      }
+      return false;
+    }
+  }]);
+
+  return Auth;
+})();
+
+exports.Auth = Auth;
+
+var BasicAuth = (function () {
+  function BasicAuth() {
+    _classCallCheck(this, BasicAuth);
+  }
+
+  _createClass(BasicAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      var deferred = new _corePromise.DeferredPromise();
+
+      new _coreRequest.APIRequest({
+        'uri': authAPIEndpoints.login(),
+        'method': 'POST',
+        'json': {
+          'app_id': settings.get('app_id'),
+          'email': data.email,
+          'password': data.password
+        }
+      }).then(function (data) {
+        storeToken(options, data.payload.data.token);
+        deferred.resolve(true);
+      }, function (err) {
+        deferred.reject(err);
+      });
+
+      return deferred.promise;
+    }
+  }, {
+    key: "signup",
+    value: function signup(data) {
+      var deferred = new _corePromise.DeferredPromise();
+
+      var userData = {
+        'app_id': settings.get('app_id'),
+        'email': data.email,
+        'password': data.password
+      };
+
+      // optional details
+      if (data.username) {
+        userData.username = data.username;
+      }
+      if (data.image) {
+        userData.image = data.image;
+      }
+      if (data.name) {
+        userData.name = data.name;
+      }
+      if (data.custom) {
+        userData.custom = data.custom;
+      }
+
+      new _coreRequest.APIRequest({
+        'uri': authAPIEndpoints.signup(),
+        'method': 'POST',
+        'json': userData
+      }).then(function () {
+        deferred.resolve(true);
+      }, function (err) {
+        var errors = [];
+        var details = getAuthErrorDetails(err);
+        if (details instanceof Array) {
+          for (var i = 0; i < details.length; i++) {
+            var detail = details[i];
+            if (typeof detail === 'object') {
+              if (detail.error_type) {
+                errors.push(detail.error_type + "_" + detail.parameter);
+              }
+            }
+          }
+        }
+        deferred.reject({ "errors": errors });
+      });
+
+      return deferred.promise;
+    }
+  }]);
+
+  return BasicAuth;
+})();
+
+var CustomAuth = (function () {
+  function CustomAuth() {
+    _classCallCheck(this, CustomAuth);
+  }
+
+  _createClass(CustomAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'custom' }, data);
+    }
+  }]);
+
+  return CustomAuth;
+})();
+
+var TwitterAuth = (function () {
+  function TwitterAuth() {
+    _classCallCheck(this, TwitterAuth);
+  }
+
+  _createClass(TwitterAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'twitter' }, data);
+    }
+  }]);
+
+  return TwitterAuth;
+})();
+
+var FacebookAuth = (function () {
+  function FacebookAuth() {
+    _classCallCheck(this, FacebookAuth);
+  }
+
+  _createClass(FacebookAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'facebook' }, data);
+    }
+  }]);
+
+  return FacebookAuth;
+})();
+
+var GithubAuth = (function () {
+  function GithubAuth() {
+    _classCallCheck(this, GithubAuth);
+  }
+
+  _createClass(GithubAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'github' }, data);
+    }
+  }]);
+
+  return GithubAuth;
+})();
+
+var GoogleAuth = (function () {
+  function GoogleAuth() {
+    _classCallCheck(this, GoogleAuth);
+  }
+
+  _createClass(GoogleAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'google' }, data);
+    }
+  }]);
+
+  return GoogleAuth;
+})();
+
+var InstagramAuth = (function () {
+  function InstagramAuth() {
+    _classCallCheck(this, InstagramAuth);
+  }
+
+  _createClass(InstagramAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'instagram' }, data);
+    }
+  }]);
+
+  return InstagramAuth;
+})();
+
+var LinkedInAuth = (function () {
+  function LinkedInAuth() {
+    _classCallCheck(this, LinkedInAuth);
+  }
+
+  _createClass(LinkedInAuth, null, [{
+    key: "authenticate",
+    value: function authenticate(options, data) {
+      return new InAppBrowserFlow(options, { 'provider': 'linkedin' }, data);
+    }
+  }]);
+
+  return LinkedInAuth;
+})();
+
+Auth.register('basic', BasicAuth);
+Auth.register('custom', CustomAuth);
+Auth.register('facebook', FacebookAuth);
+Auth.register('github', GithubAuth);
+Auth.register('google', GoogleAuth);
+Auth.register('instagram', InstagramAuth);
+Auth.register('linkedin', LinkedInAuth);
+Auth.register('twitter', TwitterAuth);
+
+},{"../core/promise":20,"../core/request":21,"../core/settings":22,"../core/storage":23,"../core/user":24}],12:[function(require,module,exports){
+"use strict";
+
+var _auth = require("./auth");
+
+// Declare the window object
+window.Ionic = window.Ionic || {};
+
+// Ionic Namespace
+Ionic.Auth = _auth.Auth;
+
+},{"./auth":11}],13:[function(require,module,exports){
 // Add Angular integrations if Angular is available
 'use strict';
 
@@ -2620,7 +3085,7 @@ if (typeof angular === 'object' && angular.module) {
   }]);
 }
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2686,7 +3151,7 @@ var App = (function () {
 
 exports.App = App;
 
-},{"./logger":16}],12:[function(require,module,exports){
+},{"./logger":19}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2717,7 +3182,6 @@ var IonicPlatform = (function () {
     this.logger.info('init');
     this._pluginsReady = false;
     this.emitter = IonicPlatform.getEmitter();
-
     this._bootstrap();
 
     if (self.cordovaPlatformUnknown) {
@@ -2945,7 +3409,7 @@ var IonicPlatform = (function () {
   }, {
     key: "Version",
     get: function get() {
-      return '0.2.0';
+      return '0.6.1';
     }
   }]);
 
@@ -2954,7 +3418,7 @@ var IonicPlatform = (function () {
 
 exports.IonicPlatform = IonicPlatform;
 
-},{"./events":15,"./logger":16,"./storage":20}],13:[function(require,module,exports){
+},{"./events":18,"./logger":19,"./storage":23}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3087,7 +3551,7 @@ exports.UniqueArray = UniqueArray;
 
 DataType.register('UniqueArray', UniqueArray);
 
-},{}],14:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
 
 var _app = require("./app");
@@ -3169,7 +3633,7 @@ Ionic.removeService = function (name) {
 // Kickstart Ionic Platform
 Ionic.io();
 
-},{"./app":11,"./core":12,"./data-types":13,"./events":15,"./logger":16,"./promise":17,"./request":18,"./settings":19,"./storage":20,"./user":21}],15:[function(require,module,exports){
+},{"./app":14,"./core":15,"./data-types":16,"./events":18,"./logger":19,"./promise":20,"./request":21,"./settings":22,"./storage":23,"./user":24}],18:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3206,7 +3670,7 @@ var EventEmitter = (function () {
 
 exports.EventEmitter = EventEmitter;
 
-},{"events":2}],16:[function(require,module,exports){
+},{"events":2}],19:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3273,7 +3737,7 @@ var Logger = (function () {
 
 exports.Logger = Logger;
 
-},{}],17:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3321,7 +3785,7 @@ var DeferredPromise = (function () {
 
 exports.DeferredPromise = DeferredPromise;
 
-},{"es6-promise":4}],18:[function(require,module,exports){
+},{"es6-promise":4}],21:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3335,6 +3799,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var _promise = require("./promise");
+
+var _authAuth = require("../auth/auth");
 
 var request = require("browser-request");
 
@@ -3371,6 +3837,13 @@ var APIRequest = (function (_Request) {
     _classCallCheck(this, APIRequest);
 
     _get(Object.getPrototypeOf(APIRequest.prototype), "constructor", this).call(this);
+    options.headers = options.headers || {};
+    if (!options.headers.Authorization) {
+      var token = _authAuth.Auth.getUserToken();
+      if (token) {
+        options.headers.Authorization = 'Bearer ' + token;
+      }
+    }
     var requestInfo = {};
     var p = new _promise.Promise(function (resolve, reject) {
       request(options, function (err, response, result) {
@@ -3382,7 +3855,7 @@ var APIRequest = (function (_Request) {
         } else {
           if (response.statusCode < 200 || response.statusCode >= 400) {
             var _err = new Error("Request Failed with status code of " + response.statusCode);
-            reject(_err);
+            reject({ 'response': response, 'error': _err });
           } else {
             resolve({ 'response': response, 'payload': result });
           }
@@ -3398,7 +3871,7 @@ var APIRequest = (function (_Request) {
 
 exports.APIRequest = APIRequest;
 
-},{"./promise":17,"browser-request":1}],19:[function(require,module,exports){
+},{"../auth/auth":11,"./promise":20,"browser-request":1}],22:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3450,7 +3923,8 @@ var Settings = (function () {
       'api': 'https://apps.ionic.io',
       'push': 'https://push.ionic.io',
       'analytics': 'https://analytics.ionic.io',
-      'deploy': 'https://apps.ionic.io'
+      'deploy': 'https://apps.ionic.io',
+      'platform-api': 'https://api.ionic.io'
     };
     this._devLocations = this.get('dev_locations');
     if (!this._devLocations) {
@@ -3481,7 +3955,7 @@ var Settings = (function () {
 
 exports.Settings = Settings;
 
-},{}],20:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3518,6 +3992,35 @@ var PlatformLocalStorageStrategy = (function () {
 
   return PlatformLocalStorageStrategy;
 })();
+
+exports.PlatformLocalStorageStrategy = PlatformLocalStorageStrategy;
+
+var LocalSessionStorageStrategy = (function () {
+  function LocalSessionStorageStrategy() {
+    _classCallCheck(this, LocalSessionStorageStrategy);
+  }
+
+  _createClass(LocalSessionStorageStrategy, [{
+    key: 'get',
+    value: function get(key) {
+      return window.sessionStorage.getItem(key);
+    }
+  }, {
+    key: 'remove',
+    value: function remove(key) {
+      return window.sessionStorage.removeItem(key);
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      return window.sessionStorage.setItem(key, value);
+    }
+  }]);
+
+  return LocalSessionStorageStrategy;
+})();
+
+exports.LocalSessionStorageStrategy = LocalSessionStorageStrategy;
 
 var objectCache = {};
 var memoryLocks = {};
@@ -3645,7 +4148,7 @@ var Storage = (function () {
 
 exports.Storage = Storage;
 
-},{"./promise":17}],21:[function(require,module,exports){
+},{"./promise":20}],24:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -3656,30 +4159,30 @@ var _createClass = (function () { function defineProperties(target, props) { for
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var _authAuth = require("../auth/auth");
+
 var _request = require("./request");
 
 var _promise = require("./promise");
 
 var _settings = require("./settings");
 
-var _core = require("./core");
-
 var _storage = require("./storage");
 
 var _logger = require("./logger");
 
-var _pushPushToken = require("../push/push-token");
-
 var _dataTypesJs = require("./data-types.js");
 
-var Core = _core.IonicPlatform;
 var AppUserContext = null;
 var settings = new _settings.Settings();
 var storage = new _storage.Storage();
 
-var userAPIBase = settings.getURL('api') + '/api/v1/app/' + settings.get('app_id') + '/users';
+var userAPIBase = settings.getURL('platform-api') + '/auth/users';
 var userAPIEndpoints = {
-  'load': function load(userModel) {
+  'self': function self() {
+    return userAPIBase + '/self';
+  },
+  'get': function get(userModel) {
     return userAPIBase + '/' + userModel.id;
   },
   'remove': function remove(userModel) {
@@ -3688,11 +4191,8 @@ var userAPIEndpoints = {
   'save': function save(userModel) {
     return userAPIBase + '/' + userModel.id;
   },
-  'identify': function identify() {
-    return userAPIBase + '/identify';
-  },
-  'addToken': function addToken() {
-    return userAPIBase + '/pushUnique';
+  'passwordReset': function passwordReset(userModel) {
+    return userAPIBase + '/' + userModel.id + '/password-reset';
   }
 };
 
@@ -3709,7 +4209,20 @@ var UserContext = (function () {
   }, {
     key: "store",
     value: function store() {
+      if (UserContext.getRawData()) {
+        UserContext.storeLegacyData(UserContext.getRawData());
+      }
+      if (User.current().data.data.__ionic_user_migrated) {
+        storage.storeObject(UserContext.label + '_legacy', { '__ionic_user_migrated': true });
+      }
       storage.storeObject(UserContext.label, User.current());
+    }
+  }, {
+    key: "storeLegacyData",
+    value: function storeLegacyData(data) {
+      if (!UserContext.getRawLegacyData()) {
+        storage.storeObject(UserContext.label + '_legacy', data);
+      }
     }
   }, {
     key: "getRawData",
@@ -3717,10 +4230,16 @@ var UserContext = (function () {
       return storage.retrieveObject(UserContext.label) || false;
     }
   }, {
+    key: "getRawLegacyData",
+    value: function getRawLegacyData() {
+      return storage.retrieveObject(UserContext.label + '_legacy') || false;
+    }
+  }, {
     key: "load",
     value: function load() {
       var data = storage.retrieveObject(UserContext.label) || false;
       if (data) {
+        UserContext.storeLegacyData(data);
         return User.fromContext(data);
       }
       return false;
@@ -3733,113 +4252,6 @@ var UserContext = (function () {
   }]);
 
   return UserContext;
-})();
-
-var PushData = (function () {
-
-  /**
-   * Push Data Object
-   *
-   * Holds push data to use in conjunction with Ionic User models.
-   * @constructor
-   * @param {object} tokens Formatted token data
-   */
-
-  function PushData(tokens) {
-    _classCallCheck(this, PushData);
-
-    this.logger = new _logger.Logger({
-      'prefix': 'Ionic Push Token:'
-    });
-    this.tokens = {
-      'android': [],
-      'ios': []
-    };
-    if (tokens && typeof tokens === 'object') {
-      this.tokens = tokens;
-    }
-  }
-
-  /**
-   * Add a new token to the current list of tokens
-   * Duplicates are not added, but still return as succesfully added.
-   *
-   * @param {ionic.io.push.Token} token Push Token
-   * @return {boolean} False on error, otherwise true
-   */
-
-  _createClass(PushData, [{
-    key: "addToken",
-    value: function addToken(token) {
-      var platform = null;
-
-      if (typeof token === 'undefined' || !token || token === '') {
-        this.logger.info('you need to pass a valid token to addToken()');
-        return false;
-      }
-
-      if (token.token) {
-        token = token.token;
-      }
-
-      // check if this is a dev token
-      if (token.slice(0, 3) === 'DEV') {
-        this.logger.info('dev tokens cannot be saved to a user as they are a temporary resource');
-        return false;
-      }
-
-      if (Core.isAndroidDevice()) {
-        platform = 'android';
-      } else if (Core.isIOSDevice()) {
-        platform = 'ios';
-      }
-
-      if (platform === null || !this.tokens.hasOwnProperty(platform)) {
-        this.logger.info('cannot determine the token platform. Are you running on an Android or iOS device?');
-        return false;
-      }
-
-      var platformTokens = this.tokens[platform];
-      var hasToken = false;
-      var testToken = null;
-
-      for (testToken in platformTokens) {
-        if (platformTokens[testToken] === token) {
-          hasToken = true;
-        }
-      }
-      if (!hasToken) {
-        platformTokens.push(token);
-      }
-
-      return true;
-    }
-
-    /**
-     * Remove the specified token if it exists in any platform token listing
-     * If it does not exist, nothing is removed, but we will still return success
-     *
-     * @param {ionic.io.push.Token} token Push Token
-     * @return {boolean} true
-     */
-  }, {
-    key: "removeToken",
-    value: function removeToken(token) {
-      var x;
-      for (x in this.tokens) {
-        var platform = this.tokens[x];
-        var testToken;
-        for (testToken in platform) {
-          if (platform[testToken] === token.token) {
-            platform.splice(testToken, 1);
-          }
-        }
-      }
-      return true;
-    }
-  }]);
-
-  return PushData;
 })();
 
 var UserData = (function () {
@@ -3888,6 +4300,9 @@ var UserData = (function () {
       if (this.data.hasOwnProperty(key)) {
         return this.data[key];
       } else {
+        if (defaultValue === 0 || defaultValue === false) {
+          return defaultValue;
+        }
         return defaultValue || null;
       }
     }
@@ -3909,7 +4324,6 @@ var User = (function () {
     this._dirty = false;
     this._fresh = true;
     this._unset = {};
-    this.push = new PushData();
     this.data = new UserData();
   }
 
@@ -3917,6 +4331,23 @@ var User = (function () {
     key: "isDirty",
     value: function isDirty() {
       return this._dirty;
+    }
+  }, {
+    key: "isAnonymous",
+    value: function isAnonymous() {
+      if (!this.id) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }, {
+    key: "isAuthenticated",
+    value: function isAuthenticated() {
+      if (this === User.current()) {
+        return _authAuth.Auth.isAuthenticated();
+      }
+      return false;
     }
   }, {
     key: "isFresh",
@@ -3934,18 +4365,12 @@ var User = (function () {
   }, {
     key: "getAPIFormat",
     value: function getAPIFormat() {
-      var self = this;
-      var data = this.data.data;
-      data.user_id = this.id; // eslint-disable-line camelcase
-      data._push = {
-        'android_tokens': this.push.tokens.android,
-        'ios_tokens': this.push.tokens.ios
-      };
-
-      if (!this.isFresh()) {
-        return { 'update': data, 'remove': self._unset };
+      var apiFormat = {};
+      for (var key in this.details) {
+        apiFormat[key] = this.details[key];
       }
-      return data;
+      apiFormat.custom = this.data.data;
+      return apiFormat;
     }
   }, {
     key: "getFormat",
@@ -3953,11 +4378,27 @@ var User = (function () {
       var self = this;
       var formatted = null;
       switch (format) {
-        case 'api':
+        case 'api-save':
           formatted = self.getAPIFormat();
           break;
       }
       return formatted;
+    }
+  }, {
+    key: "migrate",
+    value: function migrate() {
+      var rawData = UserContext.getRawLegacyData();
+      if (rawData.__ionic_user_migrated) {
+        return true;
+      }
+      if (rawData) {
+        var currentUser = Ionic.User.current();
+        var userData = new UserData(rawData.data.data);
+        for (var key in userData.data) {
+          currentUser.set(key, userData.data[key]);
+        }
+        currentUser.set('__ionic_user_migrated', true);
+      }
     }
   }, {
     key: "delete",
@@ -3975,10 +4416,7 @@ var User = (function () {
         new _request.APIRequest({
           'uri': userAPIEndpoints.remove(this),
           'method': 'DELETE',
-          'headers': {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
+          'json': true
         }).then(function (result) {
           self._blockDelete = false;
           self.logger.info('deleted ' + self);
@@ -4018,20 +4456,10 @@ var User = (function () {
       if (!self._blockSave) {
         self._blockSave = true;
         self._store();
-        var saveURL = userAPIEndpoints.save(this);
-        var saveMethod = 'PUT';
-        if (self.isFresh()) {
-          saveURL = userAPIEndpoints.identify(this);
-          saveMethod = 'POST';
-        }
         new _request.APIRequest({
-          'uri': saveURL,
-          'method': saveMethod,
-          'headers': {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          'body': JSON.stringify(self.getFormat('api'))
+          'uri': userAPIEndpoints.save(this),
+          'method': 'PATCH',
+          'json': self.getFormat('api-save')
         }).then(function (result) {
           self._dirty = false;
           if (!self.isFresh()) {
@@ -4055,22 +4483,28 @@ var User = (function () {
       return deferred.promise;
     }
   }, {
+    key: "resetPassword",
+    value: function resetPassword() {
+      var self = this;
+      var deferred = new _promise.DeferredPromise();
+
+      new _request.APIRequest({
+        'uri': userAPIEndpoints.passwordReset(this),
+        'method': 'POST'
+      }).then(function (result) {
+        self.logger.info('password reset for user');
+        deferred.resolve(result);
+      }, function (error) {
+        self.logger.error(error);
+        deferred.reject(error);
+      });
+
+      return deferred.promise;
+    }
+  }, {
     key: "toString",
     value: function toString() {
       return '<IonicUser [\'' + this.id + '\']>';
-    }
-  }, {
-    key: "addPushToken",
-    value: function addPushToken(token) {
-      return this.push.addToken(token);
-    }
-  }, {
-    key: "removePushToken",
-    value: function removePushToken(token) {
-      if (!(token instanceof _pushPushToken.PushToken)) {
-        token = new _pushPushToken.PushToken(token);
-      }
-      return this.push.removeToken(token);
     }
   }, {
     key: "set",
@@ -4125,10 +4559,46 @@ var User = (function () {
       var user = new User();
       user.id = data._id;
       user.data = new UserData(data.data.data);
-      user.push = new PushData(data.push.tokens);
+      user.details = data.details || {};
       user._fresh = data._fresh;
       user._dirty = data._dirty;
       return user;
+    }
+  }, {
+    key: "self",
+    value: function self() {
+      var deferred = new _promise.DeferredPromise();
+      var tempUser = new User();
+
+      if (!tempUser._blockLoad) {
+        tempUser._blockLoad = true;
+        new _request.APIRequest({
+          'uri': userAPIEndpoints.self(),
+          'method': 'GET',
+          'json': true
+        }).then(function (result) {
+          tempUser._blockLoad = false;
+          tempUser.logger.info('loaded user');
+
+          // set the custom data
+          tempUser.id = result.payload.data.uuid;
+          tempUser.data = new UserData(result.payload.data.custom);
+          tempUser.details = result.payload.data.details;
+          tempUser._fresh = false;
+
+          User.current(tempUser);
+          deferred.resolve(tempUser);
+        }, function (error) {
+          tempUser._blockLoad = false;
+          tempUser.logger.error(error);
+          deferred.reject(error);
+        });
+      } else {
+        tempUser.logger.info("a load operation is already in progress for " + this + ".");
+        deferred.reject(false);
+      }
+
+      return deferred.promise;
     }
   }, {
     key: "load",
@@ -4141,29 +4611,16 @@ var User = (function () {
       if (!tempUser._blockLoad) {
         tempUser._blockLoad = true;
         new _request.APIRequest({
-          'uri': userAPIEndpoints.load(tempUser),
+          'uri': userAPIEndpoints.get(tempUser),
           'method': 'GET',
-          'json': true,
-          'headers': {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
+          'json': true
         }).then(function (result) {
           tempUser._blockLoad = false;
           tempUser.logger.info('loaded user');
 
           // set the custom data
-          tempUser.data = new UserData(result.payload.custom_data);
-
-          // set the push tokens
-          if (result.payload._push && result.payload._push.android_tokens) {
-            tempUser.push.tokens.android = result.payload._push.android_tokens;
-          }
-          if (result.payload._push && result.payload._push.ios_tokens) {
-            tempUser.push.tokens.ios = result.payload._push.ios_tokens;
-          }
-
-          tempUser.image = result.payload.image;
+          tempUser.data = new UserData(result.payload.data.custom);
+          tempUser.details = result.payload.data.details;
           tempUser._fresh = false;
 
           deferred.resolve(tempUser);
@@ -4179,16 +4636,6 @@ var User = (function () {
 
       return deferred.promise;
     }
-  }, {
-    key: "anonymousId",
-    value: function anonymousId() {
-      // this is not guaranteed to be unique
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0,
-            v = c == 'x' ? r : r & 0x3 | 0x8; //eslint-disable-line
-        return v.toString(16);
-      });
-    }
   }]);
 
   return User;
@@ -4196,7 +4643,7 @@ var User = (function () {
 
 exports.User = User;
 
-},{"../push/push-token":29,"./core":12,"./data-types.js":13,"./logger":16,"./promise":17,"./request":18,"./settings":19,"./storage":20}],22:[function(require,module,exports){
+},{"../auth/auth":11,"./data-types.js":16,"./logger":19,"./promise":20,"./request":21,"./settings":22,"./storage":23}],25:[function(require,module,exports){
 // Add Angular integrations if Angular is available
 'use strict';
 
@@ -4212,7 +4659,7 @@ if (typeof angular === 'object' && angular.module) {
   }]);
 }
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -4701,7 +5148,7 @@ var Deploy = (function () {
 
 exports.Deploy = Deploy;
 
-},{"../core/core":12,"../core/events":15,"../core/logger":16,"../core/promise":17,"../core/settings":19}],24:[function(require,module,exports){
+},{"../core/core":15,"../core/events":18,"../core/logger":19,"../core/promise":20,"../core/settings":22}],27:[function(require,module,exports){
 "use strict";
 
 var _deploy = require("./deploy");
@@ -4712,7 +5159,7 @@ window.Ionic = window.Ionic || {};
 // Ionic Namespace
 Ionic.Deploy = _deploy.Deploy;
 
-},{"./deploy":23}],25:[function(require,module,exports){
+},{"./deploy":26}],28:[function(require,module,exports){
 // Add Angular integrations if Angular is available
 'use strict';
 
@@ -4755,21 +5202,8 @@ if (typeof angular === 'object' && angular.module) {
          * @return {void}
          */
         value: function notificationNavigation(notification) {
-          var state = false;
-          var stateParams = {};
-
-          try {
-            state = notification.additionalData.payload.$state;
-          } catch (e) {
-            state = false;
-          }
-
-          try {
-            stateParams = JSON.parse(notification.additionalData.payload.$stateParams);
-          } catch (e) {
-            stateParams = {};
-          }
-
+          var state = notification.payload.$state || false;
+          var stateParams = notification.payload.$stateParams || {};
           if (state) {
             $state.go(state, stateParams);
           }
@@ -4788,19 +5222,24 @@ if (typeof angular === 'object' && angular.module) {
   }]).run(['$ionicPush', '$ionicPushAction', function ($ionicPush, $ionicPushAction) {
     // This is what kicks off the state redirection when a push notificaiton has the relevant details
     $ionicPush._emitter.on('ionic_push:processNotification', function (notification) {
-      if (notification && notification.additionalData && notification.additionalData.foreground === false) {
-        $ionicPushAction.notificationNavigation(notification);
+      notification = Ionic.PushMessage.fromPluginJSON(notification);
+      if (notification && notification.app) {
+        if (notification.app.asleep === true || notification.app.closed === true) {
+          $ionicPushAction.notificationNavigation(notification);
+        }
       }
     });
   }]);
 }
 
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 
 var _push = require("./push");
 
 var _pushToken = require("./push-token");
+
+var _pushMessage = require("./push-message");
 
 // Declare the window object
 window.Ionic = window.Ionic || {};
@@ -4808,8 +5247,9 @@ window.Ionic = window.Ionic || {};
 // Ionic Namespace
 Ionic.Push = _push.Push;
 Ionic.PushToken = _pushToken.PushToken;
+Ionic.PushMessage = _pushMessage.PushMessage;
 
-},{"./push":30,"./push-token":29}],27:[function(require,module,exports){
+},{"./push":33,"./push-message":31,"./push-token":32}],30:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -4864,7 +5304,7 @@ var PushDevService = (function () {
     this.logger = new _coreLogger.Logger({
       'prefix': 'Ionic Push (dev):'
     });
-    this._serviceHost = settings.getURL('push');
+    this._serviceHost = settings.getURL('platform-api') + '/push';
     this._token = false;
     this._watch = false;
   }
@@ -4908,14 +5348,10 @@ var PushDevService = (function () {
 
       var requestOptions = {
         "method": 'POST',
-        "uri": this._serviceHost + '/dev/push',
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        "body": JSON.stringify({
-          "dev_token": token
-        })
+        "uri": this._serviceHost + '/development',
+        "json": {
+          "token": token
+        }
       };
 
       new _coreRequest.APIRequest(requestOptions).then(function () {
@@ -4945,19 +5381,14 @@ var PushDevService = (function () {
       var self = this;
       var requestOptions = {
         'method': 'GET',
-        'uri': this._serviceHost + '/dev/push/check',
-        'headers': {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'X-Ionic-Dev-Token': this._token
-        },
+        'uri': self._serviceHost + '/development?token=' + self._token,
         'json': true
       };
 
       new _coreRequest.APIRequest(requestOptions).then(function (result) {
-        if (result.payload.messages.length > 0) {
+        if (result.payload.data.message) {
           var message = {
-            'message': result.payload.messages[0],
+            'message': result.payload.data.message,
             'title': 'DEVELOPMENT PUSH'
           };
 
@@ -5004,7 +5435,7 @@ var PushDevService = (function () {
 
 exports.PushDevService = PushDevService;
 
-},{"../core/logger":16,"../core/request":18,"../core/settings":19,"./push-token":29}],28:[function(require,module,exports){
+},{"../core/logger":19,"../core/request":21,"../core/settings":22,"./push-token":32}],31:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -5112,7 +5543,7 @@ var PushMessage = (function () {
 
 exports.PushMessage = PushMessage;
 
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -5151,7 +5582,7 @@ var PushToken = (function () {
 
 exports.PushToken = PushToken;
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -5176,6 +5607,8 @@ var _coreRequest = require("../core/request");
 
 var _corePromise = require("../core/promise");
 
+var _coreUser = require("../core/user");
+
 var _pushToken = require("./push-token");
 
 var _pushMessage = require("./push-message");
@@ -5186,10 +5619,13 @@ var settings = new _coreSettings.Settings();
 
 var DEFER_INIT = "DEFER_INIT";
 
-var pushAPIBase = settings.getURL('api') + '/api/v1/app/' + settings.get('app_id') + '/push';
+var pushAPIBase = settings.getURL('platform-api') + '/push';
 var pushAPIEndpoints = {
+  'saveToken': function saveToken() {
+    return pushAPIBase + '/tokens';
+  },
   'invalidateToken': function invalidateToken() {
-    return pushAPIBase + '/invalidate-token';
+    return pushAPIBase + '/tokens/invalidate';
   }
 };
 
@@ -5250,8 +5686,10 @@ var Push = (function () {
     this._isReady = false;
     this._tokenReady = false;
     this._blockRegistration = false;
+    this._blockSaveToken = false;
     this._registered = false;
     this._emitter = new _coreEvents.EventEmitter();
+    this._plugin = null;
     if (config !== DEFER_INIT) {
       var self = this;
       _coreCore.IonicPlatform.getMain().onReady(function () {
@@ -5334,29 +5772,47 @@ var Push = (function () {
       this._emitter.emit('ionic_push:ready', { "config": this._config });
       return this;
     }
-
-    /**
-     * Store the currently registered device token with a User
-     *
-     * @param {IonicUser} user The User the token should be associated with
-     * @return {void}
-     */
   }, {
-    key: "addTokenToUser",
-    value: function addTokenToUser(user) {
-      if (!this._token) {
-        this.logger.info('a token must be registered before you can add it to a user.');
+    key: "saveToken",
+    value: function saveToken(token, options) {
+      var deferred = new _corePromise.DeferredPromise();
+      var opts = options || {};
+      if (token.token) {
+        token = token.token;
       }
-      if (typeof user === 'object') {
-        if (_coreCore.IonicPlatform.isAndroidDevice()) {
-          user.addPushToken(this._token, 'android');
-        } else if (_coreCore.IonicPlatform.isIOSDevice()) {
-          user.addPushToken(this._token, 'ios');
-        } else {
-          this.logger.info('token is not a valid Android or iOS registration id. Cannot save to user.');
+
+      var tokenData = {
+        'token': token,
+        'app_id': settings.get('app_id')
+      };
+
+      if (!opts.ignore_user) {
+        var user = _coreUser.User.current();
+        if (user.isAuthenticated()) {
+          tokenData.user_id = user.id; // eslint-disable-line
         }
+      }
+
+      if (!self._blockSaveToken) {
+        new _coreRequest.APIRequest({
+          'uri': pushAPIEndpoints.saveToken(),
+          'method': 'POST',
+          'json': tokenData
+        }).then(function (result) {
+          self._blockSaveToken = false;
+          self.logger.info('saved push token: ' + token);
+          if (tokenData.user_id) {
+            self.logger.info('added push token to user: ' + tokenData.user_id);
+          }
+          deferred.resolve(result);
+        }, function (error) {
+          self._blockSaveToken = false;
+          self.logger.error(error);
+          deferred.reject(error);
+        });
       } else {
-        this.logger.info('invalid $ionicUser object passed to $ionicPush.addToUser()');
+        self.logger.info("a token save operation is already in progress.");
+        deferred.reject(false);
       }
     }
 
@@ -5385,7 +5841,7 @@ var Push = (function () {
           self._blockRegistration = false;
           self._tokenReady = true;
         } else {
-          self._plugin = PushNotification.init(self._config.pluginConfig);
+          self._plugin = self._getPushPlugin().init(self._config.pluginConfig);
           self._plugin.on('registration', function (data) {
             self._blockRegistration = false;
             self.token = new _pushToken.PushToken(data.registrationId);
@@ -5428,16 +5884,12 @@ var Push = (function () {
           this._plugin.unregister(function () {}, function () {});
         }
         new _coreRequest.APIRequest({
-          'uri': pushAPIEndpoints.invalidateToken(self),
+          'uri': pushAPIEndpoints.invalidateToken(),
           'method': 'POST',
-          'headers': {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          'body': JSON.stringify({
+          'json': {
             'platform': platform,
             'token': self.getStorageToken().token
-          })
+          }
         }).then(function (result) {
           self._blockUnregister = false;
           self.logger.info('unregistered push token: ' + self.getStorageToken().token);
@@ -5649,12 +6101,7 @@ var Push = (function () {
       this._emitter.emit('ionic_push:processNotification', notification);
     }
 
-    /**
-     * Fetch the phonegap-push-plugin interface
-     * Internal Method
-     *
-     * @return {PushNotification} PushNotification instance
-     */
+    /* Deprecated in favor of `getPushPlugin` */
   }, {
     key: "_getPushPlugin",
     value: function _getPushPlugin() {
@@ -5670,6 +6117,17 @@ var Push = (function () {
         self.logger.error("PushNotification plugin is required. Have you run `ionic plugin add phonegap-plugin-push` ?");
       }
       return PushPlugin;
+    }
+
+    /**
+     * Fetch the phonegap-push-plugin interface
+     *
+     * @return {PushNotification} PushNotification instance
+     */
+  }, {
+    key: "getPushPlugin",
+    value: function getPushPlugin() {
+      return this._plugin;
     }
 
     /**
@@ -5707,4 +6165,36 @@ var Push = (function () {
 
 exports.Push = Push;
 
-},{"../core/app":11,"../core/core":12,"../core/events":15,"../core/logger":16,"../core/promise":17,"../core/request":18,"../core/settings":19,"./push-dev":27,"./push-message":28,"./push-token":29}]},{},[17,18,15,16,20,19,13,12,21,11,14,10,29,28,27,30,26,25,23,24,22,9,8,5,7,6]);
+},{"../core/app":14,"../core/core":15,"../core/events":18,"../core/logger":19,"../core/promise":20,"../core/request":21,"../core/settings":22,"../core/user":24,"./push-dev":30,"./push-message":31,"./push-token":32}],34:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports.deepExtend = deepExtend;
+
+function deepExtend(out) {
+  out = out || {};
+
+  for (var i = 1; i < arguments.length; i++) {
+    var obj = arguments[i];
+
+    if (!obj) {
+      continue;
+    }
+
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        if (typeof obj[key] === 'object') {
+          out[key] = deepExtend(out[key], obj[key]);
+        } else {
+          out[key] = obj[key];
+        }
+      }
+    }
+  }
+
+  return out;
+}
+
+},{}]},{},[20,21,18,19,23,22,16,15,24,14,17,13,11,12,10,32,31,30,33,29,28,26,27,25,9,8,5,7,6]);

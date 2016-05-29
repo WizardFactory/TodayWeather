@@ -2,6 +2,7 @@
 A web client that provides interactions with the Ionic platform.
 Check out our [docs](http://docs.ionic.io/docs/io-introduction) for more detailed information.
 
+
 ## Installation
 
 Using the latest [Ionic CLI](https://github.com/driftyco/ionic-cli):
@@ -19,10 +20,6 @@ $ ionic io init
 ## Usage
 
 ```javascript
-// You need to initialize the platform before you can start using any of the services
-var io = Ionic.io();
-
-// You can now setup the current app user
 // If no user has been previously saved, a fresh user object is returned,
 // otherwise the last [current] saved user will be returned.
 var user = Ionic.User.current();

@@ -1,0 +1,51 @@
+<ion-view hide-nav-bar="true">
+    <ion-header-bar style="background-color: #EC407A; padding-bottom: 10px; background-image: none;">
+        <label class="item-input-wrapper">
+            <i class="icon ion-ios-search placeholder-icon"></i>
+            <input type="text" placeholder="도시명을 입력하세요" style="background-color: transparent;"
+                  ng-model="searchWord" ng-change="OnChangeSearchWord()">
+        </label>
+    </ion-header-bar>
+    <ion-content style="color:white;" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentBottom+'px'}">
+        <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-if="searchWord!==undefined">
+            <div class="item" style="background-color: inherit;" ng-repeat="result in searchResults"
+                 ng-click="OnSelectResult(result)">
+                <div class="row row-no-padding">
+                    <div class="col search-content" style="text-align: left;">
+                        {{result.first}} {{result.second}} {{result.third}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="height:16px;" ng-if="searchWord===undefined"></div>
+        <div class="list list-inset" style="background-color: transparent; margin-top: 0px;" ng-if="searchWord===undefined">
+            <div class="item" style="background-color: inherit;" ng-repeat="city in cityList"
+                 on-swipe-left="OnSwipeCity(city)" on-swipe-right="OnSwipeCity(city)">
+                <div class="row row-no-padding">
+                    <div class="col search-content" style="text-align: left;" ng-click="OnSelectCity($index)" >
+                        {{city.address[0]}}<br>{{city.address[1]}}
+                            <a class="icon ion-ios-location-outline" style="color: white;" ng-if="city.currentPosition"></a>
+                    </div>
+                    <div class="col search-content" ng-click="OnSelectCity($index)">
+                        <img style="width: 48px" ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
+                    </div>
+                    <div class="col search-content" style="text-align: center" ng-click="OnSelectCity($index)">
+                        {{city.t1h}}˚<br><span style="font-size: 12px;">{{city.tmn}}˚/{{city.tmx}}˚</span>
+                    </div>
+                    <div class="search-content" style="text-align: right; font-size: 24px; width: 32px"
+                         ng-show="city.delete===false" ng-click="openTimePicker($index)">
+                        <a class="icon" ng-class="city.alarmInfo == undefined?
+                                            'ion-android-notifications-none':'ion-android-notifications'"></a>
+                    </div>
+                    <button class="button button-energized" style="font-size:20px; font-family: 'Bareun Dotum Pro 1'"
+                            ng-show="city.delete===true" ng-click="OnDeleteCity($index)">삭제
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div style="text-align: center" ng-if="searchWord===undefined"><p>삭제하고 싶은 지역은 왼쪽으로 밀어주세요.</p></div>
+    </ion-content>
+    <ion-spinner icon="lines" class="spinner-light" style="position: absolute; top: 50%; left: 50%"
+                 ng-if="isLoading===true"/>
+</ion-view>
