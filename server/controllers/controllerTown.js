@@ -2036,7 +2036,7 @@ ControllerTown.prototype._sum = function(list, invalidValue) {
         return Math.round(total);
     }
     else {
-        return total.toFixed(1);
+        return +total.toFixed(1);
     }
 };
 
@@ -2621,7 +2621,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                         shortList[index].tmn = currentTmn;
                     }
                 }
-                shortList[index].tmn = shortList[index].tmn.toFixed(1);
+                shortList[index].tmn = +shortList[index].tmn.toFixed(1);
             }
             if (shortItem.time === '1500') {
                 currentTmx = (self._createOrGetDaySummaryList(daySummaryList, shortItem.date)).taMax;
@@ -2637,7 +2637,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
 
                     }
                 }
-                shortList[index].tmx = shortList[index].tmx.toFixed(1);
+                shortList[index].tmx = +shortList[index].tmx.toFixed(1);
             }
         });
 
@@ -3122,13 +3122,13 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     var self = this;
     var dayConditionList = [];
     var daySummaryList = [];
-    var dateInfo = self._getCurrentTimeValue(9);
+    //var dateInfo = self._getCurrentTimeValue(9);
 
     shortList.forEach(function (short, i) {
-        if (short.date < dateInfo.date) {
-            log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
-            return;
-        }
+        //if (short.date < dateInfo.date) {
+        //    log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
+        //    return;
+        //}
         if (i === shortList.length-1 && short.time === '0000') {
             //todo update way
            return;
@@ -3166,6 +3166,12 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     dayConditionList.forEach(function (dayCondition) {
         if (dayCondition.reh.length === 0) {
             log.warn(new Error("dayCondition is empty :" + dayCondition.date));
+            return;
+        }
+
+        //24시 때문에 short에서 data가 하루 뿐인 경우가 있음.
+        if (dayCondition.t3h.length < 8) {
+            log.debug("skip current dayCondition  :" + dayCondition.date);
             return;
         }
 
