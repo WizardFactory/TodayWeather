@@ -267,24 +267,6 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   flex-direction: column;
 }
 
-.search-content {
-  margin: auto;
-  background-color: transparent;
-  color: white;
-  font-family: "Bareun Dotum Pro 3";
-  font-size: 17px;
-  opacity: 0.84;
-}
-
-.search-content img{
-  display: block;
-  margin: auto;
-}
-
-.city-list {
-  width: 100%;
-}
-
 .tabs-dark .tabs {
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-color: transparent;
@@ -303,6 +285,142 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .item-center {
   display: block;
   margin: auto;
+}
+
+/* search */
+.search-header {
+  padding: 5px 5px 10px 10px;
+  background-color: #EC407A;
+  background-image: none;
+}
+
+.search-header label {
+  margin-right: 5px;
+}
+
+.search-header input {
+  background-color: transparent;
+}
+
+.search-header a {
+  padding: 0px 7px;
+  color: white;
+  font-size: 25px;
+}
+
+.search-content {
+}
+
+.search-content .list {
+  margin-top: 0px;
+  background-color: transparent;
+}
+
+.search-content .item {
+  background-color: transparent;
+}
+
+.search-item {
+  margin: auto;
+  text-align: left;
+  color: white;
+  font-family: "Bareun Dotum Pro 3";
+  font-size: 17px;
+  opacity: 0.84;
+}
+
+.search-item.last-item {
+  width: 48px;
+  text-align: center;
+  font-size: 28px;
+}
+
+.search-item img {
+  display: block;
+  margin: auto;
+  width: 48px;
+}
+
+.search-item a {
+  color: white;
+}
+
+.search-item .toggle, .search-item .track {
+  width: 100%;
+}
+
+.search-item .ion-ios-close-outline:before {
+  font-weight: bold;
+}
+
+.toggle.toggle-search {
+  margin: 0px;
+}
+
+.toggle.toggle-search .track {
+  height: 14px;
+  border: 0px;
+  border-radius: 8px;
+  margin: auto 0px;
+  background-color: rgba(158,158,158,0.8);
+}
+
+.toggle.toggle-search input:checked + .track {
+  background-color: #673AB7;
+}
+
+.toggle.toggle-search .track .handle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  left: 5px;
+  top: auto;
+  bottom: auto;
+  margin-top: -3px;
+  background-color: white;
+}
+
+.toggle.toggle-search input:checked + .track .handle {
+  background-color: white;
+  left: auto;
+  right: 25px;
+}
+
+/* popup */
+.ionic_popup .popup {
+  background-color: #ffffff;
+}
+
+.ionic_popup .popup-head {
+  height: 44px;
+  background-color: #03A9F4;
+  text-align: center;
+  line-height: 44px;
+}
+
+.ionic_popup .popup-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.ionic_popup .popup-body {
+  padding: 0;
+}
+
+.ionic_popup .popup-buttons {
+  padding: 0;
+  min-height: 44px;
+  height: 44px;
+}
+
+.ionic_popup .popup-buttons .button:not(:last-child) {
+  margin-right: 1px;
+}
+
+.ionic_popup .button_cancel, .ionic_popup .button_close {
+  background-color: #03A9F4;
+  color: #ffffff;
 }
 
 //chrome extension
