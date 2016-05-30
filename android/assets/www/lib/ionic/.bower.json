@@ -38,7 +38,7 @@
   "_resolution": {
     "type": "version",
     "tag": "v1.1.1",
-    "commit": "f495b4c4754547f96a0182098147917c525f99b6"
+    "commit": "cfd7acef85e3717a5093c213e761970ec524130b"
   },
   "_source": "git://github.com/driftyco/ionic-bower.git",
   "_target": "1.1.1",

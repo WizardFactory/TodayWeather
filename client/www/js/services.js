@@ -1249,7 +1249,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon';
-        obj.version = '0.8.2'; // sync with config.xml
+        obj.version = '0.8.3'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
