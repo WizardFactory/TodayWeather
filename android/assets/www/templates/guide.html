@@ -4,7 +4,7 @@ Each tab's child <ion-nav-view> directive will have its own
 navigation history that also transitions its views in and out.
 -->
 <ion-view title="Home" hide-nav-bar="true">
-    <ion-content scroll="false" style="background-color: #22a1db; color: white">
+    <ion-content scroll="false" style="background-color: #03A9F4; color: white">
         <ion-slide-box on-slide-changed="onSlideChanged(index)" style="height: 100%;">
             <ion-slide>
                 <div class="guide-content" style="background-image: url(img/guide-01.png);">
@@ -23,19 +23,19 @@ navigation history that also transitions its views in and out.
                 </div>
             </ion-slide>
             <ion-slide>
+                <div class="guide-content" style="background-image: url(img/guide-04.png);">
+                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
+                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">알람설정</p>
+                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">자주 보는 도시에 알람을 설정하고,</p>
+                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">설정한 시간에 날씨정보를 받으세요.</p>
+                </div>
+            </ion-slide>
+            <ion-slide>
                 <div class="guide-content" style="background-image: url(img/guide-03.png);">
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
                     <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">중요한 것만</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">미세 먼지부터, 생활 지수까지</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">중요한 것만 보이도록 했어요</p>
-                </div>
-            </ion-slide>
-            <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-04.png);">
-                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
-                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">즐겨찾기</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">자주 보는 도시를 즐겨찾기에 추가하세요</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">도시 별로도 한눈에 비교할 수 있어요</p>
                 </div>
             </ion-slide>
             <ion-slide>

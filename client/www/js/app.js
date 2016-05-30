@@ -17,7 +17,7 @@ angular.module('starter', [
     'ionic-timepicker',
     'ngCordova'
 ])
-    .run(function($ionicPlatform, $ionicAnalytics, Util, $rootScope, $location) {
+    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo) {
         $ionicPlatform.ready(function() {
 
             if (navigator.splashscreen) {
@@ -26,8 +26,6 @@ angular.module('starter', [
 
             if (Util.isDebug()) {
                 Util.ga.debugMode();
-            } else {
-                $ionicAnalytics.register();
             }
 
             if (ionic.Platform.isIOS()) {
@@ -50,18 +48,38 @@ angular.module('starter', [
                 cordova.plugins.Keyboard.disableScroll(true);
 
             }
-            if (window.StatusBar) {
-                StatusBar.backgroundColorByHexString('#0288D1');
-            }
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
-            if (fromState.name === '' && toState.name === 'tab.forecast') {
-                if(typeof(Storage) !== 'undefined') {
+            if (toState.name === 'tab.search') {
+                $rootScope.viewColor = '#ec72a8';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#EC407A');
+                }
+            } else if (toState.name === 'tab.forecast') {
+                if (fromState.name === '') {
                     var guideVersion = localStorage.getItem('guideVersion');
                     if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
                         $location.path('/guide');
+                        return;
+                    } else if (WeatherInfo.getEnabledCityCount() === 0) {
+                        $location.path('/tab/search');
+                        return;
                     }
+                }
+
+                $rootScope.viewColor = '#03A9F4';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0288D1');
+                }
+            } else if (toState.name === 'tab.setting') {
+                $rootScope.viewColor = '#FFA726';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#FB8C00');
+                }
+            } else if (toState.name === 'guide') {
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0288D1');
                 }
             }
         });
@@ -685,4 +703,7 @@ angular.module('starter', [
             buttons: 3
         };
         ionicTimePickerProvider.configTimePicker(timePickerObj);
+    })
+    .constant('$ionicLoadingConfig', {
+        template: '<ion-spinner icon="bubbles" class="spinner-stable"></ion-spinner>'
     });

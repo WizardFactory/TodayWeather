@@ -31,6 +31,12 @@ public class AddressesElement {
         try {
             JSONObject result = new JSONObject(jsonStr);
             if (result != null) {
+                String status = result.getString("status");
+                if (!status.equals("OK")) {
+                    Log.e("AddressesElement", "status="+status);
+                    return retElement;
+                }
+
                 retElement = new AddressesElement();
 
                 JSONArray arrReader = result.getJSONArray("results");

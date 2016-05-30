@@ -12,5 +12,3 @@ gen
 out
 # Gradle builds
 /build
-.gradle
-.idea
