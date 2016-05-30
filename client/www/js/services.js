@@ -1,6 +1,6 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -246,8 +246,10 @@ angular.module('starter.services', [])
             var city = cities[index];
 
             if (city === undefined) {
-                that.isLoadComplete = true;
-                $rootScope.$broadcast('loadCompleteEvent');
+                $ionicPlatform.ready(function() {
+                    that.isLoadComplete = true;
+                    $rootScope.$broadcast('loadCompleteEvent');
+                });
                 return;
             }
 
