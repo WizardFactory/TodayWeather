@@ -1837,19 +1837,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     log.verbose('check time and request task');
 
     if (time === 2 || putAll) {
-        log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
-
-        log.info('push keco forecast');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("kecoForecast", callback);
-        });
-
+        //spend long time
         log.info('push past');
         self.asyncTasks.push(function (callback) {
             self._requestApi("past", callback);
+        });
+
+        log.info('push keco_forecast');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("kecoForecast", callback);
         });
 
         log.info('push life index');
@@ -1894,7 +1890,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 20) {
+    if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
             self._requestApi("keco", callback);
@@ -1902,11 +1898,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 35 || putAll) {
-        log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
-
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);
