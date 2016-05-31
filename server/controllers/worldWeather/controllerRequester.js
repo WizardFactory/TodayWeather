@@ -11,9 +11,21 @@ var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var commandCategory = ['ALL','MET','OWM','WU'];
 var command = ['get_all','get', 'req_add'];
 
+/**
+ *
+ * @returns {ControllerRequester}
+ * @constructor
+ */
 function ControllerRequester(){
     var self = this;
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     * @returns {*}
+     */
     self.runCommand = function(req, res, next){
 
         if(!self.isValidCommand(req)){
@@ -42,6 +54,13 @@ function ControllerRequester(){
         }
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     * @returns {*}
+     */
     self.checkKey = function(req, res, next){
         var self = this;
 
@@ -61,6 +80,11 @@ function ControllerRequester(){
         return self;
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     */
     self.sendResult = function(req, res){
         if(req.result){
             res.json(req.result);
@@ -77,6 +101,11 @@ function ControllerRequester(){
     return self;
 }
 
+/**
+ *
+ * @param req
+ * @returns {boolean}
+ */
 ControllerRequester.prototype.isValidCommand = function(req){
     var i, j;
 
@@ -100,7 +129,11 @@ ControllerRequester.prototype.isValidCommand = function(req){
 
     return (i < commandCategory.length && j < command.length);
 };
-
+/**
+ *
+ * @param req
+ * @returns {boolean}
+ */
 ControllerRequester.prototype.parseGeocode = function(req){
     if(req.query.gcode === undefined){
         log.silly('RQ> There are no geocode');
@@ -125,6 +158,11 @@ ControllerRequester.prototype.parseGeocode = function(req){
     return true;
 };
 
+/**
+ *
+ * @param req
+ * @returns {boolean}
+ */
 ControllerRequester.prototype.parseAddress = function(req){
     if(req.query.city === undefined){
         log.silly('RQ> There are no city name');
@@ -151,6 +189,12 @@ ControllerRequester.prototype.parseAddress = function(req){
     return true;
 };
 
+/**
+ *
+ * @param geocode
+ * @param address
+ * @param callback
+ */
 ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, callback){
     var self = this;
     var meta = {};
@@ -169,6 +213,11 @@ ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, callb
     });
 };
 
+/**
+ *
+ * @param req
+ * @param callback
+ */
 ControllerRequester.prototype.addLocation = function(req, callback){
     var self = this;
 
@@ -242,6 +291,11 @@ ControllerRequester.prototype.addLocation = function(req, callback){
     );
 };
 
+/**
+ *
+ * @param req
+ * @param callback
+ */
 ControllerRequester.prototype.addNewLocation = function(req, callback){
     var self = this;
 
