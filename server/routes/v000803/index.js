@@ -15,13 +15,14 @@ fs.exists('./config/jwt-public.pem', function(exist) {
     if(exist) {
         publicKey = fs.readFileSync('./config/jwt-public.pem');
     }
-})
+});
 
 var router = express.Router();
 
 var idBearerToken = [];
 
 router.use(function checkAuthorization(req, res, next) {
+    var err;
     // post일 경우에만 check 한다.
     if(req.method === 'POST') {
         // id, pw가 파라메터에 포함될 경우 json web token을 생성하여 보내고,
@@ -30,7 +31,7 @@ router.use(function checkAuthorization(req, res, next) {
         if(req.headers.bearertoken === undefined) {
             // body에서 id와 pw 를 찾고 없으면, 503 에러를 보낸다
             if(req.body.id === undefined) {
-                var err = [];
+                err = [];
 
                 err.message = 'Not found id.';
 
@@ -57,7 +58,7 @@ router.use(function checkAuthorization(req, res, next) {
                     res.status = 200;
                     res.send(token);
                 } else {
-                    var err = [];
+                    err = [];
 
                     err.message = 'invalid id or password.';
 
@@ -82,7 +83,7 @@ router.use(function checkAuthorization(req, res, next) {
                 console.log(decode.app);
                 next();
             } else {
-                var err = [];
+                err = [];
 
                 console.log(decode.id);
 
@@ -110,3 +111,4 @@ router.post('/', function(req,res) {
     res.render('index', {title:'TodayWeather : post'});
 });
 
+module.exports = router;
