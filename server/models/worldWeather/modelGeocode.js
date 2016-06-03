@@ -28,6 +28,9 @@ tSchema.statics = {
             //log.info('get geocode : ', mCoord.length);
             cb(0, geocode);
         }
+    },
+    updateGeocode : function(){
+        geocode = [];
     }
 };
 
