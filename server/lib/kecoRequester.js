@@ -201,6 +201,7 @@ Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
  * @param o3Value
  * @param no2Value
  * @param pm10Value
+ * @param pm25Value
  * @param khaiValue
  * @param khaiGrade
  * @param so2Grade
@@ -208,6 +209,7 @@ Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
  * @param o3Grade
  * @param no2Grade
  * @param pm10Grade
+ * @param pm25Grade
  * @returns {{}}
  */
 Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
@@ -245,15 +247,14 @@ Keco.prototype.parseCtprvn = function (data, callback) {
 
     xml2json(data, function (err, result) {
         if (err) {
-            callback(err);
-            return;
+            return callback(err);
         }
 
         //check header
         if(parseInt(result.response.header[0].resultCode[0]) !== 0) {
             err = new Error(result.response.header[0].resultMsg[0]);
             log.error(err);
-            callback(err);
+            return callback(err);
         }
 
         var arpltnList = [];
@@ -286,7 +287,7 @@ Keco.prototype.saveCtprvn = function (arpltnList, callback) {
             Arpltn.update({stationName: arpltn.stationName}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
                     log.error(err);
-                    callback(err);
+                    return callback(err);
                 }
                 log.silly('The raw response from Mongo was ', JSON.stringify(raw));
                 callback(err, raw);
@@ -631,7 +632,9 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
                         log.error("minu dust frcst dspth is duplicated!!");
                     }
                     for (var name in objFrcst) {
-                        shFrcstList[0][name] = objFrcst[name];
+                        if (objFrcst.hasOwnProperty(name)) {
+                            shFrcstList[0][name] = objFrcst[name];
+                        }
                     }
                     shFrcstList[0].save(function (err) {
                         cb(err, objFrcst.informData);
