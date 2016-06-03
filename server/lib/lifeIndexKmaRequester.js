@@ -52,19 +52,19 @@ function KmaIndexService() {
         urlPath: 'getSensorytemLifeList'
     };
 
-     this.frostbite = {
-        nextTime: null,
-        offerMonth: {start: 11, end: 1}, //12~2
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getFrostbiteLifeList'
-    };
+    //this.frostbite = {
+    //    nextTime: null,
+    //    offerMonth: {start: 11, end: 1}, //12~2
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getFrostbiteLifeList'
+    //};
 
-    this.heat = {
-        nextTime: null,
-        offerMonth: {start: 5, end: 8}, //6~9
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getHeatLifeList'
-    };
+    //this.heat = {
+    //    nextTime: null,
+    //    offerMonth: {start: 5, end: 8}, //6~9
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getHeatLifeList'
+    //};
 
     this.dspls = {
         nextTime: null,
@@ -73,12 +73,12 @@ function KmaIndexService() {
         urlPath: 'getDsplsLifeList'
     };
 
-    this.winter = {
-        nextTime: null,
-        offerMonth: {start: 11, end: 1},
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getWinterLifeList'
-    };
+    //this.winter = {
+    //    nextTime: null,
+    //    offerMonth: {start: 11, end: 1},
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getWinterLifeList'
+    //};
 
     this.ultrv = {
         nextTime: null,
@@ -87,13 +87,12 @@ function KmaIndexService() {
         urlPath: 'getUltrvLifeList'
     };
 
-    this.airpollution = {
-        nextTime: null,
-        offerMonth: {start: 10, end: 4},
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getAirpollutionLifeList'
-    };
-
+    //this.airpollution = {
+    //    nextTime: null,
+    //    offerMonth: {start: 10, end: 4},
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getAirpollutionLifeList'
+    //};
 }
 
 /**
@@ -559,7 +558,7 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
     var self = this;
     var failList = [];
 
-    async.map(list,
+    async.mapLimit(list, 500,
         function (area, cBack) {
             self.getLifeIndexByIndexNameAreaNo(indexName, area, function (err, data) {
                 if (err) {
@@ -665,13 +664,14 @@ KmaIndexService.prototype.findAreaByTown = function(townInfo, callback) {
             return false;
         });
 
-        if (!retTown) {
+        if (retTown) {
+            log.debug("areaNo="+retTown.areaNo);
+            return callback(undefined, retTown);
+        }
+        else {
             err = new Error("Fail to find areaNo "+ townInfo.toString());
             return callback(err);
         }
-
-        log.debug("areaNo="+retTown.areaNo);
-        callback(undefined, retTown);
     });
 };
 
@@ -720,6 +720,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
 /**
  * KMA 기상지수는 동시에 가지고 오면 503에러가 발생함
  * @param self
+ * @param callback
  * @returns {*}
  */
 KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {

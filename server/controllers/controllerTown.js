@@ -952,7 +952,7 @@ function ControllerTown() {
                         }
 
                         var i;
-                        //update tmx, tmn of today short
+                        //update tmx, tmn, t3h of today short
                         if (req.short && Array.isArray(req.short)) {
                             for (i=0; i<req.short.length; i++) {
                                 if (req.short[i].date === req.current.date) {
@@ -965,6 +965,10 @@ function ControllerTown() {
                                         log.info('stn hourly weather update tmn to ', req.current.t1h);
                                     }
                                 }
+                                if (req.short[i].time === req.current.time) {
+                                    req.short[i].t3h = req.current.t1h;
+                                }
+
                                 if (req.short[i].date > req.current.date) {
                                     break;
                                 }

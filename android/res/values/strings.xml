@@ -16,4 +16,5 @@
     <string name="temperature_separator">/</string>
     <string name="msg_do_not_widget_data_plz_update">정보가 없습니다.\n여기를 눌러 갱신해 주세요.</string>
     <string name="google_app_id">362303467798</string>
+    <string name="fail_to_get_location">오늘날씨 : 위치정보를 못 가지고 왔습니다.</string>
 </resources>
