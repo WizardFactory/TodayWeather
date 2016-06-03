@@ -31,9 +31,7 @@ router.use(function checkAuthorization(req, res, next) {
         if(req.headers.bearertoken === undefined) {
             // body에서 id와 pw 를 찾고 없으면, 503 에러를 보낸다
             if(req.body.id === undefined) {
-                err = [];
-
-                err.message = 'Not found id.';
+                err = new Error('Not found id.');
 
                 res.status(err.status || 500);
                 res.render('error', {
@@ -58,9 +56,7 @@ router.use(function checkAuthorization(req, res, next) {
                     res.status = 200;
                     res.send(token);
                 } else {
-                    err = [];
-
-                    err.message = 'invalid id or password.';
+                    err = new Error('invalid id or password.');
 
                     res.status(err.status || 500);
                     res.render('error', {
@@ -83,11 +79,9 @@ router.use(function checkAuthorization(req, res, next) {
                 console.log(decode.app);
                 next();
             } else {
-                err = [];
+                err = new Error('App name is invalid.');
 
                 console.log(decode.id);
-
-                err.message = 'App name is invalid.';
 
                 res.status(err.status || 500);
                 res.render('error', {
