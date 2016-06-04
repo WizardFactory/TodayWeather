@@ -92,7 +92,7 @@ describe('controller unit test - collector', function(){
             }
         }
     ];
-
+/*
     it('get geocode', function(done){
         var modelGeocode = require('../../models/worldWeather/modelGeocode');
         modelGeocode.getGeocode = function(callback){
@@ -105,12 +105,12 @@ describe('controller unit test - collector', function(){
             done();
         });
     });
-
+*/
     it('get wu data', function(done){
         var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
         modelWuForecast.find = function(geocode, callback){
 
-            callback(0, []);
+            callback(0, ['test']);
         };
 
         var collector = new controllerCollector;
