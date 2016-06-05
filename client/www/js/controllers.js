@@ -554,6 +554,23 @@ angular.module('starter.controllers', [])
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
 
+        var service = new google.maps.places.AutocompleteService();
+        var callback = function(predictions, status) {
+            if (status != google.maps.places.PlacesServiceStatus.OK) {
+                return;
+            }
+
+            predictions.forEach(function(prediction) {
+                if (prediction.types.indexOf('sublocality_level_4') < 0) { // 도로명 주소 제외. 영어 검색 제외 안됨
+                    var addressArray = WeatherUtil.convertAddressArray(prediction.description);
+                    var townAddress = WeatherUtil.getTownFromFullAddress(addressArray);
+                    if (townAddress.first !== "" || townAddress.second !== "" || townAddress.third !== "") {
+                        $scope.searchResults.push(townAddress);
+                    }
+                }
+            });
+        };
+
         function init() {
             Util.ga.trackEvent('page', 'tab', 'search');
 
@@ -610,6 +627,12 @@ angular.module('starter.controllers', [])
             $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
             searchIndex = 0;
             $scope.OnScrollResults();
+            service.getPlacePredictions(
+                {
+                    input: $scope.searchWord,
+                    types: ['(regions)'],
+                    componentRestrictions: {}
+                }, callback);
         };
 
         $scope.OnSearchCurrentPosition = function() {
@@ -664,20 +687,20 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnScrollResults = function() {
-            if ($scope.searchWord !== undefined && searchIndex !== -1) {
-                for (var i = searchIndex; i < towns.length; i++) {
-                    var town = towns[i];
-                    if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
-                        || town.third.indexOf($scope.searchWord) >= 0) {
-                        $scope.searchResults.push(town);
-                        if ($scope.searchResults.length % 10 === 0) {
-                            searchIndex = i + 1;
-                            return;
-                        }
-                    }
-                }
-                searchIndex = -1;
-            }
+            //if ($scope.searchWord !== undefined && searchIndex !== -1) {
+            //    for (var i = searchIndex; i < towns.length; i++) {
+            //        var town = towns[i];
+            //        if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
+            //            || town.third.indexOf($scope.searchWord) >= 0) {
+            //            $scope.searchResults.push(town);
+            //            if ($scope.searchResults.length % 10 === 0) {
+            //                searchIndex = i + 1;
+            //                return;
+            //            }
+            //        }
+            //    }
+            //    searchIndex = -1;
+            //}
         };
 
         $scope.OnSelectResult = function(result) {
