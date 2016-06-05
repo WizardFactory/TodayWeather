@@ -1149,7 +1149,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
                 log.info('S> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 10, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, function (err, results) {
                 log.info('S> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1225,7 +1225,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
 
             //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 10, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, function (err, results) {
                 log.info('ST> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1295,7 +1295,7 @@ Manager.prototype.getTownCurrentData = function(gmt, key, callback){
                 log.info('C> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 10, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, function (err, results) {
                 log.info('C> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1355,7 +1355,7 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             log.info('MF> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 10, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 20, function (err, results) {
             log.info('MF> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1420,7 +1420,7 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             log.info('ML> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 10, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 20, function (err, results) {
             log.info('ML> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1486,7 +1486,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             log.info('MT> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 10, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20, function (err, results) {
             log.info('MT> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1545,7 +1545,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             log.info('Ms> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 10, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 20, function (err, results) {
             log.info('MD> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1837,19 +1837,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     log.verbose('check time and request task');
 
     if (time === 2 || putAll) {
-        log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
-
-        log.info('push keco forecast');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("kecoForecast", callback);
-        });
-
+        //spend long time
         log.info('push past');
         self.asyncTasks.push(function (callback) {
             self._requestApi("past", callback);
+        });
+
+        log.info('push keco_forecast');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("kecoForecast", callback);
         });
 
         log.info('push life index');
@@ -1894,7 +1890,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 20) {
+    if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
             self._requestApi("keco", callback);
@@ -1902,11 +1898,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 35 || putAll) {
-        log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
-
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", callback);

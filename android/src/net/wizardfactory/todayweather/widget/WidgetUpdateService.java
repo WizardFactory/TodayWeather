@@ -15,6 +15,7 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 
 import net.wizardfactory.todayweather.R;
 import net.wizardfactory.todayweather.widget.Data.WeatherData;
@@ -126,7 +127,7 @@ public class WidgetUpdateService extends Service {
 
     private String location2Address(double lat, double lon) {
         String retAddr = null;
-
+        
         Log.i("Service", "lat : " + lat + ", lon " + lon);
         try {
             String geourl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
@@ -136,6 +137,7 @@ public class WidgetUpdateService extends Service {
             AddressesElement addrsElement = AddressesElement.parsingAddressJson2String(retJson);
             if (addrsElement == null || addrsElement.getAddrs() == null) {
                 Log.e("Service", "Fail to get address of lat : "+ lat + ", lon " + lon);
+                Toast.makeText(getApplicationContext(), R.string.fail_to_get_location, Toast.LENGTH_LONG).show();
                 return retAddr;
             }
 

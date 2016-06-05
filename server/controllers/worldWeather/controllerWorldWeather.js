@@ -10,11 +10,20 @@ var config = require('../../config/config');
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['short', 'current'];
 
+/**
+ *
+ * @returns {controllerWorldWeather}
+ */
 function controllerWorldWeather(){
     var self = this;
 
     self.geocodeList = [];
 
+    /**
+     *
+     * @param req
+     * @param res
+     */
     self.sendResult = function(req, res){
         if(req.error){
             res.json(req.error);
@@ -30,6 +39,12 @@ function controllerWorldWeather(){
         return;
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     */
     self.showUsage = function(req, res, next){
         if(req.result === undefined){
             req.result = {};
@@ -42,6 +57,12 @@ function controllerWorldWeather(){
         next();
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     */
     self.checkApiVersion = function(req, res, next){
         var self = this;
         var meta = {};
@@ -65,6 +86,13 @@ function controllerWorldWeather(){
         }
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     * @returns {*}
+     */
     self.queryWeather = function(req, res, next){
         var meta = {};
         meta.method = 'queryWeather';
@@ -198,6 +226,12 @@ function controllerWorldWeather(){
         });
     };
 
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     */
     self.checkCommand = function(req, res, next){
         if(req.query.command === undefined){
             next();
@@ -223,6 +257,11 @@ function controllerWorldWeather(){
         }
     };
 
+    /**
+     *
+     * @param req
+     * @returns {boolean}
+     */
     self.isValidCategory = function(req){
         if(req.params.category === undefined){
             log.error('there is no category');
@@ -238,6 +277,11 @@ function controllerWorldWeather(){
         return false;
     };
 
+    /**
+     *
+     * @param req
+     * @returns {boolean}
+     */
     self.getCode = function(req){
         if(req.query.gcode === undefined){
             log.silly('WW> can not find geocode from qurey');
@@ -256,6 +300,11 @@ function controllerWorldWeather(){
         return true;
     };
 
+    /**
+     *
+     * @param req
+     * @returns {boolean}
+     */
     self.getCountry = function(req){
         if(req.query.country === undefined){
             log.silly('WW> can not find country name from qurey');
@@ -267,6 +316,11 @@ function controllerWorldWeather(){
         return true;
     };
 
+    /**
+     *
+     * @param req
+     * @returns {boolean}
+     */
     self.getCity = function(req){
         if(req.query.city === undefined){
             log.silly('WW> can not find city name from qurey');
@@ -278,6 +332,10 @@ function controllerWorldWeather(){
         return true;
     };
 
+    /**
+     *
+     * @param callback
+     */
     self.loadGeocodeList = function(callback){
         log.silly('WW> IN loadGeocodeList');
 
@@ -305,6 +363,11 @@ function controllerWorldWeather(){
         }
     };
 
+    /**
+     *
+     * @param city
+     * @returns {boolean}
+     */
     self.checkCityName = function(city){
         for(var i = 0; i < self.geocodeList.length ; i++){
             if(self.geocodeList[i].address.city === city){
@@ -315,6 +378,11 @@ function controllerWorldWeather(){
         return false;
     };
 
+    /**
+     *
+     * @param geocode
+     * @returns {boolean}
+     */
     self.checkGeocode = function(geocode){
         for(var i = 0; i < self.geocodeList.length ; i++){
             if((self.geocodeList[i].geocode.lon === geocode.lon) && (self.geocodeList[i].geocode.lat === geocode.lat)){
@@ -325,25 +393,48 @@ function controllerWorldWeather(){
         return false;
     };
 
+    /**
+     *
+     * @param req
+     * @param callback
+     */
     self.getDataFromMET = function(req, callback){
         req.MET = {};
         callback(0, req.MET);
     };
 
+    /**
+     *
+     * @param req
+     * @param callback
+     */
     self.getDataFromOWM = function(req, callback){
         req.OWM = {};
         callback(0, req.OWM);
     };
 
+    /**
+     *
+     * @param req
+     * @param callback
+     */
     self.getDataFromWU = function(req, callback){
         req.WU = {};
         callback(0, req.WU);
     };
 
+    /**
+     *
+     * @param req
+     */
     self.makeDefault = function(req){
         req.weather = {};
     };
 
+    /**
+     *
+     * @param req
+     */
     self.mergeWeather = function(req){
         if(req.MET){
             // TODO : merge MET data
@@ -358,6 +449,11 @@ function controllerWorldWeather(){
         }
     };
 
+    /**
+     *
+     * @param req
+     * @param callback
+     */
     self.requestAddingGeocode = function(req, callback){
         var base_url = config.url.requester;
         var key = 'abcdefg';

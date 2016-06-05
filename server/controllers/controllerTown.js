@@ -952,7 +952,7 @@ function ControllerTown() {
                         }
 
                         var i;
-                        //update tmx, tmn of today short
+                        //update tmx, tmn, t3h of today short
                         if (req.short && Array.isArray(req.short)) {
                             for (i=0; i<req.short.length; i++) {
                                 if (req.short[i].date === req.current.date) {
@@ -965,6 +965,10 @@ function ControllerTown() {
                                         log.info('stn hourly weather update tmn to ', req.current.t1h);
                                     }
                                 }
+                                if (req.short[i].time === req.current.time) {
+                                    req.short[i].t3h = req.current.t1h;
+                                }
+
                                 if (req.short[i].date > req.current.date) {
                                     break;
                                 }
@@ -1361,12 +1365,41 @@ function ControllerTown() {
         if(req.currentPubDate) {
             result.currentPubDate = req.currentPubDate;
         }
+
+        if (req.current.t1h == undefined) {
+            req.current.t1h = -50;
+        }
+        if (req.current.rn1 == undefined) {
+            req.current.rn1 = -1;
+        }
+        if (req.current.sky == undefined) {
+            req.current.sky = -1;
+        }
+        if (req.current.uuu == undefined) {
+            req.current.uuu = -100;
+        }
+        if (req.current.vvv == undefined) {
+            req.current.vvv = -100;
+        }
+        if (req.current.reh == undefined) {
+            req.current.reh = -1;
+        }
+        if (req.current.pty == undefined) {
+            req.current.pty = -1;
+        }
+        if (req.current.lgt == undefined) {
+            req.current.lgt = -1;
+        }
+        if (req.current.vec == undefined) {
+            req.current.vec = -1;
+        }
+        if (req.current.wsd == undefined) {
+            req.current.wsd = -1;
+        }
         if(req.current){
             result.current = req.current;
         }
-        if(req.midData){
-            result.midData = req.midData;
-        }
+
         if (req.midData.pubDate == undefined) {
             req.midData.pubDate = req.midData.tempPubDate;
         }
@@ -1384,6 +1417,9 @@ function ControllerTown() {
         }
         if (req.midData.pubDate == undefined) {
             req.midData.pubDate = '';
+        }
+        if(req.midData){
+            result.midData = req.midData;
         }
 
         res.json(result);
