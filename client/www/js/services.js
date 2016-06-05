@@ -999,6 +999,7 @@ angular.module('starter.services', [])
                     var address = findDongAddressFromGoogleGeoCodeResults(data.results);
                     if (!address || address.length === 0) {
                         deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
+                        return;
                     }
                     console.log(address);
                     deferred.resolve(address);
