@@ -8,7 +8,7 @@ var assert  = require('assert');
 var config = require('../../config/config');
 var Logger = require('../../lib/log');
 var convertGeocode = require('../../utils/convertGeocode');
-
+var keybox = require('../../config/config').keyString;
 global.log  = new Logger(__dirname + "/debug.log");
 
 describe('unit test - WU', function(){
@@ -61,7 +61,7 @@ describe('unit test - WU', function(){
 
     it('get current weather by WU', function(done){
         var wu = new wrRequester();
-        wu.collectCurrent(list, function(err, result){
+        wu.collectCurrent(list, {id:keybox.wu_id, key: keybox.wu_key}, function(err, result){
             if(err){
                 log.error('!!! failed to get current weather data');
                 log.error(err);
@@ -78,7 +78,7 @@ describe('unit test - WU', function(){
 
     it('get forecast weather by WU', function(done){
         var wu = new wrRequester();
-        wu.collectForecast(list, function(err, result){
+        wu.collectForecast(list, {id:keybox.wu_id, key: keybox.wu_key}, function(err, result){
             if(err){
                 log.error('!!! failed to get forecast weather data');
                 log.error(err);
@@ -87,6 +87,40 @@ describe('unit test - WU', function(){
             }
 
             log.info('!!! Successed to get forecast weather data');
+            log.info(result);
+            done();
+
+        });
+    });
+
+    it('get one forecast item by WU', function(done){
+        var wu = new wrRequester();
+        wu.getForecast({lat:39.66, lon:116.40}, {id:keybox.wu_id, key: keybox.wu_key}, function(err, result){
+            if(err){
+                log.error('!!! failed to get forecast weather data');
+                log.error(err);
+                done();
+                return;
+            }
+
+            log.info('!!! Successed to get forecast weather data');
+            log.info(result);
+            done();
+
+        });
+    });
+
+    it('get one current item by WU', function(done){
+        var wu = new wrRequester();
+        wu.getCurrent({lat:39.66, lon:116.40}, {id:keybox.wu_id, key: keybox.wu_key}, function(err, result){
+            if(err){
+                log.error('!!! failed to get forecast weather data');
+                log.error(err);
+                done();
+                return;
+            }
+
+            log.info('!!! Successed to get current weather data');
             log.info(result);
             done();
 

@@ -10,18 +10,65 @@ var keys = require('../../config/config').keyString;
 
 function wuRequester(){
     var self = this;
+    self.base_url = 'http://api.weatherunlocked.com/api/';//51.50,-0.12?app_id={APP_ID}&app_key={APP_KEY}
+
     return this;
 }
 
-wuRequester.prototype.collectCurrent = function(list, callback){
-    return this.collect('current', list, callback);
+wuRequester.prototype.getCurrent = function(geocode, key, callback){
+    var self = this;
+
+    if(!geocode.lat || !geocode.lon){
+        callback(new Error('WU> there is no coordinate'), {isSuccess: false});
+        return;
+    }
+    var url = self.base_url + 'current' + '/' + geocode.lat + ',' + geocode.lon;
+    url += '?app_id=' + key.id + '&app_key=' + key.key;
+
+    self.getData(url, function(err, res){
+        if(err){
+            callback(err, {isSuccess: false});
+            return;
+        }
+        res.isSuccess = true;
+        callback(err, res);
+        return;
+    });
+
+    return;
 };
 
-wuRequester.prototype.collectForecast = function(list, callback){
-    return this.collect('forecast', list, callback);
+wuRequester.prototype.getForecast = function(geocode, key, callback){
+    var self = this;
+
+    if(!geocode.lat || !geocode.lon){
+        callback(new Error('WU> there is no coordinate'), {isSuccess: false});
+        return;
+    }
+    var url = self.base_url + 'forecast' + '/' + geocode.lat + ',' + geocode.lon;
+    url += '?app_id=' + key.id + '&app_key=' + key.key;
+
+    self.getData(url, function(err, res){
+        if(err){
+            callback(err, {isSuccess: false});
+            return;
+        }
+        res.isSuccess = true;
+        callback(err, res);
+        return;
+    });
 };
 
-wuRequester.prototype.collect = function(type, list, callback){
+wuRequester.prototype.collectCurrent = function(list, key, callback){
+    return this.collect('current', list, key, callback);
+};
+
+wuRequester.prototype.collectForecast = function(list, key, callback){
+    return this.collect('forecast', list, key, callback);
+};
+
+
+wuRequester.prototype.collect = function(type, list, key, callback){
     var self = this;
     var base_url = 'http://api.weatherunlocked.com/api/';//51.50,-0.12?app_id={APP_ID}&app_key={APP_KEY}
 
@@ -32,7 +79,7 @@ wuRequester.prototype.collect = function(type, list, callback){
                 return;
             }
             var url = base_url + type + '/' + item.lat + ',' + item.lon;
-            url += '?app_id=' + keys.wu_id + '&app_key=' + keys.wu_key;
+            url += '?app_id=' + key.id + '&app_key=' + key.key;
 
             self.getData(url, function(err, res){
                 if(err){
@@ -61,7 +108,7 @@ wuRequester.prototype.collect = function(type, list, callback){
 wuRequester.prototype.getData = function(url, callback){
     var self = this;
 
-    log.info('WU> get data : ', url);
+    log.silly('WU> get data : ', url);
     req.get(url, {timeout: 1000 * 5}, function(err, response, body){
         if(err) {
             log.warn(err);
