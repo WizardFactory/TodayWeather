@@ -7,6 +7,7 @@ var assert  = require('assert');
 var config = require('../../config/config');
 var Logger = require('../../lib/log');
 var controllerCollector = require('../../controllers/worldWeather/controllerCollector');
+var mongoose = require('mongoose');
 
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -92,7 +93,7 @@ describe('controller unit test - collector', function(){
             }
         }
     ];
-
+/*
     it('get geocode', function(done){
         var modelGeocode = require('../../models/worldWeather/modelGeocode');
         modelGeocode.getGeocode = function(callback){
@@ -105,18 +106,42 @@ describe('controller unit test - collector', function(){
             done();
         });
     });
-
+*/
+    /*
     it('get wu data', function(done){
         var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
         modelWuForecast.find = function(geocode, callback){
-
-            callback(0, []);
+            var datalist = [];
+            datalist.push({geocode: {}, address: {}, date:0, days: [], save:function(callback){
+                callback(0);
+            }});
+            callback(0, datalist);
         };
 
         var collector = new controllerCollector;
         collector.processWuForecast(geocodeList, 2, function(err, failList){
             done();
         });
-    })
+    });
+    */
 
+    it('test db', function(done){
+        var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+            replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+
+        mongoose.connect('mongodb://localhost/todayweather', options, function(err) {
+            if (err) {
+                log.error('DB> fail to connect', err);
+                done();
+            }
+        });
+
+        var collector = new controllerCollector;
+        collector.processWuForecast(geocodeList, 2, function(err, failList){
+            if(err){
+                log.error('fail to processWuForecast');
+            }
+            done();
+        });
+    });
 });
