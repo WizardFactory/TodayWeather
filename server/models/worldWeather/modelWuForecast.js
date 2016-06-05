@@ -56,7 +56,6 @@ var wuForecastSchema = new mongoose.Schema({
     }]
 });
 
-wuForecastSchema.index({geocode:1});
 wuForecastSchema.index({"geocode.lat" : 1, "geocode.lon" : 1});
 
 module.exports = mongoose.model('wuForecast', wuForecastSchema);

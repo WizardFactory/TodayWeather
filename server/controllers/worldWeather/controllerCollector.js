@@ -296,11 +296,18 @@ ConCollector.prototype.parseWuForecast = function(src){
             forecast.rain = parseInt(frame.rain_mm);
             forecast.snow = parseInt(frame.snow_mm);
             forecast.fsnow = parseInt(frame.snow_accum_cm);
-            forecast.prob = parseInt(frame.prob_precip_pct);
+
+            // sometimes, the server scnd percent as '<1'. it can't be changed number.
+            if(parseInt(frame.prob_precip_pct) != typeof Number){
+                forecast.prob = 0
+            }else{
+                forecast.prob = parseInt(frame.prob_precip_pct);
+            }
             forecast.humid = parseInt(frame.humid_pct);
             forecast.dewpoint = parseInt(frame.dewpoint_c);
             forecast.vis = parseInt(frame.vis_km);
             forecast.splmax = parseInt(frame.slp_mb);
+
             forecastList.push(forecast);
         });
 
@@ -334,22 +341,34 @@ ConCollector.prototype.saveWuForecast = function(geocode, data, callback){
 
             if(list.length === 0){
                 print.info('WuF> First time');
-                var newItem = new modelWuForecast({geocode: geocode, address: {}, date:curDate, days: newData});
+                //var newItem = new modelWuForecast({geocode: geocode, address: {country:'', city:'', zipcode:0, postcode:0}, date:curDate, days: newData});
+                var newItem = new modelWuForecast({geocode:geocode, address:{}, days:newData});
                 newItem.save(function(err){
                     if(err){
-                        log.error('WuF> fail to save to DB :', geocode);
+                        log.error('WuF> fail to add the new data to DB :', geocode);
                     }
                     if(callback){
                         callback(err);
                     }
                 });
                 //print.info('WuF> add new Item : ', newData);
-                return;
             }else{
+                list.forEach(function(data, index){
+                    data.date = curDate;
+                    data.days = [];
+                    data.days = newData;
+                    //log.info(data);
+                    data.save(function(err){
+                        if(err){
+                            log.error('WuF> fail to save to DB :', geocode);
+                        }
 
+                        if(callback){
+                            callback(err);
+                        }
+                    });
+                });
             }
-
-            callback(err);
         });
     }catch(e){
         print.error('WuF> Exception!!!');
