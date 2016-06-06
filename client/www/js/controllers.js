@@ -718,7 +718,8 @@ angular.module('starter.controllers', [])
                 var city = WeatherUtil.convertWeatherData(weatherDatas);
                 city.currentPosition = false;
                 city.address = address;
-                city.location = location;
+                //검색하는 경우 location 정보가 없음. 업데이트 필요.
+                //city.location = location;
 
                 if (WeatherInfo.addCity(city) === false) {
                     var msg = "이미 동일한 지역이 추가되어 있습니다.";
