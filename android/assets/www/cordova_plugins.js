@@ -98,6 +98,13 @@ module.exports = [
         "clobbers": [
             "Connection"
         ]
+    },
+    {
+        "file": "plugins/cordova-plugin-app-preferences/www/apppreferences.js",
+        "id": "cordova-plugin-app-preferences.apppreferences",
+        "clobbers": [
+            "plugins.appPreferences"
+        ]
     }
 ];
 module.exports.metadata = 
@@ -117,7 +124,9 @@ module.exports.metadata =
     "phonegap-plugin-push": "1.6.4",
     "cordova-plugin-extension": "1.5.1",
     "cordova-plugin-admobpro": "2.17.1",
-    "cordova-plugin-network-information": "1.2.1"
+    "cordova-plugin-network-information": "1.2.1",
+    "cordova-plugin-console": "1.0.3",
+    "cordova-plugin-app-preferences": "0.7.7"
 };
 // BOTTOM OF METADATA
 });
