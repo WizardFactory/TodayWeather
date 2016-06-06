@@ -1,6 +1,6 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, $cordovaPreferences) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -228,6 +228,12 @@ angular.module('starter.services', [])
                 items.forEach(function (item) {
                     createCity(item);
                 });
+                that._loadCitiesPreference(function (err) {
+                    if (err) {
+                        //restore cities
+                        that._saveCitiesPreference(items);
+                    }
+                });
             }
 
             // load last cityIndex
@@ -237,8 +243,44 @@ angular.module('starter.services', [])
             }
         };
 
+        obj._saveCitiesPreference = function (cities) {
+            var pList = {cityList: []};
+            cities.forEach(function (city) {
+                if (!city.disable) {
+                    var simpleInfo = {};
+                    simpleInfo.currentPosition = city.currentPosition;
+                    simpleInfo.address = city.address;
+                    simpleInfo.location = city.location;
+                    pList.cityList.push(simpleInfo);
+                }
+            });
+
+            console.log('save preference plist='+JSON.stringify(pList));
+
+            $cordovaPreferences.store('cityList', JSON.stringify(pList))
+                .success(function(value) {
+                    console.log("save preference Success: " + value);
+                })
+                .error(function(error) {
+                    console.log("save preference Error: " + error);
+                });
+        };
+
+        obj._loadCitiesPreference = function (callback) {
+            $cordovaPreferences.fetch('cityList')
+                .success(function(value) {
+                    console.log("fetch preference Success: " + value);
+                    callback(undefined, value);
+                })
+                .error(function(error) {
+                    console.log("fetch preference Error: " + error);
+                    callback(error);
+                })
+        };
+
         obj.saveCities = function() {
             localStorage.setItem("cities", JSON.stringify(cities));
+            this._saveCitiesPreference(cities);
         };
 
         obj.updateCities = function(index) {
