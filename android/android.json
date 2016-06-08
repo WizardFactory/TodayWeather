@@ -59,6 +59,10 @@
                         {
                             "xml": "<feature name=\"NetworkStatus\"><param name=\"android-package\" value=\"org.apache.cordova.networkinformation.NetworkManager\" /></feature>",
                             "count": 1
+                        },
+                        {
+                            "xml": "<feature name=\"AppPreferences\"><param name=\"android-package\" value=\"me.apla.cordova.AppPreferences\" /></feature>",
+                            "count": 1
                         }
                     ]
                 }
@@ -165,6 +169,10 @@
                         {
                             "xml": "<activity android:configChanges=\"keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize\" android:name=\"com.google.android.gms.ads.AdActivity\" android:theme=\"@android:style/Theme.Translucent\" />",
                             "count": 1
+                        },
+                        {
+                            "xml": "<activity android:name=\"me.apla.cordova.AppPreferencesActivity\" />",
+                            "count": 1
                         }
                     ]
                 }
@@ -226,6 +234,12 @@
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
         },
         "cordova-plugin-network-information": {
+            "PACKAGE_NAME": "net.wizardfactory.todayweather"
+        },
+        "cordova-plugin-console": {
+            "PACKAGE_NAME": "net.wizardfactory.todayweather"
+        },
+        "cordova-plugin-app-preferences": {
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
         }
     },
@@ -329,6 +343,13 @@
             "clobbers": [
                 "Connection"
             ]
+        },
+        {
+            "file": "plugins/cordova-plugin-app-preferences/www/apppreferences.js",
+            "id": "cordova-plugin-app-preferences.apppreferences",
+            "clobbers": [
+                "plugins.appPreferences"
+            ]
         }
     ],
     "plugin_metadata": {
@@ -346,6 +367,8 @@
         "phonegap-plugin-push": "1.6.4",
         "cordova-plugin-extension": "1.5.1",
         "cordova-plugin-admobpro": "2.17.1",
-        "cordova-plugin-network-information": "1.2.1"
+        "cordova-plugin-network-information": "1.2.1",
+        "cordova-plugin-console": "1.0.3",
+        "cordova-plugin-app-preferences": "0.7.7"
     }
 }

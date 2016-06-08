@@ -108,18 +108,38 @@ public class AddressesElement {
     }
 
     // this is same as app code that write javascript
-    public String makeUrlAddress(String addr) {
+    public static String makeUrlAddress(String addr) {
         String retUrl = null;
 
         if (addr != null) {
             String[] addrTokens = addr.split(" ");
 
             if (addrTokens.length == 5) {
+                //nation + do + si + gu + dong
                 retUrl = "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[2]) + encodingUtf8(addrTokens[3]) + "/" + encodingUtf8(addrTokens[4]);
             } else if (addrTokens.length == 4) {
-                retUrl = "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[2]) + "/" + encodingUtf8(addrTokens[3]);
+                retUrl = "/" + encodingUtf8(addrTokens[1]);
+                if (addrTokens[3].substring(addrTokens[3].length()-1).equals("구")) {
+                    //nation + do + si + gu
+                    retUrl +=  "/" + encodingUtf8(addrTokens[2]) + encodingUtf8(addrTokens[3]);
+                }
+                else {
+                    //nation + si + gu + dong
+                    retUrl += "/" + encodingUtf8(addrTokens[2]) + "/" + encodingUtf8(addrTokens[3]);
+                }
             } else if (addrTokens.length == 3) {
-                retUrl = "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[2]);
+                String lastChar = addrTokens[2].substring(addrTokens[2].length()-1);
+                if (lastChar.equals("읍") || lastChar.equals("면") || lastChar.equals("동")) {
+                    //nation + si + myeon,eup,dong
+                    retUrl = "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[2]);
+                }
+                else {
+                    //nation + si,do + si, gun, gu
+                    retUrl = "/" + encodingUtf8(addrTokens[1]) + "/" + encodingUtf8(addrTokens[2]);
+                }
+            } else if (addrTokens.length == 2) {
+                //nation + si,do
+                retUrl = "/" + encodingUtf8(addrTokens[1]);
             } else {
                 Log.e("AddressElement", "address is invalid");
             }
@@ -129,7 +149,7 @@ public class AddressesElement {
     }
 
     // if url address is changed utf-8, server read right  address.
-    private String encodingUtf8(String str) {
+    private static String encodingUtf8(String str) {
         String retStr = null;
         try {
             retStr = URLEncoder.encode(str, "utf-8");
