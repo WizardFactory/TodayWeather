@@ -48,6 +48,20 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
         reqMidData.regId = midRssData.regId;
 
         var dailyData = reqMidData.dailyData;
+
+        var nLandPubDate = 0;
+        if (reqMidData.landPubDate) {
+            nLandPubDate = +reqMidData.landPubDate;
+        }
+        var nTempPubDate = 0;
+        if (reqMidData.tempPubDate) {
+            nTempPubDate = +reqMidData.tempPubDate;
+        }
+        var nRssPubDate = 0;
+        if (reqMidData.rssPubDate) {
+            nRssPubDate = +reqMidData.rssPubDate;
+        }
+
         midRssData.midData.forEach(function (midData) {
             if (dailyData.length > 0) {
                 if (parseInt(midData.date)  < parseInt(dailyData[0].date) ) {
@@ -58,10 +72,14 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
 
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
-                    dailyData[i].taMin = Math.round(midData.taMin);
-                    dailyData[i].taMax = Math.round(midData.taMax);
-                    dailyData[i].wfAm = midData.wfAm;
-                    dailyData[i].wfPm = midData.wfPm;
+                    if (nTempPubDate < nRssPubDate) {
+                        dailyData[i].taMin = Math.round(midData.taMin);
+                        dailyData[i].taMax = Math.round(midData.taMax);
+                    }
+                    if (nLandPubDate < nRssPubDate) {
+                        dailyData[i].wfAm = midData.wfAm;
+                        dailyData[i].wfPm = midData.wfPm;
+                    }
                     dailyData[i].reliability = midData.reliability;
                     break;
                 }
