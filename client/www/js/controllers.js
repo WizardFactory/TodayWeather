@@ -2,28 +2,49 @@
 angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
-                                          $stateParams, $location, $ionicHistory, $sce, $ionicLoading) {
+                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading) {
 
+        var TABLET_WIDTH = 720;
+        var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth = window.innerWidth;
         var colWidth;
         var cityData = null;
 
-        $scope.forecastType = "short"; //mid, detail
+        $scope.forecastType = "short"; //mid, detail(aqi)
         var shortenAddress = "";
 
         //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
-        $scope.currentWeather;
+        //$scope.currentWeather;
         //{day: String, time: Number, t3h: Number, skyIcon: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
         //$scope.timeTable = [];
         //{week: String, skyIcon:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
         //$scope.dayTable = [];
         //[{name: String, values:[{name: String, value: Number}]}]
-        $scope.timeChart;
+        //$scope.timeChart;
         //[{values: Object, temp: Number}]
-        $scope.dayChart;
+        //$scope.dayChart;
 
-        $scope.timeWidth; //total width of timeChart and timeTable
-        $scope.dayWidth; //total width of dayChart and dayTable
+        //$scope.timeWidth; //total width of timeChart and timeTable
+        //$scope.dayWidth; //total width of dayChart and dayTable
+        $scope.imgPath = Util.imgPath;
+
+        $scope.getSentimentIcon = function (grade) {
+           switch (grade) {
+               case 1:
+                   return 'ic_sentiment_satisfied_white_24px.svg';
+               case 2:
+                   return 'ic_sentiment_neutral_white_24px.svg';
+               case 3:
+                   return 'ic_sentiment_dissatisfied_white_24px.svg';
+               case 4:
+                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+               case 5:
+                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+               default:
+                   console.log('Fail to find grade='+grade);
+           }
+            return 'ic_sentiment_neutral_white_24px.svg';
+        };
 
         var regionSize;
         var regionSumSize;
@@ -33,6 +54,29 @@ angular.module('starter.controllers', [])
         var smallTimeSize;
         var smallImageSize;
         var smallDigitSize;
+        var headerRatio = 0;
+        var contentRatio = 0;
+
+        if (window.innerWidth >= TABLET_WIDTH && window.innerWidth < window.innerHeight) {
+            headerRatio = 0.4;
+            contentRatio = 0.6;
+        }
+        else if (window.innerHeight / window.innerWidth < ASPECT_RATIO_16_9) {
+            headerRatio = 0.35;
+            contentRatio = 0.65;
+        }
+        else if (ionic.Platform.isIOS()) {
+            headerRatio = 0.4;
+            contentRatio = 0.6;
+        }
+        else if (ionic.Platform.isAndroid()) {
+            headerRatio = 0.37;
+            contentRatio = 0.63;
+        }
+        else {
+            headerRatio = 0.4;
+            contentRatio = 0.6;
+        }
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'forecast');
@@ -122,21 +166,21 @@ angular.module('starter.controllers', [])
             if (ionic.Platform.isIOS()) {
                 str += '<div style="height: 20px"></div>';
             }
-            str += '<p class="textFont" style="font-size:'+regionSize+'px; margin: 0">';
+            str += '<p id="cityInfo" class="textFont" style="font-size:'+regionSize+'px; margin: 0">';
             if (cityData.currentPosition) {
                 str += '<a class="icon ion-ios-location-outline" style="color: white;"></a>';
             }
             str += shortenAddress+'</p>';
-            str += '<div class="row row-no-padding"> <div style="margin: auto"> <div class="row row-no-padding">';
-            str +=      '<p style="font-size: '+bigDigitSize+'px; margin: 0">'+cityData.currentWeather.t1h+'</p>';
+            str += '<div class="row row-no-padding"> <div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">';
+            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+cityData.currentWeather.t1h+'</p>';
             str +=      '<div style="text-align: left; margin: auto">';
-            str +=          '<img style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
+            str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
             str +=          '<br>';
-            str +=          '<img style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
+            str +=          '<img id="imgBigSkyStateSize" style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
                                 cityData.currentWeather.skyIcon+'.png">';
             str +=      '</div>';
             str += '</div></div></div>';
-            str += '<p class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
+            str += '<p id="summary" class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
                 $scope.currentWeather.summary+'</p>';
             return str;
         }
@@ -175,46 +219,109 @@ angular.module('starter.controllers', [])
                 value = cityData.dayTable[i];
                 if (value.date > cityData.timeTable[0].date && value.date <= cityData.timeTable[cityData.timeTable.length-1].date) {
                     str += '<div class="col">';
-                    str +=   '<p style="font-size: '+smallTimeSize+'px; margin: 0; opacity: 0.84">';
+                    str +=   '<p class="caption" style="margin: 0;">';
                     str +=       $scope.getDayText(value);
-                    str +=       ' <span style="font-size: 13px; opacity: 0.54">';
-                    str +=           $scope.getDayForecast(value);
-                    str +=       '</span></p></div>';
+                    //str +=       ' <span style="font-size: 13px; opacity: 0.54">';
+                    //str +=           $scope.getDayForecast(value);
+                    //str +=       '</span>';
+                    str += '</p></div>';
                 }
             }
-            str += '<div style="width: '+colWidth/2+'px;"></div> </div>';
+            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
 
-            str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
-
-            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            str += '<div class="row row-no-padding">';
+            //str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=0; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                str += '<div class="col table-items">';
-                str += '<p style="font-size: '+smallTimeSize+'px; margin:auto">'+value.timeStr+'</p>';
-                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="img/'+value.tempIcon+'.png">';
-                str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.t3h+'˚</p>';
-                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+
-                        value.skyIcon+'.png">';
-                if (value.rn1 != undefined &&
-                    (value.date < cityData.currentWeather.date || value.time <= cityData.currentWeather.time))
-                {
-                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
-                    str += '<span style="font-size:10px">';
+                str += '<div class="col table-items" style="text-align: center;">';
+                //str += '<div class="col table-items table-border" style="text-align: center;">';
+                if (value.time == 24) {
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px; border-bottom : 1px solid rgba(254,254,254,0.5);">' + '0시' + '</p>';
+                    //str += '<p class="title" style="letter-spacing: 0; margin: 0;">' + '0시' + '</p>';
+                }
+                else {
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px; border-bottom : 1px solid rgba(254,254,254,0.5);">' + value.timeStr + '</p>';
+                    //str += '<p class="title" style="letter-spacing: 0; margin: 0;">' + value.timeStr + '</p>';
+                }
+                str += '</div>';
+            }
+            //str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
+            str += '</div>';
+
+            //str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
+            //for (i=0; i<cityData.timeTable.length-1; i++) {
+            //    value = cityData.timeTable[i];
+            //    str += '<div class="col table-items table-border" style="text-align: left">';
+            //    str += '<p class="title" style="letter-spacing:0; margin:0">'+value.t3h+'˚</p>';
+            //    str += '</div>';
+            //}
+            //str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
+
+            str += '<div class="row row-no-padding">';
+            str += '<div style="width: '+colWidth/2+'px;"></div>';
+            for (i=1; i<cityData.timeTable.length; i++) {
+                value = cityData.timeTable[i];
+                str += '<div class="col table-items table-border">';
+                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
+                str += '</div>';
+            }
+            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
+            str += '</div>';
+
+            str += '<div class="row row-no-padding">';
+            str += '<div style="width: '+colWidth/2+'px;"></div>';
+            for (i=1; i<cityData.timeTable.length; i++) {
+                value = cityData.timeTable[i];
+                str += '<div class="col table-items table-border">';
+                if (value.pop) {
+                    str += '<p class="subheading" style="letter-spacing:0; margin: auto">'+
+                            //'<a class="icon ion-umbrella"></a>' +
+                        value.pop + '<small style="font-size: 10px">%</small></p>';
+                }
+                str += '</div>';
+            }
+            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
+            str += '</div>';
+
+            str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
+            for (i=1; i<cityData.timeTable.length; i++) {
+                value = cityData.timeTable[i];
+                str += '<div class="col table-items table-border">';
+                if (value.rn1 && value.rn1 > 0) {
+                    str += '<p class="caption" style="letter-spacing:0; margin: auto">'+value.rn1;
+                    str += '<small style="font-size:10px">';
                     if (value.pty === 3) {
                         str += 'cm';
                     }
                     else {
                         str += 'mm';
                     }
-                    str += '</span></p>'
+                    str += '</small></p>';
                 }
-                else {
-                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.pop+
-                            '<small>%</small></p>';
+                else if ((value.r06 && value.r06 > 0) || (value.s06 && value.s06 > 0)) {
+                    var v = 0;
+                    if (value.r06) {
+                        v = value.r06;
+                    }
+                    else {
+                        v = value.s06;
+                    }
+                    str += '<p class="caption" style="letter-spacing: 0; margin: auto">'+v;
+                    str += '<small style="font-size:10px">';
+                    if (value.pty === 3) {
+                        str += 'cm';
+                    }
+                    else {
+                        str += 'mm';
+                    }
+                    str += '</small></p>';
                 }
+
                 str += '</div>';
             }
-            str += '</div>';
+            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
+
+            //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
             return str;
         }
 
@@ -241,12 +348,12 @@ angular.module('starter.controllers', [])
             var i;
             var value;
             var tmpStr = '-';
-            str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
+            //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
             str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
             for (i=0; i<cityData.dayTable.length; i++) {
                 value = cityData.dayTable[i];
                 str += '<div class="col table-items">';
-                str +=  '<p style="margin: auto; font-size: '+smallTimeSize+'px;';
+                str +=  '<p class="subheading" style="margin: 4px;';
                 if (value.fromToday === 0)  {
                     str += ' border-bottom: 1px solid rgba(255,255,255,0.8);';
                     str += ' opacity: 1;">';
@@ -255,27 +362,61 @@ angular.module('starter.controllers', [])
                     str += ' opacity: 0.84;">';
                 }
                 str +=  value.week + '</p>';
+                if (value.date) {
+                    str +=  '<p class="body1" style="margin: auto; latter-spacing: 0;">';
+                    str +=  value.date.substr(6,2) + '</p>';
+                }
+                str += '</div>';
+            }
+            str += '</div>';
+
+            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            for (i=0; i<cityData.dayTable.length; i++) {
+                value = cityData.dayTable[i];
+                str += '<div class="col table-items">';
                 str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
-                            Util.imgPath+'/'+value.skyIcon+'.png">';
-                if (value.rn1 != undefined) {
-                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
-                    str += '<span style="font-size:10px">';
+                            Util.imgPath+'/'+value.skyAm+'.png">';
+                if(value.skyAm != value.skyPm) {
+                    str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
+                        Util.imgPath+'/'+value.skyPm+'.png">';
+                }
+
+                if (value.pop != undefined && value.pop > 0) {
+                    tmpStr = value.pop == undefined?'-':value.pop+'<small style="font-size: 10px">%</small>';
+                    str += '<p class="subheading" style="margin: auto">'+tmpStr+'</p>';
+                }
+
+                if (value.rn1 != undefined && value.rn1 > 0) {
+                    str += '<p class="caption" style="margin: auto; letter-spacing: 0;">'+value.rn1;
+                    str += '<small style="font-size:10px">';
                     if (value.pty === 3) {
                        str += 'cm';
                     }
                     else {
                        str += 'mm';
                     }
-                    str += '</span></p>';
+                    str += '</small></p>';
                 }
-                else {
-                    tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
-                    str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
+                else if ((value.r06 && value.r06 > 0) || (value.s06 && value.s06 > 0)) {
+                    var v = 0;
+                    if (value.r06) {
+                        v = value.r06;
+                    }
+                    else {
+                        v = value.s06;
+                    }
+                    str += '<p class="caption" style="letter-spacing: 0; margin: auto">'+v;
+                    str += '<small style="font-size:10px">';
+                    if (value.pty === 3) {
+                        str += 'cm';
+                    }
+                    else {
+                        str += 'mm';
+                    }
+                    str += '</small></p>';
                 }
-                str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto" src="img/'+value.humidityIcon+'.png">';
-                tmpStr = value.reh == undefined?'-':value.reh+'<small>%</small>';
-                str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
-                str += '</div>';
+
+               str += '</div>';
             }
             str += '</div>';
             return str;
@@ -284,6 +425,7 @@ angular.module('starter.controllers', [])
         function applyWeatherData() {
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData === null || cityData.address === null) {
+                console.log("fail to getCityOfIndex");
                 return;
             }
 
@@ -309,17 +451,26 @@ angular.module('starter.controllers', [])
             // AppleWatch.setWeatherData(cityData);
 
             setTimeout(function () {
+                //var mainHeight = document.getElementById('ionContentBody').offsetHeight;
+                var mainHeight = window.innerHeight * contentRatio;
+                var padding = 0;
+
+                //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
+                if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                    padding += 25;
+                }
+
+                //topMainBox height is startHeight
+                var chartShortHeight = mainHeight - (smallImageSize+168+padding);
+                $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
+                var chartMidHeight = mainHeight - (smallDigitSize*2+smallImageSize+136+padding);
+                $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
+
                 $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
                 $scope.shortTable =  $sce.trustAsHtml(getShortTable());
                 $scope.midTable = $sce.trustAsHtml(getMidTable());
 
-                if ($scope.forecastType === 'short') {
-                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                }
-                else if ($scope.forecastType === 'mid') {
-                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                }
-            }, 100);
+            });
         }
 
         function loadWeatherData() {
@@ -411,7 +562,7 @@ angular.module('starter.controllers', [])
                 index = 7; //yesterday 21h
 
                 //large tablet
-                if (bodyWidth >= 720) {
+                if (bodyWidth >= TABLET_WIDTH) {
                     return getWidthPerCol()*index;
                 }
 
@@ -434,60 +585,70 @@ angular.module('starter.controllers', [])
                 if (bodyWidth >= 720) {
                     return 0;
                 }
-
-                // Sunday is 0
-                var day = time.getDay();
-                var dayPadding = 1;
-
-                //monday는 토요일부터 표시
-                if (day === 1) {
-                    index = 5;
-                }
-                else {
-
-                    //sunday는 monday까지 보이게
-                    if (day === 0) {
-                        day = 7;
-                        dayPadding += 1;
-                    }
-
-                    index = 6 + dayPadding - day;
-                }
+                //next tomorrow 까지 표시.
+                index = 3;
                 return getWidthPerCol()*index;
             }
             return getWidthPerCol()*index;
         }
 
-        $scope.changeForecastType = function() {
-            if ($scope.forecastType === 'short') {
-                $scope.forecastType = 'mid';
-                $rootScope.viewColor = '#8BC34A';
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#689F38');
-                }
-                //async drawing for preventing screen cut #544
-                setTimeout(function () {
-                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                }, 0);
-            }
-            else if ($scope.forecastType === 'mid') {
-                $scope.forecastType = 'detail';
-                $rootScope.viewColor = '#00BCD4';
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0097A7');
-                }
-            }
-            else if ($scope.forecastType === 'detail') {
+        /**
+         * event가 두번 들어오는 경우가 있어 toggle은 사용 못함.
+         * 값을 지정하여도, 반복해서 들어오는 경우가 있음. event 자체가 두번 불리는 것으로 보임
+         * @param forecastType
+         */
+        $scope.changeForecastType = function(forecastType) {
+            console.log("changeForecastType to "+forecastType);
+            if (forecastType === 'short') {
                 $scope.forecastType = 'short';
                 $rootScope.viewColor = '#03A9F4';
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
-                setTimeout(function () {
-                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                }, 0);
+            }
+            else if (forecastType === 'mid') {
+                $scope.forecastType = 'mid';
+                $rootScope.viewColor = '#8BC34A';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#689F38');
+                }
+            }
+            else if (forecastType === 'detail') {
+                if ($scope.currentWeather.arpltn != undefined) {
+                    $scope.forecastType = 'detail';
+                    $rootScope.viewColor = '#00BCD4';
+                    if (window.StatusBar) {
+                        StatusBar.backgroundColorByHexString('#0097A7');
+                    }
+                }
+                else {
+                    $scope.forecastType = 'short';
+                    $rootScope.viewColor = '#03A9F4';
+                    if (window.StatusBar) {
+                        StatusBar.backgroundColorByHexString('#0288D1');
+                    }
+                }
             }
         };
+
+        /**
+         * ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+         */
+        $scope.$watch('forecastType', function (newValue) {
+            if (newValue === 'short')  {
+                setTimeout(function () {
+                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                }, 0);
+            }
+            else if (newValue === 'mid') {
+                setTimeout(function () {
+                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
+                    $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
+                }, 0);
+            }
+
+            $ionicScrollDelegate.$getByHandle("body").scrollTo(0, 0, false);
+        });
 
         $scope.onSwipeLeft = function() {
             if (WeatherInfo.getEnabledCityCount() === 1) {
@@ -511,6 +672,10 @@ angular.module('starter.controllers', [])
 
         $scope.getDayText = function (value) {
             return value.fromTodayStr + ' ' + value.date.substr(4,2) + '.' + value.date.substr(6,2);
+        };
+
+        $scope.convertMMDD = function (value) {
+            return value.substr(4,2)+'/'+value.substr(6,2);
         };
 
         $scope.getDayForecast = function (value) {
@@ -539,6 +704,143 @@ angular.module('starter.controllers', [])
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
         });
+
+        /* The height of a toolbar by default in Angular Material */
+        var legacyToolbarH = 58;
+        var startHeight = window.innerHeight * headerRatio;
+        var headerE         = angular.element(document.querySelector('[md-page-header]'));
+        var picture        = angular.element(document.querySelector('[md-header-picture]'));
+        var alphaBar        = angular.element(document.getElementById('alphaBar'));
+        var pBigDigit;
+        var imgBigTempPointSize;
+        var imgBigSkyStateSize;
+        var pCityInfo;
+        var pSummary;
+        var divWeatherInfo;
+        var divBigInfoBox;
+
+        var scrollHeight;
+        var minBigDigitSize = 36;
+        var minBigTempPointSize = 10;
+        var minBigSkyStateSize = 21;
+        var bodyFontSize = 12;
+        var arrayWidth;
+
+        if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
+            startHeight -= 25;
+        }
+
+        headerE.css('height', startHeight+'px');
+        picture.css('height', startHeight+'px');
+        //0288D1
+        //alphaBar.css('background-color','rgba(2,136,209,0)');
+
+        function drawBigInfo() {
+            //baseDimensions = document.querySelector('[md-header-picture]').getBoundingClientRect();
+            //headerE.css('height', (baseDimensions.height)+'px');
+
+            pBigDigit        = angular.element(document.getElementById('pBigDigit'));
+            imgBigTempPointSize  = angular.element(document.getElementById('imgBigTempPointSize'));
+            imgBigSkyStateSize = angular.element(document.getElementById('imgBigSkyStateSize'));
+            pCityInfo = angular.element(document.getElementById('cityInfo'));
+            pSummary = angular.element(document.getElementById('summary'));
+            //divBigInfoBox = angular.element(document.getElementById('bigInfoBox'));
+            divWeatherInfo = angular.element(document.getElementById('weatherInfo'));
+            divWeatherInfo.css('left', (headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth)/2);
+
+            divBigInfoBox = angular.element(document.getElementById('bigInfoBox'));
+
+            arrayWidth = headerE[0].offsetWidth*0.1;
+
+            var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
+            console.log('scroll '+JSON.stringify(rect));
+            if (!scrollHeight) {
+                scrollHeight = document.getElementById('contentBody').offsetHeight -
+                    document.getElementById('ionContentBody').offsetHeight + 1;
+                console.log(scrollHeight);
+            }
+
+            var height;
+            var percent;
+            var percent2;
+
+            if (!rect) {
+                percent = 0;
+                height = startHeight;
+                percent2 = 0;
+            }
+            else {
+                percent = rect.top / scrollHeight;
+                height = startHeight - rect.top;
+                percent2 = rect.top/(startHeight - legacyToolbarH);
+            }
+            //var height =  startHeight - ((startHeight-legacyToolbarH)*percent);
+            if (height < legacyToolbarH) {
+                height = legacyToolbarH;
+            }
+            console.log(height);
+            console.log(percent);
+            headerE.css('height', height+'px');
+            alphaBar.css('background-color','rgba(2,136,209,'+percent+')');
+
+            pCityInfo.css('position', 'fixed');
+            divWeatherInfo.css('position', 'fixed');
+            pSummary.css('position', 'fixed');
+
+            var weatherInfoTop = (height-divWeatherInfo[0].offsetHeight)/2;
+            console.log('divWeatherinfo = '+divWeatherInfo[0].offsetHeight);
+            divWeatherInfo.css('top', weatherInfoTop+'px');
+
+            if (height >= (pCityInfo[0].offsetHeight+divWeatherInfo[0].offsetHeight+pSummary[0].offsetHeight)) {
+                pBigDigit.css('font-size', bigDigitSize - (bigDigitSize-minBigDigitSize)*percent2+'px');
+                imgBigTempPointSize.css('height', bigTempPointSize - (bigTempPointSize-minBigTempPointSize)*percent2 +'px');
+                imgBigSkyStateSize.css('height', bigSkyStateSize - (bigSkyStateSize-minBigSkyStateSize)*percent2 + 'px');
+
+                pCityInfo.css('font-size', regionSize-(regionSize-bodyFontSize)*percent2+'px');
+                pSummary.css('font-size', regionSumSize-(regionSumSize-bodyFontSize)*percent2+'px');
+
+                var cityInfoLeft = (headerE[0].offsetWidth-pCityInfo[0].offsetWidth)/2;
+                var cityInfoTop = (height-pCityInfo[0].offsetHeight)/2 - divWeatherInfo[0].offsetHeight/2 - 18;
+                pCityInfo.css('left', cityInfoLeft+'px');
+                pCityInfo.css('top', cityInfoTop+'px');
+
+                var summaryLeft = (headerE[0].offsetWidth-pSummary[0].offsetWidth)/2;
+                var summaryTop = (height-pSummary[0].offsetHeight)/2 + divWeatherInfo[0].offsetHeight/2 + 6;
+                pSummary.css('left', summaryLeft+'px');
+                pSummary.css('top', summaryTop+'px');
+
+                var weatherInfoLeft = (headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth)/2;
+                divWeatherInfo.css('left', weatherInfoLeft+'px');
+            }
+            else {
+                pBigDigit.css('font-size', minBigDigitSize +'px');
+                imgBigTempPointSize.css('height', minBigTempPointSize +'px');
+                imgBigSkyStateSize.css('height', minBigSkyStateSize + 'px');
+
+                pCityInfo.css('font-size', bodyFontSize+'px');
+                pSummary.css('font-size', bodyFontSize+'px');
+
+                pCityInfo.css('left', arrayWidth+'px');
+                pCityInfo.css('top', height/2-pCityInfo[0].offsetHeight+'px');
+                pSummary.css('left', arrayWidth+'px');
+                pSummary.css('top', height/2+'px');
+
+                var weatherInfoLeft = headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth-arrayWidth;
+                divWeatherInfo.css('left', weatherInfoLeft+'px');
+            }
+
+        }
+
+        //$scope.headerScroll = drawBigInfo;
+        $scope.headerScroll = function drawShadow() {
+            var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
+            if (rect.top > 0) {
+                alphaBar.css('box-shadow','0px 1px 5px 0 rgba(0, 0, 0, 0.26)');
+            }
+            else {
+                alphaBar.css('box-shadow','initial');
+            }
+        };
 
         init();
     })

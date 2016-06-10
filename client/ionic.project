@@ -11,8 +11,8 @@
   ],
   "proxies": [
     {
-      "path": "./",
-      "proxyUrl": "http://localhost:3000/v000705"
+      "path": "/v000705",
+      "proxyUrl": "http://tw-wzdfac.rhcloud.com/v000705"
     }
   ]
 }
