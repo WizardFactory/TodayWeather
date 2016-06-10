@@ -99,7 +99,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                    var margin = {top: 12, right: 0, bottom: 12, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg, initLine, line;
 
@@ -184,6 +184,32 @@ angular.module('starter', [
                             .append('g')
                             .attr('class', 'line-group');
 
+                        // draw guideLine
+                        var guideLines = lineGroups.selectAll('guide-line')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line');
+
+                        guideLines.exit().remove();
+
+                        guideLines.attr('x1', function (d, i) {
+                            return x.rangeBand() * i + x.rangeBand() / 2+1;
+                            //return x.rangeBand() * i+1;
+                        })
+                            .attr('x2', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+1;
+                                //return x.rangeBand() * i+1;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .style('stroke-dasharray', ("1, 1"))
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.2');
+
                         // draw line
                         var lines = lineGroups.selectAll('.line')
                             .data(function(d) {
@@ -220,18 +246,18 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'circle-' + d.name;
                             })
-                            .attr('r', 2)
+                            .attr('r', 10)
                             .attr('cx', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.attr('cy', function (d) {
                             return y(d.value.t3h);
@@ -256,14 +282,16 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'point circle-' + d.name + '-current';
                             })
-                            .attr('r', 5)
+                            .attr('r', function () {
+                                return currentTime % 3 == 0 ? 11:5;
+                            })
                             .attr('cx', function (d) {
                                 var cx1, cx2;
                                 for (var i = 0; i < d.values.length; i = i + 1) {
@@ -275,7 +303,7 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.attr('cx', function (d) {
                             var cx1, cx2;
@@ -326,17 +354,9 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
+                            .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
-                                    }
-                                }
-                                return '';
+                                return d.value.t3h;
                             });
 
                         texts.enter()
@@ -344,26 +364,32 @@ angular.module('starter', [
                             .attr('class', function (d) {
                                 return 'text-' + d.name;
                             })
+                            .style("fill", function (d) {
+                                //빨강점에 글자가 들어가므로 색깔 선정 필요.
+                                //if (d.name == "today") {
+                                //    if (currentTime.getHours() == 0) {
+                                //        if (d.value.time == 24 && d.value.day === "어제") {
+                                //            return '#ffffff';
+                                //        }
+                                //    }
+                                //    else if (d.value.time == currentTime.getHours() && d.value.day === "오늘") {
+                                //        return '#ffffff';
+                                //    }
+                                //}
+                                return '#0288D1';
+                            })
                             .attr('text-anchor', 'middle')
                             .attr('dy', margin.top)
                             .attr('x', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
+                            .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
-                                    }
-                                }
-                                return '';
+                                return d.value.t3h;
                             });
 
                         texts.attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top - margin.textTop;
+                            return y(d.value.t3h) - margin.bottom + margin.textTop;
                         });
 
                         texts.exit()
@@ -425,7 +451,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                    var margin = {top: 18, right: 0, bottom: 18, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg;
 
@@ -693,6 +719,7 @@ angular.module('starter', [
 
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
+        $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
 
         var timePickerObj = {
             format: 12,

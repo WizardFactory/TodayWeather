@@ -771,6 +771,8 @@ angular.module('starter.services', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.skyIcon = getHighPrioritySky(skyAm, skyPm);
+                data.skyAm = skyAm;
+                data.skyPm = skyPm;
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
@@ -1301,7 +1303,7 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "./";
+            //obj.url = "./v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
