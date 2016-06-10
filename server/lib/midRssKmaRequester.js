@@ -17,7 +17,7 @@ var collectTown = require('../lib/collectTownForecast');
 function MidRssKmaRequester() {
     this._nextGetTime = new Date();
     this._url = 'http://www.kma.go.kr/weather/forecast/mid-term-rss3.jsp';
-    this._updateTimeTable =  [5, 20];   //kr 06, 18
+    this._updateTimeTable =  [9, 21];   //kr 18, 06
 }
 
 MidRssKmaRequester.prototype.checkGetTime = function(time) {

@@ -144,7 +144,15 @@ public class WeatherElement {
         if (weatherCurrent != null) {
             retWidgetData = new WidgetData();
             // set location
-            retWidgetData.setLoc(townName);
+            if (townName != null && townName.length() > 0) {
+                retWidgetData.setLoc(townName);
+            }
+            else if (cityName != null && cityName.length() > 0) {
+                retWidgetData.setLoc(cityName);
+            }
+            else if (regionName != null && regionName.length() > 0) {
+                retWidgetData.setLoc(regionName);
+            }
 
             // get current data
             WeatherData current = new WeatherData();

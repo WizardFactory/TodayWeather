@@ -101,6 +101,8 @@ LifeIndexKmaController._addIndexDataToList = function(destList, srcList, indexNa
         for (; i<srcList.length && j<destList.length; i++, j++) {
             if (srcList[i].date != destList[j].date) {
                 log.error('Fail to find lifeIndex data of date='+destList[j].date);
+                //keep src index
+                i--;
                 continue;
             }
 

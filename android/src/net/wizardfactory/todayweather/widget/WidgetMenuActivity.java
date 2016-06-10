@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.widget;
 
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,6 +11,7 @@ import android.widget.LinearLayout;
 
 import net.wizardfactory.todayweather.MainActivity;
 import net.wizardfactory.todayweather.R;
+import net.wizardfactory.todayweather.widget.Provider.W2x1WidgetProvider;
 
 import org.apache.cordova.CordovaActivity;
 
@@ -23,6 +26,7 @@ public class WidgetMenuActivity extends CordovaActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContxt = getApplicationContext();
+
         setContentView(R.layout.widget_menu);
     }
 
@@ -41,7 +45,7 @@ public class WidgetMenuActivity extends CordovaActivity {
         Button updateBtn = (Button)findViewById(R.id.update_button);
         updateBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
-                updateWidet();
+                updateWidget();
             }
         });
 
@@ -54,9 +58,15 @@ public class WidgetMenuActivity extends CordovaActivity {
         });
     }
 
-    private void updateWidet() {
-        Intent serviceIntent = new Intent(mContxt, WidgetUpdateService.class);
-        mContxt.startService(serviceIntent);
+    private void updateWidget() {
+        Intent intent = new Intent(this, W2x1WidgetProvider.class);
+        intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        ComponentName thisWidget = new ComponentName(mContxt, W2x1WidgetProvider.class);
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(mContxt);
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
+        sendBroadcast(intent);
+
         finish();
     }
 
