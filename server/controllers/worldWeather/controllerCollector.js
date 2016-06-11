@@ -21,9 +21,10 @@ function ConCollector() {
     var self = this;
 
     self.keybox = config.keyString;
+    self.wuLimitation = 2;//80;  // there is limitation to get 100 datas for a mimute from WU server.
 }
 
-ConCollector.prototype.leadingZeros = function(n, digits) {
+ConCollector.prototype._leadingZeros = function(n, digits) {
     var zero = '';
     n = n.toString();
 
@@ -35,7 +36,7 @@ ConCollector.prototype.leadingZeros = function(n, digits) {
     return zero + n;
 };
 
-ConCollector.prototype.getTimeString = function(tzOffset) {
+ConCollector.prototype._getTimeString = function(tzOffset) {
     var self = this;
     var now = new Date();
     var result;
@@ -51,11 +52,211 @@ ConCollector.prototype.getTimeString = function(tzOffset) {
     now.setTime(tz);
 
     result =
-        self.leadingZeros(now.getFullYear(), 4) +
-        self.leadingZeros(now.getMonth() + 1, 2) +
-        self.leadingZeros(now.getDate(), 2) +
-        self.leadingZeros(now.getHours(), 2) +
-        self.leadingZeros(now.getMinutes(), 2);
+        self._leadingZeros(now.getFullYear(), 4) +
+        self._leadingZeros(now.getMonth() + 1, 2) +
+        self._leadingZeros(now.getDate(), 2) +
+        self._leadingZeros(now.getHours(), 2) +
+        self._leadingZeros(now.getMinutes(), 2);
+
+    return result;
+};
+
+
+ConCollector.prototype._getGeocodeList = function(db, callback){
+    db.getGeocode(function(err, resultList){
+        if(err){
+            print.error('Fail to get geocode');
+        }
+        callback(err, resultList);
+    });
+};
+
+ConCollector.prototype._makeDefaultWuSummary = function(){
+    return {
+        date:       0,
+        sunrise:    -100,
+        sunset:     -100,
+        moonrise:   -100,
+        moonset:    -100,
+        tmax:       -100,
+        tmin:       -100,
+        precip:     -100,
+        rain:       -100,
+        snow:       -100,
+        prob:       -100,
+        humax:      -100,
+        humin:      -100,
+        windspdmax: -100,
+        windgstmax: -100,
+        slpmax:     -100,
+        slpmin:     -100
+    };
+};
+
+ConCollector.prototype._makeDefaultWuForecast = function(){
+    return {
+        date:       0,         // YYYYMMDD,
+        time:       0,         // HHMM
+        utcDate:    0,         // YYYYMMDD,,
+        utcTime:    0,         // HHMM
+        desc:       '',        // string
+        code:       -100,      //
+        tmp:        -100,      //
+        ftmp:       -100,      // 체감 온도
+        winddir:    -100,      // degree(0~360), 풍향
+        windspd:    -100,      // metres per second
+        windgst:    -100,      // metres per second
+        cloudlow:   -100,      // percent, low level cloud
+        cloudmid:   -100,      // percent, mid level cloud
+        cloudhigh:  -100,      // percent, high level cloud
+        cloudtot:   -100,      // percent  total cloud
+        precip:     -100,      // millimeters, total 강수량
+        rain:       -100,      // millimeters
+        snow:       -100,      // millimeters
+        fsnow:      -100,      // centimetres, fresh snowfall - if accumulated
+        prob:       -100,      // percent, 강수 확율
+        humid:      -100,      // percent, 습도
+        dewpoint:   -100,      // celcius, 이슬점
+        vis:        -100,      // kilometers, 가시거
+        splmax:     -100       // millibars, sea level pressure
+    }
+};
+ConCollector.prototype._divideList = function(list, unit){
+    var resultList = [];
+    var unitList = [];
+
+    list.forEach(function(item, i){
+        unitList.push(item);
+        if(((i+1) % unit) === 0 ){
+            resultList.push(unitList);
+            unitList = [];
+        }
+    });
+
+    return resultList;
+};
+
+
+ConCollector.prototype._getAndSaveWuForecast = function(list, key, retryCount, callback){
+    var self = this;
+    var failList = [];
+
+    if(list.length === 0){
+        print.info('WuF> There is no geocode');
+        callback(0, failList);
+        return;
+    }
+
+    async.mapSeries(list,
+        function(location, cb){
+            var requester = new wuRequester;
+            requester.getForecast(location.geocode, key, function(err, result){
+                if(err){
+                    print.error('WuF> get fail', location);
+                    log.error('WuF> get fail', location);
+                    failList.push(location);
+                    cb(null);
+                    return;
+                }
+
+                log.info(result);
+                self.saveWuForecast(location.geocode, result, function(err){
+                    cb(null);
+                })
+            });
+        },
+        function(err){
+            if(err){
+                print.error('WuF> ');
+            }
+
+            if(retryCount > 0){
+                return self._getAndSaveWuForecast(failList, key, --retryCount, callback);
+            }else{
+                callback(err, failList);
+                return;
+            }
+        }
+    );
+};
+
+ConCollector.prototype._parseWuForecast = function(src){
+    var self = this;
+    var result = [];
+
+    src.Days.forEach(function(day, index){
+        var summary = {};
+        var forecastList = [];
+
+        summary = self._makeDefaultWuSummary();
+
+        var dayDate = day.date.split('/');
+        dayDate = parseInt(''+dayDate[2]+dayDate[1]+dayDate[0]);
+
+        summary.date = dayDate;
+        summary.sunrise = parseInt(day.sunrise_time.replace(':',''));
+        summary.sunset = parseInt(day.sunset_time.replace(':',''));
+        summary.moonrise = parseInt(day.moonrise_time.replace(':',''));
+        summary.moonset = parseInt(day.moonset_time.replace(':',''));
+        summary.tmax = parseFloat(day.temp_max_c);
+        summary.tmin = parseFloat(day.temp_min_c);
+        summary.precip = parseInt(day.precip_total_mm);
+        summary.rain = parseInt(day.rain_total_mm);
+        summary.snow = parseInt(day.snow_total_mm);
+        summary.prob = parseInt(day.prob_precip_pct);
+        summary.humax = parseInt(day.humid_max_pct);
+        summary.humin = parseInt(day.humid_min_pct);
+        summary.windspdmax = parseInt(day.windspd_max_ms);
+        summary.windgstmax = parseInt(day.windgst_max_ms);
+        summary.slpmax = parseInt(day.slp_max_mb);
+        summary.slpmin = parseInt(day.slp_min_mb);
+
+        day.Timeframes.forEach(function(frame, idx){
+            var forecast = self._makeDefaultWuForecast();
+
+            var frameDate = frame.date.split('/');
+            frameDate = parseInt(''+frameDate[2]+frameDate[1]+frameDate[0]);
+
+            forecast.date = frameDate;
+            forecast.time = parseInt(frame.time);
+
+            var utcDate = frame.utcdate.split('/');
+            utcDate = parseInt(''+utcDate[2]+utcDate[1]+utcDate[0]);
+
+            forecast.utcDate = utcDate;
+            forecast.utcTime = parseInt(frame.utctime);
+            forecast.desc = frame.wx_desc;
+            forecast.code = parseInt(frame.wx_code);
+            forecast.tmp = parseFloat(frame.temp_c);
+            forecast.ftmp = parseFloat(frame.feelslike_c);
+            forecast.winddir = parseInt(frame.winddir_deg);
+            forecast.windspd = parseInt(frame.windspd_ms);
+            forecast.windgst = parseInt(frame.windgst_ms);
+            forecast.cloudlow = parseInt(frame.cloud_low_pct);
+            forecast.cloudmid = parseInt(frame.cloud_mid_pct);
+            forecast.cloudhigh = parseInt(frame.cloud_high_pct);
+            forecast.cloudtot = parseInt(frame.cloudtotal_pct);
+            forecast.precip = parseInt(frame.precip_mm);
+            forecast.rain = parseInt(frame.rain_mm);
+            forecast.snow = parseInt(frame.snow_mm);
+            forecast.fsnow = parseInt(frame.snow_accum_cm);
+
+            // sometimes, the server scnd percent as '<1'. it can't be changed number.
+            if(parseInt(frame.prob_precip_pct) != typeof Number){
+                forecast.prob = 0
+            }else{
+                forecast.prob = parseInt(frame.prob_precip_pct);
+            }
+            forecast.humid = parseInt(frame.humid_pct);
+            forecast.dewpoint = parseInt(frame.dewpoint_c);
+            forecast.vis = parseInt(frame.vis_km);
+            forecast.splmax = parseInt(frame.slp_mb);
+
+            forecastList.push(forecast);
+        });
+
+        result.push({summary: summary, forecast:forecastList});
+    });
 
     return result;
 };
@@ -67,10 +268,10 @@ ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
         async.waterfall([
                 function(first_cb){
                     // 1. get location list which contains either geocode or city name.
-                    self.getGeocodeList(modelGeocode, function(err, list){
+                    self._getGeocodeList(modelGeocode, function(err, list){
                         if(err){
                             print.error('Fail to get geocode list');
-                            first_cb('fail:getGeocodeList');
+                            first_cb('fail:_getGeocodeList');
                             return;
                         }
 
@@ -122,59 +323,44 @@ ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
     }
 };
 
-ConCollector.prototype.getGeocodeList = function(db, callback){
-    db.getGeocode(function(err, resultList){
-        if(err){
-            print.error('Fail to get geocode');
-        }
-        callback(err, resultList);
-    });
-};
-
 ConCollector.prototype.processWuForecast = function(list, isRetry, callback){
     var self = this;
     var key = self.getWuKey();
     var failList = [];
 
-    if(list.length === 0){
-        print.info('WuF> There is no geocode');
-        callback(0, failList);
-        return;
-    }
     try{
-        async.mapSeries(list,
-            function(location, cb){
-                var requester = new wuRequester;
-                requester.getForecast(location.geocode, key, function(err, result){
-                    if(err){
-                        print.error('WuF> get fail', location);
-                        failList.push(location);
-                        cb(null);
+        print.info('WuF> Total count: ', list.length);
+        var dividedList = self._divideList(list, self.wuLimitation);
+        print.info('WuF> divided count : ', dividedList.length);
+
+        self._getAndSaveWuForecast(dividedList.shift(), key, isRetry, function(err, resultList) {
+            failList.concat(resultList);
+            if(dividedList.length === 0){
+                log.info('WuF> Finish to collect WU forecast');
+                callback(0, failList);
+                return;
+            }
+        });
+
+        if(dividedList.length > 0){
+            var timer = setInterval(function(){
+                print.info('WuF> Do task : ', dividedList.length);
+                self._getAndSaveWuForecast(dividedList.shift(), key, isRetry, function(err, resultList){
+                    failList.concat(resultList);
+
+                    if(dividedList.length === 0){
+                        print.info('WuF> clear interval timer');
+                        clearInterval(timer);
+                        callback(0, failList);
                         return;
                     }
-
-                    log.info(result);
-                    self.saveWuForecast(location.geocode, result, function(err){
-                        cb(null);
-                    })
                 });
-            },
-            function(err){
-                if(err){
-                    print.error('');
-                }
-
-                if(isRetry > 0){
-                    return self.processWuForecast(failList, --isRetry, callback);
-                }else{
-                    callback(err, failList);
-                    return;
-                }
-            }
-        );
+            }, 60 * 1000);
+        }
     }
     catch(e){
         print.error('Exception!!!');
+        log.error('WuF> Exception!!!');
         if(callback){
             callback(e);
         }
@@ -183,138 +369,6 @@ ConCollector.prototype.processWuForecast = function(list, isRetry, callback){
 
 ConCollector.prototype.processWuCurrent = function(list, callback){
     var self = this;
-};
-
-ConCollector.prototype.makeDefaultWuSummary = function(){
-    return {
-        date:       0,
-        sunrise:    -100,
-        sunset:     -100,
-        moonrise:   -100,
-        moonset:    -100,
-        tmax:       -100,
-        tmin:       -100,
-        precip:     -100,
-        rain:       -100,
-        snow:       -100,
-        prob:       -100,
-        humax:      -100,
-        humin:      -100,
-        windspdmax: -100,
-        windgstmax: -100,
-        slpmax:     -100,
-        slpmin:     -100
-    };
-};
-
-ConCollector.prototype.makeDefaultWuForecast = function(){
-    return {
-        date:       0,         // YYYYMMDD,
-        time:       0,         // HHMM
-        utcDate:    0,         // YYYYMMDD,,
-        utcTime:    0,         // HHMM
-        desc:       '',        // string
-        code:       -100,      //
-        tmp:        -100,      //
-        ftmp:       -100,      // 체감 온도
-        winddir:    -100,      // degree(0~360), 풍향
-        windspd:    -100,      // metres per second
-        windgst:    -100,      // metres per second
-        cloudlow:   -100,      // percent, low level cloud
-        cloudmid:   -100,      // percent, mid level cloud
-        cloudhigh:  -100,      // percent, high level cloud
-        cloudtot:   -100,      // percent  total cloud
-        precip:     -100,      // millimeters, total 강수량
-        rain:       -100,      // millimeters
-        snow:       -100,      // millimeters
-        fsnow:      -100,      // centimetres, fresh snowfall - if accumulated
-        prob:       -100,      // percent, 강수 확율
-        humid:      -100,      // percent, 습도
-        dewpoint:   -100,      // celcius, 이슬점
-        vis:        -100,      // kilometers, 가시거
-        splmax:     -100       // millibars, sea level pressure
-    }
-};
-
-ConCollector.prototype.parseWuForecast = function(src){
-    var self = this;
-    var result = [];
-
-    src.Days.forEach(function(day, index){
-        var summary = {};
-        var forecastList = [];
-
-        summary = self.makeDefaultWuSummary();
-
-        var dayDate = day.date.split('/');
-        dayDate = parseInt(''+dayDate[2]+dayDate[1]+dayDate[0]);
-
-        summary.date = dayDate;
-        summary.sunrise = parseInt(day.sunrise_time.replace(':',''));
-        summary.sunset = parseInt(day.sunset_time.replace(':',''));
-        summary.moonrise = parseInt(day.moonrise_time.replace(':',''));
-        summary.moonset = parseInt(day.moonset_time.replace(':',''));
-        summary.tmax = parseFloat(day.temp_max_c);
-        summary.tmin = parseFloat(day.temp_min_c);
-        summary.precip = parseInt(day.precip_total_mm);
-        summary.rain = parseInt(day.rain_total_mm);
-        summary.snow = parseInt(day.snow_total_mm);
-        summary.prob = parseInt(day.prob_precip_pct);
-        summary.humax = parseInt(day.humid_max_pct);
-        summary.humin = parseInt(day.humid_min_pct);
-        summary.windspdmax = parseInt(day.windspd_max_ms);
-        summary.windgstmax = parseInt(day.windgst_max_ms);
-        summary.slpmax = parseInt(day.slp_max_mb);
-        summary.slpmin = parseInt(day.slp_min_mb);
-
-        day.Timeframes.forEach(function(frame, idx){
-            var forecast = {};
-
-            var frameDate = frame.date.split('/');
-            frameDate = parseInt(''+frameDate[2]+frameDate[1]+frameDate[0]);
-
-            forecast.date = frameDate;
-            forecast.time = parseInt(frame.time);
-
-            var utcDate = frame.utcdate.split('/');
-            utcDate = parseInt(''+utcDate[2]+utcDate[1]+utcDate[0]);
-
-            forecast.utcDate = utcDate;
-            forecast.utcTime = parseInt(frame.utctime);
-            forecast.desc = frame.wx_desc;
-            forecast.code = parseInt(frame.wx_code);
-            forecast.tmp = parseFloat(frame.temp_c);
-            forecast.ftmp = parseFloat(frame.feelslike_c);
-            forecast.winddir = parseInt(frame.winddir_deg);
-            forecast.windspd = parseInt(frame.windspd_ms);
-            forecast.windgst = parseInt(frame.windgst_ms);
-            forecast.cloudlow = parseInt(frame.cloud_low_pct);
-            forecast.cloudmid = parseInt(frame.cloud_mid_pct);
-            forecast.cloudhigh = parseInt(frame.cloud_high_pct);
-            forecast.cloudtot = parseInt(frame.cloudtotal_pct);
-            forecast.precip = parseInt(frame.precip_mm);
-            forecast.rain = parseInt(frame.rain_mm);
-            forecast.snow = parseInt(frame.snow_mm);
-            forecast.fsnow = parseInt(frame.snow_accum_cm);
-
-            // sometimes, the server scnd percent as '<1'. it can't be changed number.
-            if(parseInt(frame.prob_precip_pct) != typeof Number){
-                forecast.prob = 0
-            }else{
-                forecast.prob = parseInt(frame.prob_precip_pct);
-            }
-            forecast.humid = parseInt(frame.humid_pct);
-            forecast.dewpoint = parseInt(frame.dewpoint_c);
-            forecast.vis = parseInt(frame.vis_km);
-            forecast.splmax = parseInt(frame.slp_mb);
-
-            forecastList.push(forecast);
-        });
-
-        result.push({summary: summary, forecast:forecastList});
-    });
-
-    return result;
 };
 
 ConCollector.prototype.saveWuForecast = function(geocode, data, callback){
@@ -328,8 +382,8 @@ ConCollector.prototype.saveWuForecast = function(geocode, data, callback){
                 return;
             }
 
-            var curDate = parseInt(self.getTimeString());
-            var newData = self.parseWuForecast(data);
+            var curDate = parseInt(self._getTimeString());
+            var newData = self._parseWuForecast(data);
 
             // for debug
             //newData.forEach(function(a){

@@ -47,6 +47,7 @@ describe('controller unit test - collector', function(){
                 lon: 12.49
             }
         },
+        */
         {
              //'Parthenon 10558 Athens Greece'
             address:{
@@ -69,7 +70,7 @@ describe('controller unit test - collector', function(){
                 lon: 139.77
             }
         },
-        */
+
         {
             // 'Fukuoka Station 321'
             address: {
