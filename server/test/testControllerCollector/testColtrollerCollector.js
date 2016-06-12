@@ -120,13 +120,13 @@ describe('controller unit test - collector', function(){
         };
 
         var collector = new controllerCollector;
-        collector.processWuForecast(geocodeList, 2, function(err, failList){
+        collector.processWuForecast(geocodeList, 201606112000, 2, function(err, failList){
             done();
         });
     });
     */
-
-    it('test db', function(done){
+/*
+    it('test WuForecast', function(done){
         var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
             replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
 
@@ -138,11 +138,56 @@ describe('controller unit test - collector', function(){
         });
 
         var collector = new controllerCollector;
-        collector.processWuForecast(geocodeList, 2, function(err, failList){
+        collector.processWuForecast(collector, geocodeList, 201606112000, 2, function(err, failList){
             if(err){
                 log.error('fail to processWuForecast');
             }
             done();
         });
     });
+*/
+
+/*
+    it('test WuCurrent', function(done){
+        var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+            replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+
+        mongoose.connect('mongodb://localhost/todayweather', options, function(err) {
+            if (err) {
+                log.error('DB> fail to connect', err);
+                done();
+            }
+        });
+
+        var collector = new controllerCollector;
+        collector.processWuCurrent(collector, geocodeList, 201606112000, 2, function(err, failList){
+            if(err){
+                log.error('fail to processWuForecast');
+            }
+            done();
+        });
+    });
+*/
+    it('test runkTask', function(done){
+        var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+            replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+
+        mongoose.connect('mongodb://localhost/todayweather', options, function(err) {
+            if (err) {
+                log.error('DB> fail to connect', err);
+                done();
+            }
+        });
+        var modelGeocode = require('../../models/worldWeather/modelGeocode');
+        modelGeocode.getGeocode = function(callback){
+            callback(0, geocodeList);
+        };
+
+        var collector = new controllerCollector;
+        collector.runkTask(true, function(err){
+            log.info('end of runTask');
+            done();
+        });
+    });
+
 });

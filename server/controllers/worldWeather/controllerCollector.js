@@ -10,6 +10,7 @@ var async = require('async');
 
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
+var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
 
 var config = require('../../config/config');
 var metRequester = require('../../lib/MET/metRequester');
@@ -21,8 +22,15 @@ function ConCollector() {
     var self = this;
 
     self.keybox = config.keyString;
-    self.wuLimitation = 2;//80;  // there is limitation to get 100 datas for a mimute from WU server.
+    self.wuLimitation = 80;  // there is limitation to get 100 datas for a mimute from WU server.
+
+    self.itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 }
+
+ConCollector.prototype._getWuKey = function(){
+    var self = this;
+    return {id: self.keybox.wu_id, key: self.keybox.wu_key};
+};
 
 ConCollector.prototype._leadingZeros = function(n, digits) {
     var zero = '';
@@ -121,23 +129,45 @@ ConCollector.prototype._makeDefaultWuForecast = function(){
         splmax:     -100       // millibars, sea level pressure
     }
 };
+
+ConCollector.prototype._makeDefaultWuCurrent = function(){
+    return {
+        date:       -100,        // YYYYMMDDHHMM
+        desc:       '',
+        code:       -100,
+        temp:       -100,
+        ftemp:      -100,        // 체감온도
+        humid:      -100,        // 습도
+        windspd:    -100,        // meters per second, 풍속
+        winddir:    -100,        // degree, 풍향
+        cloud:      -100,        // percent, 구름량
+        vis:        -100,        // kilometers, 가시거리
+        airpress:   -100,        // millibars, 기압
+        dewpoint:   -100         // celcius, 이슬점
+    }
+};
+
 ConCollector.prototype._divideList = function(list, unit){
     var resultList = [];
     var unitList = [];
 
-    list.forEach(function(item, i){
-        unitList.push(item);
-        if(((i+1) % unit) === 0 ){
-            resultList.push(unitList);
-            unitList = [];
-        }
-    });
+    if(list.length < unit){
+        resultList.push(list);
+    }
+    else{
+        list.forEach(function(item, i){
+            unitList.push(item);
+            if(((i+1) % unit) === 0 ){
+                resultList.push(unitList);
+                unitList = [];
+            }
+        });
+    }
 
     return resultList;
 };
 
-
-ConCollector.prototype._getAndSaveWuForecast = function(list, key, retryCount, callback){
+ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCount, callback){
     var self = this;
     var failList = [];
 
@@ -150,19 +180,34 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, retryCount, c
     async.mapSeries(list,
         function(location, cb){
             var requester = new wuRequester;
-            requester.getForecast(location.geocode, key, function(err, result){
+            modelWuForecast.find({geocode:location.geocode}, function(err, list){
                 if(err){
-                    print.error('WuF> get fail', location);
-                    log.error('WuF> get fail', location);
-                    failList.push(location);
+                    log.error('WuF> _getAndSaveWuForecast : Fail to get DB');
+                    print.error('WuF> _getAndSaveWuForecast : Fail to get DB');
                     cb(null);
                     return;
                 }
 
-                log.info(result);
-                self.saveWuForecast(location.geocode, result, function(err){
-                    cb(null);
-                })
+                if(list.length != 0 && date != 0){
+                    list.forEach(function(item){
+                        // TODO : compare between date parameter and DB's date.
+                    });
+                }
+
+                requester.getForecast(location.geocode, key, function(err, result){
+                    if(err){
+                        print.error('WuF> get fail', location);
+                        log.error('WuF> get fail', location);
+                        failList.push(location);
+                        cb(null);
+                        return;
+                    }
+
+                    log.info(result);
+                    self.saveWuForecast(location.geocode, date, result, function(err){
+                        cb(null);
+                    })
+                });
             });
         },
         function(err){
@@ -171,7 +216,65 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, retryCount, c
             }
 
             if(retryCount > 0){
-                return self._getAndSaveWuForecast(failList, key, --retryCount, callback);
+                return self._getAndSaveWuForecast(failList, key, date, --retryCount, callback);
+            }else{
+                callback(err, failList);
+                return;
+            }
+        }
+    );
+};
+
+
+ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCount, callback){
+    var self = this;
+    var failList = [];
+
+    if(list.length === 0){
+        print.info('WuC> There is no geocode');
+        callback(0, failList);
+        return;
+    }
+
+    async.mapSeries(list,
+        function(location, cb){
+            var requester = new wuRequester;
+            modelWuCurrent.find({geocode:location.geocode}, function(err, list){
+                if(err){
+                    log.error('WuC> _getAndSaveWuCurrent : Fail to get DB');
+                    cb(null);
+                    return;
+                }
+
+                if(list.length != 0 && date != 0){
+                    list.forEach(function(item){
+                        // TODO : compare between date parameter and DB's date.
+                    });
+                }
+
+                requester.getCurrent(location.geocode, key, function(err, result){
+                    if(err){
+                        print.error('WuC> get fail', location);
+                        log.error('WuC> get fail', location);
+                        failList.push(location);
+                        cb(null);
+                        return;
+                    }
+
+                    log.info(result);
+                    self.saveWuCurrent(location.geocode, date, result, function(err){
+                        cb(null);
+                    })
+                });
+            });
+        },
+        function(err){
+            if(err){
+                print.error('WuF> ');
+            }
+
+            if(retryCount > 0){
+                return self._getAndSaveWuCurrent(failList, key, date, --retryCount, callback);
             }else{
                 callback(err, failList);
                 return;
@@ -206,10 +309,10 @@ ConCollector.prototype._parseWuForecast = function(src){
         summary.prob = parseInt(day.prob_precip_pct);
         summary.humax = parseInt(day.humid_max_pct);
         summary.humin = parseInt(day.humid_min_pct);
-        summary.windspdmax = parseInt(day.windspd_max_ms);
-        summary.windgstmax = parseInt(day.windgst_max_ms);
-        summary.slpmax = parseInt(day.slp_max_mb);
-        summary.slpmin = parseInt(day.slp_min_mb);
+        summary.windspdmax = parseFloat(day.windspd_max_ms);
+        summary.windgstmax = parseFloat(day.windgst_max_ms);
+        summary.slpmax = parseFloat(day.slp_max_mb);
+        summary.slpmin = parseFloat(day.slp_min_mb);
 
         day.Timeframes.forEach(function(frame, idx){
             var forecast = self._makeDefaultWuForecast();
@@ -230,8 +333,8 @@ ConCollector.prototype._parseWuForecast = function(src){
             forecast.tmp = parseFloat(frame.temp_c);
             forecast.ftmp = parseFloat(frame.feelslike_c);
             forecast.winddir = parseInt(frame.winddir_deg);
-            forecast.windspd = parseInt(frame.windspd_ms);
-            forecast.windgst = parseInt(frame.windgst_ms);
+            forecast.windspd = parseFloat(frame.windspd_ms);
+            forecast.windgst = parseFloat(frame.windgst_ms);
             forecast.cloudlow = parseInt(frame.cloud_low_pct);
             forecast.cloudmid = parseInt(frame.cloud_mid_pct);
             forecast.cloudhigh = parseInt(frame.cloud_high_pct);
@@ -248,9 +351,9 @@ ConCollector.prototype._parseWuForecast = function(src){
                 forecast.prob = parseInt(frame.prob_precip_pct);
             }
             forecast.humid = parseInt(frame.humid_pct);
-            forecast.dewpoint = parseInt(frame.dewpoint_c);
-            forecast.vis = parseInt(frame.vis_km);
-            forecast.splmax = parseInt(frame.slp_mb);
+            forecast.dewpoint = parseFloat(frame.dewpoint_c);
+            forecast.vis = parseFloat(frame.vis_km);
+            forecast.splmax = parseFloat(frame.slp_mb);
 
             forecastList.push(forecast);
         });
@@ -261,7 +364,259 @@ ConCollector.prototype._parseWuForecast = function(src){
     return result;
 };
 
-ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
+ConCollector.prototype._parseWuCurrent = function(src, date){
+    var self = this;
+    var result = {
+        date:       date,
+        desc:       src.wx_desc,
+        code:       parseInt(src.wx_code),
+        temp:       parseFloat(src.temp_c),
+        ftemp:      parseFloat(src.feelslike_c),
+        humid:      parseInt(src.humid_pct),
+        windspd:    parseFloat(src.windspd_ms),
+        winddir:    parseFloat(src.winddir_deg),
+        cloud:      parseInt(src.cloudtotal_pct),
+        vis:        parseFloat(src.vis_km),
+        slp:        parseFloat(src.slp_mb),
+        dewpoint:   parseFloat(src.dewpoint_c)
+    };
+    return result;
+};
+
+ConCollector.prototype._addWuCurrentToList = function(newData, list){
+    var self = this;
+
+    list.forEach(function(oldData, index){
+        if(oldData.date === newData.date){
+            self.itemWuCurrent.forEach(function(itemName){
+                list[index][itemName] = newData[itemName];
+            });
+
+            print.info('updated olditem : ', newData.date);
+        }
+    });
+
+    list.push(newData);
+
+    return list;
+};
+
+ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, callback){
+    var key = self._getWuKey();
+    var failList = [];
+
+    try{
+        print.info('WuF> Total count: ', list.length);
+        var dividedList = self._divideList(list, self.wuLimitation);
+        print.info('WuF> divided count : ', dividedList.length);
+
+        self._getAndSaveWuForecast(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+            failList.concat(resultList);
+            if(dividedList.length === 0){
+                log.info('WuF> Finish to collect WU forecast');
+                callback(0, failList);
+                return;
+            }
+        });
+
+        if(dividedList.length > 0){
+            var timer = setInterval(function(){
+                print.info('WuF> Do task : ', dividedList.length);
+                self._getAndSaveWuForecast(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                    failList.concat(resultList);
+
+                    if(dividedList.length === 0){
+                        print.info('WuF> clear interval timer');
+                        clearInterval(timer);
+                        callback(0, failList);
+                        return;
+                    }
+                });
+            }, 60 * 1000);
+        }
+    }
+    catch(e){
+        print.error('Exception!!!');
+        log.error('WuF> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, callback){
+    var key = self._getWuKey();
+    var failList = [];
+
+    try{
+        print.info('WuC> Total count: ', list.length);
+        var dividedList = self._divideList(list, self.wuLimitation);
+        print.info('WuC> divided count : ', dividedList.length);
+
+        self._getAndSaveWuCurrent(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+            failList.concat(resultList);
+            if(dividedList.length === 0){
+                log.info('WuC> Finish to collect WU forecast');
+                callback(0, failList);
+                return;
+            }
+        });
+
+        if(dividedList.length > 0){
+            var timer = setInterval(function(){
+                print.info('WuC> Do task : ', dividedList.length);
+                self._getAndSaveWuCurrent(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                    failList.concat(resultList);
+
+                    if(dividedList.length === 0){
+                        print.info('WuC> clear interval timer');
+                        clearInterval(timer);
+                        callback(0, failList);
+                        return;
+                    }
+                });
+            }, 60 * 1000);
+        }
+    }
+    catch(e){
+        print.error('Exception!!!');
+        log.error('WuC> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
+    var self = this;
+
+    try{
+        modelWuForecast.find({geocode:geocode}, function(err, list){
+            if(err){
+                print.error('WuF> fail to find from DB');
+                callback(err);
+                return;
+            }
+            var newData = self._parseWuForecast(data);
+
+            // for debug
+            //newData.forEach(function(a){
+            //    print.info(a.summary);
+            //    a.forecast.forEach(function(b){
+            //        print.info(b);
+            //    })
+            //});
+
+            if(list.length === 0){
+                print.info('WuF> First time');
+                //var newItem = new modelWuForecast({geocode: geocode, address: {country:'', city:'', zipcode:0, postcode:0}, date:curDate, days: newData});
+                var newItem = new modelWuForecast({geocode:geocode, address:{}, date:date, days:newData});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('WuF> fail to add the new data to DB :', geocode);
+                        print.error('WuF> fail to add the new data to DB :', geocode);
+                    }
+                    if(callback){
+                        callback(err);
+                    }
+                });
+                //print.info('WuF> add new Item : ', newData);
+            }else{
+                list.forEach(function(data, index){
+                    data.date = date;
+                    data.days = [];
+                    data.days = newData;
+                    //log.info(data);
+                    data.save(function(err){
+                        if(err){
+                            log.error('WuF> fail to save to DB :', geocode);
+                        }
+
+                        if(callback){
+                            callback(err);
+                        }
+                    });
+                });
+            }
+        });
+    }catch(e){
+        print.error('WuF> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
+    var self = this;
+
+    try{
+        modelWuCurrent.find({geocode:geocode}, function(err, list){
+            if(err){
+                print.error('WuC> fail to find from DB');
+                callback(err);
+                return;
+            }
+            var newData = self._parseWuCurrent(data, date);
+
+            // for debug
+            //print.info(newData);
+
+            if(list.length === 0){
+                var dataList = [];
+                dataList.push(newData);
+                print.info('WuC> First time');
+                var newItem = new modelWuCurrent({geocode:geocode, address:{}, date:date, dataList:dataList});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('WuC> fail to add the new data to DB :', geocode);
+                        print.error('WuC> fail to add the new data to DB :', geocode);
+                    }
+                    if(callback){
+                        callback(err);
+                    }
+                });
+                //print.info('WuC> add new Item : ', newData);
+            }else{
+                list.forEach(function(data, index){
+                    data.date = date;
+                    data.dataList = self._addWuCurrentToList(newData, data.dataList);
+
+                    data.dataList.sort(function(a, b){
+                        if(a.date > b.date){
+                            return 1;
+                        }
+                        if(a.date < b.date){
+                            return -1;
+                        }
+                        return 0;
+                    });
+
+                    if(data.dataList.length > 72){
+                        data.dataList.shift();
+                    }
+                    //log.info(data);
+                    data.save(function(err){
+                        if(err){
+                            log.error('WuC> fail to save to DB :', geocode);
+                        }
+
+                        if(callback){
+                            callback(err);
+                        }
+                    });
+                });
+            }
+        });
+    }catch(e){
+        print.error('WuF> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callback){
     var self = this;
 
     try{
@@ -275,6 +630,7 @@ ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
                             return;
                         }
 
+                        print.info('Success to get geocode List : ', list.length);
                         first_cb(undefined, list);
                     });
                 },
@@ -282,7 +638,7 @@ ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
 
                     async.mapSeries(funcList,
                         function(funcCollector, sec_cb){
-                            funcCollector(geocodeList, isRetry, function(err, failList){
+                            funcCollector(self, geocodeList, date, isRetry, function(err, failList){
                                 if(err){
                                     var errString = 'Fail to funcCollect[' + funcList.indexOf(funcCollector) + ']';
                                     print.error(errString);
@@ -323,122 +679,47 @@ ConCollector.prototype.collectWeather = function(funcList, isRetry, callback){
     }
 };
 
-ConCollector.prototype.processWuForecast = function(list, isRetry, callback){
+ConCollector.prototype.runkTask = function(isAll, callback){
     var self = this;
-    var key = self.getWuKey();
-    var failList = [];
+    var minute = (new Date()).getUTCMinutes();
+    var funcList = [];
 
-    try{
-        print.info('WuF> Total count: ', list.length);
-        var dividedList = self._divideList(list, self.wuLimitation);
-        print.info('WuF> divided count : ', dividedList.length);
+    log.silly('RT> check collector based on the minute');
 
-        self._getAndSaveWuForecast(dividedList.shift(), key, isRetry, function(err, resultList) {
-            failList.concat(resultList);
-            if(dividedList.length === 0){
-                log.info('WuF> Finish to collect WU forecast');
-                callback(0, failList);
-                return;
-            }
-        });
-
-        if(dividedList.length > 0){
-            var timer = setInterval(function(){
-                print.info('WuF> Do task : ', dividedList.length);
-                self._getAndSaveWuForecast(dividedList.shift(), key, isRetry, function(err, resultList){
-                    failList.concat(resultList);
-
-                    if(dividedList.length === 0){
-                        print.info('WuF> clear interval timer');
-                        clearInterval(timer);
-                        callback(0, failList);
-                        return;
-                    }
-                });
-            }, 60 * 1000);
-        }
+    if(minute === 30 || isAll){
+        funcList.push(self.processWuCurrent);
     }
-    catch(e){
-        print.error('Exception!!!');
-        log.error('WuF> Exception!!!');
-        if(callback){
-            callback(e);
-        }
+
+    if(minute === 1 || isAll){
+        funcList.push(self.processWuForecast);
     }
-};
 
-ConCollector.prototype.processWuCurrent = function(list, callback){
-    var self = this;
-};
+    var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
+    print.info('RT> Cur date : ', date);
 
-ConCollector.prototype.saveWuForecast = function(geocode, data, callback){
-    var self = this;
-
-    try{
-        modelWuForecast.find({geocode:geocode}, function(err, list){
+    if(funcList.length > 0){
+        self.collectWeather(funcList, date, 2, function(err){
             if(err){
-                print.error('WuF> fail to find from DB');
-                callback(err);
+                log.error('RT> Something is wrong!!!');
                 return;
             }
 
-            var curDate = parseInt(self._getTimeString());
-            var newData = self._parseWuForecast(data);
+            log.info('RT>  collect weather data : ', self._getTimeString(9));
 
-            // for debug
-            //newData.forEach(function(a){
-            //    print.info(a.summary);
-            //    a.forecast.forEach(function(b){
-            //        print.info(b);
-            //    })
-            //});
-
-            if(list.length === 0){
-                print.info('WuF> First time');
-                //var newItem = new modelWuForecast({geocode: geocode, address: {country:'', city:'', zipcode:0, postcode:0}, date:curDate, days: newData});
-                var newItem = new modelWuForecast({geocode:geocode, address:{}, days:newData});
-                newItem.save(function(err){
-                    if(err){
-                        log.error('WuF> fail to add the new data to DB :', geocode);
-                    }
-                    if(callback){
-                        callback(err);
-                    }
-                });
-                //print.info('WuF> add new Item : ', newData);
-            }else{
-                list.forEach(function(data, index){
-                    data.date = curDate;
-                    data.days = [];
-                    data.days = newData;
-                    //log.info(data);
-                    data.save(function(err){
-                        if(err){
-                            log.error('WuF> fail to save to DB :', geocode);
-                        }
-
-                        if(callback){
-                            callback(err);
-                        }
-                    });
-                });
+            if(callback){
+                callback(err);
             }
         });
-    }catch(e){
-        print.error('WuF> Exception!!!');
-        if(callback){
-            callback(e);
-        }
     }
 };
 
-ConCollector.prototype.saveWuCurrent = function(){
+ConCollector.prototype.doCollect = function(){
     var self = this;
-};
 
-ConCollector.prototype.getWuKey = function(){
-    var self = this;
-    return {id: self.keybox.wu_id, key: self.keybox.wu_key};
+    self.runkTask(true);
+    setInterval(function() {
+        self.runkTask(false);
+    }, 1000*60);
 };
 
 module.exports = ConCollector;
