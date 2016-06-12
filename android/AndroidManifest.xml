@@ -68,7 +68,7 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w1x1_widget_provider_info" />
         </receiver>
-        <activity android:name=".widget.WidgetProviderConfigureActivity">
+        <activity android:name=".widget.WidgetProviderConfigureActivity" android:theme="@android:style/Theme.Translucent">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
