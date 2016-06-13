@@ -344,8 +344,7 @@ public class WidgetUpdateService extends Service {
             views.setViewVisibility(R.id.weather_layout, View.VISIBLE);
 
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            ComponentName w2x1Wdiget = new ComponentName(context, W2x1WidgetProvider.class);
-            appWidgetManager.updateAppWidget(w2x1Wdiget, views);
+            appWidgetManager.updateAppWidget(mAppWidgetId, views);
         }
     }
 }// class end
