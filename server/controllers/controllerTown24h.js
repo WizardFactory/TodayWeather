@@ -84,6 +84,65 @@ function ControllerTown24h() {
             short.tmn = -50;
         });
 
+        //r06, s06을 3시간단위로 나눔.
+        //앞시간 뒤시간 모두 pty가 1이상이면 반반으로 나누고, 아니라면 몰아줌.
+        if (req.short[0].s06 < 0) {
+            req.short[0].s06 = 0;
+        }
+        if (req.short[0].r06 < 0) {
+            req.short[0].r06 = 0;
+        }
+        for (var i=2; i<req.short.length; i+=2) {
+            var short = req.short[i];
+            if (short.r06 > 0) {
+                if (req.short[i-1].pty > 0 && req.short[i].pty > 0) {
+                    req.short[i-1].r06 = +(short.r06/2).toFixed(1);
+                    req.short[i].r06 = +(short.r06/2).toFixed(1);
+                }
+                else if (req.short[i-1].pty > 0 ) {
+                    req.short[i-1].r06 = short.r06;
+                    req.short[i].r06 = 0;
+                }
+                else if (req.short[i].pty > 0 ) {
+                    req.short[i-1].r06 = 0;
+                    req.short[i].r06 = short.r06;
+                }
+                else {
+                    log.error("It has r06 but pty is zero short index="+i);
+                    req.short[i-1].r06 = 0;
+                    req.short[i].r06 = 0;
+                }
+            }
+            else {
+                req.short[i-1].r06 = 0;
+                req.short[i].r06 = 0;
+            }
+
+            if (short.s06 > 0) {
+                if (req.short[i-1].pty > 0 && req.short[i].pty > 0) {
+                    req.short[i-1].s06 = +(short.s06/2).toFixed(1);
+                    req.short[i].s06 = +(short.s06/2).toFixed(1);
+                }
+                else if (req.short[i-1].pty > 0 ) {
+                    req.short[i-1].s06 = short.s06;
+                    req.short[i].s06 = 0;
+                }
+                else if (req.short[i].pty > 0 ) {
+                    req.short[i-1].s06 = 0;
+                    req.short[i].s06 = short.s06;
+                }
+                else {
+                    log.error("It has s06 but pty is zero short index="+i);
+                    req.short[i-1].s06 = 0;
+                    req.short[i].s06 = 0;
+                }
+            }
+            else {
+                req.short[i-1].s06 = 0;
+                req.short[i].s06 = 0;
+            }
+        }
+
         //client 하위 버전 지원 못함.
         req.short.forEach(function (short, index) {
 
