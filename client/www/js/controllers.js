@@ -130,9 +130,9 @@ angular.module('starter.controllers', [])
             str += '<div class="row row-no-padding"> <div style="margin: auto"> <div class="row row-no-padding">';
             str +=      '<p style="font-size: '+bigDigitSize+'px; margin: 0">'+cityData.currentWeather.t1h+'</p>';
             str +=      '<div style="text-align: left; margin: auto">';
-            str +=          '<img style="height: '+bigTempPointSize+'px" src="img/reddot.png">';
+            str +=          '<img style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
             str +=          '<br>';
-            str +=          '<img style="height: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
+            str +=          '<img style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
                                 cityData.currentWeather.skyIcon+'.png">';
             str +=      '</div>';
             str += '</div></div></div>';
@@ -191,9 +191,9 @@ angular.module('starter.controllers', [])
                 value = cityData.timeTable[i];
                 str += '<div class="col table-items">';
                 str += '<p style="font-size: '+smallTimeSize+'px; margin:auto">'+value.timeStr+'</p>';
-                str += '<img width='+smallImageSize+'px style="margin: auto" src="img/'+value.tempIcon+'.png">';
+                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="img/'+value.tempIcon+'.png">';
                 str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.t3h+'˚</p>';
-                str += '<img width='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+
+                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+
                         value.skyIcon+'.png">';
                 if (value.rn1 != undefined &&
                     (value.date < cityData.currentWeather.date || value.time <= cityData.currentWeather.time))
@@ -255,7 +255,7 @@ angular.module('starter.controllers', [])
                     str += ' opacity: 0.84;">';
                 }
                 str +=  value.week + '</p>';
-                str += '<img style="width: '+smallImageSize+'px; margin: auto;" src="'+
+                str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
                             Util.imgPath+'/'+value.skyIcon+'.png">';
                 if (value.rn1 != undefined) {
                     str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+value.rn1;
@@ -272,7 +272,7 @@ angular.module('starter.controllers', [])
                     tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
                     str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
                 }
-                str += '<img style="width: '+smallImageSize+'px; margin: auto" src="img/'+value.humidityIcon+'.png">';
+                str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto" src="img/'+value.humidityIcon+'.png">';
                 tmpStr = value.reh == undefined?'-':value.reh+'<small>%</small>';
                 str += '<p style="font-size: '+smallDigitSize+'px; margin: auto">'+tmpStr+'</p>';
                 str += '</div>';
