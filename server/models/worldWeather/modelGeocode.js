@@ -12,7 +12,7 @@ var tSchema = new mongoose.Schema({
 });
 
 tSchema.index({"geocode.lat": 1, "geocode.lon": 1});
-tSchema.index({"address.country":'text', "address.city":'text', "address.zipcode":1, "address.postcode":1});
+//tSchema.index({"address.country":'text', "address.city":'text', "address.zipcode":1, "address.postcode":1});
 
 var geocode = [];
 

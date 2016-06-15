@@ -7,6 +7,7 @@ var events = require('events');
 var req = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
+var conCollector = require('./controllerCollector');
 
 var commandCategory = ['ALL','MET','OWM','WU'];
 var command = ['get_all','get', 'req_add'];
@@ -44,10 +45,13 @@ function ControllerRequester(){
             case 'req_add':
                 self.addNewLocation(req, function(err){
                     if(err){
-                        log.info('RQ>  fail to run req_add_geocode');
+                        log.error('RQ>  fail to run req_add_geocode');
+                        req.result = {status: 'Fail', cmd: req.params.command};
+                        next();
+                        return;
                     }
                     log.info('RQ> success adding geocode');
-                    req.result = {status: 'OK', cmd: req.params.command};
+                    req.result = {status: 'OK', cmd: req.params.command, weather:req.weather};
                     next();
                 });
                 break;
@@ -304,7 +308,7 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                 // 1. add location to DB
                 self.addLocation(req, function(err){
                     if(err){
-                        log.info('RQ>  fail to run req_add_geocode');
+                        log.error('RQ>  fail to run req_add_geocode');
                         cb('err_exit_fail to add');
                         return;
                     }
@@ -313,7 +317,19 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
             },
             function(cb){
                 // 2. get weather data from provider.
-                cb(null);
+                var collector = new conCollector;
+                collector.requestWuData(req.geocode, function(err, wuData){
+                    if(err){
+                        log.error('RQ> Fail to requestWuData');
+                        cb('Fail to requestWuData');
+                        return;
+                    }
+
+                    req.weather = {
+                        wu: wuData
+                    };
+                    cb(null);
+                });
             },
             function(cb){
                 // 3. adjust weather data for client.
