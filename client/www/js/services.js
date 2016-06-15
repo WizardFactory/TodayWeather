@@ -596,9 +596,13 @@ angular.module('starter.services', [])
             results.forEach(function (result) {
                 var lastChar = result.formatted_address.slice(-1);
                 if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
-                    if(length < result.formatted_address.length) {
-                        dongAddress = result.formatted_address;
-                        length = result.formatted_address.length;
+                    var arrayStr = result.formatted_address.split(" ");
+                    var secondLastChar = arrayStr[arrayStr.length-2].slice(-1);
+                    if (secondLastChar === "시" || secondLastChar === "군" || secondLastChar === "구")  {
+                        if(length < result.formatted_address.length) {
+                            dongAddress = result.formatted_address;
+                            length = result.formatted_address.length;
+                        }
                     }
                 }
             });
