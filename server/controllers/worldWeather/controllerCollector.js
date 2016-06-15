@@ -73,7 +73,7 @@ ConCollector.prototype._getTimeString = function(tzOffset) {
 ConCollector.prototype._getGeocodeList = function(db, callback){
     db.getGeocode(function(err, resultList){
         if(err){
-            print.error('Fail to get geocode');
+            log.error('Fail to get geocode');
         }
         callback(err, resultList);
     });
@@ -172,7 +172,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
     var failList = [];
 
     if(list.length === 0){
-        print.info('WuF> There is no geocode');
+        log.info('WuF> There is no geocode');
         callback(0, failList);
         return;
     }
@@ -206,13 +206,13 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
                     log.info(result);
                     self.saveWuForecast(location.geocode, date, result, function(err){
                         cb(null);
-                    })
+                    });
                 });
             });
         },
         function(err){
             if(err){
-                print.error('WuF> ');
+                log.error('WuF> ');
             }
 
             if(retryCount > 0){
@@ -231,7 +231,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
     var failList = [];
 
     if(list.length === 0){
-        print.info('WuC> There is no geocode');
+        log.info('WuC> There is no geocode');
         callback(0, failList);
         return;
     }
@@ -270,7 +270,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
         },
         function(err){
             if(err){
-                print.error('WuF> ');
+                log.error('WuF> ');
             }
 
             if(retryCount > 0){
@@ -493,7 +493,7 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
     try{
         modelWuForecast.find({geocode:geocode}, function(err, list){
             if(err){
-                print.error('WuF> fail to find from DB');
+                log.error('WuF> fail to find from DB');
                 callback(err);
                 return;
             }
@@ -517,7 +517,7 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
                         print.error('WuF> fail to add the new data to DB :', geocode);
                     }
                     if(callback){
-                        callback(err);
+                        callback(err, newData);
                     }
                 });
                 //print.info('WuF> add new Item : ', newData);
@@ -533,14 +533,14 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
                         }
 
                         if(callback){
-                            callback(err);
+                            callback(err, newData);
                         }
                     });
                 });
             }
         });
     }catch(e){
-        print.error('WuF> Exception!!!');
+        log.error('WuF> Exception!!!');
         if(callback){
             callback(e);
         }
@@ -553,7 +553,7 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
     try{
         modelWuCurrent.find({geocode:geocode}, function(err, list){
             if(err){
-                print.error('WuC> fail to find from DB');
+                log.error('WuC> fail to find from DB');
                 callback(err);
                 return;
             }
@@ -573,7 +573,7 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
                         print.error('WuC> fail to add the new data to DB :', geocode);
                     }
                     if(callback){
-                        callback(err);
+                        callback(err, newData);
                     }
                 });
                 //print.info('WuC> add new Item : ', newData);
@@ -602,18 +602,74 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
                         }
 
                         if(callback){
-                            callback(err);
+                            callback(err, newData);
                         }
                     });
                 });
             }
         });
     }catch(e){
-        print.error('WuF> Exception!!!');
+        log.error('WuF> Exception!!!');
         if(callback){
             callback(e);
         }
     }
+};
+
+ConCollector.prototype.requestWuData = function(geocode, callback){
+    var self = this;
+    var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
+    var requester = new wuRequester;
+
+    async.waterfall([
+            function(cb){
+                // get forecast
+                requester.getForecast(geocode, self._getWuKey(), function(err, result){
+                    if(err){
+                        print.error('rWD> Fail to requestWuData on Forecase');
+                        log.error('rWD> Fail to requestWuData on Forecase');
+                        cb('rWD> Fail to requestWuData on Forecase');
+                        return;
+                    }
+
+                    log.info(result);
+                    self.saveWuForecast(geocode, date, result, function(err, forecastData){
+                        cb(undefined, forecastData);
+                    });
+                });
+            },
+            function(forecastData, cb){
+                // get current
+                var wuData = {
+                    forecast: forecastData,
+                    current: {}
+                };
+                requester.getCurrent(geocode, self._getWuKey(), function(err, result){
+                    if(err){
+                        print.error('rWD> fail to requestWuData on Current');
+                        log.error('rWD> fail to requestWuData on Current');
+                        cb('rWD> fail to requestWuData on Current', wuData);
+                        return;
+                    }
+
+                    log.info(result);
+                    self.saveWuCurrent(geocode, date, result, function(err, currentData){
+                        wuData.current = currentData;
+                        cb(undefined, wuData);
+                    });
+                });
+            }
+        ],
+        function(err, wuData){
+            if(err){
+                log.err(err);
+            }
+
+            if(wuData){
+                callback(err, wuData);
+            }
+        }
+    );
 };
 
 ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callback){
@@ -625,12 +681,12 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
                     // 1. get location list which contains either geocode or city name.
                     self._getGeocodeList(modelGeocode, function(err, list){
                         if(err){
-                            print.error('Fail to get geocode list');
+                            log.error('Fail to get geocode list');
                             first_cb('fail:_getGeocodeList');
                             return;
                         }
 
-                        print.info('Success to get geocode List : ', list.length);
+                        log.info('Success to get geocode List : ', list.length);
                         first_cb(undefined, list);
                     });
                 },
@@ -641,7 +697,7 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
                             funcCollector(self, geocodeList, date, isRetry, function(err, failList){
                                 if(err){
                                     var errString = 'Fail to funcCollect[' + funcList.indexOf(funcCollector) + ']';
-                                    print.error(errString);
+                                    log.error(errString);
                                     // it always return success, even though there is error to get data,
                                     sec_cb(null);
                                     return;
@@ -652,11 +708,11 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
                         },
                         function(sec_err){
                             if(sec_err){
-                                print.error('Collecting is not completed!! : ', sec_err);
+                                log.error('Collecting is not completed!! : ', sec_err);
                                 first_cb('fail:collecting');
                                 return;
                             }
-                            print.info('Collecting is completed!!');
+                            log.info('Collecting is completed!!');
                             first_cb(null);
                         }
                     );
@@ -665,14 +721,14 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
             ],
             function(first_err){
                 if(first_err){
-                    print.error('Something was wrong:', first_err);
+                    log.error('Something was wrong:', first_err);
                 }
-                print.info('Finish : collectWeather');
+                log.info('Finish : collectWeather');
                 callback(first_err);
             }
         );
     }catch(e){
-        print.error('Exception!!!');
+        log.error('Exception!!!');
         if(callback){
             callback(e);
         }
@@ -695,7 +751,7 @@ ConCollector.prototype.runkTask = function(isAll, callback){
     }
 
     var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
-    print.info('RT> Cur date : ', date);
+    print.info('rT> Cur date : ', date);
 
     if(funcList.length > 0){
         self.collectWeather(funcList, date, 2, function(err){

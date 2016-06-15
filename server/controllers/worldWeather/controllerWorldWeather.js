@@ -474,7 +474,7 @@ function controllerWorldWeather(){
 
         log.info('WW> req url : ', url);
         try{
-            request.get(url, {timeout: 1000 * 5}, function(err, response, body){
+            request.get(url, {timeout: 1000 * 20}, function(err, response, body){
                 if(err){
                     log.error('WW> Fail to request adding geocode to db');
                     callback(err);
