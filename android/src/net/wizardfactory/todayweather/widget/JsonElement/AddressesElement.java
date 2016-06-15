@@ -95,9 +95,14 @@ public class AddressesElement {
                  String myen = new String(myenBytes, "utf-8");
 
                  if (lastStr.equals(dong) || lastStr.equals(yup) || lastStr.equals(myen)) {
-                     if (length <  addrs[i].length()) {
-                         dongAddress =  addrs[i];
-                         length =  addrs[i].length();
+                     String[] arrayStr = addrs[i].split(" ");
+                     String secondLastStr = arrayStr[arrayStr.length-2].substring(arrayStr[arrayStr.length-2].length()-1);
+
+                     if (secondLastStr.equals("시") || secondLastStr.equals("군") || secondLastStr.equals("구")) {
+                         if (length < addrs[i].length()) {
+                             dongAddress = addrs[i];
+                             length = addrs[i].length();
+                         }
                      }
                  }
              } catch (UnsupportedEncodingException e) {
