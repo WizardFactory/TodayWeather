@@ -222,9 +222,13 @@ function ControllerTown() {
 
                 var j;
                 var found;
+                var overwrite = false;
 
                 req.shortRssPubDate = shortRssInfo.pubDate;
 
+                if (parseInt(req.shortPubDate) < parseInt(req.shortRssPubDate)) {
+                   overwrite = true;
+                }
                 // rss 데이터를 모두 가져온다.
                 for(i;i<rssList.length;i++) {
                     found = 0;
@@ -233,17 +237,52 @@ function ControllerTown() {
                         if(parseInt(req.short[j].date + req.short[j].time) === parseInt(rssList[i].date)) {
                             found = 1;
 
-                            req.short[j].pop = rssList[i].pop;
-                            req.short[j].pty = rssList[i].pty;
-                            req.short[j].r06 = Math.round(rssList[i].r06);
-                            req.short[j].reh = rssList[i].reh;
-                            req.short[j].s06 = Math.round(rssList[i].s06);
-                            req.short[j].sky = rssList[i].sky;
-                            req.short[j].t3h = Math.round(rssList[i].temp);
+                            if (overwrite || req.short[j].pop == undefined || req.short[j].pop == -1) {
+                                req.short[j].pop = rssList[i].pop;
+                            }
+                            if (overwrite || req.short[j].pty == undefined || req.short[j].pty == -1) {
+                                req.short[j].pty = rssList[i].pty;
+                            }
+                            //s06, r06은 6시간 단위로 오기 때문에 3,9,15,21은 원래 -1이며, RSS는 다른 시간대의 값과 동일하게 옴.
+                            //지금 -1을 덮어쓰고, adjustShort에서 나누어서 저장하게 되어있는데, adjustShort를 사용안하면 주의 필요.
+                            if (overwrite || req.short[j].r06 == undefined || req.short[j].r06 == -1) {
+                                req.short[j].r06 = Math.round(rssList[i].r06);
+                            }
+                            if (overwrite || req.short[j].s06 == undefined || req.short[j].s06 == -1) {
+                                req.short[j].s06 = Math.round(rssList[i].s06);
+                            }
+                            if (overwrite || req.short[j].reh == undefined || req.short[j].reh == -1) {
+                                req.short[j].reh = rssList[i].reh;
+                            }
+                            if (overwrite || req.short[j].sky == undefined || req.short[j].sky == -1) {
+                                req.short[j].sky = rssList[i].sky;
+                            }
+                            if (overwrite || req.short[j].t3h == undefined || req.short[j].t3h == -50) {
+                                req.short[j].t3h = Math.round(rssList[i].temp);
+                            }
                             if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
-                                req.short[j].tmn = rssList[i].tmn;
+                                if (overwrite || req.short[j].tmn == undefined || req.short[j].tmn == -50) {
+                                    req.short[j].tmn = rssList[i].tmn;
+                                }
                             } else if(req.short[j].time === '1500' && rssList[i].tmn != -999) {
-                                req.short[j].tmx = rssList[i].tmx;
+                                if (overwrite || req.short[j].tmx == undefined || req.short[j].tmx == -50) {
+                                    req.short[j].tmx = rssList[i].tmx;
+                                }
+                            }
+                            if (overwrite || req.short[j].wsd == undefined || req.short[j].wsd == -1) {
+                                req.short[j].wsd = rssList[i].wsd;
+                            }
+                            if (overwrite || req.short[j].vec == undefined || req.short[j].vec == -1) {
+                                req.short[j].vec = rssList[i].vec;
+                            }
+                            if (overwrite || req.short[j].wav == undefined || req.short[j].wav == -1) {
+                                req.short[j].wav = rssList[i].wav;
+                            }
+                            if (overwrite || req.short[j].uuu == undefined || req.short[j].uuu == -100) {
+                                req.short[j].uuu = rssList[i].uuu;
+                            }
+                            if (overwrite || req.short[j].vvv == undefined || req.short[j].vvv == -100) {
+                                req.short[j].vvv = rssList[i].vvv;
                             }
                             break;
                         }
@@ -269,6 +308,11 @@ function ControllerTown() {
                         }else{
                             item.tmx = -50;
                         }
+                        item.wsd = rssList[i].wsd;
+                        item.vec = rssList[i].vec;
+                        item.wav = rssList[i].wav;
+                        item.uuu = rssList[i].uuu;
+                        item.vvv = rssList[i].vvv;
 
                         req.short.push(item);
                     }
@@ -2080,14 +2124,19 @@ ControllerTown.prototype._sum = function(list, invalidValue) {
  *
  * @param list
  * @param invalidValue
+ * @param digits
  * @returns {number}
  * @private
  */
-ControllerTown.prototype._average = function(list, invalidValue) {
+ControllerTown.prototype._average = function(list, invalidValue, digits) {
     var self = this;
 
     if (!Array.isArray(list)) {
         return -1;
+    }
+
+    if (digits == undefined) {
+        digits = 0;
     }
 
     var validList;
@@ -2100,7 +2149,7 @@ ControllerTown.prototype._average = function(list, invalidValue) {
         validList = list;
     }
 
-    return Math.round(self._sum(validList)/validList.length);
+    return +(self._sum(validList)/validList.length).toFixed(digits);
 };
 
 /**
@@ -2606,8 +2655,8 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
                                 newItem[string] = self._max([prv1[string], prv2[string], curItem[string]], -1);
                             }
-                            else if(string === 'uuu' || string === 'vvv') {
-                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -100);
+                            else if(string === 'uuu' || string === 'vvv' || string === 'wsd') {
+                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -100, 1);
                             }
                             else if(string === 't1h') {
                                 newItem[string] = Math.round(curItem[string]);
@@ -2616,7 +2665,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                                 newItem[string] = self._sum([prv1[string], prv2[string], curItem[string]], -1);
                             }
                             else{
-                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -1);
+                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -1, 0);
                             }
                         });
                     }
@@ -3197,6 +3246,10 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
         if (short.tmn !== -50) {
             dayCondition.tmn = short.tmn;
         }
+
+        if (short.wsd !== -1) {
+            dayCondition.wsd.push(short.wsd);
+        }
     });
 
     dayConditionList.forEach(function (dayCondition) {
@@ -3216,14 +3269,15 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
         daySummary.pop = self._max(dayCondition.pop, -1);
         daySummary.pty = self._summaryPty(dayCondition.pty, -1);
         daySummary.r06 = self._sum(dayCondition.r06, -1);
-        daySummary.reh = self._average(dayCondition.reh, -1);
+        daySummary.reh = self._average(dayCondition.reh, -1, 0);
         daySummary.s06 = self._sum(dayCondition.s06, -1);
-        daySummary.sky = self._average(dayCondition.sky, -1);
+        daySummary.sky = self._average(dayCondition.sky, -1, 0);
         daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
         daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.t1d = self._average(dayCondition.t3h, -50);
+        daySummary.t1d = self._average(dayCondition.t3h, -50, 1);
         daySummary.taMax = Math.round(dayCondition.tmx);
         daySummary.taMin = Math.round(dayCondition.tmn);
+        daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
     });
 
     return daySummaryList;
@@ -3282,13 +3336,13 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
 
         daySummary.lgt = self._summaryLgt(dayCondition.lgt, -1);
         daySummary.pty = self._summaryPty(dayCondition.pty, -1);
-        daySummary.reh = self._average(dayCondition.reh, -1);
+        daySummary.reh = self._average(dayCondition.reh, -1, 0);
         daySummary.rn1 = self._sum(dayCondition.rn1, -1);
-        daySummary.sky = self._average(dayCondition.sky, -1);
+        daySummary.sky = self._average(dayCondition.sky, -1, 0);
         daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
         daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.t1d = self._average(dayCondition.t1h, -50);
-        daySummary.wsd = self._average(dayCondition.wsd, -1);
+        daySummary.t1d = self._average(dayCondition.t1h, -50, 1);
+        daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
         daySummary.taMax = Math.round(self._max(dayCondition.t1h, -50));
         daySummary.taMin = Math.round(self._min(dayCondition.t1h, -50));
     });
