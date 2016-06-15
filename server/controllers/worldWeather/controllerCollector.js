@@ -180,7 +180,12 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
     async.mapSeries(list,
         function(location, cb){
             var requester = new wuRequester;
-            modelWuForecast.find({geocode:location.geocode}, function(err, list){
+            var geocode = {
+                lat: parseFloat(location.lat),
+                lon: parseFloat(location.lon)
+            };
+
+            modelWuForecast.find({geocode:geocode}, function(err, list){
                 if(err){
                     log.error('WuF> _getAndSaveWuForecast : Fail to get DB');
                     print.error('WuF> _getAndSaveWuForecast : Fail to get DB');
@@ -194,7 +199,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
                     });
                 }
 
-                requester.getForecast(location.geocode, key, function(err, result){
+                requester.getForecast(geocode, key, function(err, result){
                     if(err){
                         print.error('WuF> get fail', location);
                         log.error('WuF> get fail', location);
@@ -204,7 +209,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
                     }
 
                     log.info(result);
-                    self.saveWuForecast(location.geocode, date, result, function(err){
+                    self.saveWuForecast(geocode, date, result, function(err){
                         cb(null);
                     });
                 });
@@ -239,7 +244,12 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
     async.mapSeries(list,
         function(location, cb){
             var requester = new wuRequester;
-            modelWuCurrent.find({geocode:location.geocode}, function(err, list){
+            var geocode = {
+                lat: parseFloat(location.geocode.lat),
+                lon: parseFloat(location.geocode.lon)
+            };
+
+            modelWuCurrent.find({geocode:geocode}, function(err, list){
                 if(err){
                     log.error('WuC> _getAndSaveWuCurrent : Fail to get DB');
                     cb(null);
@@ -252,7 +262,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
                     });
                 }
 
-                requester.getCurrent(location.geocode, key, function(err, result){
+                requester.getCurrent(geocode, key, function(err, result){
                     if(err){
                         print.error('WuC> get fail', location);
                         log.error('WuC> get fail', location);
@@ -262,7 +272,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
                     }
 
                     log.info(result);
-                    self.saveWuCurrent(location.geocode, date, result, function(err){
+                    self.saveWuCurrent(geocode, date, result, function(err){
                         cb(null);
                     })
                 });
