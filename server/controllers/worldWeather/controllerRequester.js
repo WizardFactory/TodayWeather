@@ -153,8 +153,8 @@ ControllerRequester.prototype.parseGeocode = function(req){
     }
 
     req.geocode = {
-        lat: codelist[0],
-        lon: codelist[1]
+        lat: parseFloat(codelist[0]),
+        lon: parseFloat(codelist[1])
     };
 
     log.info('RQ> ', req.geocode);
@@ -326,7 +326,7 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                     }
 
                     req.weather = {
-                        wu: wuData
+                        WU: wuData
                     };
                     cb(null);
                 });

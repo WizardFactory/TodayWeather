@@ -4,12 +4,60 @@
 var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode.js');
+var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
+var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
 var config = require('../../config/config');
 
 
 var commandList = ['restart', 'renewGeocodeList'];
-var weatherCategory = ['short', 'current'];
+var weatherCategory = ['forecast', 'current'];
 
+var itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
+var itemWuForecastSummary =[
+    'date',
+    'sunrise',
+    'sunset',
+    'moonrise',
+    'moonset',
+    'tmax',
+    'tmin',
+    'precip',
+    'rain',
+    'snow',
+    'prob',
+    'humax',
+    'humin',
+    'windspdmax',
+    'windgstmax',
+    'slpmax',
+    'slpmin'
+];
+var itemWuForecast = [
+    'date',
+    'time',
+    'utcDate',
+    'utcTime',
+    'desc',
+    'code',
+    'tmp',
+    'ftmp',
+    'winddir',
+    'windspd',
+    'windgst',
+    'cloudlow',
+    'cloudmid',
+    'cloudhigh',
+    'cloudtot',
+    'precip',
+    'rain',
+    'snow',
+    'fsnow',
+    'prob',
+    'humid',
+    'dewpoint',
+    'vis',
+    'splmax'
+];
 /**
  *
  * @returns {controllerWorldWeather}
@@ -173,6 +221,10 @@ function controllerWorldWeather(){
                             }
 
                             req.error = undefined;
+
+                            if(result.weather.WU){
+                                req.WU = result.weather.WU;
+                            }
                             callback('skip_get_data', result);
                         });
                     });
@@ -197,11 +249,16 @@ function controllerWorldWeather(){
                 },
                 // 4. get WU data from DB by using geocode
                 function(callback){
-                    self.getDataFromWU(req, function(err){
+                    self.getDataFromWU(req, function(err, result){
+                        if(err){
+                            log.error('WW> Fail to get WU data: ', err);
+                            callback(null);
+                            return;
+                        }
                         log.info('WW> get WU data');
 
                         // goto next step
-                        callback(null);
+                        callback(null, result);
                     });
                 }
         ],
@@ -217,8 +274,7 @@ function controllerWorldWeather(){
                 self.makeDefault(req);
                 self.mergeWeather(req);
 
-                req.result = result;
-                log.info(req.result);
+                log.silly(req.result);
             }
 
             log.info('WW> Finish to make weather data');
@@ -354,7 +410,7 @@ function controllerWorldWeather(){
                 //}
 
                 self.geocodeList = tList;
-                log.silly('WW> ', JSON.stringify(self.geocodeList));
+                log.info('WW> ', JSON.stringify(self.geocodeList));
                 callback(0);
             });
         }
@@ -385,7 +441,9 @@ function controllerWorldWeather(){
      */
     self.checkGeocode = function(geocode){
         for(var i = 0; i < self.geocodeList.length ; i++){
-            if((self.geocodeList[i].geocode.lon === geocode.lon) && (self.geocodeList[i].geocode.lat === geocode.lat)){
+            log.info('index[' + i + ']' + 'lon:(' + self.geocodeList[i].geocode.lon + '), lat:(' + self.geocodeList[i].geocode.lat + ') | lon:(' + geocode.lon + '), lat:(' + geocode.lat + ')');
+            if((self.geocodeList[i].geocode.lon === parseFloat(geocode.lon)) &&
+                (self.geocodeList[i].geocode.lat === parseFloat(geocode.lat))){
                 return true;
             }
         }
@@ -413,14 +471,115 @@ function controllerWorldWeather(){
         callback(0, req.OWM);
     };
 
+    self.getWuForecastData = function(days){
+        var result = [];
+
+        days.forEach(function(day){
+            var newItem = {
+                summary:{},
+                forecast: []
+            };
+            itemWuForecastSummary.forEach(function(summaryItem){
+               newItem.summary[summaryItem] = day.summary[summaryItem];
+            });
+
+            day.forecast.forEach(function(forecastItem){
+                var newForecast = {};
+
+                itemWuForecast.forEach(function(name){
+                    newForecast[name] = forecastItem[name];
+                });
+
+                newItem.forecast.push(newForecast);
+            });
+
+            result.push(newItem);
+        });
+
+        return result;
+    };
+
+    self.getWuCurrentData = function(dataList){
+        var result = [];
+
+        dataList.forEach(function(item){
+            var newData = {};
+            itemWuCurrent.forEach(function(name){
+                newData[name] = item[name];
+            });
+            result.push(newData);
+        });
+
+        return result;
+    };
+
     /**
      *
      * @param req
      * @param callback
      */
     self.getDataFromWU = function(req, callback){
-        req.WU = {};
-        callback(0, req.WU);
+        var geocode = {
+            lat: parseFloat(req.geocode.lat),
+            lon: parseFloat(req.geocode.lon)
+        };
+        req.WU = {
+            current:[],
+            days: []
+        };
+
+        async.waterfall([
+                function(cb){
+                    modelWuCurrent.find({geocode:geocode}, function(err, list){
+                        if(err){
+                            log.error('gFU> fail to get WU Current data');
+                            //cb(new Error('gFU> fail to get WU Current data'));
+                            cb(null);
+                            return;
+                        }
+
+                        if(list.length === 0){
+                            log.error('gFU> There is no WU Current data for ', geocode);
+                            //cb(new Error('gFU> There is no WU Current data'));
+                            cb(null);
+                            return;
+                        }
+
+                        req.WU.current = self.getWuCurrentData(list[0].dataList);
+                        cb(null);
+                    });
+                },
+                function(cb){
+                    modelWuForecast.find({geocode:geocode}, function(err, list){
+                        if(err){
+                            log.error('gFU> fail to get WU Forecast data');
+                            //cb(new Error('gFU> fail to get WU Forecast data'));
+                            cb(null);
+                            return;
+                        }
+
+                        if(list.length === 0){
+                            log.error('gFU> There is no WU Forecast data for ', geocode);
+                            //cb(new Error('gFU> There is no WU Forecast data'));
+                            cb(null);
+                            return;
+                        }
+
+                        req.WU.forecast = self.getWuForecastData(list[0].days);
+                        cb(null);
+                    });
+                }
+            ],
+            function(err, result){
+                if(err){
+                    log.error('gFU> something is wrong???');
+                    return;
+                }
+
+                log.info(req.WU);
+                callback(err, req.WU);
+            }
+        );
     };
 
     /**
@@ -428,7 +587,7 @@ function controllerWorldWeather(){
      * @param req
      */
     self.makeDefault = function(req){
-        req.weather = {};
+        req.result = {};
     };
 
     /**
@@ -446,6 +605,7 @@ function controllerWorldWeather(){
 
         if(req.WU){
             // TODO : merge WU data
+            req.result.WU = req.WU;
         }
     };
 
