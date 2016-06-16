@@ -287,72 +287,183 @@ function ControllerTown24h() {
         return this;
     };
 
+    this._makeDailyPmStr = function (dustFcst) {
+        var pmStr;
+        var pmGrade;
+        if (dustFcst == undefined) {
+            return;
+        }
+
+        if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
+            pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+            pmGrade = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Grade:dustFcst.PM25Grade;
+        }
+        else if (dustFcst.PM10Grade) {
+            pmStr = dustFcst.PM10Str;
+            pmGrade = dustFcst.PM10Grade;
+        }
+        else if (dustFcst.PM25Grade) {
+            pmStr = dustFcst.PM25Str;
+            pmGrade = dustFcst.PM25Grade;
+        }
+        return {"pmGrade": pmGrade, "pmStr": pmStr};
+    };
+
     this.makeDailySummary = function (req, res, next) {
         var regionName = req.params.region;
         var cityName = req.params.city;
         var townName = req.params.town;
 
         var meta = {};
-        meta.method = 'makeDailySummary';
+        meta.method = "makeDailySummary";
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info(">", meta);
+
+        var todayDate = req.current.date;
+        var yD = kmaTimeLib.convertStringToDate(todayDate);
+        yD.setDate(yD.getDate()-1);
+        var yesterdayDate = kmaTimeLib.convertDateToYYYYMMDD(yD);
+        var tD = kmaTimeLib.convertStringToDate(todayDate);
+        tD.setDate(tD.getDate()+1);
+        var tomorrowDate = kmaTimeLib.convertDateToYYYYMMDD(tD);
 
         var time = parseInt(req.current.time.substr(0, 2));
         req.current.skyIcon = self._parseSkyState(req.current.sky, req.current.pty, req.current.lgt, time < 7 || time > 18);
+        var current = req.current;
 
-        var dustFcst;
-        dustFcst = req.midData.dailyData[7].dustForecast;
-        if (dustFcst) {
-            if (dustFcst.PM10Grade && dustFcst.PM25Grade) {
-                req.midData.dailyData[7].pmStr = dustFcst.PM10Grade>=dustFcst.PM25Grade?dustFcst.PM10Str:dustFcst.PM25Str;
+        var today;
+        var yesterday;
+        var tomorrow;
+
+        var dailyDataLen = req.midData.dailyData.length;
+        var pmObject;
+        for (var i=0; i<dailyDataLen; i++) {
+            var dailyData =  req.midData.dailyData[i];
+            if (dailyData.date === yesterdayDate) {
+                yesterday = req.midData.dailyData[i];
             }
-            else if (dustFcst.PM10Grade) {
-                req.midData.dailyData[7].pmStr = dustFcst.PM10Str;
+            else if (dailyData.date === todayDate) {
+                today = req.midData.dailyData[i];
+                today.skyIcon = self._parseSkyState(today.sky, today.pty, 0, true);
+                pmObject = self._makeDailyPmStr(today.dustForecast);
+                if (pmObject) {
+                    today.pmStr = pmObject.pmStr;
+                    today.pmGrade = pmObject.pmGrade;
+                }
             }
-            else if (dustFcst.PM25Grade) {
-                req.midData.dailyData[7].pmStr = dustFcst.PM25Str;
-            }
-        }
-
-        var text = '';
-
-        if (townName && townName != '') {
-            text += townName+' ';
-        }
-        else if (cityName && cityName != '') {
-            text += cityName+' ';
-        }
-        else if (regionName && regionName != '') {
-            text += regionName+' ';
-        }
-
-        text += self._getWeatherEmoji(req.current.skyIcon)+',';
-        text += req.current.t1h+'˚';
-        if (req.midData.dailyData.length > 7) {
-            text += ',';
-            text += self._getEmoji('DownwardsArrow')+req.midData.dailyData[7].taMin+'˚/'+
-                self._getEmoji('UpwardsArrow')+req.midData.dailyData[7].taMax+'˚';
-            if (req.midData.dailyData[7].pmStr) {
-                text += ' ';
-                text += '미세예보:'+req.midData.dailyData[7].pmStr;
+            else if (dailyData.date === tomorrowDate) {
+                tomorrow = req.midData.dailyData[i];
+                tomorrow.skyIcon = self._parseSkyState(tomorrow.sky, tomorrow.pty, 0, true);
+                pmObject = self._makeDailyPmStr(tomorrow.dustForecast);
+                if (pmObject) {
+                    tomorrow.pmStr = pmObject.pmStr;
+                    tomorrow.pmGrade = pmObject.pmGrade;
+                }
             }
         }
 
-        var date = req.current.stnDateTime?req.current.stnDateTime:req.currentPubDate;
-        if (req.midData.dailyData.length > 6) {
-            var yesterday = {tmn: req.midData.dailyData[6].taMin, tmx: req.midData.dailyData[6].taMax};
+        var dailyArray = [];
+        var dailySummary = "";
+
+        var location = "";
+        if (townName && townName != "") {
+            location += townName+" ";
         }
-        if (req.midData.dailyData.length > 7) {
-            var today = {tmn: req.midData.dailyData[7].taMin, tmx: req.midData.dailyData[7].taMax};
+        else if (cityName && cityName != "") {
+            location += cityName+" ";
         }
-        if (req.midData.dailyData.length > 8) {
-            var tomorrow = {tmn: req.midData.dailyData[8].taMin, tmx: req.midData.dailyData[8].taMax};
+        else if (regionName && regionName != "") {
+            location += regionName+" ";
         }
 
-        req.dailySummary = {title: req.current.summary, text: text, date: date, icon: req.current.skyIcon,
-                            yesterday: yesterday, today: today, tomorrow: tomorrow};
+        var theDay;
+        if (time < 18) {
+            theDay = today;
+            dailySummary += "오늘: ";
+        }
+        else {
+            theDay = tomorrow;
+            dailySummary += "내일: ";
+        }
+
+        if (theDay.skyIcon) {
+            dailyArray.push(self._getWeatherEmoji(theDay.skyIcon));
+        }
+        if (theDay.taMin != undefined && theDay.taMax != undefined) {
+            dailyArray.push(self._getEmoji("DownwardsArrow")+theDay.taMin+"˚"+
+                self._getEmoji("UpwardsArrow")+theDay.taMax+"˚");
+        }
+        if (theDay.pty && theDay.pty > 0) {
+            if (theDay.pop) {
+                dailyArray.push("강수확률"+" "+theDay.pop+"%");
+            }
+        }
+        if (theDay.pmGrade && theDay.pmGrade > 1) {
+            if (theDay.pmStr) {
+                dailyArray.push("미세먼지" + " " + theDay.pmStr);
+            }
+        }
+        if (theDay.ultrvGrade >= 2) {
+            dailyArray.push("자외선"+" "+theDay.ultrvStr);
+        }
+        if (theDay.dustForecast.O3Grade >= 2) {
+            dailyArray.push("오존"+" "+theDay.dustForecast.O3Str);
+        }
+
+        //불쾌지수
+
+        dailySummary += dailyArray.toString();
+
+        var hourlyArray = [];
+        var hourlySummary = "";
+        hourlySummary += time+"시: ";
+
+        if (current.skyIcon) {
+            var weather = self._getWeatherEmoji(current.skyIcon);
+            //if (current.weather) {
+            //    weather += " "+current.weather;
+            //}
+            hourlyArray.push(weather);
+        }
+        if (current.t1h) {
+            var str = current.t1h+"˚";
+
+            //if (current.yesterday && current.yesterday.t1h !== undefined) {
+            //    str += " ";
+            //    var diffTemp = Math.round(current.t1h - current.yesterday.t1h);
+            //
+            //    str += "어제";
+            //    if (diffTemp == 0) {
+            //        str += "와 동일";
+            //    }
+            //    else {
+            //        str += "보다 " + Math.abs(diffTemp);
+            //        if (diffTemp < 0) {
+            //            str += "˚낮음";
+            //        }
+            //        else if (diffTemp > 0) {
+            //            str += "˚높음";
+            //        }
+            //    }
+            //}
+            hourlyArray.push(str);
+        }
+
+        if (current.arpltn && current.arpltn.khaiGrade) {
+            hourlyArray.push("대기"+" "+ current.arpltn.khaiStr);
+        }
+        if (current.pty && current.rn1 != undefined) {
+            hourlyArray.push(current.ptyStr+" "+ current.rn1Str);
+        }
+        hourlySummary += hourlyArray.toString();
+        //불쾌지수
+
+        var date = current.stnDateTime?current.stnDateTime:currentPubDate;
+
+        req.dailySummary = {title: location+hourlySummary, text: dailySummary, date: date, icon: current.skyIcon,
+                            current: current, yesterday: yesterday, today: today, tomorrow: tomorrow};
 
         return next();
     };
