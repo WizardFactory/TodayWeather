@@ -31,9 +31,32 @@
                     </ion-scroll>
 
                     <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                    <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">대기정보</p>
+                    <div class="row row-no-padding" style="margin-top: 8px">
+                        <div class="col" style="text-align: center" >
+                            <!--<p class="title" style="margin: 0">CAI</p>-->
+                            <p class="subheading" style="margin: 0 0 5px;">대기질</p>
+                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.khaiGrade)}}">
+                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.khaiValue}}</p>
+                        </div>
+                        <div class="col" style="text-align: center" >
+                            <!--<p class="title" style="margin: 0">PM10</p>-->
+                            <p class="subheading" style="margin: 0 0 5px;">미세먼지</p>
+                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm10Grade)}}">
+                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.pm10Value}}<small style="letter-spacing: 0">㎍/㎥</small></p>
+                        </div>
+                        <div class="col" style="text-align: center" >
+                            <!--<p class="title" style="margin: 0;">PM2.5</p>-->
+                            <p class="subheading" style="margin: 0 0 5px;">초미세먼지</p>
+                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm25Grade)}}">
+                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.pm25Value}}<small style="letter-spacing: 0">㎍/㎥</small></p>
+                        </div>
+                    </div>
 
-                    <div class="row" style="margin: auto">
-                        <div style="margin: auto">
+                    <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+                    <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">상세날씨</p>
+                    <div class="row row-no-padding" style="margin-top: 8px">
+                        <div style="margin: 0 auto">
                             <div class="row subheading">
                                 <img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
                                      style="height: 24px;">
@@ -69,8 +92,56 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                    <div style="width: 100%">
+                        <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">실시간</p>
+                        <div class="row" style="padding-top: 0">
+                            <div style="margin: auto">
+                                <div class="subheading" style="padding: 2px">
+                                    CAI <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.khaiGrade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.khaiStr}}<span class="caption" style="letter-spacing: 0"
+                                                                           ng-if="currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    PM10 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm10Grade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.pm10Str}}<span class="caption" style="letter-spacing: 0"
+                                                                           ng-if="currentWeather.arpltn.pm10Value != -1">({{currentWeather.arpltn.pm10Value}}㎍/㎥{{currentWeather.arpltn.pm10StationName?" "+currentWeather.arpltn.pm10StationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    PM2.5 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm25Grade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.pm25Str}}<span class="caption" style="letter-spacing: 0"
+                                                                           ng-if="currentWeather.arpltn.pm25Value != -1">({{currentWeather.arpltn.pm25Value}}㎍/㎥{{currentWeather.arpltn.pm25StationName?" "+currentWeather.arpltn.pm25StationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    O3 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.o3Grade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.o3Str}}<span class="caption" style="letter-spacing: 0"
+                                                                         ng-if="currentWeather.arpltn.o3Value != -1">({{currentWeather.arpltn.o3Value}}ppm{{currentWeather.arpltn.o3StationName?" "+currentWeather.arpltn.o3StationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    SO2 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.so2Grade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.so2Str}}<span class="caption" style="letter-spacing: 0"
+                                                                          ng-if="currentWeather.arpltn.so2Value != -1">({{currentWeather.arpltn.so2Value}}ppm{{currentWeather.arpltn.so2StationName?" "+currentWeather.arpltn.so2StationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    CO <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.coGrade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.coStr}}<span class="caption" style="letter-spacing: 0"
+                                                                         ng-if="currentWeather.arpltn.coValue != -1">({{currentWeather.arpltn.coValue}}ppm{{currentWeather.arpltn.coStationName?" "+currentWeather.arpltn.coStationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    NO2 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.no2Grade)}}" style="height: 24px; vertical-align: middle">
+                                    {{currentWeather.arpltn.no2Str}}<span class="caption" style="letter-spacing: 0"
+                                                                          ng-if="currentWeather.arpltn.no2Value != -1">({{currentWeather.arpltn.no2Value}}ppm{{currentWeather.arpltn.coStationName?" "+currentWeather.arpltn.coStationName:""}})</span>
+                                </div>
+                                <div class="subheading" style="padding: 2px">
+                                    측정소명 <span
+                                        ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col extend-content" ng-if="forecastType==='mid'" ng-click="changeForecastType('detail')">
+                <div class="col extend-content" ng-if="forecastType==='mid'" ng-click="changeForecastType('short')">
                     <ion-scroll delegate-handle="weeklyChart" direction="x" zooming="false" has-bouncing="false"
                                 scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                         <div class="col chartBox" style="margin: auto" ng-style="{'width':dayWidth +'px'}">
@@ -79,6 +150,24 @@
                         </div>
                     </ion-scroll>
                     <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                    <div style="margin: auto">
+                        <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">대기 예보</p>
+                        <div class="row" style="padding-top: 0">
+                            <!--<div style="margin:auto;"></div>-->
+                            <div style="margin: auto;" ng-if="$index == 7 || $index == 8" ng-repeat="day in dayChart[0].values">
+                                <a class="icon ion-calendar" style="color: white;letter-spacing: 5px;"> {{convertMMDD(day.date)}}</a>
+                                <p class="subheading" style="margin: 0">PM10 {{day.dustForecast.PM10Str?day.dustForecast.PM10Str:"-"}}</p>
+                                <p class="caption" style="margin: 0 0 5px;">미세먼지</p>
+                                <p class="subheading" style="margin: 0">PM2.5 {{day.dustForecast.PM25Str?day.dustForecast.PM25Str:"-"}}</p>
+                                <p class="caption" style="margin: 0 0 5px;">초미세먼지</p>
+                                <p class="subheading" style="margin: 0">O3 {{day.dustForecast.O3Str?day.dustForecast.O3Str:"-"}}</p>
+                                <p class="caption" style="margin: 0 0 5px;">오존</p>
+                            </div>
+                            <!--<div style="margin: auto;"></div>-->
+                        </div>
+                    </div>
+                    <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                    <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">상세날씨</p>
                     <ion-scroll delegate-handle="weeklyTable" direction="x" zooming="false" has-bouncing="false"
                                 scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                         <div class="row" style="margin: auto;">
@@ -132,93 +221,9 @@
                         </div>
                     </ion-scroll>
                 </div>
-                <div class="col extend-content" ng-if="forecastType==='detail'"
-                     ng-click="changeForecastType('short')" style="width: 100%">
-                    <div class="row row-no-padding">
-                        <div class="col" style="text-align: center" >
-                            <p class="title" style="margin: 0">CAI</p>
-                            <p class="caption" style="margin: 0 0 5px;">대기질</p>
-                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.khaiGrade)}}">
-                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.khaiValue}}</p>
-                        </div>
-                        <div class="col" style="text-align: center" >
-                            <p class="title" style="margin: 0">PM10</p>
-                            <p class="caption" style="margin: 0 0 5px;">미세먼지</p>
-                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm10Grade)}}">
-                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.pm10Value}}<small style="letter-spacing: 0">㎍/㎥</small></p>
-                        </div>
-                        <div class="col" style="text-align: center" >
-                            <p class="title" style="margin: 0;">PM2.5</p>
-                            <p class="caption" style="margin: 0 0 5px;">초미세먼지</p>
-                            <img height="48px" ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm25Grade)}}">
-                            <p class="body2" style="margin: 0 0 5px;">{{currentWeather.arpltn.pm25Value}}<small style="letter-spacing: 0">㎍/㎥</small></p>
-                        </div>
-                    </div>
-                    <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                    <div style="margin: auto">
-                        <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">예보</p>
-                        <div class="row" style="padding-top: 0">
-                            <!--<div style="margin:auto;"></div>-->
-                            <div style="margin: auto;" ng-if="$index == 7 || $index == 8" ng-repeat="day in dayChart[0].values">
-                                <a class="icon ion-calendar" style="color: white;letter-spacing: 5px;"> {{convertMMDD(day.date)}}</a>
-                                <p class="subheading" style="margin: 0">PM10 {{day.dustForecast.PM10Str?day.dustForecast.PM10Str:"-"}}</p>
-                                <p class="caption" style="margin: 0 0 5px;">미세먼지</p>
-                                <p class="subheading" style="margin: 0">PM2.5 {{day.dustForecast.PM25Str?day.dustForecast.PM25Str:"-"}}</p>
-                                <p class="caption" style="margin: 0 0 5px;">초미세먼지</p>
-                                <p class="subheading" style="margin: 0">O3 {{day.dustForecast.O3Str?day.dustForecast.O3Str:"-"}}</p>
-                                <p class="caption" style="margin: 0 0 5px;">오존</p>
-                            </div>
-                            <!--<div style="margin: auto;"></div>-->
-                        </div>
-                    </div>
-                    <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                    <div style="width: 100%">
-                        <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">실시간</p>
-                        <div class="row" style="padding-top: 0">
-                            <div style="margin: auto">
-                                <div class="subheading" style="padding: 2px">
-                                    CAI <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.khaiGrade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.khaiStr}}<span class="caption" style="letter-spacing: 0"
-                                                                           ng-if="currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    PM10 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm10Grade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.pm10Str}}<span class="caption" style="letter-spacing: 0"
-                                                                           ng-if="currentWeather.arpltn.pm10Value != -1">({{currentWeather.arpltn.pm10Value}}㎍/㎥{{currentWeather.arpltn.pm10StationName?" "+currentWeather.arpltn.pm10StationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    PM2.5 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.pm25Grade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.pm25Str}}<span class="caption" style="letter-spacing: 0"
-                                                                           ng-if="currentWeather.arpltn.pm25Value != -1">({{currentWeather.arpltn.pm25Value}}㎍/㎥{{currentWeather.arpltn.pm25StationName?" "+currentWeather.arpltn.pm25StationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    O3 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.o3Grade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.o3Str}}<span class="caption" style="letter-spacing: 0"
-                                                                         ng-if="currentWeather.arpltn.o3Value != -1">({{currentWeather.arpltn.o3Value}}ppm{{currentWeather.arpltn.o3StationName?" "+currentWeather.arpltn.o3StationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    SO2 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.so2Grade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.so2Str}}<span class="caption" style="letter-spacing: 0"
-                                                                          ng-if="currentWeather.arpltn.so2Value != -1">({{currentWeather.arpltn.so2Value}}ppm{{currentWeather.arpltn.so2StationName?" "+currentWeather.arpltn.so2StationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    CO <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.coGrade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.coStr}}<span class="caption" style="letter-spacing: 0"
-                                                                         ng-if="currentWeather.arpltn.coValue != -1">({{currentWeather.arpltn.coValue}}ppm{{currentWeather.arpltn.coStationName?" "+currentWeather.arpltn.coStationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    NO2 <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.no2Grade)}}" style="height: 24px; vertical-align: middle">
-                                    {{currentWeather.arpltn.no2Str}}<span class="caption" style="letter-spacing: 0"
-                                                                          ng-if="currentWeather.arpltn.no2Value != -1">({{currentWeather.arpltn.no2Value}}ppm{{currentWeather.arpltn.coStationName?" "+currentWeather.arpltn.coStationName:""}})</span>
-                                </div>
-                                <div class="subheading" style="padding: 2px">
-                                    측정소명 <span
-                                        ng-if="currentWeather.arpltn.stationName">{{currentWeather.arpltn.stationName}}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!--<div class="col extend-content" ng-if="forecastType==='detail'"-->
+                     <!--ng-click="changeForecastType('short')" style="width: 100%">-->
+                <!--</div>-->
             </div>
         </div>
     </ion-content>
