@@ -37,19 +37,19 @@
                             <div class="row subheading">
                                 <img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
                                      style="height: 24px;">
-                                <p style="margin: auto 8px;">습도 {{currentWeather.reh}}%</p>
+                                <p style="margin: auto 8px;">습도 {{currentWeather.reh}}<small>%</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/wind-and-cloud.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">바람 {{currentWeather.wdd}} {{currentWeather.wsd}}m/s</p>
+                                <p style="margin: auto 8px">바람 {{currentWeather.wdd}} {{currentWeather.wsd}}<small>m/s</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/ic_visibility_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">가시거리 {{currentWeather.visibility}}km</p>
+                                <p style="margin: auto 8px">가시거리 {{currentWeather.visibility}}<small>km</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/ic_vertical_align_bottom_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">기압 {{currentWeather.hPa}}hPa</p>
+                                <p style="margin: auto 8px">기압 {{currentWeather.hPa}}<small>hPa</small></p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.dspls && currentWeather.dspls > 60">
                                 <img src="img/angry.svg" style="height: 20px; margin: 0 2px">
@@ -57,7 +57,7 @@
                             </div>
                             <div class="row subheading" ng-if="currentWeather.sensorytem">
                                 <img src="img/ic_person_outline_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">체감온도 {{currentWeather.sensorytem}}</p>
+                                <p style="margin: auto 8px">체감온도 {{currentWeather.sensorytem}}˚</p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.weather">
                                 <img ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png" style="height: 24px">
@@ -65,7 +65,7 @@
                             </div>
                             <div class="row subheading" ng-if="currentWeather.rn1 != undefined">
                                 <img src="img/glass-with-water.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">강수량 {{currentWeather.rn1}}mm</p>
+                                <p style="margin: auto 8px">강수량 {{currentWeather.rn1}}<small>mm</small></p>
                             </div>
                         </div>
                     </div>
@@ -89,43 +89,29 @@
                                 <div class="row" style="margin: 0" ng-if="day.reh">
                                     <img ng-src="img/Humidity-{{day.reh?day.reh - day.reh%10:'00'}}.png" style="height: 24px; margin: auto 0;">
                                     <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.reh}}%</p>
+                                        <p class="subheading" style="margin: 0;">{{day.reh}}<small>%</small></p>
                                         <span class="caption">습도</span>
                                     </div>
                                 </div>
                                 <div class="row subheading" style="margin: 0" ng-if="day.wsd">
                                     <img src="img/wind-and-cloud.svg" style="height: 22px; margin: auto 1px;">
                                     <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.wsd}}m/s</p>
+                                        <p class="subheading" style="margin: 0;">{{day.wsd}}<small>m/s</small></p>
                                         <span class="caption">바람</span>
                                     </div>
                                 </div>
                                 <div class="row subheading" style="margin: 0" ng-if="day.pop">
                                     <img src="img/Umbrella.png" style="height: 24px; margin: auto 0;">
                                     <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.pop}}%</p>
+                                        <p class="subheading" style="margin: 0;">{{day.pop}}<small>%</small></p>
                                         <span class="caption">강수확률</span>
                                     </div>
                                 </div>
-                                <div class="row subheading" style="margin: 0" ng-if="day.rn1">
+                                <div class="row subheading" style="margin: 0" ng-if="haveRainSnowFall(day)">
                                     <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
                                     <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.rn1}}mm</p>
-                                        <span class="caption">강수량</span>
-                                    </div>
-                                </div>
-                                <div class="row subheading" style="margin: 0" ng-if="day.r06">
-                                    <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
-                                    <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.r06}}mm</p>
-                                        <span class="caption">강수량</span>
-                                    </div>
-                                </div>
-                                <div class="row subheading" style="margin: 0" ng-if="day.s06">
-                                    <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
-                                    <div style="margin: auto 8px">
-                                        <p class="subheading" style="margin: 0;">{{day.s06}}cm</p>
-                                        <span class="caption">적설량</span>
+                                        <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getRainSnowFallSymbol(day)}}</small></p>
+                                        <span class="caption">{{getRainSnowFallSymbol(day)=="cm"?"적설량":"강수량"}}</span>
                                     </div>
                                 </div>
                                 <div class="row subheading" style="margin: 0" ng-if="day.ultrvStr">

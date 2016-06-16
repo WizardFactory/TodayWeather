@@ -184,6 +184,89 @@ angular.module('starter.controllers', [])
                 $scope.currentWeather.summary+'</p>';
             return str;
         }
+
+        function _makeRainSnowFallValueStr(pty, rn1, r06, s06) {
+            var ret = "";
+            var frcst = 0;
+            var rsf = 0;
+
+            if (r06 != undefined && r06 > 0) {
+                frcst = r06;
+            }
+            else if (r06 != undefined && s06 > 0) {
+                frcst = s06;
+            }
+
+            if (rn1 != undefined && rn1 > 0) {
+                rsf = rn1;
+            }
+
+            if (rn1 != undefined && rn1 > 0) {
+                if (r06 != undefined || s06 != undefined) {
+                    ret += rsf+'/'+frcst;
+                }
+                else {
+                    ret += rsf;
+                }
+                return ret;
+            }
+            else if ((r06 != undefined && r06 > 0) || (r06 != undefined && s06 > 0)) {
+                if (rn1 != undefined) {
+                    ret += rsf+'/'+frcst;
+                }
+                else {
+                    ret += frcst;
+                }
+                return ret;
+            }
+            if (pty > 0) {
+               ret = "0";
+            }
+            return ret;
+        }
+
+        function _makeRainSnowFallSymbol(pty, rn1, r06, s06) {
+            if (pty != undefined && pty === 3) {
+                return "cm";
+            }
+            else if (pty != undefined && pty > 0) {
+                return "mm";
+            }
+
+            if (r06 != undefined && r06 > 0) {
+                return "mm";
+            }
+            if (s06 != undefined && s06 > 0) {
+                return "cm";
+            }
+
+            if (rn1 != undefined && rn1 > 0) {
+                return "mm";
+            }
+            return "";
+        }
+
+        $scope.haveRainSnowFall = function (day) {
+            if (
+                (day.pty != undefined && day.pty > 0) ||
+                (day.rn1 != undefined && day.rn1 > 0) ||
+                (day.r06 != undefined && day.r06 > 0) ||
+                (day.s06 != undefined && day.s06 > 0)
+            )  {
+                return true;
+            }
+
+            return false;
+        };
+
+        $scope.getRainSnowFall = function (value) {
+            return _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+        };
+
+        $scope.getRainSnowFallSymbol = function (value) {
+            return _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+        };
+
         //<div class="row row-no-padding">
         //                        <div style="width: 26px;"></div>
         //                        <div class="col"
@@ -276,7 +359,7 @@ angular.module('starter.controllers', [])
                 if (value.pop) {
                     str += '<p class="subheading" style="letter-spacing:0; margin: auto">'+
                             //'<a class="icon ion-umbrella"></a>' +
-                        value.pop + '<small style="font-size: 10px">%</small></p>';
+                        value.pop + '<small>%</small></p>';
                 }
                 str += '</div>';
             }
@@ -286,37 +369,13 @@ angular.module('starter.controllers', [])
             str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                str += '<div class="col table-items table-border">';
-                if (value.rn1 && value.rn1 > 0) {
-                    str += '<p class="caption" style="letter-spacing:0; margin: auto">'+value.rn1;
-                    str += '<small style="font-size:10px">';
-                    if (value.pty === 3) {
-                        str += 'cm';
-                    }
-                    else {
-                        str += 'mm';
-                    }
-                    str += '</small></p>';
-                }
-                else if ((value.r06 && value.r06 > 0) || (value.s06 && value.s06 > 0)) {
-                    var v = 0;
-                    if (value.r06) {
-                        v = value.r06;
-                    }
-                    else {
-                        v = value.s06;
-                    }
-                    str += '<p class="caption" style="letter-spacing: 0; margin: auto">'+v;
-                    str += '<small style="font-size:10px">';
-                    if (value.pty === 3) {
-                        str += 'cm';
-                    }
-                    else {
-                        str += 'mm';
-                    }
-                    str += '</small></p>';
-                }
 
+                str += '<div class="col table-items table-border">';
+                str += '<p class="caption" style="letter-spacing:0; margin: auto">';
+                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+                str += '<small">';
+                str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+                str += '</small></p>';
                 str += '</div>';
             }
             str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
@@ -382,41 +441,16 @@ angular.module('starter.controllers', [])
                 }
 
                 if (value.pop != undefined && value.pop > 0) {
-                    tmpStr = value.pop == undefined?'-':value.pop+'<small style="font-size: 10px">%</small>';
+                    tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
                     str += '<p class="subheading" style="margin: auto">'+tmpStr+'</p>';
                 }
 
-                if (value.rn1 != undefined && value.rn1 > 0) {
-                    str += '<p class="caption" style="margin: auto; letter-spacing: 0;">'+value.rn1;
-                    str += '<small style="font-size:10px">';
-                    if (value.pty === 3) {
-                       str += 'cm';
-                    }
-                    else {
-                       str += 'mm';
-                    }
-                    str += '</small></p>';
-                }
-                else if ((value.r06 && value.r06 > 0) || (value.s06 && value.s06 > 0)) {
-                    var v = 0;
-                    if (value.r06) {
-                        v = value.r06;
-                    }
-                    else {
-                        v = value.s06;
-                    }
-                    str += '<p class="caption" style="letter-spacing: 0; margin: auto">'+v;
-                    str += '<small style="font-size:10px">';
-                    if (value.pty === 3) {
-                        str += 'cm';
-                    }
-                    else {
-                        str += 'mm';
-                    }
-                    str += '</small></p>';
-                }
-
-               str += '</div>';
+                str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
+                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+                str += '<small>';
+                str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+                str += '</small></p>';
+                str += '</div>';
             }
             str += '</div>';
             return str;
