@@ -39,6 +39,27 @@ function ControllerRequester(){
         switch(req.params.command)
         {
             case 'get_all':
+                if(req.params.category === 'WU'){
+                    var collector;
+                    if(global.collector){
+                        collector = global.collector;
+                    }else{
+                        collector = new conCollector;
+                    }
+                    collector.runTask(true, function(err){
+                        if(err){
+                            log.error('command error : get_all');
+                            req.result = {status: 'Fail', cmd: req.params.command};
+                        }else{
+                            req.result = {status: 'OK', category: req.params.category, cmd: req.params.command};
+                        }
+
+                        next();
+                    });
+                }else{
+                    req.result = {status: 'OK', cmd: req.params.command};
+                    next();
+                }
                 break;
             case 'get':
                 break;

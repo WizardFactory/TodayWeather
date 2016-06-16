@@ -245,8 +245,8 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
         function(location, cb){
             var requester = new wuRequester;
             var geocode = {
-                lat: parseFloat(location.geocode.lat),
-                lon: parseFloat(location.geocode.lon)
+                lat: parseFloat(location.lat),
+                lon: parseFloat(location.lon)
             };
 
             modelWuCurrent.find({geocode:geocode}, function(err, list){
@@ -636,9 +636,9 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                 // get forecast
                 requester.getForecast(geocode, self._getWuKey(), function(err, result){
                     if(err){
-                        print.error('rWD> Fail to requestWuData on Forecase');
-                        log.error('rWD> Fail to requestWuData on Forecase');
-                        cb('rWD> Fail to requestWuData on Forecase');
+                        print.error('rWuD> Fail to requestWuData on Forecast');
+                        log.error('rWuD> Fail to requestWuData on Forecast');
+                        cb('rWuD> Fail to requestWuData on Forecast');
                         return;
                     }
 
@@ -656,9 +656,9 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                 };
                 requester.getCurrent(geocode, self._getWuKey(), function(err, result){
                     if(err){
-                        print.error('rWD> fail to requestWuData on Current');
-                        log.error('rWD> fail to requestWuData on Current');
-                        cb('rWD> fail to requestWuData on Current', wuData);
+                        print.error('rWuD> fail to requestWuData on Current');
+                        log.error('rWuD> fail to requestWuData on Current');
+                        cb('rWuD> fail to requestWuData on Current', wuData);
                         return;
                     }
 
@@ -677,6 +677,8 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
 
             if(wuData){
                 callback(err, wuData);
+            }else{
+                callback(err);
             }
         }
     );
@@ -745,12 +747,12 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
     }
 };
 
-ConCollector.prototype.runkTask = function(isAll, callback){
+ConCollector.prototype.runTask = function(isAll, callback){
     var self = this;
     var minute = (new Date()).getUTCMinutes();
     var funcList = [];
 
-    log.silly('RT> check collector based on the minute');
+    log.info('RT> check collector based on the minute : ', minute);
 
     if(minute === 30 || isAll){
         funcList.push(self.processWuCurrent);
@@ -770,7 +772,7 @@ ConCollector.prototype.runkTask = function(isAll, callback){
                 return;
             }
 
-            log.info('RT>  collect weather data : ', self._getTimeString(9));
+            log.info('RT>  Complete to collect weather data : ', self._getTimeString(9));
 
             if(callback){
                 callback(err);
@@ -782,10 +784,14 @@ ConCollector.prototype.runkTask = function(isAll, callback){
 ConCollector.prototype.doCollect = function(){
     var self = this;
 
-    self.runkTask(true);
+    global.collector = self;
+
+    self.runTask(true);
     setInterval(function() {
-        self.runkTask(false);
+        self.runTask(false);
     }, 1000*60);
+
+
 };
 
 module.exports = ConCollector;
