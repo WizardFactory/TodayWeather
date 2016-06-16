@@ -12,6 +12,7 @@
 var req = require('request');
 var async = require('async');
 
+var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -713,6 +714,46 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
                     lifeIndexKma[result.indexName] = result.data;
                 });
                 return callback(undefined, lifeIndexKma);
+            });
+    });
+};
+
+/**
+ * towns db로부터 areaNo정보를 life index kma에 추가함.
+ * @param callback
+ */
+KmaIndexService.prototype.updateLifeIndexDbFromTowns = function (callback) {
+
+    Town.find({},{_id:0}).lean().exec(function (err, townList) {
+        if (err) {
+            log.error(err);
+            return;
+        }
+        async.map(townList,
+            function (town, cb) {
+                LifeIndexKma.find({"areaNo": town.areaNo}, function (err, lifeIndexList) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    if (lifeIndexList.length > 0) {
+                        log.silly("Already saved areaNo="+town.areaNo);
+                        return cb(undefined);
+                    }
+                    var lifeIndexKma = new LifeIndexKma({town: town.town, mCoord: town.mCoord, areaNo: town.areaNo,
+                                                        geo: [town.gCoord.lon, town.gCoord.lat]});
+                    lifeIndexKma.save(function (err) {
+                        if (err) {
+                            return cb(err);
+                        }
+                        cb(undefined, lifeIndexKma.areaNo);
+                    });
+                });
+            },
+            function (err, results) {
+                if (err) {
+                    return callback(err);
+                }
+                callback(undefined, results);
             });
     });
 };

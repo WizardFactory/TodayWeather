@@ -178,6 +178,30 @@ describe('unit test - requester of kma index service class', function() {
         assert.equal(result, ultraIndex, '');
     });
 
+    //it('update Life Index Db From Towns', function (done) {
+    //    this.timeout(30*1000);
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //            done();
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //    reqLifeIndex.updateLifeIndexDbFromTowns(function (err, results) {
+    //        if (err) {
+    //            log.error(err.toString());
+    //            return done();
+    //        }
+    //        log.info(JSON.stringify(results));
+    //        done();
+    //    });
+    //});
+
     //it ('get LifeIndex By Town', function (done) {
     //    this.timeout(10*1000);
     //    var mongoose = require('mongoose');
