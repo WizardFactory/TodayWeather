@@ -2400,7 +2400,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
  */
 ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
     var meta = {};
-    meta.method = '_getShortFromDB';
+    meta.method = '_getTownDataFromDB';
     meta.indicator = indicator;
 
     try{
@@ -2477,7 +2477,8 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
                 }
                 else{
                     log.info('~> what???');
-                    log.error(meta);
+                    log.error(JSON.stringify(meta));
+                    cb(new Error(JSON.stringify(meta)));
                     return [];
                 }
                 //log.info(ret);
