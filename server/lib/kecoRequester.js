@@ -633,7 +633,26 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
                     }
                     for (var name in objFrcst) {
                         if (objFrcst.hasOwnProperty(name)) {
-                            shFrcstList[0][name] = objFrcst[name];
+                            if (name == "informGrade") {
+                                var informGradeArray = objFrcst[name];
+                                for (var i=0; i<informGradeArray.length; i++) {
+                                    if (informGradeArray[i].grade != "예보없음") {
+                                        for (var j=0; j<shFrcstList[0][name].length; j++) {
+                                            if (shFrcstList[0][name][j].region == informGradeArray[i].region) {
+                                                shFrcstList[0][name][j].grade = informGradeArray[i].grade;
+                                                break;
+                                            }
+                                        }
+                                        if (j == shFrcstList[0][name].length) {
+                                            log.warning("_saveFrcst : region is new? name="+informGradeArray[i].region);
+                                            shFrcstList[0][name].push(informGradeArray[i]);
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                shFrcstList[0][name] = objFrcst[name];
+                            }
                         }
                     }
                     shFrcstList[0].save(function (err) {
