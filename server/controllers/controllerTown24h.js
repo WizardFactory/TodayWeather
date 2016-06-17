@@ -86,6 +86,7 @@ function ControllerTown24h() {
 
         //r06, s06을 3시간단위로 나눔.
         //앞시간 뒤시간 모두 pty가 1이상이면 반반으로 나누고, 아니라면 몰아줌.
+        //todo: merge 순서 변경 필요. 1) short  2) short rss 3) r06, s06분리 4) past
         if (req.short[0].s06 < 0) {
             req.short[0].s06 = 0;
         }
@@ -108,7 +109,12 @@ function ControllerTown24h() {
                     req.short[i].r06 = short.r06;
                 }
                 else {
-                    log.error("It has r06 but pty is zero short index="+i);
+                    if (req.short[i-1].rn1 != undefined || req.short[i].rn1 != undefined) {
+                        //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
+                    }
+                    else {
+                        log.error("It has r06 but pty is zero short index="+i);
+                    }
                     req.short[i-1].r06 = 0;
                     req.short[i].r06 = 0;
                 }
@@ -132,7 +138,12 @@ function ControllerTown24h() {
                     req.short[i].s06 = short.s06;
                 }
                 else {
-                    log.error("It has s06 but pty is zero short index="+i);
+                    if (req.short[i-1].rn1 != undefined || req.short[i].rn1 != undefined) {
+                        //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
+                    }
+                    else {
+                        log.error("It has s06 but pty is zero short index=" + i);
+                    }
                     req.short[i-1].s06 = 0;
                     req.short[i].s06 = 0;
                 }
