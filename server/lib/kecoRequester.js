@@ -81,7 +81,7 @@ Keco.prototype.getCtprvnSidoList = function() {
 
     //get from town.js
     this._sidoList = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원', '충북', '충남', '전북', '전남', '경북',
-        '경남', '제주'
+        '경남', '제주', '세종'
     ];
 
     return this._sidoList;
@@ -111,7 +111,7 @@ Keco.prototype.convertRegionToSido = function(regionName) {
             return '울산';
         case '충청북도':case '충북':
             return '충북';
-        case '세종특별자치시':case '세종시':case '세종':case '충청남도':case '충남':
+        case '충청남도':case '충남':
             return '충남';
         case '인천광역시': case '인천시': case '인천':
             return '인천';
@@ -121,6 +121,8 @@ Keco.prototype.convertRegionToSido = function(regionName) {
             return '전북';
         case '제주특별자치도':case '제주도':case '제주':
             return '제주';
+        case '세종특별자치시':case '세종시':case '세종':
+            return '세종';
     }
     return '';
 };

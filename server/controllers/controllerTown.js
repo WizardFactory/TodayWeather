@@ -903,10 +903,10 @@ function ControllerTown() {
         log.info('>', meta);
 
         if (!req.current)  {
-            var err = new Error("Fail to find current weather "+JSON.stringify(meta));
-            log.warn(err);
-            next();
-            return this;
+            req.current={};
+            var nowDate = self._getCurrentTimeValue(+9);
+            req.current.time = nowDate.time;
+            req.current.date = nowDate.date;
         }
 
         try {
@@ -953,6 +953,7 @@ function ControllerTown() {
                         }
                     }
 
+                    req.current.date = date;
                     req.current.time = time;
                     // get discomfort index(불괘지수)
                     req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
@@ -1066,10 +1067,10 @@ function ControllerTown() {
         log.info('>', meta);
 
         if (!req.current)  {
-            var err = new Error("Fail to find current weather "+JSON.stringify(meta));
-            log.warn(err);
-            next();
-            return this;
+            req.current={};
+            var nowDate = self._getCurrentTimeValue(+9);
+            req.current.time = nowDate.time;
+            req.current.date = nowDate.date;
         }
 
         try {
