@@ -3059,7 +3059,8 @@ ControllerTown.prototype._createOrGetDayCondition = function(list, date) {
         }
     }
 
-    list.push({date: date, lgt:[], pty:[], reh:[], rn1:[], sky:[], t1h:[], wsd:[], pop:[], r06:[], s06:[], t3h:[], tmx:-50, tmn:-50});
+    list.push({date: date, lgt:[], pty:[], reh:[], rn1:[], sky:[], t1h:[], wsd:[], pop:[], r06:[], s06:[], t3h:[],
+        tmx:-50, tmn:-50, lgtAm:[], lgtPm:[], ptyAm:[], ptyPm:[], skyAm:[], skyPm:[]});
     return list[list.length-1];
 };
 
@@ -3211,12 +3212,16 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
     //var dateInfo = self._getCurrentTimeValue(9);
 
     shortList.forEach(function (short, i) {
-        //if (short.date < dateInfo.date) {
-        //    log.verbose('getDaySummaryListByShort skip date='+short.date+' before today');
-        //    return;
-        //}
+
+        //24로 변환하면 처음 앞에 데이터는 하루 전으로 변경되어서 버림.
+        if (i == 0 && short.time === '2400') {
+            log.silly('skip one item what is change date');
+            return;
+        }
+
+        //v000705 이전 버전에서 0시 데이터 하나 버림.
         if (i === shortList.length-1 && short.time === '0000') {
-            //todo update way
+            log.silly('skip one item on old api');
            return;
         }
 
@@ -3247,21 +3252,37 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
         if (short.tmn !== -50) {
             dayCondition.tmn = short.tmn;
         }
-
         if (short.wsd !== -1) {
             dayCondition.wsd.push(short.wsd);
+        }
+
+        if (parseInt(short.time) <= 1200 ) {
+            if (short.lgt !== -1) {
+                dayCondition.lgtAm.push(short.lgt);
+            }
+            if (short.sky !== -1) {
+                dayCondition.skyAm.push(short.sky);
+            }
+            if (short.pty !== -1) {
+                dayCondition.ptyAm.push(short.pty);
+            }
+        }
+        else {
+            if (short.lgt !== -1) {
+                dayCondition.lgtPm.push(short.lgt);
+            }
+            if (short.sky !== -1) {
+                dayCondition.skyPm.push(short.sky);
+            }
+            if (short.pty !== -1) {
+                dayCondition.ptyPm.push(short.pty);
+            }
         }
     });
 
     dayConditionList.forEach(function (dayCondition) {
         if (dayCondition.reh.length === 0) {
             log.warn(new Error("dayCondition is empty :" + dayCondition.date));
-            return;
-        }
-
-        //24시 때문에 short에서 data가 하루 뿐인 경우가 있음.
-        if (dayCondition.t3h.length < 8) {
-            log.debug("skip current dayCondition  :" + dayCondition.date);
             return;
         }
 
@@ -3273,8 +3294,14 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
         daySummary.reh = self._average(dayCondition.reh, -1, 0);
         daySummary.s06 = self._sum(dayCondition.s06, -1);
         daySummary.sky = self._average(dayCondition.sky, -1, 0);
-        daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.lgtAm = self._summaryLgt(dayCondition.lgtAm, -1);
+        daySummary.ptyAm = self._summaryPty(dayCondition.ptyAm, -1);
+        daySummary.skyAm = self._average(dayCondition.skyAm, -1, 0);
+        daySummary.lgtPm = self._summaryLgt(dayCondition.lgtPm, -1);
+        daySummary.ptyPm = self._summaryPty(dayCondition.ptyPm, -1);
+        daySummary.skyPm = self._average(dayCondition.skyPm, -1, 0);
+        daySummary.wfAm = self._convertSkyToKorStr(daySummary.skyAm, daySummary.ptyAm);
+        daySummary.wfPm = self._convertSkyToKorStr(daySummary.skyPm, daySummary.ptyPm);
         daySummary.t1d = self._average(dayCondition.t3h, -50, 1);
         daySummary.taMax = Math.round(dayCondition.tmx);
         daySummary.taMin = Math.round(dayCondition.tmn);
@@ -3297,7 +3324,20 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
     var daySummaryList = [];
     //var dateInfo = _getCurrentTimeValue(9);
 
-    pastList.forEach(function (hourCondition) {
+    pastList.forEach(function (hourCondition, i) {
+        if (hourCondition.time === "0000") {
+            var D = kmaTimeLib.convertStringToDate(hourCondition.date);
+            D.setDate(D.getDate()-1);
+            //date = back one day
+            //date = (parseInt(hourCondition.date)-1).toString();
+            hourCondition.time = "2400";
+            hourCondition.date = kmaTimeLib.convertDateToYYYYMMDD(D);
+        }
+        //index 0번 0000시가 하루전으로 변경되므로, 한개는 버려야 함.
+        if (i == 0) {
+            return;
+        }
+
         //if (dateInfo.date - hourCondition.date > 7) {
         //    //skip
         //    log.info('getDaySummaryList skip date='+ hourCondition.date);
@@ -3325,6 +3365,28 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
         if (hourCondition.wsd !== -1) {
             dayCondition.wsd.push(hourCondition.wsd);
         }
+        if (parseInt(hourCondition.time) <= 1200 ) {
+            if (hourCondition.lgt !== -1) {
+                dayCondition.lgtAm.push(hourCondition.lgt);
+            }
+            if (hourCondition.sky !== -1) {
+                dayCondition.skyAm.push(hourCondition.sky);
+            }
+            if (hourCondition.pty !== -1) {
+                dayCondition.ptyAm.push(hourCondition.pty);
+            }
+        }
+        else {
+            if (hourCondition.lgt !== -1) {
+                dayCondition.lgtPm.push(hourCondition.lgt);
+            }
+            if (hourCondition.sky !== -1) {
+                dayCondition.skyPm.push(hourCondition.sky);
+            }
+            if (hourCondition.pty !== -1) {
+                dayCondition.ptyPm.push(hourCondition.pty);
+            }
+        }
     });
 
     dayConditionList.forEach(function (dayCondition) {
@@ -3340,8 +3402,25 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
         daySummary.reh = self._average(dayCondition.reh, -1, 0);
         daySummary.rn1 = self._sum(dayCondition.rn1, -1);
         daySummary.sky = self._average(dayCondition.sky, -1, 0);
-        daySummary.wfAm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
-        daySummary.wfPm = self._convertSkyToKorStr(daySummary.sky, daySummary.pty);
+        daySummary.lgtAm = self._summaryLgt(dayCondition.lgtAm, -1);
+        daySummary.ptyAm = self._summaryPty(dayCondition.ptyAm, -1);
+        if (dayCondition.skyAm.length > 0) {
+            daySummary.skyAm = self._average(dayCondition.skyAm, -1, 0);
+            daySummary.wfAm = self._convertSkyToKorStr(daySummary.skyAm, daySummary.ptyAm);
+        }
+        else {
+            //측정날씨의 경우에는 당일 데이터가 없을 수 있음. short에서 덮어쓰게 됨.
+        }
+        daySummary.lgtPm = self._summaryLgt(dayCondition.lgtPm, -1);
+        daySummary.ptyPm = self._summaryPty(dayCondition.ptyPm, -1);
+        if (dayCondition.skyPm.length > 0) {
+            daySummary.skyPm = self._average(dayCondition.skyPm, -1, 0);
+            daySummary.wfPm = self._convertSkyToKorStr(daySummary.skyPm, daySummary.ptyPm);
+        }
+        else {
+            //측정날씨의 경우에는 당일 데이터가 없을 수 있음. short에서 덮어쓰게 됨.
+        }
+
         daySummary.t1d = self._average(dayCondition.t1h, -50, 1);
         daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
         daySummary.taMax = Math.round(self._max(dayCondition.t1h, -50));
