@@ -279,7 +279,7 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 }
 
 .table-border {
-  border-left: 1px rgba(254, 254, 254, .4) dotted;
+  box-shadow: 1px 0 0 0 rgba(254, 254, 254, 0.1) inset;
 }
 
 .table-items {
@@ -465,21 +465,21 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   font-size: 45px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0px;
+  letter-spacing: 0;
 }
 
 .display1 {
   font-size: 34px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0px;
+  letter-spacing: 0;
 }
 
 .headline {
   font-size: 24px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0px;
+  letter-spacing: 0;
 }
 
 .title {

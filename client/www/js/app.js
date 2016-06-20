@@ -72,6 +72,11 @@ angular.module('starter', [
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
+            } else if (toState.name === 'tab.dailyforecast') {
+                $rootScope.viewColor = '#00BCD4';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0097A7');
+                }
             } else if (toState.name === 'tab.setting') {
                 $rootScope.viewColor = '#FFA726';
                 if (window.StatusBar) {
@@ -154,6 +159,18 @@ angular.module('starter', [
                         }
 
                         var currentTime = scope.currentWeather.time;
+                        //var currentTime = (new Date()).getHours();
+
+                        var currentIndex = -1;
+                        for(var i=0; i<data[1].values.length; i++) {
+                            var value = data[1].values[i].value;
+                            if (value.date == scope.currentWeather.date) {
+                                if (currentTime < value.time) {
+                                    currentIndex = i-1;
+                                    break;
+                                }
+                            }
+                        }
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
@@ -177,6 +194,23 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.currentRect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'currentRect')
+                            .attr('stroke', '#039BE5')
+                            .attr('fill', '#039BE5')
+                            .attr('x', function () {
+                                return x.rangeBand() * currentIndex + x.rangeBand() / 2 + 0.5;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         var lineGroups = svg.selectAll('.line-group')
                             .data(data);
 
@@ -195,20 +229,18 @@ angular.module('starter', [
 
                         guideLines.exit().remove();
 
-                        guideLines.attr('x1', function (d, i) {
-                            return x.rangeBand() * i + x.rangeBand() / 2+1;
-                            //return x.rangeBand() * i+1;
-                        })
+                        guideLines
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
                             .attr('x2', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2+1;
-                                //return x.rangeBand() * i+1;
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
                             })
                             .attr('y1', 0)
                             .attr('y2', height)
-                            .style('stroke-dasharray', ("1, 1"))
                             .attr('stroke-width', 1)
                             .attr('stroke', '#fefefe')
-                            .attr('stroke-opacity', '0.2');
+                            .attr('stroke-opacity', '0.05');
 
                         // draw line
                         var lines = lineGroups.selectAll('.line')
@@ -364,18 +396,13 @@ angular.module('starter', [
                             .attr('class', function (d) {
                                 return 'text-' + d.name;
                             })
-                            .style("fill", function (d) {
+                            .style("fill", function (d, i) {
                                 //빨강점에 글자가 들어가므로 색깔 선정 필요.
-                                //if (d.name == "today") {
-                                //    if (currentTime.getHours() == 0) {
-                                //        if (d.value.time == 24 && d.value.day === "어제") {
-                                //            return '#ffffff';
-                                //        }
-                                //    }
-                                //    else if (d.value.time == currentTime.getHours() && d.value.day === "오늘") {
-                                //        return '#ffffff';
-                                //    }
-                                //}
+                                if (d.name == "today") {
+                                    if (i == currentIndex && currentTime % 3 == 0) {
+                                       return '#fefefe';
+                                    }
+                                }
                                 return '#0288D1';
                             })
                             .attr('text-anchor', 'middle')
@@ -503,6 +530,27 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.currentRect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'currentRect')
+                            .attr('fill', '#00ACC1')
+                            .attr('x', function (d) {
+                                for (var i = 0; i < d.values.length; i++) {
+                                    if (d.values[i].fromToday === 0) {
+                                        return x.rangeBand() * i;
+                                    }
+                                }
+                                return 0;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand())
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         // draw bar
                         var group = svg.selectAll('.bar-group')
                             .data(data);
@@ -510,7 +558,31 @@ angular.module('starter', [
                         group.enter().append('g')
                             .attr('class', 'bar-group');
 
-                        var rects = group.selectAll('rect')
+                        // draw guideLine
+                        var guideLines = group.selectAll('guide-line')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line');
+
+                        guideLines.exit().remove();
+
+                        guideLines
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return (x.rangeBand()) * i+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.1');
+
+                        var rects = group.selectAll('.rect')
                             .data(function (d) {
                                 return d.values;
                             });
@@ -698,9 +770,19 @@ angular.module('starter', [
                     }
                 }
             })
+            .state('tab.dailyforecast', {
+                url: '/dailyforecast?fav',
+                cache: false,
+                views: {
+                    'tab-dailyforecast': {
+                        templateUrl: 'templates/tab-dailyforecast.html',
+                        controller: 'ForecastCtrl'
+                    }
+                }
+            })
             .state('tab.setting', {
                 url: '/setting',
-                cache: false,
+                cache: true,
                 views: {
                     'tab-setting': {
                         templateUrl: 'templates/tab-setting.html',

@@ -10,7 +10,13 @@ angular.module('starter.controllers', [])
         var colWidth;
         var cityData = null;
 
-        $scope.forecastType = "short"; //mid, detail(aqi)
+        if ($location.path() === '/tab/dailyforecast') {
+            $scope.forecastType = "mid"; //mid, detail(aqi)
+        }
+        else {
+            $scope.forecastType = "short"; //mid, detail(aqi)
+        }
+
         var shortenAddress = "";
 
         //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
@@ -98,10 +104,6 @@ angular.module('starter.controllers', [])
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
                 smallPadding = 1.1;
             }
-            //iphone 6 667-20
-            //if ((window.innerHeight === 647 || window.innerHeight === 667) && window.innerWidth === 375) {
-            //    padding = 1.0625;
-            //}
 
             var mainHeight = window.innerHeight - 100;
 
@@ -172,10 +174,11 @@ angular.module('starter.controllers', [])
             }
             str += shortenAddress+'</p>';
             str += '<div class="row row-no-padding"> <div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">';
-            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+cityData.currentWeather.t1h+'</p>';
+            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+cityData.currentWeather.t1h;
+            str +=      '<span style="font-size: '+bigDigitSize/2+'px;vertical-align: super;">˚</span></p>';
             str +=      '<div style="text-align: left; margin: auto">';
-            str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
-            str +=          '<br>';
+            //str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
+            //str +=          '<br>';
             str +=          '<img id="imgBigSkyStateSize" style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
                                 cityData.currentWeather.skyIcon+'.png">';
             str +=      '</div>';
@@ -185,7 +188,17 @@ angular.module('starter.controllers', [])
             return str;
         }
 
-        function _makeRainSnowFallValueStr(pty, rn1, r06, s06) {
+        /**
+         * 실제 강우량과, 예보 강우량을 구분하는데 all인 경우 두개 모두 표시
+         * @param pty
+         * @param rn1
+         * @param r06
+         * @param s06
+         * @param all
+         * @returns {string}
+         * @private
+         */
+        function _makeRainSnowFallValueStr(pty, rn1, r06, s06, all) {
             var ret = "";
             var frcst = 0;
             var rsf = 0;
@@ -202,7 +215,7 @@ angular.module('starter.controllers', [])
             }
 
             if (rn1 != undefined && rn1 > 0) {
-                if (r06 != undefined || s06 != undefined) {
+                if ((r06 != undefined || s06 != undefined) && all) {
                     ret += rsf+'/'+frcst;
                 }
                 else {
@@ -211,7 +224,7 @@ angular.module('starter.controllers', [])
                 return ret;
             }
             else if ((r06 != undefined && r06 > 0) || (r06 != undefined && s06 > 0)) {
-                if (rn1 != undefined) {
+                if (rn1 != undefined && all) {
                     ret += rsf+'/'+frcst;
                 }
                 else {
@@ -225,6 +238,15 @@ angular.module('starter.controllers', [])
             return ret;
         }
 
+        /**
+         * 적설량과, 강우량 구분
+         * @param pty
+         * @param rn1
+         * @param r06
+         * @param s06
+         * @returns {*}
+         * @private
+         */
         function _makeRainSnowFallSymbol(pty, rn1, r06, s06) {
             if (pty != undefined && pty === 3) {
                 return "cm";
@@ -246,6 +268,11 @@ angular.module('starter.controllers', [])
             return "";
         }
 
+        /**
+         * pty가 0이라도 예보상으로 비가 온다고 했거나, 비가 오지 않는다고 했지만 실제로 비가 온 경우도 있음.
+         * @param day
+         * @returns {boolean}
+         */
         $scope.haveRainSnowFall = function (day) {
             if (
                 (day.pty != undefined && day.pty > 0) ||
@@ -260,42 +287,73 @@ angular.module('starter.controllers', [])
         };
 
         $scope.getRainSnowFall = function (value) {
-            return _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+            var ret = _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+            if (ret == "") {
+                ret = "0";
+            }
+            return ret;
         };
 
         $scope.getRainSnowFallSymbol = function (value) {
-            return _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+            var ret = _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+            if (ret == "") {
+                ret = "mm";
+            }
+            return ret;
         };
 
+        /**
+         * grade 값이 따라 색깔을 정한다.
+         * @param grade
+         * @returns {*}
+         */
+        //$scope.getGradeColor = function (grade) {
+        //    switch (grade) {
+        //        case 1:
+        //            return "good";
+        //        case 2:
+        //            return "moderate";
+        //        case 3:
+        //            //return "unhealthy-for-sensitive";
+        //            return "unhealthy";
+        //        case 4:
+        //            return "very-unhealthy";
+        //        case 5:
+        //            return "hazardous";
+        //    }
+        //    return "";
+        //};
+
         //<div class="row row-no-padding">
-        //                        <div style="width: 26px;"></div>
-        //                        <div class="col"
-        //                             ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date"
-        //                             ng-repeat="value in dayTable">
-        //                                <p ng-style="::{'font-size':smallTimeSize+'px'}"
-        //                                   style="margin: 0; opacity: 0.84">
-        //                                    {{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span>
-        //                                </p>
-        //                        </div>
-        //                        <div style="width: 26px;"></div>
-        //                    </div>
-        //                    <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-        //                    <div class="row row-no-padding" style="flex: 1">
-        //                        <div class="col table-items" ng-repeat="value in timeTable">
-        //                            <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: auto">{{value.time}}</p>
-        //                            <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.tempIcon}}.png">
-        //                            <p ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.t3h}}˚</p>
-        //                            <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
-        //                            <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
-        //                            <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.rn1}}<span
-        //                                    style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
-        //                                    style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
-        //                        </div>
-        //                    </div>
+        //    <div style="width: 26px;"></div>
+        //    <div class="col"
+        //         ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date"
+        //         ng-repeat="value in dayTable">
+        //            <p ng-style="::{'font-size':smallTimeSize+'px'}"
+        //               style="margin: 0; opacity: 0.84">
+        //                {{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span>
+        //            </p>
+        //    </div>
+        //    <div style="width: 26px;"></div>
+        //</div>
+        //<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
+        //<div class="row row-no-padding" style="flex: 1">
+        //    <div class="col table-items" ng-repeat="value in timeTable">
+        //        <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: auto">{{value.time}}</p>
+        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.tempIcon}}.png">
+        //        <p ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.t3h}}˚</p>
+        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
+        //        <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
+        //        <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.rn1}}<span
+        //                style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
+        //                style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
+        //    </div>
+        //</div>
         function getShortTable() {
             var i;
             var value;
             var str = '';
+            var currentIndex = -1;
 
             str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
             for (i=0; i<cityData.dayTable.length; i++) {
@@ -304,47 +362,44 @@ angular.module('starter.controllers', [])
                     str += '<div class="col">';
                     str +=   '<p class="caption" style="margin: 0;">';
                     str +=       $scope.getDayText(value);
-                    //str +=       ' <span style="font-size: 13px; opacity: 0.54">';
-                    //str +=           $scope.getDayForecast(value);
-                    //str +=       '</span>';
                     str += '</p></div>';
                 }
             }
             str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
 
-            str += '<div class="row row-no-padding">';
-            //str += '<div style="width: '+colWidth/2+'px;"></div>';
+            str += '<div class="row row-no-padding" style="border-bottom : 1px solid rgba(254,254,254,0.5);">';
             for (i=0; i<cityData.timeTable.length; i++) {
+                if (cityData.currentWeather.date == cityData.timeTable[i].date && cityData.currentWeather.time >= cityData.timeTable[i].time) {
+                    if (i == cityData.timeTable.length-1) {
+                        currentIndex = i+1;
+                    }
+                    else if (cityData.currentWeather.time < cityData.timeTable[i+1].time) {
+                        currentIndex = i+1;
+                    }
+                }
+
                 value = cityData.timeTable[i];
                 str += '<div class="col table-items" style="text-align: center;">';
-                //str += '<div class="col table-items table-border" style="text-align: center;">';
                 if (value.time == 24) {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px; border-bottom : 1px solid rgba(254,254,254,0.5);">' + '0시' + '</p>';
-                    //str += '<p class="title" style="letter-spacing: 0; margin: 0;">' + '0시' + '</p>';
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + '0시' + '</p>';
                 }
                 else {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px; border-bottom : 1px solid rgba(254,254,254,0.5);">' + value.timeStr + '</p>';
-                    //str += '<p class="title" style="letter-spacing: 0; margin: 0;">' + value.timeStr + '</p>';
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + value.timeStr + '</p>';
                 }
                 str += '</div>';
             }
-            //str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
             str += '</div>';
-
-            //str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
-            //for (i=0; i<cityData.timeTable.length-1; i++) {
-            //    value = cityData.timeTable[i];
-            //    str += '<div class="col table-items table-border" style="text-align: left">';
-            //    str += '<p class="title" style="letter-spacing:0; margin:0">'+value.t3h+'˚</p>';
-            //    str += '</div>';
-            //}
-            //str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
 
             str += '<div class="row row-no-padding">';
             str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                str += '<div class="col table-items table-border">';
+                if (i == currentIndex) {
+                    str += '<div class="col table-items table-border" style="background-color: #039BE5;">';
+                }
+                else {
+                    str += '<div class="col table-items table-border">';
+                }
                 str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
                 str += '</div>';
             }
@@ -355,32 +410,27 @@ angular.module('starter.controllers', [])
             str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                str += '<div class="col table-items table-border">';
+                if (i == currentIndex) {
+                    str += '<div class="col table-items table-border" style="background-color: #039BE5;">';
+                }
+                else {
+                    str += '<div class="col table-items table-border">';
+                }
                 if (value.pop) {
                     str += '<p class="subheading" style="letter-spacing:0; margin: auto">'+
                             //'<a class="icon ion-umbrella"></a>' +
                         value.pop + '<small>%</small></p>';
                 }
-                str += '</div>';
-            }
-            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
-            str += '</div>';
-
-            str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
-            for (i=1; i<cityData.timeTable.length; i++) {
-                value = cityData.timeTable[i];
-
-                str += '<div class="col table-items table-border">';
                 str += '<p class="caption" style="letter-spacing:0; margin: auto">';
-                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
                 str += '<small">';
                 str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
                 str += '</small></p>';
                 str += '</div>';
             }
-            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
+            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
+            str += '</div>';
 
-            //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
             return str;
         }
 
@@ -408,21 +458,33 @@ angular.module('starter.controllers', [])
             var value;
             var tmpStr = '-';
             //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
-            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            str += '<div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">';
             for (i=0; i<cityData.dayTable.length; i++) {
                 value = cityData.dayTable[i];
                 str += '<div class="col table-items">';
-                str +=  '<p class="subheading" style="margin: 4px;';
+                str +=  '<p class="body1" style="margin: 0;';
                 if (value.fromToday === 0)  {
-                    str += ' border-bottom: 1px solid rgba(255,255,255,0.8);';
                     str += ' opacity: 1;">';
                 }
                 else {
                     str += ' opacity: 0.84;">';
                 }
                 str +=  value.week + '</p>';
+                str += '</div>';
+            }
+            str += '</div>';
+
+            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            for (i=0; i<cityData.dayTable.length; i++) {
+                value = cityData.dayTable[i];
+                if (value.fromToday === 0) {
+                    str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
+                }
+                else {
+                    str += '<div class="col table-items table-border">';
+                }
                 if (value.date) {
-                    str +=  '<p class="body1" style="margin: auto; latter-spacing: 0;">';
+                    str +=  '<p class="subheading" style="margin: 4px; latter-spacing: 0;">';
                     str +=  value.date.substr(6,2) + '</p>';
                 }
                 str += '</div>';
@@ -432,7 +494,13 @@ angular.module('starter.controllers', [])
             str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
             for (i=0; i<cityData.dayTable.length; i++) {
                 value = cityData.dayTable[i];
-                str += '<div class="col table-items">';
+
+                if (value.fromToday === 0) {
+                    str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
+                }
+                else {
+                    str += '<div class="col table-items  table-border">';
+                }
                 str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
                             Util.imgPath+'/'+value.skyAm+'.png">';
                 if(value.skyAm != value.skyPm) {
@@ -446,7 +514,7 @@ angular.module('starter.controllers', [])
                 }
 
                 str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
-                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
+                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
                 str += '<small>';
                 str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
                 str += '</small></p>';
@@ -494,16 +562,36 @@ angular.module('starter.controllers', [])
                     padding += 25;
                 }
 
-                //topMainBox height is startHeight
-                var chartShortHeight = mainHeight - (smallImageSize+168+padding);
-                $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
-                var chartMidHeight = mainHeight - (smallDigitSize*2+smallImageSize+136+padding);
-                $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
-
                 $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
-                $scope.shortTable =  $sce.trustAsHtml(getShortTable());
-                $scope.midTable = $sce.trustAsHtml(getMidTable());
 
+                if($scope.forecastType == 'short') {
+                    //topMainBox height is startHeight
+                    if (cityData.currentWeather.arpltn) {
+                       padding+=50;
+                    }
+                    var chartShortHeight = mainHeight - (smallImageSize+168+padding);
+                    $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
+                    $scope.shortTable =  $sce.trustAsHtml(getShortTable());
+
+                    setTimeout(function () {
+                        // ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                    }, 0);
+                }
+                else {
+                    if (cityData.dayTable[7].dustForecast) {
+                        padding+=50;
+                    }
+
+                    var chartMidHeight = mainHeight - (smallDigitSize*2+smallImageSize+136+padding);
+                    $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
+                    $scope.midTable = $sce.trustAsHtml(getMidTable());
+
+                    setTimeout(function () {
+                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
+                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
+                    }, 0);
+                }
             });
         }
 
@@ -634,55 +722,12 @@ angular.module('starter.controllers', [])
         $scope.changeForecastType = function(forecastType) {
             console.log("changeForecastType to "+forecastType);
             if (forecastType === 'short') {
-                $scope.forecastType = 'short';
-                $rootScope.viewColor = '#03A9F4';
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0288D1');
-                }
+                $location.path('/tab/forecast');
             }
             else if (forecastType === 'mid') {
-                $scope.forecastType = 'mid';
-                $rootScope.viewColor = '#8BC34A';
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#689F38');
-                }
-            }
-            else if (forecastType === 'detail') {
-                if ($scope.currentWeather.arpltn != undefined) {
-                    $scope.forecastType = 'detail';
-                    $rootScope.viewColor = '#00BCD4';
-                    if (window.StatusBar) {
-                        StatusBar.backgroundColorByHexString('#0097A7');
-                    }
-                }
-                else {
-                    $scope.forecastType = 'short';
-                    $rootScope.viewColor = '#03A9F4';
-                    if (window.StatusBar) {
-                        StatusBar.backgroundColorByHexString('#0288D1');
-                    }
-                }
+                $location.path('/tab/dailyforecast');
             }
         };
-
-        /**
-         * ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-         */
-        $scope.$watch('forecastType', function (newValue) {
-            if (newValue === 'short')  {
-                setTimeout(function () {
-                    $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
-                }, 0);
-            }
-            else if (newValue === 'mid') {
-                setTimeout(function () {
-                    $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
-                    $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
-                }, 0);
-            }
-
-            $ionicScrollDelegate.$getByHandle("body").scrollTo(0, 0, false);
-        });
 
         $scope.onSwipeLeft = function() {
             if (WeatherInfo.getEnabledCityCount() === 1) {
@@ -712,21 +757,26 @@ angular.module('starter.controllers', [])
             return value.substr(4,2)+'/'+value.substr(6,2);
         };
 
-        $scope.getDayForecast = function (value) {
-            var str = [];
-            if (value.fromToday === 0 || value.fromToday === 1) {
-                if (value.dustForecast && value.dustForecast.PM10Str) {
-                   str.push('미세예보:'+value.dustForecast.PM10Str);
-                }
-
-                if (value.ultrvStr) {
-                    str.push('자외선:'+value.ultrvStr);
-                }
-                return str.toString();
-            }
-
-            return str.toString();
-        };
+        /**
+         * 사용하지 않음.
+         * @param value
+         * @returns {string}
+         */
+        //$scope.getDayForecast = function (value) {
+        //    var str = [];
+        //    if (value.fromToday === 0 || value.fromToday === 1) {
+        //        if (value.dustForecast && value.dustForecast.PM10Str) {
+        //           str.push('미세예보:'+value.dustForecast.PM10Str);
+        //        }
+        //
+        //        if (value.ultrvStr) {
+        //            str.push('자외선:'+value.ultrvStr);
+        //        }
+        //        return str.toString();
+        //    }
+        //
+        //    return str.toString();
+        //};
 
         $scope.$on('loadCompleteEvent', function(event) {
             console.log('called by load complete event');
@@ -764,108 +814,15 @@ angular.module('starter.controllers', [])
             startHeight -= 25;
         }
 
+        console.log(headerE);
+        console.log(picture);
+        console.log("startHeight=", startHeight);
+
         headerE.css('height', startHeight+'px');
         picture.css('height', startHeight+'px');
-        //0288D1
-        //alphaBar.css('background-color','rgba(2,136,209,0)');
+        //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+        $scope.headerHeight = startHeight;
 
-        function drawBigInfo() {
-            //baseDimensions = document.querySelector('[md-header-picture]').getBoundingClientRect();
-            //headerE.css('height', (baseDimensions.height)+'px');
-
-            pBigDigit        = angular.element(document.getElementById('pBigDigit'));
-            imgBigTempPointSize  = angular.element(document.getElementById('imgBigTempPointSize'));
-            imgBigSkyStateSize = angular.element(document.getElementById('imgBigSkyStateSize'));
-            pCityInfo = angular.element(document.getElementById('cityInfo'));
-            pSummary = angular.element(document.getElementById('summary'));
-            //divBigInfoBox = angular.element(document.getElementById('bigInfoBox'));
-            divWeatherInfo = angular.element(document.getElementById('weatherInfo'));
-            divWeatherInfo.css('left', (headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth)/2);
-
-            divBigInfoBox = angular.element(document.getElementById('bigInfoBox'));
-
-            arrayWidth = headerE[0].offsetWidth*0.1;
-
-            var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
-            console.log('scroll '+JSON.stringify(rect));
-            if (!scrollHeight) {
-                scrollHeight = document.getElementById('contentBody').offsetHeight -
-                    document.getElementById('ionContentBody').offsetHeight + 1;
-                console.log(scrollHeight);
-            }
-
-            var height;
-            var percent;
-            var percent2;
-
-            if (!rect) {
-                percent = 0;
-                height = startHeight;
-                percent2 = 0;
-            }
-            else {
-                percent = rect.top / scrollHeight;
-                height = startHeight - rect.top;
-                percent2 = rect.top/(startHeight - legacyToolbarH);
-            }
-            //var height =  startHeight - ((startHeight-legacyToolbarH)*percent);
-            if (height < legacyToolbarH) {
-                height = legacyToolbarH;
-            }
-            console.log(height);
-            console.log(percent);
-            headerE.css('height', height+'px');
-            alphaBar.css('background-color','rgba(2,136,209,'+percent+')');
-
-            pCityInfo.css('position', 'fixed');
-            divWeatherInfo.css('position', 'fixed');
-            pSummary.css('position', 'fixed');
-
-            var weatherInfoTop = (height-divWeatherInfo[0].offsetHeight)/2;
-            console.log('divWeatherinfo = '+divWeatherInfo[0].offsetHeight);
-            divWeatherInfo.css('top', weatherInfoTop+'px');
-
-            if (height >= (pCityInfo[0].offsetHeight+divWeatherInfo[0].offsetHeight+pSummary[0].offsetHeight)) {
-                pBigDigit.css('font-size', bigDigitSize - (bigDigitSize-minBigDigitSize)*percent2+'px');
-                imgBigTempPointSize.css('height', bigTempPointSize - (bigTempPointSize-minBigTempPointSize)*percent2 +'px');
-                imgBigSkyStateSize.css('height', bigSkyStateSize - (bigSkyStateSize-minBigSkyStateSize)*percent2 + 'px');
-
-                pCityInfo.css('font-size', regionSize-(regionSize-bodyFontSize)*percent2+'px');
-                pSummary.css('font-size', regionSumSize-(regionSumSize-bodyFontSize)*percent2+'px');
-
-                var cityInfoLeft = (headerE[0].offsetWidth-pCityInfo[0].offsetWidth)/2;
-                var cityInfoTop = (height-pCityInfo[0].offsetHeight)/2 - divWeatherInfo[0].offsetHeight/2 - 18;
-                pCityInfo.css('left', cityInfoLeft+'px');
-                pCityInfo.css('top', cityInfoTop+'px');
-
-                var summaryLeft = (headerE[0].offsetWidth-pSummary[0].offsetWidth)/2;
-                var summaryTop = (height-pSummary[0].offsetHeight)/2 + divWeatherInfo[0].offsetHeight/2 + 6;
-                pSummary.css('left', summaryLeft+'px');
-                pSummary.css('top', summaryTop+'px');
-
-                var weatherInfoLeft = (headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth)/2;
-                divWeatherInfo.css('left', weatherInfoLeft+'px');
-            }
-            else {
-                pBigDigit.css('font-size', minBigDigitSize +'px');
-                imgBigTempPointSize.css('height', minBigTempPointSize +'px');
-                imgBigSkyStateSize.css('height', minBigSkyStateSize + 'px');
-
-                pCityInfo.css('font-size', bodyFontSize+'px');
-                pSummary.css('font-size', bodyFontSize+'px');
-
-                pCityInfo.css('left', arrayWidth+'px');
-                pCityInfo.css('top', height/2-pCityInfo[0].offsetHeight+'px');
-                pSummary.css('left', arrayWidth+'px');
-                pSummary.css('top', height/2+'px');
-
-                var weatherInfoLeft = headerE[0].offsetWidth-divWeatherInfo[0].offsetWidth-arrayWidth;
-                divWeatherInfo.css('left', weatherInfoLeft+'px');
-            }
-
-        }
-
-        //$scope.headerScroll = drawBigInfo;
         $scope.headerScroll = function drawShadow() {
             var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
             if (rect.top > 0) {
@@ -1217,18 +1174,26 @@ angular.module('starter.controllers', [])
             }, 1000);
         }
 
-        $scope.doTabForecast = function() {
+        $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 $scope.showAlert('에러', '도시를 추가해주세요');
                 return;
             }
-            if ($location.path() === '/tab/forecast') {
+            if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
                 $scope.$broadcast('reloadEvent');
-
+                Util.ga.trackEvent('page', 'tab', 'reload');
+            }
+            else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
+                $scope.$broadcast('reloadEvent');
                 Util.ga.trackEvent('page', 'tab', 'reload');
             }
             else {
-                $location.path('/tab/forecast');
+                if (forecastType === 'forecast') {
+                    $location.path('/tab/forecast');
+                }
+                else {
+                    $location.path('/tab/dailyforecast');
+                }
             }
         };
 
