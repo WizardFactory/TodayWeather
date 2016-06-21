@@ -752,7 +752,7 @@ angular.module('starter', [
             // Each tab has its own nav history stack:
             .state('tab.search', {
                 url: '/search',
-                cache: false,
+                cache: true,
                 views: {
                     'tab-search': {
                         templateUrl: 'templates/tab-search.html',

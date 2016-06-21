@@ -31,6 +31,8 @@
                         </div>
                     </ion-scroll>
 
+                    <div class="col" style="margin: 0;padding: 0" ng-if="showDetailWeather">
+
                     <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                     <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">대기정보</p>
                     <div class="row row-no-padding" style="margin-top: 8px">
@@ -56,8 +58,12 @@
 
                     <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                     <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">상세날씨</p>
-                    <div class="row row-no-padding" style="margin-top: 8px">
+                    <div class="row row-no-padding">
                         <div style="margin: 0 auto">
+                            <div class="row subheading">
+                                <img src="img/Temp-05.png" style="height: 24px;">
+                                <p style="margin: auto 8px;">{{diffTodayYesterday()}}</p>
+                            </div>
                             <div class="row subheading">
                                 <img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
                                      style="height: 24px;">
@@ -77,7 +83,7 @@
                             </div>
                             <div class="row subheading" ng-if="currentWeather.dspls && currentWeather.dspls > 60">
                                 <img src="img/angry.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">불쾌지수 <span ng-class="getGradeColor(currentWeather.dsplsGrade)">{{currentWeather.dsplsStr}}</span></p>
+                                <p style="margin: auto 8px">불쾌지수 {{currentWeather.dsplsStr}}<span class="caption">({{currentWeather.dspls}})</span></p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.sensorytem">
                                 <img src="img/ic_person_outline_white_24px.svg" style="height: 24px">
@@ -140,6 +146,8 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
                     </div>
                 </div>
             </div>

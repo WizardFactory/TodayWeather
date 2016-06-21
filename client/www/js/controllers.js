@@ -10,6 +10,7 @@ angular.module('starter.controllers', [])
         var colWidth;
         var cityData = null;
 
+        $scope.showDetailWeather = false;
         if ($location.path() === '/tab/dailyforecast') {
             $scope.forecastType = "mid"; //mid, detail(aqi)
         }
@@ -557,6 +558,8 @@ angular.module('starter.controllers', [])
 
             $scope.currentPosition = cityData.currentPosition;
 
+            $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
+
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
@@ -569,8 +572,6 @@ angular.module('starter.controllers', [])
                 if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
                     padding += 25;
                 }
-
-                $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
 
                 if($scope.forecastType == 'short') {
                     //topMainBox height is startHeight
@@ -599,6 +600,8 @@ angular.module('starter.controllers', [])
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
                     }, 0);
                 }
+
+                $scope.showDetailWeather = true;
             });
         }
 
@@ -762,6 +765,31 @@ angular.module('starter.controllers', [])
 
         $scope.convertMMDD = function (value) {
             return value.substr(4,2)+'/'+value.substr(6,2);
+        };
+
+        $scope.diffTodayYesterday = function () {
+            var current = cityData.currentWeather;
+            var yesterday = cityData.currentWeather.yesterday;
+            var str = "";
+
+            if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+                var diffTemp = Math.round(current.t1h - yesterday.t1h);
+
+                str += "어제";
+                if (diffTemp == 0) {
+                    str += "와 동일";
+                }
+                else {
+                    str += "보다 " + Math.abs(diffTemp);
+                    if (diffTemp < 0) {
+                        str += "˚낮음";
+                    }
+                    else if (diffTemp > 0) {
+                        str += "˚높음";
+                    }
+                }
+            }
+            return str;
         };
 
         /**
