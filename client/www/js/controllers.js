@@ -62,6 +62,7 @@ angular.module('starter.controllers', [])
         var smallDigitSize;
         var headerRatio = 0;
         var contentRatio = 0;
+        var showAqi = false;
 
         if (window.innerWidth >= TABLET_WIDTH && window.innerWidth < window.innerHeight) {
             headerRatio = 0.4;
@@ -70,6 +71,7 @@ angular.module('starter.controllers', [])
         else if (window.innerHeight / window.innerWidth < ASPECT_RATIO_16_9) {
             headerRatio = 0.35;
             contentRatio = 0.65;
+            showAqi = false;
         }
         else if (ionic.Platform.isIOS()) {
             headerRatio = 0.4;
@@ -103,6 +105,10 @@ angular.module('starter.controllers', [])
             //iphone 5 568-20(status bar)
             if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
                 smallPadding = 1.1;
+            }
+            //5.5 inch
+            if (window.innerHeight >= 706) {
+                showAqi = true;
             }
 
             var mainHeight = window.innerHeight - 100;
@@ -457,6 +463,7 @@ angular.module('starter.controllers', [])
             var i;
             var value;
             var tmpStr = '-';
+            var imageSize = smallImageSize*0.8;
             //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
             str += '<div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">';
             for (i=0; i<cityData.dayTable.length; i++) {
@@ -501,16 +508,17 @@ angular.module('starter.controllers', [])
                 else {
                     str += '<div class="col table-items  table-border">';
                 }
-                str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
+
+                str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
                             Util.imgPath+'/'+value.skyAm+'.png">';
                 if(value.skyAm != value.skyPm) {
-                    str += '<img style="width: '+smallImageSize+'px; height: '+smallImageSize+'px; margin: auto;" src="'+
+                    str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
                         Util.imgPath+'/'+value.skyPm+'.png">';
                 }
 
                 if (value.pop != undefined && value.pop > 0) {
                     tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
-                    str += '<p class="subheading" style="margin: auto">'+tmpStr+'</p>';
+                    str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
                 }
 
                 str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
@@ -566,10 +574,10 @@ angular.module('starter.controllers', [])
 
                 if($scope.forecastType == 'short') {
                     //topMainBox height is startHeight
-                    if (cityData.currentWeather.arpltn) {
-                       padding+=50;
+                    if (showAqi && cityData.currentWeather.arpltn) {
+                        padding+=60;
                     }
-                    var chartShortHeight = mainHeight - (smallImageSize+168+padding);
+                    var chartShortHeight = mainHeight - (smallImageSize+154+padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
@@ -579,11 +587,10 @@ angular.module('starter.controllers', [])
                     }, 0);
                 }
                 else {
-                    if (cityData.dayTable[7].dustForecast) {
-                        padding+=50;
+                    if (showAqi && cityData.dayTable[7].dustForecast) {
+                        padding+=60;
                     }
-
-                    var chartMidHeight = mainHeight - (smallDigitSize*2+smallImageSize+136+padding);
+                    var chartMidHeight = mainHeight - ((smallImageSize*0.8)+180+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 

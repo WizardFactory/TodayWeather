@@ -546,7 +546,7 @@ angular.module('starter', [
                             .attr('y', function () {
                                 return 0;
                             })
-                            .attr('width', x.rangeBand())
+                            .attr('width', x.rangeBand()-0.5)
                             .attr('height', height);
 
                         currentRect.exit().remove();
