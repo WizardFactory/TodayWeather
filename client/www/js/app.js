@@ -72,6 +72,11 @@ angular.module('starter', [
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
+            } else if (toState.name === 'tab.dailyforecast') {
+                $rootScope.viewColor = '#00BCD4';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0097A7');
+                }
             } else if (toState.name === 'tab.setting') {
                 $rootScope.viewColor = '#FFA726';
                 if (window.StatusBar) {
@@ -99,7 +104,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                    var margin = {top: 12, right: 0, bottom: 12, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg, initLine, line;
 
@@ -154,6 +159,18 @@ angular.module('starter', [
                         }
 
                         var currentTime = scope.currentWeather.time;
+                        //var currentTime = (new Date()).getHours();
+
+                        var currentIndex = -1;
+                        for(var i=0; i<data[1].values.length; i++) {
+                            var value = data[1].values[i].value;
+                            if (value.date == scope.currentWeather.date) {
+                                if (currentTime < value.time) {
+                                    currentIndex = i-1;
+                                    break;
+                                }
+                            }
+                        }
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
@@ -177,12 +194,53 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.currentRect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'currentRect')
+                            .attr('stroke', '#039BE5')
+                            .attr('fill', '#039BE5')
+                            .attr('x', function () {
+                                return x.rangeBand() * currentIndex + x.rangeBand() / 2 + 0.5;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         var lineGroups = svg.selectAll('.line-group')
                             .data(data);
 
                         lineGroups.enter()
                             .append('g')
                             .attr('class', 'line-group');
+
+                        // draw guideLine
+                        var guideLines = lineGroups.selectAll('guide-line')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line');
+
+                        guideLines.exit().remove();
+
+                        guideLines
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.05');
 
                         // draw line
                         var lines = lineGroups.selectAll('.line')
@@ -220,18 +278,18 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'circle-' + d.name;
                             })
-                            .attr('r', 2)
+                            .attr('r', 10)
                             .attr('cx', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.attr('cy', function (d) {
                             return y(d.value.t3h);
@@ -256,14 +314,16 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'point circle-' + d.name + '-current';
                             })
-                            .attr('r', 5)
+                            .attr('r', function () {
+                                return currentTime % 3 == 0 ? 11:5;
+                            })
                             .attr('cx', function (d) {
                                 var cx1, cx2;
                                 for (var i = 0; i < d.values.length; i = i + 1) {
@@ -275,7 +335,7 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.attr('cx', function (d) {
                             var cx1, cx2;
@@ -326,17 +386,9 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
+                            .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
-                                    }
-                                }
-                                return '';
+                                return d.value.t3h;
                             });
 
                         texts.enter()
@@ -344,26 +396,27 @@ angular.module('starter', [
                             .attr('class', function (d) {
                                 return 'text-' + d.name;
                             })
+                            .style("fill", function (d, i) {
+                                //빨강점에 글자가 들어가므로 색깔 선정 필요.
+                                if (d.name == "today") {
+                                    if (i == currentIndex && currentTime % 3 == 0) {
+                                       return '#fefefe';
+                                    }
+                                }
+                                return '#0288D1';
+                            })
                             .attr('text-anchor', 'middle')
                             .attr('dy', margin.top)
                             .attr('x', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
+                            .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
-                                    }
-                                }
-                                return '';
+                                return d.value.t3h;
                             });
 
                         texts.attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top - margin.textTop;
+                            return y(d.value.t3h) - margin.bottom + margin.textTop;
                         });
 
                         texts.exit()
@@ -425,7 +478,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                    var margin = {top: 18, right: 0, bottom: 18, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg;
 
@@ -477,6 +530,27 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.currentRect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'currentRect')
+                            .attr('fill', '#00ACC1')
+                            .attr('x', function (d) {
+                                for (var i = 0; i < d.values.length; i++) {
+                                    if (d.values[i].fromToday === 0) {
+                                        return x.rangeBand() * i;
+                                    }
+                                }
+                                return 0;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand()-0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         // draw bar
                         var group = svg.selectAll('.bar-group')
                             .data(data);
@@ -484,7 +558,31 @@ angular.module('starter', [
                         group.enter().append('g')
                             .attr('class', 'bar-group');
 
-                        var rects = group.selectAll('rect')
+                        // draw guideLine
+                        var guideLines = group.selectAll('guide-line')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line');
+
+                        guideLines.exit().remove();
+
+                        guideLines
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return (x.rangeBand()) * i+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.1');
+
+                        var rects = group.selectAll('.rect')
                             .data(function (d) {
                                 return d.values;
                             });
@@ -654,7 +752,7 @@ angular.module('starter', [
             // Each tab has its own nav history stack:
             .state('tab.search', {
                 url: '/search',
-                cache: false,
+                cache: true,
                 views: {
                     'tab-search': {
                         templateUrl: 'templates/tab-search.html',
@@ -672,9 +770,19 @@ angular.module('starter', [
                     }
                 }
             })
+            .state('tab.dailyforecast', {
+                url: '/dailyforecast?fav',
+                cache: false,
+                views: {
+                    'tab-dailyforecast': {
+                        templateUrl: 'templates/tab-dailyforecast.html',
+                        controller: 'ForecastCtrl'
+                    }
+                }
+            })
             .state('tab.setting', {
                 url: '/setting',
-                cache: false,
+                cache: true,
                 views: {
                     'tab-setting': {
                         templateUrl: 'templates/tab-setting.html',
@@ -693,6 +801,7 @@ angular.module('starter', [
 
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
+        $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
 
         var timePickerObj = {
             format: 12,
