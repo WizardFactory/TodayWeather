@@ -762,21 +762,25 @@ function ControllerTown() {
 
         var yesterdayDate = self._getCurrentTimeValue(+9-24);
         var yesterdayItem;
-        for (var i=0; i<req.currentList.length;i++) {
+        /**
+         * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하기 때문에,
+         * yesterday도 데이터가 없는 경우에는 그 이전 데이터를 사용하게 변경
+         */
+        for (var i=req.currentList.length-1; i>=0; i--) {
             if (req.currentList[i].date == yesterdayDate.date &&
-                parseInt(req.currentList[i].time) >= parseInt(req.current.time))
+                parseInt(req.currentList[i].time) <= parseInt(req.current.time))
             {
                 yesterdayItem =  req.currentList[i];
                 break;
             }
         }
+
         if (yesterdayItem) {
-            yesterdayItem.t1h = yesterdayItem.t1h;
             req.current.summary = self._makeSummary(req.current, yesterdayItem);
             req.current.yesterday = yesterdayItem;
         }
         else {
-            log.warn('Fail to gt yesterday weather info');
+            log.error('Fail to gt yesterday weather info');
             req.current.summary = '';
         }
         next();
@@ -2736,11 +2740,22 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                             if(string === 'sky' || string === 'pty' || string === 'lgt') {
                                 newItem[string] = self._max([prv1[string], prv2[string], curItem[string]], -1);
                             }
-                            else if(string === 'uuu' || string === 'vvv' || string === 'wsd') {
-                                newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -100, 1);
-                            }
-                            else if(string === 't1h') {
-                                newItem[string] = +(curItem[string]).toFixed(1);
+                            else if(string === 't1h' || string === 'wsd' || string == 'reh' || string === 'uuu' || string === 'vvv') {
+                                if (curItem[string] != undefined && curItem[string] != -50) {
+                                    newItem[string] = +(curItem[string]).toFixed(1);
+                                }
+                                else {
+                                    log.error("Fail to find current data :" + string + " " + curItem.date+" "+curItem.time);
+                                    if (prv1[string] != undefined && prv1[string] != -50) {
+                                        newItem[string] = +(prv1[string]).toFixed(1);
+                                    }
+                                    else if (prv2[string] != undefined && prv2[string] != -50) {
+                                        newItem[string] = +(prv2[string]).toFixed(1);
+                                    }
+                                    else {
+                                        newItem[string] = tmpList[tmpList.length-1][string];
+                                    }
+                                }
                             }
                             else if(string === 'rn1') {
                                 newItem[string] = self._sum([prv1[string], prv2[string], curItem[string]], -1);
