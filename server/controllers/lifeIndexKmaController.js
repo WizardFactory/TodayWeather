@@ -149,7 +149,7 @@ LifeIndexKmaController._appendFromDb = function(town, callback) {
         },
         function(cb) {
             var coords = [town.gCoord.lon, town.gCoord.lat];
-            LifeIndexKma.find({geo: {$near:coords, $maxDistance: 1}}).limit(3).lean().exec(function (err, indexDataList) {
+            LifeIndexKma.find({geo: {$near:coords, $maxDistance: 0.3}}, {_id:0}).limit(3).lean().exec(function (err, indexDataList) {
                 if (err)  {
                     return cb(err);
                 }
@@ -269,11 +269,11 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
 
     var discomfortIndex = (9/5*temperature)-(0.55*(1-humidity/100)*(9/5*temperature-26))+32;
 
-    return discomfortIndex.toFixed(1);
+    return Math.round(discomfortIndex);
 };
 
 /**
- *
+ * 불쾌지수
  * @param discomfortIndex
  * @returns {*}
  */
@@ -300,6 +300,12 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     return discomfortString;
 };
 
+/**
+ * 부패지수
+ * @param temperature
+ * @param humidity
+ * @returns {number}
+ */
 LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
     if(temperature === undefined
         || humidity === undefined
@@ -316,9 +322,14 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
         index = 0;
     }
 
-    return index.toFixed(1);
-}
+    return Math.round(index);
+};
 
+/**
+ *
+ * @param DecompositionIndex
+ * @returns {*}
+ */
 LifeIndexKmaController.convertStringFromDecompositionIndex = function(DecompositionIndex) {
     if(DecompositionIndex === undefined
         || DecompositionIndex < 0)
@@ -338,8 +349,14 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     }
 
     return decompositionString;
-}
+};
 
+/**
+ * 열지수
+ * @param temperature
+ * @param humidity
+ * @returns {*}
+ */
 LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
     if(temperature === undefined
         || humidity === undefined
@@ -373,9 +390,14 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
     v3 = (v3-32)*(5.0/9.0);
     v3 = Math.round(v3*10) / 10.0;
 
-    return v3.toFixed(1);
-}
+    return +v3.toFixed(1);
+};
 
+/**
+ *
+ * @param heatIndex
+ * @returns {*}
+ */
 LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     if(heatIndex === undefined
         || heatIndex < 0) 
@@ -397,8 +419,13 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     }
     
     return heatIndexString;
-}
+};
 
+/**
+ * 동상가능지수
+ * @param temperature
+ * @returns {*}
+ */
 LifeIndexKmaController.getFrostString = function(temperature) {
     if(temperature === undefined
         || temperature < -50)
@@ -418,8 +445,14 @@ LifeIndexKmaController.getFrostString = function(temperature) {
     }
 
     return frostString;
-}
+};
 
+/**
+ *
+ * @param temperature
+ * @param yesterMinTemperature
+ * @returns {*}
+ */
 LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperature) {
     if(temperature === undefined
         || temperature < -50)
@@ -445,6 +478,6 @@ LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperat
     }
 
     return freezeString;
-}
+};
 
 module.exports = LifeIndexKmaController;
