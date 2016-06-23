@@ -978,11 +978,11 @@ function ControllerTown() {
                                         req.short[i].tmn = req.current.t1h;
                                         log.info('stn hourly weather update tmn to ', req.current.t1h);
                                     }
-                                }
-                                if (req.short[i].time === req.current.time) {
-                                    req.short[i].t3h = req.current.t1h;
-                                }
 
+                                    if (req.short[i].time === req.current.time) {
+                                        req.short[i].t3h = req.current.t1h;
+                                    }
+                                }
                                 if (req.short[i].date > req.current.date) {
                                     break;
                                 }
