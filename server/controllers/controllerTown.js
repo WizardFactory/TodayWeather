@@ -246,10 +246,10 @@ function ControllerTown() {
                             //s06, r06은 6시간 단위로 오기 때문에 3,9,15,21은 원래 -1이며, RSS는 다른 시간대의 값과 동일하게 옴.
                             //지금 -1을 덮어쓰고, adjustShort에서 나누어서 저장하게 되어있는데, adjustShort를 사용안하면 주의 필요.
                             if (overwrite || req.short[j].r06 == undefined || req.short[j].r06 == -1) {
-                                req.short[j].r06 = Math.round(rssList[i].r06);
+                                req.short[j].r06 = +(rssList[i].r06).toFixed(1);
                             }
                             if (overwrite || req.short[j].s06 == undefined || req.short[j].s06 == -1) {
-                                req.short[j].s06 = Math.round(rssList[i].s06);
+                                req.short[j].s06 = +(rssList[i].s06).toFixed(1);
                             }
                             if (overwrite || req.short[j].reh == undefined || req.short[j].reh == -1) {
                                 req.short[j].reh = rssList[i].reh;
@@ -258,7 +258,7 @@ function ControllerTown() {
                                 req.short[j].sky = rssList[i].sky;
                             }
                             if (overwrite || req.short[j].t3h == undefined || req.short[j].t3h == -50) {
-                                req.short[j].t3h = Math.round(rssList[i].temp);
+                                req.short[j].t3h = +(rssList[i].temp).toFixed(1);
                             }
                             if(req.short[j].time === '0600' && rssList[i].tmn != -999) {
                                 if (overwrite || req.short[j].tmn == undefined || req.short[j].tmn == -50) {
@@ -293,11 +293,11 @@ function ControllerTown() {
                         item.time = rssList[i].date.slice(8, 12);
                         item.pop = rssList[i].pop;
                         item.pty = rssList[i].pty;
-                        item.r06 = Math.round(rssList[i].r06);
+                        item.r06 = +(rssList[i].r06).toFixed(1);
                         item.reh = rssList[i].reh;
-                        item.s06 = Math.round(rssList[i].s06);
+                        item.s06 = +(rssList[i].s06).toFixed(1);
                         item.sky = rssList[i].sky;
-                        item.t3h = Math.round(rssList[i].temp);
+                        item.t3h = +(rssList[i].temp).toFixed(1);
                         if(item.time === '0600' && rssList[i].tmn != -999){
                             item.tmn = rssList[i].tmn;
                         } else{
@@ -526,6 +526,10 @@ function ControllerTown() {
                     if (resultItem.t1h == -50) {
                        resultItem.t1h = undefined;
                     }
+                    else {
+                        resultItem.t1h = +(resultItem.t1h).toFixed(1);
+                    }
+
                     if (resultItem.rn1 == -1) {
                         resultItem.rn1 = undefined;
                     }
@@ -554,29 +558,6 @@ function ControllerTown() {
                         resultItem.wsd = undefined;
                     }
 
-                    resultItem.sensorytem = Math.round(self._getNewWCT(resultItem.t1h, resultItem.wsd));
-                    //log.info(listCurrent);
-                    //지수 계산 이후에 반올림함.
-                    if (resultItem.t1h != undefined) {
-                        resultItem.t1h = Math.round(resultItem.t1h);
-
-                        // get discomfort index(불괘지수)
-                        resultItem.dspls = LifeIndexKmaController.getDiscomfortIndex(resultItem.t1h, resultItem.reh);
-                        resultItem.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(resultItem.dspls);
-
-                        // get decomposition index(부패지수)
-                        resultItem.decpsn = LifeIndexKmaController.getDecompositionIndex(resultItem.t1h, resultItem.reh);
-                        resultItem.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(resultItem.decpsn);
-
-                        // get heat index(열지수)
-                        resultItem.heatIndex = LifeIndexKmaController.getHeatIndex(resultItem.t1h, resultItem.reh);
-                        resultItem.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(resultItem.heatIndex);
-
-                        // get frost string(동상가능지수)
-                        resultItem.frostStr = LifeIndexKmaController.getFrostString(resultItem.t1h);
-
-                    }
-
                     // get freeze string(동파가능지수)
                     if(req.short !== undefined) {
                         var yesterday = kmaTimeLib.convertStringToDate(resultItem.date);
@@ -600,9 +581,7 @@ function ControllerTown() {
                             yesterdayMinTemperature = 0;
                         }
 
-                        if (resultItem.t1h != undefined) {
-                            resultItem.freezeStr = LifeIndexKmaController.getFreezeString(resultItem.t1h,yesterdayMinTemperature);
-                        }
+                        req.yesterdayMinTemperature = yesterdayMinTemperature;
                     }
 
                     req.current = resultItem;
@@ -792,7 +771,7 @@ function ControllerTown() {
             }
         }
         if (yesterdayItem) {
-            yesterdayItem.t1h = Math.round(yesterdayItem.t1h);
+            yesterdayItem.t1h = yesterdayItem.t1h;
             req.current.summary = self._makeSummary(req.current, yesterdayItem);
             req.current.yesterday = yesterdayItem;
         }
@@ -955,16 +934,6 @@ function ControllerTown() {
 
                     req.current.date = date;
                     req.current.time = time;
-                    // get discomfort index(불괘지수)
-                    req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
-                    req.current.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(req.current.dspls);
-
-                    // get decomposition index(부패지수)
-                    req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
-                    req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
-
-                    req.current.sensorytem = Math.round(self._getNewWCT(req.current.t1h, req.current.wsd));
-                    req.current.t1h = Math.round(req.current.t1h);
 
                     if (stnHourlyFirst) {
                         if (req.current.rns === true) {
@@ -1346,6 +1315,116 @@ function ControllerTown() {
         return this;
     };
 
+    /**
+     * 계산 가능한 지수들 추가하기
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.insertIndex = function (req, res, next) {
+
+        if (req.current) {
+            if (req.current.t1h != undefined) {
+                if (req.current.wsd != undefined) {
+                    //체감온도
+                    req.current.sensorytem = +(self._getNewWCT(req.current.t1h, req.current.wsd)).toFixed(1);
+                }
+                if (req.current.reh != undefined) {
+                    // get discomfort index(불괘지수)
+                    req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
+                    req.current.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(req.current.dspls);
+
+                    // get decomposition index(부패지수)
+                    req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
+                    req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
+
+                    // get heat index(열지수)
+                    req.current.heatIndex = LifeIndexKmaController.getHeatIndex(req.current.t1h, req.current.reh);
+                    req.current.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(req.current.heatIndex);
+
+                    //new sensorytem = old sensorytem + head index
+                    req.current.sensorytem = req.current.t1h + (req.current.sensorytem - req.current.t1h) + (req.current.heatIndex - req.current.t1h);
+                    req.current.sensorytem = Math.round(req.current.sensorytem);
+
+                    if (req.yesterdayMinTemperature) {
+                        req.current.freezeStr = LifeIndexKmaController.getFreezeString(req.current.t1h, req.yesterdayMinTemperature);
+                    }
+                }
+
+                // get frost string(동상가능지수)
+                req.current.frostStr = LifeIndexKmaController.getFrostString(req.current.t1h);
+            }
+        }
+
+        if (req.short) {
+            req.short.forEach(function (short) {
+                if (short.t3h == undefined) {
+                    return;
+                }
+
+                if (short.wsd != undefined) {
+                    //체감온도
+                    short.sensorytem = +(self._getNewWCT(short.t3h, short.wsd)).toFixed(1);
+                }
+
+                if (short.reh != undefined) {
+                    // get discomfort index(불괘지수)
+                    short.dspls = LifeIndexKmaController.getDiscomfortIndex(short.t3h, short.reh);
+                    short.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(short.dspls);
+
+                    // get decomposition index(부패지수)
+                    short.decpsn = LifeIndexKmaController.getDecompositionIndex(short.t3h, short.reh);
+                    short.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(short.decpsn);
+
+                    // get heat index(열지수)
+                    short.heatIndex = LifeIndexKmaController.getHeatIndex(short.t3h, short.reh);
+                    short.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(short.heatIndex);
+
+                    //new sensorytem = old sensorytem + head index
+                    short.sensorytem = short.t3h + (short.sensorytem - short.t3h) + (short.heatIndex - short.t3h);
+                    short.sensorytem = Math.round(short.sensorytem);
+
+                    if (req.yesterdayMinTemperature) {
+                        short.freezeStr = LifeIndexKmaController.getFreezeString(short.t3h, req.yesterdayMinTemperature);
+                    }
+                }
+
+                // get frost string(동상가능지수)
+                short.frostStr = LifeIndexKmaController.getFrostString(short.t3h);
+            });
+        }
+        next();
+        return;
+    };
+
+    /**
+     * t1h, t3h, taMin, taMax 를 정수로 변환, old version 호환용이며, 0.8.4 초과버전부터는 소수한자리로 데이터 전달하고, 필요시 client에서 정수로 변환.
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.dataToFixed = function (req, res, next) {
+        log.info('data to fixed');
+        if (req.current) {
+            req.current.t1h = Math.round(req.current.t1h);
+        }
+        if (req.short) {
+            req.short.forEach(function (short) {
+                short.t3h = Math.round(short.t3h);
+                short.tmn = Math.round(short.tmn);
+                short.tmx = Math.round(short.tmx);
+            });
+        }
+        if (req.midData && req.midData.dailyData) {
+            req.midData.dailyData.forEach(function (data) {
+                data.taMin = Math.round(data.taMin);
+                data.taMax = Math.round(data.taMax);
+            });
+        }
+        next();
+        return;
+    };
+
     this.insertStrForData = function (req, res, next) {
         if(req.short){
             req.short.forEach(function (data) {
@@ -1623,9 +1702,9 @@ ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, 
                 currentItem.wsd = short.wsd;
             }
             else {
-                currentItem.t3h = Math.round(self._calcValue3hTo1h(intTime%3, short.t3h, prvShort.t3h));
+                currentItem.t1h = +(self._calcValue3hTo1h(intTime%3, short.t3h, prvShort.t3h)).toFixed(1);
                 currentItem.reh = Math.round(self._calcValue3hTo1h(intTime%3, short.reh, prvShort.reh));
-                currentItem.wsd = Math.round(self._calcValue3hTo1h(intTime%3, short.wsd, prvShort.wsd));
+                currentItem.wsd = +(self._calcValue3hTo1h(intTime%3, short.wsd, prvShort.wsd)).toFixed(1);
             }
         }
 
@@ -2661,7 +2740,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
                                 newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -100, 1);
                             }
                             else if(string === 't1h') {
-                                newItem[string] = Math.round(curItem[string]);
+                                newItem[string] = +(curItem[string]).toFixed(1);
                             }
                             else if(string === 'rn1') {
                                 newItem[string] = self._sum([prv1[string], prv2[string], curItem[string]], -1);
@@ -2778,16 +2857,16 @@ ControllerTown.prototype._mergeShortWithRSS = function(shortList, rssList, cb){
                         found = 1;
                         shortList[i].pop = rssItem.pop;
                         shortList[i].pty = rssItem.pty;
-                        shortList[i].r06 = Math.round(rssItem.r06);
+                        shortList[i].r06 = +(rssItem.r06).toFixed(1);
                         shortList[i].reh = rssItem.reh;
-                        shortList[i].s06 = Math.round(rssItem.s06);
+                        shortList[i].s06 = +(rssItem.s06).toFixed(1);
                         shortList[i].sky = rssItem.sky;
-                        shortList[i].t3h = Math.round(rssItem.temp);
+                        shortList[i].t3h = +(rssItem.temp).toFixed(1);
                         if(shortList[i].time === '0600' && rssItem.tmn != -999) {
-                            shortList[i].tmn = Math.round(rssItem.tmn);
+                            shortList[i].tmn = +(rssItem.tmn).toFixed(1);
                         }
                         if(shortList[i].time === '1500' && rssItem.tmn != -999){
-                            shortList[i].tmx = Math.round(rssItem.tmx);
+                            shortList[i].tmx = +(rssItem.tmx).toFixed(1);
                         }
                     }
                 }
@@ -2797,18 +2876,18 @@ ControllerTown.prototype._mergeShortWithRSS = function(shortList, rssList, cb){
                     item.time = rssItem.date.slice(8, 12);
                     item.pop = rssItem.pop;
                     item.pty = rssItem.pty;
-                    item.r06 = Math.round(rssItem.r06);
+                    item.r06 = +(rssItem.r06).toFixed(1);
                     item.reh = rssItem.reh;
-                    item.s06 = Math.round(rssItem.s06);
+                    item.s06 = +(rssItem.s06).toFixed(1);
                     item.sky = rssItem.sky;
-                    item.t3h = Math.round(rssItem.temp);
+                    item.t3h = +(rssItem.temp).toFixed(1);
                     if(item.time === '0600' && rssItem.tmn != -999){
-                        item.tmn = Math.round(rssItem.tmn);
+                        item.tmn = +(rssItem.tmn).toFixed(1);
                     } else{
                         item.tmn = -50;
                     }
                     if(item.time === '1500' && rssItem.tmx != -999){
-                        item.tmx = Math.round(rssItem.tmx);
+                        item.tmx = +(rssItem.tmx).toFixed(1);
                     }else{
                         item.tmx = -50;
                     }
@@ -2978,7 +3057,7 @@ ControllerTown.prototype._mergeShortWithBasicList = function(shortList, basicLis
             if(shortItem.date === basicItem.date && shortItem.time === basicItem.time){
                 shortString.forEach(function(string){
                     if (string === 't3h') {
-                        basicItem[string] = Math.round(shortItem[string]);
+                        basicItem[string] = +(shortItem[string]).toFixed(1);
                     }
                     else {
                         basicItem[string] = shortItem[string];
@@ -3304,8 +3383,8 @@ ControllerTown.prototype._getDaySummaryListByShort = function(shortList) {
         daySummary.wfAm = self._convertSkyToKorStr(daySummary.skyAm, daySummary.ptyAm);
         daySummary.wfPm = self._convertSkyToKorStr(daySummary.skyPm, daySummary.ptyPm);
         daySummary.t1d = self._average(dayCondition.t3h, -50, 1);
-        daySummary.taMax = Math.round(dayCondition.tmx);
-        daySummary.taMin = Math.round(dayCondition.tmn);
+        daySummary.taMax = dayCondition.tmx;
+        daySummary.taMin = dayCondition.tmn;
         daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
     });
 
@@ -3424,8 +3503,8 @@ ControllerTown.prototype._getDaySummaryList = function(pastList) {
 
         daySummary.t1d = self._average(dayCondition.t1h, -50, 1);
         daySummary.wsd = self._average(dayCondition.wsd, -1, 1);
-        daySummary.taMax = Math.round(self._max(dayCondition.t1h, -50));
-        daySummary.taMin = Math.round(self._min(dayCondition.t1h, -50));
+        daySummary.taMax = +(self._max(dayCondition.t1h, -50)).toFixed(1);
+        daySummary.taMin = +(self._min(dayCondition.t1h, -50)).toFixed(1);
     });
 
     return daySummaryList;

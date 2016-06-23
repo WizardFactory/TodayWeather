@@ -149,14 +149,14 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, callback) {
     async.waterfall([function (cb) {
         var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
         async.parallel([function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}}).limit(5).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(5).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }
                 return pCallback(err, kmaStnList);
             });
         }, function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }

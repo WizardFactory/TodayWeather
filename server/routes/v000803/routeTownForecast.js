@@ -1,14 +1,17 @@
 /**
- * Created by Peter on 2015. 8. 24..
+ *
+ * Created by aleckim on 2016. 2. 21..
  */
 
 var router = require('express').Router();
-var ControllerTown = require('../../controllers/controllerTown');
-var cTown = new ControllerTown();
+
+var ControllerTown24h = require('../../controllers/controllerTown24h');
+
+var cTown = new ControllerTown24h();
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
-    log.info('+ townForecast > request | Time[', printTime.toISOString(), ']');
+    log.info('+ townForecast24h > request | Time[', printTime.toISOString(), ']');
 
     next();
 });
@@ -40,26 +43,38 @@ router.get('/', [cTown.getSummary], function(req, res) {
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                         cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                         cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                        cTown.mergeByShortest, cTown.dataToFixed, cTown.sendResult]);
+                        cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.getKecoDustForecast,
+                        cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
+                            cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                 cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                 cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                cTown.mergeByShortest, cTown.dataToFixed, cTown.sendResult]);
+                                cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
+                                cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
+                                cTown.getSummary, cTown.sendResult]);
 
+/**
+ * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
+ * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
+ */
 router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
                                     cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKmaStnHourlyWeather,
-                                    cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
+                                    cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
-                                    cTown.mergeMidWithShort, cTown.dataToFixed, cTown.sendResult]);
+                                            cTown.mergeMidWithShort, cTown.getKecoDustForecast,
+                                            cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.adjustShort, cTown.dataToFixed, cTown.sendResult]);
+router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.adjustShort,
+                                            cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.dataToFixed, cTown.sendResult]);
+router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKeco, cTown.dataToFixed, cTown.sendResult]);
+router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKeco, cTown.insertStrForData,
+                                                cTown.getSummary, cTown.sendResult]);
 
 module.exports = router;
