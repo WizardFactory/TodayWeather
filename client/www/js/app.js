@@ -159,18 +159,6 @@ angular.module('starter', [
                         }
 
                         var currentTime = scope.currentWeather.time;
-                        //var currentTime = (new Date()).getHours();
-
-                        var currentIndex = -1;
-                        for(var i=0; i<data[1].values.length; i++) {
-                            var value = data[1].values[i].value;
-                            if (value.date == scope.currentWeather.date) {
-                                if (currentTime < value.time) {
-                                    currentIndex = i-1;
-                                    break;
-                                }
-                            }
-                        }
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
@@ -194,14 +182,40 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
-                        var currentRect = svg.selectAll('.currentRect').data(data);
+                        // draw guideLine
+                        var guideLines = svg.selectAll('.guide-line')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line')
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.1');
+
+                        guideLines.exit().remove();
+
+                        var currentRect = svg.selectAll('.current-rect').data(function () {
+                           return [data[1].currentIndex];
+                        });
 
                         currentRect.enter().append('rect')
-                            .attr('class', 'currentRect')
+                            .attr('class', 'current-rect');
+
+                        currentRect
                             .attr('stroke', '#039BE5')
                             .attr('fill', '#039BE5')
-                            .attr('x', function () {
-                                return x.rangeBand() * currentIndex + x.rangeBand() / 2 + 0.5;
+                            .attr('x', function (index) {
+                                return x.rangeBand() * index + x.rangeBand() / 2 + 0.5;
                             })
                             .attr('y', function () {
                                 return 0;
@@ -217,30 +231,6 @@ angular.module('starter', [
                         lineGroups.enter()
                             .append('g')
                             .attr('class', 'line-group');
-
-                        // draw guideLine
-                        var guideLines = lineGroups.selectAll('guide-line')
-                            .data(function (d) {
-                                return d.values;
-                            });
-
-                        guideLines.enter().append('line')
-                            .attr('class', 'guide-line');
-
-                        guideLines.exit().remove();
-
-                        guideLines
-                            .attr('x1', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
-                            })
-                            .attr('x2', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
-                            })
-                            .attr('y1', 0)
-                            .attr('y2', height)
-                            .attr('stroke-width', 1)
-                            .attr('stroke', '#fefefe')
-                            .attr('stroke-opacity', '0.05');
 
                         // draw line
                         var lines = lineGroups.selectAll('.line')
@@ -302,6 +292,9 @@ angular.module('starter', [
                         var point = lineGroups.selectAll('.point')
                             .data(function(d) {
                                 return [d];
+                            })
+                            .attr('r', function () {
+                                return currentTime % 3 == 0 ? 11:5;
                             })
                             .attr('cx', function (d) {
                                 var cx1, cx2;
@@ -386,9 +379,17 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
+                            .style("fill", function (d, i) {
+                                if (d.name == "today") {
+                                    if (i == data[1].currentIndex && currentTime % 3 == 0) {
+                                       return '#fefefe';
+                                    }
+                                }
+                                return '#0288D1';
+                            })
                             .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                return d.value.t3h;
+                                return Math.round(d.value.t3h);
                             });
 
                         texts.enter()
@@ -397,9 +398,8 @@ angular.module('starter', [
                                 return 'text-' + d.name;
                             })
                             .style("fill", function (d, i) {
-                                //빨강점에 글자가 들어가므로 색깔 선정 필요.
                                 if (d.name == "today") {
-                                    if (i == currentIndex && currentTime % 3 == 0) {
+                                    if (i == data[1].currentIndex && currentTime % 3 == 0) {
                                        return '#fefefe';
                                     }
                                 }
@@ -412,7 +412,7 @@ angular.module('starter', [
                             })
                             .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                return d.value.t3h;
+                                return Math.round(d.value.t3h);
                             });
 
                         texts.attr('y', function (d) {
@@ -634,7 +634,7 @@ angular.module('starter', [
                             .attr('dy', margin.top)
                             .attr('text-anchor', 'middle')
                             .text(function (d) {
-                                return d.tmx + '˚';
+                                return Math.round(d.tmx) + '˚';
                             })
                             .attr('class', 'text-today')
                             .attr('y', function (d) {
@@ -668,7 +668,7 @@ angular.module('starter', [
                             .attr('dy', margin.bottom)
                             .attr('text-anchor', 'middle')
                             .text(function (d) {
-                                return d.tmn + '˚';
+                                return Math.round(d.tmn) + '˚';
                             })
                             .attr('class', 'text-today')
                             .attr('y', function (d) {
@@ -752,7 +752,7 @@ angular.module('starter', [
             // Each tab has its own nav history stack:
             .state('tab.search', {
                 url: '/search',
-                cache: true,
+                cache: false,
                 views: {
                     'tab-search': {
                         templateUrl: 'templates/tab-search.html',

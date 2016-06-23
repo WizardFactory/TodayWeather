@@ -95,6 +95,7 @@ angular.module('starter.controllers', [])
 
             var padding = 1;
             var smallPadding = 1;
+            console.log("UA:"+ionic.Platform.ua);
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
 
@@ -181,7 +182,7 @@ angular.module('starter.controllers', [])
             }
             str += shortenAddress+'</p>';
             str += '<div class="row row-no-padding"> <div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">';
-            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+cityData.currentWeather.t1h;
+            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+Math.round(cityData.currentWeather.t1h);
             str +=      '<span style="font-size: '+bigDigitSize/2+'px;vertical-align: super;">˚</span></p>';
             str +=      '<div style="text-align: left; margin: auto">';
             //str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
@@ -211,14 +212,14 @@ angular.module('starter.controllers', [])
             var rsf = 0;
 
             if (r06 != undefined && r06 > 0) {
-                frcst = r06;
+                frcst = r06>=10?Math.round(r06):r06;
             }
             else if (r06 != undefined && s06 > 0) {
-                frcst = s06;
+                frcst = s06>=10?Math.round(s06):s06;
             }
 
             if (rn1 != undefined && rn1 > 0) {
-                rsf = rn1;
+                rsf = rn1>=10?Math.round(rn1):rn1;
             }
 
             if (rn1 != undefined && rn1 > 0) {
@@ -360,7 +361,6 @@ angular.module('starter.controllers', [])
             var i;
             var value;
             var str = '';
-            var currentIndex = -1;
 
             str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
             for (i=0; i<cityData.dayTable.length; i++) {
@@ -376,15 +376,6 @@ angular.module('starter.controllers', [])
 
             str += '<div class="row row-no-padding" style="border-bottom : 1px solid rgba(254,254,254,0.5);">';
             for (i=0; i<cityData.timeTable.length; i++) {
-                if (cityData.currentWeather.date == cityData.timeTable[i].date && cityData.currentWeather.time >= cityData.timeTable[i].time) {
-                    if (i == cityData.timeTable.length-1) {
-                        currentIndex = i+1;
-                    }
-                    else if (cityData.currentWeather.time < cityData.timeTable[i+1].time) {
-                        currentIndex = i+1;
-                    }
-                }
-
                 value = cityData.timeTable[i];
                 str += '<div class="col table-items" style="text-align: center;">';
                 if (value.time == 24) {
@@ -401,11 +392,11 @@ angular.module('starter.controllers', [])
             str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                if (i == currentIndex) {
-                    str += '<div class="col table-items table-border" style="background-color: #039BE5;">';
+                if (value.currentIndex) {
+                    str += '<div class="col table-items table-border" style="background-color: #039BE5; width:auto;">';
                 }
                 else {
-                    str += '<div class="col table-items table-border">';
+                    str += '<div class="col table-items table-border" style="width:auto;">';
                 }
                 str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
                 str += '</div>';
@@ -417,11 +408,11 @@ angular.module('starter.controllers', [])
             str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
                 value = cityData.timeTable[i];
-                if (i == currentIndex) {
-                    str += '<div class="col table-items table-border" style="background-color: #039BE5;">';
+                if (value.currentIndex) {
+                    str += '<div class="col table-items table-border" style="background-color: #039BE5; width: auto">';
                 }
                 else {
-                    str += '<div class="col table-items table-border">';
+                    str += '<div class="col table-items table-border" style="width: auto">';
                 }
                 if (value.pop) {
                     str += '<p class="subheading" style="letter-spacing:0; margin: auto">'+
@@ -517,9 +508,11 @@ angular.module('starter.controllers', [])
                         Util.imgPath+'/'+value.skyPm+'.png">';
                 }
 
-                if (value.pop != undefined && value.pop > 0) {
-                    tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
-                    str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
+                if (value.fromToday >= 0) {
+                    if (value.pop != undefined && value.pop > 0) {
+                        tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
+                        str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
+                    }
                 }
 
                 str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';

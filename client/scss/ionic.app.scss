@@ -201,21 +201,21 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   fill: #ffffff;
 }
 
-.detail-image {
-  height: 100%;
-  display: table;
-}
+//.detail-image {
+//  height: 100%;
+//  display: table;
+//}
 
-.detail-image div {
-  display: table-cell;
-  vertical-align: middle;
-}
+//.detail-image div {
+//  display: table-cell;
+//  vertical-align: middle;
+//}
 
-.detail-image div img {
-  width: 40px;
-  margin: 0 auto;
-  display: block;
-}
+//.detail-image div img {
+//  width: 40px;
+//  margin: 0 auto;
+//  display: block;
+//}
 
 //.detail-text {
 //  display: table;
@@ -233,14 +233,20 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 //  margin: 0;
 //}
 
-.detail-item {
-  background-color: transparent;
-  color: inherit;
-  margin-left: 0;
-  margin-right: 0;
-  padding: 0;
-  height: 80px;
+//.detail-item {
+//  background-color: transparent;
+//  color: inherit;
+//  margin-left: 0;
+//  margin-right: 0;
+//  padding: 0;
+//  height: 80px;
+//}
+
+.detail-item-p {
+  margin: auto 0 auto 8px;
+  width: 200px
 }
+
 
 .main-content {
   width: 100%;

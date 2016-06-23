@@ -691,7 +691,7 @@ angular.module('starter.services', [])
 
         /**
          * @param {Object[]} shortForecastList
-         * @param {Date} currentForecast
+         * @param {Object} currentForecast
          * @param {Date} current
          * @param {Object[]} dailyInfoList midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
@@ -702,6 +702,8 @@ angular.module('starter.services', [])
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
                 return {timeTable: [], timeChart: []};
             }
+
+            var currentIndex = -1;
 
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
@@ -726,6 +728,24 @@ angular.module('starter.services', [])
                 tempObject.day = day;
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";
+
+                if (currentForecast.date == tempObject.date && currentForecast.time >= tempObject.time) {
+                    if (index == shortForecastList.length-1) {
+                        currentIndex = index;
+                        tempObject.currentIndex = true;
+                    }
+                    else {
+                        var nextTime = parseInt(shortForecastList[index+1].time.slice(0, -2));
+                        if (currentForecast.time < nextTime) {
+                            currentIndex = index;
+                            /**
+                             * chart는 기준 index부터 뒤로 rect를 그리고, table은 기준값 기준으로 앞으로 데이터를 선정하기 때문에 선택된 index에 한칸으로 가야 함
+                             */
+                            shortForecastList[index+1].currentIndex = true;
+                        }
+                    }
+                }
+
                 data.push(tempObject);
 
                 return true;
@@ -743,7 +763,8 @@ angular.module('starter.services', [])
                     name: "today",
                     values: data.slice(8).map(function (d) {
                         return {name: "today", value: d};
-                    })
+                    }),
+                    currentIndex: currentIndex - 8
                 }
             ];
 

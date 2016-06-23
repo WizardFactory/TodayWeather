@@ -59,43 +59,43 @@
                     <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
                     <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">상세날씨</p>
                     <div class="row row-no-padding">
-                        <div style="margin: 0 auto">
+                        <div style="margin: 0 auto;">
                             <div class="row subheading">
                                 <img src="img/Temp-05.png" style="height: 24px;">
-                                <p style="margin: auto 8px;">{{diffTodayYesterday()}}</p>
+                                <p class="detail-item-p">{{diffTodayYesterday()}}</p>
                             </div>
                             <div class="row subheading">
                                 <img ng-src="img/Humidity-{{currentWeather.reh?currentWeather.reh - currentWeather.reh%10:'00'}}.png"
                                      style="height: 24px;">
-                                <p style="margin: auto 8px;">습도 {{currentWeather.reh}}<small>%</small></p>
+                                <p class="detail-item-p">습도 {{currentWeather.reh}}<small>%</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/wind-and-cloud.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">바람 {{currentWeather.wdd}} {{currentWeather.wsd}}<small>m/s</small></p>
+                                <p class="detail-item-p">바람 {{currentWeather.wdd}} {{currentWeather.wsd}}<small>m/s</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/ic_visibility_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">가시거리 {{currentWeather.visibility}}<small>km</small></p>
+                                <p class="detail-item-p">가시거리 {{currentWeather.visibility}}<small>km</small></p>
                             </div>
                             <div class="row subheading">
                                 <img src="img/ic_vertical_align_bottom_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">기압 {{currentWeather.hPa}}<small>hPa</small></p>
+                                <p class="detail-item-p">기압 {{currentWeather.hPa}}<small>hPa</small></p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.dspls && currentWeather.dspls > 60">
                                 <img src="img/angry.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">불쾌지수 {{currentWeather.dsplsStr}}<span class="caption">({{currentWeather.dspls}})</span></p>
+                                <p class="detail-item-p">불쾌지수 {{currentWeather.dsplsStr}}<span class="caption">({{currentWeather.dspls}})</span></p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.sensorytem">
                                 <img src="img/ic_person_outline_white_24px.svg" style="height: 24px">
-                                <p style="margin: auto 8px">체감온도 {{currentWeather.sensorytem}}˚</p>
+                                <p class="detail-item-p">체감온도 {{currentWeather.sensorytem}}˚</p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.weather">
                                 <img ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png" style="height: 24px">
-                                <p style="margin: auto 8px">날씨 {{currentWeather.weather}}</p>
+                                <p class="detail-item-p">날씨 {{currentWeather.weather}}</p>
                             </div>
                             <div class="row subheading" ng-if="currentWeather.rn1">
                                 <img src="img/glass-with-water.svg" style="height: 20px; margin: 0 2px">
-                                <p style="margin: auto 8px">강수량 {{currentWeather.rn1}}<small>mm</small></p>
+                                <p class="detail-item-p">강수량 {{currentWeather.rn1}}<small>mm</small></p>
                             </div>
                         </div>
                     </div>
@@ -104,7 +104,7 @@
                     <div style="width: 100%">
                         <p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">상세대기정보</p>
                         <div class="row" style="padding-top: 0">
-                            <div style="margin: auto">
+                            <div style="margin: auto; min-width: 220px">
                                 <div class="subheading" ng-class="getGradeColor(currentWeather.arpltn.khaiGrade)" style="padding: 2px">
                                     CAI <img ng-src="img/{{getSentimentIcon(currentWeather.arpltn.khaiGrade)}}" style="height: 24px; vertical-align: middle">
                                     {{currentWeather.arpltn.khaiStr}}<span class="caption" style="letter-spacing: 0"
