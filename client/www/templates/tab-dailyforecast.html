@@ -69,7 +69,7 @@
                            <div class="row" style="margin: auto;">
                                <div style="margin: 0 auto; min-width: 120px" ng-if="$index == 6 || $index == 7 || $index == 8" ng-repeat="day in dayChart[0].values">
                                    <div class="row" style="margin: 0">
-                                       <a class="icon ion-calendar" style="color: white; margin: 0 12px"> {{convertMMDD(day.date)}} {{day.fromTodayStr}}</a>
+                                       <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.date)}} {{day.fromTodayStr}}</a>
                                    </div>
                                    <div class="row" style="margin: 0" ng-if="day.reh">
                                        <img ng-src="img/Humidity-{{day.reh?day.reh - day.reh%10:'00'}}.png" style="height: 24px; margin: auto 0;">
