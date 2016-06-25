@@ -363,7 +363,9 @@ function ControllerTown() {
 
                     if(req.short && req.short.length > 0){
                         shortestList.forEach(function(shortestItem){
-                            if(currentTime.date <= shortestItem.date && currentTime.time <= shortestItem.date) {
+                            if(parseInt(currentTime.date) <= parseInt(shortestItem.date) &&
+                                parseInt(currentTime.time) <= parseInt(shortestItem.time))
+                            {
                                 req.short.forEach(function(shortItem){
                                     if(shortestItem.date === shortItem.date && shortestItem.time === shortItem.time){
                                         log.silly('MRbyST> update short data');
