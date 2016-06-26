@@ -729,7 +729,11 @@ angular.module('starter.services', [])
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";
 
-                if (currentForecast.date == tempObject.date && currentForecast.time >= tempObject.time) {
+                if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
+                    currentIndex = index-1;
+                    shortForecastList[index].currentIndex = true;
+                }
+                else if (currentForecast.date == tempObject.date && currentForecast.time > tempObject.time) {
                     if (index == shortForecastList.length-1) {
                         currentIndex = index;
                         tempObject.currentIndex = true;
@@ -1318,8 +1322,8 @@ angular.module('starter.services', [])
 
         //endregion
 
-        obj.imgPath = 'img/weatherIcon2-white-color';
-        obj.version = '0.8.4'; // sync with config.xml
+        obj.imgPath = 'img/weatherIcon2-color';
+        obj.version = '0.8.6'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
