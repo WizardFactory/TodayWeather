@@ -17,7 +17,10 @@ var metRequester = require('../../lib/MET/metRequester');
 var owmRequester = require('../../lib/OWM/owmRequester');
 var wuRequester = require('../../lib/WU/wuRequester');
 
-
+/**
+ *
+ * @constructor
+ */
 function ConCollector() {
     var self = this;
 
@@ -27,11 +30,23 @@ function ConCollector() {
     self.itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 }
 
+/**
+ *
+ * @returns {{id: string, key: string}}
+ * @private
+ */
 ConCollector.prototype._getWuKey = function(){
     var self = this;
     return {id: self.keybox.wu_id, key: self.keybox.wu_key};
 };
 
+/**
+ *
+ * @param n
+ * @param digits
+ * @returns {string}
+ * @private
+ */
 ConCollector.prototype._leadingZeros = function(n, digits) {
     var zero = '';
     n = n.toString();
@@ -44,6 +59,12 @@ ConCollector.prototype._leadingZeros = function(n, digits) {
     return zero + n;
 };
 
+/**
+ *
+ * @param tzOffset
+ * @returns {string|*}
+ * @private
+ */
 ConCollector.prototype._getTimeString = function(tzOffset) {
     var self = this;
     var now = new Date();
@@ -69,7 +90,12 @@ ConCollector.prototype._getTimeString = function(tzOffset) {
     return result;
 };
 
-
+/**
+ *
+ * @param db
+ * @param callback
+ * @private
+ */
 ConCollector.prototype._getGeocodeList = function(db, callback){
     db.getGeocode(function(err, resultList){
         if(err){
@@ -79,6 +105,11 @@ ConCollector.prototype._getGeocodeList = function(db, callback){
     });
 };
 
+/**
+ *
+ * @returns {{date: number, sunrise: number, sunset: number, moonrise: number, moonset: number, tmax: number, tmin: number, precip: number, rain: number, snow: number, prob: number, humax: number, humin: number, windspdmax: number, windgstmax: number, slpmax: number, slpmin: number}}
+ * @private
+ */
 ConCollector.prototype._makeDefaultWuSummary = function(){
     return {
         date:       0,
@@ -101,6 +132,11 @@ ConCollector.prototype._makeDefaultWuSummary = function(){
     };
 };
 
+/**
+ *
+ * @returns {{date: number, time: number, utcDate: number, utcTime: number, desc: string, code: number, tmp: number, ftmp: number, winddir: number, windspd: number, windgst: number, cloudlow: number, cloudmid: number, cloudhigh: number, cloudtot: number, precip: number, rain: number, snow: number, fsnow: number, prob: number, humid: number, dewpoint: number, vis: number, splmax: number}}
+ * @private
+ */
 ConCollector.prototype._makeDefaultWuForecast = function(){
     return {
         date:       0,         // YYYYMMDD,
@@ -130,6 +166,11 @@ ConCollector.prototype._makeDefaultWuForecast = function(){
     }
 };
 
+/**
+ *
+ * @returns {{date: number, desc: string, code: number, temp: number, ftemp: number, humid: number, windspd: number, winddir: number, cloud: number, vis: number, airpress: number, dewpoint: number}}
+ * @private
+ */
 ConCollector.prototype._makeDefaultWuCurrent = function(){
     return {
         date:       -100,        // YYYYMMDDHHMM
@@ -147,6 +188,13 @@ ConCollector.prototype._makeDefaultWuCurrent = function(){
     }
 };
 
+/**
+ *
+ * @param list
+ * @param unit
+ * @returns {Array}
+ * @private
+ */
 ConCollector.prototype._divideList = function(list, unit){
     var resultList = [];
     var unitList = [];
@@ -167,6 +215,15 @@ ConCollector.prototype._divideList = function(list, unit){
     return resultList;
 };
 
+/**
+ *
+ * @param list
+ * @param key
+ * @param date
+ * @param retryCount
+ * @param callback
+ * @private
+ */
 ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCount, callback){
     var self = this;
     var failList = [];
@@ -230,7 +287,15 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
     );
 };
 
-
+/**
+ *
+ * @param list
+ * @param key
+ * @param date
+ * @param retryCount
+ * @param callback
+ * @private
+ */
 ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCount, callback){
     var self = this;
     var failList = [];
@@ -293,6 +358,12 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
     );
 };
 
+/**
+ *
+ * @param src
+ * @returns {Array}
+ * @private
+ */
 ConCollector.prototype._parseWuForecast = function(src){
     var self = this;
     var result = [];
@@ -374,6 +445,13 @@ ConCollector.prototype._parseWuForecast = function(src){
     return result;
 };
 
+/**
+ *
+ * @param src
+ * @param date
+ * @returns {{date: *, desc: *, code: Number, temp: Number, ftemp: Number, humid: Number, windspd: Number, winddir: Number, cloud: Number, vis: Number, slp: Number, dewpoint: Number}}
+ * @private
+ */
 ConCollector.prototype._parseWuCurrent = function(src, date){
     var self = this;
     var result = {
@@ -393,6 +471,13 @@ ConCollector.prototype._parseWuCurrent = function(src, date){
     return result;
 };
 
+/**
+ *
+ * @param newData
+ * @param list
+ * @returns {*}
+ * @private
+ */
 ConCollector.prototype._addWuCurrentToList = function(newData, list){
     var self = this;
 
@@ -411,6 +496,14 @@ ConCollector.prototype._addWuCurrentToList = function(newData, list){
     return list;
 };
 
+/**
+ *
+ * @param self
+ * @param list
+ * @param date
+ * @param isRetry
+ * @param callback
+ */
 ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, callback){
     var key = self._getWuKey();
     var failList = [];
@@ -454,6 +547,14 @@ ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, c
     }
 };
 
+/**
+ *
+ * @param self
+ * @param list
+ * @param date
+ * @param isRetry
+ * @param callback
+ */
 ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, callback){
     var key = self._getWuKey();
     var failList = [];
@@ -497,6 +598,13 @@ ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, ca
     }
 };
 
+/**
+ *
+ * @param geocode
+ * @param date
+ * @param data
+ * @param callback
+ */
 ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
     var self = this;
 
@@ -557,6 +665,13 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
     }
 };
 
+/**
+ *
+ * @param geocode
+ * @param date
+ * @param data
+ * @param callback
+ */
 ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
     var self = this;
 
@@ -626,6 +741,11 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
     }
 };
 
+/**
+ *
+ * @param geocode
+ * @param callback
+ */
 ConCollector.prototype.requestWuData = function(geocode, callback){
     var self = this;
     var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
@@ -684,6 +804,13 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
     );
 };
 
+/**
+ *
+ * @param funcList
+ * @param date
+ * @param isRetry
+ * @param callback
+ */
 ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callback){
     var self = this;
 
@@ -747,12 +874,17 @@ ConCollector.prototype.collectWeather = function(funcList, date, isRetry, callba
     }
 };
 
+/**
+ *
+ * @param isAll
+ * @param callback
+ */
 ConCollector.prototype.runTask = function(isAll, callback){
     var self = this;
     var minute = (new Date()).getUTCMinutes();
     var funcList = [];
 
-    log.info('RT> check collector based on the minute : ', minute);
+    log.silly('RT> check collector based on the minute : ', minute);
 
     if(minute === 30 || isAll){
         funcList.push(self.processWuCurrent);
@@ -763,9 +895,9 @@ ConCollector.prototype.runTask = function(isAll, callback){
     }
 
     var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
-    print.info('rT> Cur date : ', date);
 
     if(funcList.length > 0){
+        log.info('rT> run task:', funcList.length, date);
         self.collectWeather(funcList, date, 2, function(err){
             if(err){
                 log.error('RT> Something is wrong!!!');
@@ -781,6 +913,9 @@ ConCollector.prototype.runTask = function(isAll, callback){
     }
 };
 
+/**
+ *
+ */
 ConCollector.prototype.doCollect = function(){
     var self = this;
 

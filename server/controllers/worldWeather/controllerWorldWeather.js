@@ -585,7 +585,7 @@ function controllerWorldWeather(){
                             return;
                         }
 
-                        req.WU.forecast = self.getWuForecastData(list[0].days);
+                        req.WU.days = self.getWuForecastData(list[0].days);
                         cb(null);
                     });
                 }
