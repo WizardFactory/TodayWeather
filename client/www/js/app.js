@@ -379,9 +379,9 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .style("fill", function (d, i) {
+                            .style("fill", function (d) {
                                 if (d.name == "today") {
-                                    if (i == data[1].currentIndex && currentTime % 3 == 0) {
+                                    if (d.value.time  === currentTime) {
                                        return '#fefefe';
                                     }
                                 }
@@ -399,7 +399,7 @@ angular.module('starter', [
                             })
                             .style("fill", function (d, i) {
                                 if (d.name == "today") {
-                                    if (i == data[1].currentIndex && currentTime % 3 == 0) {
+                                    if (d.value.time === currentTime) {
                                        return '#fefefe';
                                     }
                                 }
