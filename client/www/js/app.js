@@ -381,7 +381,7 @@ angular.module('starter', [
                             })
                             .style("fill", function (d) {
                                 if (d.name == "today") {
-                                    if (d.value.time  === currentTime) {
+                                    if (d.value.time  === currentTime && d.value.date === scope.currentWeather.date) {
                                        return '#fefefe';
                                     }
                                 }
@@ -397,9 +397,9 @@ angular.module('starter', [
                             .attr('class', function (d) {
                                 return 'text-' + d.name;
                             })
-                            .style("fill", function (d, i) {
+                            .style("fill", function (d) {
                                 if (d.name == "today") {
-                                    if (d.value.time === currentTime) {
+                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
                                        return '#fefefe';
                                     }
                                 }
