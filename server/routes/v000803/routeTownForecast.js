@@ -41,7 +41,7 @@ router.get('/', [cTown.getSummary], function(req, res) {
 });
 
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                        cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
+                        cTown.getCurrent, cTown.mergeShortWithCurrentList ,cTown.adjustShort, cTown.getKeco, cTown.getMid,
                         cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                         cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.getKecoDustForecast,
                         cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
@@ -58,12 +58,11 @@ router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShorte
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
-router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                                    cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                                    cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
-                                    cTown.getSummary, cTown.sendResult]);
+router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest, cTown.getCurrent,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.getKmaStnHourlyWeather,
+                                    cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getKeco, cTown.getLifeIndexKma, cTown.getKecoDustForecast, cTown.insertIndex,
+                                    cTown.insertStrForData, cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
                                             cTown.mergeMidWithShort, cTown.getKecoDustForecast,

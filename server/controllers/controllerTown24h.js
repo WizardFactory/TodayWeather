@@ -42,16 +42,6 @@ function ControllerTown24h() {
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
 
-            //client 하위 버전 지원 못함.
-            if (short.time === "0000") {
-                var D = kmaTimeLib.convertStringToDate(short.date);
-                D.setDate(D.getDate()-1);
-                //date = back one day
-                //date = (parseInt(short.date)-1).toString();
-                short.time = "2400";
-                short.date = kmaTimeLib.convertDateToYYYYMMDD(D);
-            }
-
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, short.date);
             daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
             daySummary.taMin = daySummary.taMin === undefined ? -50:daySummary.taMin;

@@ -59,10 +59,11 @@ router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShorte
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
 router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                                    cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                                    cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.adjustShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
