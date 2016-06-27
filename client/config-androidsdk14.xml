@@ -12,13 +12,14 @@
     <preference name="webviewbounce" value="false" />
     <preference name="UIWebViewBounce" value="false" />
     <preference name="DisallowOverscroll" value="true" />
-    <preference name="android-minSdkVersion" value="19" />
+    <preference name="android-minSdkVersion" value="14" />
+    <preference name="android-maxSdkVersion" value="18" />
     <preference name="BackupWebStorage" value="local" />
     <preference name="SplashScreen" value="screen" />
     <preference name="FadeSplashScreen" value="false" />
     <preference name="ShowSplashScreenSpinner" value="false" />
     <preference name="SplashMaintainAspectRatio" value="true" />
-    <preference name="SplashScreenDelay" value="0"/>
+    <preference name="SplashScreenDelay" value="0" />
     <preference name="AutoHideSplashScreen" value="false" />
     <preference name="orientation" value="portrait" />
     <preference name="target-device" value="universal" />
@@ -92,4 +93,8 @@
     <icon src="resources/android/icon/drawable-xhdpi-icon.png" />
     <allow-navigation href="*" />
     <allow-intent href="mailto:*" />
+    <preference name="xwalkVersion" value="18+" />
+    <preference name="xwalkCommandLine" value="--disable-pull-to-refresh-effect" />
+    <preference name="xwalkMode" value="embedded" />
+    <preference name="xwalkMultipleApk" value="true" />
 </widget>
