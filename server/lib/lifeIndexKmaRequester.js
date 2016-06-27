@@ -39,19 +39,19 @@ function KmaIndexService() {
         urlPath: 'getFsnLifeList'
     };
 
-    this.rot = {
-        nextTime: null,
-        offerMonth: {start: 2, end: 10}, //3~11
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getRotLifeList'
-    };
+    //this.rot = {
+    //    nextTime: null,
+    //    offerMonth: {start: 2, end: 10}, //3~11
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getRotLifeList'
+    //};
 
-    this.sensorytem = {
-        nextTime: null,
-        offerMonth: {start: 10, end: 3}, //3~11
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getSensorytemLifeList'
-    };
+    //this.sensorytem = {
+    //    nextTime: null,
+    //    offerMonth: {start: 10, end: 3}, //3~11
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getSensorytemLifeList'
+    //};
 
     //this.frostbite = {
     //    nextTime: null,
@@ -67,12 +67,12 @@ function KmaIndexService() {
     //    urlPath: 'getHeatLifeList'
     //};
 
-    this.dspls = {
-        nextTime: null,
-        offerMonth: {start: 5, end: 8}, //6~9
-        updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
-        urlPath: 'getDsplsLifeList'
-    };
+    //this.dspls = {
+    //    nextTime: null,
+    //    offerMonth: {start: 5, end: 8}, //6~9
+    //    updateTimeTable: [3, 6, 9, 12, 15, 18, 21],   //per 3hours
+    //    urlPath: 'getDsplsLifeList'
+    //};
 
     //this.winter = {
     //    nextTime: null,
@@ -84,7 +84,7 @@ function KmaIndexService() {
     this.ultrv = {
         nextTime: null,
         offerMonth: {start: 2, end: 10},
-        updateTimeTable: [10, 22], //kr 7, 19
+        updateTimeTable: [9, 21], //kr 6, 18
         urlPath: 'getUltrvLifeList'
     };
 
@@ -478,6 +478,7 @@ KmaIndexService.prototype.saveLifeIndex = function(indexName, townObject, data, 
             {
                 log.error('areaNo='+data.areaNo+' '+indexName+' life index has not updated yet lastUpdateDate='+
                             lifeIndex[indexName].lastUpdateDate);
+                callback();
                 return;
             }
 
