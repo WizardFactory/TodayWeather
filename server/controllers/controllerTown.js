@@ -576,7 +576,7 @@ function ControllerTown() {
         log.info('>', meta);
 
         var currentTime = self._getCurrentTimeValue(9);
-        var useTime = Math.ceil(parseInt(currentTime.time.substr(0, 2)) % 3)*3;
+        var useTime = Math.ceil(parseInt(currentTime.time.substr(0, 2)) / 3)*3-3;
         if (useTime >= 24) {
            useTime -= 24;
         }
@@ -615,43 +615,14 @@ function ControllerTown() {
                                 short = req.short[i];
                                 if (shortest3h.date === short.date && shortest3h.time === short.time) {
                                     for (var key in shortest3h) {
+                                        //rn1의 경우 s06,r06을 변환해야 하고 이러기 위해서, 6시간데이터 맞추어야 한다
+                                        //현재는 무시. 하늘 상태인 pty, lgt, sky만 업데이트 함.
                                         short[key] = shortest3h[key];
                                     }
                                     break;
                                 }
                             }
                         });
-
-                        //shortestList.forEach(function(shortestItem){
-                        //    //todo: 현재 시간이 포함된 데이터에 대해서는 시점데이터 외에는 적용하면 안됨.
-                        //    //current time이 3h이면 4h부터, 4h면 6h 부터
-                        //
-                        //    //if(currentTime.date <= shortestItem.date && useTime < shortestItem.time) {
-                        //    //    //organize1hto3h(list)
-                        //    //    req.short.forEach(function(shortItem){
-                        //    //        if(shortestItem.date === shortItem.date && shortestItem.time === shortItem.time){
-                        //    //            log.silly('MRbyST> update short data');
-                        //    //            shortestString.forEach(function(string){
-                        //    //                if (shortestItem[string] < 0)  {
-                        //    //                    log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
-                        //    //                        ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
-                        //    //                }
-                        //    //                else {
-                        //    //                    if (string === 'rn1') {
-                        //    //                        /**
-                        //    //                         * rn1은 merge해서 넣어야 함. 그러나 측량값도 있으므로 개념한 3시간 사이 실제 온 값으로 하고,
-                        //    //                         * 예측값은 버림. 사용할려면 rn1이 아니라, s06, r06을 업데이트 해야 함.
-                        //    //                         */
-                        //    //                    }
-                        //    //                    else {
-                        //    //                        shortItem[string] = shortestItem[string];
-                        //    //                    }
-                        //    //                }
-                        //    //            });
-                        //    //        }
-                        //    //    });
-                        //    //}
-                        //});
                     }
 
                     if(req.current) {
@@ -2793,9 +2764,6 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
     var self = this;
 
     for (key in summary) {
-        if (key === 'date3h' || key === 'time3h' || key === 'date' || key === 'time') {
-            continue;
-        }
 
         if( key === 'pty') {
             newItem[key] = self._summaryPty(summary[key], -1);
@@ -2809,7 +2777,7 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
                 newItem[key] = +(summary[key][summary[key].length-1]).toFixed(1);
             }
             else {
-                log.warn("Fail to find current data :" + key + " " + newItem.date+" "+newItem.time);
+                log.debug("Fail to find current data :" + key + " " + summary.date3h+" "+summary.time3h);
             }
 
             //if (curItem[key] != undefined && curItem[key] != -50) {
@@ -2831,9 +2799,7 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         else if(key === 'rn1') {
             newItem[key] = self._sum(summary[key], -1);
         }
-        else{
-            //sky, vec
-            log.info("key="+key+" array="+summary[key]);
+        else if(key === 'sky' || key === 'vec' )  {
             newItem[key] = self._average(summary[key], -1, 0);
         }
     }
