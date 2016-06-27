@@ -864,7 +864,7 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
@@ -877,6 +877,13 @@ angular.module('starter.controllers', [])
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'search');
+
+            window.addEventListener('native.keyboardshow', function () {
+                TwAds.setShowAds(false);
+            });
+            window.addEventListener('native.keyboardhide', function () {
+                TwAds.setShowAds(true);
+            });
 
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
@@ -1216,6 +1223,21 @@ angular.module('starter.controllers', [])
                 Util.ga.trackEvent('page', 'tab', 'reload');
             }
             else {
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                    if (cordova.plugins.Keyboard.isVisible) {
+                        cordova.plugins.Keyboard.close();
+                        setTimeout(function(){
+                            if (forecastType === 'forecast') {
+                                $location.path('/tab/forecast');
+                            }
+                            else {
+                                $location.path('/tab/dailyforecast');
+                            }
+                        }, 100);
+                        return;
+                    }
+                }
+
                 if (forecastType === 'forecast') {
                     $location.path('/tab/forecast');
                 }
