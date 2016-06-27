@@ -3,10 +3,10 @@ angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading) {
-
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
-        var bodyWidth = window.innerWidth;
+        var bodyWidth;
+        var bodyHeight;
         var colWidth;
         var cityData = null;
 
@@ -56,64 +56,122 @@ angular.module('starter.controllers', [])
         var regionSize;
         var regionSumSize;
         var bigDigitSize;
-        var bigTempPointSize;
+        //var bigTempPointSize;
         var bigSkyStateSize;
-        var smallTimeSize;
+        //var smallTimeSize;
         var smallImageSize;
-        var smallDigitSize;
-        var headerRatio = 0;
-        var contentRatio = 0;
+        //var smallDigitSize;
+        var headerRatio = 0.4;
+        var contentRatio = 0.6;
         var showAqi = false;
 
-        if (window.innerWidth >= TABLET_WIDTH && window.innerWidth < window.innerHeight) {
-            headerRatio = 0.4;
-            contentRatio = 0.6;
-        }
-        else if (window.innerHeight / window.innerWidth < ASPECT_RATIO_16_9) {
-            headerRatio = 0.35;
-            contentRatio = 0.65;
-            showAqi = false;
-        }
-        else if (ionic.Platform.isIOS()) {
-            headerRatio = 0.4;
-            contentRatio = 0.6;
-        }
-        else if (ionic.Platform.isAndroid()) {
-            headerRatio = 0.37;
-            contentRatio = 0.63;
-        }
-        else {
-            headerRatio = 0.4;
-            contentRatio = 0.6;
-        }
+        /* The height of a toolbar by default in Angular Material */
+        var legacyToolbarH = 58;
+        var startHeight;
+        var headerE;
+        var picture;
+        var alphaBar;
+        var pBigDigit;
+        var imgBigTempPointSize;
+        var imgBigSkyStateSize;
+        var pCityInfo;
+        var pSummary;
+        var divWeatherInfo;
+        var divBigInfoBox;
+
+        var scrollHeight;
+        var minBigDigitSize = 36;
+        var minBigTempPointSize = 10;
+        var minBigSkyStateSize = 21;
+        var bodyFontSize = 12;
+        var arrayWidth;
 
         function init() {
             Util.ga.trackEvent('page', 'tab', 'forecast');
-
             //identifyUser();
             $ionicHistory.clearHistory();
 
-            var padding = 1;
-            var smallPadding = 1;
             console.log("UA:"+ionic.Platform.ua);
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+            if (window.screen.height) {
+                bodyHeight = window.screen.height;
+                bodyWidth = window.screen.width;
+            }
+            else if (window.innerHeight) {
+                //crosswalk에서 늦게 올라옴.
+                bodyHeight = window.innerHeight;
+                bodyWidth = window.innerWidth;
+            }
+            else if (window.outerHeight) {
+                //ios에서는 outer가 없음.
+                bodyHeight = window.outerHeight;
+                bodyWidth = window.outerHeight;
+            }
+            else {
+                console.log("Fail to get window width, height");
+                bodyHeight = 640;
+                bodyWidth = 360;
+            }
+
+            if (bodyWidth >= TABLET_WIDTH && bodyWidth < bodyHeight) {
+                headerRatio = 0.4;
+                contentRatio = 0.6;
+            }
+            else if (bodyHeight / bodyWidth < ASPECT_RATIO_16_9) {
+                headerRatio = 0.35;
+                contentRatio = 0.65;
+                showAqi = false;
+            }
+            else if (ionic.Platform.isIOS()) {
+                headerRatio = 0.4;
+                contentRatio = 0.6;
+            }
+            else if (ionic.Platform.isAndroid()) {
+                headerRatio = 0.37;
+                contentRatio = 0.63;
+            }
+
+            /* The height of a toolbar by default in Angular Material */
+            legacyToolbarH = 58;
+            startHeight = bodyHeight * headerRatio;
+            headerE         = angular.element(document.querySelector('[md-page-header]'));
+            picture        = angular.element(document.querySelector('[md-header-picture]'));
+            alphaBar        = angular.element(document.getElementById('alphaBar'));
+
+            if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                startHeight -= 25;
+            }
+
+            //console.log(headerE);
+            //console.log(picture);
+            //console.log("startHeight=", startHeight);
+
+            headerE.css('height', startHeight+'px');
+            picture.css('height', startHeight+'px');
+            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+            $scope.headerHeight = startHeight;
+
+            var padding = 1;
+            var smallPadding = 1;
 
             //iphone 4 480-20(status bar)
-            if ((window.innerHeight === 460 || window.innerHeight === 480) && window.innerWidth === 320) {
+            if ((bodyHeight === 460 || bodyHeight === 480) && bodyWidth === 320) {
                 padding = 1.125;
                 smallPadding = 1.1;
             }
             //iphone 5 568-20(status bar)
-            if ((window.innerHeight === 548 || window.innerHeight === 568) && window.innerWidth === 320) {
+            if ((bodyHeight === 548 || bodyHeight === 568) && bodyWidth === 320) {
                 smallPadding = 1.1;
             }
             //5.5 inch
-            if (window.innerHeight >= 706) {
+            if (bodyHeight >= 706) {
                 showAqi = true;
             }
 
-            var mainHeight = window.innerHeight - 100;
+            var mainHeight = bodyHeight - 100;
 
             //var topTimeSize = mainHeight * 0.026;
             //$scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
@@ -127,20 +185,20 @@ angular.module('starter.controllers', [])
             bigDigitSize = mainHeight * 0.17544 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
 
-            bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
-            bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
+            //bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
+            //bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
 
             bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
             bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
 
-            smallTimeSize = mainHeight * 0.0299 * smallPadding;
-            smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
+            //smallTimeSize = mainHeight * 0.0299 * smallPadding;
+            //smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
 
             smallImageSize = mainHeight * 0.0512 * smallPadding;
             smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
 
-            smallDigitSize = mainHeight * 0.0320 * smallPadding;
-            smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
+            //smallDigitSize = mainHeight * 0.0320 * smallPadding;
+            //smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
             if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
                 WeatherInfo.setCityIndex($stateParams.fav);
@@ -558,7 +616,7 @@ angular.module('starter.controllers', [])
 
             setTimeout(function () {
                 //var mainHeight = document.getElementById('ionContentBody').offsetHeight;
-                var mainHeight = window.innerHeight * contentRatio;
+                var mainHeight = bodyHeight * contentRatio;
                 var padding = 0;
 
                 //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
@@ -670,7 +728,6 @@ angular.module('starter.controllers', [])
                 return colWidth;
             }
 
-            console.log("body of width="+bodyWidth);
             colWidth = bodyWidth/7;
             if (colWidth > 60) {
                 colWidth = 60;
@@ -816,40 +873,6 @@ angular.module('starter.controllers', [])
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
         });
-
-        /* The height of a toolbar by default in Angular Material */
-        var legacyToolbarH = 58;
-        var startHeight = window.innerHeight * headerRatio;
-        var headerE         = angular.element(document.querySelector('[md-page-header]'));
-        var picture        = angular.element(document.querySelector('[md-header-picture]'));
-        var alphaBar        = angular.element(document.getElementById('alphaBar'));
-        var pBigDigit;
-        var imgBigTempPointSize;
-        var imgBigSkyStateSize;
-        var pCityInfo;
-        var pSummary;
-        var divWeatherInfo;
-        var divBigInfoBox;
-
-        var scrollHeight;
-        var minBigDigitSize = 36;
-        var minBigTempPointSize = 10;
-        var minBigSkyStateSize = 21;
-        var bodyFontSize = 12;
-        var arrayWidth;
-
-        if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
-            startHeight -= 25;
-        }
-
-        console.log(headerE);
-        console.log(picture);
-        console.log("startHeight=", startHeight);
-
-        headerE.css('height', startHeight+'px');
-        picture.css('height', startHeight+'px');
-        //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
-        $scope.headerHeight = startHeight;
 
         $scope.headerScroll = function drawShadow() {
             var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
@@ -1299,8 +1322,24 @@ angular.module('starter.controllers', [])
             TwAds.setShowAds(false);
             Util.ga.trackEvent('page', 'tab', 'guide');
 
-            $scope.bigFont = (window.innerHeight - 56) * 0.0512;
-            $scope.smallFont = (window.innerHeight - 56) * 0.0299;
+            var bodyHeight;
+
+            if (window.screen.height) {
+                bodyHeight = window.screen.height;
+            }
+            else if (window.innerHeight) {
+                bodyHeight = window.innerHeight;
+            }
+            else if (window.outerHeight) {
+                bodyHeight = window.outerHeight;
+            }
+            else {
+                console.log("Fail to get window height");
+                bodyHeight = 640;
+            }
+
+            $scope.bigFont = (bodyHeight - 56) * 0.0512;
+            $scope.smallFont = (bodyHeight - 56) * 0.0299;
 
             guideVersion = localStorage.getItem("guideVersion");
 

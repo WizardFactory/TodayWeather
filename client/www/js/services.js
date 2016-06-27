@@ -257,25 +257,29 @@ angular.module('starter.services', [])
 
             console.log('save preference plist='+JSON.stringify(pList));
 
-            $cordovaPreferences.store('cityList', JSON.stringify(pList))
-                .success(function(value) {
-                    console.log("save preference Success: " + value);
-                })
-                .error(function(error) {
-                    console.log("save preference Error: " + error);
-                });
+            $ionicPlatform.ready(function() {
+                $cordovaPreferences.store('cityList', JSON.stringify(pList))
+                    .success(function (value) {
+                        console.log("save preference Success: " + value);
+                    })
+                    .error(function (error) {
+                        console.log("save preference Error: " + error);
+                    });
+            });
         };
 
         obj._loadCitiesPreference = function (callback) {
-            $cordovaPreferences.fetch('cityList')
-                .success(function(value) {
-                    console.log("fetch preference Success: " + value);
-                    callback(undefined, value);
-                })
-                .error(function(error) {
-                    console.log("fetch preference Error: " + error);
-                    callback(error);
-                })
+            $ionicPlatform.ready(function() {
+                $cordovaPreferences.fetch('cityList')
+                    .success(function (value) {
+                        console.log("fetch preference Success: " + value);
+                        callback(undefined, value);
+                    })
+                    .error(function (error) {
+                        console.log("fetch preference Error: " + error);
+                        callback(error);
+                    })
+            });
         };
 
         obj.saveCities = function() {
