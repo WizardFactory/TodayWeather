@@ -11,8 +11,15 @@
   ],
   "proxies": [
     {
-      "path": "./",
-      "proxyUrl": "http://localhost:3000/v000705"
+      "path": "/v000705",
+      "proxyUrl": "http://tw-wzdfac.rhcloud.com/v000705"
+    }
+  ],
+  "browsers": [
+    {
+      "platform": "android",
+      "browser": "crosswalk",
+      "version": "12.41.296.5"
     }
   ]
 }

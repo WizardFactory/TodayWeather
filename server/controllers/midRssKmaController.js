@@ -73,8 +73,8 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
             for (var i = 0; i < dailyData.length; i++) {
                 if (dailyData[i].date === midData.date) {
                     if (nTempPubDate < nRssPubDate) {
-                        dailyData[i].taMin = Math.round(midData.taMin);
-                        dailyData[i].taMax = Math.round(midData.taMax);
+                        dailyData[i].taMin = +(midData.taMin).toFixed(1);
+                        dailyData[i].taMax = +(midData.taMax).toFixed(1);
                     }
                     if (nLandPubDate < nRssPubDate) {
                         dailyData[i].wfAm = midData.wfAm;

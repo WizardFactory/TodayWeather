@@ -257,25 +257,29 @@ angular.module('starter.services', [])
 
             console.log('save preference plist='+JSON.stringify(pList));
 
-            $cordovaPreferences.store('cityList', JSON.stringify(pList))
-                .success(function(value) {
-                    console.log("save preference Success: " + value);
-                })
-                .error(function(error) {
-                    console.log("save preference Error: " + error);
-                });
+            $ionicPlatform.ready(function() {
+                $cordovaPreferences.store('cityList', JSON.stringify(pList))
+                    .success(function (value) {
+                        console.log("save preference Success: " + value);
+                    })
+                    .error(function (error) {
+                        console.log("save preference Error: " + error);
+                    });
+            });
         };
 
         obj._loadCitiesPreference = function (callback) {
-            $cordovaPreferences.fetch('cityList')
-                .success(function(value) {
-                    console.log("fetch preference Success: " + value);
-                    callback(undefined, value);
-                })
-                .error(function(error) {
-                    console.log("fetch preference Error: " + error);
-                    callback(error);
-                })
+            $ionicPlatform.ready(function() {
+                $cordovaPreferences.fetch('cityList')
+                    .success(function (value) {
+                        console.log("fetch preference Success: " + value);
+                        callback(undefined, value);
+                    })
+                    .error(function (error) {
+                        console.log("fetch preference Error: " + error);
+                        callback(error);
+                    })
+            });
         };
 
         obj.saveCities = function() {
@@ -691,7 +695,7 @@ angular.module('starter.services', [])
 
         /**
          * @param {Object[]} shortForecastList
-         * @param {Date} currentForecast
+         * @param {Object} currentForecast
          * @param {Date} current
          * @param {Object[]} dailyInfoList midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
@@ -702,6 +706,8 @@ angular.module('starter.services', [])
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
                 return {timeTable: [], timeChart: []};
             }
+
+            var currentIndex = -1;
 
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
@@ -726,6 +732,28 @@ angular.module('starter.services', [])
                 tempObject.day = day;
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";
+
+                if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
+                    currentIndex = index-1;
+                    shortForecastList[index].currentIndex = true;
+                }
+                else if (currentForecast.date == tempObject.date && currentForecast.time > tempObject.time) {
+                    if (index == shortForecastList.length-1) {
+                        currentIndex = index;
+                        tempObject.currentIndex = true;
+                    }
+                    else {
+                        var nextTime = parseInt(shortForecastList[index+1].time.slice(0, -2));
+                        if (currentForecast.time < nextTime) {
+                            currentIndex = index;
+                            /**
+                             * chart는 기준 index부터 뒤로 rect를 그리고, table은 기준값 기준으로 앞으로 데이터를 선정하기 때문에 선택된 index에 한칸으로 가야 함
+                             */
+                            shortForecastList[index+1].currentIndex = true;
+                        }
+                    }
+                }
+
                 data.push(tempObject);
 
                 return true;
@@ -743,7 +771,8 @@ angular.module('starter.services', [])
                     name: "today",
                     values: data.slice(8).map(function (d) {
                         return {name: "today", value: d};
-                    })
+                    }),
+                    currentIndex: currentIndex - 8
                 }
             ];
 
@@ -775,6 +804,8 @@ angular.module('starter.services', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.skyIcon = getHighPrioritySky(skyAm, skyPm);
+                data.skyAm = skyAm;
+                data.skyPm = skyPm;
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
@@ -1090,37 +1121,38 @@ angular.module('starter.services', [])
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
-            if (ionic.Platform.isAndroid() && window.cordova) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //37.472595, 126.795249
+                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
 
-                var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+                deferred.resolve(position.coords);
+            }, function(error) {
+                console.log("Fail to get current position from navigator");
+                console.log(error.message);
 
-                orgGeo.getCurrentPosition(function (position) {
-                        //console.log('native geolocation');
-                        //console.log(position);
-                        deferred.resolve(position.coords);
-                    },
-                    function (error) {
-                        console.log("Fail to get current position from native");
-                        console.log(error);
-                        deferred.reject();
-                    },{timeout:5000});
-            }
-            else {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    //경기도,광주시,오포읍,37.36340556,127.2307667
-                    //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                    //37.472595, 126.795249
-                    //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                    //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                if (ionic.Platform.isAndroid() && window.cordova) {
+                    var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
-                    deferred.resolve(position.coords);
-                }, function(error) {
-                    console.log("Fail to get current position from navigator");
-                    console.log(error);
+                    orgGeo.getCurrentPosition(function (position) {
+                            //console.log('native geolocation');
+                            //console.log(position);
+                            deferred.resolve(position.coords);
+                        },
+                        function (error) {
+                            console.log("Fail to get current position from native");
+                            console.log(error.message);
+                            deferred.reject();
+                        },{timeout:5000});
+                }
+                else {
                     deferred.reject();
-                },{timeout:3000});
-            }
+                }
+            },{timeout:3000});
+
             return deferred.promise;
         };
 
@@ -1295,8 +1327,8 @@ angular.module('starter.services', [])
 
         //endregion
 
-        obj.imgPath = 'img/weatherIcon';
-        obj.version = '0.8.4'; // sync with config.xml
+        obj.imgPath = 'img/weatherIcon2-color';
+        obj.version = '0.9.0'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1305,7 +1337,7 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "./";
+            //obj.url = "./v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }

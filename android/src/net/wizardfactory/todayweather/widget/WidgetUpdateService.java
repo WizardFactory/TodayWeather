@@ -30,6 +30,7 @@ import net.wizardfactory.todayweather.widget.Provider.W2x1WidgetProvider;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -43,24 +44,25 @@ public class WidgetUpdateService extends Service {
 
     private LocationManager mLocationManager = null;
     private boolean mIsLocationManagerRemoveUpdates = false;
-    int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
+    private int[] mAppWidgetId = new int[0];
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         // Find the widget id from the intent.
         Bundle extras = intent.getExtras();
+        int widgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
         if (extras != null) {
-            mAppWidgetId = extras.getInt(
+            widgetId = extras.getInt(
                     AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
         }
 
         // If this activity was started with an intent without an app widget ID, finish with an error.
-        if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             return START_NOT_STICKY;
         }
 
-        startUpdate(mAppWidgetId);
+        startUpdate(widgetId);
         return START_NOT_STICKY;
     }
 
@@ -69,9 +71,9 @@ public class WidgetUpdateService extends Service {
         return null;
     }
 
-    private void startUpdate(int id) {
+    private void startUpdate(int widgetId) {
         final Context context = getApplicationContext();
-        String jsonCityInfoStr = WidgetProviderConfigureActivity.loadCityInfoPref(context, id);
+        String jsonCityInfoStr = WidgetProviderConfigureActivity.loadCityInfoPref(context, widgetId);
         boolean currentPosition = true;
         String address = null;
 
@@ -79,7 +81,7 @@ public class WidgetUpdateService extends Service {
             Log.i("Service", "cityInfo is null, so this widget is zombi");
 
 //            Intent result = new Intent();
-//            result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
+//            result.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
 //            result.setAction(AppWidgetManager.ACTION_APPWIDGET_DELETED);
 //            context.sendBroadcast(result);
             return;
@@ -95,8 +97,8 @@ public class WidgetUpdateService extends Service {
         }
 
         if (currentPosition) {
-            Log.i("Service", "Update current postion app widget id=" + id);
-            registerLocationUpdates();
+            Log.i("Service", "Update current postion app widget id=" + widgetId);
+            registerLocationUpdates(widgetId);
 
             // if location do not found in LOCATION_TIMEOUT, this service is stop.
             Runnable myRunnable = new Runnable() {
@@ -118,17 +120,17 @@ public class WidgetUpdateService extends Service {
             Handler myHandler = new Handler();
             myHandler.postDelayed(myRunnable, LOCATION_TIMEOUT);
         } else {
-            Log.i("Service", "Update address=" + address + " app widget id=" + id);
+            Log.i("Service", "Update address=" + address + " app widget id=" + widgetId);
             String addr = AddressesElement.makeUrlAddress(address);
             if (addr != null) {
                 addr = "http://todayweather.wizardfactory.net/town" + addr;
                 String jsonData = getWeatherDataFromServer(addr);
-                updateWidget(jsonData);
+                updateWidget(widgetId, jsonData);
             }
         }
     }
 
-    private void registerLocationUpdates() {
+    private void registerLocationUpdates(int widgetId) {
         if (mLocationManager == null) {
             mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         }
@@ -138,14 +140,18 @@ public class WidgetUpdateService extends Service {
             Location lastLoc = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             if (lastLoc != null) {
                 Log.i("Service", "success last location from NETWORK");
-                findAddressAndWeatherUpdate(lastLoc.getLatitude(), lastLoc.getLongitude());
+                findAddressAndWeatherUpdate(widgetId, lastLoc.getLatitude(), lastLoc.getLongitude());
             } else {
                 lastLoc = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (lastLoc != null) {
                     Log.i("Service", "success last location from gps");
-                    findAddressAndWeatherUpdate(lastLoc.getLatitude(), lastLoc.getLongitude());
+                    findAddressAndWeatherUpdate(widgetId, lastLoc.getLatitude(), lastLoc.getLongitude());
                 }
             }
+
+            mAppWidgetId = Arrays.copyOf(mAppWidgetId, mAppWidgetId.length + 1);
+            mAppWidgetId[mAppWidgetId.length - 1] = widgetId;
+
             mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 300, 0, locationListener);
             mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
         } catch (SecurityException e) {
@@ -179,7 +185,10 @@ public class WidgetUpdateService extends Service {
                 }
                 mLocationManager.removeUpdates(locationListener);
 
-                findAddressAndWeatherUpdate(lat, lon);
+                for (int i = 0; i < mAppWidgetId.length; i++) {
+                    findAddressAndWeatherUpdate(mAppWidgetId[i], lat, lon);
+                }
+                mAppWidgetId = Arrays.copyOf(mAppWidgetId, 0);
                 stopSelf();
             }
         }
@@ -191,10 +200,10 @@ public class WidgetUpdateService extends Service {
         }
     };
 
-    private void findAddressAndWeatherUpdate(double lat, double lon) {
+    private void findAddressAndWeatherUpdate(int widgetId, double lat, double lon) {
         String addr = location2Address(lat, lon);
         String jsonData = getWeatherDataFromServer(addr);
-        updateWidget(jsonData);
+        updateWidget(widgetId, jsonData);
     }
 
     private String location2Address(double lat, double lon) {
@@ -254,7 +263,7 @@ public class WidgetUpdateService extends Service {
         return retJsonStr;
     }
 
-    private void updateWidget(String jsonStr) {
+    private void updateWidget(int widgetId, String jsonStr) {
         if (jsonStr != null) {
             Log.i("Service", "jsonStr: " + jsonStr);
 
@@ -265,7 +274,7 @@ public class WidgetUpdateService extends Service {
                 WidgetData wData = weatherElement.makeWidgetData();
 
                 // input weather data to 2x1 widget
-                set2x1WidgetData(wData);
+                set2x1WidgetData(widgetId, wData);
                 // TODO: if added another size widget, using "set2x1WidgetData" function.
             }
             else {
@@ -277,7 +286,7 @@ public class WidgetUpdateService extends Service {
         }
     }
 
-    private void set2x1WidgetData(WidgetData wData) {
+    private void set2x1WidgetData(int widgetId, WidgetData wData) {
         Context context = getApplicationContext();
         // input weather content to widget layout
 
@@ -343,8 +352,9 @@ public class WidgetUpdateService extends Service {
             views.setViewVisibility(R.id.msg_layout, View.GONE);
             views.setViewVisibility(R.id.weather_layout, View.VISIBLE);
 
+            Log.i("UpdateWidgetService", "set2x1WidgetData id=" + widgetId);
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            appWidgetManager.updateAppWidget(mAppWidgetId, views);
+            appWidgetManager.updateAppWidget(widgetId, views);
         }
     }
 }// class end

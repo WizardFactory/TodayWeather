@@ -72,6 +72,11 @@ angular.module('starter', [
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
+            } else if (toState.name === 'tab.dailyforecast') {
+                $rootScope.viewColor = '#00BCD4';
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#0097A7');
+                }
             } else if (toState.name === 'tab.setting') {
                 $rootScope.viewColor = '#FFA726';
                 if (window.StatusBar) {
@@ -99,7 +104,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 5, left: 0, textTop: 5};
+                    var margin = {top: 12, right: 0, bottom: 12, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg, initLine, line;
 
@@ -177,6 +182,49 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        // draw guideLine
+                        var guideLines = svg.selectAll('.guide-line')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line')
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.1');
+
+                        guideLines.exit().remove();
+
+                        var currentRect = svg.selectAll('.current-rect').data(function () {
+                           return [data[1].currentIndex];
+                        });
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'current-rect');
+
+                        currentRect
+                            .attr('stroke', '#039BE5')
+                            .attr('fill', '#039BE5')
+                            .attr('x', function (index) {
+                                return x.rangeBand() * index + x.rangeBand() / 2 + 0.5;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand() - 0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         var lineGroups = svg.selectAll('.line-group')
                             .data(data);
 
@@ -220,18 +268,18 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'circle-' + d.name;
                             })
-                            .attr('r', 2)
+                            .attr('r', 10)
                             .attr('cx', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         circles.attr('cy', function (d) {
                             return y(d.value.t3h);
@@ -245,6 +293,9 @@ angular.module('starter', [
                             .data(function(d) {
                                 return [d];
                             })
+                            .attr('r', function () {
+                                return currentTime % 3 == 0 ? 11:5;
+                            })
                             .attr('cx', function (d) {
                                 var cx1, cx2;
                                 for (var i = 0; i < d.values.length; i = i + 1) {
@@ -256,14 +307,16 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.enter()
                             .append('circle')
                             .attr('class', function (d) {
                                 return 'point circle-' + d.name + '-current';
                             })
-                            .attr('r', 5)
+                            .attr('r', function () {
+                                return currentTime % 3 == 0 ? 11:5;
+                            })
                             .attr('cx', function (d) {
                                 var cx1, cx2;
                                 for (var i = 0; i < d.values.length; i = i + 1) {
@@ -275,7 +328,7 @@ angular.module('starter', [
                                 }
                                 return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
                             })
-                            .attr('cy', height - margin.bottom);
+                            .attr('cy', height);
 
                         point.attr('cx', function (d) {
                             var cx1, cx2;
@@ -326,17 +379,17 @@ angular.module('starter', [
                             .data(function (d) {
                                 return d.values;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
-                            .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
+                            .style("fill", function (d) {
+                                if (d.name == "today") {
+                                    if (d.value.time  === currentTime && d.value.date === scope.currentWeather.date) {
+                                       return '#fefefe';
                                     }
                                 }
-                                return '';
+                                return '#0288D1';
+                            })
+                            .attr('y', height - margin.bottom + margin.textTop)
+                            .text(function (d) {
+                                return Math.round(d.value.t3h);
                             });
 
                         texts.enter()
@@ -344,26 +397,26 @@ angular.module('starter', [
                             .attr('class', function (d) {
                                 return 'text-' + d.name;
                             })
+                            .style("fill", function (d) {
+                                if (d.name == "today") {
+                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
+                                       return '#fefefe';
+                                    }
+                                }
+                                return '#0288D1';
+                            })
                             .attr('text-anchor', 'middle')
                             .attr('dy', margin.top)
                             .attr('x', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr('y', height - margin.bottom - margin.textTop)
+                            .attr('y', height - margin.bottom + margin.textTop)
                             .text(function (d) {
-                                if (d.name === 'today') {
-                                    if (d.value.tmn !== -50) {
-                                        return d.value.tmn + '˚';
-                                    }
-                                    if (d.value.tmx !== -50) {
-                                        return d.value.tmx + '˚';
-                                    }
-                                }
-                                return '';
+                                return Math.round(d.value.t3h);
                             });
 
                         texts.attr('y', function (d) {
-                            return y(d.value.t3h) - margin.top - margin.textTop;
+                            return y(d.value.t3h) - margin.bottom + margin.textTop;
                         });
 
                         texts.exit()
@@ -425,7 +478,7 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 20, right: 0, bottom: 20, left: 0, textTop: 5};
+                    var margin = {top: 18, right: 0, bottom: 18, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg;
 
@@ -477,6 +530,27 @@ angular.module('starter', [
                             .scale(y)
                             .orient('left');
 
+                        var currentRect = svg.selectAll('.currentRect').data(data);
+
+                        currentRect.enter().append('rect')
+                            .attr('class', 'currentRect')
+                            .attr('fill', '#00ACC1')
+                            .attr('x', function (d) {
+                                for (var i = 0; i < d.values.length; i++) {
+                                    if (d.values[i].fromToday === 0) {
+                                        return x.rangeBand() * i;
+                                    }
+                                }
+                                return 0;
+                            })
+                            .attr('y', function () {
+                                return 0;
+                            })
+                            .attr('width', x.rangeBand()-0.5)
+                            .attr('height', height);
+
+                        currentRect.exit().remove();
+
                         // draw bar
                         var group = svg.selectAll('.bar-group')
                             .data(data);
@@ -484,7 +558,31 @@ angular.module('starter', [
                         group.enter().append('g')
                             .attr('class', 'bar-group');
 
-                        var rects = group.selectAll('rect')
+                        // draw guideLine
+                        var guideLines = group.selectAll('guide-line')
+                            .data(function (d) {
+                                return d.values;
+                            });
+
+                        guideLines.enter().append('line')
+                            .attr('class', 'guide-line');
+
+                        guideLines.exit().remove();
+
+                        guideLines
+                            .attr('x1', function (d, i) {
+                                return x.rangeBand() * i+0.5;
+                            })
+                            .attr('x2', function (d, i) {
+                                return (x.rangeBand()) * i+0.5;
+                            })
+                            .attr('y1', 0)
+                            .attr('y2', height)
+                            .attr('stroke-width', 1)
+                            .attr('stroke', '#fefefe')
+                            .attr('stroke-opacity', '0.1');
+
+                        var rects = group.selectAll('.rect')
                             .data(function (d) {
                                 return d.values;
                             });
@@ -536,7 +634,7 @@ angular.module('starter', [
                             .attr('dy', margin.top)
                             .attr('text-anchor', 'middle')
                             .text(function (d) {
-                                return d.tmx + '˚';
+                                return Math.round(d.tmx) + '˚';
                             })
                             .attr('class', 'text-today')
                             .attr('y', function (d) {
@@ -570,7 +668,7 @@ angular.module('starter', [
                             .attr('dy', margin.bottom)
                             .attr('text-anchor', 'middle')
                             .text(function (d) {
-                                return d.tmn + '˚';
+                                return Math.round(d.tmn) + '˚';
                             })
                             .attr('class', 'text-today')
                             .attr('y', function (d) {
@@ -672,9 +770,19 @@ angular.module('starter', [
                     }
                 }
             })
+            .state('tab.dailyforecast', {
+                url: '/dailyforecast?fav',
+                cache: false,
+                views: {
+                    'tab-dailyforecast': {
+                        templateUrl: 'templates/tab-dailyforecast.html',
+                        controller: 'ForecastCtrl'
+                    }
+                }
+            })
             .state('tab.setting', {
                 url: '/setting',
-                cache: false,
+                cache: true,
                 views: {
                     'tab-setting': {
                         templateUrl: 'templates/tab-setting.html',
@@ -693,6 +801,7 @@ angular.module('starter', [
 
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
+        $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
 
         var timePickerObj = {
             format: 12,

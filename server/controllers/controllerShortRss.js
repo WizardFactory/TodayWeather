@@ -292,7 +292,7 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
             template.s12 = parseFloat(item.s12[0]);
             template.ws = parseFloat(item.ws[0]);
             if(template.ws.toString().length >= 5) {
-                template.ws = template.ws.toFixed(1);
+                template.ws = +template.ws.toFixed(1);
             }
             template.wd = parseFloat(item.wd[0]);
             template.wdKor = self.convertWeaterString(item.wdKor[0]);

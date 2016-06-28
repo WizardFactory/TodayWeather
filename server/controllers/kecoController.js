@@ -328,7 +328,7 @@ arpltnController._getArpLtnList = function (msrStnList, callback) {
     //순서를 위해서 mapSeries를 사용
     async.mapSeries(msrStnList,
         function(msrStn, cb) {
-            Arpltn.find({stationName: msrStn.stationName}).limit(1).lean().exec(function (err, arpltnList) {
+            Arpltn.find({stationName: msrStn.stationName}, {_id: 0}).limit(1).lean().exec(function (err, arpltnList) {
                 if (err) {
                     log.error(err);
                 }
