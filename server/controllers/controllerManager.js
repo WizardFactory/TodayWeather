@@ -1848,11 +1848,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
             self._requestApi("kecoForecast", callback);
         });
 
-        log.info('push life index');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("lifeindex", callback);
-        });
-
         log.info('push mid temp');
         self.asyncTasks.push(function (callback) {
             self._requestApi("midtemp", callback);
@@ -1894,6 +1889,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
             self._requestApi("keco", callback);
+        });
+    }
+
+    /**
+     * setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
+     */
+    if (time === 10 || putAll) {
+        log.info('push life index');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("lifeindex", callback);
         });
     }
 
