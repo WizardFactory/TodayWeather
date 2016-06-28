@@ -41,18 +41,20 @@ router.get('/', [cTown.getSummary], function(req, res) {
 });
 
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                        cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                        cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                        cTown.mergeByShortest,  cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                        cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
-                            cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.adjustShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                                cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                                cTown.getKmaStnHourlyWeather, cTown.insertIndex, cTown.insertStrForData,
-                                cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.adjustShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 /**
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
@@ -66,16 +68,24 @@ router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.get
                                     cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
+/**
+ * mid, short, shortest 다 정상적으로 동작하기 위해서는 current, shorest, short의 데이타가 필요하다.
+ */
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
-                                            cTown.mergeMidWithShort, cTown.getKecoDustForecast,
+                                    cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getKeco,
+                                    cTown.getKecoDustForecast, cTown.insertIndex,
+                                    cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
+
+router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
+                                            cTown.convert0Hto24H, cTown.mergeShortWithCurrentList, cTown.adjustShort,
+                                            cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
                                             cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.adjustShort,
+router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.convert0Hto24H, cTown.insertIndex,
                                             cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
-
-router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKeco, cTown.insertStrForData,
-                                                cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
+router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
+                                            cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
+                                            cTown.insertStrForData, cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 module.exports = router;

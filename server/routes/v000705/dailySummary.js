@@ -23,12 +23,14 @@ function divideParams(req, res, next) {
     return next();
 }
 
+
 router.get('/town/*', [divideParams, cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                                    cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKecoDustForecast,
-                                    cTown.getKmaStnHourlyWeather, cTown.insertStrForData, cTown.getSummary,
-                                    cTown.makeDailySummary, cTown.sendDailySummaryResult]);
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.adjustShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.insertIndex, cTown.insertStrForData, cTown.getSummary,
+                                    cTown.dataToFixed, cTown.makeDailySummary, cTown.sendDailySummaryResult]);
 
 router.get('/geo/:lat/:lon', [], function(req, res) {
 

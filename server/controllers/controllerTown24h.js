@@ -83,7 +83,8 @@ function ControllerTown24h() {
         if (req.short[0].r06 < 0) {
             req.short[0].r06 = 0;
         }
-        for (var i=2; i<req.short.length; i+=2) {
+        var i;
+        for (i=2; i<req.short.length; i+=2) {
             var short = req.short[i];
             if (short.r06 > 0) {
                 if (req.short[i-1].pty > 0 && req.short[i].pty > 0) {
@@ -143,6 +144,19 @@ function ControllerTown24h() {
                 req.short[i].s06 = 0;
             }
         }
+
+        req.short.forEach(function (short) {
+            if (short.hasOwnProperty('shortestRn1')) {
+                if (short.hasOwnProperty('pty')) {
+                    if (short.pty === 3) {
+                        short.s06 = short.shortestRn1;
+                    }
+                    else if (short.pty === 2 || short.pty === 1)  {
+                        short.r06 = short.shortestRn1;
+                    }
+                }
+            }
+        });
 
         //client 하위 버전 지원 못함.
         req.short.forEach(function (short, index) {
@@ -275,7 +289,7 @@ function ControllerTown24h() {
             }
         });
 
-        var i = req.short.length - 1;
+        i = req.short.length - 1;
         for(;i>=0;i--) {
             if(req.short[i].reh !== -1) {
                 break;
