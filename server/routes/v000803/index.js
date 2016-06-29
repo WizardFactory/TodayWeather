@@ -40,8 +40,7 @@ router.use(function checkAuthorization(req, res, next) {
                 });
             } else {
                 if((req.body.id === 'todayweather')
-                    && (req.body.password === 'wizard'))
-                {
+                    && (req.body.password === 'wizard')) {
                     var token = null;
 
                     if(privateKey) {
@@ -55,7 +54,8 @@ router.use(function checkAuthorization(req, res, next) {
 
                     res.status = 200;
                     res.send(token);
-                } else {
+                }
+                else {
                     err = new Error('invalid id or password.');
 
                     res.status(err.status || 500);
@@ -71,14 +71,16 @@ router.use(function checkAuthorization(req, res, next) {
 
             if(publicKey) {
                 decode = jwt.decode(req.headers.bearertoken, publicKey, {algorithm:'RS256'});
-            } else {
+            }
+            else {
                 decode = jwt.decode(req.headers.bearertoken, 'wizard');
             }
 
             if(idBearerToken[decode.id] === decode.app) {
                 console.log(decode.app);
                 next();
-            } else {
+            }
+            else {
                 err = new Error('App name is invalid.');
 
                 console.log(decode.id);
@@ -90,6 +92,9 @@ router.use(function checkAuthorization(req, res, next) {
                 });
             }
         }
+    }
+    else {
+        next();
     }
 });
 
