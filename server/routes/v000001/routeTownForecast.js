@@ -48,9 +48,10 @@ router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShorte
                                 cTown.mergeByShortest, cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.adjustShort, cTown.getKeco, cTown.getMid,
-                                    cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.mergeByShortest, cTown.getLifeIndexKma, cTown.getKmaStnHourlyWeather,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather,
+                                    cTown.mergeShortWithCurrentList, cTown.mergeByShortest, cTown.adjustShort,
+                                    cTown.getMid,cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getLifeIndexKma, cTown.getKeco,
                                     cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
