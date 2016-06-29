@@ -700,7 +700,7 @@ function ControllerTown() {
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHMM(now);
                 log.info(date+time);
-                controllerKmaStnWeather.getStnHourly(townInfo, date+time, function (err, stnWeatherInfo) {
+                controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
                         next();

@@ -19,17 +19,49 @@ function controllerKmaStnWeather() {
 
 /**
  * weather, r1d, s1d는 발생시에만 있고, sensoryTem과 dspls는 둘중 하나만 있음
+ * 도시별날씨의 경우 바로 적용.
  * @param stnWeatherList
+ * @param t1h
  * @returns {*}
  * @private
  */
-controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList) {
+controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
     var propertyName = ['stnId', 'stnName', 'weather', 'visibility', 'cloud', 'heavyCloud', 't1h', 'dpt', 'sensoryTem', 'dspls',
                         'r1d', 's1d', 'reh', 'wdd', 'vec', 'wsd', 'hPa', 'rs1h', 'rs1d', 'rns'];
     var propertyCount = 0;
     var mergedStnWeatherInfo;
+    var tmpDiff = 0;
+    var nextTmpDiff = 0;
+
     for (var j=0; j<stnWeatherList.length; j++) {
         var stnWeatherInfo = stnWeatherList[j];
+
+        if (stnWeatherInfo.t1h == undefined) {
+            continue;
+        }
+
+        //도시별날씨라면 적용함.
+        if (stnWeatherInfo.isCityWeather == false) {
+            if (t1h != undefined) {
+                tmpDiff = Math.abs(t1h - stnWeatherInfo.t1h);
+                if (stnWeatherList[j+1] && stnWeatherList[j+1].t1h != undefined) {
+                    nextTmpDiff =  Math.abs(t1h - stnWeatherList[j+1].t1h);
+                    if (tmpDiff > nextTmpDiff) {
+                        continue;
+                    }
+                }
+                else {
+                    //하나 뿐이거나, 마지막꺼는 잘 못 될 수 있어서 사용 안함.
+                    //다음 측정소에서 정보를 못 가지고 오는 경우에도 버림.
+                    continue;
+                }
+            }
+
+            if (j >= 2 && mergedStnWeatherInfo == undefined) {
+                //기본 값이 근접 1,2에서 못 만들면 버림.
+                break;
+            }
+        }
 
         for (var i=2; i<propertyName.length; i++) {
             if (stnWeatherInfo[propertyName[i]] != undefined) {
@@ -118,6 +150,7 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
            var stnWeatherInfo = new Object(hourlyData);
            stnWeatherInfo.stnId = stnInfo.stnId;
            stnWeatherInfo.stnName = stnInfo.stnName;
+           stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
 
            mCallback(err, stnWeatherInfo);
        });
@@ -136,12 +169,14 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
 
 /**
  * KMA station은 시도별날씨 정보를 제공하는 곳과 아닌 곳이 있어서 두개 구분하고, 시도별날씨를 요청에 꼭 하나 넣도록 한다.
+ * 근접한 측정소의 온도값이 다은 측정소보다 차가 크다면, 산이나 높은 고도에 있는 것으로 보고, 측정값을 제외한다.
  * @param townInfo
  * @param dateTime
+ * @param t1h
  * @param callback
  * @returns {controllerKmaStnWeather}
  */
-controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, callback) {
+controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callback) {
     var self = this;
 
     var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoMMoZZ(dateTime);
@@ -176,7 +211,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, callback) {
             cb(err, results);
         });
     }, function (stnHourWeatherList, cb) {
-        var mergedStnWeather = self._mergeStnWeatherList(stnHourWeatherList);
+        var mergedStnWeather = self._mergeStnWeatherList(stnHourWeatherList, t1h);
         if (mergedStnWeather == undefined) {
             return cb(new Error('Fail to make stn Weather info town='+JSON.stringify(townInfo)));
         }
