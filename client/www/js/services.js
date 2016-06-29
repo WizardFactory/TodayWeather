@@ -730,18 +730,22 @@ angular.module('starter.services', [])
                     }
                 }
 
-                if (displayItemCount == 0 && tempObject.skyIcon != undefined) {
-                        displayItemCount = 1;
+                var tmpDisplayCount = 0;
+                if (tempObject.skyIcon != undefined) {
+                        tmpDisplayCount++;
                 }
-                else if (displayItemCount == 1 && tempObject.pop) {
-                        displayItemCount = 2;
+                if (tempObject.pop && tempObject.pop > 0) {
+                    tmpDisplayCount++;
                 }
-                else if (displayItemCount == 2) {
+                if (displayItemCount == 2) {
                     if ((tempObject.rn1 && tempObject.rn1 > 0)
                         || (tempObject.r06 && tempObject.r06 > 0)
                         || (tempObject.s06 && tempObject.s06 > 0)) {
-                        displayItemCount = 3;
+                        tmpDisplayCount++;
                     }
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
                 }
 
                 data.push(tempObject);
@@ -778,6 +782,7 @@ angular.module('starter.services', [])
          */
         obj.parseMidTownWeather = function (midData, currentTime) {
             var tmpDayTable = [];
+            var displayItemCount = 0;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
                 return tmpDayTable;
@@ -809,6 +814,23 @@ angular.module('starter.services', [])
                 }
 
                 tmpDayTable.push(data);
+
+                var tmpDisplayCount = 0;
+                if (data.skyAm != "" || data.skyPm != "") {
+                   tmpDisplayCount++;
+                    if (data.skyAm != data.skyPm) {
+                        if (data.skyAm != "" && data.skyPm == "") {
+                            tmpDisplayCount++;
+                        }
+                    }
+                }
+
+                if (data.pop && data.pop > 0) {
+                    tmpDisplayCount++;
+                }
+
+
+
             });
 
             //console.log(tmpDayTable);
