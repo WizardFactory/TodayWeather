@@ -355,14 +355,15 @@ arpltnController._getArpLtnList = function (msrStnList, callback) {
 };
 
 /**
- *
+ * item 항목이 모두 채워지면 true
  * @param arpltn
+ * @param itemList
  * @returns {boolean}
  * @private
  */
-arpltnController._checkArpltnDataValid = function (arpltn) {
-    for (var key in arpltn) {
-        if (typeof arpltn[key] === 'number' && arpltn[key] === -1) {
+arpltnController._checkArpltnDataValid = function (arpltn, itemList) {
+    for (var i=0; i<itemList.length; i++) {
+        if (arpltn[itemList[i]+'Value'] == undefined) {
             return false;
         }
     }
@@ -405,6 +406,7 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
 arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
     var arpltn;
     var self = this;
+    var itemList = ['co', 'khai', 'no2', 'o3', 'pm10', 'pm25', 'so2'];
 
     if (!Array.isArray(arpltnList)) {
         log.error(new Error("arpltn is not array"));
@@ -416,11 +418,16 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
 
         if(self._checkDateTime(src, currentTime)) {
             if (arpltn === undefined) {
-                arpltn =  new Object(src);
+                arpltn =  {};
+                for (var key in src) {
+                    if (src[key] != undefined && src[key] != -1) {
+                        arpltn[key] = src[key];
+                    }
+                }
             }
             else {
-                ['co', 'khai', 'no2', 'o3', 'pm10', 'pm25', 'so2'].forEach(function (name) {
-                    if (arpltn[name+'Value'] === -1 && src[name+'Value'] !== -1) {
+                itemList.forEach(function (name) {
+                    if (arpltn[name+'Value'] == undefined && src[name+'Value'] !== -1) {
                         arpltn[name+'Value'] = src[name+'Value'];
                         arpltn[name+'Grade'] = src[name+'Grade'];
                         arpltn[name+'StationName'] = src.stationName;
@@ -429,7 +436,7 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
             }
         }
 
-        if (arpltn && self._checkArpltnDataValid(arpltn)) {
+        if (arpltn && self._checkArpltnDataValid(arpltn, itemList)) {
             break;
         }
     }
