@@ -620,7 +620,7 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 10*1000})
+            $http({method: 'GET', url: url, timeout: 20*1000})
                 .success(function (data) {
                     //console.log(data);
                     deferred.resolve({data: data});
@@ -683,6 +683,7 @@ angular.module('starter.services', [])
             }
 
             var currentIndex = -1;
+            var displayItemCount = 0;
 
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
@@ -702,7 +703,7 @@ angular.module('starter.services', [])
                 tempObject = shortForecast;
 
                 tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
+                //tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
 
                 tempObject.day = day;
                 tempObject.time = time;
@@ -729,6 +730,20 @@ angular.module('starter.services', [])
                     }
                 }
 
+                if (displayItemCount == 0 && tempObject.skyIcon != undefined) {
+                        displayItemCount = 1;
+                }
+                else if (displayItemCount == 1 && tempObject.pop) {
+                        displayItemCount = 2;
+                }
+                else if (displayItemCount == 2) {
+                    if ((tempObject.rn1 && tempObject.rn1 > 0)
+                        || (tempObject.r06 && tempObject.r06 > 0)
+                        || (tempObject.s06 && tempObject.s06 > 0)) {
+                        displayItemCount = 3;
+                    }
+                }
+
                 data.push(tempObject);
 
                 return true;
@@ -747,7 +762,8 @@ angular.module('starter.services', [])
                     values: data.slice(8).map(function (d) {
                         return {name: "today", value: d};
                     }),
-                    currentIndex: currentIndex - 8
+                    currentIndex: currentIndex - 8,
+                    displayItemCount: displayItemCount
                 }
             ];
 
@@ -1312,7 +1328,7 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "./v000705";
+            //obj.url = "/v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
@@ -1322,7 +1338,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .run(function(WeatherInfo) {
+    .run(function(WeatherInfo, $ionicPlatform, $rootScope) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
     });

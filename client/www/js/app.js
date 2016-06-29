@@ -107,6 +107,7 @@ angular.module('starter', [
                     var margin = {top: 12, right: 0, bottom: 12, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg, initLine, line;
+                    var displayItemCount = 0;
 
                     //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
                     //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
@@ -119,6 +120,23 @@ angular.module('starter', [
                         }
                         width = iElement[0].getBoundingClientRect().width;
                         height = iElement[0].getBoundingClientRect().height;
+                        displayItemCount = scope.timeChart[1].displayItemCount;
+                        if (displayItemCount >= 1) {
+                            margin.top += scope.smallImageSize;
+                            margin.textTop -= scope.smallImageSize;
+                        }
+                        if (displayItemCount >= 2) {
+                            //subheading
+                            margin.top += 17;
+                            margin.textTop -= 17;
+                        }
+                        //5정도 빼주어야 가깝게 그려짐.
+                        if (displayItemCount >= 2) {
+                            //caption
+                            margin.top += 12 - 5;
+                            margin.textTop -= 12 -5;
+                        }
+
                         x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                         y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
@@ -224,6 +242,90 @@ angular.module('starter', [
                             .attr('height', height);
 
                         currentRect.exit().remove();
+
+                        var weatherIcons = svg.selectAll('.weatherIcon')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        weatherIcons.enter().append("svg:image")
+                            .attr('class', 'weatherIcon')
+                            .attr("xlink:href", function (d) {
+                               return "img/weatherIcon2-color/"+ d.value.skyIcon+".png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i - scope.smallImageSize/2;
+                            })
+                            .attr("y", 0)
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize);
+
+                        var txtPops = svg.selectAll('.subheading')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        txtPops.enter().append("text")
+                            .attr('class', 'subheading')
+                            .attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i;
+                            })
+                            .attr("y", function(){
+                                if (displayItemCount >=1) {
+                                    return scope.smallImageSize+12;//margin top
+                                }
+                            })
+                            .text(function (d) {
+                                return d.value.pop;
+                            })
+                            .append('tspan')
+                            .attr('font-size', '10px')
+                            .text('%');
+
+                        var txtRns = svg.selectAll('.caption')
+                            .data(function () {
+                                return data[1].values;
+                            });
+
+                        txtRns.enter().append("text")
+                            .attr('class', 'caption')
+                            .attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .style('letter-spacing', 0)
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i;
+                            })
+                            .attr("y", function () {
+                               var y = 12; //margin top
+                                if (displayItemCount >=1) {
+                                    y += scope.smallImageSize;
+                                }
+                                if (displayItemCount >=2) {
+                                    y += 17;//subheading
+                                }
+                                return y - 5;
+                            })
+                            .text(function (d) {
+                                if (d.value.rn1) {
+                                    return d.value.rn1;
+                                }
+                                else if (d.value.r06) {
+                                    return d.value.r06;
+                                }
+                                return '';
+                            })
+                            .append('tspan')
+                            .attr('font-size', '10px')
+                            .text(function (d) {
+                                if (d.value.rn1 || d.value.r06) {
+                                    return 'mm';
+                                }
+                                else if (d.value.s06) {
+                                   return 'cm';
+                                }
+                            });
 
                         var lineGroups = svg.selectAll('.line-group')
                             .data(data);
@@ -491,6 +593,7 @@ angular.module('starter', [
                         }
                         width = iElement[0].getBoundingClientRect().width;
                         height = iElement[0].getBoundingClientRect().height;
+                        margin.top += 60;
                         x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                         y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
@@ -581,6 +684,26 @@ angular.module('starter', [
                             .attr('stroke-width', 1)
                             .attr('stroke', '#fefefe')
                             .attr('stroke-opacity', '0.1');
+
+                        //days
+                        var txtdays = svg.selectAll('.subheading')
+                            .data(function () {
+                                return data[0].values;
+                            });
+
+                        txtdays.enter().append("text")
+                            .attr('class', 'subheading')
+                            .attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr("y", function(){
+                                return 0;
+                            })
+                            .text(function (d) {
+                                return d.date.substr(6,2);
+                            });
 
                         var rects = group.selectAll('.rect')
                             .data(function (d) {

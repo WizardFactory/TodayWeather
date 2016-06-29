@@ -196,6 +196,7 @@ angular.module('starter.controllers', [])
 
             smallImageSize = mainHeight * 0.0512 * smallPadding;
             smallImageSize = smallImageSize<33.17?smallImageSize:33.17;
+            $scope.smallImageSize = smallImageSize;
 
             //smallDigitSize = mainHeight * 0.0320 * smallPadding;
             //smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
@@ -447,6 +448,8 @@ angular.module('starter.controllers', [])
             }
             str += '</div>';
 
+            return str;
+
             str += '<div class="row row-no-padding">';
             str += '<div style="width: '+colWidth/2+'px;"></div>';
             for (i=1; i<cityData.timeTable.length; i++) {
@@ -532,56 +535,56 @@ angular.module('starter.controllers', [])
             }
             str += '</div>';
 
-            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
-            for (i=0; i<cityData.dayTable.length; i++) {
-                value = cityData.dayTable[i];
-                if (value.fromToday === 0) {
-                    str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
-                }
-                else {
-                    str += '<div class="col table-items table-border">';
-                }
-                if (value.date) {
-                    str +=  '<p class="subheading" style="margin: 4px; latter-spacing: 0;">';
-                    str +=  value.date.substr(6,2) + '</p>';
-                }
-                str += '</div>';
-            }
-            str += '</div>';
-
-            str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
-            for (i=0; i<cityData.dayTable.length; i++) {
-                value = cityData.dayTable[i];
-
-                if (value.fromToday === 0) {
-                    str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
-                }
-                else {
-                    str += '<div class="col table-items  table-border">';
-                }
-
-                str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
-                            Util.imgPath+'/'+value.skyAm+'.png">';
-                if(value.skyAm != value.skyPm) {
-                    str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
-                        Util.imgPath+'/'+value.skyPm+'.png">';
-                }
-
-                if (value.fromToday >= 0) {
-                    if (value.pop != undefined && value.pop > 0) {
-                        tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
-                        str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
-                    }
-                }
-
-                str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
-                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
-                str += '<small>';
-                str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
-                str += '</small></p>';
-                str += '</div>';
-            }
-            str += '</div>';
+            //str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            //for (i=0; i<cityData.dayTable.length; i++) {
+            //    value = cityData.dayTable[i];
+            //    if (value.fromToday === 0) {
+            //        str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
+            //    }
+            //    else {
+            //        str += '<div class="col table-items table-border">';
+            //    }
+            //    if (value.date) {
+            //        str +=  '<p class="subheading" style="margin: 4px; latter-spacing: 0;">';
+            //        str +=  value.date.substr(6,2) + '</p>';
+            //    }
+            //    str += '</div>';
+            //}
+            //str += '</div>';
+            //
+            //str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
+            //for (i=0; i<cityData.dayTable.length; i++) {
+            //    value = cityData.dayTable[i];
+            //
+            //    if (value.fromToday === 0) {
+            //        str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
+            //    }
+            //    else {
+            //        str += '<div class="col table-items  table-border">';
+            //    }
+            //
+            //    str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
+            //                Util.imgPath+'/'+value.skyAm+'.png">';
+            //    if(value.skyAm != value.skyPm) {
+            //        str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
+            //            Util.imgPath+'/'+value.skyPm+'.png">';
+            //    }
+            //
+            //    if (value.fromToday >= 0) {
+            //        if (value.pop != undefined && value.pop > 0) {
+            //            tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
+            //            str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
+            //        }
+            //    }
+            //
+            //    str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
+            //    str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
+            //    str += '<small>';
+            //    str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
+            //    str += '</small></p>';
+            //    str += '</div>';
+            //}
+            //str += '</div>';
             return str;
         }
 
@@ -630,7 +633,7 @@ angular.module('starter.controllers', [])
                     if (showAqi && cityData.currentWeather.arpltn) {
                         padding+=60;
                     }
-                    var chartShortHeight = mainHeight - (smallImageSize+154+padding);
+                    var chartShortHeight = mainHeight - (120+padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
@@ -643,7 +646,7 @@ angular.module('starter.controllers', [])
                     if (showAqi && cityData.dayTable[7].dustForecast) {
                         padding+=60;
                     }
-                    var chartMidHeight = mainHeight - ((smallImageSize*0.8)+180+padding);
+                    var chartMidHeight = mainHeight - (90+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 
