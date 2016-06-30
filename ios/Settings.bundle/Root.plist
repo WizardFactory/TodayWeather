@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>PreferenceSpecifiers</key>
+    <array>
+      <dict>
+        <key>Type</key>
+        <string>PSGroupSpecifier</string>
+        <key>Title</key>
+        <string>Common</string>
+      </dict>
+      <dict>
+        <key>Type</key>
+        <string>PSTextFieldSpecifier</string>
+        <key>Key</key>
+        <string>title</string>
+        <key>Title</key>
+        <string>Title</string>
+      </dict>
+      <dict>
+        <key>Type</key>
+        <string>PSRadioGroupSpecifier</string>
+        <key>Key</key>
+        <string>lang</string>
+        <key>Title</key>
+        <string>Language</string>
+        <key>DefaultValue</key>
+        <string>en-us</string>
+        <key>Titles</key>
+        <array>
+          <string>English (US)</string>
+          <string>English (UK)</string>
+        </array>
+        <key>Values</key>
+        <array>
+          <string>en-us</string>
+          <string>en-gb</string>
+        </array>
+      </dict>
+      <dict>
+        <key>Type</key>
+        <string>PSToggleSwitchSpecifier</string>
+        <key>Key</key>
+        <string>debug</string>
+        <key>Title</key>
+        <string>Debug</string>
+        <key>DefaultValue</key>
+        <false/>
+      </dict>
+    </array>
+  </dict>
+</plist>
