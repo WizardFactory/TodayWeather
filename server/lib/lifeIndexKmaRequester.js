@@ -108,7 +108,9 @@ function KmaIndexService() {
  */
 KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
     this.serviceKeyList.push(key);
-    this.serviceKeyList.push(keyBox.test_cert);
+    if (keyBox && keyBox.test_cert) {
+        this.serviceKeyList.push(keyBox.test_cert);
+    }
     this.serviceKeyIndex = 0;
     this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
     log.info('Set KEY!!');
