@@ -420,10 +420,10 @@ function ControllerTown24h() {
                 dailyArray.push("미세먼지" + " " + theDay.pmStr);
             }
         }
-        if (theDay.ultrvGrade >= 2) {
+        if (theDay.ultrvGrade && theDay.ultrvGrade >= 2) {
             dailyArray.push("자외선"+" "+theDay.ultrvStr);
         }
-        if (theDay.dustForecast.O3Grade >= 2) {
+        if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
             dailyArray.push("오존"+" "+theDay.dustForecast.O3Str);
         }
 
@@ -469,7 +469,7 @@ function ControllerTown24h() {
         if (current.arpltn && current.arpltn.khaiGrade) {
             hourlyArray.push("대기"+" "+ current.arpltn.khaiStr);
         }
-        if (current.pty && current.rn1 != undefined) {
+        if (current.pty && current.pty > 0 && current.rn1 != undefined) {
             hourlyArray.push(current.ptyStr+" "+ current.rn1Str);
         }
         hourlySummary += hourlyArray.toString();
