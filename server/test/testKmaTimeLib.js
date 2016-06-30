@@ -32,5 +32,12 @@ describe('unit test - kma time lib', function() {
         target += '00';
         assert(hhmm, target, 'Fail to convert date to hhmm');
     });
+
+    it('test compareDateTime', function () {
+        var timeA = {date:"20160629", time:"2400"};
+        var timeB = {date:"20160630", time:"0000"};
+
+        assert(kmaTimeLib.compareDateTime(timeA, timeB), true, 'Fail compare date time');
+    });
 });
 

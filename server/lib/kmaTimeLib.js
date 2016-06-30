@@ -115,4 +115,41 @@ kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ = function (date) {
         ':00';
 };
 
+kmaTimeLib.convert0Hto24H = function (obj) {
+    if (obj.time === "0000") {
+        var D = kmaTimeLib.convertStringToDate(obj.date);
+        D.setDate(D.getDate()-1);
+        //date = back one day
+        //date = (parseInt(short.date)-1).toString();
+        obj.time = "2400";
+        obj.date = kmaTimeLib.convertDateToYYYYMMDD(D);
+    }
+};
+
+kmaTimeLib.convert24Hto0H = function (obj) {
+    if (obj.time === "2400") {
+        var D = kmaTimeLib.convertStringToDate(obj.date);
+        D.setDate(D.getDate()+1);
+        //date = back one day
+        //date = (parseInt(short.date)-1).toString();
+        obj.time = "0000";
+        obj.date = kmaTimeLib.convertDateToYYYYMMDD(D);
+    }
+};
+
+kmaTimeLib.compareDateTime = function (objA, objB) {
+    var self = this;
+    var tempA = JSON.parse(JSON.stringify(objA));
+    var tempB = JSON.parse(JSON.stringify(objB));
+
+    self.convert0Hto24H(tempA);
+    self.convert0Hto24H(tempB);
+
+    if (tempA.date === tempB.date && tempA.time === tempB.time) {
+        return true;
+    }
+
+    return false;
+};
+
 module.exports = kmaTimeLib;
