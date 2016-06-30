@@ -475,7 +475,7 @@ function ControllerTown24h() {
         hourlySummary += hourlyArray.toString();
         //불쾌지수
 
-        var date = current.stnDateTime?current.stnDateTime:currentPubDate;
+        var date = current.stnDateTime?current.stnDateTime:req.currentPubDate;
 
         req.dailySummary = {title: location+hourlySummary, text: dailySummary, date: date, icon: current.skyIcon,
                             current: current, yesterday: yesterday, today: today, tomorrow: tomorrow};
