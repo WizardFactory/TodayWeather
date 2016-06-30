@@ -30,6 +30,8 @@ var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
  */
 function KmaIndexService() {
     this.serviceKey = "";
+    this.serviceKeyList = [];
+    this.serviceKeyIndex = -1;
     this._areaList = [];
     this.requestCount = {};
 
@@ -98,14 +100,34 @@ function KmaIndexService() {
 }
 
 /**
- *
+ * #984 이슈 문제와, 차후 키가 늘어날 경우를 위해서 array처리함
+ * 깔끔하게 만들어지는 형태가 아니라 아쉬움.
  * @param key
+ * @param keyBox
  * @returns {KmaIndexService}
  */
-KmaIndexService.prototype.setServiceKey = function(key) {
-    this.serviceKey = key;
+KmaIndexService.prototype.setServiceKey = function(key, keyBox) {
+    this.serviceKeyList.push(key);
+    if (keyBox && keyBox.test_cert) {
+        this.serviceKeyList.push(keyBox.test_cert);
+    }
+    this.serviceKeyIndex = 0;
+    this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
     log.info('Set KEY!!');
     return this;
+};
+
+KmaIndexService.prototype.changeServiceKey = function() {
+    this.serviceKeyIndex++;
+    if (this.serviceKeyIndex >= this.serviceKeyList.length) {
+        this.serviceKeyIndex = 0;
+        log.error('service key rotated!! for kma index service');
+        return false;
+    }
+
+    log.info('service key is changed index='+this.serviceKeyIndex);
+    this.serviceKey = this.serviceKeyList[this.serviceKeyIndex];
+    return true;
 };
 
 /**
@@ -566,21 +588,24 @@ KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, to
 KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, retryCount, callback) {
     var self = this;
     var failList = [];
+    var needChangeServiceKey = false;
 
     async.mapLimit(list, 500,
         function (area, cBack) {
             self.getLifeIndexByIndexNameAreaNo(indexName, area, function (err, data) {
                 if (err) {
+                    var errStr = 'Can not retry get life index of '+indexName;
                     err.message += ' indexName=' +indexName +' area'+ JSON.stringify(area);
-                    if (err.ReturnCode && (err.ReturnCode == '01' || err.ReturnCode == '99')) {
-                        var errStr = 'Can not retry get life index of '+indexName;
-                        if (err.ReturnCode == '01') {
-                            log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
-                        }
-                        else if (err.ReturnCode == '99') {
-                            log.silly(errStr+': There is no result');
-                        }
+
+                    if (err.ReturnCode && err.ReturnCode == 99) {
+                        log.silly(errStr+': There is no result');
                         log.error(err);
+                    }
+                    else if (err.ReturnCode && err.ReturnCode == 1) {
+                        log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
+                        log.warn(err.message);
+                        needChangeServiceKey = true;
+                        failList.push(area);
                     }
                     else {
                         failList.push(area);
@@ -604,6 +629,13 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
             }
             log.debug('rcv results.length='+results.length);
             if (failList.length != 0) {
+                if (needChangeServiceKey) {
+                    if (self.changeServiceKey() == false) {
+                        err = new Error('Key Rotated!!');
+                        return callback(err, results);
+                    }
+                    needChangeServiceKey = false;
+                }
                 retryCount--;
                 if (retryCount <=0) {
                     err = new Error('Retry count is zero');
