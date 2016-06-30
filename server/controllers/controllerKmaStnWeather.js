@@ -147,7 +147,7 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
                return mCallback();
            }
 
-           var stnWeatherInfo = new Object(hourlyData);
+           var stnWeatherInfo = JSON.parse(JSON.stringify(hourlyData));
            stnWeatherInfo.stnId = stnInfo.stnId;
            stnWeatherInfo.stnName = stnInfo.stnName;
            stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;

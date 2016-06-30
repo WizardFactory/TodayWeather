@@ -358,7 +358,7 @@ function ControllerTown() {
                     var resultItem = {};
 
                     if(nowDate.date === currentItem.date && nowDate.time === currentItem.time)  {
-                        resultItem = Object.create(currentItem);
+                        resultItem = JSON.parse(JSON.stringify(currentItem));
                     }
                     else {
                         //현재 시간의 데이터가 없다면, 3시간 내에 있는 데이터를 사용함.
