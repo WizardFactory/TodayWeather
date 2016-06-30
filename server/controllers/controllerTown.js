@@ -513,43 +513,158 @@ function ControllerTown() {
 
             self._dataListPrint(resultShortList, 'route S', 'Merged with Current');
 
-            //var tempDate = '';
-            //var yesterdayMinTemperature = -50;
-            //var i;
-            //for(i=0 ; i < resultShortList.length ; i++){
-            //    if(resultShortList[i].reh === -1) {
-            //        continue;
-            //    }
-            //
-            //    // frost String(동상가능지수)
-            //    if(tempDate !== resultShortList[i].date) {
-            //        var yesterday = kmaTimeLib.convertStringToDate(resultShortList[i].date);
-            //
-            //        tempDate = resultShortList[i].date;
-            //
-            //        yesterday.setDate(yesterday.getDate() - 1);
-            //
-            //        // convert yesterday string from Date object
-            //        var yesterdayString = kmaTimeLib.convertDateToYYYYMMDD(yesterday);
-            //
-            //        for (var j = i; j >= 0; j--) {
-            //            if ((resultShortList[j].date === yesterdayString)
-            //                && (resultShortList[j].reh !== -1)) {
-            //                yesterdayMinTemperature = resultShortList[j].tmn;
-            //                break;
-            //            }
-            //        }
-            //        // 값이 없을 경우 0
-            //        if(yesterdayMinTemperature === -50) {
-            //            yesterdayMinTemperature = 0;
-            //        }
-            //    }
-            //
-            //    resultShortList[i].freezeStr = LifeIndexKmaController.getFreezeString(resultShortList[i].t3h,yesterdayMinTemperature);
-            //}
-
             req.short = resultShortList;
             next();
+        });
+    };
+
+    /**
+     *
+     * @param current
+     * @param shortestList
+     * @param currentTime
+     * @returns {boolean}
+     * @private
+     */
+    this._mergeCurrentByShortest = function (current, shortestList, currentTime) {
+        if (current == undefined) {
+            return false;
+        }
+        if (shortestList == undefined || shortestList.length == 0) {
+            return false;
+        }
+        //req.current가 1시간 이전 데이터(0분~30분)이면 shortest를 적용하면서 실제 시간에 맞춤.
+        if (current.date == currentTime.date && parseInt(current.time) < parseInt(currentTime.time)) {
+
+            shortestList.forEach(function(shortestItem){
+                if(shortestItem.date === currentTime.date && shortestItem.time === currentTime.time){
+                    log.silly('MRbyST> update current data');
+                    shortestString.forEach(function(string){
+                        if (shortestItem[string] < 0)  {
+                            log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
+                                ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
+                        }
+                        else {
+                            current[string] = shortestItem[string];
+                        }
+                    });
+                    current.date = currentTime.date;
+                    current.time = currentTime.time;
+                    current.overwrite = true;
+                }
+            });
+
+            if (current.overwrite) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    this.mergeCurrentByShortest = function (req, res, next) {
+        var meta = {};
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = 'mergeCurrentByShortest';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        log.info('>', meta);
+
+        var currentTime = self._getCurrentTimeValue(9);
+
+        if (req.shortestList) {
+            var merged = self._mergeCurrentByShortest(req.current, req.shortestList, currentTime);
+            if (merged && req.currentList) {
+                req.currentList.push(req.current);
+            }
+            next();
+        }
+        else {
+            self._getCoord(regionName, cityName, townName, function(err, coord){
+                if (err) {
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    return next();
+                }
+                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
+                    if (err) {
+                        log.error(new Error('error to get shortest for merge' + err.message));
+                        return next();
+                    }
+
+                    var shortestList = shortestInfo.ret;
+
+                    log.verbose(shortestList);
+                    if (shortestList && shortestList.length > 0) {
+                        req.shortestList = shortestList;
+
+                        var merged = self._mergeCurrentByShortest(req.current, shortestList, currentTime);
+
+                        if(merged && req.currentList) {
+                            req.currentList.push(req.current);
+                        }
+                    }
+
+                    next();
+                });
+            });
+        }
+
+        return this;
+    };
+
+    /**
+     *
+     * @param shortList
+     * @param shortestList
+     * @param currentTime
+     * @param useTime
+     * @private
+     */
+    this._mergeShortByShortest = function (shortList, shortestList, currentTime, useTime) {
+
+        if(shortList == undefined || shortList.length == 0) {
+            return;
+        }
+        if(shortestList == undefined || shortestList.length == 0) {
+            return;
+        }
+
+        var filterdList = shortestList.filter(function (obj) {
+            var objTime = parseInt(obj.time.substr(0,2));
+            if(parseInt(currentTime.date) < parseInt(obj.date)) {
+                return true;
+            }
+            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime < objTime) {
+                return true;
+            }
+            return false;
+        });
+
+        var tmpList = self._convert1Hto3H(filterdList, false);
+        var shortLen = shortList.length;
+        var i;
+        var short;
+        tmpList.forEach(function (shortest3h) {
+            for (i=0; i<shortLen; i++) {
+                short = shortList[i];
+                if (shortest3h.date === short.date && shortest3h.time === short.time) {
+                    for (var key in shortest3h) {
+                        if (key === 'rn1') {
+                            short.shortestRn1 = shortest3h[key]
+                        }
+                        else {
+                            short[key] = shortest3h[key];
+                        }
+                    }
+                    break;
+                }
+            }
         });
     };
 
@@ -582,84 +697,35 @@ function ControllerTown() {
            useTime -= 24;
         }
 
-        self._getCoord(regionName, cityName, townName, function(err, coord){
-            if (err) {
-                log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
-                return next();
-            }
-            self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
+        if (req.shortestList) {
+            self._mergeShortByShortest(req.short, req.shortestList, currentTime, useTime);
+            next();
+        }
+        else {
+
+            self._getCoord(regionName, cityName, townName, function(err, coord){
                 if (err) {
-                    log.error(new Error('error to get shortest for merge'+err.message));
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-
-                var shortestList = shortestInfo.ret;
-
-                log.verbose(shortestList);
-                if(shortestList && shortestList.length > 0){
-
-                    if(req.short && req.short.length > 0){
-                        var filterdList = shortestList.filter(function (obj) {
-                            var objTime = parseInt(obj.time.substr(0,2));
-                            if(parseInt(currentTime.date) < parseInt(obj.date)) {
-                                return true;
-                            }
-                            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime < objTime) {
-                                return true;
-                            }
-                            return false;
-                        });
-
-                        var tmpList = self._convert1Hto3H(filterdList, false);
-                        var shortLen = req.short.length;
-                        var i;
-                        var short;
-                        tmpList.forEach(function (shortest3h) {
-                            for (i=0; i<shortLen; i++) {
-                                short = req.short[i];
-                                if (shortest3h.date === short.date && shortest3h.time === short.time) {
-                                    for (var key in shortest3h) {
-                                        if (key === 'rn1') {
-                                            short.shortestRn1 = shortest3h[key]
-                                        }
-                                        else {
-                                            short[key] = shortest3h[key];
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        });
+                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
+                    if (err) {
+                        log.error(new Error('error to get shortest for merge'+err.message));
+                        return next();
                     }
 
-                    if(req.current) {
-                        //req.current가 1시간 이전 데이터(0분~30분)이면 shortest를 적용하면서 실제 시간에 맞춤.
-                        if (req.current.date == currentTime.date && parseInt(req.current.time) < parseInt(currentTime.time)) {
+                    var shortestList = shortestInfo.ret;
 
-                            shortestList.forEach(function(shortestItem){
-                                if(shortestItem.date === currentTime.date && shortestItem.time === currentTime.time){
-                                    log.silly('MRbyST> update current data');
-                                    shortestString.forEach(function(string){
-                                        if (shortestItem[string] < 0)  {
-                                            log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
-                                                ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
-                                        }
-                                        else {
-                                            req.current[string] = shortestItem[string];
-                                        }
-                                    });
-                                    req.current.date = currentTime.date;
-                                    req.current.time = currentTime.time;
-                                    req.current.overwrite = true;
-                                }
-                            });
-                        }
+                    log.verbose(shortestList);
+                    if(shortestList && shortestList.length > 0) {
+                        req.shortestList = shortestList;
+                        self._mergeShortByShortest(req.short, shortestList, currentTime, useTime);
                     }
-                }
 
-                next();
+                    next();
+                });
             });
-        });
+        }
 
         return this;
     };
@@ -765,48 +831,6 @@ function ControllerTown() {
                                 req.current.pty = 0;
                             }
                         }
-
-
-                        //var i;
-                        ////update tmx, tmn, t3h of today short
-                        //if (req.short && Array.isArray(req.short)) {
-                        //    for (i=0; i<req.short.length; i++) {
-                        //        if (req.short[i].date === req.current.date) {
-                        //            if (req.short[i].tmx != -50 && req.short[i].tmx < req.current.t1h) {
-                        //                req.short[i].tmx = req.current.t1h;
-                        //                log.info('stn hourly weather update tmx to ', req.current.t1h);
-                        //            }
-                        //            if (req.short[i].tmn != -50 && req.short[i].tmn > req.current.t1h) {
-                        //                req.short[i].tmn = req.current.t1h;
-                        //                log.info('stn hourly weather update tmn to ', req.current.t1h);
-                        //            }
-                        //
-                        //            if (req.short[i].time === req.current.time) {
-                        //                req.short[i].t3h = req.current.t1h;
-                        //            }
-                        //        }
-                        //        if (req.short[i].date > req.current.date) {
-                        //            break;
-                        //        }
-                        //    }
-                        //}
-                        ////update tmx, tmn of today mid
-                        //if (req.midData && req.midData.dailyData && Array.isArray(req.midData.dailyData)) {
-                        //    for (i=0; i<req.midData.dailyData.length; i++) {
-                        //        if (req.midData.dailyData[i].date === req.current.date) {
-                        //            if(req.midData.dailyData[i].taMax < req.current.t1h) {
-                        //                req.midData.dailyData[i].taMax = req.current.t1h;
-                        //                log.info('stn hourly weather update taMax to ', req.current.t1h);
-                        //            }
-                        //            if(req.midData.dailyData[i].taMin > req.current.t1h) {
-                        //                req.midData.dailyData[i].taMin = req.current.t1h;
-                        //                log.info('stn hourly weather update taMin to ', req.current.t1h);
-                        //            }
-                        //            break;
-                        //        }
-                        //    }
-                        //}
-
                     }
 
                     //update currentList of req.
@@ -2903,105 +2927,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
             if (daySummary.taMin === -50 || daySummary.taMin > curItem.t1h) {
                 daySummary.taMin = curItem.t1h;
             }
-            //var newItem = {};
-            //log.info(parseInt(curItem.date), parseInt(requestTime.date));
-            //log.info(parseInt(curItem.time), parseInt(requestTime.time));
-            // 현재 시간 보다 작은 current의 데이터를 사용해서 지난 정보는 실제 current 값을 사용한다
-            //if ((parseInt(curItem.date) < parseInt(requestTime.date)) ||
-            //    ((parseInt(curItem.date) === parseInt(requestTime.date)) &&
-            //    parseInt(curItem.time) <= parseInt(requestTime.time))){
-            //    // 시간이 0시 이거나 3의 배수인 시간일때 데이터를 구성한다
-            //    // 1시, 2시 같은 경우에는 마지막의 있는 1시, 2시 시간을 버린다.
-            //    if(curItem.time === '0000' || (parseInt(curItem.time) % 3) === 0) {
-            //        newItem.time = curItem.time;
-            //        newItem.date = curItem.date;
-            //        if(index === 0) {
-            //            curString.forEach(function(string){
-            //                newItem[string] = curItem[string];
-            //            });
-            //        }
-            //        else {
-            //            var prv1;
-            //            if (index === 1) {
-            //                prv1 = {'t1h':-50, 'rn1':-1, 'sky':-1, 'uuu':-100, 'vvv':-100,
-            //                    'reh':-1, 'pty':-1, 'lgt':-1, 'vec':-1, 'wsd':-1};
-            //            }
-            //            else {
-            //                prv1 = currentList[index-2];
-            //            }
-            //
-            //            var prv2 = currentList[index-1];
-            //
-            //            if (prv1 === undefined || !prv1.hasOwnProperty('sky') ||
-            //                prv2 === undefined || !prv2.hasOwnProperty('sky'))
-            //            {
-            //                log.warn(new Error('current is undefined or empty object'));
-            //                return;
-            //            }
-            //
-            //            curString.forEach(function(string) {
-            //                if( string === 'pty') {
-            //                    newItem[string] = self._summaryPty([prv1[string], prv2[string], curItem[string]], -1);
-            //                }
-            //                else if (string === 'lgt') {
-            //                    newItem[string] = self._summaryLgt([prv1[string], prv2[string], curItem[string]], -1);
-            //                }
-            //                else if(string === 't1h' || string === 'wsd' || string == 'reh' || string === 'uuu' || string === 'vvv') {
-            //                    if (curItem[string] != undefined && curItem[string] != -50) {
-            //                        newItem[string] = +(curItem[string]).toFixed(1);
-            //                    }
-            //                    else {
-            //                        log.error("Fail to find current data :" + string + " " + curItem.date+" "+curItem.time);
-            //                        if (prv1[string] != undefined && prv1[string] != -50) {
-            //                            newItem[string] = +(prv1[string]).toFixed(1);
-            //                        }
-            //                        else if (prv2[string] != undefined && prv2[string] != -50) {
-            //                            newItem[string] = +(prv2[string]).toFixed(1);
-            //                        }
-            //                        else {
-            //                            newItem[string] = tmpList[tmpList.length-1][string];
-            //                        }
-            //                    }
-            //                }
-            //                else if(string === 'rn1') {
-            //                    newItem[string] = self._sum([prv1[string], prv2[string], curItem[string]], -1);
-            //                }
-            //                else{
-            //                    newItem[string] = self._average([prv1[string], prv2[string], curItem[string]], -1, 0);
-            //                }
-            //            });
-            //        }
-            //
-            //        tmpList.push(newItem);
-            //
-            //        //empty restList
-            //        restList = [];
-            //    }
-            //    else {
-            //       restList.push(curItem);
-            //    }
-            //}
-
         });
-
-        //if (restList.length > 0) {
-        //    var object = {};
-        //    object.date = requestTime.date;
-        //    object.time = ""+Math.ceil(requestTime.time / 3)*3;
-        //    if (restList.length == 1) {
-        //        object.pty = restList[0].pty;
-        //        object.rn1 = restList[0].rn1;
-        //        object.sky = restList[0].sky;
-        //        object.lgt = restList[0].lgt;
-        //    }
-        //    else {
-        //        object.pty = self._summaryPty([restList[0].pty, restList[1].pty], -1);
-        //        object.rn1 = self._sum([restList[0].rn1, restList[1].rn1], -1);
-        //        object.sky = self._average([restList[0].sky, restList[1].sky], -1);
-        //        object.lgt = self._summaryLgt([restList[0].lgt, restList[1].lgt], -1);
-        //    }
-        //    tmpList.push(object);
-        //}
 
         tmpList = self._convert1Hto3H(currentList, true);
 
