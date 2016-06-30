@@ -46,7 +46,8 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
                 tmpDiff = Math.abs(t1h - stnWeatherInfo.t1h);
                 if (stnWeatherList[j+1] && stnWeatherList[j+1].t1h != undefined) {
                     nextTmpDiff =  Math.abs(t1h - stnWeatherList[j+1].t1h);
-                    if (tmpDiff > nextTmpDiff) {
+                    //0.5도 이내 차이는 무시
+                    if (tmpDiff > nextTmpDiff+0.5) {
                         continue;
                     }
                 }
@@ -59,7 +60,7 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
 
             if (j >= 2 && mergedStnWeatherInfo == undefined) {
                 //기본 값이 근접 1,2에서 못 만들면 버림.
-                break;
+                continue;
             }
         }
 
@@ -84,6 +85,7 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
             }
         }
     }
+
     if (mergedStnWeatherInfo == undefined) {
         log.error('Fail to make stnWeather info');
         return;
