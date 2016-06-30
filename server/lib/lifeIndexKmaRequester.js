@@ -31,6 +31,7 @@ var PATH_RETRIEVE_LIFE_INDEX_SERVICE = "iros/RetrieveLifeIndexService";
 function KmaIndexService() {
     this.serviceKey = "";
     this._areaList = [];
+    this.requestCount = {};
 
     this.fsn = {
         nextTime: null,
@@ -354,7 +355,6 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
         else {
             err = new Error("ReturnCode="+header.ReturnCode+" ErrMsg="+header.ErrMsg);
             err.ReturnCode = header.ReturnCode;
-            log.error(err);
             return {error: err};
         }
     }
@@ -393,6 +393,13 @@ KmaIndexService.prototype.getLifeIndex = function (indexName, areaNo, callback) 
     var url = this.getUrl(indexName, areaNo, this.serviceKey);
 
     log.debug(url);
+    if (this.requestCount[indexName] == undefined) {
+        this.requestCount[indexName] = 0;
+    }
+    else {
+        this.requestCount[indexName]++;
+    }
+    log.info(indexName+" request count="+this.requestCount[indexName]);
 
     req(url, {timeout: 1000*30, json:true}, function (err, response, body) {
         if (err) {
