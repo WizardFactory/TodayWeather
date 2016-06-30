@@ -586,6 +586,7 @@ KmaIndexService.prototype.getLifeIndexByIndexNameAreaNo = function(indexName, to
 KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, retryCount, callback) {
     var self = this;
     var failList = [];
+    var needChangeServiceKey = false;
 
     async.mapLimit(list, 500,
         function (area, cBack) {
@@ -599,14 +600,10 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
                         log.error(err);
                     }
                     else if (err.ReturnCode && err.ReturnCode == 1) {
-                        if (self.changeServiceKey() == false) {
-                            log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
-                            log.error(err);
-                        }
-                        else {
-                            log.warn(err.message);
-                            failList.push(area);
-                        }
+                        log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
+                        log.warn(err.message);
+                        needChangeServiceKey = true;
+                        failList.push(area);
                     }
                     else {
                         failList.push(area);
@@ -630,6 +627,13 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
             }
             log.debug('rcv results.length='+results.length);
             if (failList.length != 0) {
+                if (needChangeServiceKey) {
+                    if (self.changeServiceKey() == false) {
+                        err = new Error('Key Rotated!!');
+                        return callback(err, results);
+                    }
+                    needChangeServiceKey = false;
+                }
                 retryCount--;
                 if (retryCount <=0) {
                     err = new Error('Retry count is zero');
