@@ -777,10 +777,7 @@ function ControllerTown() {
                     var stnWeatherInfoTime = stnWeatherInfo.stnDateTime.substr(11,2);
                     var currentTime = req.current.time.substr(0,2);
 
-                    /**
-                     * addShortest가 true이면 shortest값으로 보정된 데이터임.
-                     */
-                    if (Number(currentTime) != Number(stnWeatherInfoTime) || req.current.overwrite) {
+                    if (Number(currentTime) >= Number(stnWeatherInfoTime)) {
                         log.info('use api first, just append new data of stn hourly weather info');
                         stnHourlyFirst = false;
                     }
@@ -803,6 +800,7 @@ function ControllerTown() {
                     req.current.time = time;
 
                     if (stnHourlyFirst) {
+                        req.current.overwrite = true;
                         if (req.current.rns === true) {
                             if (req.current.pty === 0) {
                                 log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
