@@ -785,7 +785,7 @@ angular.module('starter.services', [])
             var displayItemCount = 0;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
-                return tmpDayTable;
+                return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
             }
             midData.dailyData.forEach(function (dayInfo) {
                 var data;
@@ -828,13 +828,18 @@ angular.module('starter.services', [])
                 if (data.pop && data.pop > 0) {
                     tmpDisplayCount++;
                 }
-
-
-
+                if ((data.rn1 && data.rn1 > 0)
+                    || (data.r06 && data.r06 > 0)
+                    || (data.s06 && data.s06 > 0)) {
+                    tmpDisplayCount++;
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
+                }
             });
 
             //console.log(tmpDayTable);
-            return tmpDayTable;
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
         };
 
         /**
@@ -1230,10 +1235,11 @@ angular.module('starter.services', [])
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
-            data.dayTable = midTownWeather;
+            data.dayTable = midTownWeather.dayTable;
             data.dayChart = [{
-                values: midTownWeather,
-                temp: currentForecast.t1h
+                values: midTownWeather.dayTable,
+                temp: currentForecast.t1h,
+                displayItemCount: midTownWeather.displayItemCount
             }];
 
             return data;
@@ -1350,9 +1356,9 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "/v000705";
+            obj.url = "/v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
-            obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
+            //obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
         else {
             obj.url = "http://todayweather.wizardfactory.net/v000705";
@@ -1360,7 +1366,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .run(function(WeatherInfo, $ionicPlatform, $rootScope) {
+    .run(function(WeatherInfo) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
     });

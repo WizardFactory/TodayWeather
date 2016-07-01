@@ -580,7 +580,8 @@ angular.module('starter', [
                 restrict: 'A',
                 transclude: true,
                 link: function (scope, iElement) {
-                    var margin = {top: 18, right: 0, bottom: 18, left: 0, textTop: 5};
+                    var marginTop = 18;
+                    var margin = {top: marginTop, right: 0, bottom: 18, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg;
 
@@ -593,7 +594,7 @@ angular.module('starter', [
                         }
                         width = iElement[0].getBoundingClientRect().width;
                         height = iElement[0].getBoundingClientRect().height;
-                        margin.top += 60;
+                        margin.top += (scope.smallImageSize*2+17+12);
                         x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                         y = d3.scale.linear().range([height - margin.bottom, margin.top]);
 
@@ -685,10 +686,18 @@ angular.module('starter', [
                             .attr('stroke', '#fefefe')
                             .attr('stroke-opacity', '0.1');
 
+                        // draw max value
+                        var midTables = svg.selectAll('.bar-mid-table')
+                            .data(data[0].values);
+
+                        midTables.enter()
+                            .append('g')
+                            .attr('class', 'bar-mid-table');
+
                         //days
-                        var txtdays = svg.selectAll('.subheading')
-                            .data(function () {
-                                return data[0].values;
+                        var txtdays = midTables.selectAll('.subheading')
+                            .data(function (d) {
+                                return d;
                             });
 
                         txtdays.enter().append("text")
@@ -699,11 +708,45 @@ angular.module('starter', [
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function(){
-                                return 0;
+                                return 18;
                             })
                             .text(function (d) {
                                 return d.date.substr(6,2);
                             });
+
+                        var skyAmIcons = svg.selectAll('.skyAm')
+                            .data(function () {
+                                return data[0].values;
+                            });
+
+                        skyAmIcons.enter().append("svg:image")
+                            .attr('class', 'skyAm')
+                            .attr("xlink:href", function (d) {
+                               return "img/weatherIcon2-color/"+ d.skyAm+".png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
+                            })
+                            .attr("y", 18)
+                            .attr("width", scope.smallImageSize*0.8)
+                            .attr("height", scope.smallImageSize*0.8);
+
+                        var skyPmIcons = svg.selectAll('.skyPm')
+                            .data(function () {
+                                return data[0].values;
+                            });
+
+                        skyPmIcons.enter().append("svg:image")
+                            .attr('class', 'skyPm')
+                            .attr("xlink:href", function (d) {
+                               return "img/weatherIcon2-color/"+ d.skyPm+".png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
+                            })
+                            .attr("y", 18+scope.smallImageSize*0.8-2)
+                            .attr("width", scope.smallImageSize*0.8)
+                            .attr("height", scope.smallImageSize*0.8);
 
                         var rects = group.selectAll('.rect')
                             .data(function (d) {
