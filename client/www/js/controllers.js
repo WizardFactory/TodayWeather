@@ -823,7 +823,7 @@ angular.module('starter.controllers', [])
             var str = "";
 
             if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-                var diffTemp = Math.round(current.t1h - yesterday.t1h);
+                var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
 
                 str += "어제";
                 if (diffTemp == 0) {
