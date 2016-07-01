@@ -1356,9 +1356,9 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            obj.url = "/v000705";
+            //obj.url = "/v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
-            //obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
+            obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
         else {
             obj.url = "http://todayweather.wizardfactory.net/v000705";

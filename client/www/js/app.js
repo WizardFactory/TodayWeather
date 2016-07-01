@@ -686,23 +686,18 @@ angular.module('starter', [
                             .attr('stroke', '#fefefe')
                             .attr('stroke-opacity', '0.1');
 
-                        // draw max value
-                        var midTables = svg.selectAll('.bar-mid-table')
-                            .data(data[0].values);
-
-                        midTables.enter()
-                            .append('g')
-                            .attr('class', 'bar-mid-table');
-
                         //days
-                        var txtdays = midTables.selectAll('.subheading')
-                            .data(function (d) {
-                                return d;
+                        var txtdays = svg.selectAll('.text-days')
+                            .data(function () {
+                                return data[0].values;
                             });
 
                         txtdays.enter().append("text")
-                            .attr('class', 'subheading')
-                            .attr('fill', 'white')
+                            .attr('class', 'subheading text-days');
+
+                        txtdays.exit().remove();
+
+                        txtdays.attr('fill', 'white')
                             .attr("text-anchor", "middle")
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
@@ -747,6 +742,83 @@ angular.module('starter', [
                             .attr("y", 18+scope.smallImageSize*0.8-2)
                             .attr("width", scope.smallImageSize*0.8)
                             .attr("height", scope.smallImageSize*0.8);
+
+                        var txtPops = svg.selectAll('.text-pops')
+                            .data(function () {
+                                return data[0].values;
+                            });
+
+                        txtPops.enter().append("text")
+                            .attr('class', 'subheading text-pops');
+
+                        txtPops.exit().remove();
+
+                        txtPops.attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr("y", function(){
+                                return 18 + scope.smallImageSize*0.8*2 + 10;
+                            })
+                            .text(function (d) {
+                                return d.pop? d.pop:"";
+                            })
+                            .append('tspan')
+                            .attr('font-size', '10px')
+                            .text(function (d) {
+                                return d.pop?"%":"";
+                            });
+
+                        var txtRns = svg.selectAll('.text-rns')
+                            .data(function () {
+                                return data[0].values;
+                            });
+
+                        txtRns.enter().append("text")
+                            .attr('class', 'caption text-rns');
+
+                        txtRns.exit().remove();
+
+                        txtRns.attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .style('letter-spacing', 0)
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr("y", function(){
+                                return 18 + scope.smallImageSize*0.8*2 + 10 + 12;
+                            })
+                            .text(function (d) {
+                                var value;
+                                if (d.rn1) {
+                                    value = d.rn1;
+                                }
+                                else if (d.r06) {
+                                    value = d.r06;
+                                }
+                                else if (d.s06) {
+                                    value = d.s06;
+                                }
+                                else {
+                                    return '';
+                                }
+                                if (value >= 10) {
+                                    value = Math.round(value);
+                                }
+                                return value;
+                            })
+                            .append('tspan')
+                            .attr('font-size', '10px')
+                            .text(function (d) {
+                                if (d.rn1 || d.r06) {
+                                    return 'mm';
+                                }
+                                else if (d.s06) {
+                                   return 'cm';
+                                }
+                                return "";
+                            });
 
                         var rects = group.selectAll('.rect')
                             .data(function (d) {
