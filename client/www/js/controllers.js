@@ -378,9 +378,6 @@ angular.module('starter.controllers', [])
          */
         function getShortTableHeight(displayItemCount) {
             var val = 0;
-            if (displayItemCount == undefined || displayItemCount == 0) {
-                displayItemCount = 3;
-            }
             if (displayItemCount >= 1) {
                 //sky
                 val += $scope.smallImageSize;
