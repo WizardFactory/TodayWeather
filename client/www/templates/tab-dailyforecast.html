@@ -1,13 +1,13 @@
 <ion-view hide-nav-bar="true">
     <ion-header-bar md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" ng-style="{'height':headerHeight+'px'}">
         <div id="alphaBar" class="row row-no-padding" style="width: 100%; height: 100%; margin-top: 0px;" ng-style="{'background-color': viewColor}">
-            <div class="cityArrow" ng-click="onSwipeLeft()">
+            <div class="cityArrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
                 <span class="icon-left ion-chevron-left"></span>
             </div>
 
             <div id="bigInfoBox" class="topMainBox" ng-bind-html="topMainBox"></div>
 
-            <div class="cityArrow" ng-click="onSwipeRight()">
+            <div class="cityArrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
                 <span class="icon-right ion-chevron-right"></span>
             </div>
         </div>
