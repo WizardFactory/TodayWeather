@@ -733,6 +733,7 @@ angular.module('starter', [
         $stateProvider
             .state('guide', {
                 url: '/guide',
+                cache: false,
                 templateUrl: 'templates/guide.html',
                 controller: 'GuideCtrl'
             })
