@@ -143,7 +143,7 @@ angular.module('starter.services', [])
 
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
-                city.loadTime = null;
+                city.loadTime = new Date();
                 cities.push(city);
                 that.saveCities();
                 return true;
