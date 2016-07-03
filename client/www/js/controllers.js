@@ -166,8 +166,9 @@ angular.module('starter.controllers', [])
             if ((bodyHeight === 548 || bodyHeight === 568) && bodyWidth === 320) {
                 smallPadding = 1.1;
             }
-            //5.5 inch
-            if (bodyHeight >= 706) {
+
+            //16:9 이상 비율 or 5.5 inch 에서 aqi보여줌.
+            if (bodyHeight / bodyWidth >= ASPECT_RATIO_16_9 || bodyHeight >= 706) {
                 showAqi = true;
             }
 
@@ -248,7 +249,7 @@ angular.module('starter.controllers', [])
             //str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
             //str +=          '<br>';
             str +=          '<img id="imgBigSkyStateSize" style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
-                                cityData.currentWeather.skyIcon+'.png">';
+                                cityData.currentWeather.skyIcon+'.svg">';
             str +=      '</div>';
             str += '</div></div></div>';
             str += '<p id="summary" class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
@@ -371,6 +372,63 @@ angular.module('starter.controllers', [])
         };
 
         /**
+         * display item을 count하여 table pixel을 구함.
+         * 0.9.1까지 displayItemCount가 없음.
+         * @param displayItemCount
+         */
+        function getShortTableHeight(displayItemCount) {
+            var val = 0;
+            if (displayItemCount == undefined || displayItemCount == 0) {
+                displayItemCount = 3;
+            }
+            if (displayItemCount >= 1) {
+                //sky
+                val += $scope.smallImageSize;
+            }
+            if (displayItemCount >= 2) {
+                //pop subheading
+                val += 17;
+            }
+            if (displayItemCount >= 3) {
+                //rn1 - caption
+                val += 13;
+            }
+            return val;
+        }
+
+        $scope.getShortTableHeight = getShortTableHeight;
+
+        /**
+         * display item을 count하여 table pixel을 구함.
+         * @param value
+         */
+        function getMidTableHeight(displayItemCount) {
+            var val = 17; //day  - subheading
+            if (displayItemCount == undefined || displayItemCount == 0) {
+                displayItemCount = 4;
+            }
+            if (displayItemCount >= 1) {
+                val += $scope.smallImageSize*0.8; //sky am
+            }
+            if (displayItemCount >=2) {
+                val += $scope.smallImageSize*0.8; //sky pm
+            }
+            if (displayItemCount >=3) {
+                //pop - subheading
+                val += 17;
+            }
+            if (displayItemCount >=4) {
+                //rns - caption
+                val += 13;
+            }
+
+            //val += 10; //영역 계산에서 안맞는 값 보정.
+            return val;
+        }
+
+        $scope.getMidTableHeight = getMidTableHeight;
+
+        /**
          * grade 값이 따라 색깔을 정한다.
          * @param grade
          * @returns {*}
@@ -460,7 +518,7 @@ angular.module('starter.controllers', [])
                 else {
                     str += '<div class="col table-items table-border" style="width:auto;">';
                 }
-                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
+                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.svg">';
                 str += '</div>';
             }
             str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
@@ -589,6 +647,7 @@ angular.module('starter.controllers', [])
         }
 
         function applyWeatherData() {
+            console.log('apply weather data');
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData === null || cityData.address === null) {
                 console.log("fail to getCityOfIndex");
@@ -630,10 +689,11 @@ angular.module('starter.controllers', [])
 
                 if($scope.forecastType == 'short') {
                     //topMainBox height is startHeight
+                    padding += getShortTableHeight($scope.timeChart[1].displayItemCount);
                     if (showAqi && cityData.currentWeather.arpltn) {
                         padding+=60;
                     }
-                    var chartShortHeight = mainHeight - (120+padding);
+                    var chartShortHeight = mainHeight - (64+padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
@@ -643,10 +703,11 @@ angular.module('starter.controllers', [])
                     }, 0);
                 }
                 else {
+                    padding += getMidTableHeight($scope.dayChart[0].displayItemCount);
                     if (showAqi && cityData.dayTable[7].dustForecast) {
                         padding+=60;
                     }
-                    var chartMidHeight = mainHeight - (90+padding);
+                    var chartMidHeight = mainHeight - (20+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 
