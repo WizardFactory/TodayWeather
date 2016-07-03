@@ -559,7 +559,7 @@ angular.module('starter', [
                             .attr('class', 'bar-group');
 
                         // draw guideLine
-                        var guideLines = group.selectAll('guide-line')
+                        var guideLines = group.selectAll('.guide-line')
                             .data(function (d) {
                                 return d.values;
                             });

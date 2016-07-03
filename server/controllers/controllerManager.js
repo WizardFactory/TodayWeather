@@ -1952,7 +1952,7 @@ Manager.prototype.startManager = function(){
 
     self.keco = keco;
 
-    taskKmaIndexService.setServiceKey(config.keyString.cert_key);
+    taskKmaIndexService.setServiceKey(config.keyString.cert_key, config.keyString);
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
