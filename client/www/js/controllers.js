@@ -657,10 +657,6 @@ angular.module('starter.controllers', [])
         }
 
         function loadWeatherData() {
-            if (WeatherInfo.isLoadComplete === false) {
-                return;
-            }
-
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 $ionicLoading.show();
 
@@ -863,11 +859,6 @@ angular.module('starter.controllers', [])
         //    return str.toString();
         //};
 
-        $scope.$on('loadCompleteEvent', function(event) {
-            console.log('called by load complete event');
-            loadWeatherData();
-        });
-
         $scope.$on('reloadEvent', function(event) {
             console.log('called by update weather event');
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
@@ -887,7 +878,7 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds,
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
@@ -945,6 +936,7 @@ angular.module('starter.controllers', [])
                     alarmInfo: Push.getAlarm(i)
                 };
                 $scope.cityList.push(data);
+                loadWeatherData(i);
             }
         }
 
@@ -1157,6 +1149,67 @@ angular.module('starter.controllers', [])
 
             ionicTimePicker.openTimePicker(ipObj1);
         };
+
+        function loadWeatherData(index) {
+            if (WeatherInfo.canLoadCity(index) === true) {
+                updateWeatherData(index).then(function (city) {
+                    index = WeatherInfo.getIndexOfCity(city);
+                    if (index !== -1) {
+                        WeatherInfo.updateCity(index, city);
+
+                        var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                        var todayData = city.dayTable.filter(function (data) {
+                            return (data.fromToday === 0);
+                        });
+
+                        var data = $scope.cityList[index];
+                        data.address = address;
+                        data.skyIcon = city.currentWeather.skyIcon;
+                        data.t1h = city.currentWeather.t1h;
+                        data.tmn = todayData[0].tmn;
+                        data.tmx = todayData[0].tmx;
+
+                        Util.ga.trackEvent('weather', 'load', WeatherUtil.getShortenAddress(city.address), index);
+                    }
+                });
+            }
+        }
+
+        function updateWeatherData(index) {
+            var deferred = $q.defer();
+
+            var cityData = WeatherInfo.getCityOfIndex(index);
+            if (cityData.currentPosition === true) {
+                WeatherUtil.getCurrentPosition().then(function (coords) {
+                    WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
+                        WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                            var city = WeatherUtil.convertWeatherData(weatherDatas);
+                            city.currentPosition = true;
+                            city.address = address;
+                            city.location = {"lat": coords.latitude, "long": coords.longitude};
+                            deferred.resolve(city);
+                        }, function () {
+                            deferred.reject();
+                        });
+                    }, function () {
+                        deferred.reject();
+                    });
+                }, function () {
+                    deferred.reject();
+                });
+            } else {
+                WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
+                    var city = WeatherUtil.convertWeatherData(weatherDatas);
+                    city.currentPosition = false;
+                    city.address = cityData.address;
+                    deferred.resolve(city);
+                }, function () {
+                    deferred.reject();
+                });
+            }
+
+            return deferred.promise;
+        }
 
         init();
     })
