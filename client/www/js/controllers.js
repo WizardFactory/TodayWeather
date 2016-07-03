@@ -207,6 +207,7 @@ angular.module('starter.controllers', [])
                 $scope.showAlert('에러', '도시를 추가해주세요');
                 return;
             }
+            $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
             $ionicLoading.show();
             applyWeatherData();
