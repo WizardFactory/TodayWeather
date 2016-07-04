@@ -125,6 +125,9 @@ angular.module('starter', [
 
                         //0.9.1까지 displayItemCount가 없음.
                         displayItemCount = scope.timeChart[1].displayItemCount;
+                        if (displayItemCount == undefined || displayItemCount == 0) {
+                            displayItemCount = 3;
+                        }
 
                         console.log('scope watch');
                         var shortTableHeight = scope.getShortTableHeight(displayItemCount);
