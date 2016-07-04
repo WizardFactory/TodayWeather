@@ -977,7 +977,7 @@ angular.module('starter.services', [])
         function getGeoCodeFromDaum(address) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/addr2coord'+
-                '?apikey=' + '6d0116e2c49361cb75eaf12f665e6360' +
+                '?apikey=' + '[DAUM_SERVICE_KEY]' +
                 '&q='+ encodeURIComponent(address) +
                 '&output=json';
 
@@ -1043,7 +1043,7 @@ angular.module('starter.services', [])
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
-                '?apikey=' + '6d0116e2c49361cb75eaf12f665e6360'+
+                '?apikey=' + '[DAUM_SERVICE_KEY]'+
                 '&longitude='+ lng +
                 '&latitude='+lat+
                 '&inputCoordSystem=WGS84'+
@@ -1260,7 +1260,7 @@ angular.module('starter.services', [])
     })
     .factory('Util', function ($window, $cordovaGoogleAnalytics) {
         var obj = {};
-        var debug = false;
+        var debug = true;
 
         //region Function
 
@@ -1328,13 +1328,13 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon2-color';
-        obj.version = '0.9.0'; // sync with config.xml
+        obj.version = '0.9.1'; // sync with config.xml
         obj.guideVersion = 1.0;
-        obj.admobIOSBannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
-        obj.admobIOSInterstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
-        obj.admobAndroidBannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
-        obj.admobAndroidInterstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
-        obj.googleSenderId = '362303467798';
+        obj.admobIOSBannerAdUnit = '';
+        obj.admobIOSInterstitialAdUnit = '';
+        obj.admobAndroidBannerAdUnit = '';
+        obj.admobAndroidInterstitialAdUnit = '';
+        obj.googleSenderId = '';
 
         if (debug) {
             //obj.url = "./v000705";
