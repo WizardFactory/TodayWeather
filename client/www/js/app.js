@@ -46,7 +46,6 @@ angular.module('starter', [
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
                 cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
                 cordova.plugins.Keyboard.disableScroll(true);
-
             }
         });
 
@@ -300,10 +299,13 @@ angular.module('starter', [
                             })
                             .text(function (d) {
                                 if (d.value.rn1) {
-                                    return d.value.rn1;
+                                    return d.value.rn1>=10?Math.round(d.value.rn1):d.value.rn1;
                                 }
                                 else if (d.value.r06) {
-                                    return d.value.r06;
+                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.rn1;
+                                }
+                                else if (d.value.s06) {
+                                    return d.value.s06>=10?Math.round(d.value.s06):d.value.rn1;
                                 }
                                 return '';
                             })

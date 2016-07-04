@@ -120,18 +120,26 @@ angular.module('starter.controllers', [])
                 headerRatio = 0.4;
                 contentRatio = 0.6;
             }
-            else if (bodyHeight / bodyWidth < ASPECT_RATIO_16_9) {
-                headerRatio = 0.35;
-                contentRatio = 0.65;
-                showAqi = false;
+            else if (bodyHeight >= 730) {
+                if (ionic.Platform.isIOS()) {
+                    headerRatio = 0.40;
+                    contentRatio = 0.60;
+                }
+                else {
+                    headerRatio = 0.33;
+                    contentRatio = 0.67;
+                }
             }
-            else if (ionic.Platform.isIOS()) {
-                headerRatio = 0.4;
-                contentRatio = 0.6;
-            }
-            else if (ionic.Platform.isAndroid()) {
-                headerRatio = 0.37;
-                contentRatio = 0.63;
+            else {
+                if (ionic.Platform.isIOS()) {
+                    headerRatio = 0.33;
+                    contentRatio = 0.67;
+                }
+                else {
+                    //0.32는 되어야, top main box가 16:9비율이 나옴.
+                    headerRatio = 0.32;
+                    contentRatio = 0.68;
+                }
             }
 
             /* The height of a toolbar by default in Angular Material */
@@ -140,10 +148,6 @@ angular.module('starter.controllers', [])
             headerE         = angular.element(document.querySelector('[md-page-header]'));
             picture        = angular.element(document.querySelector('[md-header-picture]'));
             alphaBar        = angular.element(document.getElementById('alphaBar'));
-
-            if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
-                startHeight -= 25;
-            }
 
             //console.log(headerE);
             //console.log(picture);
@@ -168,7 +172,11 @@ angular.module('starter.controllers', [])
             }
 
             //16:9 이상 비율 or 5.5 inch 에서 aqi보여줌.
-            if (bodyHeight / bodyWidth >= ASPECT_RATIO_16_9 || bodyHeight >= 706) {
+            if (bodyHeight >= 640) {
+                showAqi = true;
+            }
+            else if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_FREE
+                && bodyHeight / bodyWidth >= ASPECT_RATIO_16_9) {
                 showAqi = true;
             }
 
@@ -177,13 +185,13 @@ angular.module('starter.controllers', [])
             //var topTimeSize = mainHeight * 0.026;
             //$scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
 
-            regionSize = mainHeight * 0.0408 * padding; //0.051
+            regionSize = mainHeight * 0.0306 * padding; //0.051
             regionSize = regionSize<33.04?regionSize:33.04;
 
-            regionSumSize = mainHeight * 0.0376 * padding; //0.047
+            regionSumSize = mainHeight * 0.0336 * padding; //0.047
             regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
 
-            bigDigitSize = mainHeight * 0.17544 * padding; //0.2193
+            bigDigitSize = mainHeight * 0.16544 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
 
             //bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
@@ -234,10 +242,7 @@ angular.module('starter.controllers', [])
         function getTopMainBox() {
             var str = '';
             console.log('address='+shortenAddress);
-            if (ionic.Platform.isIOS()) {
-                str += '<div style="height: 20px"></div>';
-            }
-            str += '<p id="cityInfo" class="textFont" style="font-size:'+regionSize+'px; margin: 0">';
+            str += '<p id="cityInfo" class="textFont" style="font-size:'+regionSize+'px; margin: 8px 0">';
             if (cityData.currentPosition) {
                 str += '<a class="icon ion-ios-location-outline" style="color: white;"></a>';
             }
@@ -249,7 +254,7 @@ angular.module('starter.controllers', [])
             //str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
             //str +=          '<br>';
             str +=          '<img id="imgBigSkyStateSize" style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
-                                cityData.currentWeather.skyIcon+'.svg">';
+                                cityData.currentWeather.skyIcon+'.png">';
             str +=      '</div>';
             str += '</div></div></div>';
             str += '<p id="summary" class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
@@ -419,7 +424,7 @@ angular.module('starter.controllers', [])
                 val += 13;
             }
 
-            //val += 10; //영역 계산에서 안맞는 값 보정.
+            val += 10; //영역 계산에서 안맞는 값 보정.
             return val;
         }
 
@@ -515,7 +520,7 @@ angular.module('starter.controllers', [])
                 else {
                     str += '<div class="col table-items table-border" style="width:auto;">';
                 }
-                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.svg">';
+                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
                 str += '</div>';
             }
             str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
@@ -680,17 +685,37 @@ angular.module('starter.controllers', [])
                 var padding = 0;
 
                 //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
-                if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_PREMIUM) {
-                    padding += 25;
+                //광고 제거 버전했을 때, AQI가 보이게 padding맞춤. 나머지 14px는 chart에서 사용됨.
+                if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+                    padding += 36;
+                }
+
+                if (bodyHeight === 480) {
+                    //iphone4
+                    padding -= 32;
+                }
+                else if (bodyHeight === 736) {
+                    //iphone6+
+                    padding -= 6;
+                }
+                else if (ionic.Platform.isAndroid()) {
+                   //status bar
+                    padding += 24;
+                    if (bodyHeight === 732) {
+                        padding -= 6;
+                    }
+                    else if (bodyHeight <= 512) {
+                        padding -= 32;
+                    }
                 }
 
                 if($scope.forecastType == 'short') {
                     //topMainBox height is startHeight
                     padding += getShortTableHeight($scope.timeChart[1].displayItemCount);
                     if (showAqi && cityData.currentWeather.arpltn) {
-                        padding+=60;
+                        padding+=36;
                     }
-                    var chartShortHeight = mainHeight - (64+padding);
+                    var chartShortHeight = mainHeight - (86+padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
@@ -702,9 +727,9 @@ angular.module('starter.controllers', [])
                 else {
                     padding += getMidTableHeight($scope.dayChart[0].displayItemCount);
                     if (showAqi && cityData.dayTable[7].dustForecast) {
-                        padding+=60;
+                        padding+=36;
                     }
-                    var chartMidHeight = mainHeight - (20+padding);
+                    var chartMidHeight = mainHeight - (40+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 
