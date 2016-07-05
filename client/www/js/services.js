@@ -817,21 +817,20 @@ angular.module('starter.services', [])
 
                 var tmpDisplayCount = 0;
                 if (data.skyAm != "" || data.skyPm != "") {
-                   tmpDisplayCount++;
                     if (data.skyAm != data.skyPm) {
                         if (data.skyAm != "" && data.skyPm == "") {
-                            tmpDisplayCount++;
+                            tmpDisplayCount = tmpDisplayCount | 4;
                         }
                     }
                 }
 
-                if (data.pop && data.pop > 0) {
-                    tmpDisplayCount++;
+                if (data.pop && data.pop > 0 && data.fromToday >= 0) {
+                    tmpDisplayCount = tmpDisplayCount | 2;
                 }
                 if ((data.rn1 && data.rn1 > 0)
                     || (data.r06 && data.r06 > 0)
                     || (data.s06 && data.s06 > 0)) {
-                    tmpDisplayCount++;
+                    tmpDisplayCount = tmpDisplayCount | 1;
                 }
                 if (tmpDisplayCount > displayItemCount) {
                     displayItemCount = tmpDisplayCount;

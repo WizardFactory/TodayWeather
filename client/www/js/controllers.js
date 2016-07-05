@@ -388,8 +388,8 @@ angular.module('starter.controllers', [])
                 val += $scope.smallImageSize;
             }
             if (displayItemCount >= 2) {
-                //pop subheading
-                val += 17;
+                //pop body1
+                val += 15;
             }
             if (displayItemCount >= 3) {
                 //rn1 - caption
@@ -407,24 +407,25 @@ angular.module('starter.controllers', [])
         function getMidTableHeight(displayItemCount) {
             var val = 17; //day  - subheading
             if (displayItemCount == undefined || displayItemCount == 0) {
-                displayItemCount = 4;
+                displayItemCount = 7;
             }
-            if (displayItemCount >= 1) {
-                val += $scope.smallImageSize*0.8; //sky am
+            //최소한 한개의 이미지는 존재함.
+            val += $scope.smallImageSize*0.8;
+
+            if (displayItemCount & 4) {
+                val += $scope.smallImageSize*0.8;
             }
-            if (displayItemCount >=2) {
-                val += $scope.smallImageSize*0.8; //sky pm
+            else {
+                val += $scope.smallImageSize*0.8/2;
             }
-            if (displayItemCount >=3) {
-                //pop - subheading
-                val += 17;
+            if (displayItemCount & 2) {
+                //pop - body1
+                val += 15;
             }
-            if (displayItemCount >=4) {
+            if (displayItemCount & 1) {
                 //rns - caption
                 val += 13;
             }
-
-            val += 10; //영역 계산에서 안맞는 값 보정.
             return val;
         }
 
@@ -729,7 +730,7 @@ angular.module('starter.controllers', [])
                     if (showAqi && cityData.dayTable[7].dustForecast) {
                         padding+=36;
                     }
-                    var chartMidHeight = mainHeight - (40+padding);
+                    var chartMidHeight = mainHeight - (50+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 

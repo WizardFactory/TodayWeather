@@ -261,7 +261,7 @@ angular.module('starter', [
                             .attr("height", scope.smallImageSize);
 
                         hourObject.append("text")
-                            .attr('class', 'subheading')
+                            .attr('class', 'body1')
                             .attr('fill', 'white')
                             .attr("text-anchor", "middle")
                             .attr("x", function (d, i) {
@@ -293,19 +293,19 @@ angular.module('starter', [
                                     y += scope.smallImageSize;
                                 }
                                 if (displayItemCount >=2) {
-                                    y += 17;//subheading
+                                    y += 15;//pop body1
                                 }
-                                return y - 5;
+                                return y - 3;
                             })
                             .text(function (d) {
                                 if (d.value.rn1) {
                                     return d.value.rn1>=10?Math.round(d.value.rn1):d.value.rn1;
                                 }
                                 else if (d.value.r06) {
-                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.rn1;
+                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.r06;
                                 }
                                 else if (d.value.s06) {
-                                    return d.value.s06>=10?Math.round(d.value.s06):d.value.rn1;
+                                    return d.value.s06>=10?Math.round(d.value.s06):d.value.s06;
                                 }
                                 return '';
                             })
@@ -603,7 +603,7 @@ angular.module('starter', [
                         height = iElement[0].getBoundingClientRect().height;
 
                         console.log("mid scope watch");
-                        margin.top = marginTop + scope.getMidTableHeight(displayItemCount) + margin.textTop;
+                        margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
 
                         x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
                         y = d3.scale.linear().range([height - margin.bottom, margin.top]);
@@ -731,7 +731,7 @@ angular.module('starter', [
                                 .attr("y", function (d) {
                                     var y = 17 + 2;
                                     if (d.skyAm == d.skyPm) {
-                                        y += scope.smallImageSize*0.8/2;
+                                        y += scope.smallImageSize*0.8/3;
                                     }
                                     return y;
                                 })
@@ -746,7 +746,7 @@ angular.module('starter', [
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
                             })
-                            .attr("y", 17+2+scope.smallImageSize*0.8)
+                            .attr("y", 17+scope.smallImageSize*0.8)
                             .attr("width", scope.smallImageSize*0.8)
                             .attr("height", scope.smallImageSize*0.8)
                             .filter(function(d) {
@@ -757,16 +757,16 @@ angular.module('starter', [
                             }).remove();
 
                         dayObject.append("text")
-                            .attr('class', 'subheading')
+                            .attr('class', 'body1')
                             .attr('fill', 'white')
                             .attr("text-anchor", "middle")
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function(d){
-                                var y = 17+ 2 + scope.smallImageSize*0.8 ;
+                                var y = 17+ scope.smallImageSize*0.8 ;
                                 if (d.skyAm == d.skyPm) {
-                                    y += scope.smallImageSize*0.8/2+2;
+                                    y += scope.smallImageSize*0.8/3;
                                 }
                                 else {
                                     y += scope.smallImageSize*0.8 ;
@@ -775,12 +775,18 @@ angular.module('starter', [
                                 return y;
                             })
                             .text(function (d) {
-                                return d.pop? d.pop:"";
+                                if (d.fromToday >=0 && d.pop) {
+                                    return d.pop;
+                                }
+                                return "";
                             })
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                return d.pop?"%":"";
+                                if (d.fromToday >=0 && d.pop) {
+                                   return "%";
+                                }
+                                return "";
                             });
 
                         dayObject.append("text")
@@ -792,15 +798,16 @@ angular.module('starter', [
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function(d){
-                                var y = 17 + 2 + scope.smallImageSize*0.8;
+                                var y = 17 + scope.smallImageSize*0.8;
                                 if (d.skyAm == d.skyPm) {
-                                    y += scope.smallImageSize*0.8/2+2;
+                                    y += scope.smallImageSize*0.8/3;
                                 }
                                 else {
-                                    y += scope.smallImageSize*0.8 ;
+                                    y += scope.smallImageSize*0.8;
                                 }
-                                if (d.pop) {
-                                    y += 17;
+                                y += 2; //margin
+                                if (d.pop && d.fromToday >= 0) {
+                                    y += 15;
                                 }
                                 y+=10;
                                 return y;
@@ -968,7 +975,7 @@ angular.module('starter', [
                     scope.$watch('dayChart', function (newVal) {
                         if (newVal) {
                             console.log("update dayChart");
-                            margin.top = marginTop + scope.getMidTableHeight(displayItemCount) + margin.textTop;
+                            margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
                             y = d3.scale.linear().range([height - margin.bottom, margin.top]);
                             chart();
                         }
