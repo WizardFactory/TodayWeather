@@ -4,8 +4,7 @@ angular.module('starter.services', [])
         var cities = [];
         var cityIndex = -1;
         var obj = {
-            towns: [],
-            isLoadComplete: false
+            towns: []
         };
 
         var createCity = function (item) {
@@ -143,7 +142,7 @@ angular.module('starter.services', [])
 
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
-                city.loadTime = null;
+                city.loadTime = new Date();
                 cities.push(city);
                 that.saveCities();
                 return true;
@@ -285,30 +284,6 @@ angular.module('starter.services', [])
         obj.saveCities = function() {
             localStorage.setItem("cities", JSON.stringify(cities));
             this._saveCitiesPreference(cities);
-        };
-
-        obj.updateCities = function(index) {
-            var that = this;
-            var city = cities[index];
-
-            if (city === undefined) {
-                $ionicPlatform.ready(function() {
-                    that.isLoadComplete = true;
-                    $rootScope.$broadcast('loadCompleteEvent');
-                });
-                return;
-            }
-
-            if (that.canLoadCity(index) && !city.currentPosition) {
-                WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
-                    var city = WeatherUtil.convertWeatherData(weatherDatas);
-                    that.updateCity(index, city);
-                }).finally(function () {
-                    that.updateCities(index + 1);
-                });
-            } else {
-                that.updateCities(index + 1);
-            }
         };
 
         obj.loadTowns = function() {
@@ -1350,5 +1325,4 @@ angular.module('starter.services', [])
     .run(function(WeatherInfo) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
-        WeatherInfo.updateCities(0);
     });
