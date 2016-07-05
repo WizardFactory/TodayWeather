@@ -386,6 +386,14 @@ function ControllerTown() {
                     if (resultItem.rn1 == -1) {
                         resultItem.rn1 = undefined;
                     }
+                    else {
+                        if (resultItem.rn1 < 10) {
+                            resultItem.rn1 = +(resultItem.rn1).toFixed(1);
+                        }
+                        else {
+                            resultItem.rn1 = Math.round(resultItem.rn1);
+                        }
+                    }
                     if (resultItem.sky == -1) {
                         resultItem.sky = undefined;
                     }
@@ -409,6 +417,9 @@ function ControllerTown() {
                     }
                     if (resultItem.wsd == -1) {
                         resultItem.wsd = undefined;
+                    }
+                    else {
+                        resultItem.wsd = +(resultItem.wsd).toFixed(1);
                     }
 
                     // get freeze string(동파가능지수)
@@ -821,6 +832,12 @@ function ControllerTown() {
                                 }
                             }
                             req.current.rn1 = req.current.rs1h;
+                            if (req.current.rn1 > 10) {
+                                req.current.rn1 = Math.round(req.current.rn1);
+                            }
+                            else {
+                                req.current.rn1 = +(req.current.rn1).toFixed(1);
+                            }
                         }
                         else {
                             if (req.current.pty != 0) {
@@ -1447,6 +1464,7 @@ function ControllerTown() {
                 if (req.current.reh != undefined) {
                     // get discomfort index(불괘지수)
                     req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
+                    req.current.dsplsGrade = LifeIndexKmaController.convertGradeFromDiscomfortIndex(req.current.dspls);
                     req.current.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(req.current.dspls);
 
                     // get decomposition index(부패지수)
@@ -1485,6 +1503,7 @@ function ControllerTown() {
                 if (short.reh != undefined) {
                     // get discomfort index(불괘지수)
                     short.dspls = LifeIndexKmaController.getDiscomfortIndex(short.t3h, short.reh);
+                    short.dsplsGrade = LifeIndexKmaController.convertGradeFromDiscomfortIndex(short.dspls);
                     short.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(short.dspls);
 
                     // get decomposition index(부패지수)
@@ -1676,25 +1695,29 @@ function ControllerTown() {
  */
 ControllerTown.prototype._makeSummary = function(current, yesterday) {
     var str = "";
-    var stringList = [];
+    var item;
+    var itemList = [];
+    var diffTemp;
+    var tmpGrade;
 
     if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-        var diffTemp = Math.round(current.t1h - yesterday.t1h);
+        diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
 
         str = "어제";
         if (diffTemp == 0) {
             str += "와 동일";
         }
         else {
-            str += "보다 " + Math.abs(diffTemp);
+            str += "보다 ";
             if (diffTemp < 0) {
-                str += "˚낮음";
+                str += diffTemp+"˚";
             }
             else if (diffTemp > 0) {
-                str += "˚높음";
+                str += "+"+diffTemp+"˚";
             }
         }
-        stringList.push(str);
+        item = {str: str, grade: Math.abs(diffTemp)};
+        itemList.push(item);
     }
 
     if (current.weather) {
@@ -1703,78 +1726,101 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
             current.weather == '맑음' ||
             current.weather == '흐림') {
             //skip
+            item = {str: current.weather, grade: 1};
         }
         else {
-            stringList.push(current.weather);
+           item = {str: current.weather, grade: 3};
+        }
+        itemList.push(item);
+    }
+
+    if (current.arpltn) {
+
+        if (current.arpltn.pm10Grade && current.arpltn.pm10Str) {
+            tmpGrade = current.arpltn.pm10Grade;
+            if (tmpGrade == 1) {
+                //좋은 보통보다 높고, 나쁨보다 낮음.
+                tmpGrade = 2.5
+            }
+           item = {str: "미세먼지"+" "+ current.arpltn.pm10Str, grade: tmpGrade};
+            itemList.push(item);
+        }
+        if (current.arpltn.pm25Grade && current.arpltn.pm25Str) {
+            tmpGrade = current.arpltn.pm25Grade;
+            if (tmpGrade == 1) {
+                //좋은 보통보다 높고, 나쁨보다 낮음.
+                tmpGrade = 2.5
+            }
+            item = {str: "초미세먼지"+" "+ current.arpltn.pm25Str, grade: tmpGrade};
+            itemList.push(item);
+        }
+        if (current.arpltn.khaiGrade && current.arpltn.khaiStr) {
+            tmpGrade = current.arpltn.khaiGrade;
+            if (tmpGrade == 1) {
+                //좋은 보통보다 높고, 나쁨보다 낮음.
+                tmpGrade = 2.5
+            }
+            item = {str: "통합대기" + " " + current.arpltn.khaiStr, grade: tmpGrade};
+            itemList.push(item);
         }
     }
-
-    //current.arpltn = {};
-    //current.arpltn.pm10Value = 82;
-    //current.arpltn.pm10Str = "나쁨";
-    //current.arpltn.pm25Value = 82;
-    //current.arpltn.pm25Str = "나쁨";
-    var haveAQI = false;
-    if (current.arpltn && current.arpltn.pm10Value && current.arpltn.pm10Str &&
-        (current.arpltn.pm10Value > 80 || current.arpltn.pm10Grade > 2)) {
-        stringList.push("미세먼지 " + current.arpltn.pm10Str);
-        haveAQI = true;
-    }
-    else if (current.arpltn && current.arpltn.pm25Value &&
-        (current.arpltn.pm25Value > 50 || current.arpltn.pm25Grade > 2)) {
-        stringList.push("초미세먼지 " + current.arpltn.pm25Str);
-        haveAQI = true;
+    if (current.rn1 && current.rn1Str) {
+        item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+        itemList.push(item);
     }
 
-    //current.ptyStr = '강수량'
-    //current.rn1Str = '1mm 미만'
-    if (current.rn1Str) {
-        stringList.push(current.ptyStr + " " + current.rn1Str);
+    if (current.dsplsGrade && current.dsplsGrade) {
+        tmpGrade = current.dsplsGrade;
+        if (tmpGrade == 1) {
+            //좋은 보통보다 높고, 나쁨보다 낮음.
+            tmpGrade = 2.5
+        }
+        item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
+        itemList.push(item);
+    }
+    if (current.sensorytem && current.sensorytem !== current.t1h) {
+        diffTemp = Math.round(current.sensorytem - current.t1h);
+        item = {str :"체감온도" +" "+ current.sensorytem +"˚", grade: Math.abs(diffTemp)};
+        itemList.push(item);
     }
 
-    //current.sensorytem = -10;
-    //current.sensorytemStr = "관심";
-    //current.wsd = 10;
-    //current.wsdStr = convertKmaWsdToStr(current.wsd);
-    if (current.sensorytem && current.sensorytem <= -10 && current.sensorytem !== current.t1h) {
-        stringList.push("체감온도 " + current.sensorytem +"˚");
+    if (current.ultrv && Number(current.time) < 1800) {
+        tmpGrade = current.ultrvGrade;
+        if (tmpGrade == 0) {
+            //좋은 보통보다 높고, 나쁨보다 낮음.
+            tmpGrade = 1.5
+        }
+        item = {str:"자외선"+" "+current.ultrvStr, grade: tmpGrade+1};
+        itemList.push(item);
     }
 
-    //불쾌지수
-
-    //current.ultrv = 6;
-    //current.ultrvStr = "높음";
-    if (current.ultrv && current.ultrv >= 6) {
-        stringList.push("자외선 " + current.ultrvStr);
+    if (current.wsdGrade && current.wsdStr) {
+        //약함(1)을 보통으로 보고 보정 1함.
+        item = {str:"바람이"+" "+ current.wsdStr, grade: current.wsdGrade+1};
+        itemList.push(item);
     }
 
-    if (current.wsd && current.wsd > 9) {
-        stringList.push("바람이 " + current.wsdStr);
+    if (current.fsnStr) {
+        //주의(1)를 보통으로 보고 보정 1함.
+        item = {str: "식중독"+" "+current.fsnStr, grade: current.fsnGrade+1};
+        itemList.push(item);
     }
 
     //감기
 
-    if (current.fsnGrade && current.fsnGrade >=2 ) {
-        if (current.fsnStr) {
-            stringList.push("식중독 " + current.fsnStr);
+    itemList.sort(function (a, b) {
+        if(a.grade > b.grade){
+            return -1;
         }
-    }
-
-    //부패
-
-    //특정 이벤트가 없다면, 미세먼지가 기본으로 추가, 미세먼지가 어제 오늘 온도비교보다 우선순위 높음.
-    if (haveAQI === false) {
-        if (current.arpltn && current.arpltn.pm10Str && current.arpltn.pm10Value >= 0)  {
-            stringList.push("미세먼지 " + current.arpltn.pm10Str);
+        if(a.grade < b.grade){
+            return 1;
         }
-    }
+        return 0;
+    });
 
-    if (stringList.length >= 3) {
-        return stringList[1]+", "+stringList[2];
-    }
-    else {
-        return stringList.toString();
-    }
+    log.debug(JSON.stringify(itemList));
+
+    return itemList[0].str+", "+itemList[1].str;
 };
 
 ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {
@@ -1950,8 +1996,10 @@ ControllerTown.prototype._makeStrForKma = function(data) {
     }
 
     if (data.hasOwnProperty('wsd')) {
-        data.wsdStr = self._convertKmaWsdToStr(data.wsd);
+        data.wsdGrade = self._convertKmaWsdToGrade(data.wsd);
+        data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade);
     }
+
     if (data.hasOwnProperty('pty') && data.pty > 0) {
         data.ptyStr = self._convertKmaPtyToStr(data.pty);
         if (data.pty == 1) {
@@ -1980,27 +2028,39 @@ ControllerTown.prototype._makeStrForKma = function(data) {
     return this;
 };
 
+
+ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
+    if (wsd < 0) {
+        return 0;
+    }
+    else if (wsd < 4) {
+        return 1;
+    }
+    else if(wsd < 9) {
+        return 2;
+    }
+    else if(wsd < 14) {
+        return 3;
+    }
+    else {
+        return 4;
+    }
+};
+
 /**
  *
  * @param wsd
  * @returns {*}
  */
-ControllerTown.prototype._convertKmaWsdToStr = function (wsd) {
-    if (wsd < 0) {
-       return '';
+ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
+    switch (wsdGrade) {
+        case 0: return "";
+        case 1: return "약함";
+        case 2: return "약간강함";
+        case 3: return "강함";
+        case 4: return "매우강함";
     }
-    else if (wsd < 4) {
-        return '약함';
-    }
-    else if(wsd < 9) {
-        return '약간강함';
-    }
-    else if(wsd < 14) {
-        return '강함';
-    }
-    else {
-        return '매우강함';
-    }
+    return "";
 };
 
 /**
