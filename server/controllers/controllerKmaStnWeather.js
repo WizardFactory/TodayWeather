@@ -187,13 +187,12 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
         var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
         async.parallel([function (pCallback) {
             //#997 이슈로 방안 마련까지, 도시날씨만 사용한다.
-            //KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(5).lean().exec(function (err, kmaStnList) {
-            //    if (err) {
-            //        return pCallback(err);
-            //    }
-            //    return pCallback(err, kmaStnList);
-            //});
-            return pCallback(undefined, []);
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(5).lean().exec(function (err, kmaStnList) {
+                if (err) {
+                    return pCallback(err);
+                }
+                return pCallback(err, kmaStnList);
+            });
         }, function (pCallback) {
             KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                 if (err) {

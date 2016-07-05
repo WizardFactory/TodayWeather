@@ -13,6 +13,7 @@ var Buffer = require('buffer').Buffer;
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var KmaStnDaily = require('../models/modelKmaStnDaily');
 var KmaStnHourly = require('../models/modelKmaStnHourly');
+var KmaStnMinute = require('../models/modelKmaStnMinute');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
 
 var convertGeocode = require('../utils/convertGeocode');
@@ -37,10 +38,13 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
     var stnWeatherList = {pubDate: '', stnList: []};
 
     var strAr = $('.ehead').text().split(" ");
-    stnWeatherList.pubDate = strAr[strAr.length-1];
-    if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
-        var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
-        return callback(err);
+
+    if (pubDate) {
+        stnWeatherList.pubDate = strAr[strAr.length-1];
+        if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
+            var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+            return callback(err);
+        }
     }
 
     log.info(stnWeatherList.pubDate);
@@ -522,6 +526,77 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
 };
 
 /**
+ * 한개의 정보를 저장함.
+ * @param stnWeatherInfo
+ * @param pubDate
+ * @param callback
+ * @returns {KmaScraper}
+ * @private
+ */
+KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callback) {
+    var self = this;
+
+    KmaStnMinute.find({stnId: stnWeatherInfo.stnId}, function (err, stnMinuteList) {
+        if (err) {
+            return callback(err);
+        }
+        if (stnHourlyList.length > 1) {
+            log.error('stnHourlyInfo is duplicated stnId=', stnWeatherInfo.stnId);
+        }
+
+        var kmaStnMinute;
+        if (stnMinuteList.length == 0) {
+            kmaStnMinute = new KmaStnMinute({
+                stnId: stnWeatherInfo.stnId,
+                stnName: stnWeatherInfo.stnName,
+                pubDate: pubDate,
+                minuteData: []
+            });
+        }
+        else {
+           kmaStnMinute = stnMinuteList[0];
+        }
+
+        kmaStnMinute.minuteData.push(self._makeDailyData(pushDate, stnWeatherInfo));
+        if (kmaStnMinute.minuteData.length > 60) {
+            kmaStnMinute.minuteData.shift();
+        }
+
+        kmaStnMinute.save(function () {
+            if (err) {
+                return callback(err);
+            }
+            return callback(err, {stnId:stnWeatherInfo.stnId, pubDate: pubDate});
+        });
+    });
+
+    return this;
+};
+
+KmaScraper.prototype._saveKmaStnMinuteList = function (weatherList, callback) {
+    var self = this;
+
+    async.map(weatherList.stnList,
+        function (stnWeatherInfo, mapCallback) {
+            self._saveStnMinute(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+                if (err) {
+                    return mapCallback(err);
+                }
+                mapCallback(err, savedList);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+
+            callback(err, results);
+        });
+
+    return this;
+};
+
+/**
  *
  * @param stnWeatherInfo
  * @param pubDate
@@ -654,6 +729,36 @@ KmaScraper.prototype._mergeAWSandCity = function(awsList, cityList) {
     });
 
     return awsList;
+};
+
+KmaScraper.prototype.getStnMinuteWeather = function (callback) {
+    var self = this;
+    log.info('get stn every minute weather');
+
+    async.waterfall([
+        function (cb) {
+            self.getAWSWeather('min', undefined, function (err, weatherList) {
+                if (err) {
+                    return cb(err);
+                }
+                return cb(err, {pubDate: weatherList.pubDate, stnList: weatherList});
+            });
+        },
+        function (weatherList, cb) {
+            log.info('wl stnlist='+weatherList.stnList.length);
+            self._saveKmaStnMinuteList(weatherList, function (err, results) {
+                if (err) {
+                    return cb(err);
+                }
+                return cb(err, results);
+            });
+        }
+    ], function (err, results) {
+        if (err) {
+            return callback(err);
+        }
+        callback(err, results);
+    });
 };
 
 /**
