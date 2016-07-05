@@ -703,6 +703,12 @@ angular.module('starter.services', [])
                         }
                     }
                 }
+                else if (currentForecast.time < 3) {
+                    if (currentForecast.date == tempObject.date && shortForecastList[index-1].date != currentForecast.date) {
+                        shortForecastList[index-1].currentIndex = true;
+                        currentIndex = index-1;
+                    }
+                }
 
                 var tmpDisplayCount = 0;
                 if (tempObject.skyIcon != undefined) {
