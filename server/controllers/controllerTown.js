@@ -1764,7 +1764,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
             itemList.push(item);
         }
     }
-    if (current.rn1 && current.rn1Str) {
+    if (current.rn1 && current.rn1Str && current.ptyStr) {
         item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
         itemList.push(item);
     }
@@ -1924,7 +1924,10 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             default : console.log('convert Kma Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 related to #347 */
-        if (0 < rXX && rXX < 100) {
+        if (0 < rXX) {
+            if (rXX >= 10) {
+                rXX = Math.ceil(rXX);
+            }
             return "~"+rXX+"mm";
         }
     }
@@ -1939,7 +1942,10 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
             default : console.log('convert Km Rxx To Str : unknown data='+rXX);
         }
         /* spec에 없지만 2로 오는 경우가 있었음 */
-        if (0 < rXX && rXX < 100) {
+        if (0 < rXX) {
+            if (rXX >= 10) {
+                rXX = Math.ceil(rXX);
+            }
             return "~"+rXX+"cm";
         }
     }
@@ -2000,6 +2006,11 @@ ControllerTown.prototype._makeStrForKma = function(data) {
         data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade);
     }
 
+    /**
+     * pty가 없어도, 즉 지금 시간 안와도, 한시간 안에는 비가 왔을 수 있음.
+     * 그런때에 rn1이 있을 수 있음.
+     * 차후 업데이트 필요할 수 있음.
+     */
     if (data.hasOwnProperty('pty') && data.pty > 0) {
         data.ptyStr = self._convertKmaPtyToStr(data.pty);
         if (data.pty == 1) {
