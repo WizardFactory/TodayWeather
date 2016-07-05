@@ -1933,6 +1933,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
+        process.exit(1);
     }
 };
 
