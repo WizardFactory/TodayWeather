@@ -1096,37 +1096,39 @@ angular.module('starter.services', [])
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
-            navigator.geolocation.getCurrentPosition(function(position) {
-                //경기도,광주시,오포읍,37.36340556,127.2307667
-                //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                //37.472595, 126.795249
-                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+            ionic.Platform.ready(function() {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    //경기도,광주시,오포읍,37.36340556,127.2307667
+                    //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                    //37.472595, 126.795249
+                    //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                    //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
 
-                deferred.resolve(position.coords);
-            }, function(error) {
-                console.log("Fail to get current position from navigator");
-                console.log(error.message);
+                    deferred.resolve(position.coords);
+                }, function (error) {
+                    console.log("Fail to get current position from navigator");
+                    console.log(error.message);
 
-                if (ionic.Platform.isAndroid() && window.cordova) {
-                    var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+                    if (ionic.Platform.isAndroid() && window.cordova) {
+                        var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
-                    orgGeo.getCurrentPosition(function (position) {
-                            //console.log('native geolocation');
-                            //console.log(position);
-                            deferred.resolve(position.coords);
-                        },
-                        function (error) {
-                            console.log("Fail to get current position from native");
-                            console.log(error.message);
-                            deferred.reject();
-                        },{timeout:5000});
-                }
-                else {
-                    deferred.reject();
-                }
-            },{timeout:3000});
+                        orgGeo.getCurrentPosition(function (position) {
+                                //console.log('native geolocation');
+                                //console.log(position);
+                                deferred.resolve(position.coords);
+                            },
+                            function (error) {
+                                console.log("Fail to get current position from native");
+                                console.log(error.message);
+                                deferred.reject();
+                            }, {timeout: 5000});
+                    }
+                    else {
+                        deferred.reject();
+                    }
+                }, {timeout: 3000});
+            });
 
             return deferred.promise;
         };
