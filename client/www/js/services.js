@@ -790,11 +790,10 @@ angular.module('starter.services', [])
                 tmpDayTable.push(data);
 
                 var tmpDisplayCount = 0;
-                if (data.skyAm != "" || data.skyPm != "") {
-                    if (data.skyAm != data.skyPm) {
-                        if (data.skyAm != "" && data.skyPm == "") {
-                            tmpDisplayCount = tmpDisplayCount | 4;
-                        }
+
+                if (data.skyAm != undefined || data.skyPm != undefined) {
+                    if (data.skyAm != data.skyPm && data.skyAm && data.skyPm) {
+                        tmpDisplayCount = tmpDisplayCount | 4;
                     }
                 }
 

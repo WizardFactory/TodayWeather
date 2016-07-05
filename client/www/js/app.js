@@ -730,13 +730,19 @@ angular.module('starter', [
                                 })
                                 .attr("y", function (d) {
                                     var y = 17 + 2;
-                                    if (d.skyAm == d.skyPm) {
+                                    if (d.skyAm == d.skyPm || d.skyPm == undefined) {
                                         y += scope.smallImageSize*0.8/3;
                                     }
                                     return y;
                                 })
                                 .attr("width", scope.smallImageSize*0.8)
-                                .attr("height", scope.smallImageSize*0.8);
+                                .attr("height", scope.smallImageSize*0.8)
+                                .filter(function (d) {
+                                    if (d.skyAm == undefined) {
+                                        return true;
+                                    }
+                                    return false;
+                                }).remove();
 
                         dayObject.append("svg:image")
                             .attr('class', 'skyPm')
@@ -746,11 +752,20 @@ angular.module('starter', [
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
                             })
-                            .attr("y", 17+scope.smallImageSize*0.8)
+                            .attr("y", function (d) {
+                                var y = 17;
+                                if (d.skyAm == undefined) {
+                                    y += 2 + scope.smallImageSize*0.8/3;
+                                }
+                                else {
+                                    y += scope.smallImageSize*0.8
+                                }
+                                return y;
+                            })
                             .attr("width", scope.smallImageSize*0.8)
                             .attr("height", scope.smallImageSize*0.8)
                             .filter(function(d) {
-                                if (d.skyAm == d.skyPm) {
+                                if (d.skyAm == d.skyPm || d.skyPm == undefined) {
                                     return true;
                                 }
                                 return false;
@@ -765,7 +780,7 @@ angular.module('starter', [
                             })
                             .attr("y", function(d){
                                 var y = 17+ scope.smallImageSize*0.8 ;
-                                if (d.skyAm == d.skyPm) {
+                                if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
                                     y += scope.smallImageSize*0.8/3;
                                 }
                                 else {
@@ -799,7 +814,7 @@ angular.module('starter', [
                             })
                             .attr("y", function(d){
                                 var y = 17 + scope.smallImageSize*0.8;
-                                if (d.skyAm == d.skyPm) {
+                                if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
                                     y += scope.smallImageSize*0.8/3;
                                 }
                                 else {
