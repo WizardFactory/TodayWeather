@@ -121,6 +121,7 @@ angular.module('starter.controllers', [])
                 contentRatio = 0.6;
             }
             else if (bodyHeight >= 730) {
+                //note5, nexus5x, iphone 5+
                 if (ionic.Platform.isIOS()) {
                     headerRatio = 0.40;
                     contentRatio = 0.60;
@@ -137,6 +138,7 @@ angular.module('starter.controllers', [])
                 }
                 else {
                     //0.32는 되어야, top main box가 16:9비율이 나옴.
+                    //차후 top main box에 사진 들어가는 것을 고려.
                     headerRatio = 0.32;
                     contentRatio = 0.68;
                 }
@@ -171,12 +173,13 @@ angular.module('starter.controllers', [])
                 smallPadding = 1.1;
             }
 
-            //16:9 이상 비율 or 5.5 inch 에서 aqi보여줌.
             if (bodyHeight >= 640) {
+                //대부분의 android와 iPhone6부터 aqi보여줌.
                 showAqi = true;
             }
             else if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_FREE
                 && bodyHeight / bodyWidth >= ASPECT_RATIO_16_9) {
+                //free이상의 유저이며, 16:9 이상 비율은 aqi보여줌.
                 showAqi = true;
             }
 
@@ -380,6 +383,7 @@ angular.module('starter.controllers', [])
          * display item을 count하여 table pixel을 구함.
          * 0.9.1까지 displayItemCount가 없음.
          * @param displayItemCount
+         * @returns {number}
          */
         function getShortTableHeight(displayItemCount) {
             var val = 0;
@@ -402,7 +406,8 @@ angular.module('starter.controllers', [])
 
         /**
          * display item을 count하여 table pixel을 구함.
-         * @param value
+         * @param displayItemCount
+         * @returns {number}
          */
         function getMidTableHeight(displayItemCount) {
             var val = 17; //day  - subheading
@@ -577,9 +582,6 @@ angular.module('starter.controllers', [])
             var str = '';
             var i;
             var value;
-            var tmpStr = '-';
-            var imageSize = smallImageSize*0.8;
-            //str += '<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">';
             str += '<div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">';
             for (i=0; i<cityData.dayTable.length; i++) {
                 value = cityData.dayTable[i];
@@ -595,57 +597,6 @@ angular.module('starter.controllers', [])
                 str += '</div>';
             }
             str += '</div>';
-
-            //str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
-            //for (i=0; i<cityData.dayTable.length; i++) {
-            //    value = cityData.dayTable[i];
-            //    if (value.fromToday === 0) {
-            //        str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
-            //    }
-            //    else {
-            //        str += '<div class="col table-items table-border">';
-            //    }
-            //    if (value.date) {
-            //        str +=  '<p class="subheading" style="margin: 4px; latter-spacing: 0;">';
-            //        str +=  value.date.substr(6,2) + '</p>';
-            //    }
-            //    str += '</div>';
-            //}
-            //str += '</div>';
-            //
-            //str += '<div class="row row-no-padding" style="flex: 1; text-align: center">';
-            //for (i=0; i<cityData.dayTable.length; i++) {
-            //    value = cityData.dayTable[i];
-            //
-            //    if (value.fromToday === 0) {
-            //        str += '<div class="col table-items table-border" style="background-color: #00ACC1">';
-            //    }
-            //    else {
-            //        str += '<div class="col table-items  table-border">';
-            //    }
-            //
-            //    str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
-            //                Util.imgPath+'/'+value.skyAm+'.png">';
-            //    if(value.skyAm != value.skyPm) {
-            //        str += '<img style="width: '+imageSize+'px; height: '+imageSize+'px; margin: auto;" src="'+
-            //            Util.imgPath+'/'+value.skyPm+'.png">';
-            //    }
-            //
-            //    if (value.fromToday >= 0) {
-            //        if (value.pop != undefined && value.pop > 0) {
-            //            tmpStr = value.pop == undefined?'-':value.pop+'<small>%</small>';
-            //            str += '<p class="body1" style="margin: auto">'+tmpStr+'</p>';
-            //        }
-            //    }
-            //
-            //    str += '<p class="caption" style="margin: auto; letter-spacing: 0;">';
-            //    str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
-            //    str += '<small>';
-            //    str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
-            //    str += '</small></p>';
-            //    str += '</div>';
-            //}
-            //str += '</div>';
             return str;
         }
 
@@ -702,10 +653,12 @@ angular.module('starter.controllers', [])
                 else if (ionic.Platform.isAndroid()) {
                    //status bar
                     padding += 24;
-                    if (bodyHeight === 732) {
+                    if (bodyHeight === 732 || bodyHeight === 731) {
+                        //ss note5, nexus 5x
                         padding -= 6;
                     }
                     else if (bodyHeight <= 512) {
+                        //view2 4:3
                         padding -= 32;
                     }
                 }

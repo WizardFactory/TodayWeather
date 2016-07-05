@@ -431,30 +431,6 @@ angular.module('starter.services', [])
             return "";
         }
 
-        /**
-         *
-         * @param temp
-         * @param tmx
-         * @param tmn
-         * @returns {string}
-         */
-        function decideTempIcon(temp, tmx, tmn) {
-            if ( (tmx === undefined || tmx === null) || (tmn === undefined || tmn === null) || tmx < tmn) {
-                return "Temp-01";
-            }
-
-            var max = tmx - tmn;
-            var cur = temp - tmn;
-            var p = Math.max(1, Math.ceil(cur / max * 10));
-
-            if (p > 9) {
-                return "Temp-10";
-            }
-            else {
-                return "Temp-0" + p;
-            }
-        }
-
         function dayToString(day) {
             switch (day) {
                 case 0:
@@ -620,7 +596,7 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 20*1000})
+            $http({method: 'GET', url: url, timeout: 10*1000})
                 .success(function (data) {
                     //console.log(data);
                     deferred.resolve({data: data});
@@ -703,8 +679,6 @@ angular.module('starter.services', [])
                 tempObject = shortForecast;
 
                 tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                //tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
-
                 tempObject.day = day;
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";

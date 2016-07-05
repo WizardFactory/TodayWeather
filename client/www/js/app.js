@@ -713,7 +713,7 @@ angular.module('starter', [
                                     return x.rangeBand() * i + x.rangeBand() / 2;
                                 })
                                 .attr("y", function(){
-                                    //0이 아닌 18이 이상함.
+                                    //0이 아닌 18이어야 하는 것이 이상함.
                                     return marginTop;
                                 })
                                 .text(function (d) {
