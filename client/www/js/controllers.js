@@ -646,18 +646,10 @@ angular.module('starter.controllers', [])
                     //iphone4
                     padding -= 32;
                 }
-                else if (bodyHeight === 736) {
-                    //iphone6+
-                    padding -= 6;
-                }
                 else if (ionic.Platform.isAndroid()) {
                    //status bar
                     padding += 24;
-                    if (bodyHeight === 732 || bodyHeight === 731) {
-                        //ss note5, nexus 5x
-                        padding -= 6;
-                    }
-                    else if (bodyHeight <= 512) {
+                    if (bodyHeight <= 512) {
                         //view2 4:3
                         padding -= 32;
                     }
@@ -665,11 +657,10 @@ angular.module('starter.controllers', [])
 
                 if($scope.forecastType == 'short') {
                     //topMainBox height is startHeight
-                    padding += getShortTableHeight($scope.timeChart[1].displayItemCount);
                     if (showAqi && cityData.currentWeather.arpltn) {
                         padding+=36;
                     }
-                    var chartShortHeight = mainHeight - (86+padding);
+                    var chartShortHeight = mainHeight - (143+padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
@@ -679,11 +670,10 @@ angular.module('starter.controllers', [])
                     }, 0);
                 }
                 else {
-                    padding += getMidTableHeight($scope.dayChart[0].displayItemCount);
                     if (showAqi && cityData.dayTable[7].dustForecast) {
                         padding+=36;
                     }
-                    var chartMidHeight = mainHeight - (50+padding);
+                    var chartMidHeight = mainHeight - (128+padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 
@@ -804,8 +794,8 @@ angular.module('starter.controllers', [])
                 if (bodyWidth >= 720) {
                     return 0;
                 }
-                //next tomorrow 까지 표시.
-                index = 3;
+                //today is 3th.
+                index = 5;
                 return getWidthPerCol()*index;
             }
             return getWidthPerCol()*index;
