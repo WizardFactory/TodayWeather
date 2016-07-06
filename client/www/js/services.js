@@ -664,17 +664,12 @@ angular.module('starter.services', [])
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
-                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
+                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), convertStringToDate(currentForecast.date));
                 var day = "";
                 if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
                     day = getDayString(diffDays);
                 }
                 var isNight = time < 7 || time > 18;
-                var dayInfo = getDayInfo(dailyInfoList, shortForecast.date);
-                if (!dayInfo) {
-                    console.log("Fail to find dayInfo date=" + shortForecast.date);
-                    dayInfo = {date: shortForecast.date, taMax: 100, taMin: -49};
-                }
 
                 tempObject = shortForecast;
 
@@ -701,6 +696,12 @@ angular.module('starter.services', [])
                              */
                             shortForecastList[index+1].currentIndex = true;
                         }
+                    }
+                }
+                else if (currentForecast.time < 3) {
+                    if (currentForecast.date == tempObject.date && shortForecastList[index-1].date != currentForecast.date) {
+                        shortForecastList[index-1].currentIndex = true;
+                        currentIndex = index-1;
                     }
                 }
 
