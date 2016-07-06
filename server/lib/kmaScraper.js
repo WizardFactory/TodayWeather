@@ -39,8 +39,9 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     var strAr = $('.ehead').text().split(" ");
 
+    stnWeatherList.pubDate = strAr[strAr.length-1];
+
     if (pubDate) {
-        stnWeatherList.pubDate = strAr[strAr.length-1];
         if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
             var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
             return callback(err);
@@ -191,6 +192,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
                    if (err) {
                        return callback(err);
                    }
+                   log.info(results.stnList.length);
                    callback(err, results);
                });
             }
@@ -540,7 +542,7 @@ KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callbac
         if (err) {
             return callback(err);
         }
-        if (stnHourlyList.length > 1) {
+        if (stnMinuteList.length > 1) {
             log.error('stnHourlyInfo is duplicated stnId=', stnWeatherInfo.stnId);
         }
 
@@ -554,10 +556,11 @@ KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callbac
             });
         }
         else {
-           kmaStnMinute = stnMinuteList[0];
+            kmaStnMinute = stnMinuteList[0];
+            kmaStnMinute.pubDate = pubDate;
         }
 
-        kmaStnMinute.minuteData.push(self._makeDailyData(pushDate, stnWeatherInfo));
+        kmaStnMinute.minuteData.push(self._makeDailyData(pubDate, stnWeatherInfo));
         if (kmaStnMinute.minuteData.length > 60) {
             kmaStnMinute.minuteData.shift();
         }
@@ -741,7 +744,7 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
                 if (err) {
                     return cb(err);
                 }
-                return cb(err, {pubDate: weatherList.pubDate, stnList: weatherList});
+                return cb(err, {pubDate: weatherList.pubDate, stnList: weatherList.stnList});
             });
         },
         function (weatherList, cb) {

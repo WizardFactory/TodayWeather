@@ -151,6 +151,24 @@ router.get('/kmaStnHourly', function (req, res) {
     });
 });
 
+router.get('/kmaStnMinute', function (req, res) {
+    var scrape = new Scrape();
+    scrape.getStnMinuteWeather(function (err, results) {
+        if (err) {
+            if (err === 'skip') {
+                log.info('stn minute weather info is already updated');
+            }
+            else {
+                log.error(err);
+            }
+        }
+        else {
+            log.silly(results);
+        }
+        res.send();
+    });
+});
+
 router.get('/invalidateCloudFront/:items', function(req, res){
     var keydata  = require('../../config/config').keyString;
     var awsData = require('../../config/config').aws;

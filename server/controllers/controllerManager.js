@@ -1998,6 +1998,13 @@ Manager.prototype.startManager = function(){
         setInterval(function() {
             self.checkTimeAndRequestTask(false) ;
         }, 1000*60);
+
+        setInterval(function () {
+            log.info('request kma stn minute');
+            self._requestApi('kmaStnMinute', function () {
+                log.info('response kma stn minute');
+            });
+        }, 1000*60);
     });
 
     return this;

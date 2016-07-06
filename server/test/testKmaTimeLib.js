@@ -25,9 +25,9 @@ describe('unit test - kma time lib', function() {
         assert(yyyymmdd, target, 'Fail to convert date to yyyymmdd');
     });
 
-    it('test convertDateToHHMM', function () {
+    it('test convertDateToHHZZ', function () {
         var date = new Date();
-        var hhmm = kmaTimeLib.convertDateToHHMM(date);
+        var hhmm = kmaTimeLib.convertDateToHHZZ(date);
         var target = date.getHours() < 10 ? '0'+ date.getHours(): ''+date.getHours();
         target += '00';
         assert(hhmm, target, 'Fail to convert date to hhmm');

@@ -775,7 +775,7 @@ function ControllerTown() {
                 now = kmaTimeLib.toTimeZone(9, now);
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
-                var time = kmaTimeLib.convertDateToHHMM(now);
+                var time = kmaTimeLib.convertDateToHHZZ(now);
                 log.info(date+time);
                 controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {

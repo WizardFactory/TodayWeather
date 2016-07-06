@@ -27,9 +27,37 @@ describe('unit test - controller kma stn weather', function() {
     //    var townInfo={first:'서울특별시',second:'송파구', third:'잠실본동', gCoord:{'lat':37.5033556,'lon':127.0864194}};
     //
     //    var date = kmaTimeLib.convertDateToYYYYMMDD(new Date());
-    //    var time = kmaTimeLib.convertDateToHHMM(new Date());
+    //    var time = kmaTimeLib.convertDateToHHZZ(new Date());
     //    console.log('pubDate='+date+time);
     //    controllerKmaStnWeather.getStnHourly(townInfo, date+time, function (err, result) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        else {
+    //            log.info(JSON.stringify(result));
+    //        }
+    //        done();
+    //    });
+    //});
+
+    //it('test get minute stn weather', function(done) {
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //    var townInfo={first:'서울특별시',second:'송파구', third:'잠실본동', gCoord:{'lat':37.5033556,'lon':127.0864194}};
+    //
+    //    var date = kmaTimeLib.convertDateToYYYYMMDD(new Date());
+    //    var time = kmaTimeLib.convertDateToHHMM(new Date());
+    //    console.log('pubDate='+date+time);
+    //    controllerKmaStnWeather.getStnMinute(townInfo, date+time, undefined, function (err, result) {
     //        if (err) {
     //            log.error(err);
     //        }
@@ -62,7 +90,7 @@ describe('unit test - controller kma stn weather', function() {
     //    lineList = lineList.slice(0, lineList.length-1);
     //
     //    var date = kmaTimeLib.convertDateToYYYYMMDD(new Date());
-    //    var time = kmaTimeLib.convertDateToHHMM(new Date());
+    //    var time = kmaTimeLib.convertDateToHHZZ(new Date());
     //    log.info('pubDate='+date+time);
     //
     //    var callCount = 0;

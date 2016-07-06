@@ -12,7 +12,8 @@ var ksiSchema = new mongoose.Schema({
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
         index: '2d'         // create the geospatial index
-    }
+    },
+    rnsHitRate: Number,
 });
 
 ksiSchema.index({stnName:'text'}, {default_language: 'none'});

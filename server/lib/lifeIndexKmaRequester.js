@@ -334,7 +334,7 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
         }
 
         var data = {date: kmaTimeLib.convertDateToYYYYMMDD(startTime),
-                    time: kmaTimeLib.convertDateToHHMM(startTime),
+                    time: kmaTimeLib.convertDateToHHZZ(startTime),
                     value: indexModel[propertyName]};
 
         log.silly(data);
