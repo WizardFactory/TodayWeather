@@ -272,6 +272,29 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
     return Math.round(discomfortIndex);
 };
 
+LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortIndex) {
+    var discomfortGrade = 0;
+
+    if(discomfortIndex === undefined
+        || discomfortIndex < 0)
+    {
+        log.warn('DiscomfortString > invalid parameter');
+        return discomfortGrade;
+    }
+
+    if(discomfortIndex < 68) {
+        discomfortGrade = 1;
+    } else if(discomfortIndex < 75) {
+        discomfortGrade = 2;
+    } else if(discomfortIndex < 80) {
+        discomfortGrade = 3;
+    } else {
+        discomfortGrade = 4;
+    }
+
+    return discomfortGrade;
+};
+
 /**
  * 불쾌지수
  * @param discomfortIndex
