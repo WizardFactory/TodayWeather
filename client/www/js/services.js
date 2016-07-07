@@ -684,7 +684,7 @@ angular.module('starter.services', [])
                 tempObject.timeStr = time + "시";
 
                 if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
-                    currentIndex = index-1;
+                    currentIndex = index;
                     shortForecastList[index].currentIndex = true;
                 }
                 else if (currentForecast.date == tempObject.date && currentForecast.time > tempObject.time) {
