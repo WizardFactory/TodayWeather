@@ -1034,6 +1034,9 @@ function ControllerTown() {
 
         var yesterdayDate = self._getCurrentTimeValue(+9-24);
         var yesterdayItem;
+        if (yesterdayDate.time == '0000') {
+           kmaTimeLib.convert0Hto24H(yesterdayDate);
+        }
         /**
          * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하기 때문에,
          * yesterday도 데이터가 없는 경우에는 그 이전 데이터를 사용하게 변경
