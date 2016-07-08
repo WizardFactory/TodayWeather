@@ -41,8 +41,8 @@ router.get('/', [cTown.getSummary], function(req, res) {
 });
 
 router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
-                                    cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
@@ -50,8 +50,8 @@ router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getSummary, cTown.sendResult]);
 
 router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
-                                    cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
@@ -63,8 +63,8 @@ router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShorte
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
 router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
-                                    cTown.mergeCurrentByShortest,  cTown.mergeShortWithCurrentList,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest,  cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
@@ -87,8 +87,8 @@ router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTo
 router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.convert0Hto24H, cTown.insertIndex,
                                             cTown.insertStrForData, cTown.sendResult]);
 
-router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
-                                            cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
+router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+                                            cTown.convert0Hto24H, cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
                                             cTown.insertStrForData, cTown.getSummary, cTown.sendResult]);
 
 module.exports = router;

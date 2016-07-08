@@ -283,7 +283,6 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
     async.waterfall([function (cb) {
         var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
         async.parallel([function (pCallback) {
-            //#997 이슈로 방안 마련까지, 도시날씨만 사용한다.
             KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(5).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
@@ -329,6 +328,14 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
     return this;
 };
 
+/**
+ * 매분 날씨 정보를 가지고 옴.
+ * @param townInfo
+ * @param dateTime
+ * @param t1h
+ * @param callback
+ * @returns {controllerKmaStnWeather}
+ */
 controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callback) {
     var self = this;
 

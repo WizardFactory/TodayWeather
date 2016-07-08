@@ -846,7 +846,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (callback) {
 };
 
 /**
- * 임시책이고, modelCurrents를 towns로 업데이트 하는 것이 아니라, 자체 list를 가지고 하도록 해야 할듯함.
+ * towns에 측정소 주소를 추가하였음. 일부 섬지역은 current를 제공하지 않음.
  * @param mOriCoord
  * @param callback
  * @private
@@ -1013,7 +1013,7 @@ KmaScraper.prototype.updateRnsHitRates = function (callback) {
 };
 
 /**
- * rns(강수)가 동작하지는 않는 측정소 리스트.
+ * rns(강수)가 동작하지는 않는 측정소 리스트. resetRnsHitRates를 실행하면 아래 리스트 0/1이 되고, 나머지 측정소는 1/1로 설정됨.
  * @param stnId
  * @returns {boolean}
  * @private
@@ -1105,6 +1105,7 @@ KmaScraper.prototype._parseStnAddress = function (addr) {
 /**
  * 측정소가 있는 위치의 날씨 정보를 저장하기 위해서, towns에 측정소 위치를 저장한다.
  * 동네예보를 제공하지 않는 지역들이 있음.섬지역임.
+ * areaNo를 추가하지 않기 때문에 생활지수,보건지수를 구하지 못함.
  * @param callback
  */
 KmaScraper.prototype.addStnAddressToTown = function (callback) {

@@ -760,6 +760,7 @@ KmaIndexService.prototype.getLifeIndexByTown = function(townInfo, callback) {
 
 /**
  * towns db로부터 areaNo정보를 life index kma에 추가함.
+ * kma aws의 정보가 towns에 들어올때, areaNo가 없는 경우가 있음. 그것에 대해서는 추가하지 않음.
  * @param callback
  */
 KmaIndexService.prototype.updateLifeIndexDbFromTowns = function (callback) {

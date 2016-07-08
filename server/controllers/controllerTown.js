@@ -840,7 +840,8 @@ function ControllerTown() {
     };
 
     /**
-     * req.current에만 적용하고 currentlist에서 적용안함.
+     * req.current에만 적용하고 currentlist에는 적용안함.
+     * req.current에 liveTime이라고 새로운 시간 정보를 추가함.
      * @param req
      * @param res
      * @param next
@@ -891,6 +892,7 @@ function ControllerTown() {
                         req.current[key] = stnWeatherInfo[key];
                     }
 
+                    //24시 01분부터 1시까지 날짜 맞지 않음.
                     //req.current.date = date;
                     req.current.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
 
