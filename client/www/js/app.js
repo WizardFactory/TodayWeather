@@ -165,6 +165,25 @@ angular.module('starter', [
                         chart();
                     });
 
+                    /**
+                     * 24시일때, 0으로 변경해야 하고, -1로 인해 한자리 밀리므로 오늘은 3시부터 표시되어야 함.
+                     * @param currentTime
+                     * @param shortList
+                     * @returns {{cx1: *, cx2: *}}
+                     */
+                    function getCx(currentTime, shortList) {
+                        var cx1;
+                        var cx2;
+                        for (var i = 0; i < shortList.length; i = i + 1) {
+                            if (shortList[i].value.day === '오늘') {
+                                cx1 = i + Math.floor(currentTime / 3) - 1;
+                                cx2 = currentTime % 3;
+                                break;
+                            }
+                        }
+                        return {cx1: cx1, cx2: cx2};
+                    }
+
                     var chart = function () {
                         var data = scope.timeChart;
 
@@ -399,15 +418,8 @@ angular.module('starter', [
                                 return currentTime % 3 == 0 ? 11:5;
                             })
                             .attr('cx', function (d) {
-                                var cx1, cx2;
-                                for (var i = 0; i < d.values.length; i = i + 1) {
-                                    if (d.values[i].value.day === '오늘') {
-                                        cx1 = i + Math.floor(currentTime / 3) - 1;
-                                        cx2 = currentTime % 3;
-                                        break;
-                                    }
-                                }
-                                return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                                var cx = getCx(currentTime, d.values);
+                                return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
@@ -420,45 +432,24 @@ angular.module('starter', [
                                 return currentTime % 3 == 0 ? 11:5;
                             })
                             .attr('cx', function (d) {
-                                var cx1, cx2;
-                                for (var i = 0; i < d.values.length; i = i + 1) {
-                                    if (d.values[i].value.day === '오늘') {
-                                        cx1 = i + Math.floor(currentTime / 3) - 1;
-                                        cx2 = currentTime % 3;
-                                        break;
-                                    }
-                                }
-                                return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                                var cx = getCx(currentTime, d.values);
+                                return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
                         point.attr('cx', function (d) {
-                            var cx1, cx2;
-                            for (var i = 0; i < d.values.length; i = i + 1) {
-                                if (d.values[i].value.day === '오늘') {
-                                    cx1 = i + Math.floor(currentTime / 3) - 1;
-                                    cx2 = currentTime % 3;
-                                    break;
-                                }
-                            }
-                            return x.rangeBand() * (cx1 + cx2 / 3) + x.rangeBand() / 2;
+                            var cx = getCx(currentTime, d.values);
+                            return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
                         })
                             .attr('cy', function (d) {
-                                var cx1, cx2;
-                                for (var i = 0; i < d.values.length; i = i + 1) {
-                                    if (d.values[i].value.day === '오늘') {
-                                        cx1 = i + Math.floor(currentTime / 3) - 1;
-                                        cx2 = currentTime % 3;
-                                        break;
-                                    }
-                                }
-                                var cy1 = d.values[cx1].value.t3h;
-                                var cy2 = d.values[cx1+1].value.t3h;
+                                var cx = getCx(currentTime, d.values);
+                                var cy1 = d.values[cx.cx1].value.t3h;
+                                var cy2 = d.values[cx.cx1+1].value.t3h;
 
-                                if (cx2 === 1) {
+                                if (cx.cx2 === 1) {
                                     return y(cy1 + (cy2 - cy1) / 3);
                                 }
-                                else if (cx2 === 2) {
+                                else if (cx.cx2 === 2) {
                                     return y(cy1 + (cy2 - cy1) / 3 * 2);
                                 }
                                 return y(cy1);
