@@ -85,10 +85,12 @@ global.townRss = new controllerShortRss();
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
 
-    var ControllerPush = require('./controllers/controllerPush');
-    var co = new ControllerPush();
-    co.start();
-    co.apnFeedback();
+    if (config.mode === 'gather') {
+        var ControllerPush = require('./controllers/controllerPush');
+        var co = new ControllerPush();
+        co.start();
+        co.apnFeedback();
+    }
 }
 
 // catch 404 and forward to error handler

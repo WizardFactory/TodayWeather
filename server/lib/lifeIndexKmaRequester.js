@@ -767,10 +767,16 @@ KmaIndexService.prototype.updateLifeIndexDbFromTowns = function (callback) {
     Town.find({},{_id:0}).lean().exec(function (err, townList) {
         if (err) {
             log.error(err);
-            return;
+            return callback();
         }
+
         async.map(townList,
             function (town, cb) {
+                if(town.areaNo === undefined) {
+                    log.warn("skip town="+JSON.stringify(town));
+                    return cb(undefined, town.areaNo);
+                }
+
                 LifeIndexKma.find({"areaNo": town.areaNo}, function (err, lifeIndexList) {
                     if (err) {
                         return cb(err);

@@ -169,6 +169,19 @@ router.get('/kmaStnMinute', function (req, res) {
     });
 });
 
+router.get('/updateStnRnsHitRate', function (req, res) {
+    var scrape = new Scrape();
+    scrape.updateRnsHitRates(function (err, results) {
+        if (err) {
+            log.error(err);
+        }
+        else {
+            log.silly(results);
+        }
+        res.send();
+    });
+});
+
 router.get('/invalidateCloudFront/:items', function(req, res){
     var keydata  = require('../../config/config').keyString;
     var awsData = require('../../config/config').aws;

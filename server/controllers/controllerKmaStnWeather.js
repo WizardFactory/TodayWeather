@@ -21,6 +21,7 @@ function controllerKmaStnWeather() {
 /**
  * weather, r1d, s1d는 발생시에만 있고, sensoryTem과 dspls는 둘중 하나만 있음
  * 도시별날씨의 경우 바로 적용.
+ * 매분 가지고 오는 경우에 강수(rns)도 산이랑 구분하는 게 맞는건지 잘 모르겠음.
  * @param stnWeatherList
  * @param t1h
  * @returns {*}
@@ -95,22 +96,6 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
     return mergedStnWeatherInfo;
 };
 
-/**
- * rns(강수)가 동작하지는 않는 측정소 리스트.
- * @param stnId
- * @returns {boolean}
- * @private
- */
-controllerKmaStnWeather._checkRnsWork = function (stnId) {
-    var noWorkRns = ["364", "365", "366", "368", "409", "458", "459", "460", "461", "476", "488", "492", "548", "556"];
-    for (var i=0; i<noWorkRns.length; i++) {
-        if (stnId == noWorkRns[i]) {
-            return false;
-        }
-    }
-    return true;
-};
-
 controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callback) {
     var self = this;
 
@@ -146,7 +131,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                 //log.info(dateTime);
                 //log.info(stnWeatherList[0].pubDate);
                 if ((new Date(stnWeatherList[0].pubDate)).getTime() < limitTime) {
-                    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
+                    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
                     return mCallback();
                 }
 
@@ -164,13 +149,16 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                 }
 
                 //if (self._checkRnsWork(stnInfo.stnId) != true) {
-                if (stnInfo.rnsHitRate < 0.5) {
-                    log.warn("rns is not working stnId="+stnInfo.stnId+" stnName="+
-                                stnInfo.stnName+" rns hit ratio="+stnInfo.rnsHitRate);
+                var rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+
+                if (rnsHitRate < 0.5) {
+                    //log.warn("rns is not working stnId="+stnInfo.stnId+" stnName="+
+                    //            stnInfo.stnName+" rns hit ratio="+rnsHitRate);
                     minuteData.rns = undefined;
                 }
 
-                if (minuteData.rns != undefined) {
+                //log.info("minuteList length="+minuteList.length);
+                if (minuteData.rns != undefined && minuteList.length >= 10) {
                     //15분안에 rain이 하나라도 true이면 rain임.
                     for (var i=0; i < minuteList.length; i++) {
                         if (minuteList[i].rns) {

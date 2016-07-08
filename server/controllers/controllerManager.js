@@ -21,7 +21,7 @@ var modelMidSea = require('../models/modelMidSea');
 var modelMidTemp = require('../models/modelMidTemp');
 
 var midRssKmaRequester = new (require('../lib/midRssKmaRequester'))();
-var PastConditionGather = require('../lib/PastConditionGather');
+//var PastConditionGather = require('../lib/PastConditionGather');
 var keco = new (require('../lib/kecoRequester.js'))();
 var taskKmaIndexService = new (require('../lib/lifeIndexKmaRequester'))();
 
@@ -1919,6 +1919,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
+    if(time === 50) {
+        log.info('push short');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("updateStnRnsHitRate", callback);
+        });
+    }
+
     //if(time === 50 || putAll){
     //    log.info('push invalidateCloudFront');
     //    self.asyncTasks.push(function(callback){
@@ -1926,7 +1933,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //    })
     //}
 
-    if (self.asyncTasks.length <= 16) {
+    if (self.asyncTasks.length <= 17) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {
@@ -2004,7 +2011,7 @@ Manager.prototype.startManager = function(){
             self._requestApi('kmaStnMinute', function () {
                 log.info('response kma stn minute');
             });
-        }, 1000*60);
+        }, 1000*30);
     });
 
     return this;

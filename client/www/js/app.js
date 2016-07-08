@@ -419,7 +419,11 @@ angular.module('starter', [
                             })
                             .attr('cx', function (d) {
                                 var cx = getCx(currentTime, d.values);
-                                return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
+                                var x1 = cx.cx1 + cx.cx2 / 3;
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    x1 += 1 / 6;
+                                }
+                                return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
@@ -433,26 +437,39 @@ angular.module('starter', [
                             })
                             .attr('cx', function (d) {
                                 var cx = getCx(currentTime, d.values);
-                                return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
+                                var x1 = cx.cx1 + cx.cx2 / 3;
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    x1 += 1 / 6;
+                                }
+                                return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
                         point.attr('cx', function (d) {
                             var cx = getCx(currentTime, d.values);
-                            return x.rangeBand() * (cx.cx1 + cx.cx2 / 3) + x.rangeBand() / 2;
+                            var x1 = cx.cx1 + cx.cx2 / 3;
+                            if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                x1 += 1 / 6;
+                            }
+                            return x.rangeBand() * x1 + x.rangeBand() / 2;
                         })
                             .attr('cy', function (d) {
                                 var cx = getCx(currentTime, d.values);
                                 var cy1 = d.values[cx.cx1].value.t3h;
                                 var cy2 = d.values[cx.cx1+1].value.t3h;
 
+                                var y1;
                                 if (cx.cx2 === 1) {
-                                    return y(cy1 + (cy2 - cy1) / 3);
+                                    y1 = cy1 + (cy2 - cy1) / 3;
                                 }
                                 else if (cx.cx2 === 2) {
-                                    return y(cy1 + (cy2 - cy1) / 3 * 2);
+                                    y1 = cy1 + (cy2 - cy1) / 3 * 2;
                                 }
-                                return y(cy1);
+
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    y1 += (cy2-cy1)/6;
+                                }
+                                return y(y1);
                             });
 
                         point.exit()
