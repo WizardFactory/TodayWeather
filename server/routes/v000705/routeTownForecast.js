@@ -62,7 +62,7 @@ router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShorte
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
-router.get('/:region/:city/:town', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
                                     cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
