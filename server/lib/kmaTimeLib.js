@@ -47,13 +47,25 @@ kmaTimeLib.convertDateToYYYYMMDD = function(date) {
     return year+month+day;
 };
 
-kmaTimeLib.convertDateToHHMM = function(date) {
+kmaTimeLib.convertDateToHHZZ = function(date) {
     //I don't know why one more create Date object by aleckim
     var d = new Date(date);
     var hh = '' + (d.getHours());
     if (hh.length < 2)  {hh = '0'+hh; }
 
     return hh+'00';
+};
+
+kmaTimeLib.convertDateToHHMM = function(date) {
+    //I don't know why one more create Date object by aleckim
+    var d = new Date(date);
+    var hh = '' + (d.getHours());
+    if (hh.length < 2)  {hh = '0'+hh; }
+
+    var mm = '' + (d.getMinutes());
+    if (mm.length < 2)  {mm = '0'+mm; }
+
+    return hh+mm;
 };
 
 kmaTimeLib.toTimeZone = function (zone, time) {
@@ -90,10 +102,10 @@ kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD = function (dateStr) {
     return dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
 };
 
-kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoMMoZZ = function(dateStr) {
+kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM = function(dateStr) {
     var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
     if (dateStr.length > 8) {
-        str += '.' + dateStr.substr(8,2) + ':00';
+        str += '.' + dateStr.substr(8,2) + ':' + dateStr.substr(10,2);
     }
     return str;
 };

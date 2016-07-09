@@ -775,7 +775,7 @@ function ControllerTown() {
                 now = kmaTimeLib.toTimeZone(9, now);
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
-                var time = kmaTimeLib.convertDateToHHMM(now);
+                var time = kmaTimeLib.convertDateToHHZZ(now);
                 log.info(date+time);
                 controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {
@@ -812,40 +812,6 @@ function ControllerTown() {
 
                     if (stnHourlyFirst) {
                         req.current.overwrite = true;
-                        if (req.current.rns === true) {
-                            if (req.current.pty === 0) {
-                                log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
-                                    req.params.region + req.params.city + req.params.town);
-
-                                //대충 잡은 값임. 추후 최적화 필요함.
-                                if (req.current.t1h > 2) {
-                                    req.current.pty = 1;
-                                }
-                                else if (req.current.t1h > -1) {
-                                    req.current.pty = 2;
-                                }
-                                else {
-                                    req.current.pty = 3;
-                                }
-                                if (req.current.sky === 1) {
-                                    req.current.sky = 2;
-                                }
-                            }
-                            req.current.rn1 = req.current.rs1h;
-                            if (req.current.rn1 > 10) {
-                                req.current.rn1 = Math.round(req.current.rn1);
-                            }
-                            else {
-                                req.current.rn1 = +(req.current.rn1).toFixed(1);
-                            }
-                        }
-                        else {
-                            if (req.current.pty != 0) {
-                                log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
-                                    req.params.region + req.params.city + req.params.town);
-                                req.current.pty = 0;
-                            }
-                        }
                     }
 
                     //update currentList of req.
@@ -855,7 +821,7 @@ function ControllerTown() {
                             req.currentList[req.currentList.length-1] = req.current;
                         }
                         else {
-                            req.currentList.push(Object.create(req.current));
+                            req.currentList.push(JSON.parse(JSON.stringify(req.current)));
                         }
                     }
 
@@ -873,6 +839,112 @@ function ControllerTown() {
 
     };
 
+    /**
+     * req.current에만 적용하고 currentlist에는 적용안함.
+     * req.current에 liveTime이라고 새로운 시간 정보를 추가함.
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.getKmaStnMinuteWeather = function (req, res, next) {
+        var meta = {};
+        meta.method = 'getKmaStnMinuteWeather';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>', meta);
+
+        if (!req.current)  {
+            req.current={};
+            var nowDate = self._getCurrentTimeValue(+9);
+            req.current.time = nowDate.time;
+            req.current.date = nowDate.date;
+        }
+
+        try {
+            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+                if (err) {
+                    log.error(err);
+                    next();
+                    return;
+                }
+
+                var now = new Date();
+                now = kmaTimeLib.toTimeZone(9, now);
+
+                var date = kmaTimeLib.convertDateToYYYYMMDD(now);
+                var time = kmaTimeLib.convertDateToHHMM(now);
+                log.info(date+time);
+                controllerKmaStnWeather.getStnMinute(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
+                    if (err) {
+                        log.error(err);
+                        next();
+                        return;
+                    }
+
+                    if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
+                        log.error('stnWeatherInfo is invalid!');
+                        next();
+                        return;
+                    }
+
+                    for (var key in stnWeatherInfo) {
+                        req.current[key] = stnWeatherInfo[key];
+                    }
+
+                    //24시 01분부터 1시까지 날짜 맞지 않음.
+                    //req.current.date = date;
+                    req.current.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
+
+                    req.current.overwrite = true;
+                    if (req.current.rns === true) {
+                        if (req.current.pty === 0) {
+                            log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
+                                req.params.region + req.params.city + req.params.town);
+
+                            //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                            if (req.current.t1h > 2) {
+                                req.current.pty = 1;
+                            }
+                            else if (req.current.t1h > -1) {
+                                req.current.pty = 2;
+                            }
+                            else {
+                                req.current.pty = 3;
+                            }
+                            if (req.current.sky === 1) {
+                                req.current.sky = 2;
+                            }
+                        }
+                        req.current.rn1 = req.current.rs1h;
+                        if (req.current.rn1 > 10) {
+                            req.current.rn1 = Math.round(req.current.rn1);
+                        }
+                        else {
+                            req.current.rn1 = +(req.current.rn1).toFixed(1);
+                        }
+                    }
+                    else if (req.current.rns === false) {
+                        if (req.current.pty != 0) {
+                            log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
+                                req.params.region + req.params.city + req.params.town);
+                            req.current.pty = 0;
+                        }
+                    }
+                    else {
+                        log.debug('we did not get rns info');
+                    }
+                    next();
+                });
+            });
+        }
+        catch(e) {
+            if (e) {
+                log.warn(e);
+            }
+            next();
+        }
+    };
     /**
      *
      * @param req
@@ -2103,7 +2175,7 @@ ControllerTown.prototype._getShortestTimeValue = function(gmt) {
 /**
  *
  * @param gmt
- * @returns {{date: *, time: string}}
+ * @returns {{date: string, time: string}}
  */
 ControllerTown.prototype._getCurrentTimeValue = function(gmt) {
     var timeFunction = manager;
@@ -2111,6 +2183,21 @@ ControllerTown.prototype._getCurrentTimeValue = function(gmt) {
     return {
         date: currentDate.slice(0, 8),
         time: currentDate.slice(8, 10) + '00'
+    };
+};
+
+/**
+ * 분까지 전달.
+ * @param gmt
+ * @returns {{date: *, time: *}}
+ * @private
+ */
+ControllerTown.prototype._getCurrentTimeMinuteValue = function(gmt) {
+    var timeFunction = manager;
+    var currentDate = timeFunction.getWorldTime(gmt);
+    return {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8, 12)
     };
 };
 

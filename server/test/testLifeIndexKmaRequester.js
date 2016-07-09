@@ -276,5 +276,29 @@ describe('unit test - requester of kma index service class', function() {
     //        console.log(townList);
     //    });
     //});
+
+    //it('test update lifeindex db from towns', function (done) {
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //        process.exit(-1);
+    //    });
+    //
+    //    reqLifeIndex = new LifeIndexKmaRequester();
+    //    reqLifeIndex.updateLifeIndexDbFromTowns(function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        log.info('Finish updating life index db from towns');
+    //        log.info(results);
+    //        done();
+    //    });
+    //});
 });
 
