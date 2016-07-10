@@ -421,7 +421,7 @@ KmaIndexService.prototype.getLifeIndex = function (indexName, areaNo, callback) 
     else {
         this.requestCount[indexName]++;
     }
-    log.info(indexName+" request count="+this.requestCount[indexName]);
+    log.silly(indexName+" request count="+this.requestCount[indexName]);
 
     req(url, {timeout: 1000*30, json:true}, function (err, response, body) {
         if (err) {
