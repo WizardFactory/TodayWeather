@@ -12,7 +12,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node --expose-gc --max-old-space-size=4096 ./bin/www",
+    "start": "node --expose-gc --max-old-space-size=512 ./bin/www",
     "test": "./node_modules/mocha/bin/mocha",
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
@@ -32,7 +32,7 @@
     "jade": "~1.11.0",
     "jsonwebtoken": "^5.7.0",
     "jwt-simple": "^0.3.0",
-    "mongoose": "^4.3.4",
+    "mongoose": "^4.5.3",
     "morgan": "~1.6.1",
     "newrelic": "^1.24.1",
     "node-gcm": "^0.14.0",

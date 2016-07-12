@@ -1816,7 +1816,7 @@ Manager.prototype._requestApi = function (apiName, callback) {
     var timeout = 1000*60*60*24;
     var url = "http://"+config.ipAddress+":"+config.port+"/gather/";
 
-    log.info('Start '+apiName);
+    log.info('Start url='+url+apiName);
     req(url+apiName, {timeout: timeout}, function(err, response) {
         log.info('Finished '+apiName+' '+new Date());
         if (err) {
@@ -1876,15 +1876,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 3 || time === 6 || time === 9 || putAll) {
-        //related issue #754 aws is not updated at correct time
-        //overwrite
-        log.info('push kma stn hourly');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi('kmaStnHourly', callback);
-        });
-    }
-
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         log.info('push keco');
         self.asyncTasks.push(function (callback) {
@@ -1916,13 +1907,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.info('push short');
         self.asyncTasks.push(function (callback) {
             self._requestApi("short", callback);
-        });
-    }
-
-    if(time === 50) {
-        log.info('push short');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("updateStnRnsHitRate", callback);
         });
     }
 
@@ -2005,13 +1989,6 @@ Manager.prototype.startManager = function(){
         setInterval(function() {
             self.checkTimeAndRequestTask(false) ;
         }, 1000*60);
-
-        setInterval(function () {
-            log.info('request kma stn minute');
-            self._requestApi('kmaStnMinute', function () {
-                log.info('response kma stn minute');
-            });
-        }, 1000*30);
     });
 
     return this;
@@ -2020,6 +1997,52 @@ Manager.prototype.startManager = function(){
 Manager.prototype.stopManager = function(){
     //var self = this;
     //self.stopTownData();
+};
+
+Manager.prototype.startScrape = function () {
+    var self = this;
+    var Scrape = require('../lib/kmaScraper');
+    var scrape = new Scrape();
+
+    setInterval(function () {
+        var time = (new Date()).getUTCMinutes();
+
+        //if (time === 3 || time === 6 || time === 9) {
+        //    //related issue #754 aws is not updated at correct time
+        //    //overwrite
+        //    log.info('request kma stn hourly');
+        //    self._requestApi('kmaStnHourly', function () {
+        //        log.info('kma stn hourly done');
+        //    });
+        //}
+        //
+        //if(time === 50) {
+        //    log.info('update stn rns hit rate');
+        //    self._requestApi('updateStnRnsHitRate', function () {
+        //        log.info('update stn rns hit rate done');
+        //    });
+        //}
+
+        if(time % 5 == 0) {
+            log.info('request kma stn minute');
+            scrape.getStnMinuteWeather(function (err, results) {
+                if (err) {
+                    if (err === 'skip') {
+                        log.info('stn minute weather info is already updated');
+                    }
+                    else {
+                        log.error(err);
+                    }
+                }
+                else {
+                    log.silly(results);
+                    log.info('kma stn minute done');
+                }
+            });
+        }
+
+        //gc(true);
+    }, 1000*60);
 };
 
 module.exports = Manager;
