@@ -158,7 +158,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                 }
 
                 //log.info("minuteList length="+minuteList.length);
-                if (minuteData.rns != undefined && minuteList.length >= 10) {
+                if (minuteData.rns != undefined && minuteList.length >= 5) {
                     //15분안에 rain이 하나라도 true이면 rain임.
                     for (var i=0; i < minuteList.length; i++) {
                         if (minuteList[i].rns) {

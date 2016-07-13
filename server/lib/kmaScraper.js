@@ -925,14 +925,11 @@ KmaScraper.prototype._updateRnsHitRate = function(stnInfo, callback) {
                         return false;
                     });
 
-                    if (minuteList.length < 40)  {
+                    if (minuteList.length < 15)  {
                         return aCallback(new Error("Need more minute weather"));
                     }
                     var rnsCount = 0;
                     var rns = false;
-                    if (stnInfo.stnId == "839") {
-                        log.info(JSON.stringify(minuteList));
-                    }
                     for (var i=0; i<minuteList.length; i++) {
                         if (minuteList[i].rns == undefined) {
 
