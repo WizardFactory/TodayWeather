@@ -415,7 +415,12 @@ angular.module('starter', [
                                 return [d];
                             })
                             .attr('r', function () {
-                                return currentTime % 3 == 0 ? 11:5;
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    return 5;
+                                }
+                                else {
+                                    return currentTime % 3 == 0 ? 11:5;
+                                }
                             })
                             .attr('cx', function (d) {
                                 var cx = getCx(currentTime, d.values);
@@ -458,7 +463,7 @@ angular.module('starter', [
                                 var cy1 = d.values[cx.cx1].value.t3h;
                                 var cy2 = d.values[cx.cx1+1].value.t3h;
 
-                                var y1;
+                                var y1 = cy1;
                                 if (cx.cx2 === 1) {
                                     y1 = cy1 + (cy2 - cy1) / 3;
                                 }
@@ -492,7 +497,12 @@ angular.module('starter', [
                             .style("fill", function (d) {
                                 if (d.name == "today") {
                                     if (d.value.time  === currentTime && d.value.date === scope.currentWeather.date) {
-                                       return '#fefefe';
+                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                            return '#0288D1';
+                                        }
+                                        else {
+                                            return '#fefefe';
+                                        }
                                     }
                                 }
                                 return '#0288D1';
@@ -510,7 +520,12 @@ angular.module('starter', [
                             .style("fill", function (d) {
                                 if (d.name == "today") {
                                     if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
-                                       return '#fefefe';
+                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                            return '#0288D1';
+                                        }
+                                        else {
+                                            return '#fefefe';
+                                        }
                                     }
                                 }
                                 return '#0288D1';

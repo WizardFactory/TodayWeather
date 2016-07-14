@@ -197,5 +197,31 @@ describe('unit test - kma city weather scraping', function() {
     //        done();
     //    });
     //});
+
+    //it('test reset mountain info', function (done) {
+    //    this.timeout( 300*1000);
+    //
+    //    var controllerManager = require('../controllers/controllerManager');
+    //    global.manager = new controllerManager();
+    //
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //    var scrape = new Scrape();
+    //    scrape.resetMoutainInfo(function (err) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        done();
+    //    });
+    //});
 });
 

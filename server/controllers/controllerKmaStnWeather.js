@@ -32,39 +32,9 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
                         'r1d', 's1d', 'reh', 'wdd', 'vec', 'wsd', 'hPa', 'rs1h', 'rs1d', 'rns'];
     var propertyCount = 0;
     var mergedStnWeatherInfo;
-    var tmpDiff = 0;
-    var nextTmpDiff = 0;
 
     for (var j=0; j<stnWeatherList.length; j++) {
         var stnWeatherInfo = stnWeatherList[j];
-
-        if (stnWeatherInfo.t1h == undefined) {
-            continue;
-        }
-
-        //도시별날씨라면 적용함.
-        if (stnWeatherInfo.isCityWeather == false) {
-            if (t1h != undefined) {
-                tmpDiff = Math.abs(t1h - stnWeatherInfo.t1h);
-                if (stnWeatherList[j+1] && stnWeatherList[j+1].t1h != undefined) {
-                    nextTmpDiff =  Math.abs(t1h - stnWeatherList[j+1].t1h);
-                    //0.5도 이내 차이는 무시
-                    if (tmpDiff > nextTmpDiff+0.5) {
-                        continue;
-                    }
-                }
-                else {
-                    //하나 뿐이거나, 마지막꺼는 잘 못 될 수 있어서 사용 안함.
-                    //다음 측정소에서 정보를 못 가지고 오는 경우에도 버림.
-                    continue;
-                }
-            }
-
-            if (j >= 2 && mergedStnWeatherInfo == undefined) {
-                //기본 값이 근접 1,2에서 못 만들면 버림.
-                continue;
-            }
-        }
 
         for (var i=2; i<propertyName.length; i++) {
             if (stnWeatherInfo[propertyName[i]] != undefined) {
@@ -159,7 +129,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
 
                 //log.info("minuteList length="+minuteList.length);
                 if (minuteData.rns != undefined && minuteList.length >= 5) {
-                    //15분안에 rain이 하나라도 true이면 rain임.
+                    //limtTime안에 rain이 하나라도 true이면 rain임.
                     for (var i=0; i < minuteList.length; i++) {
                         if (minuteList[i].rns) {
                             minuteData.rns = true;
@@ -267,6 +237,23 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
 };
 
 /**
+ * 사용할 stn를 선정한다. 산 등 고도가 주변지역보다 너무 차이 나는 경우 제외.
+ * @param stnList
+ * @returns {*}
+ * @private
+ */
+controllerKmaStnWeather._filterStnList = function (stnList) {
+    return stnList.filter(function (stn) {
+        if (stn.isMountain == undefined) {
+            return true;
+        }
+        if (stn.isCityWeather) return true;
+
+        return !stn.isMountain;
+    });
+};
+
+/**
  * KMA station은 시도별날씨 정보를 제공하는 곳과 아닌 곳이 있어서 두개 구분하고, 시도별날씨를 요청에 꼭 하나 넣도록 한다.
  * 근접한 측정소의 온도값이 다은 측정소보다 차가 크다면, 산이나 높은 고도에 있는 것으로 보고, 측정값을 제외한다.
  * @param townInfo
@@ -283,14 +270,14 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
     async.waterfall([function (cb) {
         var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
         async.parallel([function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(5).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }
                 return pCallback(err, kmaStnList);
             });
         }, function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }
@@ -300,7 +287,8 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
             if (err) {
                 return cb(err);
             }
-            cb(err, results[0].concat(results[1]));
+            var stnList = self._filterStnList(results[0].concat(results[1])) ;
+            cb(err, stnList);
         });
     }, function (stnList, cb) {
         self._getStnHourlyList(stnList, stnDateTime, function (err, results) {
@@ -312,7 +300,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
     }, function (stnHourWeatherList, cb) {
         var mergedStnWeather = self._mergeStnWeatherList(stnHourWeatherList, t1h);
         if (mergedStnWeather == undefined) {
-            return cb(new Error('Fail to make stn Weather info town='+JSON.stringify(townInfo)));
+            return cb(new Error('Fail to make stn Hourly Weather info town='+JSON.stringify(townInfo)));
         }
         else {
             mergedStnWeather.stnDateTime = stnHourWeatherList[0].date;
@@ -344,11 +332,13 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
 
     async.waterfall([
             function (aCallback) {
-                KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.3}}).limit(9).lean().exec(function (err, kmaStnList) {
+                KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
                     if (err) {
                         return aCallback(err);
                     }
-                    return aCallback(err, kmaStnList);
+
+                    var stnList = self._filterStnList(kmaStnList) ;
+                    return aCallback(err, stnList);
                 });
             },
             function (stnList, aCallback) {
@@ -362,7 +352,7 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
             function (stnMinuteWeatherList, aCallback) {
                 var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList, t1h);
                 if (mergedStnWeather == undefined) {
-                    return aCallback(new Error('Fail to make stn Weather info town='+JSON.stringify(townInfo)));
+                    return aCallback(new Error('Fail to make stn Minute Weather info town='+JSON.stringify(townInfo)));
                 }
                 else {
                     mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
