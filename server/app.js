@@ -93,6 +93,10 @@ if (config.mode === 'gather' || config.mode === 'local') {
     }
 }
 
+if (config.mode === 'scrape' || config.mode === 'local') {
+    manager.startScrape();
+}
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found url='+req.originalUrl);
