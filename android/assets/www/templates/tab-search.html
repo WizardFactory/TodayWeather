@@ -1,0 +1,54 @@
+<ion-view hide-nav-bar="true">
+    <ion-header-bar class="search-header">
+        <label class="item-input-wrapper">
+            <i class="icon ion-ios-search placeholder-icon"></i>
+            <input type="text" placeholder="도시명을 입력하세요" ng-model="searchWord" ng-change="OnChangeSearchWord()">
+        </label>
+        <a class="icon ion-ios-location-outline" ng-click="OnSearchCurrentPosition()"></a>
+        <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
+    </ion-header-bar>
+    <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
+                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentBottom+'px'}">
+        <div style="height:16px;"></div>
+        <div class="list list-inset" ng-if="searchWord!==undefined">
+            <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
+                <div class="row row-no-padding">
+                    <div class="col search-item">
+                        {{result.first}} {{result.second}} {{result.third}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="list list-inset" ng-if="searchWord===undefined">
+            <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
+                <div class="row row-no-padding">
+                    <div class="col search-item" ng-click="OnSelectCity($index)" >
+                        {{city.address[0]}}<br>{{city.address[1]}}
+                        <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
+                    </div>
+                    <div class="col search-item" ng-click="OnSelectCity($index)">
+                        <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
+                    </div>
+                    <div class="col search-item" style="text-align: center" ng-click="OnSelectCity($index)">
+                        {{city.t1h}}˚<br>
+                        <span style="font-size: 12px;">{{city.tmn}}˚/{{city.tmx}}˚</span>
+                    </div>
+                    <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenTimePicker($index)">
+                        <a class="icon" ng-class="city.alarmInfo == undefined?'ion-android-notifications-none':'ion-android-notifications'"></a>
+                    </div>
+                    <div class="search-item last-item" ng-show="isEditing && city.currentPosition">
+                        <label class="toggle toggle-search">
+                            <input type="checkbox" ng-model="city.disable" ng-true-value="false" ng-false-value="true" ng-change="OnDisableCity()">
+                            <div class="track">
+                                <div class="handle"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="search-item last-item" ng-show="isEditing && !city.currentPosition" ng-click="OnDeleteCity($index)">
+                        <a class="icon ion-ios-close-outline"></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ion-content>
+</ion-view>

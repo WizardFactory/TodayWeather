@@ -5,8 +5,9 @@
 "use strict";
 
 var fs = require('fs');
-var indexList = fs.readFileSync('./data/areaNoKma.csv').toString().split('\n');
-var baseList = fs.readFileSync('./data/base.csv').toString().split('\n');
+var targetName = './utils/data/part.csv';
+var indexList = fs.readFileSync('./utils/data/areaNoKma.csv').toString().split('\n');
+var baseList = fs.readFileSync(targetName).toString().split('\n');
 
 function addAreaCodeToBase() {
 
@@ -30,7 +31,8 @@ function addAreaCodeToBase() {
     if (i >= baseList.length) {
 
       //console.log("Fail to find " + area.toString());
-      baseList.push(indexArea);
+      //if use base.csv, have to push new data
+      //baseList.push(indexArea);
     }
   });
 }
@@ -38,7 +40,7 @@ function addAreaCodeToBase() {
 function saveBaseWithAreaCode() {
   baseList.sort();
   baseList.unshift('대분류,중분류,소분류,위도,경도,지점코드');
-  fs.writeFile('./data/base.csv', baseList.join('\n'), function (err) {
+  fs.writeFile(targetName, baseList.join('\n'), function (err) {
     if(err) {
       throw err;
     }

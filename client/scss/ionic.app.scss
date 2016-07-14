@@ -15,40 +15,35 @@ $royal:                           #886aea !default;
 $dark:                            #444 !default;
 */
 
-$calm:                            #22a1db !default;
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 @font-face {
-  font-family: "helvetica neue ultralight";
-  src: url("../fonts/HelveticaNeue-UltraLight.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro";
+  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
+  font-weight: 300; //Light
 }
 
 @font-face {
-  font-family: "helvetica neue light";
-  src: url("../fonts/HelveticaNeueLTPro-Lt.otf") format("opentype");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro";
+  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
+  font-weight: 400; //Normal
 }
 
 @font-face {
-  font-family: "Nanum Barun Gothic UltraLight";
-  src: url("../fonts/NanumBarunGothicUltraLight.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
+  font-family: "Bareun Dotum Pro";
+  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
+  font-weight: 700; //Bold
 }
 
-@font-face {
-  font-family: "Nanum Barun Gothic Light";
-  src: url("../fonts/NanumBarunGothicLight.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
-}
+$font-family-base: "Bareun Dotum Pro", sans-serif !default;
 
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
+
+.popup-body {
+  line-height: 20px;
+}
 
 .scroll {
   height: 100%;
@@ -59,154 +54,82 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 }
 
 .col {
-  font-family: "Nanum Barun Gothic UltraLight";
+  font-weight: 300;
 }
 
 .row + .row {
    margin-top: 0;
 }
 
-.top-time {
-  padding: 5px;
-  text-align: left;
-  font-family: 'Nanum Barun Gothic Light';
+.textFont {
+  font-weight: 400;
 }
 
-.region {
-  display: table;
+.digitFont {
+  font-weight: 300;
 }
 
-.region p {
-  display: table-cell;
-  vertical-align: middle;
+.cityArrow {
+  width: 10%;
+  margin: auto;
   text-align: center;
-  margin: 0;
-  font-size: 26px;
 }
 
-.region-sum {
-  display: table;
-}
-
-.region-sum p {
-  display: table-cell;
-  vertical-align: middle;
+.topMainBox {
+  width: 80%;
+  margin: auto;
   text-align: center;
-  margin: 0;
-  font-size: 21px;
-}
-
-.big-digit {
-  font-family: 'helvetica neue ultralight';
-  text-align: right;
-  font-size: 89px;
-  letter-spacing: -3px;
-}
-
-.big-temp-point img {
-  width: 14px;
-}
-
-.big-temp-sky-state img {
-  width: 40px;
 }
 
 .timeChart {
-  width: 1248px; //52px per col
+  width: 1716px; //52px per col * 33
 }
 
 .weeklyChart {
   width: 936px; //52px per col * 18
 }
 
-.small-time {
-  display: table;
-}
-
-.small-time p {
-  display: table-cell;
-  vertical-align: middle;
-  font-family: 'Nanum Barun Gothic Light';
-  text-align: center;
-  font-size: 14px;
-  margin: 0;
-}
-
-.small-image {
-  display: table;
-}
-
-.small-image div {
-  display: table-cell;
-  vertical-align: middle;
-}
-
-.small-image div img {
-  width: 24px;
-  margin: 0 auto;
-  display: block;
-}
-
-.small-digit {
-  display: table;
-}
-
-.small-digit p {
-  display: table-cell;
-  vertical-align: middle;
-  font-family: 'helvetica neue light';
-  text-align: center;
-  font-size: 15px;
-  margin: 0;
-}
-
+/* guide */
 .guide-content {
-  width: 100%;
-  height: 100%;
-  padding: 13px;
-  background-color: #231815;
-  opacity: 0.8;
-  color: white;
-  font-family: "Nanum Barun Gothic UltraLight";
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 55px;
+  overflow: hidden;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 
-.guide-row {
+.guide-content-text {
   width: 100%;
-  display: table;
+  margin: 0 0 5px;
   text-align: center;
+  color: inherit;
 }
 
-.guide-col {
-  width: 50%;
-  display: table-cell;
+.guide-pager {
+  width: 100%;
+  height: 56px;
+  position: absolute;
+  bottom: 0;
+  border-top: 1px lightgray solid;
+  z-index: 2;
 }
 
-.guide-col-left-top {
-  text-align: left;
-  vertical-align: top;
-}
-
-.guide-col-right-top {
+.guide-pager-left {
+  width: 30%;
+  padding: 20px;
+  float: left;
   text-align: right;
-  vertical-align: top;
 }
 
-.guide-col-left-middle {
+.guide-pager-right {
+  width: 30%;
+  padding: 20px;
+  float: right;
   text-align: left;
-  vertical-align: middle;
-}
-
-.guide-col-right-middle {
-  text-align: right;
-  vertical-align: middle;
-}
-
-.guide-img-top {
-  width: 30px;
-}
-
-.guide-img {
-  width: 60px;
 }
 
 /* time chart style */
@@ -237,7 +160,7 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 .circle-today-current {
   stroke: #ffffff;
   stroke-width: 2px;
-  fill: #ff0000;
+  fill: #FF5252;
 }
 
 .circle-yesterday-current {
@@ -248,18 +171,29 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
 
 .text-today {
   fill: #ffffff;
-  font-family: 'helvetica neue light';
-  font-size: 20px;
+  opacity: 0.87;
+  font-weight: 300;
+  font-size: 15px;
 }
 
 .text-yesterday {
-  fill: #d0d0d0;
-  font-family: 'helvetica neue light';
-  font-size: 20px;
+  fill: #90A4AE;
+  opacity: 0.54;
+  font-weight: 300;
+  font-size: 15px;
 }
 
 .circle-hidden, .text-hidden {
   visibility: hidden;
+}
+
+.axis .minor line {
+  stroke: #777;
+  stroke-dasharray: 2,2;
+}
+
+.x.axis line {
+  stroke: #fff;
 }
 
 /* day chart style */
@@ -267,245 +201,462 @@ $ionicons-font-path: "../lib/ionic/fonts" !default;
   fill: #ffffff;
 }
 
+//.detail-image {
+//  height: 100%;
+//  display: table;
+//}
+
+//.detail-image div {
+//  display: table-cell;
+//  vertical-align: middle;
+//}
+
+//.detail-image div img {
+//  width: 40px;
+//  margin: 0 auto;
+//  display: block;
+//}
+
+//.detail-text {
+//  display: table;
+//  height: 100%;
+//}
+
+//.detail-text p {
+//  display: table-cell;
+//  vertical-align: middle;
+//  font-weight: 700;
+//  line-height: 24px;
+//  font-size: 20px;
+//  padding-left: 5px;
+//  color: #ffffff;
+//  margin: 0;
+//}
+
+//.detail-item {
+//  background-color: transparent;
+//  color: inherit;
+//  margin-left: 0;
+//  margin-right: 0;
+//  padding: 0;
+//  height: 80px;
+//}
+
+.detail-item-p {
+  margin: auto 0 auto 8px;
+  width: 200px
+}
+
+
+.main-content {
+  width: 100%;
+  //height: 100%;
+  color: white;
+}
+
+.current-content {
+  //height: 42%;
+}
+
+.extend-content {
+  width: 100%;
+  //height: 58%;
+}
+
+.chart-content {
+  //height: 54%;
+  width: 100%;
+  margin: 0 0 5px;
+}
+
+.chartBox {
+  padding: 0;
+  //height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-content {
+  flex : 1;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-border {
+  box-shadow: 1px 0 0 0 rgba(254, 254, 254, 0.1) inset;
+}
+
+.table-items {
+  height: inherit;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.tabs-dark .tabs {
+  background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
+  background-color: transparent;
+}
+
+.pane, .view {
+  background-color: transparent;
+}
+
+.purchase-content {
+  background-color: #F5F5F5;
+  width: 100%;
+  height: 100%;
+}
+
+.item-center {
+  display: block;
+  margin: auto;
+}
+
+/* search */
+.search-header {
+  padding: 5px 5px 10px 10px;
+  background-color: #EC407A;
+  background-image: none;
+}
+
+.search-header label {
+  margin-right: 5px;
+}
+
+.search-header input {
+  background-color: transparent;
+}
+
+.search-header a {
+  padding: 0px 7px;
+  color: white;
+  font-size: 25px;
+}
+
+.search-content {
+}
+
+.search-content .list {
+  margin-top: 0px;
+  background-color: transparent;
+}
+
+.search-content .item {
+  background-color: transparent;
+}
+
+.search-item {
+  margin: auto;
+  text-align: left;
+  color: white;
+  font-weight: 700;
+  font-size: 17px;
+  opacity: 0.84;
+}
+
+.search-item.last-item {
+  width: 48px;
+  text-align: center;
+  font-size: 28px;
+  margin: auto 0;
+}
+
+.search-item img {
+  display: block;
+  margin: auto;
+  width: 48px;
+}
+
+.search-item a {
+  color: white;
+}
+
+.search-item .toggle, .search-item .track {
+  width: 100%;
+}
+
+.search-item .ion-ios-close-outline:before {
+  font-weight: 700;
+}
+
+.toggle.toggle-search {
+  margin: 0px;
+}
+
+.toggle.toggle-search .track {
+  height: 14px;
+  border: 0px;
+  border-radius: 8px;
+  margin: auto 0px;
+  background-color: rgba(158,158,158,0.8);
+}
+
+.toggle.toggle-search input:checked + .track {
+  background-color: #673AB7;
+}
+
+.toggle.toggle-search .track .handle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  left: 5px;
+  top: auto;
+  bottom: auto;
+  margin-top: -3px;
+  background-color: white;
+}
+
+.toggle.toggle-search input:checked + .track .handle {
+  background-color: white;
+  left: auto;
+  right: 25px;
+}
+
+/* popup */
+.ionic_popup .popup {
+  background-color: #ffffff;
+}
+
+.ionic_popup .popup-head {
+  height: 44px;
+  background-color: #03A9F4;
+  text-align: center;
+  line-height: 44px;
+}
+
+.ionic_popup .popup-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ionic_popup .popup-body {
+  padding: 0;
+}
+
+.ionic_popup .popup-buttons {
+  padding: 0;
+  min-height: 44px;
+  height: 44px;
+}
+
+.ionic_popup .popup-buttons .button:not(:last-child) {
+  margin-right: 1px;
+}
+
+.ionic_popup .button_cancel, .ionic_popup .button_close {
+  background-color: #03A9F4;
+  color: #ffffff;
+}
+
+//Dense scripts
+.display4 {
+  font-size: 112px;
+  opacity: 0.54;
+  font-weight: 300;
+  letter-spacing: -10px;
+}
+
+.display3 {
+  font-size: 56px;
+  opacity: 0.54;
+  font-weight: 400;
+  letter-spacing: -5px;
+}
+
+.display2 {
+  font-size: 45px;
+  opacity: 0.54;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.display1 {
+  font-size: 34px;
+  opacity: 0.54;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.headline {
+  font-size: 24px;
+  opacity: 0.87;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.title {
+  font-size: 21px;
+  opacity: 0.87;
+  font-weight: 700;
+  //letter-spacing: 5px;
+}
+
+p small {
+  font-size: 10px;
+}
+
+.subheading {
+  font-size: 17px;
+  opacity: 0.87;
+  font-weight: 400;
+  //letter-spacing: 5px;
+}
+
+.body2 {
+  font-size: 15px;
+  opacity: 0.87;
+  font-weight: 700;
+  letter-spacing: 5px;
+}
+
+.body1 {
+  font-size: 15px;
+  opacity: 0.87;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+
+.caption {
+  font-size: 13px;
+  opacity: 0.54;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
+
+.button {
+  font-size: 15px;
+  opacity: 0.87;
+  font-weight: 700;
+  letter-spacing: 5px;
+}
+
+
+[md-page-header] {
+  padding: 0;
+  //height: auto;
+  color: white;
+  background-color: initial;
+  margin: auto;
+  //background-position: 50% 50%;
+  //background-size: 100%;
+  //background-image: initial;
+}
+
+[md-header-picture] {
+  //  position: relative;
+  //  width: 100%;
+  //  height: 0;
+  //  /* Simple trick to keep a 16:9 ratio on your background image (height=0;padding-bottom=56.25%) */
+  //  padding-bottom: 56.25%;
+  //  overflow: hidden;
+  //  background-size: 160%;
+  //  /* You can override this value if your picture has a weird ratio */
+  background-position: 50% 50%;
+}
+
+//healthy color
+.good {
+  color: #448AFF;
+  opacity: 0.87;
+}
+
+.moderate {
+  color: #00E676;
+  opacity: 0.87;
+}
+
+.unhealthy-for-sensitive {
+  color: #FFD600;
+  opacity: 0.87;
+}
+
+.unhealthy {
+  color: #FF6D00;
+  opacity: 0.87;
+}
+
+.very-unhealthy {
+  color: #FF1744;
+  opacity: 0.87;
+}
+
+.hazardous {
+  color: #795548;
+  opacity: 0.87;
+}
+
+//chrome extension
+
 //iphone 4
-@media only screen and (min-device-width: 320px)
-    and (max-device-width: 480px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 320/480)
+@media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/480)
 {
-  .region  p {
-    font-size: 20px;
-  }
-
-  .region-sum p {
-    font-size: 18px;
-  }
-
-  .big-digit {
-    font-size: 89px;
-    letter-spacing: -3px;
-  }
-
-  .big-temp-point img{
-    width: 14px;
-  }
-
-  .big-temp-sky-state img{
-    width: 40px;
-  }
-
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
     width: 954px; //53px per col *18
   }
-
-  .small-time p {
-    font-size: 13px;
-  }
-
-  .small-image div img {
-    width: 20px;
-  }
-
-  .small-digit p {
-    font-size: 14px;
-  }
 }
 
 //iphone 5
-@media only screen and (min-device-width: 320px)
-    and (max-device-width: 568px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 320/568)
+@media only screen and (min-device-width: 320px) and (max-device-width: 568px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/568)
 {
-  .region p {
-    font-size: 20px;
-  }
-
-  .region-sum p {
-    font-size: 18px;
-  }
-
-  .big-digit {
-    font-size: 100px;
-    letter-spacing: -2px;
-  }
-
-  .big-temp-point img{
-    width: 14px;
-  }
-
-  .big-temp-sky-state img{
-    width: 52px;
-  }
-
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
     width: 954px; //53px per col * 18
-  }
-
-  .small-time p {
-    font-size: 14px;
-  }
-
-  .small-image div img {
-    width: 24px;
-  }
-
-  .small-digit p {
-    font-size: 15px;
   }
 }
 
 //iphone 6
-@media only screen and (min-device-width: 375px)
-    and (max-device-width: 667px)
-    and (-webkit-min-device-pixel-ratio: 2)
-    and (device-aspect-ratio: 375/667)
+@media only screen and (min-device-width: 375px) and (max-device-width: 667px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 375/667)
 {
-   .region p {
-    font-size: 26px;
-  }
-
-  .big-digit {
-    font-size: 115px;
-    letter-spacing: -3px;
-  }
-
-  .big-temp-point img{
-    width: 16px;
-  }
-
-  .big-temp-sky-state img{
-    width: 58px;
-  }
-
   .timeChart {
-    width: 1272px; //53px per col
+    width: 1749px; //53px per col * 33
   }
 
   .weeklyChart {
     width: 954px; //53px per col * 18
   }
-
-  .small-time p {
-    font-size: 14px;
-  }
-
-  .small-image div img {
-    width: 30px;
-  }
-
-  .small-digit p {
-    font-size: 15px;
-  }
 }
 
 //iphone 6+
-@media only screen and (min-device-width: 414px)
-    and (max-device-width: 736px)
-    and (-webkit-min-device-pixel-ratio: 3)
-    and (device-aspect-ratio: 414/736)
+@media only screen and (min-device-width: 414px) and (max-device-width: 736px) and (-webkit-min-device-pixel-ratio: 3) and (device-aspect-ratio: 414/736)
 {
-  .region p {
-    font-size: 28px;
-  }
-
-  .region-sum p {
-    font-size: 23px;
-  }
-
-  .big-digit {
-    font-size: 135px;
-    letter-spacing: -6px;
-  }
-
-  .big-temp-point img{
-    width: 18px;
-  }
-
-  .big-temp-sky-state img{
-    width: 72px;
-  }
-
   .timeChart {
-    width: 1416px; // 59px per col
+    width: 1947px; // 59px per col * 33
   }
 
   .weeklyChart {
     width: 1062px; //59px per col * 18
   }
-
-  .small-time p {
-    font-size: 15px;
-  }
-
-  .small-image div img {
-    width: 32px;
-  }
-
-  .small-digit p {
-    font-size: 16px;
-  }
 }
 
-/* SS S3 */
-@media screen and (device-width: 320px) and (device-height: 640px)
-    and (device-aspect-ratio: 320/640)
+/* SS S3, note2*/
+@media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 2)
 {
-  .timeChart {
-    width: 1272px; //53 px per col
-  }
-
-  .weeklyChart {
-    width: 954px; //53px per col * 18
-  }
 }
 
 /* SS Galaxy Note3, S5, S4, S6 */
-//It's default
-@media screen and (device-width: 360px) and (device-height: 640px)
-    and (device-aspect-ratio: 360/640)
+@media screen and (device-width: 360px) and (device-height: 640px) and (-webkit-min-device-pixel-ratio: 3)
 {
-  .big-digit {
-    font-size: 118px;
+}
+
+/* SS Galaxy Note5, G6, .. QHD */
+@media screen and (device-width: 412px) and (device-height: 732px) and (device-aspect-ratio: 412/732)
+{
+  .timeChart {
+    width: 1942px; // 58.85px per col * (41-8)
   }
 
-  .big-temp-point img {
-    width: 18px;
+  .weeklyChart {
+    width: 1059px; //58.85px per col * 18
   }
-
-  .big-temp-sky-state img {
-    width: 54px;
-  }
-}
-
-.main-content {
-  width: 100%;
-  height: 100%;
-  color: white;
-}
-
-.main-content.short-forcast {
-  background-color: #22a1db;
-}
-
-.main-content.mid-forcast {
-  background-color: #0fbe96;
-}
-//
-//.scroll-content {
-//  background: url("../img/screen-dash.png");
-//  background-size: cover;
-//}
-
-.tabs {
-  border: 0;
-  background-size: 0;
 }

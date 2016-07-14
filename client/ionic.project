@@ -11,8 +11,15 @@
   ],
   "proxies": [
     {
-      "path": "/town",
-      "proxyUrl": "http://d2ibo8bwl7ifj5.cloudfront.net/town"
+      "path": "/v000705",
+      "proxyUrl": "http://tw-wzdfac.rhcloud.com/v000705"
+    }
+  ],
+  "browsers": [
+    {
+      "platform": "android",
+      "browser": "crosswalk",
+      "version": "12.41.296.5"
     }
   ]
 }

@@ -4,6 +4,8 @@
  * Module dependencies.
  */
 
+'use strict';
+
 var app = require('../app');
 var debug = require('debug')('server:server');
 var http = require('http');
@@ -12,21 +14,10 @@ var config = require('../config/config');
 /**
  * Get port from environment and store in Express.
  */
-var port;
-var local_ipaddress;
-if(config.mode === 'local'){
-  port = normalizePort(process.env.PORT || '3000');
 
-}
-else{
-  local_ipaddress = process.env.OPENSHIFT_NODEJS_IP;
-  port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+var local_ipaddress = config.ipAddress;
+var port = normalizePort(config.port);
 
-  if(local_ipaddress === "undefined") {
-    console.info('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-    local_ipaddress = "127.0.0.1";
-  }
-}
 app.set('port', port);
 
 /**
@@ -35,19 +26,18 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
+if (config.mode === 'gather') {
+  server.setTimeout(1000*60*60*24);
+}
+
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-if(config.mode === 'local'){
-  server.listen(port);
-}
-else{
-  server.listen(port, local_ipaddress, function() {
-    console.log('%s: Node server started on %s:%d ...',
-        Date(Date.now() ), local_ipaddress, port);
-  });
-}
+server.listen(port, local_ipaddress, function() {
+  console.log('%s: Node server started on %s:%d ...', Date(Date.now() ), local_ipaddress, port);
+});
+
 server.on('error', onError);
 server.on('listening', onListening);
 
@@ -80,9 +70,7 @@ function onError(error) {
     throw error;
   }
 
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  var bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
@@ -105,8 +93,6 @@ function onError(error) {
 
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
+  var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }

@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.0.1",
+  "version": "0.7.5",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -13,24 +13,40 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "test": "mocha",
-    "initdata": "node ./utils/initTownDataToMongo"
-//    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo"
+    "test": "./node_modules/mocha/bin/mocha",
+    "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {
+    "apn": "^1.7.5",
+    "async": "^1.4.2",
+    "aws-sdk": "^2.2.35",
     "body-parser": "~1.13.1",
+    "cheerio": "^0.20.0",
     "compress": "^0.99.0",
     "compression": "^1.5.2",
     "cookie-parser": "~1.3.5",
     "debug": "~2.2.0",
     "express": "~4.13.0",
+    "iconv": "^2.1.11",
+    "in-app-purchase": "^1.0.6",
     "jade": "~1.11.0",
+    "jsonwebtoken": "^5.7.0",
     "jwt-simple": "^0.3.0",
-    "mongoose": "^4.1.8",
+    "mongoose": "^4.3.4",
     "morgan": "~1.6.1",
+    "newrelic": "^1.24.1",
+    "node-gcm": "^0.14.0",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
+    "tracer": "^0.8.3",
     "winston": "^1.0.1",
+    "winston-logentries": "^2.0.0",
     "xml2js": "^0.4.9"
-  }
+  },
+  "devDependencies": {
+    "mocha": "^2.3.3",
+    "should": "^8.3.0",
+    "supertest": "^1.2.0"
+  },
+  "main": "./bin/www"
 }

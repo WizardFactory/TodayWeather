@@ -39,10 +39,13 @@ function CollectData(options, callback){
         [
             {name: '강원도', code: '105'},
             {name: '전국', code: '108'},
-            {name: '경기도', code: '109'},
-            {name: '충청도', code: '133'},
-            {name: '전라도', code: '156'},
-            {name: '경상도', code: '159'},
+            {name: '서울,인천,경기도', code: '109'},
+            {name: '충청북도', code: '131'},
+            {name: '대전,세종,충청남도', code: '133'},
+            {name: '전라북도', code: '146'},
+            {name: '광주,전라남도', code: '156'},
+            {name: '대구,경상북도', code: '143'},
+            {name: '부산,울산,경상남도', code: '159'},
             {name: '제주도', code: '184'}
         ]
     );
@@ -50,8 +53,8 @@ function CollectData(options, callback){
     self.listAreaCode = Object.freeze(
         [
             {name: '경기도', code: '11B00000'},
-            {name: '강원도 영서', code: '11D10000'},
-            {name: '강원도 영동', code: '11D20000'},
+            {name: '강원도 영서', code: '11D10000'}, //춘천
+            {name: '강원도 영동', code: '11D20000'}, //강릉
             {name: '충청남도', code: '11C20000'},
             {name: '충청북도', code: '11C10000'},
             {name: '전라남도', code: '11F20000'},
@@ -66,8 +69,8 @@ function CollectData(options, callback){
         [
             {name: '서울', code: '11B10101'}, // 서울
             {name: '인천', code: '11B20201'}, // 경기 서부
-                {name: '수원', code: '11B20601'}, // 경기 남부
-            {name: '문산', code: '11B20305'}, // 경기 북부
+            {name: '수원', code: '11B20601'}, // 경기 남부
+            {name: '파주', code: '11B20305'}, // 경기 북부
 
             {name: '춘천', code: '11D10301'}, // 강원 서부
             {name: '원주', code: '11D10401'}, // 강원 남서
@@ -124,9 +127,9 @@ function CollectData(options, callback){
     });
 
     self.DATA_URL = Object.freeze({
-        TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastGrib',
-        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastTimeData',
-        TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService/ForecastSpaceData',
+        TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
+        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
+        TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
         MID_FORECAST: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast',
         MID_LAND: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather',
         MID_TEMP: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature',
@@ -144,10 +147,11 @@ function CollectData(options, callback){
         }
     }
     else{
-        self.timeout = 3000;
-        self.retryCount = 1;
+        self.timeout = 0;
+        self.retryCount = 0;
     }
 
+    //it seems to be unused
     if(callback){
         self.callback = callback;
     }
@@ -157,25 +161,30 @@ function CollectData(options, callback){
     * we can get the notify by request event and will decide whether to retry or ignore this item
     */
     self.on('recvFail', function(listIndex){
-        //log.error('receive fail[%d]', listIndex);
+        log.debug('Fail index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
         if(self.resultList[listIndex].retryCount > 0){
             //log.error('try again:', listIndex);
             //log.error('URL : ', self.resultList[listIndex].url);
             //log.error(self.resultList[listIndex].options);
 
-            self.resultList[listIndex].retryCount--;
-            self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
+            setTimeout(function(){
+                self.resultList[listIndex].retryCount--;
+                self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url,
+                    self.resultList[listIndex].options);
+            }, self.timeout);
+
+            //self.resultList[listIndex].retryCount--;
+            //self.getData(listIndex, self.resultList[listIndex].options.dataType, self.resultList[listIndex].url, self.resultList[listIndex].options);
         }
         else
         {
             self.recvFailed = true;
             self.receivedCount++;
 
-            log.error('ignore this: ', listIndex);
-            log.error('URL : ', self.resultList[listIndex].url);
+            log.debug('will retry this: ', listIndex, 'URL : ', self.resultList[listIndex].url);
 
             if(self.receivedCount === self.listCount){
-                self.emit('dataComplated');
+                self.emit('dataCompleted');
             }
         }
     });
@@ -189,9 +198,9 @@ function CollectData(options, callback){
         self.resultList[listIndex].isCompleted = true;
         self.resultList[listIndex].data = data;
 
-        //log.info('index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
+        log.debug('Recv index[%d], totalCount[%d], receivedCount[%d]', listIndex, self.listCount, self.receivedCount);
         if(self.receivedCount === self.listCount){
-            self.emit('dataComplated');
+            self.emit('dataCompleted');
         }
     });
 
@@ -277,7 +286,8 @@ CollectData.prototype.resetResult = function(){
                 time: '',
                 dataType: -1,
                 code: ''
-            }
+            },
+            mCoord: {}
         };
         self.resultList.push(item);
     }
@@ -290,7 +300,7 @@ CollectData.prototype.resetResult = function(){
 *               If it successes to get data, it would send 'recvData' event to this.
 *               If it fail to get data, it would send 'recvFail' event to this.
 * */
-CollectData.prototype.getData = function(index, dataType, url,options, callback){
+CollectData.prototype.getData = function(index, dataType, url, options, callback){
     var self = this;
     var meta = {};
 
@@ -301,10 +311,9 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
     //log.info(meta);
     //log.info('url[', index, ']: ', self.resultList[index].url);
 
-    req.get(url, null, function(err, response, body){
-        var statusCode = response.statusCode;
+    req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            //log.error(err);
+            log.warn(err);
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -313,11 +322,13 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
             }
             return;
         }
+        var statusCode = response.statusCode;
 
         if(statusCode === 404 || statusCode === 403){
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
 
+            log.debug('ERROR!!! StatusCode : ', statusCode);
             self.emit('recvFail', index);
             if(callback){
                 callback(err, index);
@@ -339,13 +350,11 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
                  //log.info(result.response.body[0]);
                  //log.info(result.response.body[0].totalCount[0]);
 
-                if(err
-                    || (result.response.header[0].resultCode[0] !== '0000')
-                    ||(result.response.body[0].totalCount[0] === '0')) {
+                if(err || (result.response.header[0].resultCode[0] !== '0000') ||
+                    (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
                     log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
                     log.error(meta);
-
                     self.emit('recvFail', index);
                 }
                 else{
@@ -390,19 +399,52 @@ CollectData.prototype.getData = function(index, dataType, url,options, callback)
     });
 };
 
+CollectData.prototype._createOrFindResult = function(list, template, date, time) {
+    for (var i=0; i<list.length; i+=1) {
+        if (list[i].date === date && list[i].time === time) {
+            return list[i];
+        }
+    }
+    list.push(Object.create(template));
+    return list[list.length-1];
+};
+
+CollectData.prototype._sortByDateTime = function (a, b) {
+    if(a.date > b.date){
+        return 1;
+    }
+    else if(a.date < b.date){
+        return -1;
+    }
+    else if(a.date === b.date){
+        if (a.time > b.time) {
+            return 1;
+        }
+        else if (a.time < b.time){
+            return -1;
+        }
+    }
+    return 0;
+};
+
 CollectData.prototype.organizeShortData = function(index, listData){
     var self = this;
     var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
-    //log.info('shortData count : ' + listItem.length);
-
     try{
-        var result = {};
+        if (listData.response.body[0].totalCount[0] === '0') {
+            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
+            self.emit('recvFail', index);
+            return;
+        }
+
+        var listItem = listData.response.body[0].items[0].item;
+        //log.info('shortData count : ' + listItem.length);
         var template = {
-            date: '',
-            time: '',
+            pubDate: '', /*baseDate+baseTime*/
+            date: '',   /* fcstDate */
+            time: '',   /* fcstTime */
             mx: -1,
             my: -1,
             pop: -1,    /* 강수 확률 : 1% 단위, invalid : -1 */
@@ -427,60 +469,41 @@ CollectData.prototype.organizeShortData = function(index, listData){
             if((item.fcstDate === undefined)
                 && (item.fcstTime === undefined)
                 && (item.fcstValue === undefined)){
-                log.error('organizeShortData : There is not forecast date');
+                log.error(new Error('There is not forecast date'));
                 continue;
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
                 //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('start collecting items');
+                var result = self._createOrFindResult(listResult, template, item.fcstDate[0], item.fcstTime[0]);
 
-                }
-                else if(result.date === item.fcstDate[0] && result.time === item.fcstTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('changed date --> push it to list and reset result');
-                    //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
-
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
                 result.time = item.fcstTime[0];
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'POP') {result.pop = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'PTY') {result.pty = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'R06') {result.r06 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'REH') {result.reh = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'S06') {result.s06 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'T3H') {result.t3h = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'TMN') {result.tmn = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'TMX') {result.tmx = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'UUU') {result.uuu = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'VVV') {result.vvv = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'WAV') {result.wav = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'VEC') {result.vec = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'WSD') {result.wsd = parseInt(item.fcstValue[0]);}
+                if(item.category[0] === 'POP') {result.pop = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'PTY') {result.pty = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'R06') {result.r06 = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'REH') {result.reh = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'S06') {result.s06 = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'T3H') {result.t3h = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMN') {result.tmn = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'TMX') {result.tmx = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'UUU') {result.uuu = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'VVV') {result.vvv = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'WAV') {result.wav = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.fcstValue[0]);}
+                else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.fcstValue[0]);}
                 else{
-                    log.error('organizeShortData : Known property', item.category[0]);
+                    log.error(new Error('Known property', item.category[0]));
                 }
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
-        }
+        listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
@@ -491,105 +514,96 @@ CollectData.prototype.organizeShortData = function(index, listData){
     }
     catch(e){
         log.error('Error!! organizeShortData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeShortestData = function(index, listData) {
     var self = this;
-    var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
+    var template = {
+        pubDate: '', /*baseDate+baseTime*/
+        date: '',
+        time: '',
+        mx: -1,
+        my: -1,
+        pty: -1, /* 강수 형태 : 1%, invalid : -1 */
+        rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
+        sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
+        lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+    };
 
     //log.info('shortestData count : ' + listItem.length);
 
     try{
-        var result = {};
-        var template = {
-            date: '',
-            time: '',
-            mx: -1,
-            my: -1,
-            pty: -1, /* 강수 형태 : 1%, invalid : -1 */
-            rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
-            sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
-            lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
-        };
+        if (listData.response.body[0].totalCount[0] === '0') {
+            log.error('There are no data', listData.response.header[0].resultCode[0], listData.response.body[0].totalCount[0]);
+            self.emit('recvFail', index);
+            return;
+        }
 
-        for(i=0 ; i < listItem.length ; i++){
+        var listItem = listData.response.body[0].items[0].item;
+
+        for(var i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
-            //log.info(item);
             if((item.fcstDate === undefined)
                 && (item.fcstTime === undefined)
                 && (item.fcstValue === undefined)){
-                log.error('organizeShortestData : There is not shortest forecast date');
+                log.error(new Error('There is not shortest forecast date'));
                 continue;
             }
 
             if((item.fcstDate[0].length > 1) && (item.fcstTime[0].length > 1)){
-                //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('organizeShortestData : start collecting items');
+                var result = self._createOrFindResult(listResult, template, item.fcstDate[0], item.fcstTime[0]);
 
-                }
-                else if(result.date === item.fcstDate[0] && result.time === item.fcstTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('organizeShortestData : same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('organizeShortestData : changed date --> push it to list and reset result');
-                    //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
-
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.fcstDate[0];
                 result.time = item.fcstTime[0];
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'PTY') {result.pty = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'RN1') {result.rn1 = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.fcstValue[0]);}
-                else if(item.category[0] === 'LGT') {result.lgt = parseInt(item.fcstValue[0]);}
+                var val = parseFloat(item.fcstValue[0]);
+                if (val < 0) {
+                    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                }
+
+                if(item.category[0] === 'PTY') {result.pty = val;}
+                else if(item.category[0] === 'RN1') {result.rn1 = val;}
+                else if(item.category[0] === 'SKY') {result.sky = val;}
+                else if(item.category[0] === 'LGT') {result.lgt = val;}
                 else{
-                    log.error('organizeShortestData : Known property', item.category[0]);
+                    log.error(new Error('Known property '+item.category[0]));
                 }
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
-        }
+        listResult.sort(self._sortByDateTime);
 
-        //log.info('organizeShortestData result count : ', listResult.length);
+        //log.silly('organizeShortestData result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
-        //    log.info(listResult[i]);
+        //    log.silly(listResult[i]);
         //}
 
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeShortestData : failed data organized');
+        log.error(e);
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeCurrentData = function(index, listData) {
     var self = this;
     var i = 0;
-    var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
-    //log.info('currentData count : ' + listItem.length);
-    //log.info(listItem);
-
     try{
-        var result = {};
+        var listItem;
+        var result;
+        //log.info('currentData count : ' + listItem.length);
+        //log.info(listItem);
         var template = {
+            pubDate: '', /*baseDate+baseTime*/
             date: '',
             time: '',
             mx: -1,
@@ -606,62 +620,56 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
             wsd: -1 /* 풍속 : 4미만(약하다) 4~9(약간강함) 9~14(강함) 14이상(매우강함), invalid : -1 */
         };
 
+        listItem = listData.response.body[0].items[0].item;
+
         for(i=0 ; i < listItem.length ; i++){
             var item = listItem[i];
             //log.info(item);
-            if((item.baseDate === undefined)
-                && (item.baseTime === undefined)
-                && (item.obsrValue === undefined)){
-                log.info(item);
+            if((item.baseDate === undefined) &&
+                        (item.baseTime === undefined) &&
+                        (item.obsrValue === undefined))
+            {
+                log.silly(item);
                 log.error('organizeCurrentData : There is not forecast date');
                 continue;
             }
 
-            if((item.baseDate[0].length > 1) && (item.baseTime[0].length > 1)){
-                //log.info(i, item);
-                if(result.date === undefined){
-                    /* into the loop first time */
-                    result = template;
-                    //log.info('organizeCurrentData : start collecting items');
+            if((item.baseDate[0].length > 1) && (item.baseTime[0].length > 1)) {
 
-                }
-                else if(result.date === item.baseDate[0] && result.time === item.baseTime[0]){
-                    /* same date between prv date and current date */
-                    //log.info('organizeCurrentData : same date --> keep going');
-                }
-                else{
-                    /* changed date value with prv date, so result should be pushed into the list and set new result */
-                    //log.info('organizeCurrentData : changed date --> push it to list and reset result');
-                    //log.info(result);
-                    var insertItem = JSON.parse(JSON.stringify(result));
-                    listResult.push(insertItem);
-                    result = template;
-                }
-
+                result = self._createOrFindResult(listResult, template, item.baseDate[0], item.baseTime[0]);
+                result.pubDate = item.baseDate[0] + item.baseTime[0];
                 result.date = item.baseDate[0];
                 result.time = item.baseTime[0];
                 result.mx = parseInt(item.nx[0]);
                 result.my = parseInt(item.ny[0]);
 
-                if(item.category[0] === 'T1H') {result.t1h = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'RN1') {result.rn1 = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'SKY') {result.sky = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'UUU') {result.uuu = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'VVV') {result.vvv = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'REH') {result.reh = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'PTY') {result.pty = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'LGT') {result.lgt = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'VEC') {result.vec = parseInt(item.obsrValue[0]);}
-                else if(item.category[0] === 'WSD') {result.wsd = parseInt(item.obsrValue[0]);}
+                if(item.category[0] === 'T1H') {result.t1h = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'RN1') {result.rn1 = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'SKY') {result.sky = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'UUU') {result.uuu = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'VVV') {result.vvv = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'REH') {result.reh = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'PTY') {result.pty = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'LGT') {result.lgt = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'VEC') {result.vec = parseFloat(item.obsrValue[0]);}
+                else if(item.category[0] === 'WSD') {result.wsd = parseFloat(item.obsrValue[0]);}
                 else{
                     log.error('organizeCurrentData : Known property', item.category[0]);
                 }
             }
         }
 
-        if(result.date !== undefined && result.date.length > 1){
-            var insertItem = JSON.parse(JSON.stringify(result));
-            listResult.push(insertItem);
+        //check data complete
+        result = listResult[0];
+        if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
+            result.pty === template.pty) {
+            log.error('Fail get full current data -'+JSON.stringify(result));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (result.uuu === template.uuu || result.vvv === template.vvv || result.lgt === template.lgt ||
+            result.vec === template.vec || result.wsd === template.wsd) {
+            log.warn('Fail get full current data -'+JSON.stringify(result));
         }
 
         //log.info('result count : ', listResult.length);
@@ -673,12 +681,13 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
     }
     catch(e){
         log.error('Error!! organizeCurrentData : failed data organized');
+        log.error(e);
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeForecastData = function(index, listData, options){
     var self = this;
-    var meta = {};
     var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
@@ -689,6 +698,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             pointNumber: options.code,
@@ -700,7 +710,7 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
             var item = listItem[i];
             //log.info(item);
             if(item.wfSv === undefined){
-                log.info(item);
+                log.silly(item);
                 log.error('organizeForecastData : There is not forecast date');
                 continue;
             }
@@ -719,12 +729,13 @@ CollectData.prototype.organizeForecastData = function(index, listData, options){
     }
     catch(e){
         log.error('Error!! organizeForecastData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeLandData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -734,6 +745,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
@@ -752,7 +764,7 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
             wf10: '' /* 10일 후 날씨 예보 */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -787,13 +799,14 @@ CollectData.prototype.organizeLandData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeLandData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeTempData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -803,6 +816,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
@@ -824,7 +838,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
             taMax10: -100 /* 10일 후 예상 최고 기온 */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -832,22 +846,22 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
             result = template;
             result.regId = item.regId[0];
-            result.taMin3 = parseInt(item.taMin3[0]);
-            result.taMax3 = parseInt(item.taMax3[0]);
-            result.taMin4 = parseInt(item.taMin4[0]);
-            result.taMax4 = parseInt(item.taMax4[0]);
-            result.taMin5 = parseInt(item.taMin5[0]);
-            result.taMax5 = parseInt(item.taMax5[0]);
-            result.taMin6 = parseInt(item.taMin6[0]);
-            result.taMax6 = parseInt(item.taMax6[0]);
-            result.taMin7 = parseInt(item.taMin7[0]);
-            result.taMax7 = parseInt(item.taMax7[0]);
-            result.taMin8 = parseInt(item.taMin8[0]);
-            result.taMax8 = parseInt(item.taMax8[0]);
-            result.taMin9 = parseInt(item.taMin9[0]);
-            result.taMax9 = parseInt(item.taMax9[0]);
-            result.taMin10 = parseInt(item.taMin10[0]);
-            result.taMax10 = parseInt(item.taMax10[0]);
+            result.taMin3 = parseFloat(item.taMin3[0]);
+            result.taMax3 = parseFloat(item.taMax3[0]);
+            result.taMin4 = parseFloat(item.taMin4[0]);
+            result.taMax4 = parseFloat(item.taMax4[0]);
+            result.taMin5 = parseFloat(item.taMin5[0]);
+            result.taMax5 = parseFloat(item.taMax5[0]);
+            result.taMin6 = parseFloat(item.taMin6[0]);
+            result.taMax6 = parseFloat(item.taMax6[0]);
+            result.taMin7 = parseFloat(item.taMin7[0]);
+            result.taMax7 = parseFloat(item.taMax7[0]);
+            result.taMin8 = parseFloat(item.taMin8[0]);
+            result.taMax8 = parseFloat(item.taMax8[0]);
+            result.taMin9 = parseFloat(item.taMin9[0]);
+            result.taMax9 = parseFloat(item.taMax9[0]);
+            result.taMin10 = parseFloat(item.taMin10[0]);
+            result.taMax10 = parseFloat(item.taMax10[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -862,13 +876,14 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeTempData : failed data organized');
+        self.emit('recvFail', index);
     }
 };
 
 CollectData.prototype.organizeSeaData = function(index, listData, options){
     var self = this;
-    var i = 0;
+    //var i = 0;
     var listItem = listData.response.body[0].items[0].item;
     var listResult = [];
 
@@ -878,6 +893,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
     try{
         var result = {};
         var template = {
+            pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
             regId: 0, /* 예보 구역 코드 */
@@ -922,7 +938,7 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             wh10B: -100 /* 10일 후 최고 예상 파고(m) */
         };
 
-        listItem.forEach(function(item, i){
+        listItem.forEach(function(item){
             if(item.regId === undefined){
                 log.error('There is no data');
                 return;
@@ -944,37 +960,36 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
             result.wf9 = item.wf9[0];
             result.wf10 = item.wf10[0];
 
-            result.wh3AAm = parseInt(item.wh3AAm[0]);
-            result.wh3APm = parseInt(item.wh3APm[0]);
-            result.wh3BAm = parseInt(item.wh3BAm[0]);
-            result.wh3BPm = parseInt(item.wh3BPm[0]);
-            result.wh4AAm = parseInt(item.wh3AAm[0]);
-            result.wh4APm = parseInt(item.wh3APm[0]);
-            result.wh4BAm = parseInt(item.wh3BAm[0]);
-            result.wh4BPm = parseInt(item.wh3BPm[0]);
-            result.wh5AAm = parseInt(item.wh3AAm[0]);
-            result.wh5APm = parseInt(item.wh3APm[0]);
-            result.wh5BAm = parseInt(item.wh3BAm[0]);
-            result.wh5BPm = parseInt(item.wh3BPm[0]);
-            result.wh6AAm = parseInt(item.wh3AAm[0]);
-            result.wh6APm = parseInt(item.wh3APm[0]);
-            result.wh6BAm = parseInt(item.wh3BAm[0]);
-            result.wh6BPm = parseInt(item.wh3BPm[0]);
-            result.wh7AAm = parseInt(item.wh3AAm[0]);
-            result.wh7APm = parseInt(item.wh3APm[0]);
-            result.wh7BAm = parseInt(item.wh3BAm[0]);
-            result.wh7BPm = parseInt(item.wh3BPm[0]);
-            result.wh8A = parseInt(item.wh8A[0]);
-            result.wh8B = parseInt(item.wh8B[0]);
-            result.wh9A = parseInt(item.wh9A[0]);
-            result.wh9B = parseInt(item.wh9B[0]);
-            result.wh10A = parseInt(item.wh10A[0]);
-            result.wh10B = parseInt(item.wh10B[0]);
+            result.wh3AAm = parseFloat(item.wh3AAm[0]);
+            result.wh3APm = parseFloat(item.wh3APm[0]);
+            result.wh3BAm = parseFloat(item.wh3BAm[0]);
+            result.wh3BPm = parseFloat(item.wh3BPm[0]);
+            result.wh4AAm = parseFloat(item.wh3AAm[0]);
+            result.wh4APm = parseFloat(item.wh3APm[0]);
+            result.wh4BAm = parseFloat(item.wh3BAm[0]);
+            result.wh4BPm = parseFloat(item.wh3BPm[0]);
+            result.wh5AAm = parseFloat(item.wh3AAm[0]);
+            result.wh5APm = parseFloat(item.wh3APm[0]);
+            result.wh5BAm = parseFloat(item.wh3BAm[0]);
+            result.wh5BPm = parseFloat(item.wh3BPm[0]);
+            result.wh6AAm = parseFloat(item.wh3AAm[0]);
+            result.wh6APm = parseFloat(item.wh3APm[0]);
+            result.wh6BAm = parseFloat(item.wh3BAm[0]);
+            result.wh6BPm = parseFloat(item.wh3BPm[0]);
+            result.wh7AAm = parseFloat(item.wh3AAm[0]);
+            result.wh7APm = parseFloat(item.wh3APm[0]);
+            result.wh7BAm = parseFloat(item.wh3BAm[0]);
+            result.wh7BPm = parseFloat(item.wh3BPm[0]);
+            result.wh8A = parseFloat(item.wh8A[0]);
+            result.wh8B = parseFloat(item.wh8B[0]);
+            result.wh9A = parseFloat(item.wh9A[0]);
+            result.wh9B = parseFloat(item.wh9B[0]);
+            result.wh10A = parseFloat(item.wh10A[0]);
+            result.wh10B = parseFloat(item.wh10B[0]);
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
         });
-
 
         //log.info('result count : ', listResult.length);
         //for(i=0 ; i<listResult.length ; i++){
@@ -984,14 +999,75 @@ CollectData.prototype.organizeSeaData = function(index, listData, options){
         self.emit('recvData', index, listResult);
     }
     catch(e){
-        log.error('Error!! organizeCurrentData : failed data organized');
+        log.error('Error!! organizeSeaData : failed data organized');
+        self.emit('recvFail', index);
     }
+};
+
+CollectData.prototype.requestDataByBaseTimeList = function (src, dataType, key, baseTimeList, callback) {
+    var self = this;
+    if (!baseTimeList || !baseTimeList.length) {
+        var err = new Error('There is no baseTime list');
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
+    }
+    self.srcList = baseTimeList;
+    self.listCount = baseTimeList.length;
+    self.resetResult();
+
+    if (!callback) {
+        callback = self.callback;
+    }
+
+    if (callback) {
+        self.on('dataCompleted', function () {
+            if (callback) {
+                callback(self.recvFailed, self.resultList);
+            }
+        });
+    }
+    try {
+        self.srcList.forEach(function (baseTime, i) {
+            var string = self.getUrl(dataType, key, baseTime.date, baseTime.time, src);
+            self.resultList[i].mCoord = src;
+            self.resultList[i].url = string.toString();
+            self.resultList[i].options.date = baseTime.date;
+            self.resultList[i].options.time = baseTime.time;
+            self.resultList[i].options.dataType = dataType;
+            if(src.code !== undefined){
+                self.resultList[i].options.code = src.code;
+            }
+
+            //200 connections per 1 term
+            if (i >= 200) {
+                self.receivedCount++;
+                return;
+            }
+
+            if(self.resultList[i].url !== ''){
+                self.getData(parseInt(i), dataType, self.resultList[i].url, self.resultList[i].options);
+            }
+        });
+    }
+    catch(e) {
+        if (callback) {
+            callback(e);
+        }
+        else if (e) {
+            log.error(e);
+        }
+    }
+    return this;
 };
 
 CollectData.prototype.requestData = function(srcList, dataType, key, date, time, callback){
     var self = this;
     var meta = {};
-    var options = {date: date, time: time};
 
 
     meta.method = 'requestData';
@@ -1000,20 +1076,25 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
     meta.date = date;
     meta.time = time;
 
-    if(srcList){
-        self.srcList = srcList;
-        self.listCount = srcList.length;
-        self.resetResult();
-    }
-    else{
-        log.error('There is no location list');
-        log.error('#', meta);
-        return;
+    if(!srcList || !srcList.length){
+        var err = new Error('There is no location list');
+        if (callback) {
+            callback(err);
+        }
+        else {
+            log.error(err);
+        }
+        return this;
     }
 
+    self.srcList = srcList;
+    self.listCount = srcList.length;
+    self.resetResult();
+
     if(callback || self.callback){
-        self.on('dataComplated', function() {
+        self.on('dataCompleted', function() {
             try{
+                log.debug("request dataCompleted");
                 if (self.callback) {
                     self.callback(self.recvFailed, self.resultList);
                 }
@@ -1022,15 +1103,18 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
                 }
             }
             catch(e){
-                log.error("requestData : ERROR !!! in event dataComplated");
+                //callback 안에서 error가 발생하면 이쪽으로 타기 때문에 여기서 error를 callback으로 넘지면 안됨
+                log.error("requestData : ERROR !!! in event dataCompleted");
+                log.error(e);
                 log.error('#', meta);
             }
         });
     }
 
     try{
-        for(var i in self.srcList){
+        for(var i in self.srcList) {
             var string = self.getUrl(dataType, key, date, time, self.srcList[i]);
+            self.resultList[i].mCoord = self.srcList[i];
             self.resultList[i].url = string.toString();
             self.resultList[i].options.date = date;
             self.resultList[i].options.time = time;
@@ -1045,11 +1129,16 @@ CollectData.prototype.requestData = function(srcList, dataType, key, date, time,
         }
     }
     catch(e){
-        log.error('# ERROR!! ', meta);
+        if (callback) {
+            callback(e);
+        }
+        else {
+            log.error(e);
+        }
     }
+
+    return this;
 };
-
-
 
 module.exports = CollectData;
 

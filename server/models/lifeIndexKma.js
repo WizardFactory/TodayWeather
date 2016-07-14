@@ -13,48 +13,55 @@ var lSchema = new mongoose.Schema({
         second: String,
         third: String
     },
-    mCoord: {
+    mCoord: {           //unused it
         mx: Number,
         my: Number
     },
-    areaNo: String,
-    fsn: {
+    areaNo: String, //it's unique key
+    fsn: { /* 식중독 food poisoning */
         lastUpdateDate: String,
         data: [ {date: String, value: Number} ] //daily
     },
-    ultrv: {
+    ultrv: { /*자외선 ultraviolet rays*/
         lastUpdateDate: String,
         data: [ {date: String, value: Number}] //daily
     },
-    rot: {
+    rot: { /* 부패 rot */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] // 3hours
     },
-    sensorytem: {
+    sensorytem: { /* feels like temperature */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] // 3hours
     },
-    frostbite: {
+    frostbite: { /* 동상 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    heat: {
+    heat: { /* 열 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    dspls: {
+    dspls: { /* 불쾌 displeasure */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    winter: {
+    winter: {  /* 동파 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number} ] //3hours
     },
-    airpollution: {
+    airpollution: { /* 확산 */
         lastUpdateDate: String,
         data: [ {date: String, time: String, value: Number}] //3hours
-    }
+    },
+    geo: {
+        type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
+        index: '2d'         // create the geospatial index
+    },
+    activated: {type : Boolean, default : true} //provider가 데이터를 제공하지 않으면 false처리 할 예정.
 });
+
+lSchema.index({areaNo: 'text'});
 
 module.exports = mongoose.model('LifeIndexKma', lSchema);
 

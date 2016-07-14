@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.1.0",
+  "version": "0.9.4",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -19,35 +19,40 @@
   },
   "devDependencies": {
     "bower": "^1.3.3",
+    "clean-css": "=2.2.2",
     "cordova-config-utils": "^1.0.3",
+    "cordova-uglify": "^0.2.1",
     "gulp-util": "^2.2.14",
-    "shelljs": "^0.3.0"
+    "imagemin": "=3.2.0",
+    "ng-annotate": "=0.15.4",
+    "shelljs": "^0.3.0",
+    "uglify-js": "=2.4.14"
   },
   "cordovaPlugins": [
     "cordova-plugin-device",
     "cordova-plugin-console",
     "cordova-plugin-splashscreen",
-    "com.ionic.keyboard",
+    "ionic-plugin-keyboard",
     "cordova-plugin-geolocation",
     "cordova-plugin-statusbar",
+    "cordova-plugin-inappbrowser@1.4.0",
+    "cordova-plugin-x-socialsharing",
+    "cordova-plugin-inapppurchase",
+    "cordova-plugin-whitelist",
+    "cordova-plugin-google-analytics",
     {
-      "locator": "https://github.com/apache/cordova-plugin-whitelist.git",
-      "id": "cordova-plugin-whitelist"
+      "variables": {
+        "SENDER_ID": "362303467798"
+      },
+      "locator": "phonegap-plugin-push",
+      "id": "phonegap-plugin-push"
     },
-    "ionic-plugin-deploy"
+    "cordova-plugin-admobpro",
+    "cordova-plugin-network-information",
+    "cordova-plugin-app-preferences"
   ],
   "cordovaPlatforms": [
-    "android",
     "ios",
-    {
-      "platform": "android",
-      "version": "",
-      "locator": "android"
-    },
-    {
-      "platform": "ios",
-      "version": "",
-      "locator": "ios"
-    }
+    "android"
   ]
 }
