@@ -785,10 +785,10 @@ function ControllerTown() {
                     }
 
                     var stnHourlyFirst = true;
-                    var stnWeatherInfoTime = stnWeatherInfo.stnDateTime.substr(11,2);
-                    var currentTime = req.current.time.substr(0,2);
+                    var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
+                    var currentTime = kmaTimeLib.convertStringToDate(req.current.date+req.current.time);
 
-                    if (Number(currentTime) >= Number(stnWeatherInfoTime)) {
+                    if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
                         log.info('use api first, just append new data of stn hourly weather info');
                         stnHourlyFirst = false;
                     }

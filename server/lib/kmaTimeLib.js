@@ -17,14 +17,16 @@ kmaTimeLib.convertStringToDate = function(str) {
     var y = str.substr(0,4),
         m = str.substr(4,2) - 1,
         d = str.substr(6,2),
-        h = str.substr(8,2);
-    if (h!== '') {
-        h = str.substr(8,2);
-    }
-    else {
+        h = str.substr(8,2),
+        min = str.substr(10,2);
+
+    if (h == '') {
         h = '0';
     }
-    var D = new Date(y,m,d, h);
+    if (min == '') {
+        min = '0';
+    }
+    var D = new Date(y,m,d,h,min);
     return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
 };
 

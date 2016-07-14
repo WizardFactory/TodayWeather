@@ -39,5 +39,15 @@ describe('unit test - kma time lib', function() {
 
         assert(kmaTimeLib.compareDateTime(timeA, timeB), true, 'Fail compare date time');
     });
+
+    it('test convertStringToDate', function() {
+        var date = kmaTimeLib.convertStringToDate('2016031600');
+        assert(date.getMonth()+1==3, true, 'Fail to convert string to date')
+    });
+
+    it('test convertStringToDate', function() {
+        var date = kmaTimeLib.convertStringToDate('201603160010');
+        assert(date.getMinutes()==10, true, 'Fail to convert string to date')
+    });
 });
 
