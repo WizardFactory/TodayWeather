@@ -15,6 +15,7 @@ var ksiSchema = new mongoose.Schema({
     },
     rnsHit: Number,
     rnsCount: Number,
+    isMountain: Boolean,
 });
 
 ksiSchema.index({stnName:'text'}, {default_language: 'none'});

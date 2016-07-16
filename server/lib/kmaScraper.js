@@ -925,14 +925,11 @@ KmaScraper.prototype._updateRnsHitRate = function(stnInfo, callback) {
                         return false;
                     });
 
-                    if (minuteList.length < 40)  {
+                    if (minuteList.length < 15)  {
                         return aCallback(new Error("Need more minute weather"));
                     }
                     var rnsCount = 0;
                     var rns = false;
-                    if (stnInfo.stnId == "839") {
-                        log.info(JSON.stringify(minuteList));
-                    }
                     for (var i=0; i<minuteList.length; i++) {
                         if (minuteList[i].rns == undefined) {
 
@@ -1154,6 +1151,49 @@ KmaScraper.prototype.addStnAddressToTown = function (callback) {
             },
             function (err, results) {
                 return callback(err, results);
+            });
+    });
+};
+
+/**
+ * 고도 필드의 배경이 rgb(255, 255, 187), stnName에 (레)가 들어간 경우, 주변 지역보다 많이 높은 경우.
+ * 부산(레), 가야산, 북악산, 팔공산, 백운산, 토함산, 매곡
+ * @param stnId
+ * @private
+ */
+KmaScraper.prototype._checkMountain = function (stnId) {
+    var mountainList = ["100", "116", "160", "175", "216", "311", "314", "315", "316", "318",
+                        "320", "422", "497", "498", "554", "579", "659", "674", "682", "694",
+                        "695", "753", "782", "831", "853", "856", "859", "867", "868", "869",
+                        "870", "871", "872", "873", "875", "878", "879", "943"];
+    for (var i=0; i<mountainList.length; i++) {
+        if (stnId == mountainList[i]) {
+            return true;
+        }
+    }
+    return false;
+};
+
+/**
+ * db에 isMountain에 대한 값을 설정한다.
+ * 고도 필드의 배경색이 rgb(255, 255, 187); 인것과 일부 주변지역에 비해 고도가 높은 지역을 mountain으로 설정하여
+ * 관측정보에서 제외한다.
+ * @param callback
+ */
+KmaScraper.prototype.resetMoutainInfo = function(callback) {
+    var self = this;
+    KmaStnInfo.find().exec(function (err, kmaStnList) {
+        if (err) {
+            return callback(err);
+        }
+        async.map(kmaStnList, function(stn, aCallback) {
+                stn.isMountain = self._checkMountain(stn.stnId);
+                stn.save(function(err) {
+                    aCallback(err);
+                });
+            },
+            function(err, results) {
+                callback(err, results) ;
             });
     });
 };

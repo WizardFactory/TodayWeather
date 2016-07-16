@@ -31,8 +31,8 @@ router.get('/past', function(req, res) {
         if (err) {
             log.error(err);
         }
-        res.send();
     });
+    res.send();
 });
 
 router.get('/shortrss', function(req, res) {
