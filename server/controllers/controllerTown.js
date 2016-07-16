@@ -23,6 +23,18 @@ var KecoController = require('../controllers/kecoController');
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var townArray = [
+    {db:modelShort, name:'modelShort'},
+    {db:modelCurrent, name:'modelCurrent'},
+    {db:modelShortest, name:'modelShortest'},
+    {db:modelShortRss, name:'modelShortRss'}
+];
+var midArray = [
+    {db:modelMidForecast, name:'modelMidForecast'},
+    {db:modelMidLand, name:'modelMidLand'},
+    {db:modelMidTemp, name:'modelMidTemp'}
+];
+
 /**
  * router callback에서 getShort 호출시에, this는 undefined되기 때문에, 생성시에 getShort를 만들어주고, self는 생성자에서 만들어준다.
  * @constructor
@@ -31,6 +43,130 @@ function ControllerTown() {
     this.dbTownList = [];
 
     var self = this;
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.getAllDataFromDb = function(req, res, next){
+        var meta = {};
+
+        if(req.params.city === undefined){
+            req.params.city = '';
+        }
+
+        if(req.params.town === undefined){
+            req.params.town = '';
+        }
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = 'getShort';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        try{
+            self._getCoord(regionName, cityName, townName, function(err, coord) {
+                if (err) {
+                    log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
+                    return next();
+                }
+
+                log.silly('GaD> coord : ', coord);
+
+                async.parallel([
+                    function(callback){
+                        // get town weather
+                        async.map(townArray,
+                            function(item, cb){
+                                self._getTownDataFromDB(item.db, coord, undefined, function(err, data){
+                                    if (err) {
+                                        log.error(new Error('GaD> error to get data : '+ err.message));
+                                        return cb(err);
+                                    }
+                                    req[item.name] = data;
+                                    log.silly('T DATA[' + item.name + '] : ', req[item.name]);
+                                    cb(null);
+                                });
+                            },
+                            function(err){
+                                if(err){
+                                    log.error(new Error('Gad> something is wrong on the townWeather'));
+                                    return callback(err);
+                                }
+                                callback(null);
+                            }
+                        );
+                    },
+                    function(callback) {
+                        // get mid weather
+                        manager.getRegIdByTown(regionName, cityName, function (err, code) {
+                            if (err) {
+                                log.error(new Error('GaD> error to get pointnumber : ' + err.message));
+                                return callback(err);
+                            }
+
+                            log.silly('point number : ', code);
+                            async.map(midArray,
+                                function (item, cb) {
+                                    var parm;
+                                    if(item.db === modelMidForecast){
+                                        parm = code.pointNumber;
+                                    }
+                                    else if(item.db === modelMidLand){
+                                        var areaCode = code.cityCode.slice(0, 3);
+                                        if(areaCode === '11B'){
+                                            areaCode = '11B00000';
+                                        }
+                                        else if(areaCode === '21F'){
+                                            areaCode = '11F10000';
+                                        }
+                                        else{
+                                            areaCode = code.cityCode.slice(0, 4) + '0000';
+                                        }
+                                        parm = areaCode;
+                                    }else{
+                                        parm = code.cityCode
+                                    }
+
+                                    self._getMidDataFromDB(item.db, parm, undefined, function (err, midData) {
+                                        if (err) {
+                                            log.error(new Error('GaD> error to get midData : '+ err.message));
+                                            return cb(err);
+                                        }
+                                        req[item.name] = midData;
+                                        log.silly('M DATA[' + item.name + '] : ', req[item.name]);
+                                        cb(null);
+                                    });
+                                },
+                                function (err) {
+                                    if (err) {
+                                        log.error(new Error('Gad> something is wrong on the Mid'));
+                                        return callback(err);
+                                    }
+                                    callback(null);
+                                }
+                            );
+                        });
+                    }],
+                    function(err){
+                        if(err){
+                            log.error(new Error('Gad> something is wrong to get weather data'));
+                        }
+                        next();
+                    }
+                );
+            });
+        }catch(e){
+            log.error('ERROR>>', meta);
+            log.error(e);
+            next();
+        }
+    };
 
     /**
      *
@@ -74,7 +210,7 @@ function ControllerTown() {
                 }
                 log.silly('S> coord : ',coord);
 
-                self._getTownDataFromDB(modelShort, coord, function(err, shortInfo){
+                self._getTownDataFromDB(modelShort, coord, req, function(err, shortInfo){
                     if (err) {
                         log.error(new Error('error to get short '+ err.message));
                         return next();
@@ -129,7 +265,7 @@ function ControllerTown() {
             }
 
             // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
-            self._getTownDataFromDB(modelShortRss, coord, function(err, shortRssInfo) {
+            self._getTownDataFromDB(modelShortRss, coord, req, function(err, shortRssInfo) {
                 if(err) {
                     log.error(new Error('error to get short RSS '+ err.message));
                     return next();
@@ -287,7 +423,7 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo){
+                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo){
                     if (err) {
                         log.error(new Error('error to get shortest '+ err.message));
                         return next();
@@ -345,7 +481,7 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, function(err, currentInfo) {
+                self._getTownDataFromDB(modelCurrent, coord, req, function(err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current ' + err.message));
                         return next();
@@ -602,7 +738,7 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
+                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
                         log.error(new Error('error to get shortest for merge' + err.message));
                         return next();
@@ -719,7 +855,7 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, function(err, shortestInfo) {
+                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
                         log.error(new Error('error to get shortest for merge'+err.message));
                         return next();
@@ -1019,7 +1155,7 @@ function ControllerTown() {
                     return next();
                 }
 
-                self._getMidDataFromDB(modelMidForecast, code.pointNumber, function(err, forecastInfo){
+                self._getMidDataFromDB(modelMidForecast, code.pointNumber, req, function(err, forecastInfo){
                     if(err){
                         log.error('RM> no forecast data '+err.message);
                         return next();
@@ -1041,14 +1177,14 @@ function ControllerTown() {
                         areaCode = code.cityCode.slice(0, 4) + '0000';
                     }
 
-                    self._getMidDataFromDB(modelMidLand, areaCode, function(err, landInfo){
+                    self._getMidDataFromDB(modelMidLand, areaCode, req, function(err, landInfo){
                         if(err){
                             log.error('RM> no land data ' + err.message);
                             return next();
                         }
                         var landList = landInfo.ret;
                         //log.info(landList);
-                        self._getMidDataFromDB(modelMidTemp, code.cityCode, function(err, tempInfo){
+                        self._getMidDataFromDB(modelMidTemp, code.cityCode, req, function(err, tempInfo){
                             if(err){
                                 log.error('RM> no temp data ' + err.message);
                                 log.error(meta);
@@ -1370,7 +1506,7 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, function (err, currentInfo) {
+                self._getTownDataFromDB(modelCurrent, coord, req, function (err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current for past' + err.message));
                         return next();
@@ -2754,12 +2890,23 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
  * @param cb
  * @returns {Array}
  */
-ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
+ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
+    var self = this;
     var meta = {};
     meta.method = '_getTownDataFromDB';
     meta.indicator = indicator;
 
     try{
+        if(req != undefined){
+            townArray.forEach(function(item){
+                if(item.db == db){
+                    log.silly('data is already received');
+                    log.silly(req[item.name]);
+                    return cb(0, req[item.name]);
+                }
+            });
+        }
+
         db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> getDataFromDB : fail to find db item');
@@ -2862,12 +3009,22 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, cb){
  * @param cb
  * @returns {Array}
  */
-ControllerTown.prototype._getMidDataFromDB = function(db, indicator, cb){
+ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb){
     var meta = {};
     meta.method = '_getMidDataFromDB';
     meta.indicator = indicator;
 
     try{
+        if(req != undefined){
+            midArray.forEach(function(item){
+                if(item.db == db){
+                    log.silly('data is already received');
+                    log.silly(req[item.name]);
+                    return cb(0, req[item.name]);
+                }
+            });
+        }
+
         db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.error('~> _getMidDataFromDB : fail to find db item');
