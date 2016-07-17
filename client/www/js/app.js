@@ -438,7 +438,12 @@ angular.module('starter', [
                                 return 'point circle-' + d.name + '-current';
                             })
                             .attr('r', function () {
-                                return currentTime % 3 == 0 ? 11:5;
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    return 5;
+                                }
+                                else {
+                                    return currentTime % 3 == 0 ? 11 : 5;
+                                }
                             })
                             .attr('cx', function (d) {
                                 var cx = getCx(currentTime, d.values);
