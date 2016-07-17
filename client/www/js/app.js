@@ -149,10 +149,11 @@ angular.module('starter', [
                         initLine = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
+                                //timeChart[0] -> yesterday, timeChart[1] -> today
                                 if (i === scope.timeChart[1].currentIndex+1) {
                                     return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
                                 }
-                                //[modify_3] 현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
+                                //현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
                                 else if (i > scope.timeChart[1].currentIndex+1) {
                                     return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
                                 }
@@ -166,7 +167,6 @@ angular.module('starter', [
                                 if (i === scope.timeChart[1].currentIndex+1) {
                                     return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
                                 }
-                                //[modify_3] 현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
                                 else if (i > scope.timeChart[1].currentIndex+1) {
                                     return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
                                 }
