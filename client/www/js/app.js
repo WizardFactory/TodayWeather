@@ -149,6 +149,14 @@ angular.module('starter', [
                         initLine = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
+                                //timeChart[0] -> yesterday, timeChart[1] -> today
+                                if (i === scope.timeChart[1].currentIndex+1) {
+                                    return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                }
+                                //현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
+                                else if (i > scope.timeChart[1].currentIndex+1) {
+                                    return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .y(height);
@@ -156,6 +164,12 @@ angular.module('starter', [
                         line = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
+                                if (i === scope.timeChart[1].currentIndex+1) {
+                                    return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                }
+                                else if (i > scope.timeChart[1].currentIndex+1) {
+                                    return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .y(function (d) {
@@ -164,25 +178,6 @@ angular.module('starter', [
 
                         chart();
                     });
-
-                    /**
-                     * 24시일때, 0으로 변경해야 하고, -1로 인해 한자리 밀리므로 오늘은 3시부터 표시되어야 함.
-                     * @param currentTime
-                     * @param shortList
-                     * @returns {{cx1: *, cx2: *}}
-                     */
-                    function getCx(currentTime, shortList) {
-                        var cx1;
-                        var cx2;
-                        for (var i = 0; i < shortList.length; i = i + 1) {
-                            if (shortList[i].value.day === '오늘') {
-                                cx1 = i + Math.floor(currentTime / 3) - 1;
-                                cx2 = currentTime % 3;
-                                break;
-                            }
-                        }
-                        return {cx1: cx1, cx2: cx2};
-                    }
 
                     var chart = function () {
                         var data = scope.timeChart;
@@ -356,7 +351,19 @@ angular.module('starter', [
                         // draw line
                         var lines = lineGroups.selectAll('.line')
                             .data(function(d) {
-                                return [d];
+                                var currentWeather = {name: d.name};
+                                if (d.name == "today") {
+                                    currentWeather.value = scope.currentWeather;
+                                    currentWeather.value.t3h = currentWeather.value.t1h;
+                                }
+                                else if (d.name == 'yesterday') {
+                                    currentWeather.value = scope.currentWeather.yesterday;
+                                    currentWeather.value.t1h = Math.round(currentWeather.value.t1h);
+                                    currentWeather.value.t3h = currentWeather.value.t1h;
+                                }
+                                var cloneDate = JSON.parse(JSON.stringify(d));
+                                cloneDate.values.splice(data[1].currentIndex+1, 0, currentWeather);
+                                return [cloneDate];
                             })
                             .attr('d', function (d) {
                                 return initLine(d.values);
@@ -423,10 +430,12 @@ angular.module('starter', [
                                 }
                             })
                             .attr('cx', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var x1 = cx.cx1 + cx.cx2 / 3;
+                                var x1 = data[1].currentIndex;
                                 if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 1 / 6;
+                                    x1 += 0.5;
+                                }
+                                else {
+                                    x1 += currentTime % 3 == 0 ? 0 : 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
@@ -438,43 +447,42 @@ angular.module('starter', [
                                 return 'point circle-' + d.name + '-current';
                             })
                             .attr('r', function () {
-                                return currentTime % 3 == 0 ? 11:5;
+                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                    return 5;
+                                }
+                                else {
+                                    return currentTime % 3 == 0 ? 11 : 5;
+                                }
                             })
                             .attr('cx', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var x1 = cx.cx1 + cx.cx2 / 3;
+                                var x1 = data[1].currentIndex;
                                 if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 1 / 6;
+                                    x1 += 0.5;
+                                }
+                                else {
+                                    x1 += currentTime % 3 == 0 ? 0 : 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
                         point.attr('cx', function (d) {
-                            var cx = getCx(currentTime, d.values);
-                            var x1 = cx.cx1 + cx.cx2 / 3;
+                            var x1 = data[1].currentIndex;
                             if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                x1 += 1 / 6;
+                                x1 += 0.5;
+                            }
+                            else {
+                                x1 += currentTime % 3 == 0 ? 0 : 0.5;
                             }
                             return x.rangeBand() * x1 + x.rangeBand() / 2;
                         })
                             .attr('cy', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var cy1 = d.values[cx.cx1].value.t3h;
-                                var cy2 = d.values[cx.cx1+1].value.t3h;
-
-                                var y1 = cy1;
-                                if (cx.cx2 === 1) {
-                                    y1 = cy1 + (cy2 - cy1) / 3;
+                                if (d.name === "today") {
+                                    return y(scope.currentWeather.t1h);
                                 }
-                                else if (cx.cx2 === 2) {
-                                    y1 = cy1 + (cy2 - cy1) / 3 * 2;
+                                else if (d.name === "yesterday") {
+                                    return  y(scope.currentWeather.yesterday.t1h);
                                 }
-
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    y1 += (cy2-cy1)/6;
-                                }
-                                return y(y1);
                             });
 
                         point.exit()

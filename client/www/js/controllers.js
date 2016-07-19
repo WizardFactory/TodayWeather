@@ -665,8 +665,12 @@ angular.module('starter.controllers', [])
                     $scope.shortTable =  $sce.trustAsHtml(getShortTable());
 
                     setTimeout(function () {
-                        // ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                        // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                        if (ionic.Platform.isAndroid()) {
+                            $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                        } else {
+                            $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                        }
                     }, 0);
                 }
                 else {
@@ -678,8 +682,13 @@ angular.module('starter.controllers', [])
                     $scope.midTable = $sce.trustAsHtml(getMidTable());
 
                     setTimeout(function () {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
+                        if (ionic.Platform.isAndroid()) {
+                            $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                            $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
+                        } else {
+                            $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
+                            $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
+                        }
                     }, 0);
                 }
 
