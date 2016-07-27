@@ -24,9 +24,9 @@ function divideParams(req, res, next) {
 }
 
 
-router.get('/town/*', [divideParams, cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.convert0Hto24H,
-                                    cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+router.get('/town/*', [divideParams, cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,

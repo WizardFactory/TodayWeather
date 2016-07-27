@@ -64,10 +64,12 @@ function ControllerTown() {
         var cityName = req.params.city;
         var townName = req.params.town;
 
-        meta.method = 'getShort';
+        meta.method = 'get AllDataFromDb';
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
+
+        log.info('>', meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord) {
@@ -2898,13 +2900,14 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
 
     try{
         if(req != undefined){
-            townArray.forEach(function(item){
-                if(item.db == db){
+            for (var i=0; i<townArray.length; i++) {
+                var item =  townArray[i];
+                if(item.db == db && req[item.name] != undefined){
                     log.silly('data is already received');
                     log.silly(req[item.name]);
                     return cb(0, req[item.name]);
                 }
-            });
+            }
         }
 
         db.find({'mCoord.mx': indicator.mx, 'mCoord.my': indicator.my}, {_id: 0}).limit(1).lean().exec(function(err, result){
@@ -3009,20 +3012,21 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
  * @param cb
  * @returns {Array}
  */
-ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb){
+ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
     var meta = {};
     meta.method = '_getMidDataFromDB';
     meta.indicator = indicator;
 
     try{
         if(req != undefined){
-            midArray.forEach(function(item){
-                if(item.db == db){
+            for (var i=0; i<midArray.length; i++) {
+                var item =  midArray[i];
+                if(item.db == db && req[item.name] != undefined){
                     log.silly('data is already received');
                     log.silly(req[item.name]);
                     return cb(0, req[item.name]);
                 }
-            });
+            }
         }
 
         db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
