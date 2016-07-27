@@ -495,6 +495,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
+        log.info('##', decodeURI(req.originalUrl));
 
         result.regionName = regionName;
         result.cityName = cityName;
