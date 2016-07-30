@@ -29,7 +29,7 @@ angular.module('starter', [
             }
 
             if (ionic.Platform.isIOS()) {
-                Util.ga.startTrackerWithId('UA-70746703-3');
+                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_IOS_KEY]');
                 if (window.applewatch) {
                     applewatch.init(function () {
                         console.log('Succeeded to initialize for apple-watch');
@@ -38,7 +38,7 @@ angular.module('starter', [
                     }, 'group.net.wizardfactory.todayweather');
                 }
             } else if (ionic.Platform.isAndroid()) {
-                Util.ga.startTrackerWithId('UA-70746703-2');
+                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
             }
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard

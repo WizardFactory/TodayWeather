@@ -40,7 +40,7 @@ router.get('/', [cTown.getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
@@ -49,7 +49,7 @@ router.get('/:region', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region/:city', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,

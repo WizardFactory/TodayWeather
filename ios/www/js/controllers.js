@@ -50,7 +50,7 @@ angular.module('starter.controllers', [])
                default:
                    console.log('Fail to find grade='+grade);
            }
-            return 'ic_sentiment_neutral_white_24px.svg';
+            return 'ic_sentiment_very_dissatisfied_white_24px.svg';
         };
 
         var regionSize;
