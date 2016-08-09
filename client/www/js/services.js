@@ -1,6 +1,6 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, $cordovaPreferences) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -257,27 +257,45 @@ angular.module('starter.services', [])
             console.log('save preference plist='+JSON.stringify(pList));
 
             $ionicPlatform.ready(function() {
-                $cordovaPreferences.store('cityList', JSON.stringify(pList))
-                    .success(function (value) {
+                if (plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('cityList', JSON.stringify(pList)).then(
+                    function (value) {
                         console.log("save preference Success: " + value);
-                    })
-                    .error(function (error) {
+                    },
+                    function (error) {
                         console.log("save preference Error: " + error);
-                    });
+                    }
+                );
             });
         };
 
         obj._loadCitiesPreference = function (callback) {
             $ionicPlatform.ready(function() {
-                $cordovaPreferences.fetch('cityList')
-                    .success(function (value) {
+                if (plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                /**
+                 * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+                 * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+                 * @type {AppPreferences}
+                 */
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.fetch('cityList').then(
+                    function (value) {
                         console.log("fetch preference Success: " + value);
                         callback(undefined, value);
-                    })
-                    .error(function (error) {
+                    }, function (error) {
                         console.log("fetch preference Error: " + error);
                         callback(error);
-                    })
+                    }
+                );
             });
         };
 
