@@ -1,11 +1,10 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, $cordovaPreferences) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
-            towns: [],
-            isLoadComplete: false
+            towns: []
         };
 
         var createCity = function (item) {
@@ -143,7 +142,7 @@ angular.module('starter.services', [])
 
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
-                city.loadTime = null;
+                city.loadTime = new Date();
                 cities.push(city);
                 that.saveCities();
                 return true;
@@ -258,57 +257,51 @@ angular.module('starter.services', [])
             console.log('save preference plist='+JSON.stringify(pList));
 
             $ionicPlatform.ready(function() {
-                $cordovaPreferences.store('cityList', JSON.stringify(pList))
-                    .success(function (value) {
+                if (plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('cityList', JSON.stringify(pList)).then(
+                    function (value) {
                         console.log("save preference Success: " + value);
-                    })
-                    .error(function (error) {
+                    },
+                    function (error) {
                         console.log("save preference Error: " + error);
-                    });
+                    }
+                );
             });
         };
 
         obj._loadCitiesPreference = function (callback) {
             $ionicPlatform.ready(function() {
-                $cordovaPreferences.fetch('cityList')
-                    .success(function (value) {
+                if (plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                /**
+                 * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+                 * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+                 * @type {AppPreferences}
+                 */
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.fetch('cityList').then(
+                    function (value) {
                         console.log("fetch preference Success: " + value);
                         callback(undefined, value);
-                    })
-                    .error(function (error) {
+                    }, function (error) {
                         console.log("fetch preference Error: " + error);
                         callback(error);
-                    })
+                    }
+                );
             });
         };
 
         obj.saveCities = function() {
             localStorage.setItem("cities", JSON.stringify(cities));
             this._saveCitiesPreference(cities);
-        };
-
-        obj.updateCities = function(index) {
-            var that = this;
-            var city = cities[index];
-
-            if (city === undefined) {
-                $ionicPlatform.ready(function() {
-                    that.isLoadComplete = true;
-                    $rootScope.$broadcast('loadCompleteEvent');
-                });
-                return;
-            }
-
-            if (that.canLoadCity(index) && !city.currentPosition) {
-                WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
-                    var city = WeatherUtil.convertWeatherData(weatherDatas);
-                    that.updateCity(index, city);
-                }).finally(function () {
-                    that.updateCities(index + 1);
-                });
-            } else {
-                that.updateCities(index + 1);
-            }
         };
 
         obj.loadTowns = function() {
@@ -454,30 +447,6 @@ angular.module('starter.services', [])
             }
             console.error("Fail to get day string day=" + day);
             return "";
-        }
-
-        /**
-         *
-         * @param temp
-         * @param tmx
-         * @param tmn
-         * @returns {string}
-         */
-        function decideTempIcon(temp, tmx, tmn) {
-            if ( (tmx === undefined || tmx === null) || (tmn === undefined || tmn === null) || tmx < tmn) {
-                return "Temp-01";
-            }
-
-            var max = tmx - tmn;
-            var cur = temp - tmn;
-            var p = Math.max(1, Math.ceil(cur / max * 10));
-
-            if (p > 9) {
-                return "Temp-10";
-            }
-            else {
-                return "Temp-0" + p;
-            }
         }
 
         function dayToString(day) {
@@ -708,33 +677,27 @@ angular.module('starter.services', [])
             }
 
             var currentIndex = -1;
+            var displayItemCount = 0;
 
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
-                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
+                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), convertStringToDate(currentForecast.date));
                 var day = "";
                 if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
                     day = getDayString(diffDays);
                 }
                 var isNight = time < 7 || time > 18;
-                var dayInfo = getDayInfo(dailyInfoList, shortForecast.date);
-                if (!dayInfo) {
-                    console.log("Fail to find dayInfo date=" + shortForecast.date);
-                    dayInfo = {date: shortForecast.date, taMax: 100, taMin: -49};
-                }
 
                 tempObject = shortForecast;
 
                 tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
-
                 tempObject.day = day;
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";
 
                 if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
-                    currentIndex = index-1;
+                    currentIndex = index;
                     shortForecastList[index].currentIndex = true;
                 }
                 else if (currentForecast.date == tempObject.date && currentForecast.time > tempObject.time) {
@@ -752,6 +715,30 @@ angular.module('starter.services', [])
                             shortForecastList[index+1].currentIndex = true;
                         }
                     }
+                }
+                else if (currentForecast.time < 3) {
+                    if (currentForecast.date == tempObject.date && shortForecastList[index-1].date != currentForecast.date) {
+                        shortForecastList[index-1].currentIndex = true;
+                        currentIndex = index-1;
+                    }
+                }
+
+                var tmpDisplayCount = 0;
+                if (tempObject.skyIcon != undefined) {
+                        tmpDisplayCount++;
+                }
+                if (tempObject.pop && tempObject.pop > 0) {
+                    tmpDisplayCount++;
+                }
+                if (displayItemCount == 2) {
+                    if ((tempObject.rn1 && tempObject.rn1 > 0)
+                        || (tempObject.r06 && tempObject.r06 > 0)
+                        || (tempObject.s06 && tempObject.s06 > 0)) {
+                        tmpDisplayCount++;
+                    }
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
                 }
 
                 data.push(tempObject);
@@ -772,7 +759,8 @@ angular.module('starter.services', [])
                     values: data.slice(8).map(function (d) {
                         return {name: "today", value: d};
                     }),
-                    currentIndex: currentIndex - 8
+                    currentIndex: currentIndex - 8,
+                    displayItemCount: displayItemCount
                 }
             ];
 
@@ -787,9 +775,10 @@ angular.module('starter.services', [])
          */
         obj.parseMidTownWeather = function (midData, currentTime) {
             var tmpDayTable = [];
+            var displayItemCount = 0;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
-                return tmpDayTable;
+                return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
             }
             midData.dailyData.forEach(function (dayInfo) {
                 var data;
@@ -818,10 +807,30 @@ angular.module('starter.services', [])
                 }
 
                 tmpDayTable.push(data);
+
+                var tmpDisplayCount = 0;
+
+                if (data.skyAm != undefined || data.skyPm != undefined) {
+                    if (data.skyAm != data.skyPm && data.skyAm && data.skyPm) {
+                        tmpDisplayCount = tmpDisplayCount | 4;
+                    }
+                }
+
+                if (data.pop && data.pop > 0 && data.fromToday >= 0) {
+                    tmpDisplayCount = tmpDisplayCount | 2;
+                }
+                if ((data.rn1 && data.rn1 > 0)
+                    || (data.r06 && data.r06 > 0)
+                    || (data.s06 && data.s06 > 0)) {
+                    tmpDisplayCount = tmpDisplayCount | 1;
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
+                }
             });
 
             //console.log(tmpDayTable);
-            return tmpDayTable;
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
         };
 
         /**
@@ -1121,37 +1130,39 @@ angular.module('starter.services', [])
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
-            navigator.geolocation.getCurrentPosition(function(position) {
-                //경기도,광주시,오포읍,37.36340556,127.2307667
-                //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                //37.472595, 126.795249
-                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+            ionic.Platform.ready(function() {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    //경기도,광주시,오포읍,37.36340556,127.2307667
+                    //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                    //37.472595, 126.795249
+                    //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                    //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
 
-                deferred.resolve(position.coords);
-            }, function(error) {
-                console.log("Fail to get current position from navigator");
-                console.log(error.message);
+                    deferred.resolve(position.coords);
+                }, function (error) {
+                    console.log("Fail to get current position from navigator");
+                    console.log(error.message);
 
-                if (ionic.Platform.isAndroid() && window.cordova) {
-                    var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+                    if (ionic.Platform.isAndroid() && window.cordova) {
+                        var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
-                    orgGeo.getCurrentPosition(function (position) {
-                            //console.log('native geolocation');
-                            //console.log(position);
-                            deferred.resolve(position.coords);
-                        },
-                        function (error) {
-                            console.log("Fail to get current position from native");
-                            console.log(error.message);
-                            deferred.reject();
-                        },{timeout:5000});
-                }
-                else {
-                    deferred.reject();
-                }
-            },{timeout:3000});
+                        orgGeo.getCurrentPosition(function (position) {
+                                //console.log('native geolocation');
+                                //console.log(position);
+                                deferred.resolve(position.coords);
+                            },
+                            function (error) {
+                                console.log("Fail to get current position from native");
+                                console.log(error.message);
+                                deferred.reject();
+                            }, {timeout: 5000});
+                    }
+                    else {
+                        deferred.reject();
+                    }
+                }, {timeout: 3000});
+            });
 
             return deferred.promise;
         };
@@ -1217,10 +1228,11 @@ angular.module('starter.services', [])
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
-            data.dayTable = midTownWeather;
+            data.dayTable = midTownWeather.dayTable;
             data.dayChart = [{
-                values: midTownWeather,
-                temp: currentForecast.t1h
+                values: midTownWeather.dayTable,
+                temp: currentForecast.t1h,
+                displayItemCount: midTownWeather.displayItemCount
             }];
 
             return data;
@@ -1328,7 +1340,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon2-color';
-        obj.version = '0.9.1'; // sync with config.xml
+        obj.version = '0.9.5'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1337,7 +1349,7 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "./v000705";
+            //obj.url = "/v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
@@ -1350,5 +1362,4 @@ angular.module('starter.services', [])
     .run(function(WeatherInfo) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
-        WeatherInfo.updateCities(0);
     });
