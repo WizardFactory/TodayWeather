@@ -9,25 +9,36 @@
         <scene sceneID="cwh-vc-ff4">
             <objects>
                 <viewController id="M4Y-Lb-cyx" customClass="TodayViewController" sceneMemberID="viewController">
-                    <view key="view" contentMode="scaleToFill" simulatedAppContext="notificationCenter" id="S3S-Oj-5AN">
+                    <view key="view" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" simulatedAppContext="notificationCenter" id="S3S-Oj-5AN">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="130"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <view hidden="YES" contentMode="scaleToFill" id="KxL-9k-51A" userLabel="No Location View">
+                            <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="KxL-9k-51A" userLabel="No Location View">
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="130"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <subviews>
-                                    <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="top" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="오늘날씨앱을 먼저 실행하여 도시목록을 생성하여 주세요." lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="K3l-cK-xrE" userLabel="No Location Label">
-                                        <rect key="frame" x="16" y="16" width="285" height="100"/>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" id="ZE0-QG-bpm">
+                                        <rect key="frame" x="99" y="94" width="123" height="29.5"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="13"/>
+                                        <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="20"/>
+                                        <state key="normal" title="오늘날씨">
+                                            <color key="titleColor" cocoaTouchSystemColor="darkTextColor"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="editWidget:" destination="M4Y-Lb-cyx" eventType="touchUpInside" id="YRC-0E-zx0"/>
+                                        </connections>
+                                    </button>
+                                    <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="top" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="오늘날씨앱을 실행하여 도시목록을 생성하여 주세요." lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="K3l-cK-xrE" userLabel="No Location Label">
+                                        <rect key="frame" x="18" y="4" width="285" height="82"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="20"/>
                                         <color key="textColor" red="1" green="1" blue="1" alpha="0.59999999999999998" colorSpace="calibratedRGB"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                 </subviews>
-                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                             </view>
-                            <view contentMode="scaleToFill" id="BFq-eg-5OO">
+                            <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="BFq-eg-5OO">
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="130"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <subviews>
@@ -138,7 +149,9 @@
                         <outlet property="curDustLabel" destination="tsK-Cz-V1Y" id="Qhg-Nj-ywt"/>
                         <outlet property="curTempLabel" destination="MdD-yn-mdu" id="nEm-yA-U6u"/>
                         <outlet property="curWTIconIV" destination="j8W-B0-5oU" id="6Nw-gs-aqL"/>
+                        <outlet property="locationView" destination="BFq-eg-5OO" id="0gB-DN-VAV"/>
                         <outlet property="nextCityBtn" destination="4Z3-ju-bkK" id="xys-yP-ElL"/>
+                        <outlet property="noLocationView" destination="KxL-9k-51A" id="XFA-bO-hQx"/>
                         <outlet property="todWTIconIV" destination="O2k-g2-Idx" id="GsU-BK-5xT"/>
                         <outlet property="todayMaxTempLabel" destination="ai2-qd-XVV" id="H6o-qk-cgI"/>
                         <outlet property="todayPopLabel" destination="lbS-Wd-U4w" id="i7I-VE-Z4e"/>

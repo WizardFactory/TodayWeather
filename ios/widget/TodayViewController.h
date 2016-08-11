@@ -48,6 +48,7 @@
     IBOutlet UIButton       *editWidgetBtn;
     IBOutlet UIButton       *updateDataBtn;
     
+    __weak IBOutlet UIView *locationView;
     IBOutlet UIView         *noLocationView;                // No Location View
     IBOutlet UILabel        *descLabel;                     // descLabel
     IBOutlet UIButton       *noLocEditWidgetBtn;

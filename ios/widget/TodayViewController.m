@@ -84,31 +84,37 @@ typedef enum
  ********************************************************************/
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 130)];
     // Do any additional setup after loading the view from its nib.
-    
-    self.view.hidden = true;
+    locationView.hidden = true;
+//    self.view.hidden = true;
     
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
     
     NSError *error;
     NSDictionary *jsonDict;
-    
-    NSString *currentWeather = nil;
     NSData *tmpData = nil;
-    currentWeather = [sharedUserDefaults stringForKey:@"currentWeather"];
-    if (currentWeather) {
-        tmpData = [currentWeather dataUsingEncoding:NSUTF8StringEncoding];
-        jsonDict = [NSJSONSerialization JSONObjectWithData:tmpData options:0 error:&error];
-        //NSLog(@"%@", jsonDict);
-        [self processWeatherResults:jsonDict];
-    }
+    
+//    NSString *currentWeather = nil;
+//    currentWeather = [sharedUserDefaults stringForKey:@"currentWeather"];
+//    if (currentWeather) {
+//        tmpData = [currentWeather dataUsingEncoding:NSUTF8StringEncoding];
+//        jsonDict = [NSJSONSerialization JSONObjectWithData:tmpData options:0 error:&error];
+//        //NSLog(@"%@", jsonDict);
+//        [self processWeatherResults:jsonDict];
+//    }
     
     NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
     NSLog(@"cityList : %@", cityList);
     
     if (cityList == nil) {
-     //You have to run todayweather for add citylist
+        //You have to run todayweather for add citylist
+        NSLog(@"show no location view");
+        noLocationView.hidden = false;
         return;
+    }
+    else {
+        noLocationView.hidden = true;
     }
     
     tmpData = [cityList dataUsingEncoding:NSUTF8StringEncoding];
@@ -585,9 +591,8 @@ typedef enum
         tomoPopLabel.text       = [NSString stringWithFormat:@"강수확률 %@%%", nssTomPop];
         tomWTIconIV.image       = [UIImage imageNamed:nssTomImgName];
         
-        [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 150)];
-        
-        self.view.hidden = false;
+        locationView.hidden = false;
+//        self.view.hidden = false;
     });
 }
 
@@ -768,6 +773,7 @@ typedef enum
 }
 
 - (BOOL) setCityInfo:(CityInfo *)nextCity {
+    locationView.hidden = true;
     NSLog(@"set city : current position %@ address %@ index %d", nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.index);
     
     mCurrentCity = nextCity;
