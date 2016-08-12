@@ -571,22 +571,6 @@ angular.module('starter', [
                             svg.attr('width', width);
                             svg.selectAll("*").remove();
 
-                            initLine = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(height);
-
-                            line = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(function (d) {
-                                    return y(d.value.t3h);
-                                });
-
                             chart();
                         }
                     });
