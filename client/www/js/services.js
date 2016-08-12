@@ -257,7 +257,7 @@ angular.module('starter.services', [])
             console.log('save preference plist='+JSON.stringify(pList));
 
             $ionicPlatform.ready(function() {
-                if (plugins.appPreferences == undefined) {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
                     return;
                 }
@@ -276,7 +276,7 @@ angular.module('starter.services', [])
 
         obj._loadCitiesPreference = function (callback) {
             $ionicPlatform.ready(function() {
-                if (plugins.appPreferences == undefined) {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
                     return;
                 }
@@ -724,21 +724,24 @@ angular.module('starter.services', [])
                 }
 
                 var tmpDisplayCount = 0;
-                if (tempObject.skyIcon != undefined) {
-                        tmpDisplayCount++;
-                }
-                if (tempObject.pop && tempObject.pop > 0) {
-                    tmpDisplayCount++;
-                }
-                if (displayItemCount == 2) {
-                    if ((tempObject.rn1 && tempObject.rn1 > 0)
-                        || (tempObject.r06 && tempObject.r06 > 0)
-                        || (tempObject.s06 && tempObject.s06 > 0)) {
+                //data on chart from yesterday
+                if (diffDays > -2) {
+                    if (tempObject.skyIcon != undefined) {
                         tmpDisplayCount++;
                     }
-                }
-                if (tmpDisplayCount > displayItemCount) {
-                    displayItemCount = tmpDisplayCount;
+                    if (tempObject.pop && tempObject.pop > 0) {
+                        tmpDisplayCount++;
+                    }
+                    if (displayItemCount == 2) {
+                        if ((tempObject.rn1 && tempObject.rn1 > 0)
+                            || (tempObject.r06 && tempObject.r06 > 0)
+                            || (tempObject.s06 && tempObject.s06 > 0)) {
+                            tmpDisplayCount++;
+                        }
+                    }
+                    if (tmpDisplayCount > displayItemCount) {
+                        displayItemCount = tmpDisplayCount;
+                    }
                 }
 
                 data.push(tempObject);
