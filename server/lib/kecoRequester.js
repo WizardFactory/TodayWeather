@@ -582,6 +582,11 @@ Keco.prototype._parseFrcst = function (rawData, dataTime) {
     var rawDataList = rawData.list;
     var parsedList = [];
 
+    if (rawDataList == undefined || !Array.isArray(rawDataList)) {
+        log.error('keco parseFrcst rawData is not array');
+        return;
+    }
+
     //remove old time frcst
     rawDataList = rawDataList.filter(function (rawData) {
         return rawData.dataTime === dataTime;

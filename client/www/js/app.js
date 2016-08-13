@@ -187,18 +187,21 @@ angular.module('starter', [
                         }
 
                         var currentTime = scope.currentWeather.time;
+                        var currentTemp = scope.currentWeather.t1h;
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
                             d3.min(data, function (c) {
-                                return d3.min(c.values, function (v) {
+                                var minT3h = d3.min(c.values, function (v) {
                                     return v.value.t3h;
                                 });
+                                return minT3h<currentTemp?minT3h:currentTemp;
                             }),
                             d3.max(data, function (c) {
-                                return d3.max(c.values, function (v) {
+                                var maxT3h =d3.max(c.values, function (v) {
                                     return v.value.t3h;
                                 });
+                                return maxT3h>currentTemp?maxT3h:currentTemp;
                             })
                         ]).nice();
 
@@ -570,22 +573,6 @@ angular.module('starter', [
                         if (svg) {
                             svg.attr('width', width);
                             svg.selectAll("*").remove();
-
-                            initLine = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(height);
-
-                            line = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(function (d) {
-                                    return y(d.value.t3h);
-                                });
 
                             chart();
                         }

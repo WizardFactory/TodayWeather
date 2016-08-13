@@ -291,7 +291,7 @@ function ControllerTown24h() {
 
         i = req.short.length - 1;
         for(;i>=0;i--) {
-            if(req.short[i].reh !== -1) {
+            if(req.short[i].t3h !== -50) {
                 break;
             }
         }
