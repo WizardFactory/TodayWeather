@@ -1,0 +1,3600 @@
+1
+Karachi	
+Pakistan	
+15,500,000
+18,000,000
+Fazlur Rehman
+2
+Shanghai	
+China	
+14,900,000
+19,200,000
+Han Zheng
+3
+Mumbai (Bombay)	
+India	
+13,900,000
+21,200,000
+Shraddha Jadhav
+4
+BEIJING	
+China	
+12,460,000
+17,550,000
+Guo Jinlong
+5
+DELHI	
+India	
+12,100,000
+16,713,000
+Kanwar Sain
+6
+BUENOS AIRES	
+Argentina	
+11,655,000
+12,924,000
+Mauricio Macri
+7
+MANILA METRO	
+Philippines	
+11,550,000
+13,503,000
+Alfredo S Lim
+8
+SEOUL	
+South Korea	
+11,153,000
+24,472,000
+Oh Se-hoon
+9
+Sao Paulo	
+Brazil	
+11,038,000
+19,890,000
+Fernando Haddad
+10
+MOSCOW	
+Russia	
+10,524,000
+14,800,000
+Sergei Sobyanin
+11
+JAKARTA	
+Indonesia	
+10,100,000
+24,100,000
+Joko Widodo
+12
+Istanbul	
+Turkey	
+9,560,000
+12,600,000
+Kadir Topbas
+13
+BANGKOK	
+Thailand	
+9,100,000
+11,970,000
+Sukhumbhand Paribatra
+14
+MEXICO CITY	
+Mexico	
+8,841,000
+21,163,000
+Miguel Angel Mancera
+15
+TOKYO	
+Japan	
+8,653,000
+31,036,000
+Naoki Inose
+16
+TEHRAN	
+Iran	
+8,430,000
+13,450,000
+Mohammad Bagher Ghalibaf
+17
+New York City	
+USA	
+8,364,000
+20,090,000
+Michael Bloomberg
+18
+KINSHASA	
+Congo D.R.	
+8,200,000
+10,100,000
+André Kimbuta Yango
+19
+DHAKA	
+Bangladesh	
+7,940,000
+12,797,000
+Sadeque Hossain Khosa
+20
+Lagos	
+Nigeria	
+7,938,000
+9,123,000
+Babatunde Raji Fashola
+21
+CAIRO	
+Egypt	
+7,764,000
+15,546,000
+Abdul Azim Wazir
+22
+LIMA	
+Peru	
+7,606,000
+8,473,000
+Susana Villaran
+23
+LONDON	
+UK	
+7,557,000
+12,200,000
+Boris Johnson
+24
+Tianjin	
+China	
+7,500,000
+11,750,000
+Huang Xingguo
+25
+BOGOTA	
+Colombia	
+7,320,000
+8,361,000
+Samuel Moreno Rojas
+26
+Ho Chi Minh City	
+Vietnam	
+7,100,000
+7,100,000
+Pham Phuong Thao
+27
+Hong Kong	
+China	
+7,055,000
+7,055,000
+Donald Tsang
+28
+Guangzhou	
+China	
+6,458,000
+10,182,000
+Wan Qingliang
+29
+Dongguan	
+China	
+6,446,000
+7,650,000
+Li Yuquan
+30
+Lahore	
+Pakistan	
+6,100,000
+8,600,000
+Mian Amir Mahmood
+31
+Rio de Janeiro	
+Brazil	
+6,093,000
+14,387,000
+Eduardo Paes
+32
+Baghdad	
+Iraq	
+6,050,000
+6,500,000
+Sabir al-Issawi
+33
+Bangalore	
+India	
+5,840,000
+6,562,000
+SK Nataraj
+34
+Surat	
+India	
+5,390,000
+6,347,000
+Rajendra Desai
+35
+SANTIAGO	
+Chile	
+5,278,000
+6,677,000
+Pablo Zalaquett Said
+36
+Kolkata	
+India	
+5,100,000
+15,420,000
+Bikash Ranjan Bhattacharya
+37
+Shenyang	
+China	
+5,090,000
+7,760,000
+Li Yingjie
+38
+Chongqing	
+China	
+5,087,000
+9,700,000
+Huang Qifan
+39
+SINGAPORE	
+Singapore	
+4,988,000
+4,988,000
+Lee Hsien Loong
+40
+RIYADH	Saudi 
+Arabia	
+4,950,000
+5,855,000
+Abdul Aziz ibn 'Ayyaf Al Migrin
+41
+LUANDA	
+Angola	
+4,799,000
+5,500,000
+José Maria Ferraz dos Santos
+42
+Harbin	
+China	
+4,755,000
+9,874,000
+Zhang Xiaolian
+43
+St Petersburg	
+Russia	
+4,661,000
+4,900,000
+Valentina Matviyenko
+44
+Chennai	
+India	
+4,600,000
+7,330,000
+M Subramaniam
+45
+Ahmadabad	
+India	
+4,525,000
+6,168,000
+Kanaji Thakor
+46
+Wuhan	
+China	
+4,500,000
+6,200,000
+Ruan Chengfa
+47
+Yangon	
+Myanmar (Burma)	
+4,468,000
+5.500,000
+Aung Thein Lynn
+48
+Sydney	
+Australia	
+4,400,000
+4,400,000
+Clover Moore
+49
+Chengdu	
+China	
+4,334,000
+11,000,000
+Ge Honglin
+50
+Shenzhen	
+China	
+4,320,000
+8,616,000
+Xy Qin
+51
+Nanjing	
+China	
+4,150,000
+7,600,000
+Ji Jianye
+52
+Alexandria	
+Egypt	
+4,110,000
+4,350,000
+Adel Labib
+53
+Johannesburg	
+South Africa	
+3,888,000
+10,268,000
+Amos Masondo
+54
+Jeddah	Saudi 
+Arabia	
+3,856,000
+4,500,000
+Adil Faqeeh
+55
+Los Angeles	
+USA	
+3,834,000
+12,890,000
+Antonio Villaraigosa
+56
+Abidjan	
+Ivory Coast	
+3,800,000
+4,000,000
+Pierre Djédji Amondji
+57
+ANKARA	
+Turkey	
+3,764,000
+4,000,000
+Melih Gökçek
+58
+Casablanca	
+Morocco	
+3,673,000
+3,850,000
+Mohammed Sajid
+59
+Yokohama	
+Japan	
+3,655,000
+3,655,000
+Fumiko Hayashi
+60
+Hyderabad	
+India	
+3,637,000
+6,290,000
+Banda Karthika Reddy
+61
+Melbourne	
+Australia	
+3,635,000
+3,635,000
+Robert Doyle
+62
+Kano	
+Nigeria	
+3,626,000
+3,900,000
+Ibrahim Shekarau
+63
+Busan	
+South Korea	
+3,600,000
+4,292,000
+Hur Nam-sik
+64
+KABUL	
+Afghanistan	
+3,586,000
+4,000,000
+Mohammad Yunus Noandesh
+65
+Changchun	
+China	
+3,581,000
+7,460,000
+Cui Jie
+66
+Cape Town	
+South Africa	
+3,497,000
+7,280,000
+Patricia de Lille
+67
+Guiyang	
+China	
+3,450,000
+3,450,000
+Yuan Zhou
+68
+BERLIN	
+Germany	
+3,432,000
+3,943,000
+Klaus Wowereit
+69
+Hangzhou	
+China	
+3,408,000
+6,776,000
+Cai Qi
+70
+ADDIS ABABA	
+Ethiopia	
+3,385,000
+4,568,000
+Kuma Demeksa
+71
+Pune	
+India	
+3,337,000
+4,470,000
+Mohansingh Rajpal
+72
+PYONGYANG	
+North Korea	
+3,255,000
+3,400,000
+n/k
+73
+MADRID	
+Spain	
+3,213,000
+5,300,000
+Alberto Ruiz-Gallardón
+74
+NAIROBI	
+Kenya	
+3,130,000
+3,300,000
+Geoffrey Majiwa
+75
+Kanpur	
+India	
+3,100,000
+4,865,000
+Ravindra Patani
+76
+Kunming	
+China	
+3,100,000
+6,800,000
+Zhang Zulin
+77
+Surabaya	
+Indonesia	
+3,100,000
+3,700,000
+Bambang D H
+78
+Jaipur	
+India	
+3,050,000
+5,690,000
+Jyoti Khandelwal
+79
+Salvador da Bahia	
+Brazil	
+2,998,000
+3,173,000
+João Henrique Carneiro
+80
+SANTO DOMINGO	
+Dominican Republic	
+2,989,000
+3,813,000
+Roberto Salcedo
+81
+Mashhad	
+Iran	
+2,910,000
+3,000,000
+Mohammad Pejman
+82
+Chicago	
+USA	
+2,853,000
+8,770,000
+Rahm Emanuel
+83
+Zibo	
+China	
+2,850,000
+4,200,000
+Liu Huiyan
+84
+KIEV	
+Ukraine	
+2,820,000
+3,300,000
+Alexander Popov
+85
+Durg	
+India	
+2,810,000
+2,810,000
+Dr Shiv Kumar Tamer
+86
+Huludao	
+China	
+2,787,000
+2,787,000
+Sun Zhaolin
+87
+CARACAS	
+Venezuela	
+2,762,000
+3,478,000
+Antonio Ledezma
+88
+Qingdao	
+China	
+2,755,000
+7,580,000
+Xia Geng
+89
+Changsha	
+China	
+2,744,000
+6,140,000
+Zhang Jiangfei
+90
+ROME	
+Italy	
+2,732,000
+3,555,000
+Gianni Alemanno
+91
+Fuzhou (Fujian)	
+China	
+2,710,000
+6,630,000
+Yuan Rongxiang
+92
+Quezon City	
+Philippines	
+2,680,000
+2,680,000
+Herbert M Bautis
+93
+Xian	
+China	
+2,670,000
+4,480,000
+Chen Baogen
+94
+Port Harcourt	
+Nigeria	
+2,667,000
+3,761,000
+Azubuike Nmerukini
+95
+Osaka	
+Japan	
+2,647,000
+17,590,000
+Toru Hashimoto
+96
+Incheon	
+South Korea	
+2,630,000
+2,630,000
+Song Young-gil
+97
+Shijiazhuang	
+China	
+2,630,000
+9,600,000
+Ai Wenli
+98
+TAIPEI	
+Taiwan	
+2,620,000
+6,753,000
+Hau Lung-pin
+99
+Zhengzhou	
+China	
+2,600,000
+4,510,000
+Zhao Jiancai
+100
+Chittagong	
+Bangladesh	
+2,580,000
+3,858,000
+Mohammed Manjur Alam
+101
+Toronto	
+Canada	
+2,571,000
+5,100,000
+Rob Ford
+102
+Ibadan	
+Nigeria	
+2,550,000
+3,000,000
+Adebayo Alao-Akala
+103
+Taiyuan	
+China	
+2,550,000
+3,400,000
+Zhang Bingsheng
+104
+Cali	
+Colombia	
+2,525,000
+2,801,000
+Jorge Ivan Ospina
+105
+Daegu	
+South Korea	
+2,512,000
+2,512,000
+Kim Bum-il
+106
+Bandung	
+Indonesia	
+2,510,000
+3,829,000
+Dada Rosada
+107
+Faisalabad	
+Pakistan	
+2,510,000
+5,081,000
+Rana Zahid Tauseef
+108
+Fortaleza	
+Brazil	
+2,506,000
+3,415,000
+Luizianne Lins
+109
+Baoshan	
+China	
+2,500,000
+2,500,000
+Xiong Qinghua
+110
+DAR ES SALAAM	
+Tanzania	
+2,498,000
+2,700,000
+Adam Kimbisa
+111
+Zhongshan	
+China	
+2,495,000
+2,495,000
+n/k
+112
+Xiamen	
+China	
+2,490,000
+2,490,000
+Liu Cigui
+113
+Chaoyang	
+China	
+2,471,000
+2,471,000
+Zhang Tiemin
+114
+Belo Horizonte	
+Brazil	
+2,453,000
+5,397,000
+Marcio Lacerda
+115
+Nanning	
+China	
+2,450,000
+6,480,000
+Huang Fangfang
+116
+HAVANA	
+Cuba	
+2,430,000
+3,700,000
+Juan Contino Aslán
+117
+Nagpur	
+India	
+2,420,000
+2,420,000
+Archana Dehankar
+118
+Omdurman	
+Sudan	
+2,400,000
+2,400,000
+Al-Fatih Az-ddin
+119
+Suzhou	
+China	
+2,383,000
+6,298,000
+Yan Li
+120
+Aleppo	
+Syria	
+2,360,000
+3,000,000
+Ma'an Al-Shibli
+121
+Lucknow	
+India	
+2,342,000
+2,686,000
+Dinesh Sharma
+122
+Izmir	
+Turkey	
+2,330,000
+3,796,000
+Aziz Kocaoglu
+123
+Linyi	
+China	
+2,300,000
+10,080,000
+Lian Chengmin
+124
+Dalian	
+China	
+2,270,000
+3,478,000
+Li Wancai
+125
+Nagoya	
+Japan	
+2,260,000
+9,250,000
+Takashi Kawamura
+126
+Houston	
+USA	
+2,242,000
+5,728,000
+Annise Parker
+127
+Giza	
+Egypt	
+2,225,000
+2,600,000
+n/k
+128
+Medellin	
+Colombia	
+2,223,000
+3,312,000
+Alonso Salazar Jaramillo
+129
+KHARTOUM	
+Sudan	
+2,208,000
+7,500,000
+Abdul Rahman Alkheder
+130
+Ningbo	
+China	
+2,201,000
+5,600,000
+Mao Guanglie
+131
+Guayaquil	
+Ecuador	
+2,196,000
+2,686,000
+Jaime Nebot
+132
+TASHKENT	
+Uzbekistan	
+2,180,000
+3,400,000
+Abdukahar Tuhtayev
+133
+PARIS	
+France	
+2,113,000
+11,769,000
+Bertrand Delanoë
+134
+BRASILIA	
+Brazil	
+2,089,000
+2,090,000
+José Roberto Arruda
+135
+Lanzhou	
+China	
+2,088,000
+3,300,000
+Zhang Jinliang
+136
+Changzhou	
+China	
+2,086,000
+3,570,000
+Wang Weicheng
+137
+Monterrey	
+Mexico	
+2,057,000
+3,650,000
+Fernando Larrazabal
+138
+BAKU	
+Azerbaijan	
+2,040,000
+2,072,000
+Hajibala Abutalybov
+139
+Kowloon	
+China	
+2,020,000
+2,200,000
+Wong Kwok-keung
+140
+BUCHAREST	
+Romania	
+1,994,000
+2,151,000
+Sorin Oprescu
+141
+Medan	
+Indonesia	
+1,990,000
+2,390,000
+Rahudman Harahap
+142
+Tangshan	
+China	
+1,980,000
+7,100,000
+Zhang Guodong
+143
+Jilin	
+China	
+1,953,000
+4,523,000
+Zhang Xiaopei
+144
+Nanchong	
+China	
+1,950,000
+7,300,000
+Liu Hongjian
+145
+CONAKRY	
+Guinea	
+1,931,000
+1,931,000
+Mamadou Wasco Camara
+146
+AMMAN	
+Jordan	
+1,919,000
+2,524,000
+Omar Maani
+147
+Indore	
+India	
+1,912,000
+1,920,000
+Krishna Murari Moghe
+148
+Sapporo	
+Japan	
+1,906,000
+2,130,000
+Fumio Ueda
+149
+Jinan	
+China	
+1,900,000
+2,444,000
+Zhang Jianguo
+150
+Puebla	
+Mexico	
+1,888,000
+2,500,000
+Blanca Alcala Ruiz
+151
+Haiphong	
+Vietnam	
+1,885,000
+1,885,000
+Trinh Quang Su
+152
+Macheng
+China	
+1,880,000
+1,880,000
+n/k
+153
+Curitiba	
+Brazil	
+1,851,000
+3,261,000
+Carlos Richa
+154
+Nanchang	
+China	
+1,844,000
+3.790,000
+Hu Xian
+155
+MINSK	
+Belarus	
+1,831,000
+1,831,000
+Nikolai Ladutko
+156
+Xuzhou	
+China	
+1,830,000
+9,410,000
+Cao Xinping
+157
+KUALA LUMPUR	
+Malaysia	
+1,810,000
+5,470,000
+Dato Ahmed Fuad Ismail
+158
+BAMAKO	
+Mali	
+1,809,000
+1,809,000
+Adama B. Sangaré
+159
+Huzhou	
+China	
+1,800,000
+2,700,000
+Ma Yi
+160
+Patna	
+India	
+1,800,000
+2,500,000
+GhanShyam Kumar
+161
+Suzhou Anhui	
+China	
+1,800,000
+5,600,000
+Tang Chengpei
+162
+Urumqi	
+China	
+1,800,000
+2,680,000
+Jerla Isamudin
+163
+Yantai	
+China	
+1,800,000
+6,500,000
+Zhang Jiangting
+164
+Maracaibo	
+Venezuela	
+1,799,000
+1,868,000
+Eveling Trejo
+165
+Tianmen	
+China	
+1,790,000
+1,790,000
+n/k
+166
+Hamburg	
+Germany	
+1,775,000
+3,260,000
+Olaf Scholz
+167
+Shantou	
+China	
+1,770,000
+4,972,000
+Cai Zong Ze
+168
+Basrah	
+Iraq	
+1,760,000
+3,800,000
+Jabbar Jaber Al-Latif
+169
+Hefei	
+China	
+1,750,000
+4,867,000
+Wu Cunrong
+170
+Tengzhou	
+China	
+1,750,000
+1,750,000
+Du Yongguang
+171
+Wuxi	
+China	
+1,750,000
+2,230,000
+Mao Xiaoping
+172
+SANAA	
+Yemen	
+1,747,000
+2,168,000
+Abdulrahman al-Akwaa
+173
+Manaus	
+Brazil	
+1,739,000
+1,924,000
+Amazonino Mendes
+174
+Fuyang	
+China	
+1,720,000
+1,720,000
+Sun Yunfei
+175
+BUDAPEST	
+Hungary	
+1,712,000
+2,503,000
+István Tarlós
+176
+WARSAW	
+Poland	
+1,712,000
+3,350,000
+Hanna Gronkiewicz-Waltz
+177
+Mecca	
+Saudi Arabia	
+1,700,000
+2,500,000
+Osama Al-Bar
+178
+Ecatepec	
+Mexico	
+1,688,000
+1,690,000
+Eruviel Ávila Villegas
+179
+TRIPOLI	
+Libya	
+1,683,000
+2,270,000
+Abdullatif Abdulrahman Aldaali
+180
+VIENNA	
+Austria	
+1,681,000
+2,269,000
+Michael Häupl
+181
+Suizhou	
+China	
+1,680,000
+1,680,000
+Li Hongyun
+182
+Barcelona	
+Spain	
+1,673,000
+3,890,000
+Jordi Hereu
+183
+DAMASCUS	
+Syria	
+1,670,000
+4,350,000
+Bishr Al Sabban
+184
+Agra	
+India	
+1,650,000
+1,800,000
+Anjula Singh Mahaur
+185
+Gaozhou	
+China	
+1,650,000
+1,650,000
+n/k
+186
+Taian	
+China	
+1,650,000
+5,500,000
+Li Hongfeng
+187
+QUITO	
+Ecuador	
+1,648,000
+1,842,000
+Augusto Barrera
+188
+Tianshui	
+China	
+1,630,000
+3,450,000
+Li Wenqing
+189
+Montreal	
+Canada	
+1,621,000
+3,636,000
+Gérald Tremblay
+190
+Nashik	
+India	
+1,620,000
+1,620,000
+Nayana Gholap
+191
+Shangqiu	
+China	
+1,610,000
+8,220,000
+Tao Minglun
+192
+ACCRA	
+Ghana	
+1,605,000
+2,756,000
+Alfred Vanderpuije
+193
+Perth	
+Australia	
+1,603,000
+1,603,000
+Lisa Scaffidi
+194
+HARARE	
+Zimbabwe	
+1,600,000
+2,800,000
+Muchadeyi Masunda
+195
+Palembang	
+Indonesia	
+1,600,000
+1,600,000
+Eddy Santana Putra
+196
+Santa Cruz	
+Bolivia	
+1,595,000
+1,863,000
+Percy Fernandez
+197
+Esfahan	
+Iran	
+1,584,000
+2,600,000
+Morteza Saqaeian Nejad
+198
+Guadalajara	
+Mexico	
+1,580,000
+3,600,000
+Jorge Aristoteles Sandoval
+199
+Phoenix	
+USA	
+1,568,000
+4,282,000
+Phil Gordon
+200
+Recife	
+Brazil	
+1,561,000
+3,769,000
+João da Costa Bezerra Filho
+201
+Neijiang	
+China	
+1,560,000
+1,560,000
+n/k
+202
+Rawalpindi	
+Pakistan	
+1,558,000
+2,548,000
+Raja Hamid Nawaz
+203
+Tangerang	
+Indonesia	
+1,545,000
+1,545,000
+Wahidin Halim
+204
+Brisbane	
+Australia	
+1,544,000
+1,544,000
+Campbell Newman
+205
+Philadelphia	
+USA	
+1,540,000
+5,345,000
+Michael Nutter
+206
+Kobe	
+Japan	
+1,534,000
+1,560,000
+Tatsuo Yada
+207
+Hechuan	
+China	
+1,530,000
+1,530,000
+n/k
+208
+Kaohsiung	
+Taiwan	
+1,530,000
+2,960,000
+Chen Chu
+209
+TSHWANE (PRETORIA)	
+South Africa	
+1,530,000
+2,346,000
+Gwen Ramokgopa
+210
+Taizhou	
+China	
+1,528,000
+5,741,000
+Wu Weirong
+211
+ALGIERS	
+Algeria	
+1,520,000
+3,354,000
+Tayeb Zitouni
+212
+LA PAZ	
+Bolivia	
+1,517,000
+1,551,000
+Luis Antonio Revilla Herrero
+213
+Pimpri Chinchwad	
+India	
+1,515,000
+1,515,000
+Yogesh Behl
+214
+Barquisimeto	
+Venezuela	
+1,500,000
+1,500,000
+Amalia Saez
+215
+Guigang	
+China	
+1,500,000
+4,400,000
+n/k
+216
+Kumasi	
+Ghana	
+1,500,000
+2,500,000
+Samuel Sarpong
+217
+Luoyang	
+China	
+1,500,000
+1,499,000
+Guo Hongchang
+218
+MOGADISHU	
+Somalia	
+1,500,000
+2,500,000
+Mohamud Ahmed Tarzan
+219
+Vadodara	
+India	
+1,500,000
+3,642,000
+Balakrishna Shukla
+220
+Quanzhou	
+China	
+1,490,000
+7,790,000
+Zhu Ming
+221
+TBILISI	
+Georgia	
+1,490,000
+1,550,000
+Giorgi Ugulava
+222
+Tijuana	
+Mexico	
+1,484,000
+1,500,000
+Carlos Bustamante
+223
+Xintai	
+China	
+1,480,000
+1,480,000
+Liu Daqun
+224
+Nanan	
+China	
+1,480,000
+1,480,000
+Chen Law
+225
+OUAGADOUGOU	
+Burkina Faso	
+1,475,000
+1,727,000
+Simon Compaoré
+226
+Benghazi	
+Libya	
+1,471,000
+1,500,000
+n/k
+227
+Kyoto	
+Japan	
+1,466,000
+1,500,000
+Daisaku Kadokawa
+228
+Kharkiv	
+Ukraine	
+1,461,000
+1,674,000
+Mykhailo Dobkin
+229
+Kaduna	
+Nigeria	
+1,460,000
+1,500,000
+Mohammed Namadi Sambo
+230
+Xinyang	
+China	
+1,460,000
+1,460,000
+Guo Ruimin
+231
+Bhopal	
+India	
+1,458,000
+1,600,000
+Krishna Gaur
+232
+Rugao	
+China	
+1,453,000
+1,453,000
+Ding Dawei
+233
+Anyang	
+China	
+1,450,000
+3,000,000
+Zhang Xiaodong
+234
+Fukuoka	
+Japan	
+1,450,000
+2,230,000
+Hiroshi Yoshida
+235
+Weifang	
+China	
+1,450,000
+8,500,000
+Xu Liquan
+236
+Zhanjiang	
+China	
+1,450,000
+6,900,000
+Ruan Risheng
+237
+Hyderabad	
+Pakistan	
+1,447,000
+1,500,000
+Kanwar Naveed Jamil
+238
+Fushun	
+China	
+1,445,000
+2,300,000
+Wang Yang
+239
+Daejeon	
+South Korea	
+1,443,000
+1,443,000
+Yum Hong-chul
+240
+Qiqihaer	
+China	
+1,439,000
+6,011,000
+Liu Gang
+241
+Jianyang	
+China	
+1,430,000
+1,430,000
+n/k
+242
+YAOUNDÉ	
+Cameroon	
+1,430,000
+1,550,000
+n/k
+243
+Multan	
+Pakistan	
+1,424,000
+1,500,000
+Mian Faisal Mukhtar
+244
+ALMATY	
+Kazakhstan	
+1,420,000
+1,500,000
+Akhmetzhan Yesimov
+245
+Guiping	
+China	
+1,420,000
+1,420,000
+n/k
+246
+Huazhou	
+China	
+1,420,000
+1,420,000
+n/k
+247
+KAMPALA	
+Uganda	
+1,420,000
+1,600,000
+Nasser Sebaggala
+248
+Tabriz	
+Iran	
+1,420,000
+1,420,000
+Alireza Novin
+249
+Gujranwala	
+Pakistan	
+1,416,000
+1,900,000
+Fayyaz Ahmad Chattha
+250
+Gwangju	
+South Korea	
+1,415,000
+1,500,000
+Kang Un-tae
+251
+Belem	
+Brazil	
+1,409,000
+1,913,000
+Duciomar Costa
+252
+SOFIA	
+Bulgaria	
+1,403,000
+1,455,000
+Yordanka Fandukova
+253
+Bursa	
+Turkey	
+1,400,000
+3,190,000
+Recep Altepe
+254
+Changde	
+China	
+1,400,000
+6,000,000
+Chen Wenhao
+255
+Ciudad Juarez	
+Mexico	
+1,400,000
+2,010,000
+José Reyes Ferriz
+256
+Ludhiana	
+India	
+1,400,000
+4,400,000
+n/k
+257
+Tongzhou	
+China	
+1,400,000
+1,400,000
+Ding Dawei
+258
+Novosibirsk	
+Russia	
+1,396,000
+1,429,000
+Vladimir Gorodetsky
+259
+Semarang	
+Indonesia	
+1,393,000
+1,400,000
+Soemarmo HS
+260
+Handan	
+China	
+1,390,000
+8,500,000
+Guo Dajian
+261
+Kawasaki	
+Japan	
+1,390,000
+1,450,000
+Takao Abe
+262
+Suining	
+China	
+1,385,000
+3,500,000
+n/k
+263
+Douala	
+Cameroon	
+1,382,000
+2,000,000
+n/k
+264
+Karaj	
+Iran	
+1,380,000
+1,380,000
+n/k
+265
+Liuyang	
+China	
+1,380,000
+1,380,000
+Liang Zhong
+266
+Luzhou	
+China	
+1,380,000
+4,800,000
+Liu Guoqiang
+267
+Caloocan	
+Philippines	
+1,379,000
+1,379,000
+Enrico Echiverri
+268
+Thane	
+India	
+1,375,000
+1,375,000
+Ashjok Vaity
+269
+Varanasi	
+India	
+1,375,000
+3,150,000
+Kaushalendra Singh
+270
+HANOI	
+Vietnam	
+1,372,000
+6,500,000
+Nguyen The Thao
+271
+Munich	
+Germany	
+1,367,000
+2,600,000
+Christian Ude
+272
+Davao City	
+Philippines	
+1,363,000
+1,363,000
+Inday Sara Duterte-Carpio
+273
+Porto Alegre	
+Brazil	
+1,355,000
+3,646,000
+José Fortunati
+274
+Taixing	
+China	
+1,355,000
+1,355,000
+Gao Yazi
+275
+Bozhou	
+China	
+1,352,000
+1,352,000
+Liu Jian
+276
+San Antonio	
+USA	
+1,351,000
+2,031,000
+Julian Castro
+277
+Jinjiang	
+China	
+1,350,000
+1,350,000
+Kenneth Li
+278
+Lufeng	
+China	
+1,350,000
+1,350,000
+n/k
+279
+Yongcheng	
+China	
+1,347,000
+1,347,000
+n/k
+280
+Guilin	
+China	
+1,340,000
+1,340,000
+Li Zhigang
+281
+Pingdu	
+China	
+1,340,000
+1,340,000
+n/k
+282
+Ahwaz	
+Iran	
+1,338,000
+1,500,000
+Saeed Mombeini
+283
+Rajkot	
+India	
+1,336,000
+1,336,000
+Sandhya Vyas
+284
+Santiago de los Caballeros	
+Dominican Republic	
+1,329,000
+1,937.000
+Gilberto Serulle
+285
+MONTEVIDEO	
+Uruguay	
+1,326,000
+1,723,000
+Ana Olivera
+286
+Ekaterinburg	
+Russia	
+1,323,000
+1,389,000
+Eugene Porunov
+287
+Baotou	
+China	
+1,318,000
+1,750,000
+Hu Ercha
+288
+Cordoba	
+Argentina	
+1,310,000
+1,528,000
+Daniel Giacomino
+289
+Milan	
+Italy	
+1,302,000
+4,051,000
+Giuliano Pisapia
+290
+Lianjiang	
+China	
+1,300,000
+1,300,000
+Xing Taian
+291
+Medina	
+Saudi Arabia	
+1,300,000
+1,300,000
+Abdulaziz Bin Majid
+292
+Mianyang	
+China	
+1,300,000
+5,200,000
+Liu Dong
+293
+Yiyang	
+China	
+1,300,000
+4,500,000
+n/k
+294
+Barranquilla	
+Colombia	
+1,298,000
+1,871,000
+Alejandro Char Chaljub
+295
+Irbil	
+Iraq	
+1,294,000
+1,500,000
+n/k
+296
+Adelaide	
+Australia	
+1,290,000
+1,290,000
+Stephen Yarwood
+297
+Anshan	
+China	
+1,290,000
+2,404,000
+n/k
+298
+Ranchi	
+India	
+1,290,000
+1,290,000
+Rama Khalkho
+299
+Rizhao	
+China	
+1,290,000
+1,290,000
+Zhao Xiaowei
+300
+Guarulhos	
+Brazil	
+1,283,000
+1,500,000
+Sebastião Moreira
+301
+Goiania
+Brazil	
+1,282,000
+2,064,000
+Íris Rezende Machado
+302
+Dallas
+USA	
+1,280,000
+6,300,000
+Tom Leppert
+303
+Heze
+China	
+1,280,000
+1,280,000
+Du Changwen
+304
+Nizhniy Novgorod
+Russia	
+1,280,000
+1,900,000
+Vadim Bulavinov
+305
+San Diego
+USA	
+1,280,000
+3,001,000
+Jerry Sanders
+306
+Meerut
+India	
+1,277,000
+1,277,000
+n/k
+307
+La Matanza
+Argentina	
+1,255,000
+1,255,000
+n/k
+308
+Datong
+China	
+1,253,000
+1,377,000
+n/k
+309
+BEIRUT
+Lebanon	
+1,250,000
+2,600,000
+Abdel Mounim Ariss
+310
+Fengcheng
+China	
+1,250,000
+1,250,000
+n/k
+311
+Ruian
+China	
+1,250,000
+1,250,000
+n/k
+312
+Laiwu
+China	
+1,249,000
+1,249,000
+Ma Pingchang
+313
+MAPUTO
+Mozambique	
+1,244,000
+1,640,000
+David Simango
+314
+PHNOM PENH
+Cambodia	
+1,242,000
+2,001,000
+Keb Chutema
+315
+PRAGUE
+Czech Republic	
+1,242,000
+1,900,000
+Zdenek Tuma
+316
+Pingdingshan
+China	
+1,230,000
+5,200,000
+Deng Yongjian
+317
+Yuzhou
+China	
+1,230,000
+1,230,000
+n/k
+318
+Shiraz
+Iran	
+1,228,000
+1,300,000
+Mehran E'temad
+319
+Cixi
+China	
+1,220,000
+1,220,000
+n/k
+320
+Allahabad
+India	
+1,215,000
+1,250,000
+Jitendr Nath Singh
+321
+Huainan
+China	
+1,201,000
+1,201,000
+Cao Yong
+322
+Anqiu
+China	
+1,200,000
+1,200,000
+n/k
+323
+Fuqing
+China	
+1,200,000
+1,200,000
+n/k
+324
+Maiduguri
+Nigeria	
+1,200,000
+1,200,000
+n/k
+325
+Pikine-Guediawaye
+Senegal	
+1,200,000
+1,200,000
+n/k
+326
+Tegucigalpa
+Honduras	
+1,200,000
+1,324,000
+Ricardo Alvarez
+327
+TUNIS
+Tunisia	
+1,200,000
+3,980,000
+Abbès Mohsen
+328
+Valencia
+Venezuela	
+1,200,000
+1,750,000
+Edgardo Parra
+329
+Amritsar
+India	
+1,195,000
+1,300,000
+Shawet Malik
+330
+Qianjiang
+China	
+1,190,000
+1,190,000
+n/k
+331
+Bazhong
+China	
+1,186,000
+1,186,000
+n/k
+332
+MANAGUA
+Nicaragua	
+1,185,000
+1,342,000
+Daisy Torres
+333
+Leqing
+China	
+1,183,000
+1,183,000
+n/k
+334
+Saitama
+Japan	
+1,183,000
+1,183,000
+Hayato Shimizu
+335
+BELGRADE
+Serbia	
+1,182,000
+1,630,000
+Dragan Dillas
+336
+Hiroshima
+Japan	
+1,174,000
+1,700,000
+Kazumi Matsui
+337
+Dongtai
+China	
+1,170,000
+1,170,000
+n/k
+338
+Ujung Pandang
+Indonesia	
+1,170,000
+1,254,000
+n/k
+339
+Aurangabad
+India	
+1,168,000
+1,168,000
+Vijaya Rahatkar
+340
+Adana
+Turkey	
+1,162,000
+1,556,000
+Aytaç Durak
+341
+Guangyuan
+China	
+1,160,000
+3,037,000
+n/k
+342
+Qidong
+China	
+1,160,000
+1,160,000
+n/k
+343
+Rosario
+Argentina	
+1,160,000
+1,358,000
+Miguel Lifschitz
+344
+Samara
+Russia	
+1,160,000
+1,500,000
+Viktor Tarkhov
+345
+Zapopan
+Mexico	
+1,155,000
+1,200,000
+Hector Vielma Ordoñez
+346
+Nezahualcoyotl
+Mexico	
+1,141,000
+1,150,000
+Edgar Cesáreo Navarro Sánchez
+347
+Lubumbashi
+Congo D.R.	
+1,140,000
+1,250,000
+Moise Katumbi
+348
+Mosul
+Iraq	
+1,139,000
+1,139,000
+n/k
+349
+Leon
+Mexico	
+1,138,000
+1,635,000
+Ricardo Sheffield
+350
+Omsk
+Russia	
+1,137,000
+1,145,000
+Viktor Shreyder
+351
+Solapur
+India	
+1,134,000
+1,134,000
+Aruna Vakase
+352
+BRAZZAVILLE
+Congo Br	
+1,133,000
+1,134,000
+n/k
+353
+Bijie
+China	
+1,130,000
+7,188,000
+n/k
+354
+Haicheng
+China	
+1,130,000
+1,130,000
+n/k
+355
+Madurai
+India	
+1,130,000
+1,130,000
+Thenmozhi Gopinathan
+356
+Ulsan
+South Korea	
+1,127,000
+1,127,000
+Bak Maeng-woo
+357
+Leshan
+China	
+1,120,000
+1,120,000
+n/k
+358
+Jabalpur
+India	
+1,117,000
+1,150,000
+Prabhat Sahu
+359
+Kazan
+Russia	
+1,115,000
+1,300,000
+lsur Metshin
+360
+Makasar
+Indonesia	
+1,113,000
+1,113,000
+Ilham Arief Sirajuddin
+361
+Jimo
+China	
+1,113,000
+1,113,000
+n/k
+362
+Jining
+China	
+1,110,000
+1,110,000
+Zhang Zhen Chuan
+363
+LUSAKA
+Zambia	
+1,110,000
+3,120,000
+Robert Chikwelete
+364
+ULAANBAATAR
+Mongolia	
+1,108,000
+1,108,000
+n/k
+365
+YEREVAN
+Armenia	
+1,108,000
+1,246,000
+Gagik Beglaryan
+366
+Donetsk
+Ukraine	
+1,100,000
+1,570,000
+Oleksandr Lukianchenko
+367
+Peshawar
+Pakistan	
+1,100,000
+3,100,000
+Muhammad Umar Khan
+368
+Wafangdian
+China	
+1,100,000
+1,100,000
+n/k
+369
+COPENHAGEN
+Denmark	
+1,096,000
+1,096,000
+Frank Jensen
+370
+Mirat
+India	
+1,095,000
+1,095,000
+n/k
+371
+Chelyabinsk
+Russia	
+1,092,000
+1,200,000
+Mikhail Yurevich
+372
+GUATEMALA CITY
+Guatemala	
+1,090,000
+2,564,000
+Alvaro Arzú
+373
+Shouguang
+China	
+1,090,000
+1,090,000
+n/k
+374
+Dubai
+UAE	
+1,089,000
+2,100,000
+n/k
+375
+Suwon
+South Korea	
+1,087,000
+1,087,000
+n/k
+376
+PORT-AU-PRINCE
+Haiti	
+1,083,000
+1,728,000
+Jean Yves Jason
+377
+Odessa
+Ukraine	
+1,080,000
+1,200,000
+Eduard Gurwits
+378
+Goyang
+South Korea	
+1,073,000
+1,073,000
+n/k
+379
+Seongnam
+South Korea	
+1,073,000
+1,073,000
+n/k
+380
+Marrakech
+Morocco	
+1,071,000
+1,071,000
+n/k
+381
+Taishan
+China	
+1,070,000
+1,070,000
+n/k
+382
+Rostov on Don
+Russia	
+1,068,000
+1,250,000
+Mikhail Chernyshyov
+383
+Dhanbad
+India	
+1,065,000
+1,200,000
+n/k
+384
+Taichung
+Taiwan	
+1,065,000
+2,700,000
+Jason Hu
+385
+Ezhou
+China	
+1,064,000
+1,064,000
+n/k
+386
+Campinas
+Brazil	
+1,059,000
+3,200,000
+Hélio de Oliveira Santos
+387
+Faridabad
+India	
+1,055,000
+2,193,000
+n/k
+388
+Jiangdu
+China	
+1,053,000
+1,053,000
+n/k
+389
+Benin
+Nigeria	
+1,051,000
+1,052,000
+n/k
+390
+Beiliu
+China	
+1,050,000
+1,050,000
+n/k
+391
+Gongzhuling
+China	
+1,050,000
+1,050,000
+n/k
+392
+Changshu
+China	
+1,048,000
+1,048,000
+Wang Xiang
+393
+Qom
+Iran	
+1,042,000
+1,042,000
+n/k
+394
+Dnipropetrovsk
+Ukraine	
+1,040,000
+1,480,000
+Ivan Ivanovych Kulichenko
+395
+FREETOWN
+Sierra Leone	
+1,032,000
+1,032,000
+Herbert-George Williams
+396
+Sendai
+Japan	
+1,032,000
+1,300,000
+Emiko Okuyama
+397
+DAKAR
+Senegal	
+1,031,000
+2,253,000
+Khalifa Sall
+398
+Ufa
+Russia	
+1,023,000
+1,050,000
+Pavel Kachkayev
+399
+Fuzhou (Jiangxi)
+China	
+1,020,000
+3,700,000
+Xìe Yìs®•
+400
+Yichun
+China	
+1,020,000
+958,000
+Gong Jianhua
+401
+Birmingham
+UK	
+1,017,000
+2,284,000
+Mike Whitby
+402
+Mudanjiang
+China	
+1,014,000
+2,707,000
+n/k
+403
+Volgograd
+Russia	
+1,012,000
+1,292,000
+Roman Grebennikov
+404
+Perm
+Russia	
+1,010,000
+1,200,000
+Igor Shubin
+405
+Fes
+Morocco	
+1,009,000
+1,009,000
+n/k
+406
+Haora
+India	
+1,008,000
+1,008,000
+Sri Gopal Mukherjee
+407
+Haora
+India	
+1,008,000
+1,020,000
+Sri Gopal Mukherjee
+408
+Jodhpur
+India	
+1,007,000
+1,007,000
+Om Kumari Gehlot
+409
+San Jose
+USA	
+1,007,000
+1,819,000
+Chuck Reed
+410
+Torreon
+Mexico	
+1,001,000
+1,001,000
+Eduardo Olmos Castro
+411
+Mexicali
+Mexico	
+1,000,000
+1,000,000
+n/k
+412
+Subra al-Haymah
+Egypt	
+998,000
+998,000
+n/k
+413
+Baoding
+China	
+997,000
+997,000
+n/k
+414
+Cologne
+Germany	
+995,000
+11,297,000
+Jürgen Roters
+415
+Hezhou
+China	
+990,000
+2,090,000
+n/k
+416
+Calgary
+Canada	
+988,000
+1,080,000
+Naheed Nenshi
+417
+Sao Luis
+Brazil	
+987,000
+1,228,000
+João Castelo
+418
+Kitakyushu
+Japan	
+985,000
+1,050,000
+Kenji Kitahashi
+419
+Sao Goncalo
+Brazil	
+973,000
+1.221,000
+n/k
+420
+Ghaziabad
+India	
+970,000
+970,000
+Damyanti Goel
+421
+Visakhapatnam
+India	
+970,000
+1,330,000
+B N Vishnu
+422
+Wujiang
+China	
+970,000
+1,500,000
+n/k
+423
+Naples
+Italy	
+963,000
+3,000,000
+Luigi di Magistris
+424
+Chiba
+Japan	
+962,000
+970,000
+Toshihito Kumagai
+425
+Mandalay
+Myanmar (Burma)	
+961,000
+1,300,000
+Phone Zaw Han
+426
+Feicheng
+China	
+960,000
+960,000
+n/k
+427
+BRUSSELS
+Belgium	
+958,000
+1,740,000
+Freddy Thielemans
+428
+Vijayawada
+India	
+957,000
+1,150,000
+Ratna Bindu
+429
+Haimen
+China	
+950,000
+950,000
+n/k
+430
+KATHMANDU
+Nepal	
+949,000
+1,700,000
+n/k
+431
+Ciudad Guayana
+Venezuela	
+940,000
+1,000,000
+José Ramón Lopéz
+432
+Safi
+Morocco	
+933,000
+933,000
+n/k
+433
+Coimbatore
+India	
+931,000
+1,446,000
+R.Venkatachalam
+434
+Gaziantep
+Turkey	
+927,000
+1,912,000
+n/k
+435
+Weinan
+China	
+925,000
+925,000
+n/k
+436
+Soweto
+South Africa	
+923,000
+923,000
+Amos Masondo (Johannesburg)
+437
+Maceio
+Brazil	
+922,000
+1,100,000
+José Cícero Soares de Almeida
+438
+Agadir
+Morocco	
+921,000
+921,000
+n/k
+439
+Krasnoyarsk
+Russia	
+920,000
+950,000
+Pyotr Pimashkov
+440
+Srinagar
+India	
+915,000
+1,050,000
+Salman Sagar
+441
+Detroit
+USA	
+912,000
+3,903,000
+Dave Bing
+442
+Turin
+Italy	
+910,000
+1,617,000
+Pietro Franco
+443
+Arequipa
+Peru	
+905,000
+905,000
+Simón Balbuena Marroquín
+444
+Mbuji-Mayi
+Congo D.R.	
+905,000
+1,054,000
+n/k
+445
+Songzi
+China	
+905,000
+905,000
+n/k
+446
+Salé
+Morocco	
+904,000
+904,000
+n/k
+447
+ANTANANARIVO
+Madagascar	
+903,000
+1,403,000
+n/k
+448
+Laizhou
+China	
+902,000
+902,000
+n/k
+449
+Chandigarh
+India	
+901,000
+901,000
+n/k
+450
+Zaria
+Nigeria	
+898,000
+898,000
+n/k
+451
+ABU DHABI	
+UAE	
+897,000
+897,000
+Khalifa bin Zayed Al Nahyan
+452
+Cartagena	
+Colombia	
+893,000
+1,240,000
+Judith Pinedo
+453
+Teresina	
+Brazil	
+893,000
+949,000
+Silvio Mendes
+454
+Danyang	
+China	
+890,000
+890,000
+n/k
+455
+Sholapur	
+India	
+890,000
+890,000
+n/k
+456
+Hengyang	
+China	
+880,000
+7,000,000
+n/k
+457
+Honghu	
+China	
+880,000
+880,000
+n/k
+458
+Mombasa	
+Kenia	
+880,000
+880,000
+Ahmed Abubakar Mohdhar
+459
+Daye	
+China	
+874,000
+874,000
+n/k
+460
+Bogor	
+Indonesia	
+866,000
+866,000
+Diani Budiarto
+461
+LILONGWE	
+Malawi	
+866,000
+866,000
+n/k
+462
+Duque de Caxias	
+Brazil	
+864,000
+1,000,000
+José Camilo Zito dos Santos Filho
+463
+Khulna	
+Bangladesh	
+856,000
+1,388,000
+Talukder Abdul Khaleque
+464
+Marseille	
+France	
+852,000
+1,605,000
+Jean-Claude Gaudin
+465
+Bucheon	
+South Korea	
+850,000
+850,000
+n/k
+466
+Norfolk	
+USA	
+850,000
+1,616,000
+Paul D Fraim
+467
+PANAMA CITY	
+Panama	
+850,000
+1,220,000
+Bosco Vallarino
+468
+Voronezh	
+Russia	
+849,000
+950,000
+Sergey Koliukh
+469
+Nova Iguacu	
+Brazil	
+846,000
+959,000
+Lindberg Farias
+470
+Sakai	
+Japan	
+836,000
+836,000
+Osami Takeyama
+471
+Port Elizabeth	
+South Africa	
+833,000
+1,245,000
+Nondumiso Maphasi
+472
+Saratov	
+Russia	
+831,000
+1,100,000
+Vyacheslav Leonovich Somov
+473
+Benxi	
+China	
+830,000
+1,567,000
+Gang Rui
+474
+Haikou	
+China	
+830,000
+830,000
+n/k
+475
+STOCKHOLM	
+Sweden	
+826,000
+1,252,000
+Sten Nordin
+476
+Hims	
+Syria	
+823,000
+823,000
+Nadia Kseibi
+477
+Kermanshah	
+Iran	
+823,000
+966,000
+n/k
+478
+Naucalpan	
+Mexico	
+822,000
+835,000
+Azucena Olivares Villagómez
+479
+Hamhung	
+North Korea	
+821,000
+821,000
+n/k
+480
+Hohhot	
+China	
+820,000
+1,041,000
+n/k
+481
+Padang	
+Indonesia	
+820,000
+900,000
+Fauzi Bahar
+482
+Hamamatsu	
+Japan	
+815,000
+1,093,000
+Yasutomo Suzuki
+483
+OTTAWA	
+Canada	
+815,000
+1,131,000
+Larry O'Brien
+484
+Ad-Dammam	
+Saudi Arabia	
+813,000
+2,051,000
+Dhaifallah al-'Utaybi
+485
+Dammam	
+Saudi Arabia	
+812,000
+2,000,000
+Dhaifallah al-'Utaybi
+486
+Niigata	
+Japan	
+812,000
+812,000
+Akira Shinoda
+487
+Liuzhou	
+China	
+810,000
+990,000
+n/k
+488
+Thiruvananthapuram	
+India	
+810,000
+955,000
+C Jayan Babu
+489
+Valencia	
+Spain	
+810,000
+1,720,000
+Rita Barberá Nolla
+490
+Bengbu	
+China	
+809,000
+3,470,000
+Chen Qitao
+491
+San Francisco	
+USA	
+809,000
+3,229,000
+n/k
+492
+Guwahati	
+India	
+808,000
+820,000
+Dolly Borah
+493
+Jacksonville	
+USA	
+808,000
+1,300,000
+John Peyton
+494
+Santiago de Queretaro	
+Mexico	
+805,000
+1,085,000
+Francisco Domínguez Servien
+495
+ZAGREB	
+Croatia	
+804,000
+1,288,000
+Milan Bandic
+496
+ASTANA	
+Kazakhstan	
+803,000
+803,000
+Imangali Tasmagambetov
+497
+Kolwezi	
+Congo D.R.	
+803,000
+803,000
+n/k
+498
+Hubli	
+India	
+801,000
+801,000
+n/k
+499
+Daqing	
+China	
+800,000
+2,770,000
+n/k
+500
+Nanyang	
+China	
+800,000
+10,700,000
+Huang Xingwei
+501
+Mysore	
+India	
+799,000
+799,000
+Purushotham
+502
+Indianapolis	
+USA	
+798,000
+1,715,000
+Gregory A. Ballard
+503
+Natal	
+Brazil	
+790,000
+1,100,000
+n/k
+504
+CHISINAU	
+Moldova	
+785,000
+911,000
+Dorin Chirtoaca
+505
+Toluca	
+Mexico	
+785,000
+1,650,000
+Maria Elena Barrera Tapia
+506
+Lodz	
+Poland	
+783,000
+1,429,000
+Jerzy Kropiwickni
+507
+Sao Bernardo do Campo	
+Brazil	
+783,000
+783,000
+Luiz Marinho
+508
+Zaporizhzhya	
+Ukraine	
+782,000
+782,000
+Yevgeni Kartashov
+509
+ABUJA	
+Nigeria	
+779,000
+900,000
+Muhammad Adamu Aliero
+510
+Leeds	
+UK	
+778,000
+1,500,000
+Paul Rogerson
+511
+Masqat-Matrah	
+Oman	
+776,000
+776,000
+n/k
+512
+Tainan	
+Taiwan	
+769,000
+785,000
+Hsu Tain-tsair
+513
+BISHKEK	
+Kyrgyzstan	
+765,000
+800,000
+Nariman Tuleyev
+514
+Jerusalem	
+Israel	
+764,000
+1,029,000
+Nir Barkat Nazareth
+515
+AMSTERDAM	
+Netherlands	
+762,000
+1,536,000
+Eberhard van der Laan
+516
+Jixi	
+China	
+760,000
+1,960,000
+Zhu, Deyi
+517
+Tiruchchirappalli	
+India	
+760,000
+863,000
+n/k
+518
+ATHENS	
+Greece	
+757,000
+3,216,000
+Giorgos Kaminis
+519
+Krakow	
+Poland	
+755,000
+1,250,000
+Jacek Majchrowski
+520
+Cebu City	
+Philippines	
+747,000
+1,198,000
+Tomas R Osmena
+521
+Ankang	
+China	
+743,000
+743,000
+n/k
+522
+Bandar Lampung	
+Indonesia	
+743,000
+1,123,000
+n/k
+523
+Malang	
+Indonesia	
+742,000
+921,000
+n/k
+524
+Lviv	
+Ukraine	
+740,000
+1,040,000
+Andriy Sadovyi
+525
+Merida	
+Mexico	
+734,000
+890,000
+César Bojórquez Zapata
+526
+Edmonton	
+Canada	
+730,000
+1,035,000
+Stephen Mandel
+527
+Ogbomosho	
+Nigeria	
+726,000
+985,000
+n/k
+528
+RIGA	
+Latvia	
+725,000
+878,000
+Nils Usakovs
+529
+Acapulco	
+Mexico	
+718,000
+880,000
+Manuel Añorve Bolaños
+530
+Shizuoka	
+Japan	
+718,000
+1,211,000
+Nobuhiro Tanabe
+531
+Columbus	
+USA	
+714,000
+1,540,000
+Michael B Coleman
+532
+Jalandhar	
+India	
+714,000
+764,000
+n/k
+533
+Xining	
+China	
+713,000
+894,000
+n/k
+534
+Krasnodar	
+Russia	
+710,000
+780,000
+Vladimir Yevlanov
+535
+La Plata	
+Argentina	
+710,000
+833,000
+Pablo Bruera
+536
+Tangier	
+Morocco	
+710,000
+710,000
+n/k
+537
+Sevilla	
+Spain	
+704,000
+1,135,000
+lfredo Sánchez Monteseirín
+538
+Joao Pessoa	
+Brazil	
+702,000
+984,000
+Ricardo Coutinho
+539
+Okayama	
+Japan	
+700,000
+1,250,000
+Shigeo Takaya
+540
+Chihuahua	
+Mexico	
+694,000
+825,000
+n/k
+541
+Fuxin	
+China	
+690,000
+969,000
+n/k
+542
+Gwalior	
+India	
+690,000
+866,000
+Sameeksha Gupta
+543
+Jinzhou	
+China	
+690,000
+902,000
+n/k
+544
+San Luis Potosi	
+Mexico	
+685,000
+957,000
+Jorge Lozano Armengol
+545
+Tlalnepantla de Baz	
+Mexico	
+685,000
+800,000
+Arturo Ugalde Meneses
+546
+Palermo	
+Italy	
+684,000
+947,000
+Leoluca Orlando
+547
+Oran	
+Algeria	
+683,000
+772,000
+Saddek Benkada
+548
+Austin	
+USA	
+681,000
+1,185,000
+Lee Leffingwell
+549
+Aligarh	
+India	
+680,000
+1,116,000
+n/k
+550
+DUSHANBE	
+Tajikistan	
+680,000
+810,000
+Mahmadsaid Ubaydulloyev
+551
+Zhangjiakou	
+China	
+680,000
+882,000
+n/k
+552
+Amravati	
+India	
+678,000
+1,031,000
+n/k
+553
+Bulawayo	
+Zimbabwe	
+676,000
+676,000
+Thaba Moyo
+554
+Durban	
+South Africa	
+670,000
+3,468,000
+Obed Mlama
+555
+Memphis	
+USA	
+670,000
+1,281,000
+AC Wharton
+556
+Baltimore	
+USA	
+667,000
+2,670,000
+Stephanie C. Rawlings-Blake
+557
+Frankfurt	
+Germany	
+665,000
+2,717,000
+Petra Roth
+558
+Aguascalientes	
+Mexico	
+664,000
+701,000
+Gabriel Arellano Espinoza
+559
+Bhubaneswar	
+India	
+659,000
+1,455,000
+n/k
+560
+BANGUI	
+Central African Republic	
+652,000
+789,000
+n/k
+561
+COLOMBO	
+Sri Lanka	
+650,000
+2,400,000
+Uvais Mohamed Imitiyas
+562
+KINGSTON	
+Jamaica	
+650,000
+925,000
+n/k
+563
+Jamshedpur	
+India	
+630,000
+1,135,000
+n/k
+564
+RABAT	
+Morocco	
+627,000
+1,790,000
+Omar El Bahraoui
+565
+Nashville	
+USA	
+626,000
+1,633,000
+Karl Dean
+566
+Boston	
+USA	
+621,000
+4,033,000
+Thomas Menino
+567
+Sao Jose dos Campos	
+Brazil	
+611,000
+794,000
+Eduardo Cury
+568
+Cochabamba	
+Bolivia	
+608,000
+798,000
+n/k
+569
+Milwaukee	
+USA	
+604,000
+1,740,000
+Tom Barrett
+570
+Stuttgart	
+Germany	
+600,000
+2,330,000
+Wolfgang Schuster
+571
+WASHINGTON DC	
+USA	
+600,000
+5,300,000
+Vincent Gray
+572
+Rotterdam	
+Netherlands	
+590,000
+1,187,000
+Ahmed Aboutaleb
+573
+Dortmund	
+Germany	
+584,000
+584,000
+Ullrich Sierau
+574
+Kaifeng	
+China	
+584,000
+855,000
+n/k
+575
+OSLO	
+Norway	
+584,000
+876,000
+Fabian Stang
+576
+Denver	
+USA	
+583,000
+2,746,000
+John W Hickenlooper
+577
+HELSINKI	
+Finland	
+583,000
+1,311,000
+Jussi Pajunen
+578
+Glasgow	
+UK	
+581,000
+1,200,000
+n/k
+579
+Essen	
+Germany	
+580,000
+580,000
+Reinhard Paß
+580
+Vancouver	
+Canada	
+580,000
+2,120,000
+Gregor Robertson
+581
+Seattle	
+USA	
+578,000
+3,584,000
+Mike McGinn
+582
+Culiacan	
+Mexico	
+567,000
+766,000
+n/k
+583
+Bhilai	
+India	
+564,000
+942,000
+n/k
+584
+Hengyang	
+China	
+561,000
+799,000
+n/k
+585
+Charlotte	
+USA	
+559,000
+1,466,000
+Anthony Foxx
+586
+Las Vegas	
+USA	
+558,000
+1,866,000
+Oscar B Goodman
+587
+LISBON	
+Portugal	
+558,000
+2,612,000
+António Costa
+588
+Oklahoma City	
+USA	
+551,000
+1,276,000
+Mick Cornett
+589
+Kitwe	
+Zambia	
+548,000
+786,000
+n/k
+590
+Bremen	
+Germany	
+547,000
+1,009,000
+Jens Böhrnsen
+591
+Ribeirao Preto	
+Brazil	
+547,000
+789,000
+Dárcy Vera
+592
+ASUNCION	
+Paraguay	
+546,000
+1,433,000
+Evangelista Troche de Gallegos
+593
+VILNIUS	
+Lithuania	
+545,000
+545,000
+Vilius Navickas
+594
+MONROVIA	
+Liberia	
+543,000
+1,010,000
+Ophelia Hoff Saytumah
+595
+Bucaramanga	
+Colombia	
+542,000
+956,000
+n/k
+596
+Portland	
+USA	
+542,000
+2,255,000
+Sam Adams
+597
+Tucson	
+USA	
+542,000
+720,000
+Bob Walkup
+598
+Atlanta	
+USA	
+538,000
+3,500,000
+Kasim Reed
+599
+Sheffield	
+UK	
+535,000
+640,000
+Paul Scriven
+600
+Surakarta	
+Indonesia	
+533,000
+857,000
+n/k
