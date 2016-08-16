@@ -295,7 +295,8 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   text-align: center;
 }
 
-.tabs-dark .tabs {
+.tabs {
+  color: #fff;
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-color: transparent;
 }
