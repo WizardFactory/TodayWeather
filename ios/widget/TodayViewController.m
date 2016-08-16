@@ -44,6 +44,27 @@ typedef enum
 /********************************************************************
  Class Implementation
  ********************************************************************/
+@implementation CityInfo
+- (void)encodeWithCoder:(NSCoder *)coder;
+{
+    [coder encodeBool:_currentPosition forKey:@"currentPosition"];
+    [coder encodeObject:_address forKey:@"address"];
+    [coder encodeInt:_index forKey:@"index"];
+}
+
+- (id)initWithCoder:(NSCoder *)coder;
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _currentPosition = [coder decodeBoolForKey:@"currentPosition"];
+        _address = [coder decodeObjectForKey:@"address"];
+        _index = [coder decodeIntForKey:@"index"];
+    }
+    return self;
+}
+@end
+
 @implementation TodayViewController
 
 @synthesize locationManager;
@@ -63,13 +84,78 @@ typedef enum
  ********************************************************************/
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 130)];
     // Do any additional setup after loading the view from its nib.
+    locationView.hidden = true;
+//    self.view.hidden = true;
     
-    self.view.hidden = true;
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userDefaultsDidChange:) name:NSUserDefaultsDidChangeNotification object:nil];
+    NSError *error;
+    NSDictionary *jsonDict;
+    NSData *tmpData = nil;
     
-    [self initLocationInfo];
+//    NSString *currentWeather = nil;
+//    currentWeather = [sharedUserDefaults stringForKey:@"currentWeather"];
+//    if (currentWeather) {
+//        tmpData = [currentWeather dataUsingEncoding:NSUTF8StringEncoding];
+//        jsonDict = [NSJSONSerialization JSONObjectWithData:tmpData options:0 error:&error];
+//        //NSLog(@"%@", jsonDict);
+//        [self processWeatherResults:jsonDict];
+//    }
+    
+    NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
+    NSLog(@"cityList : %@", cityList);
+    
+    if (cityList == nil) {
+        //You have to run todayweather for add citylist
+        NSLog(@"show no location view");
+        noLocationView.hidden = false;
+        return;
+    }
+    else {
+        noLocationView.hidden = true;
+    }
+    
+    tmpData = [cityList dataUsingEncoding:NSUTF8StringEncoding];
+    jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
+    
+    int index = 0;
+    mCityList = [NSMutableArray array];
+    for (NSDictionary *cityDict in jsonDict[@"cityList"]) {
+        CityInfo *city = [[CityInfo alloc] init];
+        city.currentPosition = [cityDict[@"currentPosition"] boolValue];
+        city.address = cityDict[@"address"];
+        city.index = index++;
+        NSLog(@"current position %@ address %@", city.currentPosition?@"true":@"false", city.address);
+        [mCityList addObject:city];
+    }
+    
+    if ([mCityList count] <= 1) {
+        NSLog(@"hide next city btn");
+        nextCityBtn.hidden = true;
+    }
+    
+    CityInfo *currentCity = nil;
+    NSData *archivedObject = [sharedUserDefaults objectForKey:@"currentCity"];
+    currentCity = (CityInfo *)[NSKeyedUnarchiver unarchiveObjectWithData:archivedObject];
+    if (currentCity == nil) {
+        currentCity = mCityList.firstObject;
+    }
+    else {
+        NSLog(@"load last city info");
+    }
+    
+    [self setCityInfo:currentCity];
+    
+    //request data
+    //if current position is true
+    //[self initLocationInfo];
+    //else
+    //nssURL = [self makeRequestURL:nssName1 addr2:nssName2 addr3:nssName3];
+    //[self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER];
+
+//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userDefaultsDidChange:) name:NSUserDefaultsDidChangeNotification object:nil];
 }
 
 /********************************************************************
@@ -173,6 +259,19 @@ typedef enum
 - (IBAction) updateData:(id)sender
 {
     [self refreshDatas];
+}
+
+- (IBAction)nextCity:(id)sender {
+    //nextCity
+    NSLog(@"next city");
+    CityInfo *nextCity = nil;
+    if (mCurrentCity.index+1 >= [mCityList count]) {
+        nextCity = mCityList.firstObject;
+    }
+    else {
+        nextCity = mCityList[mCurrentCity.index+1];
+    }
+    [self setCityInfo:nextCity];
 }
 
 /********************************************************************
@@ -345,8 +444,17 @@ typedef enum
 {
     NSString *nssURL = nil;
     NSCharacterSet *set = nil;
+    nssURL = [NSString stringWithFormat:@"https://tw-wzdfac.rhcloud.com/v000705/daily/town"];
+    if (nssAddr1 != nil) {
+        nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr1];
+    }
+    if (nssAddr2 != nil) {
+        nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr2];
+    }
+    if (nssAddr3 != nil) {
+        nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr3];
+    }
     
-    nssURL = [NSString stringWithFormat:@"https://tw-wzdfac.rhcloud.com/v000705/daily/town/%@/%@/%@", nssAddr1, nssAddr2, nssAddr3];
 #if USE_DEBUG
     NSLog(@"nssURL %@", nssURL);
 #endif
@@ -393,6 +501,7 @@ typedef enum
 
     // Temperature
     NSUInteger currentTemp = 0;
+    NSUInteger currentHum = 0;
     NSUInteger todayMinTemp = 0;
     NSUInteger todayMaxTemp = 0;
     NSUInteger tomoMinTemp = 0;
@@ -417,13 +526,13 @@ typedef enum
     nssCityName = [jsonDict objectForKey:@"cityName"];
     nssRegionName = [jsonDict objectForKey:@"regionName"];
     nssTownName = [jsonDict objectForKey:@"townName"];
-    if(nssTownName)
+    if([nssTownName length] > 0)
     {
         nssAddress = [NSString stringWithFormat:@"%@", nssTownName];
     }
     else
     {
-        if(nssCityName)
+        if([nssCityName length] > 0)
         {
             nssAddress = [NSString stringWithFormat:@"%@", nssCityName];
         }
@@ -437,18 +546,19 @@ typedef enum
     nsdDailySumDict = [jsonDict objectForKey:@"dailySummary"];
     nssDate     = [nsdDailySumDict objectForKey:@"date"];
     nssCurIcon   = [nsdDailySumDict objectForKey:@"icon"];
-    nssCurImgName = [NSString stringWithFormat:@"weatherIcon/%@.png", nssCurIcon];
+    nssCurImgName = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
 
     // Current
     currentDict         = [nsdDailySumDict objectForKey:@"current"];
     currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
     nssPm10Str          = [currentArpltnDict objectForKey:@"pm10Str"];
     currentTemp         = [[currentDict valueForKey:@"t1h"] unsignedIntValue];
+    currentHum         = [[currentDict valueForKey:@"reh"] unsignedIntValue];
     
     // Today
     todayDict           = [nsdDailySumDict objectForKey:@"today"];
     nssTodIcon          = [todayDict objectForKey:@"skyIcon"];
-    nssTodImgName       = [NSString stringWithFormat:@"weatherIcon/%@.png", nssTodIcon];
+    nssTodImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTodIcon];
     todayMinTemp        = [[todayDict valueForKey:@"taMin"] unsignedIntValue];
     todayMaxTemp        = [[todayDict valueForKey:@"taMax"] unsignedIntValue];
     nssTodPop           = [todayDict objectForKey:@"pop"];
@@ -456,7 +566,7 @@ typedef enum
     // Tomorrow
     tomoDict            = [nsdDailySumDict objectForKey:@"tomorrow"];
     nssTomIcon          = [tomoDict objectForKey:@"skyIcon"];
-    nssTomImgName       = [NSString stringWithFormat:@"weatherIcon/%@.png", nssTomIcon];
+    nssTomImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTomIcon];
     tomoMinTemp         = [[tomoDict valueForKey:@"taMin"] unsignedIntValue];
     tomoMaxTemp         = [[tomoDict valueForKey:@"taMax"] unsignedIntValue];
     nssTomPop           = [tomoDict objectForKey:@"pop"];
@@ -466,24 +576,23 @@ typedef enum
         updateTimeLabel.text    = nssDate;
         addressLabel.text       = nssAddress;
         curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
-        curTempLabel.text       = [NSString stringWithFormat:@"%lu도", currentTemp];
-        curDustLabel.text       = nssPm10Str;
+        curTempLabel.text       = [NSString stringWithFormat:@"%lu˚ %lu%%", currentTemp, currentHum];
+        curDustLabel.text       = [NSString stringWithFormat:@"통합대기 %@", nssPm10Str];
         
         // Today
         todWTIconIV.image       = [UIImage imageNamed:nssTodImgName];
-        todayMaxTempLabel.text  = [NSString stringWithFormat:@"%lu도", todayMaxTemp];
-        todayMinTempLabel.text  = [NSString stringWithFormat:@"%lu도", todayMinTemp];
-        todayPopLabel.text      = [NSString stringWithFormat:@"%@%%", nssTodPop];
+        todayMaxTempLabel.text  = [NSString stringWithFormat:@"%lu˚/%lu˚", todayMaxTemp, todayMinTemp];
+        //todayMinTempLabel.text  = [NSString stringWithFormat:@"%lu˚", todayMinTemp];
+        todayPopLabel.text      = [NSString stringWithFormat:@"강수확률 %@%%", nssTodPop];
         
         // Tomorrow
-        tomoMaxTempLabel.text   = [NSString stringWithFormat:@"%lu도", tomoMaxTemp];
-        tomoMinTempLabel.text   = [NSString stringWithFormat:@"%lu도", tomoMinTemp];
-        tomoPopLabel.text       = [NSString stringWithFormat:@"%@%%", nssTomPop];
+        tomoMaxTempLabel.text   = [NSString stringWithFormat:@"%lu˚/%lu˚", tomoMaxTemp, tomoMinTemp];
+        //tomoMinTempLabel.text   = [NSString stringWithFormat:@"%lu˚", tomoMinTemp];
+        tomoPopLabel.text       = [NSString stringWithFormat:@"강수확률 %@%%", nssTomPop];
         tomWTIconIV.image       = [UIImage imageNamed:nssTomImgName];
         
-        [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 150)];
-        
-        self.view.hidden = false;
+        locationView.hidden = false;
+//        self.view.hidden = false;
     });
 }
 
@@ -568,7 +677,7 @@ typedef enum
 {
     NSLog(@"Succeeded! Received %lu bytes of data",(unsigned long)[responseData length]);
     NSString *txt = [[NSString alloc] initWithData:responseData encoding:NSASCIIStringEncoding];
-    
+
     NSLog(@"txt : %@", txt);
 }
 
@@ -615,7 +724,6 @@ typedef enum
     if(startingPoint == nil)
         self.startingPoint = newLocation;
     
-    //if(abs(howRecent) < 5.0)
     if(fabs(howRecent) < 5.0)
     {
         [locationManager stopUpdatingLocation];
@@ -662,6 +770,42 @@ typedef enum
         // just test - delete me
         //[self getAddressFromDaum:gMylatitude longitude:gMylongitude];
     }
+}
+
+- (BOOL) setCityInfo:(CityInfo *)nextCity {
+    locationView.hidden = true;
+    NSLog(@"set city : current position %@ address %@ index %d", nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.index);
+    
+    mCurrentCity = nextCity;
+    if (nextCity.currentPosition) {
+        [self initLocationInfo];
+    }
+    else {
+        NSArray *array = [nextCity.address componentsSeparatedByString:@" "];
+        NSString *nssAddr1 = nil;
+        NSString *nssAddr2 = nil;
+        NSString *nssAddr3 = nil;
+        if ([array count] > 1) {
+            nssAddr1 = array[1];
+        }
+        if ([array count] > 2) {
+            nssAddr2 = array[2];
+        }
+        if ([array count] > 3) {
+            nssAddr2 = array[3];
+        }
+        
+        NSLog(@"Expected string is : %@",array);
+        NSString *nssURL = [self makeRequestURL:nssAddr1 addr2:nssAddr2 addr3:nssAddr3];
+        [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER];
+    }
+    
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSData *archivedObject = [NSKeyedArchiver archivedDataWithRootObject: nextCity];
+    [sharedUserDefaults setObject:archivedObject forKey:@"currentCity"];
+    [sharedUserDefaults synchronize];
+    NSLog(@"save first city of list");
+    return true;
 }
 
 @end
