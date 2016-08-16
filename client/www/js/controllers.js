@@ -1306,6 +1306,13 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
+        $scope.showIcon = function () {
+            if (ionic.Platform.isAndroid()) {
+                return false;
+            }
+            return true;
+        };
+
         init();
     })
 
