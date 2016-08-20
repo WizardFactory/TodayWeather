@@ -1553,6 +1553,20 @@ angular.module('starter.controllers', [])
             }
         };
 
+        $scope.getGuideImg = function (number) {
+            var imgPath;
+            if (ionic.Platform.isAndroid()) {
+                imgPath = "img/guide_android_0";
+            }
+            else {
+                imgPath = "img/guide-0";
+            }
+            imgPath += ""+number+".png";
+            console.log(imgPath);
+
+            return imgPath;
+        };
+
         $scope.$on('$ionicView.leave', function() {
             TwAds.setShowAds(true);
         });
