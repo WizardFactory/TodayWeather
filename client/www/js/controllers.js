@@ -87,7 +87,6 @@ angular.module('starter.controllers', [])
         var arrayWidth;
 
         function init() {
-            Util.ga.trackEvent('page', 'tab', 'forecast');
             //identifyUser();
             $ionicHistory.clearHistory();
 
@@ -703,13 +702,11 @@ angular.module('starter.controllers', [])
                 updateWeatherData().finally(function () {
                     shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
                     $ionicLoading.hide();
-                    Util.ga.trackEvent('weather', 'load', shortenAddress, WeatherInfo.getCityIndex());
                 });
                 return;
             }
 
             $ionicLoading.hide();
-            Util.ga.trackEvent('weather', 'load', shortenAddress, WeatherInfo.getCityIndex());
         }
 
         function updateWeatherData() {
@@ -718,7 +715,14 @@ angular.module('starter.controllers', [])
             if (cityData.currentPosition === true) {
                 WeatherUtil.getCurrentPosition().then(function (coords) {
                     WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
+                        var startTime = new Date().getTime();
+
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                            var endTime = new Date().getTime();
+                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                                '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
                             city.address = address;
                             city.location = {"lat": coords.latitude, "long": coords.longitude};
@@ -726,6 +730,11 @@ angular.module('starter.controllers', [])
                             applyWeatherData();
                             deferred.resolve();
                         }, function () {
+                            var endTime = new Date().getTime();
+                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+
                             var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                             $scope.showAlert("에러", msg);
                             deferred.reject();
@@ -744,12 +753,24 @@ angular.module('starter.controllers', [])
                     deferred.reject();
                 });
             } else {
+                var startTime = new Date().getTime();
+
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
+                    var endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
                     WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
                     applyWeatherData();
                     deferred.resolve();
                 }, function () {
+                    var endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+
                     var msg = "위치 정보 업데이트를 실패하였습니다.";
                     $scope.showAlert("에러", msg);
                     deferred.reject();
@@ -930,8 +951,6 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
-            Util.ga.trackEvent('page', 'tab', 'search');
-
             window.addEventListener('native.keyboardshow', function () {
                 TwAds.setShowAds(false);
             });
@@ -1097,7 +1116,13 @@ angular.module('starter.controllers', [])
                 address += " " + result.third;
             }
 
+            var startTime = new Date().getTime();
+
             WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                var endTime = new Date().getTime();
+                Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
+
                 var city = WeatherUtil.convertWeatherData(weatherDatas);
                 city.currentPosition = false;
                 city.address = address;
@@ -1105,15 +1130,22 @@ angular.module('starter.controllers', [])
                 //city.location = location;
 
                 if (WeatherInfo.addCity(city) === false) {
+                    Util.ga.trackEvent('city error', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
                     var msg = "이미 동일한 지역이 추가되어 있습니다.";
                     $scope.showAlert("에러", msg);
                 }
                 else {
+                    Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
+
                     WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
                     $location.path('/tab/forecast');
                 }
                 $ionicLoading.hide();
             }, function () {
+                var endTime = new Date().getTime();
+                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address), endTime - startTime);
+
                 var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                 $scope.showAlert("에러", msg);
                 $ionicLoading.hide();
@@ -1136,12 +1168,16 @@ angular.module('starter.controllers', [])
         };
 
         $scope.OnDisableCity = function() {
+            Util.ga.trackEvent('city', 'disable', $scope.cityList[0].disable, 0);
+
             WeatherInfo.disableCity($scope.cityList[0].disable);
 
             return false; //OnDisableCity가 호출되지 않도록 이벤트 막음
         };
 
         $scope.OnDeleteCity = function(index) {
+            Util.ga.trackEvent('city', 'delete', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
+
             if ($scope.cityList[index].alarmInfo != undefined) {
                 Push.removeAlarm($scope.cityList[index].alarmInfo);
             }
@@ -1157,12 +1193,16 @@ angular.module('starter.controllers', [])
                     if (typeof(val) === 'undefined') {
                         console.log('closed');
                     } else if (val == 0) {
+                        Util.ga.trackEvent('alarm', 'cancel', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
+
                         console.log('cityIndex='+index+' alarm canceled');
                         if ($scope.cityList[index].alarmInfo != undefined) {
                             Push.removeAlarm($scope.cityList[index].alarmInfo);
                             $scope.cityList[index].alarmInfo = undefined;
                         }
                     } else {
+                        Util.ga.trackEvent('alarm', 'set', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
+
                         var selectedTime = new Date();
                         selectedTime.setHours(0,0,0,0);
                         selectedTime.setSeconds(val);
@@ -1208,8 +1248,6 @@ angular.module('starter.controllers', [])
                         data.t1h = city.currentWeather.t1h;
                         data.tmn = todayData[0].tmn;
                         data.tmx = todayData[0].tmx;
-
-                        Util.ga.trackEvent('weather', 'load', WeatherUtil.getShortenAddress(city.address), index);
                     }
                 });
             }
@@ -1222,13 +1260,25 @@ angular.module('starter.controllers', [])
             if (cityData.currentPosition === true) {
                 WeatherUtil.getCurrentPosition().then(function (coords) {
                     WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
+                        var startTime = new Date().getTime();
+
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
+                            var endTime = new Date().getTime();
+                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                                '(' + index + ')', endTime - startTime);
+
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
                             city.currentPosition = true;
                             city.address = address;
                             city.location = {"lat": coords.latitude, "long": coords.longitude};
                             deferred.resolve(city);
                         }, function () {
+                            var endTime = new Date().getTime();
+                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                '(' + index + ')', endTime - startTime);
+
                             deferred.reject();
                         });
                     }, function () {
@@ -1238,12 +1288,24 @@ angular.module('starter.controllers', [])
                     deferred.reject();
                 });
             } else {
+                var startTime = new Date().getTime();
+
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
+                    var endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + index + ')', endTime - startTime);
+
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
                     city.currentPosition = false;
                     city.address = cityData.address;
                     deferred.resolve(city);
                 }, function () {
+                    var endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + index + ')', endTime - startTime);
+
                     deferred.reject();
                 });
             }
@@ -1258,8 +1320,6 @@ angular.module('starter.controllers', [])
         $scope.version = Util.version;
 
         function init() {
-            Util.ga.trackEvent('page', 'tab', 'setting');
-
             //for chrome extension
             if (window.chrome && chrome.extension) {
                 $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
@@ -1270,6 +1330,11 @@ angular.module('starter.controllers', [])
                 });
             }
         }
+
+        $scope.sendMail = function() {
+            Util.ga.trackEvent('action', 'click', 'send mail');
+            window.location.href = "mailto:todayweather@wizardfactory.net";
+        };
 
         $scope.openMarket = function() {
             var src = "";
@@ -1293,11 +1358,12 @@ angular.module('starter.controllers', [])
                 .then(function(event) {
                     console.log(event);
                     // success
+                    Util.ga.trackEvent('action', 'click', 'open market');
                 })
                 .catch(function(event) {
                     console.log("error");
                     console.log(event);
-                    // error
+                    Util.ga.trackEvent('action error', 'click', 'open market');
                 });
         };
 
@@ -1332,11 +1398,11 @@ angular.module('starter.controllers', [])
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
                 $scope.$broadcast('reloadEvent');
-                Util.ga.trackEvent('page', 'tab', 'reload');
+                Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
                 $scope.$broadcast('reloadEvent');
-                Util.ga.trackEvent('page', 'tab', 'reload');
+                Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {
                 if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
@@ -1385,11 +1451,11 @@ angular.module('starter.controllers', [])
                 .share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null)
                 .then(function(result) {
                     // Success!
+                    Util.ga.trackEvent('action', 'tab', 'share');
                 }, function(err) {
                     // An error occured
+                    Util.ga.trackEvent('action error', 'tab', 'share');
                 });
-
-            Util.ga.trackEvent('page', 'tab', 'share');
         };
 
         $scope.showAlert = function(title, msg) {
@@ -1435,7 +1501,6 @@ angular.module('starter.controllers', [])
         function init() {
             //for fast close ads when first loading
             TwAds.setShowAds(false);
-            Util.ga.trackEvent('page', 'tab', 'guide');
 
             var bodyHeight;
 

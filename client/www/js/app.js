@@ -19,7 +19,6 @@ angular.module('starter', [
 ])
     .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo) {
         $ionicPlatform.ready(function() {
-
             if (navigator.splashscreen) {
                 navigator.splashscreen.hide();
             }
@@ -38,8 +37,20 @@ angular.module('starter', [
                     }, 'group.net.wizardfactory.todayweather');
                 }
             } else if (ionic.Platform.isAndroid()) {
-                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
+                Util.ga.startTrackerWithId('UA-75892478-2');
             }
+
+            document.addEventListener("resume", function() {
+                Util.ga.trackEvent('app', 'status', 'resume');
+            }, false);
+            document.addEventListener("pause", function() {
+                Util.ga.trackEvent('app', 'status', 'pause');
+            }, false);
+            Util.ga.enableUncaughtExceptionReporting(true);
+
+            Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+            Util.ga.trackEvent('app', 'version', Util.version);
+            Util.ga.platformReady();
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
             // for form inputs)
@@ -86,6 +97,8 @@ angular.module('starter', [
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
             }
+
+            Util.ga.trackView(toState.name);
         });
     })
 
