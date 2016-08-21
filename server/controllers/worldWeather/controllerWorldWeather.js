@@ -212,7 +212,7 @@ function controllerWorldWeather(){
                         }
 
                         // need to update location list
-                        // TODO : Maybe it'll take for long time, so need to find out other way to update.
+                        // TODO : Perhaps it'll take for long time, so need to find out other way to update.
                         self.loadGeocodeList(function(err){
                             if(err){
                                 log.error('WW> Fail to update geocode list, count:', self.geocodeList.length);
@@ -247,7 +247,7 @@ function controllerWorldWeather(){
                         callback(null);
                     });
                 },
-                // 4. get WU data from DB by using geocode
+                // 5. get WU data from DB by using geocode
                 function(callback){
                     self.getDataFromWU(req, function(err, result){
                         if(err){
@@ -548,7 +548,7 @@ function controllerWorldWeather(){
             days: []
         };
 
-        async.waterfall([
+        async.parallel([
                 function(cb){
                     modelWuCurrent.find({geocode:geocode}, function(err, list){
                         if(err){

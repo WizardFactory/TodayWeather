@@ -1372,6 +1372,13 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
+        $scope.showIcon = function () {
+            if (ionic.Platform.isAndroid()) {
+                return false;
+            }
+            return true;
+        };
+
         init();
     })
 
@@ -1609,6 +1616,20 @@ angular.module('starter.controllers', [])
             } else {
                 $ionicSlideBoxDelegate.next();
             }
+        };
+
+        $scope.getGuideImg = function (number) {
+            var imgPath;
+            if (ionic.Platform.isAndroid()) {
+                imgPath = "img/guide_android_0";
+            }
+            else {
+                imgPath = "img/guide-0";
+            }
+            imgPath += ""+number+".png";
+            console.log(imgPath);
+
+            return imgPath;
         };
 
         $scope.$on('$ionicView.leave', function() {

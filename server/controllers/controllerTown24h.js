@@ -361,7 +361,9 @@ function ControllerTown24h() {
             }
             else if (dailyData.date === todayDate) {
                 today = req.midData.dailyData[i];
-                today.skyIcon = self._parseSkyState(today.sky, today.pty, 0, true);
+                today.skyIcon = self._parseSkyState(today.sky, today.pty, 0, false);
+                today.skyIconAm = self._parseSkyState(today.skyAm, today.ptyAm, 0, false);
+                today.skyIconPm = self._parseSkyState(today.skyPm, today.ptyPm, 0, false);
                 pmObject = self._makeDailyPmStr(today.dustForecast);
                 if (pmObject) {
                     today.pmStr = pmObject.pmStr;
@@ -370,11 +372,27 @@ function ControllerTown24h() {
             }
             else if (dailyData.date === tomorrowDate) {
                 tomorrow = req.midData.dailyData[i];
-                tomorrow.skyIcon = self._parseSkyState(tomorrow.sky, tomorrow.pty, 0, true);
+                tomorrow.skyIcon = self._parseSkyState(tomorrow.sky, tomorrow.pty, 0, false);
+                tomorrow.skyIconAm = self._parseSkyState(tomorrow.skyAm, tomorrow.ptyAm, 0, false);
+                tomorrow.skyIconPm = self._parseSkyState(tomorrow.skyPm, tomorrow.ptyPm, 0, false);
                 pmObject = self._makeDailyPmStr(tomorrow.dustForecast);
                 if (pmObject) {
                     tomorrow.pmStr = pmObject.pmStr;
                     tomorrow.pmGrade = pmObject.pmGrade;
+                }
+            }
+        }
+
+        //update pop
+        if (req.short) {
+            today.pop = 0;
+            var len = req.short.length;
+            for (i=0; i<len; i++) {
+                var w3h = req.short[i];
+                if (w3h.date === today.date && w3h.time > req.current.time) {
+                   if (w3h.pop > today.pop) {
+                       today.pop = w3h.pop;
+                   }
                 }
             }
         }
@@ -403,15 +421,19 @@ function ControllerTown24h() {
             dailySummary += "내일: ";
         }
 
-        if (theDay.skyIcon) {
+        if (theDay.skyIconAm && theDay.skyIconPm) {
+            dailyArray.push(self._getWeatherEmoji(theDay.skyIconAm)+self._getEmoji("RightwardsArrow")+self._getWeatherEmoji(theDay.skyIconPm));
+        }
+        else if (theDay.skyIcon) {
             dailyArray.push(self._getWeatherEmoji(theDay.skyIcon));
         }
+
         if (theDay.taMin != undefined && theDay.taMax != undefined) {
-            dailyArray.push(self._getEmoji("DownwardsArrow")+theDay.taMin+"˚"+
-                self._getEmoji("UpwardsArrow")+theDay.taMax+"˚");
+            dailyArray.push(self._getEmoji("DownwardsArrowToBar")+theDay.taMin+"˚"+
+                self._getEmoji("UpwardsArrowToBar")+theDay.taMax+"˚");
         }
         if (theDay.pty && theDay.pty > 0) {
-            if (theDay.pop) {
+            if (theDay.pop && current.pty <= 0) {
                 dailyArray.push("강수확률"+" "+theDay.pop+"%");
             }
         }
@@ -619,8 +641,14 @@ ControllerTown24h.prototype._getEmoji = function (name) {
     switch (name) {
         case 'UpwardsArrow':
             return '\u2191';
+        case 'RightwardsArrow':
+            return '\u2192';
         case 'DownwardsArrow':
             return '\u2193';
+        case 'UpwardsArrowToBar':
+            return '\u2912';
+        case 'DownwardsArrowToBar':
+            return '\u2913';
         default:
             log.error('Fail to find emoji name='+name);
     }

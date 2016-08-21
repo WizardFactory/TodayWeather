@@ -187,6 +187,7 @@ angular.module('service.twads', [])
                 TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
             }
 
+            //android에서 custom size가 안됨.
             AdMob.setOptions({
                 adSize:         'BANNER',
                 overlap:        true,

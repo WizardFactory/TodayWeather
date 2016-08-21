@@ -1057,7 +1057,12 @@ angular.module('starter', [
             .state('tab', {
                 url: '/tab',
                 abstract: true,
-                templateUrl: 'templates/tabs.html',
+                templateUrl: function () {
+                    if (ionic.Platform.isAndroid()) {
+                        return  'templates/tabs-android.html';
+                    }
+                    return 'templates/tabs.html';
+                },
                 controller: 'TabCtrl'
             })
 
