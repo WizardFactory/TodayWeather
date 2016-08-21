@@ -84,13 +84,13 @@ global.townRss = new controllerShortRss();
 
 if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
+}
 
-    if (config.mode === 'gather') {
-        var ControllerPush = require('./controllers/controllerPush');
-        var co = new ControllerPush();
-        co.start();
-        co.apnFeedback();
-    }
+if (config.mode === 'push' || config.mode === 'local') {
+    var ControllerPush = require('./controllers/controllerPush');
+    var co = new ControllerPush();
+    co.start();
+    co.apnFeedback();
 }
 
 if (config.mode === 'scrape' || config.mode === 'local') {
