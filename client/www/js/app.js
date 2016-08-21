@@ -37,7 +37,7 @@ angular.module('starter', [
                     }, 'group.net.wizardfactory.todayweather');
                 }
             } else if (ionic.Platform.isAndroid()) {
-                Util.ga.startTrackerWithId('UA-75892478-2');
+                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
             }
 
             document.addEventListener("resume", function() {
