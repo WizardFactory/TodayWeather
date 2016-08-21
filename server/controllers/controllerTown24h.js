@@ -429,8 +429,7 @@ function ControllerTown24h() {
         }
 
         if (theDay.taMin != undefined && theDay.taMax != undefined) {
-            dailyArray.push(self._getEmoji("DownwardsArrowToBar")+theDay.taMin+"˚"+
-                self._getEmoji("UpwardsArrowToBar")+theDay.taMax+"˚");
+            dailyArray.push(theDay.taMin+"˚/"+theDay.taMax+"˚");
         }
         if (theDay.pty && theDay.pty > 0) {
             if (theDay.pop && current.pty <= 0) {
