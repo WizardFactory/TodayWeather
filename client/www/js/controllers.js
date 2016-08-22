@@ -2,7 +2,7 @@
 angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
-                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading) {
+                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading, $ionicPopup) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -698,15 +698,62 @@ angular.module('starter.controllers', [])
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 $ionicLoading.show();
-
-                updateWeatherData().finally(function () {
-                    shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
+                updateWeatherData().then(function () {
                     $ionicLoading.hide();
+                }, function (msg) {
+                    $ionicLoading.hide();
+                    showRetryConfirm("에러", msg, function (retry) {
+                        if (retry) {
+                            loadWeatherData();
+                        }
+                    });
+                }).finally(function () {
+                    console.log('finish update weather data');
+                    shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
                 });
                 return;
             }
 
             $ionicLoading.hide();
+        }
+
+        var confirmPopup;
+
+        /**
+         * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
+         * 그래서 init와 reloadevent가 둘다 오게 되는데 retry confirm이 두개 뜨지 않게 한개 있는 경우 닫았다가 새롭게 열게 함.
+         * @param title
+         * @param template
+         * @param callback
+         */
+        function showRetryConfirm(title, template, callback) {
+            if (confirmPopup) {
+                confirmPopup.close();
+            }
+            confirmPopup = $ionicPopup.show({
+                title: title,
+                template: template,
+                buttons: [
+                    { text: '닫기' ,
+                        onTap: function () {
+                            return false;
+                        }
+                    },
+                    { text: '재시도',
+                        onTap: function () {
+                            return true;
+                        }
+                    }
+                ]
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log("Retry");
+                } else {
+                    console.log("Close");
+                }
+                callback(res);
+            });
         }
 
         function updateWeatherData() {
@@ -736,21 +783,18 @@ angular.module('starter.controllers', [])
                                 '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                             var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
-                            $scope.showAlert("에러", msg);
-                            deferred.reject();
+                            deferred.reject(msg);
                         });
                     }, function () {
                         var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
-                        $scope.showAlert("에러", msg);
-                        deferred.reject();
+                        deferred.reject(msg);
                     });
                 }, function () {
                     var msg = "현재 위치를 찾을 수 없습니다.";
                     if (ionic.Platform.isAndroid()) {
                         msg += "<br>WIFI와 위치정보를 켜주세요.";
                     }
-                    $scope.showAlert("에러", msg);
-                    deferred.reject();
+                    deferred.reject(msg);
                 });
             } else {
                 var startTime = new Date().getTime();
@@ -772,8 +816,7 @@ angular.module('starter.controllers', [])
                         '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                     var msg = "위치 정보 업데이트를 실패하였습니다.";
-                    $scope.showAlert("에러", msg);
-                    deferred.reject();
+                    deferred.reject(msg);
                 });
             }
 
