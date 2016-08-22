@@ -704,7 +704,6 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                     showRetryConfirm("에러", msg, function (retry) {
                         if (retry) {
-                            $ionicLoading.show();
                             loadWeatherData();
                         }
                     });
