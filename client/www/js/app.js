@@ -598,6 +598,7 @@ angular.module('starter', [
                             margin.top = marginTop + shortTableHeight;
                             margin.textTop = textTop - shortTableHeight;
                             y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+                            svg.selectAll('.hourly-table').remove();
                             chart();
                         }
                     });
@@ -1023,6 +1024,7 @@ angular.module('starter', [
                             console.log("update dayChart");
                             margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
                             y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+                            svg.selectAll('.day-table').remove();
                             chart();
                         }
                     });
