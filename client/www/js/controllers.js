@@ -695,8 +695,14 @@ angular.module('starter.controllers', [])
             });
         }
 
+        var confirmPopup;
+
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                if (confirmPopup) {
+                    confirmPopup.close();
+                    confirmPopup = undefined;
+                }
                 $ionicLoading.show();
                 updateWeatherData().then(function () {
                     $ionicLoading.hide();
@@ -716,8 +722,6 @@ angular.module('starter.controllers', [])
 
             $ionicLoading.hide();
         }
-
-        var confirmPopup;
 
         /**
          * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
