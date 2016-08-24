@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, $cordovaNetwork) {
+    .factory('TwAds', function($rootScope, $cordovaNetwork, Util) {
         var obj = {};
         //상태 천이 변경 개선 필요
         obj.enableAds;
@@ -95,6 +95,7 @@ angular.module('service.twads', [])
                 obj.enableAds = enable;
                 obj.bannerCreated = false;
                 _setLayout(enable);
+                Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
                 obj.enableAds = enable;
@@ -103,6 +104,7 @@ angular.module('service.twads', [])
                 if ($cordovaNetwork.isOnline()) {
                    obj._admobCreateBanner();
                 }
+                Util.ga.trackEvent('app', 'account', 'free');
             }
         };
 
