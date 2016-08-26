@@ -1489,7 +1489,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon2-color';
-        obj.version = '0.9.5'; // sync with config.xml
+        obj.version = '0.9.8'; // sync with config.xml
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
