@@ -383,26 +383,6 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param dailyInfoList
-         * @param date
-         * @returns {*}
-         */
-        function getDayInfo(dailyInfoList, date) {
-            if (dailyInfoList.length === 0) {
-                return undefined;
-            }
-
-            for (var i = 0; i < dailyInfoList.length; i++) {
-                if (dailyInfoList[i].date === date) {
-                    return dailyInfoList[i];
-                }
-            }
-
-            return undefined;
-        }
-
-        /**
-         *
          * @param {Date} target
          * @param {Date} current
          * @returns {number}
@@ -667,11 +647,9 @@ angular.module('starter.services', [])
         /**
          * @param {Object[]} shortForecastList
          * @param {Object} currentForecast
-         * @param {Date} current
-         * @param {Object[]} dailyInfoList midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast) {
             var data = [];
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
@@ -1162,6 +1140,8 @@ angular.module('starter.services', [])
                     //37.472595, 126.795249
                     //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
                     //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                    //서울특별시
+                    //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
 
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
@@ -1202,7 +1182,7 @@ angular.module('starter.services', [])
                     else {
                         deferred.reject();
                     }
-                }, {timeout: 3000});
+                }, {maximumAge: 3000, timeout: 3000});
             });
 
             return deferred.promise;
@@ -1257,7 +1237,7 @@ angular.module('starter.services', [])
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, weatherData.midData.dailyData);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast);
             //console.log(shortTownWeather);
 
             /**
@@ -1489,7 +1469,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.imgPath = 'img/weatherIcon2-color';
-        obj.version = '0.9.8'; // sync with config.xml
+        obj.version = '';
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1508,7 +1488,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .run(function($rootScope, $ionicPlatform, WeatherInfo) {
+    .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
@@ -1516,4 +1496,18 @@ angular.module('starter.services', [])
                 $rootScope.$broadcast('reloadEvent');
             }
         });
+        $ionicPlatform.ready(function() {
+            console.log("UA:"+ionic.Platform.ua);
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+            if (window.cordova && cordova.getAppVersion) {
+                cordova.getAppVersion.getVersionNumber().then(function (version) {
+                    Util.version = version;
+                });
+            }
+
+        });
+
     });
