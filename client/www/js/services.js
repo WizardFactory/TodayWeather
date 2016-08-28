@@ -1475,11 +1475,13 @@ angular.module('starter.services', [])
                 }
             },
             platformReady: function() {
-                for (var i = 0; i < gaArray.length; i++) {
-                    if (gaArray[i][0] === "trackView") {
-                        this.trackView(gaArray[i][1]);
-                    } else if (gaArray[i][0] === "trackEvent") {
-                        this.trackEvent(gaArray[i][1], gaArray[i][2], gaArray[i][3], gaArray[i][4]);
+                if (typeof $window.analytics !== "undefined") {
+                    for (var i = 0; i < gaArray.length; i++) {
+                        if (gaArray[i][0] === "trackView") {
+                            this.trackView(gaArray[i][1]);
+                        } else if (gaArray[i][0] === "trackEvent") {
+                            this.trackEvent(gaArray[i][1], gaArray[i][2], gaArray[i][3], gaArray[i][4]);
+                        }
                     }
                 }
                 gaArray = [];
