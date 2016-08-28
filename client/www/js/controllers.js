@@ -2,7 +2,7 @@
 angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
-                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading) {
+                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading, $ionicPopup) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -20,19 +20,6 @@ angular.module('starter.controllers', [])
 
         var shortenAddress = "";
 
-        //{time: Number, t1h: Number, skyIcon: String, tmn: Number, tmx: Number, summary: String};
-        //$scope.currentWeather;
-        //{day: String, time: Number, t3h: Number, skyIcon: String, pop: Number, tempIcon: String, tempInfo: String, tmn: Number, tmx: Number}
-        //$scope.timeTable = [];
-        //{week: String, skyIcon:String, pop: Number, humidityIcon: String, reh: Number, tmn: Number, tmx: Number};
-        //$scope.dayTable = [];
-        //[{name: String, values:[{name: String, value: Number}]}]
-        //$scope.timeChart;
-        //[{values: Object, temp: Number}]
-        //$scope.dayChart;
-
-        //$scope.timeWidth; //total width of timeChart and timeTable
-        //$scope.dayWidth; //total width of dayChart and dayTable
         $scope.imgPath = Util.imgPath;
 
         $scope.getSentimentIcon = function (grade) {
@@ -72,28 +59,11 @@ angular.module('starter.controllers', [])
         var picture;
         var alphaBar;
         var pBigDigit;
-        var imgBigTempPointSize;
         var imgBigSkyStateSize;
-        var pCityInfo;
-        var pSummary;
-        var divWeatherInfo;
-        var divBigInfoBox;
-
-        var scrollHeight;
-        var minBigDigitSize = 36;
-        var minBigTempPointSize = 10;
-        var minBigSkyStateSize = 21;
-        var bodyFontSize = 12;
-        var arrayWidth;
 
         function init() {
             //identifyUser();
             $ionicHistory.clearHistory();
-
-            console.log("UA:"+ionic.Platform.ua);
-            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
-            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
 
             if (window.screen.height) {
                 bodyHeight = window.screen.height;
@@ -107,7 +77,7 @@ angular.module('starter.controllers', [])
             else if (window.outerHeight) {
                 //ios에서는 outer가 없음.
                 bodyHeight = window.outerHeight;
-                bodyWidth = window.outerHeight;
+                bodyWidth = window.outerWidth;
             }
             else {
                 console.log("Fail to get window width, height");
@@ -350,16 +320,10 @@ angular.module('starter.controllers', [])
          * @returns {boolean}
          */
         $scope.haveRainSnowFall = function (day) {
-            if (
-                (day.pty != undefined && day.pty > 0) ||
-                (day.rn1 != undefined && day.rn1 > 0) ||
-                (day.r06 != undefined && day.r06 > 0) ||
-                (day.s06 != undefined && day.s06 > 0)
-            )  {
-                return true;
-            }
-
-            return false;
+            return !!((day.pty != undefined && day.pty > 0) ||
+            (day.rn1 != undefined && day.rn1 > 0) ||
+            (day.r06 != undefined && day.r06 > 0) ||
+            (day.s06 != undefined && day.s06 > 0));
         };
 
         $scope.getRainSnowFall = function (value) {
@@ -435,28 +399,6 @@ angular.module('starter.controllers', [])
 
         $scope.getMidTableHeight = getMidTableHeight;
 
-        /**
-         * grade 값이 따라 색깔을 정한다.
-         * @param grade
-         * @returns {*}
-         */
-        //$scope.getGradeColor = function (grade) {
-        //    switch (grade) {
-        //        case 1:
-        //            return "good";
-        //        case 2:
-        //            return "moderate";
-        //        case 3:
-        //            //return "unhealthy-for-sensitive";
-        //            return "unhealthy";
-        //        case 4:
-        //            return "very-unhealthy";
-        //        case 5:
-        //            return "hazardous";
-        //    }
-        //    return "";
-        //};
-
         //<div class="row row-no-padding">
         //    <div style="width: 26px;"></div>
         //    <div class="col"
@@ -511,49 +453,6 @@ angular.module('starter.controllers', [])
                 }
                 str += '</div>';
             }
-            str += '</div>';
-
-            return str;
-
-            str += '<div class="row row-no-padding">';
-            str += '<div style="width: '+colWidth/2+'px;"></div>';
-            for (i=1; i<cityData.timeTable.length; i++) {
-                value = cityData.timeTable[i];
-                if (value.currentIndex) {
-                    str += '<div class="col table-items table-border" style="background-color: #039BE5; width:auto;">';
-                }
-                else {
-                    str += '<div class="col table-items table-border" style="width:auto;">';
-                }
-                str += '<img width='+smallImageSize+'px height='+smallImageSize+'px style="margin: auto" src="'+Util.imgPath+'/'+ value.skyIcon+'.png">';
-                str += '</div>';
-            }
-            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
-            str += '</div>';
-
-            str += '<div class="row row-no-padding">';
-            str += '<div style="width: '+colWidth/2+'px;"></div>';
-            for (i=1; i<cityData.timeTable.length; i++) {
-                value = cityData.timeTable[i];
-                if (value.currentIndex) {
-                    str += '<div class="col table-items table-border" style="background-color: #039BE5; width: auto">';
-                }
-                else {
-                    str += '<div class="col table-items table-border" style="width: auto">';
-                }
-                if (value.pop) {
-                    str += '<p class="subheading" style="letter-spacing:0; margin: auto">'+
-                            //'<a class="icon ion-umbrella"></a>' +
-                        value.pop + '<small>%</small></p>';
-                }
-                str += '<p class="caption" style="letter-spacing:0; margin: auto">';
-                str += _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06, false);
-                str += '<small">';
-                str += _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
-                str += '</small></p>';
-                str += '</div>';
-            }
-            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div>';
             str += '</div>';
 
             return str;
@@ -695,18 +594,69 @@ angular.module('starter.controllers', [])
             });
         }
 
+        var confirmPopup;
+
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                if (confirmPopup) {
+                    confirmPopup.close();
+                    confirmPopup = undefined;
+                }
                 $ionicLoading.show();
-
-                updateWeatherData().finally(function () {
-                    shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
+                updateWeatherData().then(function () {
                     $ionicLoading.hide();
+                }, function (msg) {
+                    $ionicLoading.hide();
+                    showRetryConfirm("에러", msg, function (retry) {
+                        if (retry) {
+                            loadWeatherData();
+                        }
+                    });
+                }).finally(function () {
+                    console.log('finish update weather data');
+                    shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
                 });
                 return;
             }
 
             $ionicLoading.hide();
+        }
+
+        /**
+         * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
+         * 그래서 init와 reloadevent가 둘다 오게 되는데 retry confirm이 두개 뜨지 않게 한개 있는 경우 닫았다가 새롭게 열게 함.
+         * @param title
+         * @param template
+         * @param callback
+         */
+        function showRetryConfirm(title, template, callback) {
+            if (confirmPopup) {
+                confirmPopup.close();
+            }
+            confirmPopup = $ionicPopup.show({
+                title: title,
+                template: template,
+                buttons: [
+                    { text: '닫기' ,
+                        onTap: function () {
+                            return false;
+                        }
+                    },
+                    { text: '재시도',
+                        onTap: function () {
+                            return true;
+                        }
+                    }
+                ]
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log("Retry");
+                } else {
+                    console.log("Close");
+                }
+                callback(res);
+            });
         }
 
         function updateWeatherData() {
@@ -736,21 +686,18 @@ angular.module('starter.controllers', [])
                                 '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                             var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
-                            $scope.showAlert("에러", msg);
-                            deferred.reject();
+                            deferred.reject(msg);
                         });
                     }, function () {
                         var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
-                        $scope.showAlert("에러", msg);
-                        deferred.reject();
+                        deferred.reject(msg);
                     });
                 }, function () {
                     var msg = "현재 위치를 찾을 수 없습니다.";
                     if (ionic.Platform.isAndroid()) {
                         msg += "<br>WIFI와 위치정보를 켜주세요.";
                     }
-                    $scope.showAlert("에러", msg);
-                    deferred.reject();
+                    deferred.reject(msg);
                 });
             } else {
                 var startTime = new Date().getTime();
@@ -772,8 +719,7 @@ angular.module('starter.controllers', [])
                         '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                     var msg = "위치 정보 업데이트를 실패하였습니다.";
-                    $scope.showAlert("에러", msg);
-                    deferred.reject();
+                    deferred.reject(msg);
                 });
             }
 
@@ -898,27 +844,6 @@ angular.module('starter.controllers', [])
             }
             return str;
         };
-
-        /**
-         * 사용하지 않음.
-         * @param value
-         * @returns {string}
-         */
-        //$scope.getDayForecast = function (value) {
-        //    var str = [];
-        //    if (value.fromToday === 0 || value.fromToday === 1) {
-        //        if (value.dustForecast && value.dustForecast.PM10Str) {
-        //           str.push('미세예보:'+value.dustForecast.PM10Str);
-        //        }
-        //
-        //        if (value.ultrvStr) {
-        //            str.push('자외선:'+value.ultrvStr);
-        //        }
-        //        return str.toString();
-        //    }
-        //
-        //    return str.toString();
-        //};
 
         $scope.$on('reloadEvent', function(event) {
             console.log('called by update weather event');
@@ -1316,9 +1241,7 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, $cordovaInAppBrowser, Util) {
-        $scope.version = Util.version;
-
+    .controller('SettingCtrl', function($scope, $http, Util) {
         function init() {
             //for chrome extension
             if (window.chrome && chrome.extension) {
@@ -1331,6 +1254,8 @@ angular.module('starter.controllers', [])
             }
         }
 
+        $scope.version = Util.version;
+
         $scope.sendMail = function() {
             Util.ga.trackEvent('action', 'click', 'send mail');
             window.location.href = "mailto:todayweather@wizardfactory.net";
@@ -1339,32 +1264,27 @@ angular.module('starter.controllers', [])
         $scope.openMarket = function() {
             var src = "";
             if (ionic.Platform.isIOS()) {
-                src = "https://itunes.apple.com/us/app/todayweather/id1041700694";
+                src = "https://itunes.apple.com/app/todayweather/id1041700694";
             }
             else if (ionic.Platform.isAndroid()) {
-                src = "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+                src = "market://details?id=net.wizardfactory.todayweather";
             }
             else {
                 src = "https://www.facebook.com/TodayWeather.WF";
             }
 
-            var options = {
-                location: "yes",
-                clearcache: "yes",
-                toolbar: "no"
-            };
-
-            $cordovaInAppBrowser.open(src, "_blank", options)
-                .then(function(event) {
-                    console.log(event);
-                    // success
-                    Util.ga.trackEvent('action', 'click', 'open market');
-                })
-                .catch(function(event) {
-                    console.log("error");
-                    console.log(event);
-                    Util.ga.trackEvent('action error', 'click', 'open market');
-                });
+            if (window.cordova && cordova.InAppBrowser) {
+                cordova.InAppBrowser.open(src, "_system");
+                Util.ga.trackEvent('action', 'click', 'open market');
+            }
+            else {
+                var options = {
+                    location: "yes",
+                    clearcache: "yes",
+                    toolbar: "no"
+                };
+                window.open(src, "_blank", options);
+            }
         };
 
         $scope.openInfo = function() {
@@ -1373,17 +1293,14 @@ angular.module('starter.controllers', [])
         };
 
         $scope.showIcon = function () {
-            if (ionic.Platform.isAndroid()) {
-                return false;
-            }
-            return true;
+            return !ionic.Platform.isAndroid();
         };
 
         init();
     })
 
     .controller('TabCtrl', function($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, $cordovaSocialSharing, TwAds, $rootScope, Util) {
+                                     $location, TwAds, $rootScope, Util) {
         var currentTime;
 
         function init() {
@@ -1454,15 +1371,13 @@ angular.module('starter.controllers', [])
                 }
             }
 
-            $cordovaSocialSharing
-                .share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null)
-                .then(function(result) {
-                    // Success!
-                    Util.ga.trackEvent('action', 'tab', 'share');
-                }, function(err) {
-                    // An error occured
-                    Util.ga.trackEvent('action error', 'tab', 'share');
-                });
+            if (window.plugins && window.plugins.socialsharing) {
+                window.plugins.socialsharing.share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null);
+                Util.ga.trackEvent('action', 'tab', 'share');
+            }
+            else {
+                console.log('plugins socialsharing is undefined');
+            }
         };
 
         $scope.showAlert = function(title, msg) {
