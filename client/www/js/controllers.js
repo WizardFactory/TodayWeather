@@ -594,6 +594,9 @@ angular.module('starter.controllers', [])
             });
         }
 
+        /**
+         * retry popup이 없는 경우 항상 undefined여야 함.
+         */
         var confirmPopup;
 
         function loadWeatherData() {
@@ -609,7 +612,9 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                     showRetryConfirm("에러", msg, function (retry) {
                         if (retry) {
-                            loadWeatherData();
+                            setTimeout(function () {
+                                loadWeatherData();
+                            }, 0);
                         }
                     });
                 }).finally(function () {
@@ -643,20 +648,26 @@ angular.module('starter.controllers', [])
                         }
                     },
                     { text: '재시도',
+                        type: 'button-positive',
                         onTap: function () {
                             return true;
                         }
                     }
                 ]
             });
-            confirmPopup.then(function (res) {
-                if (res) {
-                    console.log("Retry");
-                } else {
-                    console.log("Close");
-                }
-                callback(res);
-            });
+            confirmPopup
+                .then(function (res) {
+                    if (res) {
+                        console.log("Retry");
+                    } else {
+                        console.log("Close");
+                    }
+                    callback(res);
+                })
+                .finally(function () {
+                    console.log('called finally');
+                    confirmPopup = undefined;
+                });
         }
 
         function updateWeatherData() {
@@ -845,7 +856,13 @@ angular.module('starter.controllers', [])
             return str;
         };
 
-        $scope.$on('reloadEvent', function(event) {
+        $scope.$on('reloadEvent', function(event, sender) {
+            if (sender == 'resume') {
+               if (confirmPopup)  {
+                   console.log('skip event when retry load popup is shown');
+                   return;
+               }
+            }
             console.log('called by update weather event');
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
@@ -1321,11 +1338,11 @@ angular.module('starter.controllers', [])
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
-                $scope.$broadcast('reloadEvent');
+                $scope.$broadcast('reloadEvent', 'tab');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
-                $scope.$broadcast('reloadEvent');
+                $scope.$broadcast('reloadEvent', 'tab');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {
