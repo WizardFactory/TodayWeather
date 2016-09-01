@@ -526,6 +526,18 @@ angular.module('starter.controllers', [])
 
             $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
 
+            $scope.updateTime = (function () {
+               if (cityData.currentWeather) {
+                   if (cityData.currentWeather.stnDateTime) {
+                       return cityData.currentWeather.stnDateTime;
+                   }
+                   else {
+                       var tmpDate = cityData.currentWeather.date;
+                       return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                           " " + cityData.currentWeather.time + ":00";
+                   }
+               }
+            })();
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
