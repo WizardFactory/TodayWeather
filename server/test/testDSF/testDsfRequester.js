@@ -58,7 +58,7 @@ describe('unit test - DSF', function(){
         }
 
     ];
-
+/*
     it('get current weather by DSF', function(done){
         var dsf = new dsfRequester();
         dsf.collect(list, undefined, keybox.dsf_key, function(err, result){
@@ -106,12 +106,15 @@ describe('unit test - DSF', function(){
             }
 
             log.info('!!! Successed to get current weather data');
-            log.info(result);
+            log.info(result.currently);
+            log.info(result.hourly);
+            log.info(result.daily);
             done();
 
         });
     });
-
+*/
+/*
     it('get one previous item by DSF', function(done){
         var dsf = new dsfRequester();
         var date = '2016-08-11T12:00:00-0900';
@@ -130,19 +133,37 @@ describe('unit test - DSF', function(){
 
         });
     });
-/*
+*/
+
+    var leadingZeros = function(n, digits) {
+        var zero = '';
+        n = n.toString();
+
+        if(n.length < digits) {
+            for(var i = 0; i < digits - n.length; i++){
+                zero += '0';
+            }
+        }
+        return zero + n;
+    };
     it('time test', function(done){
         var date = new Date();
-        date.setTime(1470873600000);
-        var time = date.getTime();
+        date.setTime(1470841200000);
 
-        log.info('time : ', time);
         log.info('year:', date.getFullYear());
         log.info('month:', date.getMonth()+1);
         log.info('days:', date.getDate());
         log.info('Time : ', date.getHours(), ':', date.getMinutes(), ':', date.getSeconds());
+        var result =
+            leadingZeros(date.getFullYear(), 4) +
+            leadingZeros(date.getMonth() + 1, 2) +
+            leadingZeros(date.getDate(), 2) +
+            leadingZeros(date.getHours(), 2) +
+            leadingZeros(date.getMinutes(), 2);
+
+        log.info('Date String : ', result);
 
         done();
     });
-*/
+
 });

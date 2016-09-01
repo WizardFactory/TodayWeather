@@ -11,11 +11,13 @@ var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
 var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
+var modelDSForecast = require('../../models/worldWeather/modelDSForecast');
 
 var config = require('../../config/config');
 var metRequester = require('../../lib/MET/metRequester');
 var owmRequester = require('../../lib/OWM/owmRequester');
 var wuRequester = require('../../lib/WU/wuRequester');
+var dsfRequester = require('../../lib/DSF/dsfRequester');
 
 /**
  *
@@ -28,6 +30,12 @@ function ConCollector() {
     self.wuLimitation = 80;  // there is limitation to get 100 datas for a mimute from WU server.
 
     self.itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
+    self.itemDsfCurrent = ['date', 'summary', 'pre_int', 'pre_pro', 'temp', 'ftemp', 'humid', 'windspd', 'winddir', 'vis', 'cloud', 'pres', 'oz'];
+    self.itemDsfDaily = ['date', 'summary', 'sunrise', 'sunset', 'moonphase',
+                            'pre_int', 'pre_intmax', 'pre_intmaxt', 'pre_pro', 'pre_type',
+                            'temp_min', 'temp_mint', 'temp_max', 'temp_maxt',
+                            'ftemp_min', 'ftemp_mint', 'ftemp_max', 'ftemp_maxt',
+                            'humid', 'windspd', 'winddir', 'vis', 'cloud', 'pres', 'oz'];
 }
 
 /**
@@ -214,7 +222,9 @@ ConCollector.prototype._divideList = function(list, unit){
 
     return resultList;
 };
-
+/**************************************************************************************/
+/* WU Module
+ /**************************************************************************************/
 /**
  *
  * @param list
@@ -803,6 +813,308 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
         }
     );
 };
+/**************************************************************************************/
+/* DSF Module
+/**************************************************************************************/
+ConCollector.prototype._getDSFKey = function(){
+    var self = this;
+    return {key: self.keybox.dsf_key};
+};
+
+ConCollector.prototype._convertTimeToDate = function(src){
+    var self = this;
+    var date = new Date();
+    date.setTime(src);
+
+    var result =
+        self._leadingZeros(date.getFullYear(), 4) +
+        self._leadingZeros(date.getMonth() + 1, 2) +
+        self._leadingZeros(date.getDate(), 2) +
+        self._leadingZeros(date.getHours(), 2) +
+        self._leadingZeros(date.getMinutes(), 2);
+
+    return result;
+};
+
+ConCollector.prototype._getFloatItem = function(src){
+    if(src == undefined){
+        return -100;
+    }else {
+        return parseFloat(src);
+    }
+};
+
+ConCollector.prototype._parseDSForecast = function(src){
+    var self = this;
+    var result = {
+        current: {},
+        hourly: {
+            summary:'',
+            data:[]
+        },
+        daily: {
+            summary:'',
+            data:[]
+        }
+    };
+
+    // Currently data
+    if(src.currently){
+        result.current.date = parseInt(self._convertTimeToDate(src.currently.time + '000'));
+        result.current.summary = src.currently.summary;
+        result.current.pre_int = self._getFloatItem(src.currently.precipIntensity);
+        result.current.pre_pro = self._getFloatItem(src.currently.precipProbability);
+        result.current.temp = self._getFloatItem(src.currently.temperature);
+        result.current.ftemp = self._getFloatItem(src.currently.apparentTemperature);
+        result.current.humid = self._getFloatItem(src.currently.humidity);
+        result.current.windspd = self._getFloatItem(src.currently.windSpeed);
+        result.current.winddir = self._getFloatItem(src.currently.windBearing);
+        result.current.vis = self._getFloatItem(src.currently.visibility);
+        result.current.cloud = self._getFloatItem(src.currently.cloudCover);
+        result.current.pres = self._getFloatItem(src.currently.pressure);
+        result.current.oz = self._getFloatItem(src.currently.ozone);
+    }
+
+    // hourly data
+    if(src.hourly){
+        result.hourly.summary = src.hourly.summary;
+        src.hourly.data.forEach(function(item){
+            var hourlyData = {};
+
+            hourlyData.date = parseInt(self._convertTimeToDate(item.time + '000'));
+            hourlyData.pre_int = self._getFloatItem(item.precipIntensity);
+            hourlyData.pre_pro = self._getFloatItem(item.precipProbability);
+            hourlyData.temp = self._getFloatItem(item.temperature);
+            hourlyData.ftemp = self._getFloatItem(item.apparentTemperature);
+            hourlyData.humid = self._getFloatItem(item.humidity);
+            hourlyData.windspd = self._getFloatItem(item.windSpeed);
+            hourlyData.winddir = self._getFloatItem(item.windBearing);
+            hourlyData.vis = self._getFloatItem(item.visibility);
+            hourlyData.cloud = self._getFloatItem(item.cloudCover);
+            hourlyData.pres = self._getFloatItem(item.pressure);
+            hourlyData.oz = self._getFloatItem(item.ozone);
+
+            result.hourly.data.push(hourlyData);
+        });
+    }
+
+    if(src.daily){
+        result.daily.summary = src.daily.summary;
+        src.daily.data.forEach(function(item, index){
+            var dailyData = {};
+
+            dailyData.date = parseInt(self._convertTimeToDate(item.time + '000'));
+            dailyData.summary = item.summary;
+            dailyData.sunrise = parseInt(self._convertTimeToDate(item.sunriseTime + '000'));
+            dailyData.sunrset = parseInt(self._convertTimeToDate(item.sunsetTime + '000'));
+            dailyData.moonphase = self._getFloatItem(item.moonPhase);
+            dailyData.pre_int = self._getFloatItem(item.precipIntensity);
+            dailyData.pre_intmax = self._getFloatItem(item.precipIntensityMax);
+            dailyData.pre_intmaxt = parseInt(self._convertTimeToDate(item.precipIntensityMaxTime + '000'));
+            dailyData.pre_pro = self._getFloatItem(item.precipProbability);
+            dailyData.pre_type = self._getFloatItem(item.precipType);
+            dailyData.temp_min = self._getFloatItem(item.temperatureMin);
+            dailyData.temp_mint = parseInt(self._convertTimeToDate(item.temperatureMinTime + '000'));
+            dailyData.temp_max = self._getFloatItem(item.temperatureMax);
+            dailyData.temp_maxt = parseInt(self._convertTimeToDate(item.temperatureMaxTime + '000'));
+            dailyData.ftemp_min = self._getFloatItem(item.apparentTemperatureMin);
+            dailyData.ftemp_mint = parseInt(self._convertTimeToDate(item.apparentTemperatureMinTime + '000'));
+            dailyData.ftemp_max = self._getFloatItem(item.apparentTemperatureMax);
+            dailyData.ftemp_maxt = parseInt(self._convertTimeToDate(item.apparentTemperatureMaxTime + '000'));
+            dailyData.humid = self._getFloatItem(item.humidity);
+            dailyData.windspd = self._getFloatItem(item.windSpeed);
+            dailyData.winddir = self._getFloatItem(item.windBearing);
+            dailyData.vis = self._getFloatItem(item.visibility);
+            dailyData.cloud = self._getFloatItem(item.cloudCover);
+            dailyData.pres = self._getFloatItem(item.pressure);
+            dailyData.oz = self._getFloatItem(item.ozone);
+
+            result.daily.data.push(dailyData);
+        });
+    }
+
+    return result;
+};
+
+ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
+    var self = this;
+
+    try{
+        modelDSForecast.find({geocode:geocode}, function(err, list){
+            if(err){
+                log.error('Dsf> fail to find from DB');
+                callback(err);
+                return;
+            }
+            var newData = self._parseDSForecast(data);
+
+            // for debug
+            //log.info('C> ', newData.current);
+            //log.info('H> ', newData.hourly.summary);
+            //newData.hourly.data.forEach(function(item){
+            //    log.info('H> ', item);
+            //});
+            //log.info('D> ',newData.daily.summary);
+            //newData.daily.data.forEach(function(item){
+            //    log.info('D> ',item);
+            //});
+
+            if(list.length === 0){
+                print.info('Dsf> First time');
+                var newItem = new modelDSForecast({geocode:geocode,
+                                                    address:{},
+                                                    date:date,
+                                                    current:newData.current,
+                                                    hourly:newData.hourly,
+                                                    daily:newData.daily});
+                newItem.save(function(err){
+                    if(err){
+                        log.error('Dsf> fail to add the new data to DB :', geocode, err);
+                        print.error('Dsf> fail to add the new data to DB :', geocode);
+                    }
+                    if(callback){
+                        callback(err, newData);
+                    }
+                });
+                //print.info('WuF> add new Item : ', newData);
+            }else{
+                list.forEach(function(data, index){
+                    data.date = date;
+                    data.current = {};
+                    data.hourly = {};
+                    data.daily = {};
+
+                    data.current = newData.current;
+                    data.hourly = newData.hourly;
+                    data.daily = newData.daily;
+                    //log.info(data);
+                    data.save(function(err){
+                        if(err){
+                            log.error('Dsf> fail to save to DB :', geocode);
+                        }
+
+                        if(callback){
+                            callback(err, newData);
+                        }
+                    });
+                });
+            }
+        });
+    }catch(e){
+        log.error('Dsf> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCount, callback){
+    var self = this;
+    var failList = [];
+
+    if(list.length === 0){
+        log.info('Dsf> There is no geocode');
+        callback(0, failList);
+        return;
+    }
+
+    async.mapSeries(list,
+        function(location, cb){
+            var requester = new dsfRequester;
+            var geocode = {
+                lat: parseFloat(location.lat),
+                lon: parseFloat(location.lon)
+            };
+
+            modelDSForecast.find({geocode:geocode}, function(err, list){
+                if(err){
+                    log.error('Dsf> _getAndSaveWuForecast : Fail to get DB');
+                    print.error('Dsf> _getAndSaveWuForecast : Fail to get DB');
+                    cb(null);
+                    return;
+                }
+
+                if(list.length != 0 && date != 0){
+                    list.forEach(function(item){
+                        // TODO : compare between date parameter and DB's date.
+                    });
+                }
+
+                requester.getForecast(geocode, undefined, key, function(err, result){
+                    if(err){
+                        print.error('Dsf> get fail', location);
+                        log.error('Dsf> get fail', location);
+                        failList.push(location);
+                        cb(null);
+                        return;
+                    }
+
+                    log.info(result);
+                    self.saveDSForecast(geocode, date, result, function(err){
+                        cb(null);
+                    });
+                });
+            });
+        },
+        function(err){
+            if(err){
+                log.error('Dsf> ');
+            }
+
+            if(retryCount > 0){
+                return self._getAndSaveDSForecast(failList, key, date, --retryCount, callback);
+            }else{
+                callback(err, failList);
+                return;
+            }
+        }
+    );
+};
+
+ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, callback){
+    var key = self._getDSFKey().key;
+    var failList = [];
+
+    try{
+        print.info('Dsf> Total count: ', list.length);
+        var dividedList = self._divideList(list, self.wuLimitation);
+        print.info('Dsf> divided count : ', dividedList.length);
+
+        self._getAndSaveDSForecast(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+            failList.concat(resultList);
+            if(dividedList.length === 0){
+                log.info('Dsf> Finish to collect WU forecast');
+                callback(0, failList);
+                return;
+            }
+        });
+
+        if(dividedList.length > 0){
+            var timer = setInterval(function(){
+                print.info('Dsf> Do task : ', dividedList.length);
+                self._getAndSaveDSForecast(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                    failList.concat(resultList);
+
+                    if(dividedList.length === 0){
+                        print.info('Dsf> clear interval timer');
+                        clearInterval(timer);
+                        callback(0, failList);
+                        return;
+                    }
+                });
+            }, 60 * 1000);
+        }
+    }
+    catch(e){
+        print.error('Exception!!!');
+        log.error('Dsf> Exception!!!');
+        if(callback){
+            callback(e);
+        }
+    }
+};
+
+/**************************************************************************************/
 
 /**
  *
@@ -892,6 +1204,10 @@ ConCollector.prototype.runTask = function(isAll, callback){
 
     if(minute === 1 || isAll){
         funcList.push(self.processWuForecast);
+    }
+
+    if(isAll){
+        funcList.push(self.processDSForecast);
     }
 
     var date = parseInt(self._getTimeString(9).slice(0,10) + '00');
