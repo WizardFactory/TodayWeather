@@ -33,6 +33,7 @@ typedef enum
 #define STR_LATITUDE                    @"&latitude="
 #define STR_INPUT_COORD                 @"&inputCoordSystem=WGS84"
 #define STR_OUTPUT_JSON                 @"&output=json"
+#define API_DAILY_TOWN                  @"v000705/daily/town"
 
 /********************************************************************
  Interface
@@ -444,7 +445,7 @@ typedef enum
 {
     NSString *nssURL = nil;
     NSCharacterSet *set = nil;
-    nssURL = [NSString stringWithFormat:@"https://tw-wzdfac.rhcloud.com/v000705/daily/town"];
+    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, API_DAILY_TOWN];
     if (nssAddr1 != nil) {
         nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr1];
     }
