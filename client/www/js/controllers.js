@@ -1373,7 +1373,7 @@ angular.module('starter.controllers', [])
         $scope.doTabShare = function() {
             var message = '';
 
-            if ($location.path() === '/tab/forecast') {
+            if ($location.path() === '/tab/forecast' || $location.path() === '/tab/dailyforecast' ) {
                 var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
                 if (cityData !== null && cityData.location !== null) {
                     message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
