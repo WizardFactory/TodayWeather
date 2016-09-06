@@ -510,6 +510,18 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   //letter-spacing: 5px;
 }
 
+.setting-title-light {
+  background-color: inherit;
+  color: inherit;
+  font-size: 20px;
+  opacity: 0.87;
+  //letter-spacing: 2px;
+}
+
+.item-select:after {
+  color: white;
+}
+
 p small {
   font-size: 10px;
 }
