@@ -104,6 +104,19 @@ public class WidgetProviderConfigureActivity extends Activity {
         prefs.apply();
     }
 
+    public static long getWidgetUpdateInterval(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
+        String key = "updateInterval";
+        if (prefs.contains(key)) {
+            long minInterval = prefs.getInt(key, -1);
+            Log.i("widgetConfigure", "widget update interval " + minInterval);
+            minInterval = minInterval * 60 * 1000;
+            return minInterval;
+        }
+
+        return -1;
+    }
+
     private void loadCityListPref(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
         String key = "cityList";
