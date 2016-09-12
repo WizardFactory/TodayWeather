@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.widget.Provider;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -16,6 +17,10 @@ import net.wizardfactory.todayweather.widget.WidgetUpdateService;
 
 public class W2x1WidgetProvider extends AppWidgetProvider {
 
+    private static final String TAG = "W2x1Widget";
+    private static PendingIntent mSender;
+    private static AlarmManager mManager;
+
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         final int N = appWidgetIds.length;
@@ -24,7 +29,7 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
         for (int i=0; i<N; i++) {
             int appWidgetId = appWidgetIds[i];
 
-            Log.i("W2x1Widget", "appWidgetId="+appWidgetId);
+            Log.i(TAG, "appWidgetId="+appWidgetId);
 
             // Create an Intent to launch menu
             Intent intent = new Intent(context, WidgetMenuActivity.class);
@@ -46,7 +51,7 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
-        Log.i("W2x1Widget", "on deleted");
+        Log.i(TAG, "on deleted");
         // When the user deletes the widget, delete the preference associated with it.
         for (int appWidgetId : appWidgetIds) {
             WidgetProviderConfigureActivity.deleteCityInfoPref(context, appWidgetId);
@@ -55,26 +60,58 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        Log.i("W2x1Widget", "Enabled");
+        Log.i(TAG, "Enabled");
     }
 
     @Override
     public void onDisabled(Context context) {
-        Log.i("W2x1Widget", "Disabled");
+        Log.i(TAG, "Disabled");
     }
 
     public void onReceive(Context context, Intent intent) {
-        Log.i("W2x1Widget", "on receive");
+        Log.i(TAG, "on receive");
         super.onReceive(context, intent);
 
+        String action = intent.getAction();
+        // 위젯 업데이트 인텐트를 수신했을 때
+        if(action.equals("android.appwidget.action.APPWIDGET_UPDATE"))
+        {
+            Log.w(TAG, "android.appwidget.action.APPWIDGET_UPDATE");
+            removePreviousAlarm();
+
+            long updateInterval = WidgetProviderConfigureActivity.getWidgetUpdateInterval(context);
+            if (updateInterval > 0) {
+                long firstTime = System.currentTimeMillis() + updateInterval;
+                mSender = PendingIntent.getBroadcast(context, 0, intent, 0);
+                mManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                mManager.set(AlarmManager.RTC, firstTime, mSender);
+            }
+        }
+        // 위젯 제거 인텐트를 수신했을 때
+        else if(action.equals("android.appwidget.action.APPWIDGET_DISABLED"))
+        {
+            Log.w(TAG, "android.appwidget.action.APPWIDGET_DISABLED");
+            removePreviousAlarm();
+        }
     }
 
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager,
                                           int appWidgetId, Bundle newOptions) {
 
-        Log.i("W2x1Widget", "on app widget options changed");
+        Log.i(TAG, "on app widget options changed");
     }
 
+    /**
+     * 예약되어있는 알람을 취소합니다.
+     */
+    public void removePreviousAlarm()
+    {
+        if(mManager != null && mSender != null)
+        {
+            mSender.cancel();
+            mManager.cancel(mSender);
+        }
+    }
 }
 
 

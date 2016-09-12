@@ -526,6 +526,18 @@ angular.module('starter.controllers', [])
 
             $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
 
+            $scope.updateTime = (function () {
+               if (cityData.currentWeather) {
+                   if (cityData.currentWeather.stnDateTime) {
+                       return cityData.currentWeather.stnDateTime;
+                   }
+                   else {
+                       var tmpDate = cityData.currentWeather.date;
+                       return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                           " " + cityData.currentWeather.time + ":00";
+                   }
+               }
+            })();
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
@@ -1269,6 +1281,33 @@ angular.module('starter.controllers', [])
                     console.log(err);
                 });
             }
+
+            if (ionic.Platform.isAndroid()) {
+                //get interval time;
+                $scope.updateInterval = "0";
+
+                ionic.Platform.ready(function() {
+                    if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                        console.log('appPreferences is undefined');
+                        return;
+                    }
+
+                    /**
+                     * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+                     * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+                     * @type {AppPreferences}
+                     */
+                    var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                    suitePrefs.fetch('updateInterval').then(
+                        function (value) {
+                            $scope.updateInterval = ""+value;
+                            console.log("fetch preference Success: " + value);
+                        }, function (error) {
+                            console.log("fetch preference Error: " + error);
+                        }
+                    );
+                });
+            }
         }
 
         $scope.version = Util.version;
@@ -1309,8 +1348,28 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
-        $scope.showIcon = function () {
-            return !ionic.Platform.isAndroid();
+        $scope.isAndroid = function () {
+            return ionic.Platform.isAndroid();
+        };
+
+        $scope.changeUpdateInterval = function (val) {
+           console.log("update interval ="+ val);
+            ionic.Platform.ready(function() {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('updateInterval', +val).then(
+                    function (value) {
+                        console.log("save preference Success: " + value);
+                    },
+                    function (error) {
+                        console.log("save preference Error: " + error);
+                    }
+                );
+            });
         };
 
         init();
@@ -1373,7 +1432,7 @@ angular.module('starter.controllers', [])
         $scope.doTabShare = function() {
             var message = '';
 
-            if ($location.path() === '/tab/forecast') {
+            if ($location.path() === '/tab/forecast' || $location.path() === '/tab/dailyforecast' ) {
                 var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
                 if (cityData !== null && cityData.location !== null) {
                     message += WeatherUtil.getShortenAddress(cityData.address)+'\n';

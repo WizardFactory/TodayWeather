@@ -6,7 +6,7 @@
 
 var async = require('async');
 
-var Town = require('../models/town');
+//var Town = require('../models/town');
 var arpltnTown = require('../models/arpltnTownKeco');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
@@ -143,6 +143,9 @@ arpltnController.parsePm25Info = function (pm25Grade) {
  * @private
  */
 arpltnController._recalculateValue = function (arpltn) {
+    if (arpltn == undefined) {
+        return arpltn;
+    }
 
     if (arpltn.hasOwnProperty("pm10Value")) {
         arpltn.pm10Grade = (function (v) {
@@ -391,15 +394,14 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
     }
 
     dateTime.setHours(dateTime.getHours()-8);
-    if (dateTime.getTime() < arpltnTime.getTime()) {
-        return true;
-    }
-    return false;
+
+    return dateTime.getTime() < arpltnTime.getTime();
 };
 
 /**
  *
  * @param arpltnList
+ * @param currentTime
  * @returns {*}
  * @private
  */
@@ -410,7 +412,7 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
 
     if (!Array.isArray(arpltnList)) {
         log.error(new Error("arpltn is not array"));
-        return arpltn;
+        return;
     }
 
     for (var i=0; i<arpltnList.length; i++) {
