@@ -260,6 +260,20 @@ function controllerWorldWeather(){
                         // goto next step
                         callback(null, result);
                     });
+                },
+                // 6. get DSF data from DB by using geocode.
+                function(callback){
+                    self.getDataFromDSF(req, function(err, result){
+                        if(err){
+                            log.error('DSF> Fail to get DSF data', err);
+                            callback(null);
+                            return;
+                        }
+                        log.info('DSF> get DSF data');
+
+                        // goto next step
+                        callback(null, result);
+                    });
                 }
         ],
         function(err, result){
@@ -480,14 +494,18 @@ function controllerWorldWeather(){
                 forecast: []
             };
             itemWuForecastSummary.forEach(function(summaryItem){
-               newItem.summary[summaryItem] = day.summary[summaryItem];
+                if(day.summary[summaryItem]){
+                    newItem.summary[summaryItem] = day.summary[summaryItem];
+                }
             });
 
             day.forecast.forEach(function(forecastItem){
                 var newForecast = {};
 
                 itemWuForecast.forEach(function(name){
-                    newForecast[name] = forecastItem[name];
+                    if(forecastItem[name]){
+                        newForecast[name] = forecastItem[name];
+                    }
                 });
 
                 newItem.forecast.push(newForecast);
@@ -602,6 +620,11 @@ function controllerWorldWeather(){
         );
     };
 
+    self.getDataFromDSF = function(req, callback){
+        req.MET = {};
+        callback(0, req.MET);
+    };
+
     /**
      *
      * @param req
@@ -626,6 +649,10 @@ function controllerWorldWeather(){
         if(req.WU){
             // TODO : merge WU data
             req.result.WU = req.WU;
+        }
+
+        if(req.DSF){
+
         }
     };
 
