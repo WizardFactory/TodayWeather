@@ -28,7 +28,7 @@ router.get('/town/*', [divideParams, cTown.getAllDataFromDb, cTown.getShort, cTo
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.getSummary,
                                     cTown.dataToFixed, cTown.makeDailySummary, cTown.sendDailySummaryResult]);
