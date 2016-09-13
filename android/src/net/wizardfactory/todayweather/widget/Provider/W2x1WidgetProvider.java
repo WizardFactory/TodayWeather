@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -33,7 +34,9 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
 
             // Create an Intent to launch menu
             Intent intent = new Intent(context, WidgetMenuActivity.class);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
+            intent.putExtra("LAYOUT_ID", R.layout.w2x1_widget_layout);
+//            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, appWidgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
             // Get the layout for the App Widget and attach an on-click listener
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.w2x1_widget_layout);
@@ -68,6 +71,15 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
         Log.i(TAG, "Disabled");
     }
 
+    public void removePreviousAlarm()
+    {
+        if(mManager != null && mSender != null)
+        {
+            mSender.cancel();
+            mManager.cancel(mSender);
+        }
+    }
+
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "on receive");
         super.onReceive(context, intent);
@@ -81,10 +93,19 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
 
             long updateInterval = WidgetProviderConfigureActivity.getWidgetUpdateInterval(context);
             if (updateInterval > 0) {
-                long firstTime = System.currentTimeMillis() + updateInterval;
-                mSender = PendingIntent.getBroadcast(context, 0, intent, 0);
+                Log.i(TAG, "set alarm");
+
+                Intent alarmIntent = new Intent(context, getClass());
+                alarmIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+                ComponentName thisWidget = new ComponentName(context, getClass());
+                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                int[] widgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
+                alarmIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds);
+
+                long updateTime = System.currentTimeMillis() + updateInterval;
+                mSender = PendingIntent.getBroadcast(context, 0, alarmIntent, 0);
                 mManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-                mManager.set(AlarmManager.RTC, firstTime, mSender);
+                mManager.set(AlarmManager.RTC, updateTime, mSender);
             }
         }
         // 위젯 제거 인텐트를 수신했을 때
@@ -95,23 +116,9 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
         }
     }
 
-    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager,
-                                          int appWidgetId, Bundle newOptions) {
-
-        Log.i(TAG, "on app widget options changed");
-    }
-
     /**
      * 예약되어있는 알람을 취소합니다.
      */
-    public void removePreviousAlarm()
-    {
-        if(mManager != null && mSender != null)
-        {
-            mSender.cancel();
-            mManager.cancel(mSender);
-        }
-    }
 }
 
 

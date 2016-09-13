@@ -1,0 +1,51 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/bg_layout"
+    android:background="@drawable/bg_round_black_box"
+    android:padding="@dimen/widget_margin">
+
+    <TextView
+        android:id="@+id/location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        android:text="Seoul"
+        android:layout_marginLeft="4dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="-100°"
+        android:includeFontPadding="false"
+        android:id="@+id/current_temperature"
+        android:layout_marginRight="4dp"
+        android:layout_below="@+id/location"
+        android:layout_alignParentRight="true" />
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/current_sky"
+        android:src="@drawable/sun"
+        android:contentDescription="@string/weather_icon"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        android:layout_below="@+id/current_temperature"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text=":::"
+        android:id="@+id/current_pm"
+        android:layout_marginLeft="4dp"
+        android:layout_below="@+id/location"
+        android:layout_alignParentLeft="true"
+        android:textStyle="bold" />
+
+</RelativeLayout>

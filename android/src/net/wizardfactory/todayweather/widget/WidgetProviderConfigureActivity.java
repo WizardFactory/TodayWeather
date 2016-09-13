@@ -17,11 +17,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.Provider.W1x1WidgetProvider;
-import net.wizardfactory.todayweather.widget.Provider.W2x1WidgetProvider;
+import net.wizardfactory.todayweather.widget.Provider.W1x1CurrentWeather;
 
 /**
- * The configuration screen for the {@link W1x1WidgetProvider W1x1WidgetProvider} AppWidget.
+ * The configuration screen for the {@link W1x1CurrentWeather W1x1CurrentWeather} AppWidget.
  */
 public class WidgetProviderConfigureActivity extends Activity {
 
@@ -60,7 +59,7 @@ public class WidgetProviderConfigureActivity extends Activity {
 
             // It is the responsibility of the configuration activity to update the app widget
 //            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-//            W1x1WidgetProvider.updateAppWidget(context, appWidgetManager, mAppWidgetId);
+//            W1x1CurrentWeather.updateAppWidget(context, appWidgetManager, mAppWidgetId);
 
             // update widget weather data using service
             Intent serviceIntent = new Intent(context, WidgetUpdateService.class);

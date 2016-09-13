@@ -105,6 +105,13 @@ module.exports = [
         "clobbers": [
             "plugins.appPreferences"
         ]
+    },
+    {
+        "file": "plugins/cordova-plugin-app-version/www/AppVersionPlugin.js",
+        "id": "cordova-plugin-app-version.AppVersionPlugin",
+        "clobbers": [
+            "cordova.getAppVersion"
+        ]
     }
 ];
 module.exports.metadata = 
@@ -126,7 +133,8 @@ module.exports.metadata =
     "cordova-plugin-admobpro": "2.17.1",
     "cordova-plugin-network-information": "1.2.1",
     "cordova-plugin-console": "1.0.3",
-    "cordova-plugin-app-preferences": "0.7.7"
+    "cordova-plugin-app-preferences": "0.7.7",
+    "cordova-plugin-app-version": "0.1.9"
 };
 // BOTTOM OF METADATA
 });

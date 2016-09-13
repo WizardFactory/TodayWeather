@@ -63,6 +63,10 @@
                         {
                             "xml": "<feature name=\"AppPreferences\"><param name=\"android-package\" value=\"me.apla.cordova.AppPreferences\" /></feature>",
                             "count": 1
+                        },
+                        {
+                            "xml": "<feature name=\"AppVersion\"><param name=\"android-package\" value=\"uk.co.whiteoctober.cordova.AppVersion\" /></feature>",
+                            "count": 1
                         }
                     ]
                 }
@@ -241,6 +245,9 @@
         },
         "cordova-plugin-app-preferences": {
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
+        },
+        "cordova-plugin-app-version": {
+            "PACKAGE_NAME": "net.wizardfactory.todayweather"
         }
     },
     "dependent_plugins": {},
@@ -350,6 +357,13 @@
             "clobbers": [
                 "plugins.appPreferences"
             ]
+        },
+        {
+            "file": "plugins/cordova-plugin-app-version/www/AppVersionPlugin.js",
+            "id": "cordova-plugin-app-version.AppVersionPlugin",
+            "clobbers": [
+                "cordova.getAppVersion"
+            ]
         }
     ],
     "plugin_metadata": {
@@ -369,6 +383,7 @@
         "cordova-plugin-admobpro": "2.17.1",
         "cordova-plugin-network-information": "1.2.1",
         "cordova-plugin-console": "1.0.3",
-        "cordova-plugin-app-preferences": "0.7.7"
+        "cordova-plugin-app-preferences": "0.7.7",
+        "cordova-plugin-app-version": "0.1.9"
     }
 }
