@@ -1285,6 +1285,7 @@ angular.module('starter.controllers', [])
             if (ionic.Platform.isAndroid()) {
                 //get interval time;
                 $scope.updateInterval = "0";
+                $scope.widgetOpacity = "69";
 
                 ionic.Platform.ready(function() {
                     if (window.plugins == undefined || plugins.appPreferences == undefined) {
