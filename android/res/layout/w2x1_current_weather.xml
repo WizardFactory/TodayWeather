@@ -1,0 +1,70 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/bg_layout"
+    android:padding="@dimen/widget_margin">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginRight="4dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="역삼동"
+            android:id="@+id/location" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="23° 30°"
+            android:id="@+id/today_temperature"
+            android:layout_below="@+id/location"
+            android:layout_alignParentLeft="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="23°"
+            android:id="@+id/current_temperature"
+            android:textSize="36dp"
+            android:includeFontPadding="false"
+            android:layout_below="@+id/today_temperature"
+            android:layout_alignParentLeft="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="12:33"
+            android:id="@+id/pubdate"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="::: 매우 나쁨"
+            android:id="@+id/current_pm"
+            android:layout_below="@+id/pubdate"
+            android:layout_alignParentRight="true" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:id="@+id/current_sky"
+            android:src="@drawable/sun"
+            android:layout_gravity="bottom|right"
+            android:contentDescription="@string/weather_icon"
+            android:layout_below="@+id/current_pm"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:scaleType="fitEnd" />
+    </RelativeLayout>
+</RelativeLayout>

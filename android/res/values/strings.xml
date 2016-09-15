@@ -19,4 +19,6 @@
     <string name="fail_to_get_location">오늘날씨 : 위치정보를 가져오지 못 하였습니다.</string>
     <string name="current_position">현재위치</string>
     <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+    <string name="weather_icon">weather icon</string>
 </resources>

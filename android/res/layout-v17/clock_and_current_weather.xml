@@ -1,0 +1,93 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/bg_layout"
+    android:padding="@dimen/widget_margin">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginRight="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="서울특별시"
+            android:textSize="10sp"
+            android:id="@+id/location"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="24:55"
+            android:textSize="10sp"
+            android:id="@+id/pubdate"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/date"
+            android:layout_below="@id/location"
+            android:layout_alignParentLeft="true"
+            android:format24Hour="yyyy.MM.dd"
+            android:format12Hour="yyyy.MM.dd" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:id="@+id/time"
+            android:textSize="40sp"
+            android:layout_below="@id/date"
+            android:layout_alignParentLeft="true"
+            android:format24Hour="hh:mm"
+            android:format12Hour="hh:mm" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/am_pm"
+            android:layout_alignTop="@+id/time"
+            android:layout_toRightOf="@+id/time"
+            android:format24Hour="a"
+            android:format12Hour="a" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-188° -188° 매우나쁨"
+            android:id="@+id/tmn_tmx_pm_pp"
+            android:layout_gravity="right"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/pubdate" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/current_sky"
+            android:src="@drawable/sun"
+            android:scaleType="fitEnd"
+            android:layout_below="@id/tmn_tmx_pm_pp"
+            android:layout_toLeftOf="@+id/current_temperature"
+            android:layout_alignBottom="@+id/current_temperature" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:includeFontPadding="false"
+            android:text="-188°"
+            android:textSize="40sp"
+            android:id="@+id/current_temperature"
+            android:layout_below="@+id/tmn_tmx_pm_pp"
+            android:layout_alignParentRight="true" />
+    </RelativeLayout>
+
+</RelativeLayout>

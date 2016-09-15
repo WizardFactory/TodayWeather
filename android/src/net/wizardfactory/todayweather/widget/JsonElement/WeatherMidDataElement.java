@@ -10,8 +10,9 @@ import java.util.Date;
 /**
  * This class is midData weather data that result from weather server.
  */
+
 public class WeatherMidDataElement {
-    private String pubDate = null;
+    private String pubDate = null; //temp public date
     private String province = null;
     private String city = null;
     private String stnId = null;
@@ -71,13 +72,24 @@ public class WeatherMidDataElement {
         try {
             JSONObject reader = new JSONObject(jsonStr);
             if (reader != null) {
-                retMidDataElement.setPubDate(reader.getString("pubDate"));
-                retMidDataElement.setProvince(reader.getString("province"));
-                retMidDataElement.setCity(reader.getString("city"));
-                retMidDataElement.setStnId(reader.getString("stnId"));
-                retMidDataElement.setRegId(reader.getString("regId"));
-
-                retMidDataElement.setWeatherDailyDatas(WeatherDailyDataElement.parsingDailyDataElementString2Json(reader.getJSONArray("dailyData").toString()));
+                if (reader.has("tempPubDate")) {
+                    retMidDataElement.setPubDate(reader.getString("tempPubDate"));
+                }
+                if (reader.has("province")) {
+                    retMidDataElement.setProvince(reader.getString("province"));
+                }
+                if (reader.has("city")) {
+                    retMidDataElement.setCity(reader.getString("city"));
+                }
+                if (reader.has("stnId")) {
+                    retMidDataElement.setStnId(reader.getString("stnId"));
+                }
+                if (reader.has("regId")) {
+                    retMidDataElement.setRegId(reader.getString("regId"));
+                }
+                if (reader.has("dailyData")) {
+                    retMidDataElement.setWeatherDailyDatas(WeatherDailyDataElement.parsingDailyDataElementString2Json(reader.getJSONArray("dailyData").toString()));
+                }
             }
             else {
                 Log.e("WeatherMidDataElement", "MidData json string is NULL");
