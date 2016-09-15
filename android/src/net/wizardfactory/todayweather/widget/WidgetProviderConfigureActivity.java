@@ -116,6 +116,18 @@ public class WidgetProviderConfigureActivity extends Activity {
         return -1;
     }
 
+    public static int getWidgetOpacity(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
+        String key = "widgetOpacity";
+        if (prefs.contains(key)) {
+            int opacity = prefs.getInt(key, 0xb2);
+            Log.i("widgetConfigure", "widget opacity " + opacity);
+            return opacity;
+        }
+
+        return 0xb2;
+    }
+
     private void loadCityListPref(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
         String key = "cityList";

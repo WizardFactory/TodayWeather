@@ -7,5 +7,4 @@
     android:minWidth="110dp"
     android:previewImage="@drawable/w2x1_widget_sample"
     android:resizeMode="horizontal"
-    android:updatePeriodMillis="0"
     android:widgetCategory="home_screen"></appwidget-provider>

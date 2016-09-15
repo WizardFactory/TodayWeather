@@ -2,7 +2,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@drawable/bg_round_black_box"
     android:id="@+id/bg_layout"
     android:padding="@dimen/widget_margin">
 

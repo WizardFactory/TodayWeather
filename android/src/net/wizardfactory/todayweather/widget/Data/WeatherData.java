@@ -211,7 +211,7 @@ public class WeatherData {
     public String getSkyImageName() {
         Calendar c = Calendar.getInstance();
         int hour = c.get(Calendar.HOUR_OF_DAY);
-        boolean isNight = (hour > 7 && hour < 18) ? false : true;
+        boolean isNight = (hour >= 7 && hour < 18) ? false : true;
 
         String strSkyImage = "";
         if (sky == 4) {

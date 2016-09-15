@@ -44,6 +44,14 @@ public class TwWidgetProvider extends AppWidgetProvider {
 
         // Get the layout for the App Widget and attach an on-click listener
         RemoteViews views = new RemoteViews(context.getPackageName(), mLayoutId);
+
+
+        int opacity = WidgetProviderConfigureActivity.getWidgetOpacity(context);
+        if (opacity > -1) {
+            int color = (255*opacity/100) << 24 + 0x231f20;
+            views.setInt(R.id.bg_layout, "setBackgroundColor", color);
+        }
+
         resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
         views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
@@ -95,5 +103,12 @@ public class TwWidgetProvider extends AppWidgetProvider {
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
         updateAppWidget(context, appWidgetManager, appWidgetId);
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        String action = intent.getAction();
+        Log.i(TAG, action);
     }
 }

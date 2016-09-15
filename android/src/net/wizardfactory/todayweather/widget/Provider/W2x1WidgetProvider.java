@@ -42,6 +42,12 @@ public class W2x1WidgetProvider extends AppWidgetProvider {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.w2x1_widget_layout);
             views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
 
+            int opacity = WidgetProviderConfigureActivity.getWidgetOpacity(context);
+            if (opacity > -1) {
+                int color = (255*opacity/100) << 24 + 0x231f20;
+                views.setInt(R.id.bg_layout, "setBackgroundColor", color);
+            }
+
             // Tell the AppWidgetManager to perform an update on the current app widget
             appWidgetManager.updateAppWidget(appWidgetId, views);
 

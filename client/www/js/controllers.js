@@ -1300,7 +1300,21 @@ angular.module('starter.controllers', [])
                     var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
                     suitePrefs.fetch('updateInterval').then(
                         function (value) {
+                            if (value == null) {
+                                value = "0"
+                            }
                             $scope.updateInterval = ""+value;
+                            console.log("fetch preference Success: " + value);
+                        }, function (error) {
+                            console.log("fetch preference Error: " + error);
+                        }
+                    );
+                    suitePrefs.fetch('widgetOpacity').then(
+                        function (value) {
+                            if (value == null) {
+                               value = "69"
+                            }
+                            $scope.widgetOpacity = ""+value;
                             console.log("fetch preference Success: " + value);
                         }, function (error) {
                             console.log("fetch preference Error: " + error);
@@ -1350,6 +1364,26 @@ angular.module('starter.controllers', [])
 
         $scope.isAndroid = function () {
             return ionic.Platform.isAndroid();
+        };
+
+        $scope.changeWidgetOpacity = function (val) {
+            console.log("widget opacity ="+ val);
+            ionic.Platform.ready(function() {
+                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('widgetOpacity', +val).then(
+                    function (value) {
+                        console.log("save preference Success: " + value);
+                    },
+                    function (error) {
+                        console.log("save preference Error: " + error);
+                    }
+                );
+            });
         };
 
         $scope.changeUpdateInterval = function (val) {

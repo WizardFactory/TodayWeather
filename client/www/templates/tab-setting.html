@@ -46,6 +46,26 @@
                             <option value="720">12시간</option>
                         </select>
                     </label>
+                    <label ng-if="isAndroid()" class="item item-input item-select setting-title-light">
+                        <div class="input-label setting-title-light" style="opacity: 1; font-weight: lighter">
+                            위젯투명도
+                        </div>
+                        <select ng-model="widgetOpacity" ng-change="changeWidgetOpacity(widgetOpacity)"
+                                style="font-weight: lighter; background-color: inherit; color: inherit; font-size: 20px;opacity: 0.87;">
+                            <option value="69">기본</option>
+                            <option value="100">0%</option>
+                            <option value="90">10%</option>
+                            <option value="80">20%</option>
+                            <option value="70">30%</option>
+                            <option value="60">40%</option>
+                            <option value="50">50%</option>
+                            <option value="40">60%</option>
+                            <option value="30">70%</option>
+                            <option value="20">80%</option>
+                            <option value="10">90%</option>
+                            <option value="0">100%</option>
+                        </select>
+                    </label>
                     <a class="item item-icon-right setting-title-light" href="#/guide">
                         가이드 보기
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
