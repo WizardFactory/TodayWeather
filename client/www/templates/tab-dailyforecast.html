@@ -33,13 +33,13 @@
                        <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
                        <div style="margin: auto">
                            <!--<p class="caption" style="margin: 5px 5px 0 5px; letter-spacing: 5px">대기예보</p>-->
-                           <div class="row" style="margin: auto;"
+                           <div class="row" style="margin: auto; padding: 0"
                                 ng-if="($index == 7 || $index == 8) && day.dustForecast"
                                 ng-repeat="day in dayChart[0].values">
-                               <div class="col col-20" style="text-align: center" >
+                               <div class="col col-25" style="text-align: center" >
                                    <p class="body1" style="margin: 0 0 5px;">{{day.week+"요일"}}</p>
                                    <p class="display1" style="margin: 0 0 2px; opacity: 0.84">{{day.date.substr(6,2)}}</p>
-                                   <p class="body2" style="margin: 0 0 5px;">{{day.fromTodayStr}}</p>
+                                   <p class="body2" style="margin: 0 0 5px;letter-spacing: 2px">{{day.fromTodayStr+"예보"}}</p>
                                </div>
                                <div class="col" style="text-align: center;" >
                                    <p class="body1" style="margin: 0 0 5px;">미세먼지</p>
