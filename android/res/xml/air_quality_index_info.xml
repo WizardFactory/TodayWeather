@@ -5,6 +5,6 @@
     android:initialLayout="@layout/air_quality_index"
     android:minHeight="40dp"
     android:minWidth="110dp"
-    android:previewImage="@drawable/w2x1_widget_sample"
+    android:previewImage="@drawable/w2x1_currentaqi"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"></appwidget-provider>
