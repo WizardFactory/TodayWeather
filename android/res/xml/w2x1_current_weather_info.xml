@@ -5,6 +5,6 @@
     android:initialLayout="@layout/w2x1_current_weather"
     android:minWidth="110dp"
     android:minHeight="40dp"
-    android:previewImage="@drawable/w2x1_widget_sample"
+    android:previewImage="@drawable/w2x1_currentweather"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"></appwidget-provider>
