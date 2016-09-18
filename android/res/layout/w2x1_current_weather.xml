@@ -63,8 +63,8 @@
             android:layout_gravity="bottom|right"
             android:contentDescription="@string/weather_icon"
             android:layout_below="@+id/current_pm"
-            android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:scaleType="fitEnd" />
+            android:scaleType="fitEnd"
+            android:layout_alignBottom="@+id/current_temperature" />
     </RelativeLayout>
 </RelativeLayout>

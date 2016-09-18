@@ -15,8 +15,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="서울특별시"
-            android:textSize="10sp"
             android:id="@+id/location"
             android:layout_alignParentTop="true"
             android:layout_alignParentLeft="true" />
@@ -24,8 +24,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="24:55"
-            android:textSize="10sp"
             android:id="@+id/pubdate"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true" />
@@ -33,6 +33,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="-188° -188° 매우나쁨"
             android:id="@+id/tmn_tmx_pm_pp"
             android:layout_gravity="right"

@@ -7,7 +7,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:text="역삼1동"
         android:id="@+id/location"
         android:layout_alignParentTop="true"
@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:text="18:00"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
@@ -51,7 +51,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="21° 30°"
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -83,7 +83,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="22° 30°"
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -115,7 +115,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="23° 30°"
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -149,7 +149,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="23° 30°"
                 android:id="@+id/twodays_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -183,7 +183,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="23° 30°"
                 android:id="@+id/threedays_temperature"
                 android:layout_gravity="center_horizontal" />
