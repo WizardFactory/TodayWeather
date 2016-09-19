@@ -91,14 +91,14 @@ public class WeatherShortestElement {
                     if (reader != null) {
                         retShortestElements[i] = new WeatherShortestElement();
 
-                        retShortestElements[i].setStrDate(reader.getString("date"));
-                        retShortestElements[i].setStrTime(reader.getString("time"));
-                        retShortestElements[i].setPty(reader.getDouble("pty"));
-                        retShortestElements[i].setRn1(reader.getDouble("rn1"));
-                        retShortestElements[i].setSky(reader.getDouble("sky"));
-                        retShortestElements[i].setLgt(reader.getDouble("lgt"));
+                        retShortestElements[i].setStrDate(reader.optString("date", null));
+                        retShortestElements[i].setStrTime(reader.optString("time", null));
+                        retShortestElements[i].setPty(reader.optDouble("pty", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortestElements[i].setRn1(reader.optDouble("rn1", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortestElements[i].setSky(reader.optDouble("sky", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortestElements[i].setLgt(reader.optDouble("lgt", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
 
-                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retShortestElements[i].getStrDate(), retShortestElements[i].getStrTime());
+                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retShortestElements[i].getStrDate(), retShortestElements[i].getStrTime(), null);
                         retShortestElements[i].setDate(makeDate);
                     }
                     else {

@@ -7,7 +7,7 @@
  <string name="yesterday">Yesterday</string>
  <string name="today">Today</string>
  <string name="same_yesterday">The same as yesterday</string>
- <string name="cmp_yesterday">어제보다</string>
+ <string name="cmp_yesterday">than yesterday</string>
  <string name="degree">˚</string>
  <string name="high">high</string>
  <string name="low">low</string>

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<manifest android:hardwareAccelerated="true" android:versionCode="803" android:versionName="0.8.3" package="net.wizardfactory.todayweather" xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest android:hardwareAccelerated="true" android:versionCode="908" android:versionName="0.9.8" package="net.wizardfactory.todayweather" xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="23" />
     <supports-screens android:anyDensity="true" android:largeScreens="true" android:normalScreens="true" android:resizeable="true" android:smallScreens="true" android:xlargeScreens="true" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -68,5 +68,47 @@
             </intent-filter>
         </activity>
         <activity android:name="me.apla.cordova.AppPreferencesActivity" />
+        <receiver android:label="@string/widget_name" android:name=".widget.Provider.W1x1CurrentWeather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w1x1_current_weather_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.W2x1CurrentWeather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w2x1_current_weather_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.DailyWeather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_weather_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.ClockAndThreeDays">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/clock_and_three_days_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.AirQualityIndex">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/air_quality_index_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.ClockAndCurrentWeather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/clock_and_current_weather_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.CurrentWeatherAndThreeDays">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/current_weather_and_three_days_info" />
+        </receiver>
     </application>
 </manifest>
