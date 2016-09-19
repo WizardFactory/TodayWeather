@@ -1083,6 +1083,89 @@ function ControllerTown() {
             next();
         }
     };
+
+    /**
+     * 중기 예보의 wfAm, wfPm을 sky, pty, lgt로 변환함. Am, Pm을 합친 값도 추가.
+     * @param req
+     * @param res
+     * @param next
+     */
+    this.convertMidKorStrToSkyInfo = function (req, res, next) {
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+
+        var meta = {};
+        meta.method = 'convertMidKorStrToSkyInfo';
+        meta.region = regionName;
+        meta.city = cityName;
+        log.info('>', meta);
+
+        if (!req.hasOwnProperty('midData')) {
+            log.warn("mid data is undefined", meta);
+            next();
+            return this;
+        }
+        if (!req.midData.hasOwnProperty('dailyData') || !Array.isArray(req.midData.dailyData)) {
+            log.warn("daily data is undefined or isnot array", meta);
+            next();
+            return this;
+        }
+
+        req.midData.dailyData.forEach(function (dailyData) {
+            var skyInfoAm = self._convertKorStrToSky(dailyData.wfAm);
+            var skyInfoPm = self._convertKorStrToSky(dailyData.wfPm);
+            dailyData.skyAm = skyInfoAm.sky;
+            dailyData.ptyAm = skyInfoAm.pty;
+            dailyData.lgtAm = skyInfoAm.lgt;
+
+            dailyData.skyPm = skyInfoPm.sky;
+            dailyData.ptyPm = skyInfoPm.pty;
+            dailyData.lgtPm = skyInfoPm.lgt;
+
+            if (dailyData.skyAm > dailyData.skyPm) {
+                dailyData.sky = dailyData.skyAm;
+            }
+            else {
+                dailyData.sky = dailyData.skyPm;
+            }
+
+            dailyData.pty = 0;
+            if (dailyData.ptyPm == 2 || dailyData.ptyAm == 2) {
+                dailyData.pty = 2;
+            }
+            else if (dailyData.ptyPm == 3) {
+                if (dailyData.ptyAm == 1) {
+                    dailyData.pty = 2;
+                }
+                else {
+                    dailyData.pty = 3;
+                }
+            }
+            else if (dailyData.ptyAm == 3) {
+                if (dailyData.ptyPm == 1) {
+                    dailyData.pty = 2;
+                }
+                else {
+                    dailyData.pty = 3;
+                }
+
+            }
+            else if (dailyData.ptyPm == 1 || dailyData.ptyAm == 1) {
+                dailyData.pty = 1;
+            }
+
+            if (dailyData.lgtPm == 1 || dailyData.lgtAm == 1) {
+                dailyData.lgt = 1;
+            }
+            else {
+                dailyData.lgt = 0;
+            }
+
+        });
+
+        next();
+        return this;
+    };
     /**
      *
      * @param req
@@ -1740,8 +1823,10 @@ function ControllerTown() {
                 short.frostStr = LifeIndexKmaController.getFrostString(short.t3h);
             });
         }
+
         next();
-        return;
+
+        return this;
     };
 
     /**
@@ -1769,7 +1854,7 @@ function ControllerTown() {
             });
         }
         next();
-        return;
+        return this;
     };
 
     this.insertStrForData = function (req, res, next) {
@@ -2273,8 +2358,9 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
 
 /**
  *
- * @param wsd
+ * @param wsdGrade
  * @returns {*}
+ * @private
  */
 ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
     switch (wsdGrade) {
@@ -2889,8 +2975,10 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
  * you have to return error object when it's error.
  * @param db
  * @param indicator
+ * @param req
  * @param cb
- * @returns {Array}
+ * @returns {*}
+ * @private
  */
 ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
     var self = this;
@@ -3009,8 +3097,10 @@ ControllerTown.prototype._getTownDataFromDB = function(db, indicator, req, cb){
  *   get mid data list from db
  * @param db
  * @param indicator
+ * @param req
  * @param cb
- * @returns {Array}
+ * @returns {*}
+ * @private
  */
 ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
     var meta = {};
@@ -3231,7 +3321,7 @@ ControllerTown.prototype._mergeShortWithCurrent = function(shortList, currentLis
         //var restList = [];
 
         // 과거의 current 데이터를 short 리스트에 넣을 수 있게 리스트를 구성한다
-        currentList.forEach(function(curItem, index){
+        currentList.forEach(function(curItem){
             if (curItem.date < shortList[0].date) {
                 log.silly('skip');
                 return;
@@ -3778,6 +3868,81 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
     }
     log.error(new Error("Unknown state sky="+sky+" pty="+pty));
     return str;
+};
+
+/**
+ * make lgt, sky, pty
+ * @private
+ */
+ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
+    var sky = 0;
+    var pty = 0;
+    var lgt = 0;
+
+    switch (skyKorStr) {
+        case "맑음":
+            sky = 1;
+            break;
+        case "구름조금":
+            sky = 2;
+            break;
+        case "구름많음":
+            sky = 3;
+            break;
+        case "흐림":
+            sky = 4;
+            break;
+        case "흐리고 한때 비":
+        case "흐리고 비":
+            sky = 4;
+            pty = 1;
+            break;
+        case "구름적고 한때 비":
+        case "구름적고 비":
+            sky = 2;
+            pty = 1;
+            break;
+        case "구름많고 한때 비":
+        case "구름많고 비":
+            sky = 3;
+            pty = 1;
+            break;
+        case "흐리고 한때 눈":
+        case "흐리고 눈":
+            sky = 4;
+            pty = 3;
+            break;
+        case "구름적고 한때 눈":
+        case "구름적고 눈":
+            sky = 2;
+            pty = 3;
+            break;
+        case "구름많고 한때 눈":
+        case "구름많고 눈":
+            sky = 3;
+            pty = 3;
+            break;
+        case "구름적고 비/눈":
+        case "구름적고 눈/비":
+            sky = 2;
+            pty = 2;
+            break;
+        case "구름많고 비/눈":
+        case "구름많고 눈/비":
+            sky = 3;
+            pty = 2;
+            break;
+        case "흐리고 비/눈":
+        case "흐리고 눈/비":
+            sky = 4;
+            pty = 2;
+            break;
+        default :
+            log.error("Fail to convert skystring="+skyKorStr);
+            break;
+
+    }
+    return  {sky: sky, pty: pty, lgt: lgt};
 };
 
 /**

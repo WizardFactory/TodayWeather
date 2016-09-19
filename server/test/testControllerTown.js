@@ -61,5 +61,31 @@ describe('unit test - controller town', function() {
                         { date: '20160808', c: 3, d: 4, e: 5 },
                         { date: '20160909', f: 7 } ], 'Fail to merge list');
     });
+
+    it('test convertMidKorStrToSkyInfo', function (done) {
+        var req = {};
+        req.params = {};
+        req.params.region = "seoul";
+        req.params.city = "kangnam";
+        req.midData = {};
+        req.midData.dailyData = [];
+        req.midData.dailyData.push({wfAm: "구름많음", wfPm: "흐리고 비"});
+        req.midData.dailyData.push({wfAm: "흐리고 비", wfPm: "맑음"});
+        req.midData.dailyData.push({wfAm: "구름조금", wfPm: "맑음"});
+        req.midData.dailyData.push({wfAm: "흐리고 비", wfPm: "구름적고 눈"});
+        req.midData.dailyData.push({wfPm: "흐리고 비", wfAm: "구름적고 눈"});
+        req.midData.dailyData.push({wfAm: "흐리고 비/눈", wfPm: "구름적고 눈"});
+        req.midData.dailyData.push({wfAm: "흐리고 비/눈", wfPm: "구름적고 눈/비"});
+        req.midData.dailyData.push({wfAm: "흐리고 비", wfPm: "구름적고 눈/비"});
+        req.midData.dailyData.push({wfAm: "흐리고 눈", wfPm: "맑음"});
+        req.midData.dailyData.push({wfAm: "흐리고 눈/비", wfPm: "맑음"});
+        req.midData.dailyData.push({wfPm: "흐리고 눈/비", wfAm: "맑음"});
+
+        var next = function () {
+            console.log(req.midData.dailyData);
+            done();
+        };
+        cTown.convertMidKorStrToSkyInfo(req, {}, next);
+    });
 });
 
