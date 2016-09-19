@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
@@ -52,6 +53,15 @@ public class ClockAndThreeDays extends TwWidgetProvider {
                     views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_SP, 18);
                 }
             }
+        }
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            views.setViewVisibility(R.id.time, View.VISIBLE);
+            views.setViewVisibility(R.id.date, View.VISIBLE);
+            views.setViewVisibility(R.id.am_pm, View.VISIBLE);
+        }
+        else {
+            views.setViewVisibility(R.id.analogClock, View.VISIBLE);
         }
     }
 

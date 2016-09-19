@@ -289,9 +289,14 @@ public class WidgetUpdateService extends Service {
         /**
          * context, manager를 member 변수로 변환하면 단순해지지만 동작 확인 필요.
          */
-        mContext = getApplicationContext();
-        mAppWidgetManager = AppWidgetManager.getInstance(mContext);
-        mLayoutId = mAppWidgetManager.getAppWidgetInfo(widgetId).initialLayout;
+        try {
+            mContext = getApplicationContext();
+            mAppWidgetManager = AppWidgetManager.getInstance(mContext);
+            mLayoutId = mAppWidgetManager.getAppWidgetInfo(widgetId).initialLayout;
+        } catch (Exception e) {
+            Log.e("Service", "Exception: " + e.getMessage());
+            return;
+        }
 
         // make today, yesterday weather info class
         WidgetData wData = weatherElement.makeWidgetData();
@@ -345,11 +350,14 @@ public class WidgetUpdateService extends Service {
             views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
         }
 
-        int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
         int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
         int[] skyIds = {R.id.yesterday_sky, R.id.today_sky, R.id.tomorrow_sky};
 
         int skyResourceId;
+
+        views.setTextViewText(R.id.label_yesterday, "어제");
+        views.setTextViewText(R.id.label_today, "오늘");
+        views.setTextViewText(R.id.label_tomorrow, "내일");
 
         for (int i=0; i<3; i++) {
             WeatherData dayData = wData.getDayWeather(i);
@@ -403,6 +411,10 @@ public class WidgetUpdateService extends Service {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
             views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
         }
+
+        views.setTextViewText(R.id.label_yesterday, "어제");
+        views.setTextViewText(R.id.label_today, "오늘");
+        views.setTextViewText(R.id.label_tomorrow, "내일");
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow,
                 R.id.label_twodays, R.id.label_threedays};
@@ -516,6 +528,10 @@ public class WidgetUpdateService extends Service {
         views.setImageViewResource(R.id.current_sky, skyResourceId);
 
         views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(currentData));
+
+        views.setTextViewText(R.id.label_yesterday, "어제");
+        views.setTextViewText(R.id.label_today, "오늘");
+        views.setTextViewText(R.id.label_tomorrow, "내일");
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
         int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
@@ -642,6 +658,10 @@ public class WidgetUpdateService extends Service {
             views.setImageViewResource(R.id.current_pm10_emoji, getDrawableFaceEmoji(currentData.getPm10Grade()));
             views.setImageViewResource(R.id.current_pm25_emoji, getDrawableFaceEmoji(currentData.getPm25Grade()));
         }
+
+        views.setTextViewText(R.id.label_aqi, "통합");
+        views.setTextViewText(R.id.label_pm10, "미세");
+        views.setTextViewText(R.id.label_pm25, "초미세");
 
         if (currentData.getAqiStr() != null) {
             views.setTextViewText(R.id.aqi_str, currentData.getAqiStr());
@@ -779,6 +799,7 @@ public class WidgetUpdateService extends Service {
         }
         views.setImageViewResource(R.id.current_sky, skyResourceId);
 
+        views.setTextViewText(R.id.current_pm, ":::");
         if (currentData.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
             if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL
                     && currentData.getPm25Grade() > currentData.getPm10Grade()) {

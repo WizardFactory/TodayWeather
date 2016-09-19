@@ -14,14 +14,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="역삼동"
+            android:text=""
             android:id="@+id/location" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="23° 30°"
+            android:text=""
             android:id="@+id/today_temperature"
             android:layout_below="@+id/location"
             android:layout_alignParentLeft="true" />
@@ -30,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="23°"
+            android:text=""
             android:id="@+id/current_temperature"
             android:textSize="36dp"
             android:includeFontPadding="false"
@@ -41,7 +41,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="12:33"
+            android:text=""
             android:id="@+id/pubdate"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true" />
@@ -50,7 +50,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="::: 매우 나쁨"
+            android:text=""
             android:id="@+id/current_pm"
             android:layout_below="@+id/pubdate"
             android:layout_alignParentRight="true" />
@@ -59,7 +59,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:id="@+id/current_sky"
-            android:src="@drawable/sun"
+            android:src="@drawable/transparent"
             android:layout_gravity="bottom|right"
             android:contentDescription="@string/weather_icon"
             android:layout_below="@+id/current_pm"

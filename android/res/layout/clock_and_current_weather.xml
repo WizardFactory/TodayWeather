@@ -16,7 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="서울특별시"
+            android:text=""
             android:id="@+id/location"
             android:layout_alignParentTop="true"
             android:layout_alignParentLeft="true" />
@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="24:55"
+            android:text=""
             android:id="@+id/pubdate"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true" />
@@ -34,7 +34,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="-188° -188° 매우나쁨"
+            android:text=""
             android:id="@+id/tmn_tmx_pm_pp"
             android:layout_gravity="right"
             android:layout_alignParentRight="true"
@@ -44,7 +44,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/current_sky"
-            android:src="@drawable/sun"
+            android:src="@drawable/transparent"
             android:scaleType="fitEnd"
             android:layout_below="@id/tmn_tmx_pm_pp"
             android:layout_toLeftOf="@+id/current_temperature"
@@ -55,7 +55,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:includeFontPadding="false"
-            android:text="-188°"
+            android:text=""
             android:textSize="40sp"
             android:id="@+id/current_temperature"
             android:layout_below="@+id/tmn_tmx_pm_pp"
@@ -68,7 +68,8 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:layout_alignTop="@+id/tmn_tmx_pm_pp" />
+            android:layout_alignTop="@+id/tmn_tmx_pm_pp"
+            android:visibility="invisible" />
     </RelativeLayout>
 
 </RelativeLayout>
