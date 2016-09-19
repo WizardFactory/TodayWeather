@@ -61,10 +61,12 @@ public class WidgetProviderConfigureActivity extends Activity {
 //            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 //            W1x1CurrentWeather.updateAppWidget(context, appWidgetManager, mAppWidgetId);
 
-            // update widget weather data using service
-            Intent serviceIntent = new Intent(context, WidgetUpdateService.class);
-            serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
-            context.startService(serviceIntent);
+            if (Build.VERSION.SDK_INT < 16) {
+                // update widget weather data using service
+                Intent serviceIntent = new Intent(context, WidgetUpdateService.class);
+                serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
+                context.startService(serviceIntent);
+            }
 
             // Make sure we pass back the original appWidgetId
             Intent resultValue = new Intent();

@@ -8,7 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:text="역삼1동"
+        android:text=""
         android:id="@+id/location"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:text="18:00"
+        android:text=""
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="어제"
+                android:text=""
                 android:id="@+id/label_yesterday"
                 android:layout_gravity="center_horizontal" />
 
@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="21° 30°"
+                android:text=""
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -60,7 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/yesterday_sky"
-                android:src="@drawable/sun"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -76,7 +76,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="오늘"
+                android:text=""
                 android:id="@+id/label_today"
                 android:layout_gravity="center_horizontal" />
 
@@ -84,7 +84,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="22° 30°"
+                android:text=""
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -92,7 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/today_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -108,7 +108,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="내일"
+                android:text=""
                 android:id="@+id/label_tomorrow"
                 android:layout_gravity="center_horizontal" />
 
@@ -116,7 +116,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="23° 30°"
+                android:text=""
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -124,7 +124,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/tomorrow_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -142,7 +142,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="9/9"
+                android:text=""
                 android:id="@+id/label_twodays"
                 android:layout_gravity="center_horizontal" />
 
@@ -150,7 +150,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="23° 30°"
+                android:text=""
                 android:id="@+id/twodays_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -158,7 +158,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/twodays_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -176,7 +176,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="9/9"
+                android:text=""
                 android:id="@+id/label_threedays"
                 android:layout_gravity="center_horizontal" />
 
@@ -184,7 +184,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="23° 30°"
+                android:text=""
                 android:id="@+id/threedays_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -192,7 +192,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/threedays_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>

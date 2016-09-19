@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
@@ -51,6 +52,15 @@ public class ClockAndCurrentWeather extends TwWidgetProvider {
                 views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_SP, 20);
                 views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_SP, 52);
             }
+        }
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            views.setViewVisibility(R.id.time, View.VISIBLE);
+            views.setViewVisibility(R.id.date, View.VISIBLE);
+            views.setViewVisibility(R.id.am_pm, View.VISIBLE);
+        }
+        else {
+            views.setViewVisibility(R.id.analogClock, View.VISIBLE);
         }
     }
 

@@ -7,7 +7,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="서울특별시"
+        android:text=""
         android:textSize="12sp"
         android:id="@+id/location"
         android:layout_alignParentTop="true"
@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="업데이트 8:33"
+        android:text=""
         android:textSize="12sp"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
@@ -45,7 +45,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="-50 -50 매우나쁨"
+                android:text=""
                 android:id="@+id/tmn_tmx_pm_pp"
                 android:layout_below="@+id/location"
                 android:layout_alignParentLeft="true" />
@@ -58,7 +58,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceLarge"
-                    android:text="-88"
+                    android:text=""
                     android:textSize="40sp"
                     android:id="@+id/current_temperature"
                     android:includeFontPadding="false"
@@ -69,7 +69,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/current_sky"
-                    android:src="@drawable/sun"
+                    android:src="@drawable/transparent"
                     android:scaleType="fitStart"
                     android:layout_toRightOf="@+id/current_temperature"
                     android:layout_alignBottom="@+id/current_temperature" />
@@ -87,7 +87,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="어제"
+                android:text=""
                 android:id="@+id/label_yesterday"
                 android:layout_gravity="center_horizontal" />
 
@@ -95,7 +95,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="21° 30°"
+                android:text=""
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -103,7 +103,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/yesterday_sky"
-                android:src="@drawable/sun"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -119,7 +119,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="오늘"
+                android:text=""
                 android:id="@+id/label_today"
                 android:layout_gravity="center_horizontal" />
 
@@ -127,7 +127,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="22° 30°"
+                android:text=""
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -135,7 +135,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/today_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
@@ -151,7 +151,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:text="내일"
+                android:text=""
                 android:id="@+id/label_tomorrow"
                 android:layout_gravity="center_horizontal" />
 
@@ -159,7 +159,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="23° 30°"
+                android:text=""
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -167,7 +167,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/tomorrow_sky"
-                android:src="@drawable/cloud"
+                android:src="@drawable/transparent"
                 android:scaleType="fitCenter"
                 android:layout_gravity="center_horizontal" />
         </LinearLayout>
