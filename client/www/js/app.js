@@ -44,6 +44,7 @@ angular.module('starter', [
                 Util.ga.trackEvent('app', 'status', 'pause');
             }, false);
             Util.ga.enableUncaughtExceptionReporting(true);
+            Util.ga.setAllowIDFACollection(true);
 
             Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
             Util.ga.trackEvent('app', 'version', Util.version);
