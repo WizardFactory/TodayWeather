@@ -8,7 +8,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="서울특별시"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:id="@+id/location"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="업데이트 8:33"
-        android:textSize="10sp"
+        android:textSize="12sp"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -44,6 +44,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="-50 -50 매우나쁨"
                 android:id="@+id/tmn_tmx_pm_pp"
                 android:layout_below="@+id/location"
@@ -71,7 +72,7 @@
                     android:src="@drawable/sun"
                     android:scaleType="fitStart"
                     android:layout_toRightOf="@+id/current_temperature"
-                     />
+                    android:layout_alignBottom="@+id/current_temperature" />
             </RelativeLayout>
         </LinearLayout>
 
@@ -93,7 +94,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="21° 30°"
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -125,7 +126,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="22° 30°"
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
@@ -157,7 +158,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text="23° 30°"
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
