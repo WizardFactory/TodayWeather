@@ -526,6 +526,18 @@ angular.module('starter.controllers', [])
 
             $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
 
+            $scope.updateTime = (function () {
+               if (cityData.currentWeather) {
+                   if (cityData.currentWeather.stnDateTime) {
+                       return cityData.currentWeather.stnDateTime;
+                   }
+                   else {
+                       var tmpDate = cityData.currentWeather.date;
+                       return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                           " " + cityData.currentWeather.time + ":00";
+                   }
+               }
+            })();
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
@@ -594,6 +606,9 @@ angular.module('starter.controllers', [])
             });
         }
 
+        /**
+         * retry popup이 없는 경우 항상 undefined여야 함.
+         */
         var confirmPopup;
 
         function loadWeatherData() {
@@ -609,7 +624,9 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                     showRetryConfirm("에러", msg, function (retry) {
                         if (retry) {
-                            loadWeatherData();
+                            setTimeout(function () {
+                                loadWeatherData();
+                            }, 0);
                         }
                     });
                 }).finally(function () {
@@ -643,20 +660,26 @@ angular.module('starter.controllers', [])
                         }
                     },
                     { text: '재시도',
+                        type: 'button-positive',
                         onTap: function () {
                             return true;
                         }
                     }
                 ]
             });
-            confirmPopup.then(function (res) {
-                if (res) {
-                    console.log("Retry");
-                } else {
-                    console.log("Close");
-                }
-                callback(res);
-            });
+            confirmPopup
+                .then(function (res) {
+                    if (res) {
+                        console.log("Retry");
+                    } else {
+                        console.log("Close");
+                    }
+                    callback(res);
+                })
+                .finally(function () {
+                    console.log('called finally');
+                    confirmPopup = undefined;
+                });
         }
 
         function updateWeatherData() {
@@ -845,7 +868,13 @@ angular.module('starter.controllers', [])
             return str;
         };
 
-        $scope.$on('reloadEvent', function(event) {
+        $scope.$on('reloadEvent', function(event, sender) {
+            if (sender == 'resume') {
+               if (confirmPopup)  {
+                   console.log('skip event when retry load popup is shown');
+                   return;
+               }
+            }
             console.log('called by update weather event');
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
@@ -1252,6 +1281,48 @@ angular.module('starter.controllers', [])
                     console.log(err);
                 });
             }
+
+            if (ionic.Platform.isAndroid()) {
+                //get interval time;
+                $scope.updateInterval = "0";
+                $scope.widgetOpacity = "69";
+
+                ionic.Platform.ready(function() {
+                    if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                        console.log('appPreferences is undefined');
+                        return;
+                    }
+
+                    /**
+                     * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+                     * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+                     * @type {AppPreferences}
+                     */
+                    var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                    suitePrefs.fetch('updateInterval').then(
+                        function (value) {
+                            if (value == null) {
+                                value = "0"
+                            }
+                            $scope.updateInterval = ""+value;
+                            console.log("fetch preference Success: " + value);
+                        }, function (error) {
+                            console.log("fetch preference Error: " + error);
+                        }
+                    );
+                    suitePrefs.fetch('widgetOpacity').then(
+                        function (value) {
+                            if (value == null) {
+                               value = "69"
+                            }
+                            $scope.widgetOpacity = ""+value;
+                            console.log("fetch preference Success: " + value);
+                        }, function (error) {
+                            console.log("fetch preference Error: " + error);
+                        }
+                    );
+                });
+            }
         }
 
         $scope.version = Util.version;
@@ -1292,8 +1363,48 @@ angular.module('starter.controllers', [])
             $scope.showAlert("TodayWeather", msg);
         };
 
-        $scope.showIcon = function () {
-            return !ionic.Platform.isAndroid();
+        $scope.isAndroid = function () {
+            return ionic.Platform.isAndroid();
+        };
+
+        $scope.changeWidgetOpacity = function (val) {
+            console.log("widget opacity ="+ val);
+            ionic.Platform.ready(function() {
+                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('widgetOpacity', +val).then(
+                    function (value) {
+                        console.log("save preference Success: " + value);
+                    },
+                    function (error) {
+                        console.log("save preference Error: " + error);
+                    }
+                );
+            });
+        };
+
+        $scope.changeUpdateInterval = function (val) {
+           console.log("update interval ="+ val);
+            ionic.Platform.ready(function() {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('updateInterval', +val).then(
+                    function (value) {
+                        console.log("save preference Success: " + value);
+                    },
+                    function (error) {
+                        console.log("save preference Error: " + error);
+                    }
+                );
+            });
         };
 
         init();
@@ -1321,11 +1432,11 @@ angular.module('starter.controllers', [])
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
-                $scope.$broadcast('reloadEvent');
+                $scope.$broadcast('reloadEvent', 'tab');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
-                $scope.$broadcast('reloadEvent');
+                $scope.$broadcast('reloadEvent', 'tab');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {
@@ -1356,7 +1467,7 @@ angular.module('starter.controllers', [])
         $scope.doTabShare = function() {
             var message = '';
 
-            if ($location.path() === '/tab/forecast') {
+            if ($location.path() === '/tab/forecast' || $location.path() === '/tab/dailyforecast' ) {
                 var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
                 if (cityData !== null && cityData.location !== null) {
                     message += WeatherUtil.getShortenAddress(cityData.address)+'\n';

@@ -7,6 +7,7 @@ var gcm = require('node-gcm');
 var config = require('../config/config');
 var PushInfo = require('../models/modelPush');
 var async = require('async');
+var req = require('request');
 
 var apnGateway;
 
@@ -33,11 +34,11 @@ var server_access_key = config.push.gcmAccessKey;
 var apnConnection = new apn.Connection(apnOptions);
 var sender = new gcm.Sender(server_access_key);
 
-function controllerPush() {
+function ControllerPush() {
     this.timeInterval = 60*1000; //1min
 }
 
-controllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
+ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
     PushInfo.find({registrationId: oldId}, function (err, pushList) {
         if (err) {
             return callback(err);
@@ -64,7 +65,7 @@ controllerPush.prototype.updateRegistrationId = function (newId, oldId, callback
 /**
  * save push info
  */
-controllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
+ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     PushInfo.update(
         {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
         pushInfo,
@@ -79,7 +80,7 @@ controllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     return this;
 };
 
-controllerPush.prototype.removePushInfo = function (pushInfo, callback) {
+ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
     PushInfo.remove({
             registrationId: pushInfo.registrationId,
             type:pushInfo.type,
@@ -98,7 +99,7 @@ controllerPush.prototype.removePushInfo = function (pushInfo, callback) {
     return this;
 };
 
-controllerPush.prototype.getPushByTime = function (time, callback) {
+ControllerPush.prototype.getPushByTime = function (time, callback) {
     PushInfo.find({pushTime: time}).lean().exec(function (err, pushList) {
         if (err) {
             return callback(err);
@@ -117,9 +118,9 @@ controllerPush.prototype.getPushByTime = function (time, callback) {
  * @param pushInfo
  * @param notification
  * @param callback
- * @returns {controllerPush}
+ * @returns {ControllerPush}
  */
-controllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
+ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
     log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
                 ' notification='+JSON.stringify(notification));
 
@@ -157,7 +158,7 @@ controllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
  * @param notification title, text
  * @param callback
  */
-controllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
+ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
     log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
     var myDevice = new apn.Device(pushInfo.registrationId);
 
@@ -178,8 +179,7 @@ controllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
  * @param town
  * @param callback
  */
-controllerPush.prototype.requestDailySummary = function (town, callback) {
-    var req = require('request');
+ControllerPush.prototype.requestDailySummary = function (town, callback) {
     var url = "http://"+config.ipAddress+":"+config.port+"/v000705/daily/town";
     if (town.first) {
         url += '/'+ encodeURIComponent(town.first);
@@ -207,11 +207,28 @@ controllerPush.prototype.requestDailySummary = function (town, callback) {
     return this;
 };
 
-controllerPush.prototype.convertToNotification = function(dailySummary) {
+/**
+ * push가 오랫동안 없을때, server가 내려가는 것을 방지하기 위한 것임.
+ */
+ControllerPush.prototype.requestKeepMessage = function () {
+
+    var url = "http://"+config.ipAddress+":"+config.port+"/v000705/town";
+    log.info('request url='+url);
+    req(url, {json:true}, function(err) {
+        if (err) {
+            log.info(err);
+        }
+        else {
+            log.info('Finished '+ url +' '+new Date());
+        }
+    });
+};
+
+ControllerPush.prototype.convertToNotification = function(dailySummary) {
     return {title: dailySummary.title, text: dailySummary.text, icon: dailySummary.icon}
 };
 
-controllerPush.prototype.sendNotification = function (pushInfo, callback) {
+ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
     var self = this;
 
     //make title, message
@@ -249,7 +266,7 @@ controllerPush.prototype.sendNotification = function (pushInfo, callback) {
     });
 };
 
-controllerPush.prototype.sendPush = function (time) {
+ControllerPush.prototype.sendPush = function (time) {
     var self = this;
 
     log.info('send push tim='+time);
@@ -257,6 +274,7 @@ controllerPush.prototype.sendPush = function (time) {
         function (callback) {
             self.getPushByTime(time, function (err, pushList) {
                 if (err) {
+                    self.requestKeepMessage();
                     return callback(err);
                 }
                 log.info('get push by time : push list='+JSON.stringify(pushList));
@@ -276,7 +294,7 @@ controllerPush.prototype.sendPush = function (time) {
                 }
                 if (pushList.length != results.length) {
                     //some push are failed
-                    return callback(new Error('Fail push='+pushList.length+' sccuess='+results.length));
+                    return callback(new Error('Fail push='+pushList.length+' success='+results.length));
                 }
                 callback(undefined, 'success push count='+pushList.length);
             });
@@ -289,7 +307,7 @@ controllerPush.prototype.sendPush = function (time) {
     });
 };
 
-controllerPush.prototype.start = function () {
+ControllerPush.prototype.start = function () {
     var self = this;
 
     setInterval(function () {
@@ -299,7 +317,7 @@ controllerPush.prototype.start = function () {
     }, self.timeInterval);
 };
 
-controllerPush.prototype.apnFeedback = function () {
+ControllerPush.prototype.apnFeedback = function () {
     //var options = {
     //    "batchFeedback": true,
     //    "interval": 300 //seconds
@@ -314,4 +332,4 @@ controllerPush.prototype.apnFeedback = function () {
     });
 };
 
-module.exports = controllerPush;
+module.exports = ControllerPush;

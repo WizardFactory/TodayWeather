@@ -44,7 +44,7 @@ router.get('/:region', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRs
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
                                     cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.sendResult]);
@@ -53,7 +53,7 @@ router.get('/:region/:city', [cTown.getAllDataFromDb, cTown.getShort, cTown.getS
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
                                     cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.sendResult]);
@@ -66,7 +66,7 @@ router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.getShort, cTow
                                     cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeCurrentByShortest,  cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
                                     cTown.insertIndex, cTown.insertStrForData,
                                     cTown.getSummary, cTown.sendResult]);
@@ -74,7 +74,7 @@ router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.getShort, cTow
 /**
  * mid, short, shortest 다 정상적으로 동작하기 위해서는 current, shorest, short의 데이타가 필요하다.
  */
-router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.getPastMid,
+router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid,
                                     cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getKeco,
                                     cTown.getKecoDustForecast, cTown.insertIndex,
                                     cTown.insertStrForData, cTown.sendResult]);

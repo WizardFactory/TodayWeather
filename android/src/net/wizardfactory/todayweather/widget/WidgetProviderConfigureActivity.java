@@ -17,11 +17,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.Provider.W1x1WidgetProvider;
-import net.wizardfactory.todayweather.widget.Provider.W2x1WidgetProvider;
+import net.wizardfactory.todayweather.widget.Provider.W1x1CurrentWeather;
 
 /**
- * The configuration screen for the {@link W1x1WidgetProvider W1x1WidgetProvider} AppWidget.
+ * The configuration screen for the {@link W1x1CurrentWeather W1x1CurrentWeather} AppWidget.
  */
 public class WidgetProviderConfigureActivity extends Activity {
 
@@ -60,7 +59,7 @@ public class WidgetProviderConfigureActivity extends Activity {
 
             // It is the responsibility of the configuration activity to update the app widget
 //            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-//            W1x1WidgetProvider.updateAppWidget(context, appWidgetManager, mAppWidgetId);
+//            W1x1CurrentWeather.updateAppWidget(context, appWidgetManager, mAppWidgetId);
 
             // update widget weather data using service
             Intent serviceIntent = new Intent(context, WidgetUpdateService.class);
@@ -102,6 +101,31 @@ public class WidgetProviderConfigureActivity extends Activity {
         SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
         prefs.remove(PREF_PREFIX_KEY + appWidgetId);
         prefs.apply();
+    }
+
+    public static long getWidgetUpdateInterval(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
+        String key = "updateInterval";
+        if (prefs.contains(key)) {
+            long minInterval = prefs.getInt(key, -1);
+            Log.i("widgetConfigure", "widget update interval " + minInterval);
+            minInterval = minInterval * 60 * 1000;
+            return minInterval;
+        }
+
+        return -1;
+    }
+
+    public static int getWidgetOpacity(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
+        String key = "widgetOpacity";
+        if (prefs.contains(key)) {
+            int opacity = prefs.getInt(key, 0xb2);
+            Log.i("widgetConfigure", "widget opacity " + opacity);
+            return opacity;
+        }
+
+        return 0xb2;
     }
 
     private void loadCityListPref(Context context) {

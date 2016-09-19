@@ -47,7 +47,7 @@ describe('controller unit test - collector', function(){
                 lon: 12.49
             }
         },
-        */
+
         {
              //'Parthenon 10558 Athens Greece'
             address:{
@@ -82,16 +82,15 @@ describe('controller unit test - collector', function(){
                 lon: 130.42
             }
         },
+        */
         {
             //'Beijing West Railway Station Lianhuachi East Road, Feeder Road, Beijing'
             address : {
                 country: 'China',
                 city: 'Beijing'
             },
-            geocode:{
-                lat:39.66,
-                lon:116.40
-            }
+            lat:39.66,
+            lon:116.40
         }
     ];
 /*
@@ -179,12 +178,12 @@ describe('controller unit test - collector', function(){
             }
         });
         var modelGeocode = require('../../models/worldWeather/modelGeocode');
-        modelGeocode.getGeocode = function(callback){
-            callback(0, geocodeList);
-        };
+       // modelGeocode.getGeocode = function(callback){
+        //    callback(0, geocodeList);
+       // };
 
         var collector = new controllerCollector;
-        collector.runkTask(true, function(err){
+        collector.runTask(true, function(err){
             log.info('end of runTask');
             done();
         });

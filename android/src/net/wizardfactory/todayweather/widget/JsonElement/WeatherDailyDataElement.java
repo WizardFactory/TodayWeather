@@ -28,6 +28,7 @@ public class WeatherDailyDataElement {
     private double wsd = WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL;
     private double taMax = WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL;
     private double taMin = WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL;
+    //lgtAm, ptyAm, skyAm,lgtPm, ptyPm, skyPm
 
     public Date getDate() {
         return date;
@@ -172,9 +173,9 @@ public class WeatherDailyDataElement {
                     if (reader != null) {
                         retDailyDataElements[i] = new WeatherDailyDataElement();
 
-                        retDailyDataElements[i].setStrDate(reader.getString("date"));
-                        retDailyDataElements[i].setWfAm(reader.getString("wfAm"));
-                        retDailyDataElements[i].setWfPm(reader.getString("wfPm"));
+                        retDailyDataElements[i].setStrDate(reader.optString("date", null));
+                        retDailyDataElements[i].setWfAm(reader.optString("wfAm", null));
+                        retDailyDataElements[i].setWfPm(reader.optString("wfPm", null));
                         String reliability = reader.optString("reliability");
                         if (reliability != "") {
                             retDailyDataElements[i].setReliability(reliability);
@@ -224,7 +225,7 @@ public class WeatherDailyDataElement {
                             retDailyDataElements[i].setTaMin(taMin);
                         }
 
-                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retDailyDataElements[i].getStrDate(), null);
+                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retDailyDataElements[i].getStrDate(), null, null);
                         retDailyDataElements[i].setDate(makeDate);
                     }
                     else {

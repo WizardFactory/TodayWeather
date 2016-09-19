@@ -172,36 +172,23 @@ public class WeatherShortElement {
                     if (reader != null) {
                         retShortElements[i] = new WeatherShortElement();
 
-                        retShortElements[i].setStrDate(reader.getString("date"));
-                        retShortElements[i].setStrTime(reader.getString("time"));
-                        retShortElements[i].setPop(reader.getDouble("pop"));
-                        retShortElements[i].setPty(reader.getDouble("pty"));
-                        retShortElements[i].setR06(reader.getDouble("r06"));
-                        retShortElements[i].setReh(reader.getDouble("reh"));
-                        retShortElements[i].setS06(reader.getDouble("s06"));
-                        retShortElements[i].setSky(reader.getDouble("sky"));
-                        retShortElements[i].setT3h(reader.getDouble("t3h"));
-                        retShortElements[i].setTmn(reader.getDouble("tmn"));
-                        retShortElements[i].setTmx(reader.getDouble("tmx"));
+                        retShortElements[i].setStrDate(reader.optString("date", null));
+                        retShortElements[i].setStrTime(reader.optString("time", null));
+                        retShortElements[i].setPop(reader.optDouble("pop", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setPty(reader.optDouble("pty", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setR06(reader.optDouble("r06", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setReh(reader.optDouble("reh", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setS06(reader.optDouble("s06", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setSky(reader.optDouble("sky", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setT3h(reader.optDouble("t3h", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setTmn(reader.optDouble("tmn", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setTmx(reader.optDouble("tmx", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setRn1(reader.optDouble("rn1", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setLgt(reader.optDouble("lgt", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setWsd(reader.optDouble("wsd", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
+                        retShortElements[i].setVec(reader.optDouble("vec", WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL));
 
-                        double rn1 = reader.optDouble("rn1");
-                        if (rn1 != Double.NaN) {
-                            retShortElements[i].setRn1(rn1);
-                        }
-                        double lgt = reader.optDouble("lgt");
-                        if (lgt != Double.NaN) {
-                            retShortElements[i].setLgt(lgt);
-                        }
-                        double wsd = reader.optDouble("wsd");
-                        if (wsd != Double.NaN) {
-                            retShortElements[i].setWsd(wsd);
-                        }
-                        double vec = reader.optDouble("vec");
-                        if (vec != Double.NaN) {
-                            retShortElements[i].setVec(vec);
-                        }
-
-                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retShortElements[i].getStrDate(), retShortElements[i].getStrTime());
+                        Date makeDate = WeatherElement.makeDateFromStrDateAndTime(retShortElements[i].getStrDate(), retShortElements[i].getStrTime(), null);
                         retShortElements[i].setDate(makeDate);
                     }
                     else {

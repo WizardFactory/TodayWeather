@@ -1495,7 +1495,7 @@ angular.module('starter.services', [])
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                $rootScope.$broadcast('reloadEvent');
+                $rootScope.$broadcast('reloadEvent', 'resume');
             }
         });
         $ionicPlatform.ready(function() {

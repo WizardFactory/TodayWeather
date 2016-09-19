@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -91,13 +92,21 @@ public class WeatherElement {
         try {
             JSONObject reader = new JSONObject(jsonStr);
             if (reader != null) {
-                retElement.setRegionName(reader.getString("regionName"));
-                retElement.setCityName(reader.getString("cityName"));
-                retElement.setTownName(reader.getString("townName"));
-                retElement.setWeatherShorts(WeatherShortElement.parsingShortElementString2Json(reader.getJSONArray("short").toString()));
-                //retElement.setWeatherShortests(WeatherShortestElement.parsingShortestElementString2Json(reader.getJSONArray("shortest").toString()));
-                retElement.setWeatherCurrent(WeatherCurrentElement.parsingCurrentElementString2Json(reader.getJSONObject("current").toString()));
-                retElement.setWeatherMidData(WeatherMidDataElement.parsingMidDataElementString2Json(reader.getJSONObject("midData").toString()));
+                retElement.setRegionName(reader.optString("regionName", null));
+                retElement.setCityName(reader.optString("cityName", null));
+                retElement.setTownName(reader.optString("townName", null));
+                if (reader.has("short")) {
+                    retElement.setWeatherShorts(WeatherShortElement.parsingShortElementString2Json(reader.getJSONArray("short").toString()));
+                }
+//                if (reader.has("shortest")) {
+//                    retElement.setWeatherShortests(WeatherShortestElement.parsingShortestElementString2Json(reader.getJSONArray("shortest").toString()));
+//                }
+                if (reader.has("current")) {
+                    retElement.setWeatherCurrent(WeatherCurrentElement.parsingCurrentElementString2Json(reader.getJSONObject("current").toString(), reader.optString("currentPubDate", null)));
+                }
+                if (reader.has("midData")) {
+                    retElement.setWeatherMidData(WeatherMidDataElement.parsingMidDataElementString2Json(reader.getJSONObject("midData").toString()));
+                }
             }
             else {
                 Log.e("WeatherElement", "Json string is NULL");
@@ -110,13 +119,26 @@ public class WeatherElement {
         return retElement;
     }
 
-    /*
-        Aargument
-        string date : yyyyMMdd
-        string time : HHmm
+    /**
+     *
+     * @param date : yyyyMMdd
+     * @param time : HHmm
+     * @param stnDateTime : yyyy.MM.dd.HH:mm
+     * @return
      */
-    public static Date makeDateFromStrDateAndTime(String date, String time) {
+    public static Date makeDateFromStrDateAndTime(String date, String time, String stnDateTime) {
         Date retDate = null;
+
+        if (stnDateTime != null) {
+            Log.i("WeatherElement", "stn date time="+stnDateTime);
+            SimpleDateFormat transFormat = new SimpleDateFormat("yyyy.MM.dd.HH:mm");
+            try {
+                retDate = transFormat.parse(stnDateTime);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+            return retDate;
+        }
 
         if (time == null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("yyyyMMdd");
@@ -137,6 +159,22 @@ public class WeatherElement {
         return retDate;
     }
 
+    /**
+     *
+     * @param dashDate yyyy-MM-dd HH:mm
+     * @return
+     */
+    public static Date makeDateFromStrDashDate(String dashDate) {
+        Date retDate = null;
+        SimpleDateFormat transFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        try {
+            retDate = transFormat.parse(dashDate);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return retDate;
+    }
+
     // make widget data using this class members.
     public WidgetData makeWidgetData() {
         WidgetData retWidgetData =  null;
@@ -154,28 +192,59 @@ public class WeatherElement {
                 retWidgetData.setLoc(regionName);
             }
 
-            // get current data
+            // get current(today) data
             WeatherData current = new WeatherData();
+            current.setDate(weatherCurrent.getDate());
+            current.setPubDate(weatherCurrent.getPubDate());
             current.setSky(weatherCurrent.getSky());
             current.setPty(weatherCurrent.getPty());
             current.setLgt(weatherCurrent.getLgt());
             current.setTemperature(weatherCurrent.getT1h());
-            current.setMaxTemperature(findMaxTemperature(true));
-            current.setMinTemperature(findMinTemperature(true));
+//            current.setMaxTemperature(findMaxTemperature(true));
+//            current.setMinTemperature(findMinTemperature(true));
+            current.setSummary(weatherCurrent.getStrSummary());
+            current.setAqiPubDate(weatherCurrent.getAqiPubDate());
+            current.setAqiGrade(weatherCurrent.getAqiGrade());
+            current.setPm10Grade(weatherCurrent.getPm10Grade());
+            current.setPm25Grade(weatherCurrent.getPm25Grade());
+            current.setAqiStr(weatherCurrent.getAqiStr());
+            current.setPm10Str(weatherCurrent.getPm10Str());
+            current.setPm25Str(weatherCurrent.getPm25Str());
+            current.setRn1(weatherCurrent.getRn1());
+            current.setRn1Str(weatherCurrent.getRn1Str());
 
             // get yesterday data
-            WeatherData yesterday = new WeatherData();
-            WeatherShortElement yesterdayElement = getYesterdayWeatherFromCurrentTime();
-            if (yesterdayElement != null) {
-                yesterday.setSky(yesterdayElement.getSky());
-                yesterday.setTemperature(yesterdayElement.getT3h());
-                yesterday.setPty(yesterdayElement.getPty());
+            WeatherData before24hWeather = new WeatherData();
+            before24hWeather.setTemperature(weatherCurrent.getBefore24ht1h());
+
+            String yesterdayDateStr = findYesterdayDateString();
+            WeatherDailyDataElement[] weatherDailyData = weatherMidData.getWeatherDailyDatas();
+            for (int i = 0; i < weatherDailyData.length; i++) {
+                if (weatherDailyData[i].getStrDate().equals(yesterdayDateStr))  {
+                    before24hWeather.setMaxTemperature(weatherDailyData[i].getTaMax());
+                    before24hWeather.setMinTemperature(weatherDailyData[i].getTaMin());
+                }
+                if (weatherDailyData[i].getStrDate().equals(weatherCurrent.getStrDate())) {
+                    current.setMinTemperature(weatherDailyData[i].getTaMin());
+                    current.setMaxTemperature(weatherDailyData[i].getTaMax());
+                }
             }
-            yesterday.setMaxTemperature(findMaxTemperature(false));
-            yesterday.setMinTemperature(findMinTemperature(false));
 
             retWidgetData.setCurrentWeather(current);
-            retWidgetData.setYesterdayWeather(yesterday);
+            retWidgetData.setBefore24hWeather(before24hWeather);
+
+            for (int i=WidgetData.YESTERDAY_WEATHER_INDEX; i<5; i++) {
+                WeatherData dayData = new WeatherData();
+                WeatherDailyDataElement todayData = weatherDailyData[i+6];
+                dayData.setSky(todayData.getSky());
+                dayData.setPty(todayData.getPty());
+                dayData.setLgt(todayData.getLgt());
+                dayData.setMaxTemperature(todayData.getTaMax());
+                dayData.setMinTemperature(todayData.getTaMin());
+                dayData.setDate(todayData.getDate());
+
+                retWidgetData.setDayWeather(i, dayData);
+            }
         }
         else {
             Log.e("WeatherElement", "CurrentWeather is NULL!!");
@@ -256,7 +325,7 @@ public class WeatherElement {
             if (shortestDate != null) {
                 // compare base time
                 String yesterdayCmpStrDate = findYesterdayDateString();
-                Date cmpDate = WeatherElement.makeDateFromStrDateAndTime(yesterdayCmpStrDate, weatherCurrent.getStrTime());
+                Date cmpDate = WeatherElement.makeDateFromStrDateAndTime(yesterdayCmpStrDate, weatherCurrent.getStrTime(), weatherCurrent.getStnDateTime());
 
                 int nearnestIdx = -1;
                 long minInterval = 999999999;
@@ -291,7 +360,7 @@ public class WeatherElement {
     private String findYesterdayDateString() {
         String retYesterdayString = null;
 
-        if (weatherCurrent != null) {
+        if (weatherCurrent != null && weatherCurrent.getDate() != null) {
             // today time - 1day
             Date yesterdayDate = new Date(weatherCurrent.getDate().getTime() - (1000 * 60 * 60 * 24));
             DateFormat sdFormat = new SimpleDateFormat("yyyyMMdd");
