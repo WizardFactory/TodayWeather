@@ -7,8 +7,10 @@ var mongoose = require("mongoose");
 var wuCurrentSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
     address: {country:String, city:String, zipcode:Number, postcode:Number},
-    date: Number,   // YYYYMMDDHHMM
+    date: Number,                                       // GMT time YYYYMMDDHHMM
+    dateObj: {type: Object, default: Date},             // UTC time
     dataList:[{
+        dateObj:    {type: Object, default: Date},      // UTC time
         date:       {type:Number, default:-100},        // YYYYMMDDHHMM
         desc:       {type:String, default:''},
         code:       {type:Number, default:-100},
