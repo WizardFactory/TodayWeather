@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.8",
+  "version": "0.9.10",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "gulp": "^3.5.6",
-    "gulp-sass": "^1.3.3",
+    "gulp-sass": "^2.0.4",
     "gulp-concat": "^2.2.0",
     "gulp-minify-css": "^0.3.0",
     "gulp-rename": "^1.2.0"
