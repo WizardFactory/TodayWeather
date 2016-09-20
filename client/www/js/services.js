@@ -4,7 +4,7 @@ angular.module('starter.services', [])
         var cities = [];
         var cityIndex = -1;
         var obj = {
-            towns: []
+            //towns: []
         };
 
         var createCity = function (item) {
@@ -21,14 +21,18 @@ angular.module('starter.services', [])
                 city.dayChart = null;
                 city.disable = true; // 현재 위치 off
             } else {
-                city.currentPosition = item.currentPosition;
-                city.address = item.address;
-                city.location = item.location;
-                city.currentWeather = item.currentWeather;
-                city.timeTable = item.timeTable;
-                city.timeChart = item.timeChart;
-                city.dayTable = item.dayTable;
-                city.dayChart = item.dayChart;
+                //if (item.name) {
+                //   city.name = item.name;
+                //}
+                //city.currentPosition = item.currentPosition;
+                //city.address = item.address;
+                //city.location = item.location;
+                //city.currentWeather = item.currentWeather;
+                //city.timeTable = item.timeTable;
+                //city.timeChart = item.timeChart;
+                //city.dayTable = item.dayTable;
+                //city.dayChart = item.dayChart;
+                city = item;
                 city.disable = item.disable === undefined ? false : item.disable;
             }
             city.loadTime = null;
@@ -182,30 +186,33 @@ angular.module('starter.services', [])
             city.loadTime = null;
         };
 
-        obj.updateCity = function (index, weatherData) {
+        obj.updateCity = function (index, newCityInfo) {
             var that = this;
             var city = cities[index];
 
-            if (weatherData.address) {
-                city.address = weatherData.address;
+            if (newCityInfo.country) {
+                city.country = newCityInfo.country;
             }
-            if (weatherData.location) {
-                city.location = weatherData.location;
+            if (newCityInfo.address) {
+                city.address = newCityInfo.address;
             }
-            if (weatherData.currentWeather) {
-                city.currentWeather = weatherData.currentWeather;
+            if (newCityInfo.location) {
+                city.location = newCityInfo.location;
             }
-            if (weatherData.timeTable) {
-                city.timeTable = weatherData.timeTable;
+            if (newCityInfo.currentWeather) {
+                city.currentWeather = newCityInfo.currentWeather;
             }
-            if (weatherData.timeChart) {
-                city.timeChart = weatherData.timeChart;
+            if (newCityInfo.timeTable) {
+                city.timeTable = newCityInfo.timeTable;
             }
-            if (weatherData.dayTable) {
-                city.dayTable = weatherData.dayTable;
+            if (newCityInfo.timeChart) {
+                city.timeChart = newCityInfo.timeChart;
             }
-            if (weatherData.dayChart) {
-                city.dayChart = weatherData.dayChart;
+            if (newCityInfo.dayTable) {
+                city.dayTable = newCityInfo.dayTable;
+            }
+            if (newCityInfo.dayChart) {
+                city.dayChart = newCityInfo.dayChart;
             }
             if (window.push && city.currentPosition == true) {
                 if (window.push.getAlarm(index)) {
@@ -249,9 +256,14 @@ angular.module('starter.services', [])
             cities.forEach(function (city) {
                 if (!city.disable) {
                     var simpleInfo = {};
+                    if (city.name) {
+                        simpleInfo.name = city.name;
+                    }
                     simpleInfo.currentPosition = city.currentPosition;
                     simpleInfo.address = city.address;
                     simpleInfo.location = city.location;
+                    simpleInfo.name = city.name;
+                    simpleInfo.country = city.country;
                     pList.cityList.push(simpleInfo);
                 }
             });
@@ -306,11 +318,10 @@ angular.module('starter.services', [])
             this._saveCitiesPreference(cities);
         };
 
-        obj.loadTowns = function() {
-            var that = this;
-
-            that.towns = window.towns;
-        };
+        //obj.loadTowns = function() {
+        //    var that = this;
+        //    that.towns = window.towns;
+        //};
 
         //endregion
 
@@ -581,6 +592,31 @@ angular.module('starter.services', [])
                 location.long = result.geometry.location.lng;
             });
             return location;
+        }
+
+        function getGeoWeatherInfo (location) {
+            var deferred = $q.defer();
+            var url = Util.url +'/coordinates';
+            url += "/" + location.lat + '/'+location.long;
+
+            console.log(url);
+            url = Util.url +'/town/'+encodeURIComponent('서울특별시');
+            console.log("convert to "+url);
+
+            $http({method: 'GET', url: url, timeout: 10*1000})
+                .success(function (data) {
+                    //console.log(data);
+                    deferred.resolve({data: data});
+                })
+                .error(function (error) {
+                    if (!error) {
+                        error = new Error("Fail to get geo weatherInfo");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+
+            return deferred.promise;
         }
 
         function getTownWeatherInfo (town) {
@@ -985,15 +1021,24 @@ angular.module('starter.services', [])
             return deferred.promise;
         }
 
-        function getGeoCodeFromGoogle(address) {
+        obj.getGeoCodeFromGoogle = function (address) {
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === 'OK') {
-                    var location = findLocationFromGoogleGeoCodeResults(data.results);
-                    console.log(location);
-                    deferred.resolve(location);
+                    try {
+                        var location = findLocationFromGoogleGeoCodeResults(data.results);
+                        //"KR"
+                        var country = data.results[0].address_components[data.results[0].address_components.length-1].short_name;
+                        var address = data.results[0].formatted_address;
+                        console.log(location);
+                        deferred.resolve({location: location, country: country, address: address});
+                    }
+                    catch (e) {
+                        deferred.reject(e);
+                    }
+
                 }
                 else {
                     //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
@@ -1004,33 +1049,35 @@ angular.module('starter.services', [])
             });
 
             return deferred.promise;
-        }
+        };
+
+        //obj.getGeoCodeFromGoogle = getGeoCodeFromGoogle;
 
         /**
          *
          * @param {String} address
          */
-        obj.getAddressToGeolocation = function (address) {
-            var deferred = $q.defer();
-
-            getGeoCodeFromDaum(address).then(function(location) {
-
-                console.log(location);
-                deferred.resolve(location);
-            }, function (err) {
-
-                console.log(err);
-                getGeoCodeFromGoogle(address).then(function (location) {
-                    console.log(location);
-                    deferred.resolve(location);
-                }, function (err) {
-                    console.log(err);
-                    deferred.reject(err);
-                });
-            });
-
-            return deferred.promise;
-        };
+        //obj.getAddressToGeolocation = function (address) {
+        //    var deferred = $q.defer();
+        //
+        //    getGeoCodeFromDaum(address).then(function(location) {
+        //
+        //        console.log(location);
+        //        deferred.resolve(location);
+        //    }, function (err) {
+        //
+        //        console.log(err);
+        //        getGeoCodeFromGoogle(address).then(function (location) {
+        //            console.log(location);
+        //            deferred.resolve(location);
+        //        }, function (err) {
+        //            console.log(err);
+        //            deferred.reject(err);
+        //        });
+        //    });
+        //
+        //    return deferred.promise;
+        //};
 
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
@@ -1058,10 +1105,42 @@ angular.module('starter.services', [])
             return deferred.promise;
         }
 
+        function getGeoInfoFromGoogle(lat, lng) {
+            var deferred = $q.defer();
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
+
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                if (data.status === "OK") {
+                    var result;
+                    for (var i=0; i < data.results.length; i++) {
+                        if (data.results[i].types[0] == "postal_code") {
+                            result = data.results[i];
+                            break;
+                        }
+                    }
+                    var address = result.formatted_address;
+                    if (!address || address.length === 0) {
+                        deferred.reject(new Error("Fail to find formatted_address from " + data.results[0].formatted_address));
+                        return;
+                    }
+                    var country = result.address_components[result.address_components.length-1].short_name;
+                    console.log(address);
+                    deferred.resolve({country: country, address: address});
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise;
+        }
+
         function getAddressFromGoogle(lat, lng) {
             var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
-                "&sensor=true&language=ko";
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
 
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === "OK") {
@@ -1084,6 +1163,29 @@ angular.module('starter.services', [])
             return deferred.promise;
         }
 
+        obj.getGeoInfoFromGeolocation = function (lat, long) {
+            var deferred = $q.defer();
+            var startTime = new Date().getTime();
+            var endTime;
+            //check kr by mCoord
+
+            getGeoInfoFromGoogle(lat, long).then(function (geoInfo) {
+                console.log(geoInfo);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data', endTime - startTime, 'get', 'google address');
+                Util.ga.trackEvent('data', 'get', 'google address', endTime - startTime);
+
+                deferred.resolve(geoInfo);
+            }, function () {
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
+                Util.ga.trackEvent('data error', 'get', 'google address', endTime - startTime);
+
+                deferred.reject(err);
+            });
+            return deferred.promise;
+        };
+
         /**
          * related to #380
          * @param {Number} lat
@@ -1100,7 +1202,7 @@ angular.module('starter.services', [])
                 Util.ga.trackTiming('data', endTime - startTime, 'get', 'daum address');
                 Util.ga.trackEvent('data', 'get', 'daum address', endTime - startTime);
 
-                deferred.resolve(address);
+                deferred.resolve({country : "KR", address : address});
             }, function (err) {
                 console.log(err);
                 endTime = new Date().getTime();
@@ -1199,15 +1301,20 @@ angular.module('starter.services', [])
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
 
-            var town = towns.filter(function (town) {
-                return !!(town.first === townAddress.first && town.second === townAddress.second
-                && town.third === townAddress.third);
-            })[0];
+            if (towns) {
+                var town = towns.filter(function (town) {
+                    return !!(town.first === townAddress.first && town.second === townAddress.second
+                    && town.third === townAddress.third);
+                })[0];
 
-            if (town === undefined) {
-                var deferred = $q.defer();
-                deferred.reject("address is empty");
-                return deferred.promise;
+                if (town === undefined) {
+                    var deferred = $q.defer();
+                    deferred.reject("address is empty");
+                    return deferred.promise;
+                }
+            }
+            else {
+                town = townAddress;
             }
 
             var promises = [];
@@ -1218,15 +1325,36 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param weatherDatas
+         * @param {country, address, location}
+         * @returns {Promise}
+         */
+        obj.getWorldWeatherInfo = function (geoInfo) {
+            var promises = [];
+            var that = this;
+
+            if (geoInfo.country === "KR") {
+                var addressArray = that.convertAddressArray(geoInfo.address);
+                var town = that.getTownFromFullAddress(addressArray);
+                promises.push(getTownWeatherInfo(town));
+            }
+            else {
+                var location = obj.geolocationNormalize(geoInfo.location);
+                promises.push(getGeoWeatherInfo(location));
+            }
+
+            return $q.all(promises);
+        };
+
+        /**
+         *
+         * @param weatherData
          * @returns {{}}
          */
-        obj.convertWeatherData = function (weatherDatas) {
+        obj.convertWeatherData = function (weatherData) {
             var that = this;
             var data = {};
             var currentTime = new Date();
-            var weatherData = {};
-            weatherDatas.forEach(function (data) {
+            weatherData.forEach(function (data) {
                 if (data.hasOwnProperty("data")) {
                     weatherData = data.data;
                 }
@@ -1288,6 +1416,17 @@ angular.module('starter.services', [])
             return '';
         };
         //endregion
+
+        obj.geolocationNormalize = function (coords) {
+            var baseLength = 0.25;
+            var lat = coords.lat;
+            var lon = coords.long;
+            console.log (lat + " " + lon);
+
+            var normal_lat = lat - (lat%baseLength) + baseLength/2;
+            var normal_lon = lon - (lon%baseLength) + baseLength/2;
+            return {lat: normal_lat, long: normal_lon};
+        };
 
         return obj;
     })
@@ -1492,7 +1631,7 @@ angular.module('starter.services', [])
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
         WeatherInfo.loadCities();
-        WeatherInfo.loadTowns();
+        //WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 $rootScope.$broadcast('reloadEvent', 'resume');
