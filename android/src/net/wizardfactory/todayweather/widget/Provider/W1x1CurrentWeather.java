@@ -35,6 +35,8 @@ public class W1x1CurrentWeather extends TwWidgetProvider {
         if (Build.VERSION.SDK_INT >= 16) {
             Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
             int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
+            int minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
+            Log.i(TAG, "minHeight="+minHeight+" minWidth="+minWidth);
 
             if (minHeight > 100) {
                 views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_SP, 18);
