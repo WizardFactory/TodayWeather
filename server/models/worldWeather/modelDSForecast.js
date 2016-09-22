@@ -7,9 +7,12 @@ var mongoose = require("mongoose");
 var dsForecastSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
     address: {country:String, city:String, zipcode:Number, postcode:Number},
-    date: Number,   // YYYYMMDDHHMM
+    date:    {type: Number, default: 0},   // GMT time YYYYMMDDHHMM
+    dateObj: {type: Object, default: Date},// UTC time
+    timeoffset: {type: Number, default: 0},
     current:{
-        date:       {type: Number, default:0},
+        dateObj:    {type: Object, default: Date},  // UTC time
+        date:       {type: Number, default: 0}, // GMT time
         summary:    {type: String, default: ''},
         pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
         pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
@@ -26,7 +29,8 @@ var dsForecastSchema = new mongoose.Schema({
     hourly:{
         summary:        {type:String, default:''},
         data:[{
-            date:       {type: Number, default:0},
+            dateObj:    {type: Object, default: Date}, // UTC time
+            date:       {type: Number, default:0},  // GMT time
             summary:    {type: String, default: ''},
             pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
             pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
@@ -45,7 +49,8 @@ var dsForecastSchema = new mongoose.Schema({
     daily:{
         summary: {type:String, default:''},
         data:[{
-            date:           {type: Number, default:0},
+            dateObj:        {type: Object, default: Date},  // UTC time
+            date:           {type: Number, default:0},  // GMT time
             summary:        {type: String, default: ''},
             sunrise:        {type: Number, default:0},  // time
             sunset:         {type: Number, default:0},  // time

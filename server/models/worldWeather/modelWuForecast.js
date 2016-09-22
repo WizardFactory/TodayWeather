@@ -6,10 +6,12 @@ var mongoose = require("mongoose");
 var wuForecastSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
     address: {country:String, city:String, zipcode:Number, postcode:Number},
-    date: Number,   // YYYYMMDDHHMM
+    date:    {type: Number, default: 0},                    // YYYYMMDDHHMM
+    dateObj: {type: Object, default: Date},                 // UTC time
     days:[{
         summary :{
-            date:       {type : Number, default:0},         // YYYYMMDD
+            dateObj:    {type: Object, default: Date},      // UTC time
+            date:       {type : Number, default:0},         // GMT YYYYMMDD
             sunrise:    {type : Number, default:-100},      // HHMM or HMM
             sunset:     {type : Number, default:-100},      // HHMM or HMM
             moonrise:   {type : Number, default:-100},      // HHMM or HMM
@@ -28,8 +30,9 @@ var wuForecastSchema = new mongoose.Schema({
             slpmin:     {type : Number, default:-100}       // millibars, min sea level presure
         },
         forecast : [{
-            date:       {type : Number, default:0},         // YYYYMMDD,
-            time:       {type : Number, default:0},         // HHMM or HMM
+            dateObj:    {type: Object, default: Date},      // UTC time
+            date:       {type : Number, default:0},         // GMT YYYYMMDD,
+            time:       {type : Number, default:0},         // GMT HHMM or HMM
             utcDate:    {type : Number, default:0},         // YYYYMMDD,,
             utcTime:    {type : Number, default:0},         // HHMM
             desc:       {type : String, default:''},        //
