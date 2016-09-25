@@ -196,6 +196,28 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   stroke: #fff;
 }
 
+.label {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 5%;
+  position: absolute;
+  bottom: 10px;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.label-today {
+  background-color: #ffffff;
+  width:10px;
+  height: 10px;
+  display: inline-block;
+}
+
+.label-yesterday {
+  background-color: #9E9E9E;
+  width:10px;
+  height: 10px;
+  display: inline-block;
+}
 /* day chart style */
 .rect {
   fill: #ffffff;
