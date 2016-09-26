@@ -1,11 +1,10 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, $cordovaPreferences) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, Util) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
-            towns: [],
-            isLoadComplete: false
+            towns: []
         };
 
         var createCity = function (item) {
@@ -143,7 +142,7 @@ angular.module('starter.services', [])
 
             if (that.getIndexOfCity(city) === -1) {
                 city.disable = false;
-                city.loadTime = null;
+                city.loadTime = new Date();
                 cities.push(city);
                 that.saveCities();
                 return true;
@@ -224,6 +223,7 @@ angular.module('starter.services', [])
 
             if (items === null) {
                 createCity();
+                Util.ga.trackEvent('app', 'user', 'new');
             } else {
                 items.forEach(function (item) {
                     createCity(item);
@@ -234,6 +234,7 @@ angular.module('starter.services', [])
                         that._saveCitiesPreference(items);
                     }
                 });
+                Util.ga.trackEvent('app', 'user', 'returning', that.getCityCount());
             }
 
             // load last cityIndex
@@ -257,54 +258,52 @@ angular.module('starter.services', [])
 
             console.log('save preference plist='+JSON.stringify(pList));
 
-            $cordovaPreferences.store('cityList', JSON.stringify(pList))
-                .success(function(value) {
-                    console.log("save preference Success: " + value);
-                })
-                .error(function(error) {
-                    console.log("save preference Error: " + error);
-                });
+            $ionicPlatform.ready(function() {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.store('cityList', JSON.stringify(pList)).then(
+                    function (value) {
+                        console.log("save preference Success: " + value);
+                    },
+                    function (error) {
+                        console.log("save preference Error: " + error);
+                    }
+                );
+            });
         };
 
         obj._loadCitiesPreference = function (callback) {
-            $cordovaPreferences.fetch('cityList')
-                .success(function(value) {
-                    console.log("fetch preference Success: " + value);
-                    callback(undefined, value);
-                })
-                .error(function(error) {
-                    console.log("fetch preference Error: " + error);
-                    callback(error);
-                })
+            $ionicPlatform.ready(function() {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
+
+                /**
+                 * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+                 * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+                 * @type {AppPreferences}
+                 */
+                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+                suitePrefs.fetch('cityList').then(
+                    function (value) {
+                        console.log("fetch preference Success: " + value);
+                        callback(undefined, value);
+                    }, function (error) {
+                        console.log("fetch preference Error: " + error);
+                        callback(error);
+                    }
+                );
+            });
         };
 
         obj.saveCities = function() {
             localStorage.setItem("cities", JSON.stringify(cities));
             this._saveCitiesPreference(cities);
-        };
-
-        obj.updateCities = function(index) {
-            var that = this;
-            var city = cities[index];
-
-            if (city === undefined) {
-                $ionicPlatform.ready(function() {
-                    that.isLoadComplete = true;
-                    $rootScope.$broadcast('loadCompleteEvent');
-                });
-                return;
-            }
-
-            if (that.canLoadCity(index) && !city.currentPosition) {
-                WeatherUtil.getWeatherInfo(city.address, that.towns).then(function (weatherDatas) {
-                    var city = WeatherUtil.convertWeatherData(weatherDatas);
-                    that.updateCity(index, city);
-                }).finally(function () {
-                    that.updateCities(index + 1);
-                });
-            } else {
-                that.updateCities(index + 1);
-            }
         };
 
         obj.loadTowns = function() {
@@ -384,26 +383,6 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param dailyInfoList
-         * @param date
-         * @returns {*}
-         */
-        function getDayInfo(dailyInfoList, date) {
-            if (dailyInfoList.length === 0) {
-                return undefined;
-            }
-
-            for (var i = 0; i < dailyInfoList.length; i++) {
-                if (dailyInfoList[i].date === date) {
-                    return dailyInfoList[i];
-                }
-            }
-
-            return undefined;
-        }
-
-        /**
-         *
          * @param {Date} target
          * @param {Date} current
          * @returns {number}
@@ -450,30 +429,6 @@ angular.module('starter.services', [])
             }
             console.error("Fail to get day string day=" + day);
             return "";
-        }
-
-        /**
-         *
-         * @param temp
-         * @param tmx
-         * @param tmn
-         * @returns {string}
-         */
-        function decideTempIcon(temp, tmx, tmn) {
-            if ( (tmx === undefined || tmx === null) || (tmn === undefined || tmn === null) || tmx < tmn) {
-                return "Temp-01";
-            }
-
-            var max = tmx - tmn;
-            var cur = temp - tmn;
-            var p = Math.max(1, Math.ceil(cur / max * 10));
-
-            if (p > 9) {
-                return "Temp-10";
-            }
-            else {
-                return "Temp-0" + p;
-            }
         }
 
         function dayToString(day) {
@@ -596,9 +551,13 @@ angular.module('starter.services', [])
             results.forEach(function (result) {
                 var lastChar = result.formatted_address.slice(-1);
                 if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
-                    if(length < result.formatted_address.length) {
-                        dongAddress = result.formatted_address;
-                        length = result.formatted_address.length;
+                    var arrayStr = result.formatted_address.split(" ");
+                    var secondLastChar = arrayStr[arrayStr.length-2].slice(-1);
+                    if (secondLastChar === "시" || secondLastChar === "군" || secondLastChar === "구")  {
+                        if(length < result.formatted_address.length) {
+                            dongAddress = result.formatted_address;
+                            length = result.formatted_address.length;
+                        }
                     }
                 }
             });
@@ -687,41 +646,84 @@ angular.module('starter.services', [])
 
         /**
          * @param {Object[]} shortForecastList
-         * @param {Date} currentForecast
-         * @param {Date} current
-         * @param {Object[]} dailyInfoList midData.dailyData
+         * @param {Object} currentForecast
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast) {
             var data = [];
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
                 return {timeTable: [], timeChart: []};
             }
 
+            var currentIndex = -1;
+            var displayItemCount = 0;
+
             shortForecastList.every(function (shortForecast, index) {
                 var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
-                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), current);
+                var diffDays = getDiffDays(convertStringToDate(shortForecast.date), convertStringToDate(currentForecast.date));
                 var day = "";
                 if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
                     day = getDayString(diffDays);
                 }
                 var isNight = time < 7 || time > 18;
-                var dayInfo = getDayInfo(dailyInfoList, shortForecast.date);
-                if (!dayInfo) {
-                    console.log("Fail to find dayInfo date=" + shortForecast.date);
-                    dayInfo = {date: shortForecast.date, taMax: 100, taMin: -49};
-                }
 
                 tempObject = shortForecast;
 
                 tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                tempObject.tempIcon = decideTempIcon(shortForecast.t3h, dayInfo.taMax, dayInfo.taMin);
-
                 tempObject.day = day;
                 tempObject.time = time;
                 tempObject.timeStr = time + "시";
+
+                if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
+                    currentIndex = index;
+                    shortForecastList[index].currentIndex = true;
+                }
+                else if (currentForecast.date == tempObject.date && currentForecast.time > tempObject.time) {
+                    if (index == shortForecastList.length-1) {
+                        currentIndex = index;
+                        tempObject.currentIndex = true;
+                    }
+                    else {
+                        var nextTime = parseInt(shortForecastList[index+1].time.slice(0, -2));
+                        if (currentForecast.time < nextTime) {
+                            currentIndex = index;
+                            /**
+                             * chart는 기준 index부터 뒤로 rect를 그리고, table은 기준값 기준으로 앞으로 데이터를 선정하기 때문에 선택된 index에 한칸으로 가야 함
+                             */
+                            shortForecastList[index+1].currentIndex = true;
+                        }
+                    }
+                }
+                else if (currentForecast.time < 3) {
+                    if (currentForecast.date == tempObject.date && shortForecastList[index-1].date != currentForecast.date) {
+                        shortForecastList[index-1].currentIndex = true;
+                        currentIndex = index-1;
+                    }
+                }
+
+                var tmpDisplayCount = 0;
+                //data on chart from yesterday
+                if (diffDays > -2) {
+                    if (tempObject.skyIcon != undefined) {
+                        tmpDisplayCount++;
+                    }
+                    if (tempObject.pop && tempObject.pop > 0) {
+                        tmpDisplayCount++;
+                    }
+                    if (displayItemCount == 2) {
+                        if ((tempObject.rn1 && tempObject.rn1 > 0)
+                            || (tempObject.r06 && tempObject.r06 > 0)
+                            || (tempObject.s06 && tempObject.s06 > 0)) {
+                            tmpDisplayCount++;
+                        }
+                    }
+                    if (tmpDisplayCount > displayItemCount) {
+                        displayItemCount = tmpDisplayCount;
+                    }
+                }
+
                 data.push(tempObject);
 
                 return true;
@@ -739,7 +741,9 @@ angular.module('starter.services', [])
                     name: "today",
                     values: data.slice(8).map(function (d) {
                         return {name: "today", value: d};
-                    })
+                    }),
+                    currentIndex: currentIndex - 8,
+                    displayItemCount: displayItemCount
                 }
             ];
 
@@ -754,9 +758,10 @@ angular.module('starter.services', [])
          */
         obj.parseMidTownWeather = function (midData, currentTime) {
             var tmpDayTable = [];
+            var displayItemCount = 0;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
-                return tmpDayTable;
+                return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
             }
             midData.dailyData.forEach(function (dayInfo) {
                 var data;
@@ -771,6 +776,8 @@ angular.module('starter.services', [])
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
                 data.skyIcon = getHighPrioritySky(skyAm, skyPm);
+                data.skyAm = skyAm;
+                data.skyPm = skyPm;
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
@@ -783,10 +790,30 @@ angular.module('starter.services', [])
                 }
 
                 tmpDayTable.push(data);
+
+                var tmpDisplayCount = 0;
+
+                if (data.skyAm != undefined || data.skyPm != undefined) {
+                    if (data.skyAm != data.skyPm && data.skyAm && data.skyPm) {
+                        tmpDisplayCount = tmpDisplayCount | 4;
+                    }
+                }
+
+                if (data.pop && data.pop > 0 && data.fromToday >= 0) {
+                    tmpDisplayCount = tmpDisplayCount | 2;
+                }
+                if ((data.rn1 && data.rn1 > 0)
+                    || (data.r06 && data.r06 > 0)
+                    || (data.s06 && data.s06 > 0)) {
+                    tmpDisplayCount = tmpDisplayCount | 1;
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
+                }
             });
 
             //console.log(tmpDayTable);
-            return tmpDayTable;
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
         };
 
         /**
@@ -1064,18 +1091,35 @@ angular.module('starter.services', [])
          */
         obj.getAddressFromGeolocation = function (lat, long) {
             var deferred = $q.defer();
+            var startTime = new Date().getTime();
+            var endTime;
 
             getAddressFromDaum(lat, long).then(function(address) {
-
                 console.log(address);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackEvent('data', 'get', 'daum address', endTime - startTime);
+
                 deferred.resolve(address);
             }, function (err) {
-
                 console.log(err);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackEvent('data error', 'get', 'daum address', endTime - startTime);
+
+                startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
                     console.log(address);
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackEvent('data', 'get', 'google address', endTime - startTime);
+
                     deferred.resolve(address);
                 }, function (err) {
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackEvent('data error', 'get', 'google address', endTime - startTime);
+
                     deferred.reject(err);
                 });
             });
@@ -1086,37 +1130,63 @@ angular.module('starter.services', [])
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
-            if (ionic.Platform.isAndroid() && window.cordova) {
-
-                var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
-
-                orgGeo.getCurrentPosition(function (position) {
-                        //console.log('native geolocation');
-                        //console.log(position);
-                        deferred.resolve(position.coords);
-                    },
-                    function (error) {
-                        console.log("Fail to get current position from native");
-                        console.log(error);
-                        deferred.reject();
-                    },{timeout:5000});
-            }
-            else {
-                navigator.geolocation.getCurrentPosition(function(position) {
+            ionic.Platform.ready(function() {
+                var startTime = new Date().getTime();
+                var endTime;
+                navigator.geolocation.getCurrentPosition(function (position) {
                     //경기도,광주시,오포읍,37.36340556,127.2307667
                     //deferred.resolve({latitude: 37.363, longitude: 127.230});
                     //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
                     //37.472595, 126.795249
                     //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
                     //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                    //서울특별시
+                    //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                    //경기 수원시 영통구 광교1동
+                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
+                    Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
 
                     deferred.resolve(position.coords);
-                }, function(error) {
+                }, function (error) {
                     console.log("Fail to get current position from navigator");
-                    console.log(error);
-                    deferred.reject();
-                },{timeout:3000});
-            }
+                    console.log(error.message);
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
+                    Util.ga.trackEvent('data error', 'get', 'position', endTime - startTime);
+
+                    if (ionic.Platform.isAndroid() && window.cordova) {
+                        var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+
+                        startTime = new Date().getTime();
+                        orgGeo.getCurrentPosition(function (position) {
+                                //console.log('native geolocation');
+                                //console.log(position);
+
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
+                                Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
+
+                                deferred.resolve(position.coords);
+                            },
+                            function (error) {
+                                console.log("Fail to get current position from native");
+                                console.log(error.message);
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
+                                Util.ga.trackEvent('data error', 'get', 'native position', endTime - startTime);
+
+                                deferred.reject();
+                            }, {timeout: 5000});
+                    }
+                    else {
+                        deferred.reject();
+                    }
+                }, {maximumAge: 3000, timeout: 3000});
+            });
+
             return deferred.promise;
         };
 
@@ -1130,20 +1200,8 @@ angular.module('starter.services', [])
             var that = this;
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
-
-            var town = towns.filter(function (town) {
-                return !!(town.first === townAddress.first && town.second === townAddress.second
-                && town.third === townAddress.third);
-            })[0];
-
-            if (town === undefined) {
-                var deferred = $q.defer();
-                deferred.reject("address is empty");
-                return deferred.promise;
-            }
-
             var promises = [];
-            promises.push(getTownWeatherInfo(town));
+            promises.push(getTownWeatherInfo(townAddress));
 
             return $q.all(promises);
         };
@@ -1169,7 +1227,7 @@ angular.module('starter.services', [])
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, weatherData.midData.dailyData);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast);
             //console.log(shortTownWeather);
 
             /**
@@ -1181,10 +1239,11 @@ angular.module('starter.services', [])
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
-            data.dayTable = midTownWeather;
+            data.dayTable = midTownWeather.dayTable;
             data.dayChart = [{
-                values: midTownWeather,
-                temp: currentForecast.t1h
+                values: midTownWeather.dayTable,
+                temp: currentForecast.t1h,
+                displayItemCount: midTownWeather.displayItemCount
             }];
 
             return data;
@@ -1222,9 +1281,10 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('Util', function ($window, $cordovaGoogleAnalytics) {
+    .factory('Util', function ($window) {
         var obj = {};
         var debug = true;
+        var gaArray = [];
 
         //region Function
 
@@ -1239,60 +1299,169 @@ angular.module('starter.services', [])
         obj.ga = {
             startTrackerWithId: function (id) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.startTrackerWithId(id);
+                    return $window.analytics.startTrackerWithId(id, function(result) {
+                        console.log("startTrackerWithId success = " + result);
+                    }, function(error) {
+                        console.log("startTrackerWithId error = " + error);
+                    });
+                }
+            },
+            setAllowIDFACollection: function (enable) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAllowIDFACollection(enable, function(result) {
+                        console.log("setAllowIDFACollection success = " + result);
+                    }, function(error) {
+                        console.log("setAllowIDFACollection error = " + error);
+                    });
                 }
             },
             setUserId: function (id) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.setUserId(id);
+                    return $window.analytics.setUserId(id, function(result) {
+                        console.log("setUserId success = " + result);
+                    }, function(error) {
+                        console.log("setUserId error = " + error);
+                    });
+                }
+            },
+            setAnonymizeIp: function (anonymize) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAnonymizeIp(anonymize, function(result) {
+                        console.log("setAnonymizeIp success = " + result);
+                    }, function(error) {
+                        console.log("setAnonymizeIp error = " + error);
+                    });
+                }
+            },
+            setAppVersion: function (version) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAppVersion(version, function(result) {
+                        console.log("setAppVersion success = " + result);
+                    }, function(error) {
+                        console.log("setAppVersion error = " + error);
+                    });
                 }
             },
             debugMode: function () {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.debugMode();
+                    return $window.analytics.debugMode(function(result) {
+                        console.log("debugMode success = " + result);
+                    }, function(error) {
+                        console.log("debugMode error = " + error);
+                    });
                 }
             },
-            trackView: function (screenName) {
+            trackMetric: function (key, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackView(screenName);
+                    return $window.analytics.trackMetric(key, value, function(result) {
+                        console.log("trackMetric success = " + result);
+                    }, function(error) {
+                        console.log("trackMetric error = " + error);
+                    });
+                }
+            },
+            trackView: function (screenName, campaingUrl) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.trackView(screenName, campaingUrl, function(result) {
+                        console.log("trackView success = " + result);
+                    }, function(error) {
+                        console.log("trackView error = " + error);
+                        gaArray.push(["trackView", screenName, campaingUrl]);
+                    });
+                } else {
+                    console.log("trackView undefined");
+                    gaArray.push(["trackView", screenName, campaingUrl]);
                 }
             },
             addCustomDimension: function (key, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addCustomDimension(key, value);
+                    return $window.analytics.addCustomDimension(key, value, function(result) {
+                        console.log("addCustomDimension success = " + result);
+                    }, function(error) {
+                        console.log("addCustomDimension error = " + error);
+                    });
                 }
             },
             trackEvent: function (category, action, label, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackEvent(category, action, label, value);
+                    return $window.analytics.trackEvent(category, action, label, value, function(result) {
+                        console.log("trackEvent success = " + result);
+                    }, function(error) {
+                        console.log("trackEvent error = " + error);
+                        gaArray.push(["trackEvent", category, action, label, value]);
+                    });
+                } else {
+                    console.log("trackEvent undefined");
+                    gaArray.push(["trackEvent", category, action, label, value]);
                 }
             },
             trackException: function (description, fatal) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackException(description, fatal);
+                    return $window.analytics.trackException(description, fatal, function(result) {
+                        console.log("trackException success = " + result);
+                    }, function(error) {
+                        console.log("trackException error = " + error);
+                        gaArray.push(["trackException", description, fatal]);
+                    });
+                } else {
+                    console.log("trackException undefined");
+                    gaArray.push(["trackException", description, fatal]);
                 }
             },
             trackTiming: function (category, milliseconds, variable, label) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackTiming(category, milliseconds, variable, label);
+                    return $window.analytics.trackTiming(category, milliseconds, variable, label, function(result) {
+                        console.log("trackTiming success = " + result);
+                    }, function(error) {
+                        console.log("trackTiming error = " + error);
+                    });
                 }
             },
             addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode);
+                    return $window.analytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
+                        console.log("addTransaction success = " + result);
+                    }, function(error) {
+                        console.log("addTransaction error = " + error);
+                    });
                 }
             },
             addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode);
+                    return $window.analytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
+                        console.log("addTransactionItem success = " + result);
+                    }, function(error) {
+                        console.log("addTransactionItem error = " + error);
+                    });
                 }
+            },
+            enableUncaughtExceptionReporting: function (enable) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.enableUncaughtExceptionReporting(enable, function(result) {
+                        console.log("enableUncaughtExceptionReporting success = " + result);
+                    }, function(error) {
+                        console.log("enableUncaughtExceptionReporting error = " + error);
+                    });
+                }
+            },
+            platformReady: function() {
+                if (typeof $window.analytics !== "undefined") {
+                    for (var i = 0; i < gaArray.length; i++) {
+                        if (gaArray[i][0] === "trackView") {
+                            this.trackView(gaArray[i][1]);
+                        } else if (gaArray[i][0] === "trackEvent") {
+                            this.trackEvent(gaArray[i][1], gaArray[i][2], gaArray[i][3], gaArray[i][4]);
+                        }
+                    }
+                }
+                gaArray = [];
             }
         };
 
         //endregion
 
-        obj.imgPath = 'img/weatherIcon';
-        obj.version = '0.8.3'; // sync with config.xml
+        obj.imgPath = 'img/weatherIcon2-color';
+        obj.version = '';
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1301,7 +1470,7 @@ angular.module('starter.services', [])
         obj.googleSenderId = '';
 
         if (debug) {
-            //obj.url = "./";
+            //obj.url = "/v000705";
             //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
             obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
         }
@@ -1311,8 +1480,26 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .run(function(WeatherInfo) {
+    .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
-        WeatherInfo.updateCities(0);
+        $ionicPlatform.on('resume', function(){
+            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                $rootScope.$broadcast('reloadEvent', 'resume');
+            }
+        });
+        $ionicPlatform.ready(function() {
+            console.log("UA:"+ionic.Platform.ua);
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+            if (window.cordova && cordova.getAppVersion) {
+                cordova.getAppVersion.getVersionNumber().then(function (version) {
+                    Util.version = version;
+                });
+            }
+
+        });
+
     });

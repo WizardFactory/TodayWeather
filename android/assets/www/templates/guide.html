@@ -7,7 +7,7 @@ navigation history that also transitions its views in and out.
     <ion-content scroll="false" style="background-color: #03A9F4; color: white">
         <ion-slide-box on-slide-changed="onSlideChanged(index)" style="height: 100%;">
             <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-01.png);">
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(1)+')'}">
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
                     <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">어제보다 오늘은</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">그래프로 한눈에 어제와 비교하세요</p>
@@ -15,7 +15,7 @@ navigation history that also transitions its views in and out.
                 </div>
             </ion-slide>
             <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-02.png);">
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(2)+')'}">
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
                     <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">지난주부터 다음 주까지</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">한 주의 변화를 확인하세요</p>
@@ -23,7 +23,7 @@ navigation history that also transitions its views in and out.
                 </div>
             </ion-slide>
             <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-04.png);">
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(4)+')'}">
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
                     <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">알람설정</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">자주 보는 도시에 알람을 설정하고,</p>
@@ -31,15 +31,7 @@ navigation history that also transitions its views in and out.
                 </div>
             </ion-slide>
             <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-03.png);">
-                    <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
-                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">중요한 것만</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">미세 먼지부터, 생활 지수까지</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">중요한 것만 보이도록 했어요</p>
-                </div>
-            </ion-slide>
-            <ion-slide>
-                <div class="guide-content" style="background-image: url(img/guide-05.png);">
+                <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(5)+')'}">
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
                     <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">손쉬운 이동</p>
                     <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">시간별,요일별,상세 날씨는</p>

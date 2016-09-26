@@ -348,13 +348,23 @@ angular.module('controller.purchase', [])
         });
 
         $ionicPlatform.ready(function() {
+            var expirationDate = new Date(Purchase.expirationDate);
+            var showRenewDate = new Date();
+
             //for fast close ads when first loading
             TwAds.setShowAds(false);
             $scope.accountLevel = Purchase.accountLevel;
-            $scope.expirationDate = (new Date(Purchase.expirationDate)).toLocaleDateString();
+            $scope.expirationDate = expirationDate.toLocaleDateString();
 
             //Todo: check expire date for ios, check autoRenewing and expire date for android
-            $scope.showRenew = false;
+            showRenewDate.setMonth(showRenewDate.getMonth()+3);
+
+            if (expirationDate.getTime() <= showRenewDate.getTime()) {
+                $scope.showRenew = true;
+            }
+            else {
+                $scope.showRenew = false;
+            }
 
             if (!window.inAppPurchase) {
                 //for develop mode

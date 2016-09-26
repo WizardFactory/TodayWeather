@@ -22,14 +22,15 @@
         <div class="list list-inset" ng-if="searchWord===undefined">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
-                    <div class="col search-item" ng-click="OnSelectCity($index)" >
-                        {{city.address[0]}}<br>{{city.address[1]}}
-                        <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
+                    <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
+                        <p style="color: white; opacity: 0.84; font-size: inherit">{{city.address[0]}}<br>{{city.address[1]}}
+                            <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
+                        </p>
                     </div>
-                    <div class="col search-item" ng-click="OnSelectCity($index)">
+                    <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">
                         <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
                     </div>
-                    <div class="col search-item" style="text-align: center" ng-click="OnSelectCity($index)">
+                    <div class="search-item" style="text-align: center;" ng-click="OnSelectCity($index)">
                         {{city.t1h}}˚<br>
                         <span style="font-size: 12px;">{{city.tmn}}˚/{{city.tmx}}˚</span>
                     </div>

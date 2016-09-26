@@ -1,6 +1,6 @@
 angular.module('starter.services', [])
 
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, Util) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -223,6 +223,7 @@ angular.module('starter.services', [])
 
             if (items === null) {
                 createCity();
+                Util.ga.trackEvent('app', 'user', 'new');
             } else {
                 items.forEach(function (item) {
                     createCity(item);
@@ -233,6 +234,7 @@ angular.module('starter.services', [])
                         that._saveCitiesPreference(items);
                     }
                 });
+                Util.ga.trackEvent('app', 'user', 'returning', that.getCityCount());
             }
 
             // load last cityIndex
@@ -257,7 +259,7 @@ angular.module('starter.services', [])
             console.log('save preference plist='+JSON.stringify(pList));
 
             $ionicPlatform.ready(function() {
-                if (plugins.appPreferences == undefined) {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
                     return;
                 }
@@ -276,7 +278,7 @@ angular.module('starter.services', [])
 
         obj._loadCitiesPreference = function (callback) {
             $ionicPlatform.ready(function() {
-                if (plugins.appPreferences == undefined) {
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
                     return;
                 }
@@ -377,26 +379,6 @@ angular.module('starter.services', [])
             }
 
             return skyIconName;
-        }
-
-        /**
-         *
-         * @param dailyInfoList
-         * @param date
-         * @returns {*}
-         */
-        function getDayInfo(dailyInfoList, date) {
-            if (dailyInfoList.length === 0) {
-                return undefined;
-            }
-
-            for (var i = 0; i < dailyInfoList.length; i++) {
-                if (dailyInfoList[i].date === date) {
-                    return dailyInfoList[i];
-                }
-            }
-
-            return undefined;
         }
 
         /**
@@ -665,11 +647,9 @@ angular.module('starter.services', [])
         /**
          * @param {Object[]} shortForecastList
          * @param {Object} currentForecast
-         * @param {Date} current
-         * @param {Object[]} dailyInfoList midData.dailyData
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        obj.parseShortTownWeather = function (shortForecastList, currentForecast, current, dailyInfoList) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast) {
             var data = [];
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
@@ -724,21 +704,24 @@ angular.module('starter.services', [])
                 }
 
                 var tmpDisplayCount = 0;
-                if (tempObject.skyIcon != undefined) {
-                        tmpDisplayCount++;
-                }
-                if (tempObject.pop && tempObject.pop > 0) {
-                    tmpDisplayCount++;
-                }
-                if (displayItemCount == 2) {
-                    if ((tempObject.rn1 && tempObject.rn1 > 0)
-                        || (tempObject.r06 && tempObject.r06 > 0)
-                        || (tempObject.s06 && tempObject.s06 > 0)) {
+                //data on chart from yesterday
+                if (diffDays > -2) {
+                    if (tempObject.skyIcon != undefined) {
                         tmpDisplayCount++;
                     }
-                }
-                if (tmpDisplayCount > displayItemCount) {
-                    displayItemCount = tmpDisplayCount;
+                    if (tempObject.pop && tempObject.pop > 0) {
+                        tmpDisplayCount++;
+                    }
+                    if (displayItemCount == 2) {
+                        if ((tempObject.rn1 && tempObject.rn1 > 0)
+                            || (tempObject.r06 && tempObject.r06 > 0)
+                            || (tempObject.s06 && tempObject.s06 > 0)) {
+                            tmpDisplayCount++;
+                        }
+                    }
+                    if (tmpDisplayCount > displayItemCount) {
+                        displayItemCount = tmpDisplayCount;
+                    }
                 }
 
                 data.push(tempObject);
@@ -1108,18 +1091,35 @@ angular.module('starter.services', [])
          */
         obj.getAddressFromGeolocation = function (lat, long) {
             var deferred = $q.defer();
+            var startTime = new Date().getTime();
+            var endTime;
 
             getAddressFromDaum(lat, long).then(function(address) {
-
                 console.log(address);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackEvent('data', 'get', 'daum address', endTime - startTime);
+
                 deferred.resolve(address);
             }, function (err) {
-
                 console.log(err);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackEvent('data error', 'get', 'daum address', endTime - startTime);
+
+                startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
                     console.log(address);
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackEvent('data', 'get', 'google address', endTime - startTime);
+
                     deferred.resolve(address);
                 }, function (err) {
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackEvent('data error', 'get', 'google address', endTime - startTime);
+
                     deferred.reject(err);
                 });
             });
@@ -1131,6 +1131,8 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
 
             ionic.Platform.ready(function() {
+                var startTime = new Date().getTime();
+                var endTime;
                 navigator.geolocation.getCurrentPosition(function (position) {
                     //경기도,광주시,오포읍,37.36340556,127.2307667
                     //deferred.resolve({latitude: 37.363, longitude: 127.230});
@@ -1138,30 +1140,51 @@ angular.module('starter.services', [])
                     //37.472595, 126.795249
                     //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
                     //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                    //서울특별시
+                    //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                    //경기 수원시 영통구 광교1동
+                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
+                    Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
 
                     deferred.resolve(position.coords);
                 }, function (error) {
                     console.log("Fail to get current position from navigator");
                     console.log(error.message);
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
+                    Util.ga.trackEvent('data error', 'get', 'position', endTime - startTime);
 
                     if (ionic.Platform.isAndroid() && window.cordova) {
                         var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
+                        startTime = new Date().getTime();
                         orgGeo.getCurrentPosition(function (position) {
                                 //console.log('native geolocation');
                                 //console.log(position);
+
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
+                                Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
+
                                 deferred.resolve(position.coords);
                             },
                             function (error) {
                                 console.log("Fail to get current position from native");
                                 console.log(error.message);
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
+                                Util.ga.trackEvent('data error', 'get', 'native position', endTime - startTime);
+
                                 deferred.reject();
                             }, {timeout: 5000});
                     }
                     else {
                         deferred.reject();
                     }
-                }, {timeout: 3000});
+                }, {maximumAge: 3000, timeout: 3000});
             });
 
             return deferred.promise;
@@ -1177,20 +1200,8 @@ angular.module('starter.services', [])
             var that = this;
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
-
-            var town = towns.filter(function (town) {
-                return !!(town.first === townAddress.first && town.second === townAddress.second
-                && town.third === townAddress.third);
-            })[0];
-
-            if (town === undefined) {
-                var deferred = $q.defer();
-                deferred.reject("address is empty");
-                return deferred.promise;
-            }
-
             var promises = [];
-            promises.push(getTownWeatherInfo(town));
+            promises.push(getTownWeatherInfo(townAddress));
 
             return $q.all(promises);
         };
@@ -1216,7 +1227,7 @@ angular.module('starter.services', [])
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, currentTime, weatherData.midData.dailyData);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast);
             //console.log(shortTownWeather);
 
             /**
@@ -1270,9 +1281,10 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('Util', function ($window, $cordovaGoogleAnalytics) {
+    .factory('Util', function ($window) {
         var obj = {};
         var debug = true;
+        var gaArray = [];
 
         //region Function
 
@@ -1287,60 +1299,169 @@ angular.module('starter.services', [])
         obj.ga = {
             startTrackerWithId: function (id) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.startTrackerWithId(id);
+                    return $window.analytics.startTrackerWithId(id, function(result) {
+                        console.log("startTrackerWithId success = " + result);
+                    }, function(error) {
+                        console.log("startTrackerWithId error = " + error);
+                    });
+                }
+            },
+            setAllowIDFACollection: function (enable) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAllowIDFACollection(enable, function(result) {
+                        console.log("setAllowIDFACollection success = " + result);
+                    }, function(error) {
+                        console.log("setAllowIDFACollection error = " + error);
+                    });
                 }
             },
             setUserId: function (id) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.setUserId(id);
+                    return $window.analytics.setUserId(id, function(result) {
+                        console.log("setUserId success = " + result);
+                    }, function(error) {
+                        console.log("setUserId error = " + error);
+                    });
+                }
+            },
+            setAnonymizeIp: function (anonymize) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAnonymizeIp(anonymize, function(result) {
+                        console.log("setAnonymizeIp success = " + result);
+                    }, function(error) {
+                        console.log("setAnonymizeIp error = " + error);
+                    });
+                }
+            },
+            setAppVersion: function (version) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.setAppVersion(version, function(result) {
+                        console.log("setAppVersion success = " + result);
+                    }, function(error) {
+                        console.log("setAppVersion error = " + error);
+                    });
                 }
             },
             debugMode: function () {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.debugMode();
+                    return $window.analytics.debugMode(function(result) {
+                        console.log("debugMode success = " + result);
+                    }, function(error) {
+                        console.log("debugMode error = " + error);
+                    });
                 }
             },
-            trackView: function (screenName) {
+            trackMetric: function (key, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackView(screenName);
+                    return $window.analytics.trackMetric(key, value, function(result) {
+                        console.log("trackMetric success = " + result);
+                    }, function(error) {
+                        console.log("trackMetric error = " + error);
+                    });
+                }
+            },
+            trackView: function (screenName, campaingUrl) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.trackView(screenName, campaingUrl, function(result) {
+                        console.log("trackView success = " + result);
+                    }, function(error) {
+                        console.log("trackView error = " + error);
+                        gaArray.push(["trackView", screenName, campaingUrl]);
+                    });
+                } else {
+                    console.log("trackView undefined");
+                    gaArray.push(["trackView", screenName, campaingUrl]);
                 }
             },
             addCustomDimension: function (key, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addCustomDimension(key, value);
+                    return $window.analytics.addCustomDimension(key, value, function(result) {
+                        console.log("addCustomDimension success = " + result);
+                    }, function(error) {
+                        console.log("addCustomDimension error = " + error);
+                    });
                 }
             },
             trackEvent: function (category, action, label, value) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackEvent(category, action, label, value);
+                    return $window.analytics.trackEvent(category, action, label, value, function(result) {
+                        console.log("trackEvent success = " + result);
+                    }, function(error) {
+                        console.log("trackEvent error = " + error);
+                        gaArray.push(["trackEvent", category, action, label, value]);
+                    });
+                } else {
+                    console.log("trackEvent undefined");
+                    gaArray.push(["trackEvent", category, action, label, value]);
                 }
             },
             trackException: function (description, fatal) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackException(description, fatal);
+                    return $window.analytics.trackException(description, fatal, function(result) {
+                        console.log("trackException success = " + result);
+                    }, function(error) {
+                        console.log("trackException error = " + error);
+                        gaArray.push(["trackException", description, fatal]);
+                    });
+                } else {
+                    console.log("trackException undefined");
+                    gaArray.push(["trackException", description, fatal]);
                 }
             },
             trackTiming: function (category, milliseconds, variable, label) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.trackTiming(category, milliseconds, variable, label);
+                    return $window.analytics.trackTiming(category, milliseconds, variable, label, function(result) {
+                        console.log("trackTiming success = " + result);
+                    }, function(error) {
+                        console.log("trackTiming error = " + error);
+                    });
                 }
             },
             addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode);
+                    return $window.analytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
+                        console.log("addTransaction success = " + result);
+                    }, function(error) {
+                        console.log("addTransaction error = " + error);
+                    });
                 }
             },
             addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
                 if (typeof $window.analytics !== "undefined") {
-                    return $cordovaGoogleAnalytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode);
+                    return $window.analytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
+                        console.log("addTransactionItem success = " + result);
+                    }, function(error) {
+                        console.log("addTransactionItem error = " + error);
+                    });
                 }
+            },
+            enableUncaughtExceptionReporting: function (enable) {
+                if (typeof $window.analytics !== "undefined") {
+                    return $window.analytics.enableUncaughtExceptionReporting(enable, function(result) {
+                        console.log("enableUncaughtExceptionReporting success = " + result);
+                    }, function(error) {
+                        console.log("enableUncaughtExceptionReporting error = " + error);
+                    });
+                }
+            },
+            platformReady: function() {
+                if (typeof $window.analytics !== "undefined") {
+                    for (var i = 0; i < gaArray.length; i++) {
+                        if (gaArray[i][0] === "trackView") {
+                            this.trackView(gaArray[i][1]);
+                        } else if (gaArray[i][0] === "trackEvent") {
+                            this.trackEvent(gaArray[i][1], gaArray[i][2], gaArray[i][3], gaArray[i][4]);
+                        }
+                    }
+                }
+                gaArray = [];
             }
         };
 
         //endregion
 
         obj.imgPath = 'img/weatherIcon2-color';
-        obj.version = '0.9.5'; // sync with config.xml
+        obj.version = '';
         obj.guideVersion = 1.0;
         obj.admobIOSBannerAdUnit = '';
         obj.admobIOSInterstitialAdUnit = '';
@@ -1359,7 +1480,26 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .run(function(WeatherInfo) {
+    .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
+        $ionicPlatform.on('resume', function(){
+            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                $rootScope.$broadcast('reloadEvent', 'resume');
+            }
+        });
+        $ionicPlatform.ready(function() {
+            console.log("UA:"+ionic.Platform.ua);
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+            if (window.cordova && cordova.getAppVersion) {
+                cordova.getAppVersion.getVersionNumber().then(function (version) {
+                    Util.version = version;
+                });
+            }
+
+        });
+
     });

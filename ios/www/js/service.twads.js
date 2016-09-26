@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, $cordovaNetwork) {
+    .factory('TwAds', function($rootScope, Util) {
         var obj = {};
         //상태 천이 변경 개선 필요
         obj.enableAds;
@@ -83,6 +83,15 @@ angular.module('service.twads', [])
                 return;
             }
 
+            function isOnline() {
+                if (navigator.connection == undefined) {
+                    console.log("cordova-plugin-network-information plugin is not working");
+                    return true;
+                }
+                var networkState = navigator.connection.type;
+                return networkState !== Connection.UNKNOWN && networkState !== Connection.NONE;
+            }
+
             if (enable === false) {
                 obj.setShowAds(false);
                 AdMob.removeBanner(function () {
@@ -95,14 +104,16 @@ angular.module('service.twads', [])
                 obj.enableAds = enable;
                 obj.bannerCreated = false;
                 _setLayout(enable);
+                Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
                 obj.enableAds = enable;
                 _setLayout(enable);
                 //hangup on android sdk 4.4.x
-                if ($cordovaNetwork.isOnline()) {
+                if (isOnline()) {
                    obj._admobCreateBanner();
                 }
+                Util.ga.trackEvent('app', 'account', 'free');
             }
         };
 
@@ -185,11 +196,12 @@ angular.module('service.twads', [])
                 TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
             }
 
+            //android에서 custom size가 안됨.
             AdMob.setOptions({
                 adSize:         'BANNER',
                 overlap:        true,
                 isTesting:      Util.isDebug(),
-                autoShow:       false,
+                autoShow:       false
             }, function () {
                 console.log('Set options of Ad mob');
                 TwAds.loadTwAdsInfo();
