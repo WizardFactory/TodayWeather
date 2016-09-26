@@ -1142,6 +1142,8 @@ angular.module('starter.services', [])
                     //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
                     //서울특별시
                     //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                    //경기 수원시 영통구 광교1동
+                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
 
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
@@ -1198,20 +1200,8 @@ angular.module('starter.services', [])
             var that = this;
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
-
-            var town = towns.filter(function (town) {
-                return !!(town.first === townAddress.first && town.second === townAddress.second
-                && town.third === townAddress.third);
-            })[0];
-
-            if (town === undefined) {
-                var deferred = $q.defer();
-                deferred.reject("address is empty");
-                return deferred.promise;
-            }
-
             var promises = [];
-            promises.push(getTownWeatherInfo(town));
+            promises.push(getTownWeatherInfo(townAddress));
 
             return $q.all(promises);
         };
