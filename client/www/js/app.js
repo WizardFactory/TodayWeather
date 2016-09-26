@@ -46,8 +46,18 @@ angular.module('starter', [
             Util.ga.enableUncaughtExceptionReporting(true);
             Util.ga.setAllowIDFACollection(true);
 
+            console.log("UA:"+ionic.Platform.ua);
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
             Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
-            Util.ga.trackEvent('app', 'version', Util.version);
+            if (window.cordova && cordova.getAppVersion) {
+                cordova.getAppVersion.getVersionNumber().then(function (version) {
+                    Util.version = version;
+                    Util.ga.trackEvent('app', 'version', Util.version);
+                });
+            }
             Util.ga.platformReady();
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
