@@ -107,15 +107,6 @@ module.exports = [
         ]
     },
     {
-        "file": "plugins/cordova-plugin-google-analytics/www/analytics.js",
-        "id": "cordova-plugin-google-analytics.UniversalAnalytics",
-        "pluginId": "cordova-plugin-google-analytics",
-        "clobbers": [
-            "analytics",
-            "ga"
-        ]
-    },
-    {
         "file": "plugins/phonegap-plugin-push/www/push.js",
         "id": "phonegap-plugin-push.PushNotification",
         "pluginId": "phonegap-plugin-push",
@@ -163,6 +154,15 @@ module.exports = [
         "clobbers": [
             "cordova.getAppVersion"
         ]
+    },
+    {
+        "file": "plugins/cordova-plugin-google-analytics/www/analytics.js",
+        "id": "cordova-plugin-google-analytics.UniversalAnalytics",
+        "pluginId": "cordova-plugin-google-analytics",
+        "clobbers": [
+            "analytics",
+            "ga"
+        ]
     }
 ];
 module.exports.metadata = 
@@ -179,13 +179,13 @@ module.exports.metadata =
     "cordova-plugin-x-socialsharing": "5.1.3",
     "cordova-plugin-inapppurchase": "1.0.0",
     "cordova-plugin-whitelist": "1.3.0",
-    "cordova-plugin-google-analytics": "1.6.0",
     "phonegap-plugin-push": "1.8.2",
     "cordova-plugin-extension": "1.5.1",
     "cordova-plugin-admobpro": "2.20.1",
     "cordova-plugin-network-information": "1.3.0",
     "cordova-plugin-app-preferences": "0.99.2",
-    "cordova-plugin-app-version": "0.1.9"
+    "cordova-plugin-app-version": "0.1.9",
+    "cordova-plugin-google-analytics": "1.6.0"
 }
 // BOTTOM OF METADATA
 });

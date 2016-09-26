@@ -16,6 +16,11 @@
     <string>net.wizardfactory.todayweather</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+      <string>en</string>
+      <string>ko</string>
+    </array>
     <key>CFBundleName</key>
     <string>${PRODUCT_NAME}</string>
     <key>CFBundlePackageType</key>
@@ -24,6 +29,17 @@
     <string>0.9.10</string>
     <key>CFBundleSignature</key>
     <string>????</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>net.wizardfactory.todayweather</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>todayweather</string>
+        </array>
+      </dict>
+    </array>
     <key>CFBundleVersion</key>
     <string>0.9.10</string>
     <key>LSRequiresIPhoneOS</key>
@@ -32,6 +48,14 @@
     <string/>
     <key>NSMainNibFile~ipad</key>
     <string/>
+    <key>UIInterfaceOrientation</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleLightContent</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
@@ -42,22 +66,11 @@
       <string>UIInterfaceOrientationPortrait</string>
       <string>UIInterfaceOrientationPortraitUpsideDown</string>
     </array>
-    <key>UIRequiresFullScreen</key>
-    <true/>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
       <true/>
     </dict>
-    <key>UIInterfaceOrientation</key>
-    <array>
-      <string>UIInterfaceOrientationPortrait</string>
-    </array>
-    <key>CFBundleLocalizations</key>
-    <array>
-      <string>en</string>
-      <string>ko</string>
-    </array>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string/>
     <key>UIBackgroundModes</key>
