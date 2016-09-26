@@ -96,6 +96,14 @@ static char coldstartKey;
     [pushHandler didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
+- (void) application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
+    NSLog(@"clicked on the shade");
+    PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
+    pushHandler.notificationMessage = userInfo;
+    pushHandler.isInline = NO;
+    [pushHandler notificationReceived];
+}
+
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"didReceiveNotification with fetchCompletionHandler");
 
@@ -202,7 +210,7 @@ forRemoteNotification: (NSDictionary *) notification completionHandler: (void (^
 
     NSLog(@"Push Plugin handleActionWithIdentifier %@", identifier);
     NSMutableDictionary *userInfo = [notification mutableCopy];
-    [userInfo setObject:identifier forKey:@"callback"];
+    [userInfo setObject:identifier forKey:@"actionCallback"];
     NSLog(@"Push Plugin userInfo %@", userInfo);
 
     if (application.applicationState == UIApplicationStateActive) {
