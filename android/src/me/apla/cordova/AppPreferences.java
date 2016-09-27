@@ -10,7 +10,6 @@ import org.json.JSONObject;
 import org.json.JSONStringer;
 import org.json.JSONTokener;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -28,20 +27,9 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 	private static CordovaWebView cdvWebView;
 	private static boolean watchChanges = false;
 
-	// useful info about default values: http://codetheory.in/saving-user-settings-with-android-preferences/
 	@Override
 	protected void pluginInitialize() {
 		cdvWebView = this.webView;
-
-		Context context = cordova.getActivity().getApplicationContext();
-
-		String packageName = context.getPackageName();
-
-		int resId = context.getResources().getIdentifier("apppreferences", "xml", packageName);
-
-		if (resId > 0) {
-			PreferenceManager.setDefaultValues(context, resId, false);
-		}
 	}
 
 	public void onSharedPreferenceChanged (SharedPreferences sharedPreferences, final String key) {
@@ -53,10 +41,6 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 		//	}
 		//});
 	}
-
-	// TODO:
-	// cloud sync example: https://developers.google.com/games/services/android/savedgames
-	// real project: https://github.com/takahirom/WearSharedPreferences/blob/master/wear-shared-preferences/src/main/java/com/kogitune/wearsharedpreference/PreferencesSaveService.java
 
 	@Override
 	public void onResume(boolean multitasking) {
@@ -76,59 +60,49 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 	public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
 		//        String result = "";
 
-		JSONObject options = new JSONObject();
-		if (args.length() > 0)
-			options = args.optJSONObject (0);
-
-		String suiteName = options.optString("suiteName", null);
-
-		SharedPreferences sharedPrefs;
-		if (suiteName != null && suiteName != "") {
-			sharedPrefs = cordova.getActivity().getSharedPreferences(suiteName, Context.MODE_PRIVATE);
-		} else {
-			sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
-		}
-
 		if (action.equals ("show")) {
 			return this.showPreferencesActivity(callbackContext);
 		} else if (action.equals("clearAll")) {
-			return this.clearAll(sharedPrefs, callbackContext);
+			return this.clearAll(callbackContext);
 		} else if (action.equals("watch")) {
-			watchChanges = options.optBoolean("subscribe", true);
-
-			if (!watchChanges) {
-				this.onPause(false);
+			if (args.length() == 1) {
+				watchChanges = args.getBoolean(0);
+				if (!watchChanges) {
+					this.onPause(false);
+				} else {
+					this.onResume(false);
+				}
 			} else {
-				this.onResume(false);
+				watchChanges = true;
 			}
-
 			callbackContext.success();
 			return true;
 		}
 
+		JSONObject options = args.getJSONObject (0);
 		String key    = options.getString("key");
 		String dict   = options.optString("dict");
-
+		String type   = options.optString("type");
 		if (!"".equals(dict))
 			key = dict + '.' + key;
 		// Log.d ("", "key is " + key);
 
 
 		if (action.equals("fetch")) {
-			return this.fetchValueByKey(sharedPrefs, key, callbackContext);
+			return this.fetchValueByKey(key, callbackContext);
 		} else if (action.equals("store")) {
 			String value  = options.getString("value");
-			String type   = options.optString("type");
-			return this.storeValueByKey(sharedPrefs, key, type, value, callbackContext);
+			return this.storeValueByKey(key, type, value, callbackContext);
 		} else if (action.equals("remove")) {
-			return this.removeValueByKey(sharedPrefs, key, callbackContext);
+			return this.removeValueByKey(key, callbackContext);
 		}
 		// callbackContext.sendPluginResult(new PluginResult (PluginResult.Status.JSON_EXCEPTION));
 		return false;
 	}
 
-	private boolean clearAll (final SharedPreferences sharedPrefs, final CallbackContext callbackContext) {
+	private boolean clearAll (final CallbackContext callbackContext) {
 		cordova.getThreadPool().execute(new Runnable() {public void run() {
+			SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
 
 			Editor editor = sharedPrefs.edit();
 			editor.clear();
@@ -146,36 +120,6 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 		}});
 		return true;
 	}
-
-	/*
-	private boolean getKeys (final SharedPreferences sharedPrefs, final CallbackContext callbackContext) {
-		cordova.getThreadPool().execute(new Runnable() {public void run() {
-
-			Map<String,?> keys = prefs.getAll();
-
-			String keysJSONArray = null;
-			try {
-				JSONStringer jsonArray = new JSONStringer ().array ();
-
-				for (Map.Entry<String,?> entry : keys.entrySet ()) {
-					jsonArray.value (entry.getKey ());
-				}
-
-				String keysJSONArray = jsonArray.endArray ().toString ();
-
-			} catch (JSONException e) {
-
-				e.printStackTrace ();
-				callbackContext.error (0);
-				return;
-			}
-
-			callbackContext.success(keysJSONArray);
-
-		}});
-		return true;
-	}
-	*/
 
 	private boolean showPreferencesActivity (final CallbackContext callbackContext) {
 		cordova.getThreadPool().execute(new Runnable() {public void run() {
@@ -197,9 +141,10 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 		return true;
 	}
 
-	private boolean fetchValueByKey(final SharedPreferences sharedPrefs, final String key, final CallbackContext callbackContext) {
+	private boolean fetchValueByKey(final String key, final CallbackContext callbackContext) {
 		cordova.getThreadPool().execute(new Runnable() {public void run() {
 
+			SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
 			String returnVal = null;
 			if (sharedPrefs.contains(key)) {
 				Object obj = sharedPrefs.getAll().get(key);
@@ -244,8 +189,10 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 		return true;
 	}
 
-	private boolean removeValueByKey(final SharedPreferences sharedPrefs, final String key, final CallbackContext callbackContext) {
+	private boolean removeValueByKey(final String key, final CallbackContext callbackContext) {
 		cordova.getThreadPool().execute(new Runnable() { public void run() {
+
+			SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
 
 			if (sharedPrefs.contains(key)) {
 				Editor editor = sharedPrefs.edit();
@@ -273,8 +220,10 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 		return true;
 	}
 
-	private boolean storeValueByKey(final SharedPreferences sharedPrefs, final String key, final String type, final String value, final CallbackContext callbackContext) {
+	private boolean storeValueByKey(final String key, final String type, final String value, final CallbackContext callbackContext) {
 		cordova.getThreadPool().execute(new Runnable() {public void run() {
+
+			SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(cordova.getActivity());
 
 			Editor editor = sharedPrefs.edit();
 			// editor.putString(key, value);
@@ -289,7 +238,7 @@ public class AppPreferences extends CordovaPlugin implements OnSharedPreferenceC
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
+			
 			if(nv == null){
 				try {
 					callbackContext.error(createErrorObj(NULL_VALUE, "Error creating/getting json token"));

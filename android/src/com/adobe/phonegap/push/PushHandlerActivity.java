@@ -7,8 +7,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.support.v4.app.RemoteInput;
-
 
 public class PushHandlerActivity extends Activity implements PushConstants {
     private static String LOG_TAG = "PushPlugin_PushHandlerActivity";
@@ -22,10 +20,7 @@ public class PushHandlerActivity extends Activity implements PushConstants {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         GCMIntentService gcm = new GCMIntentService();
-
-        Intent intent = getIntent();
-
-        int notId = intent.getExtras().getInt(NOT_ID, 0);
+        int notId = getIntent().getExtras().getInt(NOT_ID, 0);
         Log.d(LOG_TAG, "not id = " + notId);
         gcm.setNotification(notId, "");
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -39,13 +34,13 @@ public class PushHandlerActivity extends Activity implements PushConstants {
         Log.d(LOG_TAG, "bringToForeground = " + foreground);
 
         boolean isPushPluginActive = PushPlugin.isActive();
-        boolean inline = processPushBundle(isPushPluginActive, intent);
+        processPushBundle(isPushPluginActive);
 
         finish();
 
         Log.d(LOG_TAG, "isPushPluginActive = " + isPushPluginActive);
 
-        if (!isPushPluginActive && foreground && inline) {
+        if (!isPushPluginActive && foreground) {
             Log.d(LOG_TAG, "forceMainActivityReload");
             forceMainActivityReload();
         } else {
@@ -57,27 +52,18 @@ public class PushHandlerActivity extends Activity implements PushConstants {
      * Takes the pushBundle extras from the intent,
      * and sends it through to the PushPlugin for processing.
      */
-    private boolean processPushBundle(boolean isPushPluginActive, Intent intent) {
+    private void processPushBundle(boolean isPushPluginActive) {
         Bundle extras = getIntent().getExtras();
-        Bundle remoteInput = null;
 
         if (extras != null)	{
             Bundle originalExtras = extras.getBundle(PUSH_BUNDLE);
 
             originalExtras.putBoolean(FOREGROUND, false);
             originalExtras.putBoolean(COLDSTART, !isPushPluginActive);
-            originalExtras.putString(ACTION_CALLBACK, extras.getString(CALLBACK));
-
-            remoteInput = RemoteInput.getResultsFromIntent(intent);
-            if (remoteInput != null) {
-                String inputString = remoteInput.getCharSequence(INLINE_REPLY).toString();
-                Log.d(LOG_TAG, "response: " + inputString);
-                originalExtras.putString(INLINE_REPLY, inputString);
-            }
+            originalExtras.putString(CALLBACK, extras.getString("callback"));
 
             PushPlugin.sendExtras(originalExtras);
         }
-        return remoteInput == null;
     }
 
     /**

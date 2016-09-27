@@ -121,11 +121,11 @@
                             "count": 1
                         },
                         {
-                            "xml": "<uses-permission android:name=\"${applicationId}.permission.C2D_MESSAGE\" />",
+                            "xml": "<permission android:name=\"${applicationId}.permission.C2D_MESSAGE\" android:protectionLevel=\"signature\" />",
                             "count": 1
                         },
                         {
-                            "xml": "<permission android:name=\"${applicationId}.permission.C2D_MESSAGE\" android:protectionLevel=\"signature\" />",
+                            "xml": "<uses-permission android:name=\"${applicationId}.permission.C2D_MESSAGE\" />",
                             "count": 1
                         }
                     ],
@@ -139,11 +139,11 @@
                             "count": 1
                         },
                         {
-                            "xml": "<receiver android:enabled=\"true\" android:exported=\"true\" android:name=\"com.google.android.gms.analytics.CampaignTrackingReceiver\"><intent-filter><action android:name=\"com.android.vending.INSTALL_REFERRER\" /></intent-filter></receiver>",
+                            "xml": "<receiver android:exported=\"true\" android:name=\"com.google.android.gms.analytics.CampaignTrackingReceiver\"><intent-filter><action android:name=\"com.android.vending.INSTALL_REFERRER\" /></intent-filter></receiver>",
                             "count": 1
                         },
                         {
-                            "xml": "<service android:enabled=\"true\" android:exported=\"false\" android:name=\"com.google.android.gms.analytics.CampaignTrackingService\" />",
+                            "xml": "<service android:name=\"com.google.android.gms.analytics.CampaignTrackingService\" />",
                             "count": 1
                         },
                         {
@@ -167,7 +167,7 @@
                             "count": 1
                         },
                         {
-                            "xml": "<service android:exported=\"false\" android:name=\"com.adobe.phonegap.push.RegistrationIntentService\" />",
+                            "xml": "<service android:exported=\"false\" android:name=\"com.adobe.phonegap.push.RegistrationIntentService\"></service>",
                             "count": 1
                         },
                         {
@@ -195,9 +195,6 @@
     },
     "installed_plugins": {
         "cordova-plugin-device": {
-            "PACKAGE_NAME": "net.wizardfactory.todayweather"
-        },
-        "cordova-plugin-console": {
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
         },
         "cordova-plugin-splashscreen": {
@@ -241,6 +238,9 @@
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
         },
         "cordova-plugin-network-information": {
+            "PACKAGE_NAME": "net.wizardfactory.todayweather"
+        },
+        "cordova-plugin-console": {
             "PACKAGE_NAME": "net.wizardfactory.todayweather"
         },
         "cordova-plugin-app-preferences": {
@@ -319,8 +319,7 @@
             "file": "plugins/cordova-plugin-google-analytics/www/analytics.js",
             "id": "cordova-plugin-google-analytics.UniversalAnalytics",
             "clobbers": [
-                "analytics",
-                "ga"
+                "analytics"
             ]
         },
         {
@@ -368,23 +367,23 @@
         }
     ],
     "plugin_metadata": {
-        "cordova-plugin-device": "1.1.3",
-        "cordova-plugin-console": "1.0.4",
-        "cordova-plugin-splashscreen": "4.0.0",
-        "ionic-plugin-keyboard": "2.2.1",
+        "cordova-plugin-device": "1.1.2",
+        "cordova-plugin-splashscreen": "3.2.2",
+        "ionic-plugin-keyboard": "2.2.0",
         "cordova-plugin-compat": "1.0.0",
-        "cordova-plugin-geolocation": "2.3.0",
-        "cordova-plugin-statusbar": "2.2.0",
+        "cordova-plugin-geolocation": "2.2.0",
+        "cordova-plugin-statusbar": "2.1.3",
         "cordova-plugin-inappbrowser": "1.4.0",
-        "cordova-plugin-x-socialsharing": "5.1.3",
+        "cordova-plugin-x-socialsharing": "5.1.1",
         "cordova-plugin-inapppurchase": "1.0.0",
-        "cordova-plugin-whitelist": "1.3.0",
-        "cordova-plugin-google-analytics": "1.6.0",
-        "phonegap-plugin-push": "1.8.2",
+        "cordova-plugin-whitelist": "1.2.2",
+        "cordova-plugin-google-analytics": "0.8.1",
+        "phonegap-plugin-push": "1.6.4",
         "cordova-plugin-extension": "1.5.1",
-        "cordova-plugin-admobpro": "2.20.1",
-        "cordova-plugin-network-information": "1.3.0",
-        "cordova-plugin-app-preferences": "0.99.2",
+        "cordova-plugin-admobpro": "2.17.1",
+        "cordova-plugin-network-information": "1.2.1",
+        "cordova-plugin-console": "1.0.3",
+        "cordova-plugin-app-preferences": "0.7.7",
         "cordova-plugin-app-version": "0.1.9"
     }
 }

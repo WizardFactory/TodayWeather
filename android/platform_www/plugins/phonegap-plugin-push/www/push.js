@@ -35,7 +35,7 @@ var PushNotification = function(options) {
     var success = function(result) {
         if (result && typeof result.registrationId !== 'undefined') {
             that.emit('registration', result);
-        } else if (result && result.additionalData && typeof result.additionalData.actionCallback !== 'undefined') {
+        } else if (result && result.additionalData && typeof result.additionalData.callback !== 'undefined') {
             var executeFunctionByName = function(functionName, context /*, args */) {
                 var args = Array.prototype.slice.call(arguments, 2);
                 var namespaces = functionName.split('.');
@@ -46,7 +46,7 @@ var PushNotification = function(options) {
                 return context[func].apply(context, args);
             };
 
-            executeFunctionByName(result.additionalData.actionCallback, window, result);
+            executeFunctionByName(result.additionalData.callback, window, result);
         } else if (result) {
             that.emit('notification', result);
         }
@@ -137,27 +137,6 @@ PushNotification.prototype.getApplicationIconBadgeNumber = function(successCallb
 };
 
 /**
- * Get the application icon badge
- */
-
-PushNotification.prototype.clearAllNotifications = function(successCallback, errorCallback) {
-    if (!successCallback) { successCallback = function() {}; }
-    if (!errorCallback) { errorCallback = function() {}; }
-
-    if (typeof errorCallback !== 'function')  {
-        console.log('PushNotification.clearAllNotifications failure: failure parameter not a function');
-        return;
-    }
-
-    if (typeof successCallback !== 'function') {
-        console.log('PushNotification.clearAllNotifications failure: success callback parameter must be a function');
-        return;
-    }
-
-    exec(successCallback, errorCallback, 'PushNotification', 'clearAllNotifications', []);
-};
-
-/**
  * Listen for an event.
  *
  * The following events are supported:
@@ -212,12 +191,7 @@ PushNotification.prototype.emit = function() {
     }
 
     for (var i = 0, length = this._handlers[eventName].length; i < length; i++) {
-        var callback = this._handlers[eventName][i];
-        if (typeof callback === 'function') {
-            callback.apply(undefined,args);
-        } else {
-            console.log('event handler: ' + eventName + ' must be a function');
-        }
+        this._handlers[eventName][i].apply(undefined,args);
     }
 
     return true;
