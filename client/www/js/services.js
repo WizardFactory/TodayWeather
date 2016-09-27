@@ -1105,7 +1105,11 @@ angular.module('starter.services', [])
                 console.log(err);
                 endTime = new Date().getTime();
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
-                Util.ga.trackEvent('data error', 'get', 'daum address', endTime - startTime);
+                if (err instanceof Error) {
+                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err.message + ')', endTime - startTime);
+                } else {
+                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
+                }
 
                 startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
@@ -1118,7 +1122,11 @@ angular.module('starter.services', [])
                 }, function (err) {
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
-                    Util.ga.trackEvent('data error', 'get', 'google address', endTime - startTime);
+                    if (err instanceof Error) {
+                        Util.ga.trackEvent('data error', 'get', 'google address(' + err.message + ')', endTime - startTime);
+                    } else {
+                        Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
+                    }
 
                     deferred.reject(err);
                 });
@@ -1155,7 +1163,7 @@ angular.module('starter.services', [])
                     console.log(error.message);
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data error', 'get', 'position', endTime - startTime);
+                    Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
 
                     if (ionic.Platform.isAndroid() && window.cordova) {
                         var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
@@ -1176,7 +1184,7 @@ angular.module('starter.services', [])
                                 console.log(error.message);
                                 endTime = new Date().getTime();
                                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data error', 'get', 'native position', endTime - startTime);
+                                Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
 
                                 deferred.reject();
                             }, {timeout: 5000});
