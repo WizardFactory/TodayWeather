@@ -15,7 +15,6 @@ public interface PushConstants {
     public static final String VIBRATE = "vibrate";
     public static final String ACTIONS = "actions";
     public static final String CALLBACK = "callback";
-    public static final String ACTION_CALLBACK = "actionCallback";
     public static final String DRAWABLE = "drawable";
     public static final String MSGCNT = "msgcnt";
     public static final String VIBRATION_PATTERN = "vibrationPattern";
@@ -45,7 +44,6 @@ public interface PushConstants {
     public static final String HAS_PERMISSION = "hasPermission";
     public static final String ANDROID = "android";
     public static final String SENDER_ID = "senderID";
-    public static final String CLEAR_BADGE = "clearBadge";
     public static final String CLEAR_NOTIFICATIONS = "clearNotifications";
     public static final String COLDSTART = "coldstart";
     public static final String ADDITIONAL_DATA = "additionalData";
@@ -56,10 +54,4 @@ public interface PushConstants {
     public static final String GCM = "GCM";
     public static final String CONTENT_AVAILABLE = "content-available";
     public static final String TOPICS = "topics";
-    public static final String SET_APPLICATION_ICON_BADGE_NUMBER = "setApplicationIconBadgeNumber";
-    public static final String CLEAR_ALL_NOTIFICATIONS = "clearAllNotifications";
-    public static final String VISIBILITY = "visibility";
-    public static final String INLINE_REPLY = "inlineReply";
-    public static final String LOC_KEY = "locKey";
-    public static final String LOC_DATA = "locData";
 }

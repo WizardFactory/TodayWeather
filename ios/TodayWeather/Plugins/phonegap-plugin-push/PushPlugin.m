@@ -133,7 +133,7 @@
         for (NSString *topic in topics) {
             NSLog(@"unsubscribe from topic: %@", topic);
             [pubSub unsubscribeWithToken: [self gcmRegistrationToken]
-                topic:[NSString stringWithFormat:@"/topics/%@", topic]
+                topic:topic
                 options:nil
                 handler:^void(NSError *error) {
                     if (error) {

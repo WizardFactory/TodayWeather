@@ -405,7 +405,7 @@ static NSString *const kShareOptionUrl = @"url";
     NSString* pathWithoutPrefix = [path stringByReplacingOccurrencesOfString:@"base64:" withString:@""];
     return [pathWithoutPrefix substringToIndex:[pathWithoutPrefix rangeOfString:@"//"].location];
   }
-  return [path componentsSeparatedByString: @"?"][0];
+  return path;
 }
 
 - (NSString*) getMimeTypeFromFileExtension:(NSString*)extension {
@@ -697,8 +697,7 @@ static NSString *const kShareOptionUrl = @"url";
     if ([fileName hasPrefix:@"http"]) {
       NSURL *url = [NSURL URLWithString:fileName];
       NSData *fileData = [NSData dataWithContentsOfURL:url];
-      NSString *name = (NSString*)[[fileName componentsSeparatedByString: @"/"] lastObject];
-      file = [NSURL fileURLWithPath:[self storeInFile:[name componentsSeparatedByString: @"?"][0] fileData:fileData]];
+      file = [NSURL fileURLWithPath:[self storeInFile:(NSString*)[[fileName componentsSeparatedByString: @"/"] lastObject] fileData:fileData]];
     } else if ([fileName hasPrefix:@"www/"]) {
       NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
       NSString *fullPath = [NSString stringWithFormat:@"%@/%@", bundlePath, fileName];
