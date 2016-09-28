@@ -47,8 +47,6 @@
       "locator": "phonegap-plugin-push",
       "id": "phonegap-plugin-push"
     },
-    "cordova-plugin-admobpro",
-    "cordova-plugin-network-information",
     "cordova-plugin-app-preferences",
     "cordova-plugin-app-version"
   ],

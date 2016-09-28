@@ -1471,10 +1471,10 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
-        obj.admobIOSBannerAdUnit = '';
-        obj.admobIOSInterstitialAdUnit = '';
-        obj.admobAndroidBannerAdUnit = '';
-        obj.admobAndroidInterstitialAdUnit = '';
+        obj.admobIOSBannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
+        obj.admobIOSInterstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
+        obj.admobAndroidBannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
+        obj.admobAndroidInterstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
         obj.googleSenderId = '';
 
         if (debug) {
