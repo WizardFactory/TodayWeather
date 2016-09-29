@@ -142,8 +142,6 @@ angular.module('controller.purchase', [])
     })
     .run(function($ionicPlatform, $ionicPopup, $q, Purchase) {
 
-        Purchase.loadPurchaseInfo();
-
         /**
          * check validation receipt by saved data in local storage
          */
@@ -199,6 +197,8 @@ angular.module('controller.purchase', [])
         }
 
         $ionicPlatform.ready(function() {
+
+            Purchase.loadPurchaseInfo();
 
             //check purchase state is canceled or refund
             if (Purchase.loaded) {
