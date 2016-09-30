@@ -1,11 +1,17 @@
 <ion-view hide-nav-bar="true">
     <ion-header-bar class="search-header">
-        <label class="item-input-wrapper">
-            <i class="icon ion-ios-search placeholder-icon"></i>
-            <input type="text" placeholder="도시명을 입력하세요" ng-model="searchWord" ng-change="OnChangeSearchWord()">
-        </label>
-        <a class="icon ion-ios-location-outline" ng-click="OnSearchCurrentPosition()"></a>
-        <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
+        <div class="col" style="padding: 0;background: #eee; -webkit-border-radius: 4px; border-radius: 4px;">
+            <div class="row" style="width: 100%">
+            <i class="icon ion-search placeholder-icon" style="margin-top: auto; margin-bottom: auto;"></i>
+            <input type="text" style="height: initial" placeholder="도시명을 입력하세요" ng-model="searchWord" ng-change="OnChangeSearchWord()">
+            </div>
+        </div>
+        <div>
+            <a class="icon ion-ios-location-outline" ng-click="OnSearchCurrentPosition()" style="font-size: 13dpi"></a>
+        </div>
+        <div>
+            <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
+        </div>
     </ion-header-bar>
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                  delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentBottom+'px'}">
