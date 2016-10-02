@@ -8,8 +8,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
         android:id="@+id/location"
+        android:includeFontPadding="false"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_marginLeft="4dp"
@@ -19,7 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -46,8 +48,9 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:id="@+id/date"
-                android:format24Hour="yyyy.MM.dd"
-                android:format12Hour="yyyy.MM.dd"
+                android:textSize="14dp"
+                android:format24Hour="MM.dd. E"
+                android:format12Hour="MM.dd. E"
                 android:visibility="invisible" />
 
             <RelativeLayout
@@ -59,7 +62,7 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:includeFontPadding="false"
-                    android:textSize="40sp"
+                    android:textSize="40dp"
                     android:id="@+id/time"
                     android:format24Hour="hh:mm"
                     android:format12Hour="hh:mm"
@@ -69,6 +72,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/am_pm"
+                    android:textSize="12dp"
                     android:layout_alignParentTop="true"
                     android:layout_toRightOf="@+id/time"
                     android:format24Hour="a"
@@ -88,8 +92,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
+                android:textSize="10dp"
                 android:text=""
+                android:includeFontPadding="false"
                 android:id="@+id/label_yesterday"
                 android:layout_gravity="center_horizontal" />
 
@@ -98,6 +103,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -120,8 +127,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
+                android:textSize="10dp"
                 android:text=""
+                android:includeFontPadding="false"
                 android:id="@+id/label_today"
                 android:layout_gravity="center_horizontal" />
 
@@ -130,6 +138,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -152,7 +162,8 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:text=""
                 android:id="@+id/label_tomorrow"
                 android:layout_gravity="center_horizontal" />
@@ -162,6 +173,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
 

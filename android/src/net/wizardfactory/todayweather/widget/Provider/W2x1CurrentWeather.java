@@ -34,17 +34,12 @@ public class W2x1CurrentWeather extends TwWidgetProvider {
     void resizeWidgetObjects(AppWidgetManager appWidgetManager, int appWidgetId, RemoteViews views) {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
-        if (Build.VERSION.SDK_INT >= 16) {
-            Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-            int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
-
-            if (minHeight > 100) {
-                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_SP, 24);
-                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_SP, 20);
-                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_SP, 56);
-            }
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 56);
         }
     }
 

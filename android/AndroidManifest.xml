@@ -67,5 +67,6 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/current_weather_and_three_days_info" />
         </receiver>
+        <activity android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize" android:name="com.google.android.gms.ads.AdActivity" android:theme="@android:style/Theme.Translucent" />
     </application>
 </manifest>

@@ -10,12 +10,14 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 import android.widget.Toast;
@@ -300,40 +302,82 @@ public class WidgetUpdateService extends Service {
 
         // make today, yesterday weather info class
         WidgetData wData = weatherElement.makeWidgetData();
+        Context context = getApplicationContext();
+        // input weather content to widget layout
+
+        RemoteViews views = new RemoteViews(context.getPackageName(), mLayoutId);
+
+        int opacity = WidgetProviderConfigureActivity.getWidgetOpacity(context);
+        if (opacity > -1) {
+            int color = (255*opacity/100) << 24 + 0x231f20;
+            views.setInt(R.id.bg_layout, "setBackgroundColor", color);
+        }
 
         if (mLayoutId == R.layout.w2x1_widget_layout) {
-            set2x1WidgetData(widgetId, wData);
+            set2x1WidgetData(context, views, wData);
+            Log.i("UpdateWidgetService", "set2x1WidgetData id=" + widgetId);
         }
         else if (mLayoutId == R.layout.w1x1_current_weather) {
-            set1x1WidgetData(widgetId, wData);
+            set1x1WidgetData(context, views, wData);
+            Log.i("UpdateWidgetService", "set 1x1WidgetData id=" + widgetId);
         }
         else if (mLayoutId == R.layout.w2x1_current_weather) {
-            set2x1CurrentWeather(widgetId, wData);
+            set2x1CurrentWeather(context, views, wData);
+            Log.i("UpdateWidgetService", "set 2x1 current weather id=" + widgetId);
         }
         else if (mLayoutId == R.layout.air_quality_index) {
-            setAirQualityIndex(widgetId, wData);
+            setAirQualityIndex(context, views, wData);
+            Log.i("UpdateWidgetService", "set air quality index id=" + widgetId);
         }
         else if (mLayoutId == R.layout.clock_and_current_weather) {
-            setClockAndCurrentWeather(widgetId, wData);
+            setClockAndCurrentWeather(context, views, wData);
+            Log.i("UpdateWidgetService", "set 3x1 clock and current weather id=" + widgetId);
         }
         else if (mLayoutId == R.layout.current_weather_and_three_days) {
-            setCurrentWeatherAndThreeDays(widgetId, wData);
+            setCurrentWeatherAndThreeDays(context, views, wData);
+            Log.i("UpdateWidgetService", "set 3x1 clock and current weather id=" + widgetId);
         }
         else if (mLayoutId == R.layout.daily_weather) {
-            setDailyWeather(widgetId, wData);
+            setDailyWeather(context, views, wData);
+            Log.i("UpdateWidgetService", "set 4x1 daily weather id=" + widgetId);
         }
         else if (mLayoutId == R.layout.clock_and_three_days) {
-            setClockAndThreedays(widgetId, wData);
+            setClockAndThreedays(context, views, wData);
+            Log.i("UpdateWidgetService", "set 4x1 clock and three days id=" + widgetId);
         }
+
+        // Create an Intent to launch menu
+        Intent intent = new Intent(context, WidgetMenuActivity.class);
+        intent.putExtra("LAYOUT_ID", mLayoutId);
+//            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
+
+        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
-    private void setClockAndThreedays(int widgetId, WidgetData wData) {
+    private void setClockAndThreedays(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+        }
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            views.setViewVisibility(R.id.time, View.VISIBLE);
+            views.setViewVisibility(R.id.date, View.VISIBLE);
+            views.setViewVisibility(R.id.am_pm, View.VISIBLE);
+        }
+        else {
+            views.setViewVisibility(R.id.analogClock, View.VISIBLE);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -350,6 +394,7 @@ public class WidgetUpdateService extends Service {
             views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
         }
 
+        int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
         int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
         int[] skyIds = {R.id.yesterday_sky, R.id.today_sky, R.id.tomorrow_sky};
 
@@ -366,6 +411,7 @@ public class WidgetUpdateService extends Service {
                 day_temperature += (int)dayData.getMinTemperature()+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
+                day_temperature += " ";
                 day_temperature += (int)dayData.getMaxTemperature()+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
@@ -377,25 +423,24 @@ public class WidgetUpdateService extends Service {
                 }
                 views.setImageViewResource(skyIds[i], skyResourceId);
             }
+
+            if (Build.MANUFACTURER.equals("samsung")) {
+                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+            }
         }
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 4x1 clock and three days id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
-    private void setDailyWeather(int widgetId, WidgetData wData) {
+    private void setDailyWeather(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -432,6 +477,7 @@ public class WidgetUpdateService extends Service {
                 day_temperature += (int)dayData.getMinTemperature()+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
+                day_temperature += " ";
                 day_temperature += (int)dayData.getMaxTemperature()+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
@@ -448,16 +494,12 @@ public class WidgetUpdateService extends Service {
                 SimpleDateFormat transFormat = new SimpleDateFormat("dd");
                 views.setTextViewText(labelIds[i], transFormat.format(dayData.getDate()));
             }
+
+            if (Build.MANUFACTURER.equals("samsung")) {
+                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+            }
         }
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 4x1 daily weather id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
     private String makeTmnTmxPmPpStr(WeatherData data) {
@@ -496,13 +538,20 @@ public class WidgetUpdateService extends Service {
         return today_tmn_tmx_pm_pp;
     }
 
-    private void setCurrentWeatherAndThreeDays(int widgetId, WidgetData wData) {
+    private void setCurrentWeatherAndThreeDays(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 56);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 56);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -544,6 +593,7 @@ public class WidgetUpdateService extends Service {
                 day_temperature += (int)dayData.getMinTemperature()+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
+                day_temperature += " ";
                 day_temperature += (int)dayData.getMaxTemperature()+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
@@ -555,25 +605,38 @@ public class WidgetUpdateService extends Service {
                 }
                 views.setImageViewResource(skyIds[i], skyResourceId);
             }
+
+            if (Build.MANUFACTURER.equals("samsung")) {
+                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+            }
         }
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 3x1 clock and current weather id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
-    private void setClockAndCurrentWeather(int widgetId, WidgetData wData) {
+    private void setClockAndCurrentWeather(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 52);
+        }
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            views.setViewVisibility(R.id.time, View.VISIBLE);
+            views.setViewVisibility(R.id.date, View.VISIBLE);
+            views.setViewVisibility(R.id.am_pm, View.VISIBLE);
+        }
+        else {
+            views.setViewVisibility(R.id.analogClock, View.VISIBLE);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -597,17 +660,7 @@ public class WidgetUpdateService extends Service {
             skyResourceId = R.drawable.sun;
         }
         views.setImageViewResource(R.id.current_sky, skyResourceId);
-
         views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(currentData));
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 3x1 clock and current weather id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
     /**
@@ -629,13 +682,22 @@ public class WidgetUpdateService extends Service {
         return R.drawable.ic_sentiment_very_dissatisfied_white_48dp;
     }
 
-    private void setAirQualityIndex(int widgetId, WidgetData wData) {
+    private void setAirQualityIndex(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.aqi_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+            views.setTextViewTextSize(R.id.pm10_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+            views.setTextViewTextSize(R.id.pm25_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -672,24 +734,21 @@ public class WidgetUpdateService extends Service {
         if (currentData.getPm25Str() != null) {
             views.setTextViewText(R.id.pm25_str, currentData.getPm25Str());
         }
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set air quality index id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
-    private void set2x1CurrentWeather(int widgetId, WidgetData wData) {
+    private void set2x1CurrentWeather(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 56);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), mLayoutId);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -747,15 +806,6 @@ public class WidgetUpdateService extends Service {
             today_temperature += String.valueOf((int) currentData.getMaxTemperature())+"°";
         }
         views.setTextViewText(R.id.today_temperature, today_temperature);
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 2x1 current weather id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
     private int getColorAqiGrade(int grade) {
@@ -772,13 +822,17 @@ public class WidgetUpdateService extends Service {
         return ContextCompat.getColor(mContext, android.R.color.primary_text_dark);
     }
 
-    private void set1x1WidgetData(int widgetId, WidgetData wData) {
+    private void set1x1WidgetData(Context context, RemoteViews views, WidgetData wData) {
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+        }
+
         if (wData == null) {
             Log.e("UpdateWidgetService", "weather data is NULL");
             return;
         }
-
-        RemoteViews views = new RemoteViews(mContext.getPackageName(), R.layout.w1x1_current_weather);
 
         // setting town
         if (wData.getLoc() != null) {
@@ -812,88 +866,66 @@ public class WidgetUpdateService extends Service {
         else if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
             views.setTextColor(R.id.current_pm, getColorAqiGrade(currentData.getPm25Grade()));
         }
-
-        // Create an Intent to launch menu
-        Intent intent = new Intent(mContext, WidgetMenuActivity.class);
-        intent.putExtra("LAYOUT_ID", mLayoutId);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mContext, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-        Log.i("UpdateWidgetService", "set 1x1WidgetData id=" + widgetId);
-        mAppWidgetManager.updateAppWidget(widgetId, views);
     }
 
-    private void set2x1WidgetData(int widgetId, WidgetData wData) {
-        Context context = getApplicationContext();
-        // input weather content to widget layout
-
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.w2x1_widget_layout);
-
-        if (wData != null) {
-            // setting town
-            if (wData.getLoc() != null) {
-                views.setTextViewText(R.id.location, wData.getLoc());
-            }
-
-            // process current weather data
-            WeatherData currentData = wData.getCurrentWeather();
-            if (currentData != null) {
-                views.setTextViewText(R.id.yesterday_temperature, String.valueOf((int)currentData.getTemperature()));
-                views.setTextViewText(R.id.today_high_temperature, String.valueOf((int) currentData.getMaxTemperature()));
-                views.setTextViewText(R.id.today_low_temperature, String.valueOf((int) currentData.getMinTemperature()));
-//                views.setTextViewText(R.id.cmp_yesterday_temperature, currentData.getSummary());
-                int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
-                if (skyResourceId == -1) {
-                    skyResourceId = R.drawable.sun;
-                }
-                views.setImageViewResource(R.id.current_sky, skyResourceId);
-            } else {
-                Log.e("UpdateWidgetService", "todayElement is NULL");
-            }
-
-            // process yesterday that same as current time, weather data
-            WeatherData yesterdayData = wData.getBefore24hWeather();
-            if (yesterdayData != null) {
-                views.setTextViewText(R.id.yesterday_high_temperature, String.valueOf((int) yesterdayData.getMaxTemperature()));
-                views.setTextViewText(R.id.yesterday_low_temperature, String.valueOf((int) yesterdayData.getMinTemperature()));
-            } else {
-                Log.e("UpdateWidgetService", "yesterdayElement is NULL");
-            }
-
-            double cmpTemp = 0;
-            String cmpYesterdayTemperatureStr = "";
-            if (currentData != null && yesterdayData != null) {
-                cmpTemp = currentData.getTemperature() - yesterdayData.getTemperature();
-                if (cmpTemp == 0) {
-                    cmpYesterdayTemperatureStr = context.getString(R.string.same_yesterday);
-                }
-                else if (cmpTemp > 0) {
-                    cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
-                            + String.valueOf(Math.round(cmpTemp)) + context.getString(R.string.degree) + " "
-                            + context.getString(R.string.high);
-                }
-                else {
-                    cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
-                            + String.valueOf(Math.round(Math.abs(cmpTemp))) + context.getString(R.string.degree) + " "
-                            + context.getString(R.string.low);
-                }
-                views.setTextViewText(R.id.cmp_yesterday_temperature, cmpYesterdayTemperatureStr);
-            }
-
-            // Create an Intent to launch menu
-            Intent intent = new Intent(context, WidgetMenuActivity.class);
-            intent.putExtra("LAYOUT_ID", mLayoutId);
-//            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-            // weather content is visible
-            views.setViewVisibility(R.id.msg_layout, View.GONE);
-            views.setViewVisibility(R.id.weather_layout, View.VISIBLE);
-
-            Log.i("UpdateWidgetService", "set2x1WidgetData id=" + widgetId);
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            appWidgetManager.updateAppWidget(widgetId, views);
+    private void set2x1WidgetData(Context context, RemoteViews views, WidgetData wData) {
+        if (wData == null) {
+            Log.e("UpdateWidgetService", "weather data is NULL");
+            return;
         }
+
+        // setting town
+        if (wData.getLoc() != null) {
+            views.setTextViewText(R.id.location, wData.getLoc());
+        }
+
+        // process current weather data
+        WeatherData currentData = wData.getCurrentWeather();
+        if (currentData != null) {
+            views.setTextViewText(R.id.yesterday_temperature, String.valueOf((int)currentData.getTemperature()));
+            views.setTextViewText(R.id.today_high_temperature, String.valueOf((int) currentData.getMaxTemperature()));
+            views.setTextViewText(R.id.today_low_temperature, String.valueOf((int) currentData.getMinTemperature()));
+//                views.setTextViewText(R.id.cmp_yesterday_temperature, currentData.getSummary());
+            int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
+            if (skyResourceId == -1) {
+                skyResourceId = R.drawable.sun;
+            }
+            views.setImageViewResource(R.id.current_sky, skyResourceId);
+        } else {
+            Log.e("UpdateWidgetService", "todayElement is NULL");
+        }
+
+        // process yesterday that same as current time, weather data
+        WeatherData yesterdayData = wData.getBefore24hWeather();
+        if (yesterdayData != null) {
+            views.setTextViewText(R.id.yesterday_high_temperature, String.valueOf((int) yesterdayData.getMaxTemperature()));
+            views.setTextViewText(R.id.yesterday_low_temperature, String.valueOf((int) yesterdayData.getMinTemperature()));
+        } else {
+            Log.e("UpdateWidgetService", "yesterdayElement is NULL");
+        }
+
+        double cmpTemp = 0;
+        String cmpYesterdayTemperatureStr = "";
+        if (currentData != null && yesterdayData != null) {
+            cmpTemp = currentData.getTemperature() - yesterdayData.getTemperature();
+            if (cmpTemp == 0) {
+                cmpYesterdayTemperatureStr = context.getString(R.string.same_yesterday);
+            }
+            else if (cmpTemp > 0) {
+                cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
+                        + String.valueOf(Math.round(cmpTemp)) + context.getString(R.string.degree) + " "
+                        + context.getString(R.string.high);
+            }
+            else {
+                cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
+                        + String.valueOf(Math.round(Math.abs(cmpTemp))) + context.getString(R.string.degree) + " "
+                        + context.getString(R.string.low);
+            }
+            views.setTextViewText(R.id.cmp_yesterday_temperature, cmpYesterdayTemperatureStr);
+        }
+
+        // weather content is visible
+        views.setViewVisibility(R.id.msg_layout, View.GONE);
+        views.setViewVisibility(R.id.weather_layout, View.VISIBLE);
     }
 }// class end

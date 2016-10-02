@@ -34,24 +34,19 @@ public class ClockAndThreeDays extends TwWidgetProvider {
     void resizeWidgetObjects(AppWidgetManager appWidgetManager, int appWidgetId, RemoteViews views) {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
-        if (Build.VERSION.SDK_INT >= 16) {
-            Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-            int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
 
-            if (minHeight > 100) {
-                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_SP, 20);
-                views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_SP, 52);
-                views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_SP, 14);
+            int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
+            int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
 
-                int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
-                int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
-
-                for (int i = 0; i < 3; i++) {
-                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_SP, 16);
-                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_SP, 18);
-                }
+            for (int i = 0; i < 3; i++) {
+                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
             }
         }
 

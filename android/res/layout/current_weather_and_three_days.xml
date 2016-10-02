@@ -8,7 +8,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:id="@+id/location"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
@@ -19,7 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -46,6 +48,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
                 android:id="@+id/tmn_tmx_pm_pp"
                 android:layout_below="@+id/location"
                 android:layout_alignParentLeft="true" />
@@ -59,9 +62,9 @@
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:text=""
-                    android:textSize="40sp"
-                    android:id="@+id/current_temperature"
+                    android:textSize="40dp"
                     android:includeFontPadding="false"
+                    android:id="@+id/current_temperature"
                     android:layout_alignParentTop="true"
                     android:layout_alignParentLeft="true" />
 
@@ -86,8 +89,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_yesterday"
                 android:layout_gravity="center_horizontal" />
 
@@ -96,6 +100,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -118,8 +124,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_today"
                 android:layout_gravity="center_horizontal" />
 
@@ -128,6 +135,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -150,8 +159,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_tomorrow"
                 android:layout_gravity="center_horizontal" />
 
@@ -160,6 +170,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
 
