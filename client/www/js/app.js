@@ -44,7 +44,7 @@ angular.module('starter', [
                 Util.ga.trackEvent('app', 'status', 'pause');
             }, false);
             Util.ga.enableUncaughtExceptionReporting(true);
-            //Util.ga.setAllowIDFACollection(true);
+            Util.ga.setAllowIDFACollection(true);
 
             console.log("UA:"+ionic.Platform.ua);
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
