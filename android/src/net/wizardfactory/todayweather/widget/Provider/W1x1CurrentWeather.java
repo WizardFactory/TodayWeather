@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
@@ -33,9 +32,9 @@ public class W1x1CurrentWeather extends TwWidgetProvider {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
         }
     }
 

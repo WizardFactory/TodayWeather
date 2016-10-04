@@ -3,12 +3,10 @@ package net.wizardfactory.todayweather.widget.Provider;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
@@ -38,8 +36,8 @@ public class DailyWeather extends TwWidgetProvider {
             int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature,
                     R.id.tomorrow_temperature, R.id.twodays_temperature, R.id.threedays_temperature};
 
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
 
             for (int i = 0; i < 5; i++) {
                 views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);

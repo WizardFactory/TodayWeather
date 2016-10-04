@@ -3,20 +3,16 @@ package net.wizardfactory.todayweather.widget.Provider;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.WidgetMenuActivity;
 import net.wizardfactory.todayweather.widget.WidgetProviderConfigureActivity;
-import net.wizardfactory.todayweather.widget.WidgetUpdateService;
 
 /**
  * Implementation of App Widget functionality.
@@ -35,11 +31,11 @@ public class AirQualityIndex extends TwWidgetProvider {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 18);
             views.setTextViewTextSize(R.id.aqi_str, TypedValue.COMPLEX_UNIT_DIP, 12);
             views.setTextViewTextSize(R.id.pm10_str, TypedValue.COMPLEX_UNIT_DIP, 12);
             views.setTextViewTextSize(R.id.pm25_str, TypedValue.COMPLEX_UNIT_DIP, 12);

@@ -358,10 +358,10 @@ public class WidgetUpdateService extends Service {
 
     private void setClockAndThreedays(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
             views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
         }
 
@@ -433,8 +433,8 @@ public class WidgetUpdateService extends Service {
 
     private void setDailyWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
         }
 
         if (wData == null) {
@@ -540,12 +540,10 @@ public class WidgetUpdateService extends Service {
 
     private void setCurrentWeatherAndThreeDays(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 56);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 56);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
         }
 
         if (wData == null) {
@@ -615,13 +613,13 @@ public class WidgetUpdateService extends Service {
 
     private void setClockAndCurrentWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
             views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
-            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 52);
+            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 46);
         }
 
         if (Build.VERSION.SDK_INT >= 17) {
@@ -684,11 +682,11 @@ public class WidgetUpdateService extends Service {
 
     private void setAirQualityIndex(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 18);
+            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 18);
             views.setTextViewTextSize(R.id.aqi_str, TypedValue.COMPLEX_UNIT_DIP, 12);
             views.setTextViewTextSize(R.id.pm10_str, TypedValue.COMPLEX_UNIT_DIP, 12);
             views.setTextViewTextSize(R.id.pm25_str, TypedValue.COMPLEX_UNIT_DIP, 12);
@@ -738,11 +736,11 @@ public class WidgetUpdateService extends Service {
 
     private void set2x1CurrentWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
             views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 56);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
         }
 
         if (wData == null) {
@@ -824,9 +822,9 @@ public class WidgetUpdateService extends Service {
 
     private void set1x1WidgetData(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 24);
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
         }
 
         if (wData == null) {
