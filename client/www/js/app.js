@@ -34,6 +34,11 @@ angular.module('starter', [
                     }, 'group.net.wizardfactory.todayweather');
                 }
             } else if (ionic.Platform.isAndroid()) {
+                if(window.MobileAccessibility){
+                    console.log("set usePreferredTextZoom to false");
+                    window.MobileAccessibility.usePreferredTextZoom(false);
+                }
+
                 Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
             }
 

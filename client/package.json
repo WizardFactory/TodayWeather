@@ -48,7 +48,11 @@
       "id": "phonegap-plugin-push"
     },
     "cordova-plugin-app-preferences",
-    "cordova-plugin-app-version"
+    "cordova-plugin-app-version",
+    {
+	"locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
+	"id": "phonegap-plugin-mobile-accessibility"
+    }
   ],
   "cordovaPlatforms": [
     "ios",
