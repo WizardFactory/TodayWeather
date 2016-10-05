@@ -12,13 +12,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".widget.WidgetMenuActivity" android:theme="@android:style/Theme.Translucent" />
-        <receiver android:label="@string/widget_name" android:name=".widget.Provider.W2x1WidgetProvider">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w2x1_widget_provider" />
-        </receiver>
+        <activity android:launchMode="singleInstance" android:name=".widget.WidgetMenuActivity" android:theme="@android:style/Theme.Translucent" />
         <service android:name=".widget.WidgetUpdateService" />
         <activity android:name=".widget.WidgetProviderConfigureActivity" android:theme="@android:style/Theme.Translucent">
             <intent-filter>
@@ -37,24 +31,6 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/w2x1_current_weather_info" />
         </receiver>
-        <receiver android:name=".widget.Provider.DailyWeather">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_weather_info" />
-        </receiver>
-        <receiver android:name=".widget.Provider.ClockAndThreeDays">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/clock_and_three_days_info" />
-        </receiver>
-        <receiver android:name=".widget.Provider.AirQualityIndex">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/air_quality_index_info" />
-        </receiver>
         <receiver android:name=".widget.Provider.ClockAndCurrentWeather">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -66,6 +42,30 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/current_weather_and_three_days_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.ClockAndThreeDays">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/clock_and_three_days_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.DailyWeather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_weather_info" />
+        </receiver>
+        <receiver android:name=".widget.Provider.AirQualityIndex">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/air_quality_index_info" />
+        </receiver>
+        <receiver android:label="@string/widget_name" android:name=".widget.Provider.W2x1WidgetProvider">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w2x1_widget_provider" />
         </receiver>
     </application>
 </manifest>
