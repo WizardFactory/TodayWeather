@@ -15,6 +15,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
+            android:textSize="14dp"
             android:id="@+id/location" />
 
         <TextView
@@ -22,6 +23,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
+            android:textSize="14dp"
             android:id="@+id/today_temperature"
             android:layout_below="@+id/location"
             android:layout_alignParentLeft="true" />
@@ -42,6 +44,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
+            android:textSize="14dp"
             android:id="@+id/pubdate"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true" />
@@ -51,6 +54,7 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text=""
+            android:textSize="14dp"
             android:id="@+id/current_pm"
             android:layout_below="@+id/pubdate"
             android:layout_alignParentRight="true" />
