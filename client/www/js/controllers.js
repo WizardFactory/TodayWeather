@@ -191,7 +191,6 @@ angular.module('starter.controllers', [])
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
-            $ionicLoading.show();
             applyWeatherData();
             loadWeatherData();
         }
@@ -900,7 +899,9 @@ angular.module('starter.controllers', [])
             }
         };
 
-        init();
+        ionic.Platform.ready(function () {
+            init();
+        });
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q,
