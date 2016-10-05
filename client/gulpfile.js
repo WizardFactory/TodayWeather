@@ -6,6 +6,10 @@ var sass = require('gulp-sass');
 var minifyCss = require('gulp-minify-css');
 var rename = require('gulp-rename');
 var sh = require('shelljs');
+var fs = require('fs');
+var rmplugin = require('gulp-cordova-plugin-remove');
+
+var shell = require('gulp-shell');
 
 var paths = {
   sass: ['./scss/**/*.scss']
@@ -36,6 +40,49 @@ gulp.task('install', ['git-check'], function() {
     .on('log', function(data) {
       gutil.log('bower', gutil.colors.cyan(data.id), data.message);
     });
+});
+
+gulp.task('build', shell.task([
+  'ionic state reset',
+  'cp -a ../ios platforms/',
+  'cp -a ../android platforms/',
+  'ionic state restore --plugins',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+  'ionic build'
+]));
+
+gulp.task('release', shell.task([
+  'ionic state reset',
+  'cp -a ../ios platforms/',
+  'cp -a ../android platforms/',
+  'ionic state restore --plugins',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+  'ionic build --release'
+]));
+
+/**
+ * it does not works perfectly
+ */
+gulp.task('rmplugins', function () {
+  var pluginList = JSON.parse(fs.readFileSync('./package.json')).cordovaPlugins;
+  pluginList = pluginList.map(function (plugin) {
+    if (typeof plugin === 'string') {
+      return plugin;
+    }
+    else {
+      if (plugin.hasOwnProperty('id')) {
+        return plugin.id;
+      }
+    }
+  });
+  console.log(pluginList);
+  return gulp.src('./').pipe(rmplugin(pluginList));
 });
 
 gulp.task('git-check', function(done) {

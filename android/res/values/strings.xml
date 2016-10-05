@@ -15,7 +15,6 @@
     <string name="move_main">앱가기</string>
     <string name="temperature_separator">/</string>
     <string name="msg_do_not_widget_data_plz_update">날씨정보가 없습니다.\n여기를 눌러 날씨정보를 갱신하세요.</string>
-    <string name="google_app_id">362303467798</string>
     <string name="fail_to_get_location">오늘날씨 : 위치정보를 가져오지 못 하였습니다.</string>
     <string name="current_position">현재위치</string>
     <string name="appwidget_text">EXAMPLE</string>

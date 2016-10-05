@@ -21,7 +21,9 @@
     "bower": "^1.3.3",
     "clean-css": "=2.2.2",
     "cordova-config-utils": "^1.0.3",
-    "cordova-uglify": "^0.2.1",
+    "cordova-uglify": "^0.2.5",
+    "gulp-cordova-plugin-remove": "^1.0.0",
+    "gulp-shell": "^0.5.2",
     "gulp-util": "^2.2.14",
     "imagemin": "=3.2.0",
     "ng-annotate": "=0.15.4",
@@ -35,7 +37,7 @@
     "ionic-plugin-keyboard",
     "cordova-plugin-geolocation",
     "cordova-plugin-statusbar",
-    "cordova-plugin-inappbrowser@1.4.0",
+    "cordova-plugin-inappbrowser",
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",
     "cordova-plugin-whitelist",
@@ -48,7 +50,11 @@
       "id": "phonegap-plugin-push"
     },
     "cordova-plugin-app-preferences",
-    "cordova-plugin-app-version"
+    "cordova-plugin-app-version",
+    {
+      "locator": "https://github.com/WizardFactory/admob-google-cordova.git",
+      "id": "cordova-admob"
+    }
   ],
   "cordovaPlatforms": [
     "ios",

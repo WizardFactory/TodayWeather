@@ -85,5 +85,4 @@
   <icon src="resources/android/icon/drawable-xhdpi-icon.png"/>
   <allow-navigation href="*"/>
   <allow-intent href="mailto:*"/>
-    <plugin name="cordova-admob" spec="https://github.com/WizardFactory/admob-google-cordova.git" />
 </widget>
