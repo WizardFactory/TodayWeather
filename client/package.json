@@ -54,6 +54,10 @@
     {
       "locator": "https://github.com/WizardFactory/admob-google-cordova.git",
       "id": "cordova-admob"
+    },
+    {
+      "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
+      "id": "phonegap-plugin-mobile-accessibility"
     }
   ],
   "cordovaPlatforms": [
