@@ -133,6 +133,25 @@ router.get('/lifeindex', function (req, res) {
     });
 });
 
+router.get('/healthday', function(req, res) {
+    var ctrlHealthDay = require('../../controllers/controllerHealthDay');
+    var requestUrl;
+    
+    for(var i=1;i<=7;i++) {
+        requestUrl = ctrlHealthDay.makeRequestString(i, 0);
+
+        log.info('[healthday] get :' + requestUrl);
+
+        ctrlHealthDay.getData(requestUrl, function(err) {
+            if(err) {
+                log.error(err);
+            }
+        });
+    }
+    
+    res.send();
+});
+
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
     scrape.getStnHourlyWeather(function (err, results) {
