@@ -1135,64 +1135,101 @@ angular.module('starter.services', [])
             return deferred.promise;
         };
 
+        function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
+            var startTime = new Date().getTime();
+            var endTime;
+            navigator.geolocation.getCurrentPosition(function (position) {
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //37.472595, 126.795249
+                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                //서울특별시
+                //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                //경기 수원시 영통구 광교1동
+                //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                console.log('navigator geolocation');
+                console.log(position);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
+                Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
+
+                callback(undefined, position);
+            }, function (error) {
+                console.log("Fail to get current position from navigator");
+                console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
+                Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
+                retryCount--;
+                if (retryCount == 0) {
+                    return callback(error);
+                }
+                else {
+                    //간격을 주지 않으면 계속 실패해버림.
+                    setTimeout(function () {
+                        _navigatorRetryGetCurrentPosition(retryCount, callback);
+                    }, 200);
+                }
+            }, {maximumAge: 2000, timeout: 3000});
+        }
+
+        function _nativeRetryGetCurrentPosition(retryCount, callback) {
+            var startTime = new Date().getTime();
+            var endTime;
+
+            var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+
+            startTime = new Date().getTime();
+            orgGeo.getCurrentPosition(function (position) {
+                    console.log('native geolocation');
+                    console.log(position);
+
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
+                    Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
+
+                    callback(undefined, position);
+                },
+                function (error) {
+                    console.log("Fail to get current position from native");
+                    console.log("code:"+error.code+" message:"+error.message);
+                    endTime = new Date().getTime();
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
+                    Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
+                    retryCount--;
+                    if (retryCount == 0) {
+                        return callback(error);
+                    }
+                    else {
+                        setTimeout(function () {
+                            _nativeRetryGetCurrentPosition(retryCount, callback);
+                        }, 200);
+                    }
+                }, {maximumAge: 2000, timeout: 3000});
+        }
+
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
             ionic.Platform.ready(function() {
-                var startTime = new Date().getTime();
-                var endTime;
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    //경기도,광주시,오포읍,37.36340556,127.2307667
-                    //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                    //37.472595, 126.795249
-                    //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                    //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
-                    //서울특별시
-                    //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
-                    //경기 수원시 영통구 광교1동
-                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
-
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
-
+                _navigatorRetryGetCurrentPosition(3, function (error, position) {
+                    if (error) {
+                        return deferred.reject();
+                    }
                     deferred.resolve(position.coords);
-                }, function (error) {
-                    console.log("Fail to get current position from navigator");
-                    console.log(error.message);
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
+                });
 
-                    if (ionic.Platform.isAndroid() && window.cordova) {
-                        var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
-
-                        startTime = new Date().getTime();
-                        orgGeo.getCurrentPosition(function (position) {
-                                //console.log('native geolocation');
-                                //console.log(position);
-
-                                endTime = new Date().getTime();
-                                Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
-
-                                deferred.resolve(position.coords);
-                            },
-                            function (error) {
-                                console.log("Fail to get current position from native");
-                                console.log(error.message);
-                                endTime = new Date().getTime();
-                                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
-
-                                deferred.reject();
-                            }, {timeout: 5000});
-                    }
-                    else {
-                        deferred.reject();
-                    }
-                }, {maximumAge: 3000, timeout: 3000});
+                if (ionic.Platform.isAndroid() && window.cordova) {
+                    _nativeRetryGetCurrentPosition(3, function (error, position) {
+                        if (error) {
+                            return deferred.reject();
+                        }
+                        deferred.resolve(position.coords);
+                    });
+                }
             });
 
             return deferred.promise;
