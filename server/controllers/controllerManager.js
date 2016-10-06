@@ -1884,6 +1884,18 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
             log.info('kma stn hourly done');
         });
     }
+    
+    if (time === 10) {
+        log.info('push health day');
+        
+        var hour = (new Date()).getUTCHours()+9;
+        
+        if(hour === 6 || hour === 18) {
+            self.asyncTasks.push(function (callback) {
+                self._requestApi('healthday', callback);
+            });
+        }
+    }
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         log.info('push keco');
