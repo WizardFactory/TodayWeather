@@ -583,6 +583,35 @@ angular.module('starter.services', [])
             return location;
         }
 
+        function _retryGetHttp(retryCount, url, callback) {
+            var retryTimeId = setTimeout(function () {
+                retryCount--;
+                if (retryCount > 0) {
+                    _retryGetHttp(retryCount, url, callback);
+                }
+            }, 2*1000);
+
+            console.log("retry="+retryCount+" get http");
+            $http({method: 'GET', url: url, timeout: 10*1000})
+                .success(function (data, status, headers, config, statusText) {
+                    console.log("status="+status);
+                    clearTimeout(retryTimeId);
+                    console.log('clear timeout = '+ retryTimeId);
+                    callback(undefined, data);
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    if (!data) {
+                        data = data | "Fail to get weatherInfo";
+                    }
+                    console.log(status +":"+data);
+                    console.log('clear timeout = '+ retryTimeId);
+                    clearTimeout(retryTimeId);
+                    var error = new Error(data);
+                    error.status = status;
+                    callback(error);
+                });
+        }
+
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
             var url = Util.url +'/town';
@@ -596,18 +625,12 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 10*1000})
-                .success(function (data) {
-                    //console.log(data);
-                    deferred.resolve({data: data});
-                })
-                .error(function (error) {
-                    if (!error) {
-                        error = new Error("Fail to get weatherInfo");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
+            _retryGetHttp(5, url, function (error, data) {
+                if (error != undefined) {
+                    return deferred.reject(error);
+                }
+                deferred.resolve({data: data});
+            });
 
             return deferred.promise;
         }
