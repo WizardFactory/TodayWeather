@@ -8,7 +8,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:id="@+id/location"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
@@ -19,7 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:id="@+id/pubdate"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -58,8 +60,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_yesterday"
                 android:layout_gravity="center_horizontal" />
 
@@ -68,6 +71,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/yesterday_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -90,8 +95,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_today"
                 android:layout_gravity="center_horizontal" />
 
@@ -100,6 +106,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/today_temperature"
                 android:layout_gravity="center_horizontal" />
 
@@ -122,8 +130,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
                 android:text=""
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_tomorrow"
                 android:layout_gravity="center_horizontal" />
 
@@ -132,6 +141,8 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:text=""
+                android:textSize="14dp"
+                android:includeFontPadding="false"
                 android:id="@+id/tomorrow_temperature"
                 android:layout_gravity="center_horizontal" />
 

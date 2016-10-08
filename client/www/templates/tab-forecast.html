@@ -23,13 +23,19 @@
                  ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}"
                  ng-click="changeForecastType('mid')">
                 <div class="col extend-content">
-                    <ion-scroll delegate-handle="timeChart" direction="x" zooming="false" has-bouncing="false"
-                                scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
-                        <div class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
-                            <div id="shortTable" class="col table-content" ng-bind-html="shortTable"></div>
-                            <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
+                    <div style="position: relative">
+                        <ion-scroll delegate-handle="timeChart" direction="x" zooming="false" has-bouncing="false"
+                                    scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
+                            <div class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
+                                <div id="shortTable" class="col table-content" ng-bind-html="shortTable"></div>
+                                <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
+                            </div>
+                        </ion-scroll>
+                        <div class="label">
+                            <div class="label-yesterday"></div> 어제<br/>
+                            <div class="label-today"></div> 오늘
                         </div>
-                    </ion-scroll>
+                    </div>
 
                     <div class="col" style="margin: 0;padding: 0" ng-if="showDetailWeather">
 

@@ -10,6 +10,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text=""
+        android:textSize="12dp"
         android:layout_marginLeft="4dp"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true" />

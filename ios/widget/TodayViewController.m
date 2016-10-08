@@ -415,15 +415,17 @@ typedef enum
         nssName2 = [jsonDict objectForKey:@"name2"];
         nssName3 = [jsonDict objectForKey:@"name3"];
         
+        NSString *nssName22 = [nssName2 stringByReplacingOccurrencesOfString:@" " withString:@""];
+        
 #if USE_DEBUG
         NSLog(@"nssFullName : %@", nssFullName);
         NSLog(@"nssName : %@", nssName);
         NSLog(@"nssName0 : %@", nssName0);
         NSLog(@"nssName1 : %@", nssName1);
-        NSLog(@"nssName2 : %@", nssName2);
+        NSLog(@"nssName22 : %@", nssName22);
         NSLog(@"nssName3 : %@", nssName3);
 #endif
-        nssURL = [self makeRequestURL:nssName1 addr2:nssName2 addr3:nssName3];
+        nssURL = [self makeRequestURL:nssName1 addr2:nssName22 addr3:nssName3];
 
         [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER];
     }
@@ -786,14 +788,37 @@ typedef enum
         NSString *nssAddr1 = nil;
         NSString *nssAddr2 = nil;
         NSString *nssAddr3 = nil;
-        if ([array count] > 1) {
+        NSString *lastChar = nil;
+        if ([array count] == 2) {
             nssAddr1 = array[1];
         }
-        if ([array count] > 2) {
-            nssAddr2 = array[2];
+        else if ([array count] == 5) {
+            nssAddr1 = array[1];
+            nssAddr2 = [NSString stringWithFormat:@"%@%@", array[2], array[3]];
+            nssAddr3 = array[4];
+        
         }
-        if ([array count] > 3) {
-            nssAddr2 = array[3];
+        else if ([array count] == 4) {
+            nssAddr1 = array[1];
+            lastChar = [array[3] substringFromIndex:[array[3] length] - 1];
+            if ([lastChar isEqualToString:@"구"]) {
+                nssAddr2 = [NSString stringWithFormat:@"%@%@", array[2], array[3]];
+            }
+            else {
+                nssAddr2 = array[2];
+                nssAddr3 = array[3];
+            }
+        }
+        else if ([array count] == 3) {
+            nssAddr1 = array[1];
+            lastChar = [array[2] substringFromIndex:[array[2] length] - 1];
+            if ([lastChar isEqualToString:@"읍"] || [lastChar isEqualToString:@"면"] || [lastChar isEqualToString:@"동"]) {
+                nssAddr2 = array[1];
+                nssAddr3 = array[2];
+            }
+            else {
+                nssAddr2 = array[2];
+            }
         }
         
         NSLog(@"Expected string is : %@",array);

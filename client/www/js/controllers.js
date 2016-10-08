@@ -191,7 +191,6 @@ angular.module('starter.controllers', [])
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
-            $ionicLoading.show();
             applyWeatherData();
             loadWeatherData();
         }
@@ -702,11 +701,16 @@ angular.module('starter.controllers', [])
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
                             applyWeatherData();
                             deferred.resolve();
-                        }, function () {
+                        }, function (error) {
                             var endTime = new Date().getTime();
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+                            if (error instanceof Error) {
+                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                    '(' + WeatherInfo.getCityIndex() + ', ' + error.message + ')', endTime - startTime);
+                            } else {
+                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                    '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
+                            }
 
                             var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                             deferred.reject(msg);
@@ -735,11 +739,16 @@ angular.module('starter.controllers', [])
                     WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
                     applyWeatherData();
                     deferred.resolve();
-                }, function () {
+                }, function (error) {
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                        '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+                    if (error instanceof Error) {
+                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                            '(' + WeatherInfo.getCityIndex() + ', ' + error.message + ')', endTime - startTime);
+                    } else {
+                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                            '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
+                    }
 
                     var msg = "위치 정보 업데이트를 실패하였습니다.";
                     deferred.reject(msg);
@@ -890,7 +899,9 @@ angular.module('starter.controllers', [])
             }
         };
 
-        init();
+        ionic.Platform.ready(function () {
+            init();
+        });
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q,
@@ -1095,10 +1106,16 @@ angular.module('starter.controllers', [])
                     $location.path('/tab/forecast');
                 }
                 $ionicLoading.hide();
-            }, function () {
+            }, function (error) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
-                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address), endTime - startTime);
+                if (error instanceof Error) {
+                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                        '(' + error.message + ')', endTime - startTime);
+                } else {
+                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                        '(' + error + ')', endTime - startTime);
+                }
 
                 var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
                 $scope.showAlert("에러", msg);
@@ -1227,11 +1244,16 @@ angular.module('starter.controllers', [])
                             city.address = address;
                             city.location = {"lat": coords.latitude, "long": coords.longitude};
                             deferred.resolve(city);
-                        }, function () {
+                        }, function (error) {
                             var endTime = new Date().getTime();
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                '(' + index + ')', endTime - startTime);
+                            if (error instanceof Error) {
+                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                    '(' + index + ', ' + error.message + ')', endTime - startTime);
+                            } else {
+                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                    '(' + index + ', ' + error + ')', endTime - startTime);
+                            }
 
                             deferred.reject();
                         });
@@ -1254,11 +1276,16 @@ angular.module('starter.controllers', [])
                     city.currentPosition = false;
                     city.address = cityData.address;
                     deferred.resolve(city);
-                }, function () {
+                }, function (error) {
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                        '(' + index + ')', endTime - startTime);
+                    if (error instanceof Error) {
+                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                            '(' + index + ', ' + error.message + ')', endTime - startTime);
+                    } else {
+                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                            '(' + index + ', ' + error + ')', endTime - startTime);
+                    }
 
                     deferred.reject();
                 });

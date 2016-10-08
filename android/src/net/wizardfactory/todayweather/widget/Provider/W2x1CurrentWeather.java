@@ -3,20 +3,16 @@ package net.wizardfactory.todayweather.widget.Provider;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.WidgetMenuActivity;
 import net.wizardfactory.todayweather.widget.WidgetProviderConfigureActivity;
-import net.wizardfactory.todayweather.widget.WidgetUpdateService;
 
 /**
  * Implementation of App Widget functionality.
@@ -34,17 +30,12 @@ public class W2x1CurrentWeather extends TwWidgetProvider {
     void resizeWidgetObjects(AppWidgetManager appWidgetManager, int appWidgetId, RemoteViews views) {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
-        if (Build.VERSION.SDK_INT >= 16) {
-            Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
-            int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
-
-            if (minHeight > 100) {
-                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_SP, 18);
-                views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_SP, 24);
-                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_SP, 20);
-                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_SP, 56);
-            }
+        if (Build.MANUFACTURER.equals("samsung")) {
+            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
         }
     }
 

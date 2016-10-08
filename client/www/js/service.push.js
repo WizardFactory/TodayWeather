@@ -313,10 +313,10 @@ angular.module('service.push', [])
         return obj;
     })
     .run(function($ionicPlatform, Push) {
-
-        Push.loadPushInfo();
-
         $ionicPlatform.ready(function() {
+
+            Push.loadPushInfo();
+
             if (!window.PushNotification) {
                 console.log("push notification plugin is not set");
                 return;

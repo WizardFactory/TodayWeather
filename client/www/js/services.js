@@ -1105,7 +1105,11 @@ angular.module('starter.services', [])
                 console.log(err);
                 endTime = new Date().getTime();
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
-                Util.ga.trackEvent('data error', 'get', 'daum address', endTime - startTime);
+                if (err instanceof Error) {
+                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err.message + ')', endTime - startTime);
+                } else {
+                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
+                }
 
                 startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
@@ -1118,7 +1122,11 @@ angular.module('starter.services', [])
                 }, function (err) {
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
-                    Util.ga.trackEvent('data error', 'get', 'google address', endTime - startTime);
+                    if (err instanceof Error) {
+                        Util.ga.trackEvent('data error', 'get', 'google address(' + err.message + ')', endTime - startTime);
+                    } else {
+                        Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
+                    }
 
                     deferred.reject(err);
                 });
@@ -1142,6 +1150,8 @@ angular.module('starter.services', [])
                     //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
                     //서울특별시
                     //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                    //경기 수원시 영통구 광교1동
+                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
 
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
@@ -1153,7 +1163,7 @@ angular.module('starter.services', [])
                     console.log(error.message);
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data error', 'get', 'position', endTime - startTime);
+                    Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
 
                     if (ionic.Platform.isAndroid() && window.cordova) {
                         var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
@@ -1174,7 +1184,7 @@ angular.module('starter.services', [])
                                 console.log(error.message);
                                 endTime = new Date().getTime();
                                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data error', 'get', 'native position', endTime - startTime);
+                                Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
 
                                 deferred.reject();
                             }, {timeout: 5000});
@@ -1198,20 +1208,8 @@ angular.module('starter.services', [])
             var that = this;
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
-
-            var town = towns.filter(function (town) {
-                return !!(town.first === townAddress.first && town.second === townAddress.second
-                && town.third === townAddress.third);
-            })[0];
-
-            if (town === undefined) {
-                var deferred = $q.defer();
-                deferred.reject("address is empty");
-                return deferred.promise;
-            }
-
             var promises = [];
-            promises.push(getTownWeatherInfo(town));
+            promises.push(getTownWeatherInfo(townAddress));
 
             return $q.all(promises);
         };
@@ -1473,10 +1471,10 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
-        obj.admobIOSBannerAdUnit = '';
-        obj.admobIOSInterstitialAdUnit = '';
-        obj.admobAndroidBannerAdUnit = '';
-        obj.admobAndroidInterstitialAdUnit = '';
+        obj.admobIOSBannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
+        obj.admobIOSInterstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
+        obj.admobAndroidBannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
+        obj.admobAndroidInterstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
         obj.googleSenderId = '';
 
         if (debug) {
@@ -1491,25 +1489,13 @@ angular.module('starter.services', [])
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
-        WeatherInfo.loadCities();
-        WeatherInfo.loadTowns();
-        $ionicPlatform.on('resume', function(){
-            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                $rootScope.$broadcast('reloadEvent', 'resume');
-            }
+        $ionicPlatform.ready(function () {
+            WeatherInfo.loadCities();
+            WeatherInfo.loadTowns();
+            $ionicPlatform.on('resume', function(){
+                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                    $rootScope.$broadcast('reloadEvent', 'resume');
+                }
+            });
         });
-        $ionicPlatform.ready(function() {
-            console.log("UA:"+ionic.Platform.ua);
-            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
-            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
-
-            if (window.cordova && cordova.getAppVersion) {
-                cordova.getAppVersion.getVersionNumber().then(function (version) {
-                    Util.version = version;
-                });
-            }
-
-        });
-
     });

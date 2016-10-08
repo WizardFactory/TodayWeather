@@ -9,7 +9,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_marginTop="4dp"
@@ -19,7 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="12sp"
+        android:textSize="12dp"
+        android:includeFontPadding="false"
         android:layout_alignParentTop="true"
         android:id="@+id/pubdate"
         android:layout_alignParentRight="true"
@@ -47,7 +49,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textSize="12sp"
+                android:textSize="12dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_aqi"
                 android:layout_gravity="center_horizontal" />
 
@@ -55,7 +58,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textSize="10sp"
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/aqi_str"
                 android:layout_gravity="center_horizontal" />
 
@@ -75,7 +79,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textSize="12sp"
+                android:textSize="12dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_pm10"
                 android:layout_gravity="center_horizontal" />
 
@@ -83,7 +88,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textSize="10sp"
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/pm10_str"
                 android:layout_gravity="center_horizontal" />
 
@@ -102,8 +108,9 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
                 android:text=""
+                android:textSize="12dp"
+                android:includeFontPadding="false"
                 android:id="@+id/label_pm25"
                 android:layout_gravity="center_horizontal" />
 
@@ -111,7 +118,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=""
-                android:textSize="10sp"
+                android:textSize="10dp"
+                android:includeFontPadding="false"
                 android:id="@+id/pm25_str"
                 android:layout_gravity="center_horizontal" />
 
