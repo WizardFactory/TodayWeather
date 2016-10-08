@@ -225,6 +225,9 @@ function controllerWorldWeather(){
                             if(result.weather.WU){
                                 req.WU = result.weather.WU;
                             }
+                            if(result.weather.DSF){
+                                req.DSF = result.weather.DSF;
+                            }
                             callback('skip_get_data', result);
                         });
                     });
@@ -621,8 +624,8 @@ function controllerWorldWeather(){
     };
 
     self.getDataFromDSF = function(req, callback){
-        req.MET = {};
-        callback(0, req.MET);
+        req.DSF = {};
+        callback(0, req.DSF);
     };
 
     /**
@@ -652,7 +655,7 @@ function controllerWorldWeather(){
         }
 
         if(req.DSF){
-
+            req.result.DSF = req.DSF;
         }
     };
 

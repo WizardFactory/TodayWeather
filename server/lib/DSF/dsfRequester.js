@@ -10,8 +10,8 @@ var keys = require('../../config/config').keyString;
 
 function dsfRequester(){
     var self = this;
-    self.base_url = 'https://api.forecast.io/forecast/';
-
+    //self.base_url = 'https://api.forecast.io/forecast/';
+    self.base_url = 'https://api.darksky.net/forecast/';
     return this;
 }
 
@@ -28,6 +28,7 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
         url += ',' + date;
     }
 
+    //log.info(url);
     self.getData(url, function(err, res){
         if(err){
             callback(err, {isSuccess: false});
@@ -94,7 +95,7 @@ dsfRequester.prototype.getData = function(url, callback){
         if(statusCode === 404 || statusCode === 403){
             log.debug('DFS> ERROR!!! StatusCode : ', statusCode);
             if(callback){
-                callback(err);
+                callback(1);
             }
             return;
         }
