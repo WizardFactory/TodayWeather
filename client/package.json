@@ -58,6 +58,10 @@
     {
       "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
       "id": "phonegap-plugin-mobile-accessibility"
+    },
+    {
+      "locator": "https://bitbucket.org/teamteheranslippers/cordova-plugin-airbridge.git",
+      "id": "cordova-plugin-airbridge"
     }
   ],
   "cordovaPlatforms": [
