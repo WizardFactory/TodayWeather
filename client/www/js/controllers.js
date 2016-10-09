@@ -1278,7 +1278,7 @@ angular.module('starter.controllers', [])
                     deferred.resolve(city);
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                     if (error instanceof Error) {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + 'status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
