@@ -706,7 +706,7 @@ angular.module('starter.controllers', [])
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                             if (error instanceof Error) {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                    '(' + WeatherInfo.getCityIndex() + ', status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
+                                    '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
@@ -744,7 +744,7 @@ angular.module('starter.controllers', [])
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                     if (error instanceof Error) {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + WeatherInfo.getCityIndex() + ', status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
+                            '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
@@ -1111,7 +1111,7 @@ angular.module('starter.controllers', [])
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                 if (error instanceof Error) {
                     Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                        '(status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
+                        '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
                     Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                         '(' + error + ')', endTime - startTime);
@@ -1249,7 +1249,7 @@ angular.module('starter.controllers', [])
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                             if (error instanceof Error) {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                    '(' + index + 'status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
+                                    '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', ' + error + ')', endTime - startTime);
@@ -1281,7 +1281,7 @@ angular.module('starter.controllers', [])
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                     if (error instanceof Error) {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + index + 'status:'+error.status+', message: ' + error.message + ')', endTime - startTime);
+                            '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', ' + error + ')', endTime - startTime);

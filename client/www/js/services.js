@@ -607,7 +607,7 @@ angular.module('starter.services', [])
                     console.log('clear timeout = '+ retryTimeId);
                     clearTimeout(retryTimeId);
                     var error = new Error(data);
-                    error.status = status;
+                    error.code = status;
                     callback(error);
                 });
         }
@@ -1064,19 +1064,23 @@ angular.module('starter.services', [])
                 '&inputCoordSystem=WGS84'+
                 '&output=json';
 
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.fullName) {
-                    var address = data.fullName;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data, status, headers, config, statusText) {
+                    if (data.fullName) {
+                        var address = data.fullName;
 
-                    address = '대한민국 ' + address;
-                    deferred.resolve(address);
-                }
-                else {
-                    deferred.reject(new Error('Fail to get address name'));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
+                        address = '대한민국 ' + address;
+                        deferred.resolve(address);
+                    }
+                    else {
+                        deferred.reject(new Error('Fail to get address name'));
+                    }
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    var error = new Error(data);
+                    error.code = status;
+                    deferred.reject(error);
+                });
 
             return deferred.promise;
         }
@@ -1086,23 +1090,27 @@ angular.module('starter.services', [])
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
                 "&sensor=true&language=ko";
 
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.status === "OK") {
-                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                    if (!address || address.length === 0) {
-                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
-                        return;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data, status, headers, config, statusText) {
+                    if (data.status === "OK") {
+                        var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                        if (!address || address.length === 0) {
+                            deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
+                            return;
+                        }
+                        console.log(address);
+                        deferred.resolve(address);
                     }
-                    console.log(address);
-                    deferred.resolve(address);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
+                    else {
+                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                        deferred.reject(new Error(data.status));
+                    }
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    var error = new Error(data);
+                    error.code = status;
+                    deferred.reject(error);
+                });
 
             return deferred.promise;
         }
@@ -1129,7 +1137,7 @@ angular.module('starter.services', [])
                 endTime = new Date().getTime();
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
                 if (err instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err.message + ')', endTime - startTime);
+                    Util.ga.trackEvent('data error', 'get', 'daum address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                 } else {
                     Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
                 }
@@ -1146,7 +1154,7 @@ angular.module('starter.services', [])
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
                     if (err instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', 'google address(' + err.message + ')', endTime - startTime);
+                        Util.ga.trackEvent('data error', 'get', 'google address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
                     }
@@ -1159,8 +1167,6 @@ angular.module('starter.services', [])
         };
 
         function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
-            var startTime = new Date().getTime();
-            var endTime;
             navigator.geolocation.getCurrentPosition(function (position) {
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
@@ -1175,20 +1181,15 @@ angular.module('starter.services', [])
 
                 console.log('navigator geolocation');
                 console.log(position);
-                endTime = new Date().getTime();
-                Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
 
-                callback(undefined, position);
+                callback(undefined, position, retryCount);
             }, function (error) {
                 console.log("Fail to get current position from navigator");
                 console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
-                endTime = new Date().getTime();
-                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
+
                 retryCount--;
                 if (retryCount == 0) {
-                    return callback(error);
+                    return callback(error, undefined, retryCount);
                 }
                 else {
                     //간격을 주지 않으면 계속 실패해버림.
@@ -1200,9 +1201,6 @@ angular.module('starter.services', [])
         }
 
         function _nativeRetryGetCurrentPosition(retryCount, callback) {
-            var startTime = new Date().getTime();
-            var endTime;
-
             var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
             startTime = new Date().getTime();
@@ -1210,21 +1208,15 @@ angular.module('starter.services', [])
                     console.log('native geolocation');
                     console.log(position);
 
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                    Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
-
-                    callback(undefined, position);
+                    callback(undefined, position, retryCount);
                 },
                 function (error) {
                     console.log("Fail to get current position from native");
                     console.log("code:"+error.code+" message:"+error.message);
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                    Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
+
                     retryCount--;
                     if (retryCount == 0) {
-                        return callback(error);
+                        return callback(error, undefined, retryCount);
                     }
                     else {
                         setTimeout(function () {
@@ -1238,18 +1230,33 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
 
             ionic.Platform.ready(function() {
-                _navigatorRetryGetCurrentPosition(3, function (error, position) {
+                var startTime = new Date().getTime();
+                var endTime;
+
+                _navigatorRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                    endTime = new Date().getTime();
                     if (error) {
+                        Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
+                        Util.ga.trackEvent('data error', 'get', 'position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                         return deferred.reject();
                     }
+
+                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
+                    Util.ga.trackEvent('data', 'get', 'position(retry:' + retryCount + ')', endTime - startTime);
                     deferred.resolve(position.coords);
                 });
 
                 if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(3, function (error, position) {
+                    _nativeRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                        endTime = new Date().getTime();
                         if (error) {
+                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
+                            Util.ga.trackEvent('data error', 'get', 'native position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             return deferred.reject();
                         }
+
+                        Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
+                        Util.ga.trackEvent('data', 'get', 'native position(retry:' + retryCount + ')', endTime - startTime);
                         deferred.resolve(position.coords);
                     });
                 }
