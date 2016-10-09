@@ -36,6 +36,7 @@ function ConCollector() {
                             'temp_min', 'temp_mint', 'temp_max', 'temp_maxt',
                             'ftemp_min', 'ftemp_mint', 'ftemp_max', 'ftemp_maxt',
                             'humid', 'windspd', 'winddir', 'vis', 'cloud', 'pres', 'oz'];
+    self.MAX_DSF_COUNT = 8;
 }
 
 /**
@@ -854,11 +855,22 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
 /**************************************************************************************/
 /* DSF Module
 /**************************************************************************************/
+/**
+ *
+ * @returns {{key: string}}
+ * @private
+ */
 ConCollector.prototype._getDSFKey = function(){
     var self = this;
     return {key: self.keybox.dsf_key};
 };
 
+/**
+ *
+ * @param src
+ * @returns {string}
+ * @private
+ */
 ConCollector.prototype._convertTimeToDate = function(src){
     var self = this;
     var date = new Date();
@@ -874,6 +886,12 @@ ConCollector.prototype._convertTimeToDate = function(src){
     return result;
 };
 
+/**
+ *
+ * @param src
+ * @returns {*}
+ * @private
+ */
 ConCollector.prototype._getFloatItem = function(src){
     if(src == undefined){
         return -100;
@@ -882,6 +900,12 @@ ConCollector.prototype._getFloatItem = function(src){
     }
 };
 
+/**
+ *
+ * @param src
+ * @returns {{current: {}, hourly: {summary: string, data: Array}, daily: {summary: string, data: Array}}}
+ * @private
+ */
 ConCollector.prototype._parseDSForecast = function(src){
     var self = this;
     var result = {
@@ -980,6 +1004,13 @@ ConCollector.prototype._parseDSForecast = function(src){
     return result;
 };
 
+/**
+ *
+ * @param geocode
+ * @param date
+ * @param data
+ * @param callback
+ */
 ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
     var self = this;
 
@@ -992,6 +1023,12 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             }
             var newData = self._parseDSForecast(data);
             var timeOffset = -100;
+            var weatherData = [];
+            weatherData.push({
+                current : newData.current,
+                hourly : newData.hourly,
+                daily: newData.daily
+            });
             // for debug
             //log.info('C> ', newData.current);
             //log.info('H> ', newData.hourly.summary);
@@ -1013,9 +1050,8 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                                                     date:date,
                                                     dateObj: self._getDateObj(date),
                                                     timeoffset:timeOffset,
-                                                    current:newData.current,
-                                                    hourly:newData.hourly,
-                                                    daily:newData.daily});
+                                                    data : weatherData
+                });
                 newItem.save(function(err){
                     if(err){
                         log.error('Dsf> fail to add the new data to DB :', geocode, err);
@@ -1029,13 +1065,15 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             }else{
                 list.forEach(function(data, index){
                     data.date = date;
-                    data.current = {};
-                    data.hourly = {};
-                    data.daily = {};
+                    data.data.push({
+                        current : newData.current,
+                        hourly : newData.hourly,
+                        daily: newData.daily
+                    });
+                    if(data.data.length > self.MAX_DSF_COUNT){
+                        data.data.shift();
+                    }
 
-                    data.current = newData.current;
-                    data.hourly = newData.hourly;
-                    data.daily = newData.daily;
                     //log.info(data);
                     data.save(function(err){
                         if(err){
@@ -1057,6 +1095,15 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
     }
 };
 
+/**
+ *
+ * @param list
+ * @param key
+ * @param date
+ * @param retryCount
+ * @param callback
+ * @private
+ */
 ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCount, callback){
     var self = this;
     var failList = [];
@@ -1120,6 +1167,14 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCo
     );
 };
 
+/**
+ *
+ * @param self
+ * @param list
+ * @param date
+ * @param isRetry
+ * @param callback
+ */
 ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, callback){
     var key = self._getDSFKey().key;
     var failList = [];
@@ -1163,6 +1218,54 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
     }
 };
 
+/**
+ *
+ * @param geocode
+ * @param callback
+ */
+ConCollector.prototype.requestDsfData = function(geocode, callback){
+    var self = this;
+    var key = self._getDSFKey().key;
+    var dataList = [];
+    var requester = new dsfRequester;
+
+    for(var i=1 ; i<8 ; i++){
+        var dateString = self._getTimeString(0 - (24 * i)).slice(0,10) + '00';
+        var now = self._getDateObj(dateString).getTime() / 1000;
+        dataList.push(now);
+    }
+
+    async.mapSeries(dataList,
+        function(date, cb){
+            // get forecast
+            log.info('date : ', date);
+            requester.getForecast(geocode, date, key, function(err, result){
+                if(err){
+                    print.error('Req Dsf> get fail', geocode);
+                    log.error('Req Dsf> get fail', geocode);
+                    cb(null);
+                    return;
+                }
+
+                log.info(result);
+                self.saveDSForecast(geocode, date, result, function(err){
+                    cb(null, result);
+                });
+            });
+        },
+        function(err, DsfData){
+            if(err){
+                log.error(err);
+            }
+
+            if(DsfData){
+                callback(err, DsfData);
+            }else{
+                callback(err);
+            }
+        }
+    );
+};
 /**************************************************************************************/
 
 /**

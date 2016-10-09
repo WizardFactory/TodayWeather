@@ -338,19 +338,41 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
             },
             function(cb){
                 // 2. get weather data from provider.
+                req.weather = {};
                 var collector = new conCollector;
-                collector.requestWuData(req.geocode, function(err, wuData){
-                    if(err){
-                        log.error('RQ> Fail to requestWuData');
-                        cb('Fail to requestWuData');
-                        return;
-                    }
+                async.parallel([
+                        function(callback){
+                            collector.requestWuData(req.geocode, function(err, wuData){
+                                if(err){
+                                    log.error('RQ> Fail to requestWuData');
+                                    callback('Fail to requestWuData');
+                                    return;
+                                }
 
-                    req.weather = {
-                        WU: wuData
-                    };
-                    cb(null);
-                });
+                                req.weather.WU = wuData;
+                                callback(null);
+                            });
+                        },
+                        function(callback){
+                            collector.requestDsfData(req.geocode, function(err, wuData){
+                                if(err){
+                                    log.error('RQ> Fail to requestDsfData');
+                                    callback('Fail to requestDsfData');
+                                    return;
+                                }
+
+                                req.weather.DSF = wuData;
+                                callback(null);
+                            });
+                        }
+                    ],
+                    function(err, result){
+                        if(err){
+                            log.error('RQ> Fail to request weather');
+                        }
+                        cb(null);
+                    }
+                );
             },
             function(cb){
                 // 3. adjust weather data for client.
