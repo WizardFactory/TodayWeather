@@ -31,7 +31,7 @@
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_below="@+id/location"
         android:layout_alignParentLeft="true"
         android:layout_marginLeft="4dp"
@@ -40,7 +40,9 @@
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_gravity="center_vertical"
             android:layout_weight="6">
 
             <TextClock
@@ -48,6 +50,7 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
                 android:id="@+id/date"
+                android:includeFontPadding="false"
                 android:textSize="14dp"
                 android:format24Hour="MM.dd. E"
                 android:format12Hour="MM.dd. E"

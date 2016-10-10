@@ -391,7 +391,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
         }
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
@@ -454,7 +454,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.label_yesterday, "어제");
@@ -543,7 +543,7 @@ public class WidgetUpdateService extends Service {
             views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
             views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
             views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
         }
 
         if (wData == null) {
@@ -563,7 +563,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
@@ -648,7 +648,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
@@ -710,7 +710,7 @@ public class WidgetUpdateService extends Service {
 
         if (currentData.getAqiPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getAqiPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getAqiPubDate()));
         }
 
         if (currentData.getAqiGrade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
@@ -740,7 +740,7 @@ public class WidgetUpdateService extends Service {
             views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
             views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
             views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
         }
 
         if (wData == null) {
@@ -760,7 +760,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
