@@ -35,7 +35,7 @@ public class CurrentWeatherAndThreeDays extends ClockAndCurrentWeather {
             views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
             views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
             views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 50);
+            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
 
             int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
             int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
