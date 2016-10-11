@@ -2067,7 +2067,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         itemList.push(item);
     }
 
-    if (current.dsplsGrade && current.dsplsGrade) {
+    if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
         tmpGrade = current.dsplsGrade;
         if (tmpGrade == 1) {
             //좋은 보통보다 높고, 나쁨보다 낮음.
@@ -2076,6 +2076,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
         itemList.push(item);
     }
+
     if (current.sensorytem && current.sensorytem !== current.t1h) {
         diffTemp = Math.round(current.sensorytem - current.t1h);
         item = {str :"체감온도" +" "+ current.sensorytem +"˚", grade: Math.abs(diffTemp)};
