@@ -907,6 +907,7 @@ angular.module('starter.controllers', [])
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
+        $scope.searchResults2 = [];
         $scope.cityList = [];
         $scope.imgPath = Util.imgPath;
         $scope.isEditing = false;
@@ -922,7 +923,7 @@ angular.module('starter.controllers', [])
 
             predictions.forEach(function(prediction) {
 
-                $scope.searchResults.push({name: prediction.terms[0].value, address: prediction.description});
+                $scope.searchResults2.push({name: prediction.terms[0].value, address: prediction.description});
                 //if (prediction.types.indexOf('sublocality_level_4') < 0) { // 도로명 주소 제외. 영어 검색 제외 안됨
                 //    var addressArray = WeatherUtil.convertAddressArray(prediction.description);
                 //    $scope.searchResults.push(addressArray.toString());
@@ -993,10 +994,12 @@ angular.module('starter.controllers', [])
             if ($scope.searchWord === "") {
                 $scope.searchWord = undefined;
                 $scope.searchResults = [];
+                $scope.searchResults2 = [];
                 return;
             }
 
             $scope.searchResults = [];
+            $scope.searchResults2 = [];
             $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
             searchIndex = 0;
             $scope.OnScrollResults();
@@ -1031,6 +1034,7 @@ angular.module('starter.controllers', [])
                             $scope.searchWord = townAddress.third;
                         }
                         $scope.searchResults = [];
+                        $scope.searchResults2 = [];
                         $scope.searchResults.push(townAddress);
                         $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
                         searchIndex = -1;
@@ -1056,24 +1060,25 @@ angular.module('starter.controllers', [])
             if ($scope.isEditing) {
                 $scope.searchWord = undefined;
                 $scope.searchResults = [];
+                $scope.searchResults2 = [];
             }
         };
 
         $scope.OnScrollResults = function() {
-            //if ($scope.searchWord !== undefined && searchIndex !== -1) {
-            //    for (var i = searchIndex; i < towns.length; i++) {
-            //        var town = towns[i];
-            //        if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
-            //            || town.third.indexOf($scope.searchWord) >= 0) {
-            //            $scope.searchResults.push(town);
-            //            if ($scope.searchResults.length % 10 === 0) {
-            //                searchIndex = i + 1;
-            //                return;
-            //            }
-            //        }
-            //    }
-            //    searchIndex = -1;
-            //}
+            if ($scope.searchWord !== undefined && searchIndex !== -1) {
+                for (var i = searchIndex; i < towns.length; i++) {
+                    var town = towns[i];
+                    if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
+                        || town.third.indexOf($scope.searchWord) >= 0) {
+                        $scope.searchResults.push(town);
+                        if ($scope.searchResults.length % 10 === 0) {
+                            searchIndex = i + 1;
+                            return;
+                        }
+                    }
+                }
+                searchIndex = -1;
+            }
         };
 
         function saveCity(weatherData, geoInfo) {
@@ -1104,6 +1109,7 @@ angular.module('starter.controllers', [])
 
             $scope.searchWord = undefined;
             $scope.searchResults = [];
+            $scope.searchResults2 = [];
             $ionicLoading.show();
 
             //get geolocation info

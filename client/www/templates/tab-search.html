@@ -14,21 +14,35 @@
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row row-no-padding">
                     <div class="col search-item">
+                        {{result.first}} {{result.second}} {{result.third}}
+                        <!--{{result.address}}-->
+                    </div>
+                </div>
+            </div>
+            <div class="item item-divider" style="color: white" ng-if="searchResults.length > 0">
+                powered by TodayWeather
+            </div>
+            <div class="item" ng-repeat="result in searchResults2" ng-click="OnSelectResult(result)">
+                <div class="row row-no-padding">
+                    <div class="col search-item">
                         <!--{{result.first}} {{result.second}} {{result.third}}-->
                         {{result.address}}
                     </div>
                 </div>
             </div>
+            <div class="item item-divider" ng-if="searchResults2.length > 0">
+               <img src="img/powered_by_google_on_non_white.png" width="144px">
+            </div>
         </div>
         <div class="list list-inset" ng-if="searchWord===undefined">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
-                    <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
-                        <p style="color: white; opacity: 0.84; font-size: inherit">{{city.address[0]}}<br>{{city.address[1]}}
-                            <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
+                    <div class="col col-40 search-item" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
+                        <p style="font-size: inherit; color:inherit; opacity: inherit;">{{city.address[0]}}<br>{{city.address[1]}}
+                            <a class="icon ion-ios-location-outline" style="color: inherit" ng-if="city.currentPosition"></a>
                         </p>
                     </div>
-                    <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">
+                    <div class="search-item" style="margin: auto 0; opacity: 1" ng-click="OnSelectCity($index)">
                         <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
                     </div>
                     <div class="search-item" style="text-align: center;" ng-click="OnSelectCity($index)">
@@ -36,7 +50,7 @@
                         <span style="font-size: 12px;">{{city.tmn}}˚/{{city.tmx}}˚</span>
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenTimePicker($index)">
-                        <a class="icon" ng-class="city.alarmInfo == undefined?'ion-android-notifications-none':'ion-android-notifications'"></a>
+                        <a class="icon" style="color: inherit" ng-class="city.alarmInfo == undefined?'ion-android-notifications-none':'ion-android-notifications'"></a>
                     </div>
                     <div class="search-item last-item" ng-show="isEditing && city.currentPosition">
                         <label class="toggle toggle-search">
@@ -47,7 +61,7 @@
                         </label>
                     </div>
                     <div class="search-item last-item" ng-show="isEditing && !city.currentPosition" ng-click="OnDeleteCity($index)">
-                        <a class="icon ion-ios-close-outline"></a>
+                        <a class="icon ion-ios-close-outline" style="color: inherit"></a>
                     </div>
                 </div>
             </div>

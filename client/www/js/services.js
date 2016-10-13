@@ -4,7 +4,7 @@ angular.module('starter.services', [])
         var cities = [];
         var cityIndex = -1;
         var obj = {
-            //towns: []
+            towns: []
         };
 
         var createCity = function (item) {
@@ -318,10 +318,10 @@ angular.module('starter.services', [])
             this._saveCitiesPreference(cities);
         };
 
-        //obj.loadTowns = function() {
-        //    var that = this;
-        //    that.towns = window.towns;
-        //};
+        obj.loadTowns = function() {
+            var that = this;
+            that.towns = window.towns;
+        };
 
         //endregion
 
@@ -600,7 +600,6 @@ angular.module('starter.services', [])
             url += "/" + location.lat + '/'+location.long;
 
             console.log(url);
-            url = Util.url +'/town/'+encodeURIComponent('서울특별시');
             console.log("convert to "+url);
 
             $http({method: 'GET', url: url, timeout: 10*1000})
@@ -1030,8 +1029,14 @@ angular.module('starter.services', [])
                     try {
                         var location = findLocationFromGoogleGeoCodeResults(data.results);
                         //"KR"
-                        var country = data.results[0].address_components[data.results[0].address_components.length-1].short_name;
                         var address = data.results[0].formatted_address;
+                        var country;
+                        for (var i=0; i< data.results[0].address_components.length; i++) {
+                            if (data.results[0].address_components[i].types[0] == "country") {
+                                country =  data.results[0].address_components[i].short_name;
+                                break;
+                            }
+                        }
                         console.log(location);
                         deferred.resolve({location: location, country: country, address: address});
                     }
@@ -1123,7 +1128,13 @@ angular.module('starter.services', [])
                         deferred.reject(new Error("Fail to find formatted_address from " + data.results[0].formatted_address));
                         return;
                     }
-                    var country = result.address_components[result.address_components.length-1].short_name;
+                    var country;
+                    for (i=0; i< result.address_components.length; i++) {
+                        if (result.address_components[i].types[0] == "country") {
+                           country =  result.address_components[i].short_name;
+                            break;
+                        }
+                    }
                     console.log(address);
                     deferred.resolve({country: country, address: address});
                 }
@@ -1301,24 +1312,8 @@ angular.module('starter.services', [])
             var addressArray = that.convertAddressArray(address);
             var townAddress = that.getTownFromFullAddress(addressArray);
 
-            if (towns) {
-                var town = towns.filter(function (town) {
-                    return !!(town.first === townAddress.first && town.second === townAddress.second
-                    && town.third === townAddress.third);
-                })[0];
-
-                if (town === undefined) {
-                    var deferred = $q.defer();
-                    deferred.reject("address is empty");
-                    return deferred.promise;
-                }
-            }
-            else {
-                town = townAddress;
-            }
-
             var promises = [];
-            promises.push(getTownWeatherInfo(town));
+            promises.push(getTownWeatherInfo(townAddress));
 
             return $q.all(promises);
         };
@@ -1631,7 +1626,7 @@ angular.module('starter.services', [])
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
         WeatherInfo.loadCities();
-        //WeatherInfo.loadTowns();
+        WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 $rootScope.$broadcast('reloadEvent', 'resume');
