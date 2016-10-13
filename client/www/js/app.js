@@ -22,7 +22,9 @@ angular.module('starter', [
                 console.log('splash screen hide!!!');
                 navigator.splashscreen.hide();
             }
-            AirBridgePlugin.initInstance("[사용자 토큰]", "[앱 ID]");
+            if (window.AirBridgePlugin) {
+                AirBridgePlugin.initInstance("[사용자 토큰]", "[앱 ID]");
+            }
         }, false);
 
         $ionicPlatform.ready(function() {
