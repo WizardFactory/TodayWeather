@@ -1510,8 +1510,11 @@ angular.module('starter.controllers', [])
             }
 
             if (window.plugins && window.plugins.socialsharing) {
-                window.plugins.socialsharing.share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null);
+                window.plugins.socialsharing.share(message + '오늘날씨 http://abr.ge/mxld', null, null, null);
                 Util.ga.trackEvent('action', 'tab', 'share');
+                if (window.AirBridgePlugin) {
+                    AirBridgePlugin.goal("weathershare");
+                }
             }
             else {
                 console.log('plugins socialsharing is undefined');
