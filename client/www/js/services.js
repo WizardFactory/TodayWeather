@@ -127,6 +127,10 @@ angular.module('starter.services', [])
         };
 
         obj.canLoadCity = function (index) {
+            if (index === -1) {
+                return false;
+            }
+
             var city = cities[index];
 
             if (city.disable === true) {
