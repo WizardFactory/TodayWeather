@@ -1356,7 +1356,12 @@ angular.module('starter.controllers', [])
 
         $scope.sendMail = function() {
             Util.ga.trackEvent('action', 'click', 'send mail');
-            window.location.href = "mailto:todayweather@wizardfactory.net";
+
+            var to = 'todayweather@wizardfactory.net';
+            var subject = '의견 보내기';
+            var body = '\n====================\nApp Version : ' + Util.version + '\nUA : ' + ionic.Platform.ua
+                + '\n====================\n';
+            window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
         };
 
         $scope.openMarket = function() {

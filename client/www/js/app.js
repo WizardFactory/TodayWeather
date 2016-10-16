@@ -64,6 +64,15 @@ angular.module('starter', [
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
             console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
 
+            if (window.screen) {
+                Util.ga.trackEvent('app', 'screen width', window.screen.width);
+                Util.ga.trackEvent('app', 'screen height', window.screen.height);
+            }
+            else if (window.outerHeight) {
+                Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+                Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+            }
+
             Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
             if (window.cordova && cordova.getAppVersion) {
                 cordova.getAppVersion.getVersionNumber().then(function (version) {
