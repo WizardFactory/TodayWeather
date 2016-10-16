@@ -20,8 +20,7 @@
             <div md-header-picture ng-style="{'height':headerHeight+'px'}"></div>
 
             <div class="main-content"
-                 ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}"
-                 ng-click="changeForecastType('mid')">
+                 ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid', 'detail-forecast':forecastType==='detail'}">
                 <div class="col extend-content">
                     <div style="position: relative">
                         <ion-scroll delegate-handle="timeChart" direction="x" zooming="false" has-bouncing="false"
