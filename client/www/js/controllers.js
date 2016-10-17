@@ -186,7 +186,7 @@ angular.module('starter.controllers', [])
                 WeatherInfo.setCityIndex($stateParams.fav);
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '도시를 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
                 return;
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
@@ -1440,7 +1440,7 @@ angular.module('starter.controllers', [])
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '도시를 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
@@ -1509,7 +1509,8 @@ angular.module('starter.controllers', [])
         $scope.showAlert = function(title, msg) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
-                template: msg
+                template: msg,
+                okText: '확인'
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
@@ -1519,7 +1520,9 @@ angular.module('starter.controllers', [])
         $scope.showConfirm = function(title, template, callback) {
             var confirmPopup = $ionicPopup.confirm({
                 title: title,
-                template: template
+                template: template,
+                okText: '확인',
+                cancelText: '취소'
             });
             confirmPopup.then(function (res) {
                 if (res) {
@@ -1602,10 +1605,10 @@ angular.module('starter.controllers', [])
         function showPopup() {
             var popup = $ionicPopup.show({
                 template: '<ion-list>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="true">현 위치 자동 검색</ion-radio>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 도시 검색</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="true">현재 위치 자동 검색</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 지역 이름 검색</ion-radio>' +
                     '</ion-list>',
-                title: '도시 검색 방법을 선택하세요.',
+                title: '즐겨찾는 지역을 추가하는 방법을 선택하세요.',
                 scope: $scope,
                 cssClass: 'ionic_popup',
                 buttons: [

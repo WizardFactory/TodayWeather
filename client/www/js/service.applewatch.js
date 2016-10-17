@@ -1,6 +1,6 @@
 /**
  * Created by aleckim on 2016. 5. 10..
- * 현재 빌드 에러로 plugin 제외함, 재 적용시에 setUserDefaults를 사용하는게 아니라, Widget처럼, 도시 목록을 전달하고 직접 데이터 업데이트 하게 변경
+ * 현재 빌드 에러로 plugin 제외함, 재 적용시에 setUserDefaults를 사용하는게 아니라, Widget처럼, 즐겨찾는 지역 목록을 전달하고 직접 데이터 업데이트 하게 변경
  */
 
 angular.module('service.applewatch', [])

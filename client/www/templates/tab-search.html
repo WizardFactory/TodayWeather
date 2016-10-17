@@ -2,7 +2,7 @@
     <ion-header-bar class="search-header">
         <label class="item-input-wrapper">
             <i class="icon ion-ios-search placeholder-icon"></i>
-            <input type="text" placeholder="도시명을 입력하세요" ng-model="searchWord" ng-change="OnChangeSearchWord()">
+            <input type="text" placeholder="지역 이름을 입력하세요" ng-model="searchWord" ng-change="OnChangeSearchWord()">
         </label>
         <a class="icon ion-ios-location-outline" ng-click="OnSearchCurrentPosition()"></a>
         <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
