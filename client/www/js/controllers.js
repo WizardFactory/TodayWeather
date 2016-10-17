@@ -809,21 +809,6 @@ angular.module('starter.controllers', [])
             return getWidthPerCol()*index;
         }
 
-        /**
-         * event가 두번 들어오는 경우가 있어 toggle은 사용 못함.
-         * 값을 지정하여도, 반복해서 들어오는 경우가 있음. event 자체가 두번 불리는 것으로 보임
-         * @param forecastType
-         */
-        $scope.changeForecastType = function(forecastType) {
-            console.log("changeForecastType to "+forecastType);
-            if (forecastType === 'short') {
-                $location.path('/tab/forecast');
-            }
-            else if (forecastType === 'mid') {
-                $location.path('/tab/dailyforecast');
-            }
-        };
-
         $scope.onSwipeLeft = function() {
             if (WeatherInfo.getEnabledCityCount() === 1) {
                 return;
