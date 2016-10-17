@@ -1623,7 +1623,7 @@ angular.module('starter.controllers', [])
                     '<ion-radio ng-model="data.autoSearch" ng-value="true">현재 위치 자동 검색</ion-radio>' +
                     '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 지역 이름 검색</ion-radio>' +
                     '</ion-list>',
-                title: '즐겨찾는 지역을 추가하는 방법을 선택하세요.',
+                title: '지역 검색 방법을 선택하세요.',
                 scope: $scope,
                 cssClass: 'ionic_popup',
                 buttons: [
