@@ -712,11 +712,11 @@ angular.module('starter.controllers', [])
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                             }
 
-                            var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                            var msg = "날씨 정보를 가져오지 못하였습니다.";
                             deferred.reject(msg);
                         });
                     }, function () {
-                        var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                        var msg = "위치 정보를 가져오지 못하였습니다.";
                         deferred.reject(msg);
                     });
                 }, function () {
@@ -750,7 +750,7 @@ angular.module('starter.controllers', [])
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                     }
 
-                    var msg = "위치 정보 업데이트를 실패하였습니다.";
+                    var msg = "날씨 정보를 가져오지 못하였습니다.";
                     deferred.reject(msg);
                 });
             }
@@ -993,7 +993,7 @@ angular.module('starter.controllers', [])
                     }
                     $ionicLoading.hide();
                 }, function () {
-                    var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                    var msg = "위치 정보를 가져오지 못하였습니다.";
                     $scope.showAlert("에러", msg);
                     $ionicLoading.hide();
                 });
@@ -1102,7 +1102,7 @@ angular.module('starter.controllers', [])
                         '(' + error + ')', endTime - startTime);
                 }
 
-                var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                var msg = "날씨 정보를 가져오지 못하였습니다.";
                 $scope.showAlert("에러", msg);
                 $ionicLoading.hide();
             });
