@@ -52,7 +52,7 @@
     "cordova-plugin-app-preferences@0.7.7",
     "cordova-plugin-app-version",
     {
-      "locator": "https://github.com/WizardFactory/admob-google-cordova.git",
+      "locator": "https://github.com/TheBosZ/admob-google-cordova.git",
       "id": "cordova-admob"
     },
     {
