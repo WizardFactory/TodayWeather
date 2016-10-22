@@ -1201,7 +1201,7 @@ angular.module('starter.services', [])
                         _navigatorRetryGetCurrentPosition(retryCount, callback);
                     }, 200);
                 }
-            }, {maximumAge: 2000, timeout: 3000});
+            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
         }
 
         function _nativeRetryGetCurrentPosition(retryCount, callback) {
@@ -1227,7 +1227,7 @@ angular.module('starter.services', [])
                             _nativeRetryGetCurrentPosition(retryCount, callback);
                         }, 200);
                     }
-                }, {maximumAge: 2000, timeout: 3000});
+                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
         }
 
         obj.getCurrentPosition = function () {
