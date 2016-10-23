@@ -1344,8 +1344,8 @@ angular.module('starter.controllers', [])
 
             var to = 'todayweather@wizardfactory.net';
             var subject = '의견 보내기';
-            var body = '\n====================\nApp Version : ' + Util.version + '\nUA : ' + ionic.Platform.ua
-                + '\n====================\n';
+            var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
+                + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
             window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
         };
 
