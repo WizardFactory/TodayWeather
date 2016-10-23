@@ -59,6 +59,7 @@ angular.module('starter', [
             Util.ga.enableUncaughtExceptionReporting(true);
             Util.ga.setAllowIDFACollection(true);
 
+            console.log("UUID:"+window.device.uuid);
             console.log("UA:"+ionic.Platform.ua);
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
@@ -73,6 +74,7 @@ angular.module('starter', [
                 Util.ga.trackEvent('app', 'outer height', window.outerHeight);
             }
 
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
             Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
             if (window.cordova && cordova.getAppVersion) {
                 cordova.getAppVersion.getVersionNumber().then(function (version) {
