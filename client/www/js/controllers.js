@@ -1540,9 +1540,7 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-            $rootScope.viewAdsBanner = TwAds.enableAds;
-            $rootScope.contentBottom = TwAds.enableAds? 100 : 50;
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.enableAds?'50px':'0px');
+            TwAds.setLayout(TwAds.enableAds === false? false : true);
         });
 
         init();
