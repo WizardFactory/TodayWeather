@@ -28,12 +28,17 @@
     <script src="js/service.push.js"></script>
     <script src="data/town.js"></script>
 
+    <script>
+        document.addEventListener('deviceready', function() {
+            angular.bootstrap(document, ['starter']);
+        }, false);
+    </script>
     <!--for chrome extension app-->
     <!--<style>-->
         <!--BODY {width : 364px; height:486px;}-->
     <!--</style>-->
 </head>
-<body ng-app="starter" style="background-color: #03A9F4; line-height: normal;" ng-style="{'background-color': viewColor}">
+<body style="background-color: #03A9F4; line-height: normal;" ng-style="{'background-color': viewColor}">
 <!--
   The nav bar that will be updated as we navigate between views.
 -->
