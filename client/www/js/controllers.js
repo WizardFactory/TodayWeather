@@ -1502,7 +1502,7 @@ angular.module('starter.controllers', [])
             if (window.plugins && window.plugins.socialsharing) {
                 window.plugins.socialsharing.share(message + '오늘날씨 http://abr.ge/mxld', null, null, null);
                 Util.ga.trackEvent('action', 'tab', 'share');
-                if (window.AirBridgePlugin) {
+                if (!Util.isDebug() && window.AirBridgePlugin) {
                     AirBridgePlugin.goal("weathershare");
                 }
             }
