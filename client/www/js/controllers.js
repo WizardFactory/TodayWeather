@@ -901,13 +901,6 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
-            window.addEventListener('native.keyboardshow', function () {
-                TwAds.setShowAds(false);
-            });
-            window.addEventListener('native.keyboardhide', function () {
-                TwAds.setShowAds(true);
-            });
-
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
