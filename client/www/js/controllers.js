@@ -889,7 +889,7 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q,
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
@@ -901,6 +901,8 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
+            $ionicHistory.clearHistory();
+
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
@@ -1275,8 +1277,10 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, Util) {
+    .controller('SettingCtrl', function($scope, $http, Util, $ionicHistory) {
         function init() {
+            $ionicHistory.clearHistory();
+
             //for chrome extension
             if (window.chrome && chrome.extension) {
                 $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
@@ -1540,7 +1544,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
-                                      $location, $ionicHistory, Util, TwAds, $ionicPopup, WeatherInfo) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo) {
         var guideVersion = null;
 
         $scope.data = { 'autoSearch': false };
