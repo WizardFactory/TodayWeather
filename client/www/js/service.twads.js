@@ -156,6 +156,12 @@ angular.module('service.twads', [])
 
             if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
+                //for ads app without inapp and paid app
+                if (TwAds.requestEnable != undefined) {
+                    console.log('set requestEnable='+TwAds.requestEnable);
+                    TwAds.setShowAds(TwAds.requestEnable);
+                    TwAds.setLayout(TwAds.requestEnable);
+                }
                 return;
             }
 
@@ -166,12 +172,12 @@ angular.module('service.twads', [])
             TwAds.loaded = true;
 
             if (ionic.Platform.isIOS()) {
-                TwAds.bannerAdUnit = Util.admobIOSBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
+                TwAds.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
+                TwAds.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                TwAds.bannerAdUnit = Util.admobAndroidBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
+                TwAds.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
+                TwAds.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
             admob.setOptions({
@@ -181,7 +187,7 @@ angular.module('service.twads', [])
                 bannerAtTop:    false,
                 overlap:        true,
                 offsetStatusBar:    false,
-                isTesting:  Util.isDebug(),
+                isTesting:  twClientConfig.debug,
                 adExtras :  {},
                 autoShowBanner: false,
                 autoShowInterstitial:   false

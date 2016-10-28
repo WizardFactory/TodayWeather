@@ -8,11 +8,20 @@ angular.module('controller.purchase', [])
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
+        //for paid app without ads, in app purchase
+        obj.ACCOUNT_LEVEL_PAID = 'paid';
         obj.accountLevel;
         obj.productId;
         obj.expirationDate;
         obj.loaded = false;
         obj.products;
+        //for only ads app without in app purchase
+        obj.hasInAppPurchase = false;
+
+        if (twClientConfig.isPaidApp) {
+            obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
+            TwAds.setEnableAds(false);
+        }
 
         obj.setAccountLevel = function (accountLevel) {
             if (obj.accountLevel != accountLevel) {
@@ -32,7 +41,7 @@ angular.module('controller.purchase', [])
         };
 
         obj.checkReceiptValidation = function(storeReceipt, callback) {
-            var url = Util.url  + '/check-purchase';
+            var url = twClientConfig.serverUrl  + '/check-purchase';
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -71,7 +80,7 @@ angular.module('controller.purchase', [])
                 obj.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
-                obj.accountLevel = obj.ACCOUNT_LEVEL_FREE;
+                obj.setAccountLevel(obj.ACCOUNT_LEVEL_FREE);
             }
         };
 
@@ -140,7 +149,11 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase) {
+    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope) {
+
+        if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
+            return;
+        }
 
         /**
          * check validation receipt by saved data in local storage
@@ -211,8 +224,12 @@ angular.module('controller.purchase', [])
 
             if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
+                $rootScope.bottomMessage = "오늘날씨 - 어제보다 오늘은?";
                 return;
             }
+
+            Purchase.hasInAppPurchase = true;
+            $rootScope.bottomMessage = "광고없는 프리미엄을 사용해보세요";
 
             inAppPurchase
                 .getProducts([Purchase.productId])

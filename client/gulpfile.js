@@ -11,6 +11,8 @@ var rmplugin = require('gulp-cordova-plugin-remove');
 
 var shell = require('gulp-shell');
 
+var json = JSON.parse(fs.readFileSync('./package.json'));
+
 var paths = {
   sass: ['./scss/**/*.scss']
 };
@@ -66,11 +68,49 @@ gulp.task('release', shell.task([
   'ionic build --release'
 ]));
 
+gulp.task('release-nonpaid', shell.task([
+  'cp config-androidsdk19.xml config.xml',
+  'cp ads.package.json package.json',
+  'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
+  'ionic state reset',
+  'cp -a ../android platforms/',
+  'ionic state restore --plugins',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+  'ionic build android --release',
+  'cp platforms/android/build/outputs/apk/android-release-unsigned.apk ./',
+  'jarsigner -tsa http://timestamp.digicert.com -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore wizardfactory-release-key.keystore android-release-unsigned.apk wizardfactoryreleasekey -storepass wzd2014',
+  '~/Library/Android/sdk/build-tools/23.0.1/zipalign -v 4 android-release-unsigned.apk TodayWeather_ads_onestore_v'+json.version+'_min19.apk',
+
+  'cp ads.ios_playstore.tw.client.config.js www/tw.client.config.js',
+  'cordova plugin add cordova-plugin-inapppurchase',
+  'ionic build android --release',
+  'cp platforms/android/build/outputs/apk/android-release-unsigned.apk ./',
+  'jarsigner -tsa http://timestamp.digicert.com -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore wizardfactory-release-key.keystore android-release-unsigned.apk wizardfactoryreleasekey -storepass wzd2014',
+  '~/Library/Android/sdk/build-tools/23.0.1/zipalign -v 4 android-release-unsigned.apk TodayWeather_ads_playstore_v'+json.version+'_min19.apk',
+
+  'cp config-androidsdk14.xml config.xml',
+  'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
+  'ionic build android --release',
+  'cp platforms/android/build/outputs/apk/android-armv7-release-unsigned.apk ./',
+  'jarsigner -tsa http://timestamp.digicert.com -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore wizardfactory-release-key.keystore android-armv7-release-unsigned.apk wizardfactoryreleasekey -storepass wzd2014',
+  '~/Library/Android/sdk/build-tools/23.0.1/zipalign -v 4 android-armv7-release-unsigned.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
+
+  'cp -a ../ios platforms/',
+  'ionic build ios --release',
+  //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
+  //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''
+  //'/Applications/Xcode.app/Contents/Applications/Application\ Loader.app/Contents/Frameworks/ITunesSoftwareService.framework/Versions/A/Support/altool --validate-app -f TodayWeather.ipa -u kimalec7@gmail.com'
+  //'/Applications/Xcode.app/Contents/Applications/Application\ Loader.app/Contents/Frameworks/ITunesSoftwareService.framework/Versions/A/Support/altool --upload-app -f TodayWeather.ipa -u kimalec7@gmail.com'
+]));
+
 /**
  * it does not works perfectly
  */
 gulp.task('rmplugins', function () {
-  var pluginList = JSON.parse(fs.readFileSync('./package.json')).cordovaPlugins;
+  var pluginList = json.cordovaPlugins;
   pluginList = pluginList.map(function (plugin) {
     if (typeof plugin === 'string') {
       return plugin;

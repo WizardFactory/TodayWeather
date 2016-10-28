@@ -618,7 +618,7 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url = Util.url +'/town';
+            var url = twClientConfig.serverUrl +'/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -1362,7 +1362,6 @@ angular.module('starter.services', [])
     })
     .factory('Util', function ($window) {
         var obj = {};
-        var debug = true;
         var gaArray = [];
 
         //region Function
@@ -1370,10 +1369,6 @@ angular.module('starter.services', [])
         //endregion
 
         //region APIs
-
-        obj.isDebug = function () {
-            return debug;
-        };
 
         obj.ga = {
             startTrackerWithId: function (id) {
@@ -1551,20 +1546,12 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
-        obj.admobIOSBannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
-        obj.admobIOSInterstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
-        obj.admobAndroidBannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
-        obj.admobAndroidInterstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
-        obj.googleSenderId = '';
 
-        if (debug) {
-            //obj.url = "/v000705";
-            //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
-            obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
-        }
-        else {
-            obj.url = "http://todayweather.wizardfactory.net/v000705";
-        }
+        //obj.url = "/v000705";
+        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
+        //obj.url = "https://tw-wzdfac.rhcloud.com/v000705";
+        //obj.url = "https://todayweather.wizardfactory.net/v000705";
+        //obj.url = window.twClientConfig.serverUrl;
 
         return obj;
     })
