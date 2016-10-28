@@ -44,7 +44,7 @@
     "cordova-plugin-google-analytics",
     {
       "variables": {
-        "SENDER_ID": "362303467798"
+        "SENDER_ID": ""
       },
       "locator": "phonegap-plugin-push",
       "id": "phonegap-plugin-push"

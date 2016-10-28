@@ -1275,18 +1275,8 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, Util) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase) {
         function init() {
-            //for chrome extension
-            if (window.chrome && chrome.extension) {
-                $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
-                    console.log("Version: " + manifest.version);
-                    $scope.version = manifest.version;
-                }).error(function (err) {
-                    console.log(err);
-                });
-            }
-
             if (ionic.Platform.isAndroid()) {
                 //get interval time;
                 $scope.updateInterval = "0";
@@ -1335,7 +1325,7 @@ angular.module('starter.controllers', [])
         $scope.sendMail = function() {
             Util.ga.trackEvent('action', 'click', 'send mail');
 
-            var to = 'todayweather@wizardfactory.net';
+            var to = twClientConfig.mailTo;
             var subject = '의견 보내기';
             var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
                 + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
@@ -1345,13 +1335,13 @@ angular.module('starter.controllers', [])
         $scope.openMarket = function() {
             var src = "";
             if (ionic.Platform.isIOS()) {
-                src = "https://itunes.apple.com/app/todayweather/id1041700694";
+                src = twClientConfig.iOSStoreUrl;
             }
             else if (ionic.Platform.isAndroid()) {
-                src = "market://details?id=net.wizardfactory.todayweather";
+                src = twClientConfig.androidStoreUrl;
             }
             else {
-                src = "https://www.facebook.com/TodayWeather.WF";
+                src = twClientConfig.etcUrl;
             }
 
             if (window.cordova && cordova.InAppBrowser) {
@@ -1415,6 +1405,10 @@ angular.module('starter.controllers', [])
                     }
                 );
             });
+        };
+
+        $scope.hasInAppPurchase = function () {
+            return Purchase.hasInAppPurchase;
         };
 
         init();
@@ -1495,7 +1489,7 @@ angular.module('starter.controllers', [])
             if (window.plugins && window.plugins.socialsharing) {
                 window.plugins.socialsharing.share(message + '오늘날씨 http://abr.ge/mxld', null, null, null);
                 Util.ga.trackEvent('action', 'tab', 'share');
-                if (!Util.isDebug() && window.AirBridgePlugin) {
+                if (!twClientConfig.debug && window.AirBridgePlugin) {
                     AirBridgePlugin.goal("weathershare");
                 }
             }
@@ -1533,7 +1527,8 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-            TwAds.setLayout(TwAds.enableAds === false? false : true);
+            //in app purchase plugin이 없으면 enableAds는 undefined임
+            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         });
 
         init();
