@@ -175,7 +175,17 @@ angular.module('service.push', [])
                     //if have additionalData go to index page
                     var url = '/tab/forecast?fav='+data.additionalData.cityIndex;
                     //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                    WeatherInfo.setCityIndex(data.additionalData.cityIndex);
+                    var fav = parseInt(data.additionalData.cityIndex);
+                    if (!isNaN(fav)) {
+                        if (fav === 0) {
+                            var city = WeatherInfo.getCityOfIndex(0);
+                            if (city !== null && !city.disable) {
+                                WeatherInfo.setCityIndex(fav);
+                            }
+                        } else {
+                            WeatherInfo.setCityIndex(fav);
+                        }
+                    }
                     console.log('clicked: ' + data.additionalData.cityIndex + ' url='+url);
                     $location.url(url);
                 }

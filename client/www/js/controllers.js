@@ -182,8 +182,16 @@ angular.module('starter.controllers', [])
             //smallDigitSize = mainHeight * 0.0320 * smallPadding;
             //smallDigitSize = smallDigitSize<20.73?smallDigitSize:20.73;
 
-            if ($stateParams.fav !== undefined && $stateParams.fav < WeatherInfo.getCityCount()) {
-                WeatherInfo.setCityIndex($stateParams.fav);
+            var fav = parseInt($stateParams.fav);
+            if (!isNaN(fav)) {
+                if (fav === 0) {
+                    var city = WeatherInfo.getCityOfIndex(0);
+                    if (city !== null && !city.disable) {
+                        WeatherInfo.setCityIndex(fav);
+                    }
+                } else {
+                    WeatherInfo.setCityIndex(fav);
+                }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
