@@ -72,7 +72,7 @@ function ControllerRequester(){
                         return;
                     }
                     log.info('RQ> success adding geocode');
-                    req.result = {status: 'OK', cmd: req.params.command, weather:req.weather};
+                    req.result = {status: 'OK', cmd: req.params.command};
                     next();
                 });
                 break;
@@ -349,19 +349,17 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                                     return;
                                 }
 
-                                req.weather.WU = wuData;
                                 callback(null);
                             });
                         },
                         function(callback){
-                            collector.requestDsfData(req.geocode, function(err, wuData){
+                            collector.requestDsfData(req.geocode, function(err, dsfData){
                                 if(err){
                                     log.error('RQ> Fail to requestDsfData');
                                     callback('Fail to requestDsfData');
                                     return;
                                 }
 
-                                req.weather.DSF = wuData;
                                 callback(null);
                             });
                         }

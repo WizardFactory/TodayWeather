@@ -18,7 +18,8 @@ router.get('/', function(req, res) {
 });
 
 router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand, worldWeather.showUsage, worldWeather.sendResult]);
-router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather, worldWeather.sendResult]);
+router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather,
+            worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentData, worldWeather.mergeDsfData, worldWeather.sendResult]);
 
 
 module.exports = router;

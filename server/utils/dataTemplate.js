@@ -14,7 +14,7 @@ var defaultData = {
         lon: -1000,
         timeOffset: -1000
     },
-    PubDate:{
+    pubDate:{
         wuCurrent: -1000,
         wuForecast: -1000,
         DSF: -1000,
@@ -56,7 +56,7 @@ var defaultData = {
         windSpd_ms: -1000,
         windDir: -1000,
         humid: -1000,
-        precType: -1000,
+        precType: -1000,   // 0: 없음 1:비 2:눈 3:비+눈 4:우박
         precProb: -1000,
         precip: -1000,
         vis: -1000,
@@ -84,7 +84,7 @@ var defaultData = {
         windSpd_ms: -1000,
         windDir: -1000,
         humid: -1000,
-        precType: -1000,
+        precType: -1000,    // 0: 없음 1:비 2:눈 3:비+눈 4:우박
         precProb: -1000,
         precip: -1000,
         vis: -1000,
