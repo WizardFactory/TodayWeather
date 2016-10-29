@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.12",
+  "version": "0.9.14",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -44,20 +44,24 @@
     "cordova-plugin-google-analytics",
     {
       "variables": {
-        "SENDER_ID": "362303467798"
+        "SENDER_ID": ""
       },
       "locator": "phonegap-plugin-push",
       "id": "phonegap-plugin-push"
     },
-    "cordova-plugin-app-preferences",
+    "cordova-plugin-app-preferences@0.7.7",
     "cordova-plugin-app-version",
     {
-      "locator": "https://github.com/WizardFactory/admob-google-cordova.git",
+      "locator": "https://github.com/TheBosZ/admob-google-cordova.git",
       "id": "cordova-admob"
     },
     {
       "locator": "https://github.com/phonegap/phonegap-mobile-accessibility.git",
       "id": "phonegap-plugin-mobile-accessibility"
+    },
+    {
+      "locator": "https://bitbucket.org/teamteheranslippers/cordova-plugin-airbridge.git",
+      "id": "cordova-plugin-airbridge"
     }
   ],
   "cordovaPlatforms": [

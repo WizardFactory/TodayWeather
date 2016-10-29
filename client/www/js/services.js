@@ -127,6 +127,10 @@ angular.module('starter.services', [])
         };
 
         obj.canLoadCity = function (index) {
+            if (index === -1) {
+                return false;
+            }
+
             var city = cities[index];
 
             if (city.disable === true) {
@@ -583,9 +587,38 @@ angular.module('starter.services', [])
             return location;
         }
 
+        function _retryGetHttp(retryCount, url, callback) {
+            var retryTimeId = setTimeout(function () {
+                retryCount--;
+                if (retryCount > 0) {
+                    _retryGetHttp(retryCount, url, callback);
+                }
+            }, 2*1000);
+
+            console.log("retry="+retryCount+" get http");
+            $http({method: 'GET', url: url, timeout: 10*1000})
+                .success(function (data, status, headers, config, statusText) {
+                    console.log("status="+status);
+                    clearTimeout(retryTimeId);
+                    console.log('clear timeout = '+ retryTimeId);
+                    callback(undefined, data);
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    if (!data) {
+                        data = data | "Fail to get weatherInfo";
+                    }
+                    console.log(status +":"+data);
+                    console.log('clear timeout = '+ retryTimeId);
+                    clearTimeout(retryTimeId);
+                    var error = new Error(data);
+                    error.code = status;
+                    callback(error);
+                });
+        }
+
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url = Util.url +'/town';
+            var url = twClientConfig.serverUrl +'/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -596,18 +629,12 @@ angular.module('starter.services', [])
             }
             console.log(url);
 
-            $http({method: 'GET', url: url, timeout: 10*1000})
-                .success(function (data) {
-                    //console.log(data);
-                    deferred.resolve({data: data});
-                })
-                .error(function (error) {
-                    if (!error) {
-                        error = new Error("Fail to get weatherInfo");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
-                });
+            _retryGetHttp(5, url, function (error, data) {
+                if (error != undefined) {
+                    return deferred.reject(error);
+                }
+                deferred.resolve({data: data});
+            });
 
             return deferred.promise;
         }
@@ -1041,19 +1068,23 @@ angular.module('starter.services', [])
                 '&inputCoordSystem=WGS84'+
                 '&output=json';
 
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.fullName) {
-                    var address = data.fullName;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data, status, headers, config, statusText) {
+                    if (data.fullName) {
+                        var address = data.fullName;
 
-                    address = '대한민국 ' + address;
-                    deferred.resolve(address);
-                }
-                else {
-                    deferred.reject(new Error('Fail to get address name'));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
+                        address = '대한민국 ' + address;
+                        deferred.resolve(address);
+                    }
+                    else {
+                        deferred.reject(new Error('Fail to get address name'));
+                    }
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    var error = new Error(data);
+                    error.code = status;
+                    deferred.reject(error);
+                });
 
             return deferred.promise;
         }
@@ -1063,23 +1094,27 @@ angular.module('starter.services', [])
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
                 "&sensor=true&language=ko";
 
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.status === "OK") {
-                    var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                    if (!address || address.length === 0) {
-                        deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
-                        return;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data, status, headers, config, statusText) {
+                    if (data.status === "OK") {
+                        var address = findDongAddressFromGoogleGeoCodeResults(data.results);
+                        if (!address || address.length === 0) {
+                            deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
+                            return;
+                        }
+                        console.log(address);
+                        deferred.resolve(address);
                     }
-                    console.log(address);
-                    deferred.resolve(address);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
+                    else {
+                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                        deferred.reject(new Error(data.status));
+                    }
+                })
+                .error(function (data, status, headers, config, statusText) {
+                    var error = new Error(data);
+                    error.code = status;
+                    deferred.reject(error);
+                });
 
             return deferred.promise;
         }
@@ -1106,7 +1141,7 @@ angular.module('starter.services', [])
                 endTime = new Date().getTime();
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
                 if (err instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err.message + ')', endTime - startTime);
+                    Util.ga.trackEvent('data error', 'get', 'daum address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                 } else {
                     Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
                 }
@@ -1123,7 +1158,7 @@ angular.module('starter.services', [])
                     endTime = new Date().getTime();
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
                     if (err instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', 'google address(' + err.message + ')', endTime - startTime);
+                        Util.ga.trackEvent('data error', 'get', 'google address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
                     }
@@ -1135,64 +1170,100 @@ angular.module('starter.services', [])
             return deferred.promise;
         };
 
+        function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                //경기도,광주시,오포읍,37.36340556,127.2307667
+                //deferred.resolve({latitude: 37.363, longitude: 127.230});
+                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
+                //37.472595, 126.795249
+                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+                //서울특별시
+                //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+                //경기 수원시 영통구 광교1동
+                //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                console.log('navigator geolocation');
+                console.log(position);
+
+                callback(undefined, position, retryCount);
+            }, function (error) {
+                console.log("Fail to get current position from navigator");
+                console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
+
+                retryCount--;
+                if (retryCount == 0) {
+                    return callback(error, undefined, retryCount);
+                }
+                else {
+                    //간격을 주지 않으면 계속 실패해버림.
+                    setTimeout(function () {
+                        _navigatorRetryGetCurrentPosition(retryCount, callback);
+                    }, 200);
+                }
+            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
+        }
+
+        function _nativeRetryGetCurrentPosition(retryCount, callback) {
+            var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+
+            startTime = new Date().getTime();
+            orgGeo.getCurrentPosition(function (position) {
+                    console.log('native geolocation');
+                    console.log(position);
+
+                    callback(undefined, position, retryCount);
+                },
+                function (error) {
+                    console.log("Fail to get current position from native");
+                    console.log("code:"+error.code+" message:"+error.message);
+
+                    retryCount--;
+                    if (retryCount == 0) {
+                        return callback(error, undefined, retryCount);
+                    }
+                    else {
+                        setTimeout(function () {
+                            _nativeRetryGetCurrentPosition(retryCount, callback);
+                        }, 200);
+                    }
+                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
+        }
+
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
 
             ionic.Platform.ready(function() {
                 var startTime = new Date().getTime();
                 var endTime;
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    //경기도,광주시,오포읍,37.36340556,127.2307667
-                    //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                    //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                    //37.472595, 126.795249
-                    //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                    //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
-                    //서울특별시
-                    //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
-                    //경기 수원시 영통구 광교1동
-                    //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
 
+                _navigatorRetryGetCurrentPosition(3, function (error, position, retryCount) {
                     endTime = new Date().getTime();
+                    if (error) {
+                        Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
+                        Util.ga.trackEvent('data error', 'get', 'position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                        return deferred.reject();
+                    }
+
                     Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data', 'get', 'position', endTime - startTime);
-
+                    Util.ga.trackEvent('data', 'get', 'position(retry:' + retryCount + ')', endTime - startTime);
                     deferred.resolve(position.coords);
-                }, function (error) {
-                    console.log("Fail to get current position from navigator");
-                    console.log(error.message);
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data error', 'get', 'position(' + error.message + ')', endTime - startTime);
+                });
 
-                    if (ionic.Platform.isAndroid() && window.cordova) {
-                        var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
+                if (ionic.Platform.isAndroid() && window.cordova) {
+                    _nativeRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                        endTime = new Date().getTime();
+                        if (error) {
+                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
+                            Util.ga.trackEvent('data error', 'get', 'native position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                            return deferred.reject();
+                        }
 
-                        startTime = new Date().getTime();
-                        orgGeo.getCurrentPosition(function (position) {
-                                //console.log('native geolocation');
-                                //console.log(position);
-
-                                endTime = new Date().getTime();
-                                Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data', 'get', 'native position', endTime - startTime);
-
-                                deferred.resolve(position.coords);
-                            },
-                            function (error) {
-                                console.log("Fail to get current position from native");
-                                console.log(error.message);
-                                endTime = new Date().getTime();
-                                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                                Util.ga.trackEvent('data error', 'get', 'native position(' + error.message + ')', endTime - startTime);
-
-                                deferred.reject();
-                            }, {timeout: 5000});
-                    }
-                    else {
-                        deferred.reject();
-                    }
-                }, {maximumAge: 3000, timeout: 3000});
+                        Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
+                        Util.ga.trackEvent('data', 'get', 'native position(retry:' + retryCount + ')', endTime - startTime);
+                        deferred.resolve(position.coords);
+                    });
+                }
             });
 
             return deferred.promise;
@@ -1291,7 +1362,6 @@ angular.module('starter.services', [])
     })
     .factory('Util', function ($window) {
         var obj = {};
-        var debug = true;
         var gaArray = [];
 
         //region Function
@@ -1300,14 +1370,10 @@ angular.module('starter.services', [])
 
         //region APIs
 
-        obj.isDebug = function () {
-            return debug;
-        };
-
         obj.ga = {
             startTrackerWithId: function (id) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.startTrackerWithId(id, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.startTrackerWithId(id, function(result) {
                         console.log("startTrackerWithId success = " + result);
                     }, function(error) {
                         console.log("startTrackerWithId error = " + error);
@@ -1315,8 +1381,8 @@ angular.module('starter.services', [])
                 }
             },
             setAllowIDFACollection: function (enable) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.setAllowIDFACollection(enable, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.setAllowIDFACollection(enable, function(result) {
                         console.log("setAllowIDFACollection success = " + result);
                     }, function(error) {
                         console.log("setAllowIDFACollection error = " + error);
@@ -1324,8 +1390,8 @@ angular.module('starter.services', [])
                 }
             },
             setUserId: function (id) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.setUserId(id, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.setUserId(id, function(result) {
                         console.log("setUserId success = " + result);
                     }, function(error) {
                         console.log("setUserId error = " + error);
@@ -1333,17 +1399,26 @@ angular.module('starter.services', [])
                 }
             },
             setAnonymizeIp: function (anonymize) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.setAnonymizeIp(anonymize, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.setAnonymizeIp(anonymize, function(result) {
                         console.log("setAnonymizeIp success = " + result);
                     }, function(error) {
                         console.log("setAnonymizeIp error = " + error);
                     });
                 }
             },
+            setOptOut: function (optout) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.setOptOut(optout, function(result) {
+                        console.log("setOptOut success = " + result);
+                    }, function(error) {
+                        console.log("setOptOut error = " + error);
+                    });
+                }
+            },
             setAppVersion: function (version) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.setAppVersion(version, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.setAppVersion(version, function(result) {
                         console.log("setAppVersion success = " + result);
                     }, function(error) {
                         console.log("setAppVersion error = " + error);
@@ -1351,8 +1426,8 @@ angular.module('starter.services', [])
                 }
             },
             debugMode: function () {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.debugMode(function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.debugMode(function(result) {
                         console.log("debugMode success = " + result);
                     }, function(error) {
                         console.log("debugMode error = " + error);
@@ -1360,17 +1435,17 @@ angular.module('starter.services', [])
                 }
             },
             trackMetric: function (key, value) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.trackMetric(key, value, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.trackMetric(key, value, function(result) {
                         console.log("trackMetric success = " + result);
                     }, function(error) {
                         console.log("trackMetric error = " + error);
                     });
                 }
             },
-            trackView: function (screenName, campaingUrl) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.trackView(screenName, campaingUrl, function(result) {
+            trackView: function (screenName, campaingUrl, newSession) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.trackView(screenName, campaingUrl, newSession, function(result) {
                         console.log("trackView success = " + result);
                     }, function(error) {
                         console.log("trackView error = " + error);
@@ -1382,17 +1457,17 @@ angular.module('starter.services', [])
                 }
             },
             addCustomDimension: function (key, value) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.addCustomDimension(key, value, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.addCustomDimension(key, value, function(result) {
                         console.log("addCustomDimension success = " + result);
                     }, function(error) {
                         console.log("addCustomDimension error = " + error);
                     });
                 }
             },
-            trackEvent: function (category, action, label, value) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.trackEvent(category, action, label, value, function(result) {
+            trackEvent: function (category, action, label, value, newSession) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.trackEvent(category, action, label, value, newSession, function(result) {
                         console.log("trackEvent success = " + result);
                     }, function(error) {
                         console.log("trackEvent error = " + error);
@@ -1404,8 +1479,8 @@ angular.module('starter.services', [])
                 }
             },
             trackException: function (description, fatal) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.trackException(description, fatal, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.trackException(description, fatal, function(result) {
                         console.log("trackException success = " + result);
                     }, function(error) {
                         console.log("trackException error = " + error);
@@ -1416,9 +1491,9 @@ angular.module('starter.services', [])
                     gaArray.push(["trackException", description, fatal]);
                 }
             },
-            trackTiming: function (category, milliseconds, variable, label) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.trackTiming(category, milliseconds, variable, label, function(result) {
+            trackTiming: function (category, intervalInMilliseconds, name, label) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.trackTiming(category, intervalInMilliseconds, name, label, function(result) {
                         console.log("trackTiming success = " + result);
                     }, function(error) {
                         console.log("trackTiming error = " + error);
@@ -1426,8 +1501,8 @@ angular.module('starter.services', [])
                 }
             },
             addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
                         console.log("addTransaction success = " + result);
                     }, function(error) {
                         console.log("addTransaction error = " + error);
@@ -1435,8 +1510,8 @@ angular.module('starter.services', [])
                 }
             },
             addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
                         console.log("addTransactionItem success = " + result);
                     }, function(error) {
                         console.log("addTransactionItem error = " + error);
@@ -1444,8 +1519,8 @@ angular.module('starter.services', [])
                 }
             },
             enableUncaughtExceptionReporting: function (enable) {
-                if (typeof $window.analytics !== "undefined") {
-                    return $window.analytics.enableUncaughtExceptionReporting(enable, function(result) {
+                if (typeof $window.ga !== "undefined") {
+                    return $window.ga.enableUncaughtExceptionReporting(enable, function(result) {
                         console.log("enableUncaughtExceptionReporting success = " + result);
                     }, function(error) {
                         console.log("enableUncaughtExceptionReporting error = " + error);
@@ -1453,7 +1528,7 @@ angular.module('starter.services', [])
                 }
             },
             platformReady: function() {
-                if (typeof $window.analytics !== "undefined") {
+                if (typeof $window.ga !== "undefined") {
                     for (var i = 0; i < gaArray.length; i++) {
                         if (gaArray[i][0] === "trackView") {
                             this.trackView(gaArray[i][1]);
@@ -1471,20 +1546,12 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
-        obj.admobIOSBannerAdUnit = 'ca-app-pub-3300619349648096/7636193363';
-        obj.admobIOSInterstitialAdUnit = 'ca-app-pub-3300619349648096/3066392962';
-        obj.admobAndroidBannerAdUnit = 'ca-app-pub-3300619349648096/9569086167';
-        obj.admobAndroidInterstitialAdUnit = 'ca-app-pub-3300619349648096/2045819361';
-        obj.googleSenderId = '';
 
-        if (debug) {
-            //obj.url = "/v000705";
-            //obj.url = "http://todayweather-wizardfactory.rhcloud.com/v000705";
-            obj.url = "http://tw-wzdfac.rhcloud.com/v000705";
-        }
-        else {
-            obj.url = "http://todayweather.wizardfactory.net/v000705";
-        }
+        //obj.url = "/v000705";
+        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
+        //obj.url = "https://tw-wzdfac.rhcloud.com/v000705";
+        //obj.url = "https://todayweather.wizardfactory.net/v000705";
+        //obj.url = window.twClientConfig.serverUrl;
 
         return obj;
     })

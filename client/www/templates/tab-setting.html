@@ -79,7 +79,7 @@
                         가이드 보기
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>
-                    <a class="item item-icon-right setting-title-light" href="#/purchase">
+                    <a class="item item-icon-right setting-title-light" href="#/purchase" ng-if="hasInAppPurchase()">
                         광고제거
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>

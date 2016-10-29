@@ -22,15 +22,18 @@ angular.module('starter', [
                 console.log('splash screen hide!!!');
                 navigator.splashscreen.hide();
             }
+            if (!twClientConfig.debug && window.AirBridgePlugin) {
+                AirBridgePlugin.initInstance(twClientConfig.airBridgeToken, twClientConfig.airBridgeAppId);
+            }
         }, false);
 
         $ionicPlatform.ready(function() {
-            if (Util.isDebug()) {
+            if (twClientConfig.debug) {
                 Util.ga.debugMode();
             }
 
             if (ionic.Platform.isIOS()) {
-                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_IOS_KEY]');
+                Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
                 if (window.applewatch) {
                     applewatch.init(function () {
                         console.log('Succeeded to initialize for apple-watch');
@@ -44,7 +47,7 @@ angular.module('starter', [
                     window.MobileAccessibility.usePreferredTextZoom(false);
                 }
 
-                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
+                Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
             }
 
             document.addEventListener("resume", function() {
@@ -56,11 +59,26 @@ angular.module('starter', [
             Util.ga.enableUncaughtExceptionReporting(true);
             Util.ga.setAllowIDFACollection(true);
 
+            if (window.hasOwnProperty("device")) {
+                console.log("UUID:"+window.device.uuid);
+            }
             console.log("UA:"+ionic.Platform.ua);
             console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
             console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
             console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
 
+            if (window.screen) {
+                Util.ga.trackEvent('app', 'screen width', window.screen.width);
+                Util.ga.trackEvent('app', 'screen height', window.screen.height);
+            }
+            else if (window.outerHeight) {
+                Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+                Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+            }
+
+            if (window.hasOwnProperty("device")) {
+                Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+            }
             Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
             if (window.cordova && cordova.getAppVersion) {
                 cordova.getAppVersion.getVersionNumber().then(function (version) {
@@ -127,12 +145,11 @@ angular.module('starter', [
 
     .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider, ionicTimePickerProvider) {
 
-        //$compileProvider.debugInfoEnabled(Util.isDebug());
+        //$compileProvider.debugInfoEnabled(twClientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
-        //add chrome-extension for chrome extension
-        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
-        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
+        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
 
         $compileProvider.directive('ngShortChart', function() {
             return {

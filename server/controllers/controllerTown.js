@@ -154,7 +154,20 @@ function ControllerTown() {
                                 }
                             );
                         });
-                    }],
+                    },
+                    function (callback) {
+                        var dateList = [];
+                        dateList.push(self._getCurrentTimeValue(+9).date); //today
+                        dateList.push(self._getCurrentTimeValue(+15).date); //tomorrow
+                        KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
+                            if (err) {
+                                return callback(err);
+                            }
+                            req.dustFrcstList = results;
+                            callback();
+                        });
+                    }
+                    ],
                     function(err){
                         if(err){
                             log.error(new Error('Gad> something is wrong to get weather data'));
@@ -1502,25 +1515,32 @@ function ControllerTown() {
             return this;
         }
 
+        function addDustFrcstList(list, dustFrcstList) {
+            dustFrcstList.forEach(function (result) {
+                list.forEach(function (dailyData) {
+                    if (dailyData.date === result.date) {
+                        dailyData.dustForecast = result.dustForecast;
+                    }
+                });
+            });
+        }
+
+        if (!req.midData.hasOwnProperty('dustFrcstList') || !Array.isArray(req.dustFrcstList)) {
+            addDustFrcstList(req.midData.dailyData, req.dustFrcstList);
+            next();
+            return this;
+        }
         try {
             var dateList = [];
-            req.midData.dailyData.forEach(function (dailyData) {
-               dateList.push(dailyData.date);
-            });
-
+            dateList.push(self._getCurrentTimeValue(+9).date); //today
+            dateList.push(self._getCurrentTimeValue(+15).date); //tomorrow
             KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
                 if (err) {
                     log.error(err);
                     next();
                     return;
                 }
-                results.forEach(function (result) {
-                    req.midData.dailyData.forEach(function (dailyData) {
-                        if (dailyData.date === result.date) {
-                            dailyData.dustForecast = result.dustForecast;
-                        }
-                    });
-                });
+                addDustFrcstList(req.midData.dailyData, results);
                 next();
             });
         }
@@ -2067,7 +2087,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         itemList.push(item);
     }
 
-    if (current.dsplsGrade && current.dsplsGrade) {
+    if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
         tmpGrade = current.dsplsGrade;
         if (tmpGrade == 1) {
             //좋은 보통보다 높고, 나쁨보다 낮음.
@@ -2076,6 +2096,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
         item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
         itemList.push(item);
     }
+
     if (current.sensorytem && current.sensorytem !== current.t1h) {
         diffTemp = Math.round(current.sensorytem - current.t1h);
         item = {str :"체감온도" +" "+ current.sensorytem +"˚", grade: Math.abs(diffTemp)};

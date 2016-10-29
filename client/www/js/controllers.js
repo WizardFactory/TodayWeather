@@ -186,7 +186,7 @@ angular.module('starter.controllers', [])
                 WeatherInfo.setCityIndex($stateParams.fav);
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '도시를 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
                 return;
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
@@ -706,17 +706,17 @@ angular.module('starter.controllers', [])
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                             if (error instanceof Error) {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                    '(' + WeatherInfo.getCityIndex() + ', ' + error.message + ')', endTime - startTime);
+                                    '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                             }
 
-                            var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                            var msg = "날씨 정보를 가져오지 못하였습니다.";
                             deferred.reject(msg);
                         });
                     }, function () {
-                        var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                        var msg = "위치 정보를 가져오지 못하였습니다.";
                         deferred.reject(msg);
                     });
                 }, function () {
@@ -744,13 +744,13 @@ angular.module('starter.controllers', [])
                     Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                     if (error instanceof Error) {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + WeatherInfo.getCityIndex() + ', ' + error.message + ')', endTime - startTime);
+                            '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                     }
 
-                    var msg = "위치 정보 업데이트를 실패하였습니다.";
+                    var msg = "날씨 정보를 가져오지 못하였습니다.";
                     deferred.reject(msg);
                 });
             }
@@ -808,21 +808,6 @@ angular.module('starter.controllers', [])
             }
             return getWidthPerCol()*index;
         }
-
-        /**
-         * event가 두번 들어오는 경우가 있어 toggle은 사용 못함.
-         * 값을 지정하여도, 반복해서 들어오는 경우가 있음. event 자체가 두번 불리는 것으로 보임
-         * @param forecastType
-         */
-        $scope.changeForecastType = function(forecastType) {
-            console.log("changeForecastType to "+forecastType);
-            if (forecastType === 'short') {
-                $location.path('/tab/forecast');
-            }
-            else if (forecastType === 'mid') {
-                $location.path('/tab/dailyforecast');
-            }
-        };
 
         $scope.onSwipeLeft = function() {
             if (WeatherInfo.getEnabledCityCount() === 1) {
@@ -916,13 +901,6 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
-            window.addEventListener('native.keyboardshow', function () {
-                TwAds.setShowAds(false);
-            });
-            window.addEventListener('native.keyboardhide', function () {
-                TwAds.setShowAds(true);
-            });
-
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
@@ -1008,7 +986,7 @@ angular.module('starter.controllers', [])
                     }
                     $ionicLoading.hide();
                 }, function () {
-                    var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
+                    var msg = "위치 정보를 가져오지 못하였습니다.";
                     $scope.showAlert("에러", msg);
                     $ionicLoading.hide();
                 });
@@ -1111,13 +1089,13 @@ angular.module('starter.controllers', [])
                 Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                 if (error instanceof Error) {
                     Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                        '(' + error.message + ')', endTime - startTime);
+                        '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
                     Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                         '(' + error + ')', endTime - startTime);
                 }
 
-                var msg = "현재 위치 정보 업데이트를 실패하였습니다.";
+                var msg = "날씨 정보를 가져오지 못하였습니다.";
                 $scope.showAlert("에러", msg);
                 $ionicLoading.hide();
             });
@@ -1249,7 +1227,7 @@ angular.module('starter.controllers', [])
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                             if (error instanceof Error) {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
-                                    '(' + index + ', ' + error.message + ')', endTime - startTime);
+                                    '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
                                 Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', ' + error + ')', endTime - startTime);
@@ -1278,10 +1256,10 @@ angular.module('starter.controllers', [])
                     deferred.resolve(city);
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
                     if (error instanceof Error) {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + index + ', ' + error.message + ')', endTime - startTime);
+                            '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
                         Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', ' + error + ')', endTime - startTime);
@@ -1297,18 +1275,8 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, Util) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase) {
         function init() {
-            //for chrome extension
-            if (window.chrome && chrome.extension) {
-                $http({method: 'GET', url: chrome.extension.getURL("manifest.json"), timeout: 3000}).success(function (manifest) {
-                    console.log("Version: " + manifest.version);
-                    $scope.version = manifest.version;
-                }).error(function (err) {
-                    console.log(err);
-                });
-            }
-
             if (ionic.Platform.isAndroid()) {
                 //get interval time;
                 $scope.updateInterval = "0";
@@ -1356,19 +1324,24 @@ angular.module('starter.controllers', [])
 
         $scope.sendMail = function() {
             Util.ga.trackEvent('action', 'click', 'send mail');
-            window.location.href = "mailto:todayweather@wizardfactory.net";
+
+            var to = twClientConfig.mailTo;
+            var subject = '의견 보내기';
+            var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
+                + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
+            window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
         };
 
         $scope.openMarket = function() {
             var src = "";
             if (ionic.Platform.isIOS()) {
-                src = "https://itunes.apple.com/app/todayweather/id1041700694";
+                src = twClientConfig.iOSStoreUrl;
             }
             else if (ionic.Platform.isAndroid()) {
-                src = "market://details?id=net.wizardfactory.todayweather";
+                src = twClientConfig.androidStoreUrl;
             }
             else {
-                src = "https://www.facebook.com/TodayWeather.WF";
+                src = twClientConfig.etcUrl;
             }
 
             if (window.cordova && cordova.InAppBrowser) {
@@ -1434,6 +1407,10 @@ angular.module('starter.controllers', [])
             });
         };
 
+        $scope.hasInAppPurchase = function () {
+            return Purchase.hasInAppPurchase;
+        };
+
         init();
     })
 
@@ -1455,7 +1432,7 @@ angular.module('starter.controllers', [])
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '도시를 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
@@ -1510,8 +1487,11 @@ angular.module('starter.controllers', [])
             }
 
             if (window.plugins && window.plugins.socialsharing) {
-                window.plugins.socialsharing.share(message + '오늘날씨 다운로드 >\nhttp://onelink.to/dqud4w', null, null, null);
+                window.plugins.socialsharing.share(message + '오늘날씨 http://abr.ge/mxld', null, null, null);
                 Util.ga.trackEvent('action', 'tab', 'share');
+                if (!twClientConfig.debug && window.AirBridgePlugin) {
+                    AirBridgePlugin.goal("weathershare");
+                }
             }
             else {
                 console.log('plugins socialsharing is undefined');
@@ -1521,7 +1501,8 @@ angular.module('starter.controllers', [])
         $scope.showAlert = function(title, msg) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
-                template: msg
+                template: msg,
+                okText: '확인'
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
@@ -1531,7 +1512,9 @@ angular.module('starter.controllers', [])
         $scope.showConfirm = function(title, template, callback) {
             var confirmPopup = $ionicPopup.confirm({
                 title: title,
-                template: template
+                template: template,
+                okText: '확인',
+                cancelText: '취소'
             });
             confirmPopup.then(function (res) {
                 if (res) {
@@ -1544,9 +1527,8 @@ angular.module('starter.controllers', [])
         };
 
         $ionicPlatform.ready(function() {
-            $rootScope.viewAdsBanner = TwAds.enableAds;
-            $rootScope.contentBottom = TwAds.enableAds? 100 : 50;
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', TwAds.showAds?'50px':'0px');
+            //in app purchase plugin이 없으면 enableAds는 undefined임
+            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         });
 
         init();
@@ -1614,10 +1596,10 @@ angular.module('starter.controllers', [])
         function showPopup() {
             var popup = $ionicPopup.show({
                 template: '<ion-list>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="true">현 위치 자동 검색</ion-radio>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 도시 검색</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="true">현재 위치 자동 검색</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 지역 이름 검색</ion-radio>' +
                     '</ion-list>',
-                title: '도시 검색 방법을 선택하세요.',
+                title: '지역 검색 방법을 선택하세요.',
                 scope: $scope,
                 cssClass: 'ionic_popup',
                 buttons: [

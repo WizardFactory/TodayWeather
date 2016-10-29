@@ -38,6 +38,7 @@ buildscript {
 // Allow plugins to declare Maven dependencies via build-extras.gradle.
 repositories {
     mavenCentral()
+jcenter()
 }
 
 task wrapper(type: Wrapper) {

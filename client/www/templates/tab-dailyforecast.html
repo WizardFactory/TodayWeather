@@ -18,8 +18,7 @@
         <div id="contentBody">
             <div md-header-picture ng-style="{'height':headerHeight+'px'}"></div>
             <div class="main-content"
-                 ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid'}"
-                 ng-click="changeForecastType('short')">
+                 ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid'}">
                <div class="col extend-content">
                     <ion-scroll delegate-handle="weeklyChart" direction="x" zooming="false" has-bouncing="false"
                                 scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">

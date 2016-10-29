@@ -9,7 +9,7 @@ angular.module('service.push', [])
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": Util.googleSenderId,
+                "senderID": twClientConfig.googleSenderId,
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -23,7 +23,7 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = Util.url + '/push';
+        obj.pushUrl = twClientConfig.serverUrl + '/push';
 
         //attach push object to the window object for android event
         //obj.push;
@@ -231,6 +231,9 @@ angular.module('service.push', [])
 
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
+                if (!twClientConfig.debug && window.AirBridgePlugin) {
+                    AirBridgePlugin.goal("weatheralarm");
+                }
             }
             else {
                 for (var i=0; i<self.pushData.alarmList.length; i++) {

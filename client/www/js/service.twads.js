@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, Util) {
+    .factory('TwAds', function($rootScope, $location, Util) {
         var obj = {};
         obj.enableAds;
         obj.showAds;
@@ -13,6 +13,11 @@ angular.module('service.twads', [])
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
+
+        $rootScope.viewAdsBanner = true;
+        $rootScope.clickAdsBanner = function() {
+            $location.path('/purchase');
+        };
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
@@ -39,12 +44,11 @@ angular.module('service.twads', [])
             localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
         };
 
-        function _setLayout(enable) {
+        obj.setLayout = function (enable) {
             //close bottom box
-            $rootScope.viewAdsBanner = enable;
             $rootScope.contentBottom = enable?100:50;
             angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', enable?'50px':'0px');
-        }
+        };
 
         obj._admobCreateBanner = function() {
             admob.createBannerView(
@@ -88,12 +92,12 @@ angular.module('service.twads', [])
                 });
 
                 obj.enableAds = enable;
-                _setLayout(enable);
+                obj.setLayout(enable);
                 Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
                 obj.enableAds = enable;
-                _setLayout(enable);
+                obj.setLayout(enable);
                 obj._admobCreateBanner();
                 Util.ga.trackEvent('app', 'account', 'free');
             }
@@ -101,6 +105,8 @@ angular.module('service.twads', [])
 
         obj.setShowAds = function(show) {
             console.log('set show ads show='+show);
+            $rootScope.viewAdsBanner = show;
+
             if(obj.showAds === show) {
                 console.log('already TwAds is show='+show);
                 return;
@@ -150,6 +156,12 @@ angular.module('service.twads', [])
 
             if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
+                //for ads app without inapp and paid app
+                if (TwAds.requestEnable != undefined) {
+                    console.log('set requestEnable='+TwAds.requestEnable);
+                    TwAds.setShowAds(TwAds.requestEnable);
+                    TwAds.setLayout(TwAds.requestEnable);
+                }
                 return;
             }
 
@@ -160,12 +172,12 @@ angular.module('service.twads', [])
             TwAds.loaded = true;
 
             if (ionic.Platform.isIOS()) {
-                TwAds.bannerAdUnit = Util.admobIOSBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
+                TwAds.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
+                TwAds.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                TwAds.bannerAdUnit = Util.admobAndroidBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
+                TwAds.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
+                TwAds.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
             admob.setOptions({
@@ -175,7 +187,7 @@ angular.module('service.twads', [])
                 bannerAtTop:    false,
                 overlap:        true,
                 offsetStatusBar:    false,
-                isTesting:  Util.isDebug(),
+                isTesting:  twClientConfig.debug,
                 adExtras :  {},
                 autoShowBanner: false,
                 autoShowInterstitial:   false
