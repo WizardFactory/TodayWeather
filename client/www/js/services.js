@@ -996,7 +996,7 @@ angular.module('starter.services', [])
         function getGeoCodeFromDaum(address) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/addr2coord'+
-                '?apikey=' + '[DAUM_SERVICE_KEY]' +
+                '?apikey=' + twClientConfig.daumServiceKey +
                 '&q='+ encodeURIComponent(address) +
                 '&output=json';
 
@@ -1062,7 +1062,7 @@ angular.module('starter.services', [])
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
-                '?apikey=' + '[DAUM_SERVICE_KEY]'+
+                '?apikey=' + twClientConfig.daumServiceKey +
                 '&longitude='+ lng +
                 '&latitude='+lat+
                 '&inputCoordSystem=WGS84'+
