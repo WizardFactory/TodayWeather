@@ -37,6 +37,7 @@ function ConCollector() {
                             'ftemp_min', 'ftemp_mint', 'ftemp_max', 'ftemp_maxt',
                             'humid', 'windspd', 'winddir', 'vis', 'cloud', 'pres', 'oz'];
     self.MAX_DSF_COUNT = 8;
+    self.MAX_WU_COUNT = 72;
 }
 
 /**
@@ -427,7 +428,9 @@ ConCollector.prototype._parseWuForecast = function(src){
         summary.moonrise = parseInt(day.moonrise_time.replace(':',''));
         summary.moonset = parseInt(day.moonset_time.replace(':',''));
         summary.tmax = parseFloat(day.temp_max_c);
+        summary.tmax_f = parseFloat(day.temp_max_f);
         summary.tmin = parseFloat(day.temp_min_c);
+        summary.tmin_f = parseFloat(day.temp_min_f);
         summary.precip = parseInt(day.precip_total_mm);
         summary.rain = parseInt(day.rain_total_mm);
         summary.snow = parseInt(day.snow_total_mm);
@@ -435,6 +438,7 @@ ConCollector.prototype._parseWuForecast = function(src){
         summary.humax = parseInt(day.humid_max_pct);
         summary.humin = parseInt(day.humid_min_pct);
         summary.windspdmax = parseFloat(day.windspd_max_ms);
+        summary.windspdmax_mh = parseFloat(day.windspd_max_mph);
         summary.windgstmax = parseFloat(day.windgst_max_ms);
         summary.slpmax = parseFloat(day.slp_max_mb);
         summary.slpmin = parseFloat(day.slp_min_mb);
@@ -460,9 +464,12 @@ ConCollector.prototype._parseWuForecast = function(src){
             forecast.desc = frame.wx_desc;
             forecast.code = parseInt(frame.wx_code);
             forecast.tmp = parseFloat(frame.temp_c);
+            forecast.tmp_f = parseFloat(frame.temp_f);
             forecast.ftmp = parseFloat(frame.feelslike_c);
+            forecast.ftmp_f = parseFloat(frame.feelslike_f);
             forecast.winddir = parseInt(frame.winddir_deg);
             forecast.windspd = parseFloat(frame.windspd_ms);
+            forecast.windspd_mh = parseFloat(frame.windspd_mph);
             forecast.windgst = parseFloat(frame.windgst_ms);
             forecast.cloudlow = parseInt(frame.cloud_low_pct);
             forecast.cloudmid = parseInt(frame.cloud_mid_pct);
@@ -508,9 +515,12 @@ ConCollector.prototype._parseWuCurrent = function(src, date){
         desc:       src.wx_desc,
         code:       parseInt(src.wx_code),
         temp:       parseFloat(src.temp_c),
+        temp_f:       parseFloat(src.temp_f),
         ftemp:      parseFloat(src.feelslike_c),
+        ftemp_f:      parseFloat(src.feelslike_f),
         humid:      parseInt(src.humid_pct),
         windspd:    parseFloat(src.windspd_ms),
+        windspd_mh:    parseFloat(src.windspd_mph),
         winddir:    parseFloat(src.winddir_deg),
         cloud:      parseInt(src.cloudtotal_pct),
         vis:        parseFloat(src.vis_km),
@@ -766,7 +776,7 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
                         return 0;
                     });
 
-                    if(data.dataList.length > 72){
+                    if(data.dataList.length > self.MAX_WU_COUNT){
                         data.dataList.shift();
                     }
                     //log.info(data);
@@ -813,7 +823,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
 
                     log.info(result);
                     self.saveWuForecast(geocode, date, result, function(err, forecastData){
-                        cb(undefined, forecastData);
+                        cb(undefined, 1);
                     });
                 });
             },
@@ -833,15 +843,14 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
 
                     log.info(result);
                     self.saveWuCurrent(geocode, date, result, function(err, currentData){
-                        wuData.current = currentData;
-                        cb(undefined, wuData);
+                        cb(undefined, 1);
                     });
                 });
             }
         ],
         function(err, wuData){
             if(err){
-                log.err(err);
+                log.error(err);
             }
 
             if(wuData){

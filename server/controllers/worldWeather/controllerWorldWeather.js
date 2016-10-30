@@ -6,6 +6,7 @@ var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode.js');
 var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
 var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
+var modelDSForecast = require('../../models/worldWeather/modelDSForecast');
 var config = require('../../config/config');
 
 
@@ -58,6 +59,7 @@ var itemWuForecast = [
     'vis',
     'splmax'
 ];
+
 /**
  *
  * @returns {controllerWorldWeather}
@@ -66,7 +68,9 @@ function controllerWorldWeather(){
     var self = this;
 
     self.geocodeList = [];
-
+    /*****************************************************************************
+     * Public Functions (For Interface)
+     *****************************************************************************/
     /**
      *
      * @param req
@@ -222,13 +226,7 @@ function controllerWorldWeather(){
 
                             req.error = undefined;
 
-                            if(result.weather.WU){
-                                req.WU = result.weather.WU;
-                            }
-                            if(result.weather.DSF){
-                                req.DSF = result.weather.DSF;
-                            }
-                            callback('skip_get_data', result);
+                            callback(null);
                         });
                     });
                 },
@@ -261,21 +259,21 @@ function controllerWorldWeather(){
                         log.info('WW> get WU data');
 
                         // goto next step
-                        callback(null, result);
+                        callback(null);
                     });
                 },
                 // 6. get DSF data from DB by using geocode.
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
-                            log.error('DSF> Fail to get DSF data', err);
+                            log.error('WW> Fail to get DSF data', err);
                             callback(null);
                             return;
                         }
-                        log.info('DSF> get DSF data');
+                        log.info('WW> get DSF data');
 
                         // goto next step
-                        callback(null, result);
+                        callback(null);
                     });
                 }
         ],
@@ -284,14 +282,6 @@ function controllerWorldWeather(){
                 log.info('WW> queryWeather Error : ', err);
             }else{
                 log.silly('WW> queryWeather no error')
-            }
-
-            // merge weather data
-            if(result){
-                self.makeDefault(req);
-                self.mergeWeather(req);
-
-                log.silly(req.result);
             }
 
             log.info('WW> Finish to make weather data');
@@ -330,6 +320,354 @@ function controllerWorldWeather(){
         }
     };
 
+
+    self.mergeWuForecastData = function(req, res, next){
+        if(req.WU.forecast){
+            if(req.result === undefined){
+                req.result = {};
+            }
+            var forecast = req.WU.forecast;
+
+            // Merge WU Forecast DATA
+            if(forecast.geocode){
+                req.result.location = {};
+                if(forecast.geocode.lat){
+                    req.result.location.lat = forecast.geocode.lat;
+                }
+                if(forecast.geocode.lon){
+                    req.result.location.lon = forecast.geocode.lon;
+                }
+            }
+
+            if(forecast.date){
+                req.result.pubDate = {};
+
+                if(forecast.date){
+                    req.result.pubDate.wuForecast = forecast.date;
+                }
+            }
+            if(forecast.dateObj){
+                if(req.result.pubDate === undefined){
+                    req.result.pubDate = {};
+                }
+
+                if(forecast.dateObj){
+                    req.result.pubDate.wuForecast = forecast.dateObj;
+                }
+            }
+
+            if(forecast.days){
+                if(req.result.daily === undefined){
+                    req.result.daily = [];
+                }
+                forecast.days.forEach(function(item){
+                    req.result.daily.push(self._makeDailyDataFromWU(item.summary));
+
+                    if(req.result.timely === undefined){
+                        req.result.timely = [];
+                    }
+
+                    item.forecast.forEach(function(time){
+                        var index = -1;
+
+                        for(var i=0 ; i<req.result.timely.length ; i++){
+                            if((req.result.timely[i].date === time.dateObj)
+                                || req.result.timely[i].date === ('' + time.date + time.time)){
+                                index = i;
+                                break;
+                            }
+                        }
+
+                        if(index > 0){
+                            req.result.timely[i] = self._makeTimelyDataFromWU(time);
+                        }
+                        else{
+                            req.result.timely.push(self._makeTimelyDataFromWU(time));
+                        }
+                    });
+                });
+            }
+        }
+
+        next();
+    };
+
+    self.mergeWuCurrentData = function(req, res, next){
+        if(req.WU.current){
+            var list = req.WU.current.dataList;
+            var curDate = new Date();
+            log.info('MG WuC> curDate ', curDate);
+
+            if(req.result.timely === undefined){
+                req.result.timely = [];
+            }
+            list.forEach(function(curItem){
+                var isExist = 0;
+                if(curItem.dateObj && curItem.dateObj > curDate){
+                    log.info('MG WuC> skip future data', curItem.dateObj);
+                    return;
+                }
+
+                for(var i=0 ; i<req.result.timely.length ; i++){
+                    if(req.result.timely[i].dateObj === curItem.dateObj){
+                        isExist = 1;
+                        if(curItem.desc){
+                            req.result.timely[i].desc = curItem.desc;
+                        }
+                        if(curItem.temp){
+                            req.result.timely[i].temp_c = curItem.temp;
+                        }
+                        if(curItem.temp_f){
+                            req.result.timely[i].temp_f = curItem.temp_f;
+                        }
+                        if(curItem.ftemp){
+                            req.result.timely[i].ftemp_c = curItem.ftemp;
+                        }
+                        if(curItem.ftemp_f){
+                            req.result.timely[i].ftemp_f = curItem.ftemp_f;
+                        }
+                        if(curItem.humid){
+                            req.result.timely[i].humid = curItem.humid;
+                        }
+                        if(curItem.windspd){
+                            req.result.timely[i].windSpd_ms = curItem.windspd;
+                        }
+                        if(curItem.windspd_mh){
+                            req.result.timely[i].windSpd_mh = curItem.windspd_mh;
+                        }
+                        if(curItem.winddir){
+                            req.result.timely[i].windDir = curItem.winddir;
+                        }
+                        if(curItem.cloud){
+                            req.result.timely[i].cloud = curItem.cloud;
+                        }
+                        if(curItem.vis){
+                            req.result.timely[i].vis = curItem.vis;
+                        }
+                        if(curItem.slp){
+                            req.result.timely[i].press = curItem.slp;
+                        }
+                    }
+                }
+                if(isExist === 0){
+                    req.result.timely.push(self._makeTimelyDataFromWUCurrent(curItem));
+                }
+
+            });
+        }
+        next();
+    };
+
+    self.mergeDsfData = function(req, res, next){
+        if(req.DSF){
+            if(req.result === undefined){
+                req.result = {};
+            }
+
+            //req.result.DSF = req.DSF;
+        }
+        next();
+    };
+
+    /*******************************************************************************
+     * * ***************************************************************************
+     * * Private Functions (For internal)
+     * * ***************************************************************************
+     * *****************************************************************************/
+
+    self._getDatabyDate = function(list, date){
+        list.forEach(function(item, index){
+            if(item.date === date){
+
+            }
+        })
+    };
+
+    self._makeTimelyDataFromWUCurrent = function(time){
+        var result = {};
+
+        if(time.date){
+            result.date = time.date;
+        }
+        if(time.dateObj){
+            result.date = time.dateObj;
+        }
+        if(time.desc){
+            result.desc = time.desc;
+        }
+        if(time.temp){
+            result.temp_c = time.temp;
+        }
+        if(time.temp_f){
+            result.temp_f = time.temp_f;
+        }
+        if(time.ftemp){
+            result.ftemp_c = time.ftemp;
+        }
+        if(time.ftemp_f){
+            result.ftemp_f = time.ftemp_f;
+        }
+        if(time.humid){
+            result.humid = time.humid;
+        }
+        if(time.windspd){
+            result.windSpd_ms = time.windspd;
+        }
+        if(time.windspd_mh){
+            result.windSpd_mh = time.windspd_mh;
+        }
+        if(time.winddir){
+            result.windDir = time.winddir;
+        }
+        if(time.cloud){
+            result.cloud = time.cloud;
+        }
+        if(time.vis){
+            result.vis = time.vis;
+        }
+        if(time.slp){
+            result.press = time.slp;
+        }
+
+        return result;
+    };
+
+    self._makeTimelyDataFromWU = function(time){
+        var result = {};
+
+        if(time.date && time.time){
+            result.date = '' + time.date + time.time;
+        }
+        if(time.utcDate && time.utcTime){
+            result.date = '' + time.date + time.time;
+        }
+        if(time.dateObj){
+            result.date = time.dateObj;
+        }
+        if(time.tmp){
+            result.temp_c = time.tmp;
+        }
+        if(time.tmp_f){
+            result.temp_f = time.tmp_f
+        }
+        if(time.ftmp){
+            result.ftemp_c = time.ftmp;
+        }
+        if(time.ftmp_f){
+            result.ftemp_f = time.ftmp_f;
+        }
+        if(time.cloudtot){
+            result.cloud = time.cloudtot;
+        }
+        if(time.windspd){
+            result.windSpd_ms = time.windspd;
+        }
+        if(time.windspd_mh){
+            result.windSpd_mh = time.windspd_mh;
+        }
+        if(time.winddir){
+            result.windDir = time.winddir;
+        }
+        if(time.humid){
+            result.humid = time.humid;
+        }
+        result.precType = 0;
+        if(time.rain > 0){
+            result.precType += 1;
+        }
+        if(time.snow > 0){
+            result.precType += 2;
+        }
+        if(time.prob){
+            result.precProb = time.prob;
+        }
+        if(time.precip){
+            result.precip = time.precip;
+        }
+        if(time.vis){
+            result.vis = time.vis;
+        }
+        if(time.splmax){
+            result.press = time.splmax;
+        }
+
+        return result;
+    };
+    self._makeDailyDataFromWU = function(summary){
+        var day = {};
+
+        if(summary.date){
+            day.date = summary.date;
+        }
+        if(summary.dateObj){
+            day.date = summary.dateObj;
+        }
+        if(summary.desc){
+            day.desc = summary.desc;
+        }
+        if(summary.sunrise){
+            day.sunrise = summary.sunrise;
+        }
+        if(summary.sunset){
+            day.sunset = summary.sunset;
+        }
+        if(summary.moonrise){
+            day.moonrise = summary.moonrise;
+        }
+        if(summary.moonset){
+            day.moonset = summary.moonset;
+        }
+        if(summary.tmax){
+            day.tempMax_c = summary.tmax;
+        }
+        if(summary.tmax_f){
+            day.tempMax_f = summary.tmax_f;
+        }
+        if(summary.tmin){
+            day.tempMin_c = summary.tmin;
+        }
+        if(summary.tmin_f){
+            day.tempMin_f = summary.tmin_f;
+        }
+        if(summary.ftmax){
+            day.ftempMax_c = summary.ftmax;
+        }
+        if(summary.ftmax_f){
+            day.ftempMax_f = summary.ftmax_f;
+        }
+        if(summary.ftmin){
+            day.ftempMin_c = summary.ftmin;
+        }
+        if(summary.ftmin_f){
+            day.ftempMin_f = summary.ftmon_f;
+        }
+
+        day.precType = 0;
+        if(summary.rain > 0){
+            day.precType += 1;
+        }
+        if(summary.snow > 0){
+            day.precType += 2;
+        }
+
+        if(summary.prob){
+            day.precProb = summary.prob;
+        }
+        if(summary.humax){
+            day.humid = summary.humax;
+        }
+        if(summary.windspdmax){
+            day.windSpd_ms = summary.windspdmax;
+        }
+        if(summary.windspdmax_mh){
+            day.windSpd_mh = summary.windspdmax_mh;
+        }
+        if(summary.slpmax){
+            day.press = summary.slpmax;
+        }
+
+        return day;
+    };
     /**
      *
      * @param req
@@ -564,68 +902,92 @@ function controllerWorldWeather(){
             lat: parseFloat(req.geocode.lat),
             lon: parseFloat(req.geocode.lon)
         };
-        req.WU = {
-            current:[],
-            days: []
+
+        var res = {
+            current:{},
+            forecast: {}
         };
 
         async.parallel([
                 function(cb){
                     modelWuCurrent.find({geocode:geocode}, function(err, list){
                         if(err){
-                            log.error('gFU> fail to get WU Current data');
+                            log.error('gWU> fail to get WU Current data');
                             //cb(new Error('gFU> fail to get WU Current data'));
                             cb(null);
                             return;
                         }
 
                         if(list.length === 0){
-                            log.error('gFU> There is no WU Current data for ', geocode);
+                            log.error('gWU> There is no WU Current data for ', geocode);
                             //cb(new Error('gFU> There is no WU Current data'));
                             cb(null);
                             return;
                         }
 
-                        req.WU.current = self.getWuCurrentData(list[0].dataList);
+                        res.current = list[0];
                         cb(null);
                     });
                 },
                 function(cb){
                     modelWuForecast.find({geocode:geocode}, function(err, list){
                         if(err){
-                            log.error('gFU> fail to get WU Forecast data');
+                            log.error('gWU> fail to get WU Forecast data');
                             //cb(new Error('gFU> fail to get WU Forecast data'));
                             cb(null);
                             return;
                         }
 
                         if(list.length === 0){
-                            log.error('gFU> There is no WU Forecast data for ', geocode);
+                            log.error('gWU> There is no WU Forecast data for ', geocode);
                             //cb(new Error('gFU> There is no WU Forecast data'));
                             cb(null);
                             return;
                         }
 
-                        req.WU.days = self.getWuForecastData(list[0].days);
+                        res.forecast = list[0];
                         cb(null);
                     });
                 }
             ],
             function(err, result){
                 if(err){
-                    log.error('gFU> something is wrong???');
+                    log.error('gWU> something is wrong???');
                     return;
                 }
 
-                log.info(req.WU);
+                req.WU = {};
+                req.WU.current = res.current;
+                req.WU.forecast = res.forecast;
+
                 callback(err, req.WU);
             }
         );
     };
 
     self.getDataFromDSF = function(req, callback){
-        req.DSF = {};
-        callback(0, req.DSF);
+        var geocode = {
+            lat: parseFloat(req.geocode.lat),
+            lon: parseFloat(req.geocode.lon)
+        };
+
+        modelDSForecast.find({geocode:geocode}, function(err, list){
+            if(err){
+                log.error('gDSF> fail to get DSF data');
+                callback(err);
+                return;
+            }
+
+            if(list.length === 0){
+                log.error('gDSF> There is no DSF data for ', geocode);
+                callback(err);
+                return;
+            }
+
+            req.DSF = list[0];
+
+            callback(err, req.DSF);
+        });
     };
 
     /**
