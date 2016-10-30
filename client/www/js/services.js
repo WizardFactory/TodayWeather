@@ -1556,13 +1556,11 @@ angular.module('starter.services', [])
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
-        $ionicPlatform.ready(function () {
-            WeatherInfo.loadCities();
-            WeatherInfo.loadTowns();
-            $ionicPlatform.on('resume', function(){
-                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                    $rootScope.$broadcast('reloadEvent', 'resume');
-                }
-            });
+        WeatherInfo.loadCities();
+        WeatherInfo.loadTowns();
+        $ionicPlatform.on('resume', function(){
+            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                $rootScope.$broadcast('reloadEvent', 'resume');
+            }
         });
     });

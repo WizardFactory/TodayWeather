@@ -62,6 +62,16 @@
     {
       "locator": "https://bitbucket.org/teamteheranslippers/cordova-plugin-airbridge.git",
       "id": "cordova-plugin-airbridge"
+    },
+    {
+      "id": "ionic-plugin-deeplinks",
+      "locator": "ionic-plugin-deeplinks",
+      "variables": {
+        "URL_SCHEME": "todayweather",
+        "DEEPLINK_SCHEME": "http",
+        "DEEPLINK_HOST": "net.wizardfactory.todayweather",
+        "ANDROID_PATH_PREFIX": "/"
+      }
     }
   ],
   "cordovaPlatforms": [

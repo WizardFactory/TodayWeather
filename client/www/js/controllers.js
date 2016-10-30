@@ -194,7 +194,9 @@ angular.module('starter.controllers', [])
                 }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요', function() {
+                    $location.path('/tab/search');
+                });
                 return;
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
@@ -1510,7 +1512,7 @@ angular.module('starter.controllers', [])
             }
         };
 
-        $scope.showAlert = function(title, msg) {
+        $scope.showAlert = function(title, msg, callback) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
                 template: msg,
@@ -1518,6 +1520,7 @@ angular.module('starter.controllers', [])
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
+                callback();
             });
         };
 
