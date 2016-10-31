@@ -43,7 +43,10 @@ mongoose.connect(config.db.path, options, function(err) {
 });
 
 var app = express();
+var session = require('express-session');
 
+// Use the session middleware
+app.use(session({ secret: 'wizard factory', cookie: { maxAge: 60000 }}));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
