@@ -31,7 +31,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('short')) {
             log.error("Short forecast data hasn't attached on req");
@@ -334,7 +334,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info(">", meta);
+        log.info('>sID=',req.sessionID, meta);
 
         var todayDate = req.current.date;
         var yD = kmaTimeLib.convertStringToDate(todayDate);
@@ -516,7 +516,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('##', decodeURI(req.originalUrl));
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
 
         result.regionName = regionName;
         result.cityName = cityName;
@@ -539,8 +539,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('##', decodeURI(req.originalUrl));
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
 
         result.regionName = regionName;
         result.cityName = cityName;
