@@ -1170,7 +1170,7 @@ angular.module('starter.services', [])
             return deferred.promise;
         };
 
-        function _navigatorRetryGetCurrentPosition(retryCount, enableHighAccuracy, callback)  {
+        function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
             navigator.geolocation.getCurrentPosition(function (position) {
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
@@ -1198,16 +1198,15 @@ angular.module('starter.services', [])
                 else {
                     //간격을 주지 않으면 계속 실패해버림.
                     setTimeout(function () {
-                        _navigatorRetryGetCurrentPosition(retryCount, enableHighAccuracy, callback);
+                        _navigatorRetryGetCurrentPosition(retryCount, callback);
                     }, 200);
                 }
-            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: enableHighAccuracy });
+            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
         }
 
-        function _nativeRetryGetCurrentPosition(retryCount, enableHighAccuracy, callback) {
+        function _nativeRetryGetCurrentPosition(retryCount, callback) {
             var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
-            startTime = new Date().getTime();
             orgGeo.getCurrentPosition(function (position) {
                     console.log('native geolocation');
                     console.log(position);
@@ -1224,10 +1223,10 @@ angular.module('starter.services', [])
                     }
                     else {
                         setTimeout(function () {
-                            _nativeRetryGetCurrentPosition(retryCount, enableHighAccuracy, callback);
+                            _nativeRetryGetCurrentPosition(retryCount, callback);
                         }, 200);
                     }
-                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: enableHighAccuracy });
+                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         obj.getCurrentPosition = function () {
@@ -1237,7 +1236,7 @@ angular.module('starter.services', [])
                 var startTime = new Date().getTime();
                 var endTime;
 
-                _navigatorRetryGetCurrentPosition(3, false, function (error, position, retryCount) {
+                _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
                         Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
@@ -1250,21 +1249,8 @@ angular.module('starter.services', [])
                     deferred.resolve(position.coords);
                 });
 
-                _navigatorRetryGetCurrentPosition(3, true, function (error, position, retryCount) {
-                    endTime = new Date().getTime();
-                    if (error) {
-                        Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                        Util.ga.trackEvent('data error', 'get', 'position high accuracy(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                        return deferred.reject();
-                    }
-
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data', 'get', 'position high accuracy(retry:' + retryCount + ')', endTime - startTime);
-                    deferred.resolve(position.coords);
-                });
-
                 if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(3, false, function (error, position, retryCount) {
+                    _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
@@ -1274,19 +1260,6 @@ angular.module('starter.services', [])
 
                         Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
                         Util.ga.trackEvent('data', 'get', 'native position(retry:' + retryCount + ')', endTime - startTime);
-                        deferred.resolve(position.coords);
-                    });
-
-                    _nativeRetryGetCurrentPosition(3, true, function (error, position, retryCount) {
-                        endTime = new Date().getTime();
-                        if (error) {
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                            Util.ga.trackEvent('data error', 'get', 'native position high accuracy(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                            return deferred.reject();
-                        }
-
-                        Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                        Util.ga.trackEvent('data', 'get', 'native position high accuracy(retry:' + retryCount + ')', endTime - startTime);
                         deferred.resolve(position.coords);
                     });
                 }
