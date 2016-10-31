@@ -1520,7 +1520,9 @@ angular.module('starter.controllers', [])
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
-                callback();
+                if (callback != undefined) {
+                    callback();
+                }
             });
         };
 
