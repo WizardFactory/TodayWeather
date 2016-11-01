@@ -69,7 +69,8 @@ function ControllerTown() {
         meta.city = cityName;
         meta.town = townName;
 
-        log.info('>', meta);
+        log.info('## + ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
+        log.info('>sID=',req.sessionID, meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord) {
@@ -91,6 +92,7 @@ function ControllerTown() {
                                         return cb(err);
                                     }
                                     req[item.name] = data;
+                                    log.info('T DATA[' + item.name + '] sID=',req.sessionID);
                                     log.silly('T DATA[' + item.name + '] : ', req[item.name]);
                                     cb(null);
                                 });
@@ -141,6 +143,7 @@ function ControllerTown() {
                                             return cb(err);
                                         }
                                         req[item.name] = midData;
+                                        log.info('M DATA[' + item.name + '] sID=',req.sessionID);
                                         log.silly('M DATA[' + item.name + '] : ', req[item.name]);
                                         cb(null);
                                     });
@@ -163,6 +166,7 @@ function ControllerTown() {
                             if (err) {
                                 return callback(err);
                             }
+                            log.info('K DATA[DustFrcst] sID='+req.sessionID);
                             req.dustFrcstList = results;
                             callback();
                         });
@@ -172,6 +176,7 @@ function ControllerTown() {
                         if(err){
                             log.error(new Error('Gad> something is wrong to get weather data'));
                         }
+                        log.info('>sID=',req.sessionID, 'go next');
                         next();
                     }
                 );
@@ -208,8 +213,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         try{
             /*
@@ -266,7 +270,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         self._getCoord(regionName, cityName, townName, function(err, coord) {
             if(err) {
@@ -429,8 +433,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord){
@@ -487,8 +490,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         try{
             self._getCoord(regionName, cityName, townName, function(err, coord) {
@@ -735,8 +737,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         var currentTime = self._getCurrentTimeValue(9);
 
@@ -850,8 +851,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         var currentTime = self._getCurrentTimeValue(9);
         var useTime = Math.ceil(parseInt(currentTime.time.substr(0, 2)) / 3)*3;
@@ -905,7 +905,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -1003,7 +1003,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -1111,7 +1111,7 @@ function ControllerTown() {
         meta.method = 'convertMidKorStrToSkyInfo';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             log.warn("mid data is undefined", meta);
@@ -1194,7 +1194,7 @@ function ControllerTown() {
         meta.method = 'getMidRss';
         meta.region = regionName;
         meta.city = cityName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -1243,8 +1243,7 @@ function ControllerTown() {
         meta.method = 'getMid';
         meta.region = regionName;
         meta.city = cityName;
-
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         try{
             manager.getRegIdByTown(regionName, cityName, function(err, code){
@@ -1329,7 +1328,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.current || !req.currentList)  {
             var err = new Error("Fail to find current weather or current list "+JSON.stringify(meta));
@@ -1414,7 +1413,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.short && !req.midData) {
             var err = new Error("Fail to find short, mid weather");
@@ -1465,7 +1464,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.current)  {
             req.current={};
@@ -1506,7 +1505,7 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.midData)  {
             var err = new Error("Fail to find midData weather "+JSON.stringify(meta));
@@ -1585,7 +1584,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -1653,7 +1652,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('midData')) {
             req.midData = {};
@@ -1691,7 +1690,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('short')) {
             log.error("Short forecast data hasn't attached on req");
@@ -1916,8 +1915,7 @@ function ControllerTown() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-
-        log.info('##', decodeURI(req.originalUrl));
+        log.info('## - ' + decodeURI(req.originalUrl)  + ' sID=' + req.sessionID);
 
         result.regionName = regionName;
         result.cityName = cityName;

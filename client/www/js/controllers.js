@@ -194,7 +194,9 @@ angular.module('starter.controllers', [])
                 }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
+                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요', function() {
+                    $location.path('/tab/search');
+                });
                 return;
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
@@ -897,7 +899,7 @@ angular.module('starter.controllers', [])
         });
     })
 
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q,
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
@@ -909,6 +911,8 @@ angular.module('starter.controllers', [])
         var searchIndex = -1;
 
         function init() {
+            $ionicHistory.clearHistory();
+
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
@@ -1283,8 +1287,10 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, Util, Purchase) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory) {
         function init() {
+            $ionicHistory.clearHistory();
+
             if (ionic.Platform.isAndroid()) {
                 //get interval time;
                 $scope.updateInterval = "0";
@@ -1506,7 +1512,7 @@ angular.module('starter.controllers', [])
             }
         };
 
-        $scope.showAlert = function(title, msg) {
+        $scope.showAlert = function(title, msg, callback) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
                 template: msg,
@@ -1514,6 +1520,9 @@ angular.module('starter.controllers', [])
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
+                if (callback != undefined) {
+                    callback();
+                }
             });
         };
 
@@ -1543,7 +1552,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
-                                      $location, $ionicHistory, Util, TwAds, $ionicPopup, WeatherInfo) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo) {
         var guideVersion = null;
 
         $scope.data = { 'autoSearch': false };

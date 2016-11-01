@@ -996,7 +996,7 @@ angular.module('starter.services', [])
         function getGeoCodeFromDaum(address) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/addr2coord'+
-                '?apikey=' + '[DAUM_SERVICE_KEY]' +
+                '?apikey=' + twClientConfig.daumServiceKey +
                 '&q='+ encodeURIComponent(address) +
                 '&output=json';
 
@@ -1062,7 +1062,7 @@ angular.module('starter.services', [])
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
-                '?apikey=' + '[DAUM_SERVICE_KEY]'+
+                '?apikey=' + twClientConfig.daumServiceKey +
                 '&longitude='+ lng +
                 '&latitude='+lat+
                 '&inputCoordSystem=WGS84'+
@@ -1201,13 +1201,12 @@ angular.module('starter.services', [])
                         _navigatorRetryGetCurrentPosition(retryCount, callback);
                     }, 200);
                 }
-            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
+            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         function _nativeRetryGetCurrentPosition(retryCount, callback) {
             var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
 
-            startTime = new Date().getTime();
             orgGeo.getCurrentPosition(function (position) {
                     console.log('native geolocation');
                     console.log(position);
@@ -1227,7 +1226,7 @@ angular.module('starter.services', [])
                             _nativeRetryGetCurrentPosition(retryCount, callback);
                         }, 200);
                     }
-                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: true });
+                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         obj.getCurrentPosition = function () {
@@ -1237,7 +1236,7 @@ angular.module('starter.services', [])
                 var startTime = new Date().getTime();
                 var endTime;
 
-                _navigatorRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
                         Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
@@ -1251,7 +1250,7 @@ angular.module('starter.services', [])
                 });
 
                 if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                    _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
                             Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
@@ -1556,13 +1555,11 @@ angular.module('starter.services', [])
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
-        $ionicPlatform.ready(function () {
-            WeatherInfo.loadCities();
-            WeatherInfo.loadTowns();
-            $ionicPlatform.on('resume', function(){
-                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                    $rootScope.$broadcast('reloadEvent', 'resume');
-                }
-            });
+        WeatherInfo.loadCities();
+        WeatherInfo.loadTowns();
+        $ionicPlatform.on('resume', function(){
+            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                $rootScope.$broadcast('reloadEvent', 'resume');
+            }
         });
     });

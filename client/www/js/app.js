@@ -14,10 +14,22 @@ angular.module('starter', [
     'service.push',
     'ionic-timepicker'
 ])
-    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo) {
+    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state) {
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
         document.addEventListener("deviceready", function () {
+            IonicDeeplink.route({
+                '/:fav': {
+                    target: 'tab.forecast',
+                    parent: 'tab.forecast'
+                }
+            }, function(match) {
+                console.log(match.$route.parent + ', ' + match.$args.fav);
+                $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+            }, function(nomatch) {
+                console.log('No match', nomatch);
+            });
+
             if (navigator.splashscreen) {
                 console.log('splash screen hide!!!');
                 navigator.splashscreen.hide();
@@ -108,14 +120,6 @@ angular.module('starter', [
                     if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
                         $location.path('/guide');
                         return;
-                    } else {
-                        //추후 개선 필요해 보임.
-                        ionic.Platform.ready(function () {
-                            if (WeatherInfo.getEnabledCityCount() === 0) {
-                                $location.path('/tab/search');
-                                return;
-                            }
-                        });
                     }
                 }
 
