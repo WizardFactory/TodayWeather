@@ -56,6 +56,17 @@ gulp.task('build', shell.task([
   'ionic build'
 ]));
 
+gulp.task('build_android', shell.task([
+  'ionic state reset',
+  'cp -a ../android platforms/',
+  'ionic state restore --plugins',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+  'ionic build android'
+]));
+
 gulp.task('release', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
