@@ -18,17 +18,22 @@ angular.module('starter', [
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
         document.addEventListener("deviceready", function () {
-            IonicDeeplink.route({
-                '/:fav': {
-                    target: 'tab.forecast',
-                    parent: 'tab.forecast'
-                }
-            }, function(match) {
-                console.log(match.$route.parent + ', ' + match.$args.fav);
-                $state.transitionTo(match.$route.parent, match.$args, { reload: true });
-            }, function(nomatch) {
-                console.log('No match', nomatch);
-            });
+            if (window.IonicDeeplink) {
+                IonicDeeplink.route({
+                    '/:fav': {
+                        target: 'tab.forecast',
+                        parent: 'tab.forecast'
+                    }
+                }, function(match) {
+                    console.log(match.$route.parent + ', ' + match.$args.fav);
+                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+                }, function(nomatch) {
+                    console.log('No match', nomatch);
+                });
+            }
+            else {
+                console.log('Fail to find ionic deep link plugin');
+            }
 
             if (navigator.splashscreen) {
                 console.log('splash screen hide!!!');
