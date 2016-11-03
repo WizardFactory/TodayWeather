@@ -200,11 +200,11 @@ angular.module('service.twads', [])
             });
 
             document.addEventListener(admob.events.onAdFailedToLoad,function(message){
-                console.log('on banner Failed Receive Ad msg='+JSON.stringify(message));
+                console.log('on banner Failed Receive Ad');
             });
 
             document.addEventListener(admob.events.onAdLoaded,function(message){
-                console.log('on banner receive msg='+JSON.stringify(message));
+                console.log('on banner receive Ad');
             });
         });
     });
