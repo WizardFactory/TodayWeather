@@ -150,7 +150,7 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase) {
+    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope, $location) {
 
         if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
             return;
@@ -231,10 +231,24 @@ angular.module('controller.purchase', [])
 
             if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
+                if (Purchase.paidAppUrl.length > 0) {
+                    $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+                    $rootScope.clickAdsBanner = function() {
+                        $location.path('/purchase');
+                    };
+                }
+                else {
+                    $rootScope.adsBannerMessage = "오늘날씨 - 어제보다 오늘은?";
+                    $rootScope.clickAdsBanner = function() {};
+                }
                 return;
             }
 
             Purchase.hasInAppPurchase = true;
+            $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+            $rootScope.clickAdsBanner = function() {
+                $location.path('/purchase');
+            };
 
             inAppPurchase
                 .getProducts([Purchase.productId])

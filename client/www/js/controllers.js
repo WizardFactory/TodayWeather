@@ -1429,7 +1429,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('TabCtrl', function($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, Purchase) {
+                                     $location, TwAds, $rootScope, Util) {
         var currentTime;
 
         function init() {
@@ -1443,20 +1443,6 @@ angular.module('starter.controllers', [])
                 }
             }, 1000);
         }
-
-        $scope.$on('$ionicView.enter', function() {
-            var adsBanner = angular.element(document.getElementById('adsBanner'));
-            if (Purchase.hasInAppPurchase || Purchase.paidAppUrl.length > 0) {
-                adsBanner.text("광고없는 프리미엄을 사용해보세요");
-                $rootScope.clickAdsBanner = function() {
-                    $location.path('/purchase');
-                };
-            }
-            else {
-                adsBanner.text("오늘날씨 - 어제보다 오늘은?");
-                $rootScope.clickAdsBanner = function() {};
-            }
-        });
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
