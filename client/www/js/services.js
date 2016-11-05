@@ -262,47 +262,38 @@ angular.module('starter.services', [])
 
             console.log('save preference plist='+JSON.stringify(pList));
 
-            $ionicPlatform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('cityList', JSON.stringify(pList)).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+            suitePrefs.store(function (value) {
+                console.log("save preference Success: " + value);
+            }, function (error) {
+                console.log("save preference Error: " + error);
+            }, 'cityList', JSON.stringify(pList));
         };
 
         obj._loadCitiesPreference = function (callback) {
-            $ionicPlatform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                /**
-                 * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
-                 * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
-                 * @type {AppPreferences}
-                 */
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.fetch('cityList').then(
-                    function (value) {
-                        console.log("fetch preference Success: " + value);
-                        callback(undefined, value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                        callback(error);
-                    }
-                );
-            });
+            /**
+             * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
+             * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
+             * @type {AppPreferences}
+             */
+            var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+            suitePrefs.fetch(function (value) {
+                console.log("fetch preference Success: " + value);
+                callback(undefined, value);
+            }, function (error) {
+                console.log("fetch preference Error: " + error);
+                callback(error);
+            }, 'cityList');
         };
 
         obj.saveCities = function() {
