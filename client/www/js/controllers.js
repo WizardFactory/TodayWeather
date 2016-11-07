@@ -1296,41 +1296,35 @@ angular.module('starter.controllers', [])
                 $scope.updateInterval = "0";
                 $scope.widgetOpacity = "69";
 
-                ionic.Platform.ready(function() {
-                    if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                        console.log('appPreferences is undefined');
-                        return;
-                    }
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
 
-                    /**
-                     * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
-                     * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
-                     * @type {AppPreferences}
-                     */
-                    var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                    suitePrefs.fetch('updateInterval').then(
-                        function (value) {
-                            if (value == null) {
-                                value = "0"
-                            }
-                            $scope.updateInterval = ""+value;
-                            console.log("fetch preference Success: " + value);
-                        }, function (error) {
-                            console.log("fetch preference Error: " + error);
+                var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+                suitePrefs.fetch(
+                    function (value) {
+                        if (value == null) {
+                            value = "0"
                         }
-                    );
-                    suitePrefs.fetch('widgetOpacity').then(
-                        function (value) {
-                            if (value == null) {
-                               value = "69"
-                            }
-                            $scope.widgetOpacity = ""+value;
-                            console.log("fetch preference Success: " + value);
-                        }, function (error) {
-                            console.log("fetch preference Error: " + error);
+                        $scope.updateInterval = ""+value;
+                        console.log("fetch preference Success: " + value);
+                    }, function (error) {
+                        console.log("fetch preference Error: " + error);
+                    }, 'updateInterval'
+                );
+
+                suitePrefs.fetch(
+                    function (value) {
+                        if (value == null) {
+                            value = "69"
                         }
-                    );
-                });
+                        $scope.widgetOpacity = ""+value;
+                        console.log("fetch preference Success: " + value);
+                    }, function (error) {
+                        console.log("fetch preference Error: " + error);
+                    }, 'widgetOpacity'
+                );
             }
         }
 
@@ -1383,42 +1377,38 @@ angular.module('starter.controllers', [])
 
         $scope.changeWidgetOpacity = function (val) {
             console.log("widget opacity ="+ val);
-            ionic.Platform.ready(function() {
-                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('widgetOpacity', +val).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.store(
+                function (value) {
+                    console.log("save preference Success: " + value);
+                },
+                function (error) {
+                    console.log("save preference Error: " + error);
+                }, 'widgetOpacity', +val
+            );
         };
 
         $scope.changeUpdateInterval = function (val) {
-           console.log("update interval ="+ val);
-            ionic.Platform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            console.log("update interval ="+ val);
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('updateInterval', +val).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.store(
+                function (value) {
+                    console.log("save preference Success: " + value);
+                },
+                function (error) {
+                    console.log("save preference Error: " + error);
+                }, 'updateInterval', +val
+            );
         };
 
         $scope.hasInAppPurchase = function () {

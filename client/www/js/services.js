@@ -267,17 +267,7 @@ angular.module('starter.services', [])
                 return;
             }
 
-            var suiteName;
-            /**
-             * 기존 버전 호환성이슈로 Android는 유지.
-             */
-            if (ionic.Platform.isAndroid()) {
-               suiteName = "net.wizardfactory.todayweather_preferences";
-            }
-            else {
-               suiteName = "group.net.wizardfactory.todayweather";
-            }
-            var suitePrefs = plugins.appPreferences.suite(suiteName);
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
             suitePrefs.store(function (value) {
                 console.log("save preference Success: " + value);
             }, function (error) {
@@ -291,14 +281,7 @@ angular.module('starter.services', [])
                 return;
             }
 
-            var suiteName;
-            if (ionic.Platform.isAndroid()) {
-                suiteName = "net.wizardfactory.todayweather_preferences";
-            }
-            else {
-                suiteName = "group.net.wizardfactory.todayweather";
-            }
-            var suitePrefs = plugins.appPreferences.suite(suiteName);
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
             suitePrefs.fetch(function (value) {
                 console.log("fetch preference Success: " + value);
                 callback(undefined, value);
@@ -1548,6 +1531,7 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
+        obj.suiteName = "group.net.wizardfactory.todayweather";
 
         //obj.url = "/v000705";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
@@ -1567,6 +1551,11 @@ angular.module('starter.services', [])
             Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
         } else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
+
+            /**
+             * 기존 버전 호환성이슈로 Android는 유지.
+             */
+            Util.suiteName = "net.wizardfactory.todayweather_preferences";
         }
 
         Util.ga.enableUncaughtExceptionReporting(true);
