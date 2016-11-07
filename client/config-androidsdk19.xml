@@ -85,4 +85,21 @@
   <icon src="resources/android/icon/drawable-xhdpi-icon.png"/>
   <allow-navigation href="*"/>
   <allow-intent href="mailto:*"/>
+  <plugin name="cordova-plugin-device" spec="1.1.3" />
+  <plugin name="cordova-plugin-splashscreen" spec="4.0.0" />
+  <plugin name="ionic-plugin-keyboard" spec="2.2.1" />
+  <plugin name="cordova-plugin-geolocation" spec="2.4.0" />
+  <plugin name="cordova-plugin-statusbar" spec="2.2.0" />
+  <plugin name="cordova-plugin-inappbrowser" spec="1.5.0" />
+  <plugin name="cordova-plugin-x-socialsharing" spec="5.1.3" />
+  <plugin name="cordova-plugin-inapppurchase" spec="1.0.0" />
+  <plugin name="cordova-plugin-whitelist" spec="1.3.0" />
+  <plugin name="cordova-plugin-google-analytics" spec="1.6.0" />
+  <plugin name="phonegap-plugin-push" spec="1.8.4" />
+  <plugin name="cordova-plugin-app-preferences" spec="0.99.3" />
+  <plugin name="cordova-plugin-app-version" spec="0.1.9" />
+  <plugin name="cordova-admob" spec="4.1.10" />
+  <plugin name="phonegap-plugin-mobile-accessibility" spec="1.0.5-dev" />
+  <plugin name="cordova-plugin-airbridge" spec="0.1.3" />
+  <plugin name="ionic-plugin-deeplinks" spec="1.0.8" />
 </widget>

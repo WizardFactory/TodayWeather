@@ -124,7 +124,14 @@ gulp.task('rmplugins', function () {
   var pluginList = json.cordovaPlugins;
   pluginList = pluginList.map(function (plugin) {
     if (typeof plugin === 'string') {
-      return plugin;
+      var index = plugin.indexOf('@');
+      if (index != -1) {
+        return plugin.slice(0,index);
+      }
+      else {
+
+        return plugin;
+      }
     }
     else {
       if (plugin.hasOwnProperty('id')) {
@@ -132,8 +139,12 @@ gulp.task('rmplugins', function () {
       }
     }
   });
-  console.log(pluginList);
-  return gulp.src('./').pipe(rmplugin(pluginList));
+  //console.log(pluginList);
+  var shellLists=[];
+  for (var i=pluginList.length-1; i>=0; i--) {
+    shellLists.push('cordova plugin rm '+pluginList[i]);
+  }
+  return gulp.src('./').pipe(shell(shellLists));
 });
 
 gulp.task('git-check', function(done) {
