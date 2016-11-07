@@ -18,6 +18,7 @@
 @property (nonatomic) NSString *address;
 @property (nonatomic) BOOL currentPosition;
 @property (nonatomic) int index;
+@property (nonatomic) NSDictionary *weatherData;
 - (void) encodeWithCoder : (NSCoder *)encode ;
 - (id) initWithCoder : (NSCoder *)decode;
 @end
@@ -29,6 +30,7 @@
 {
     IBOutlet UILabel        *addressLabel;
     IBOutlet UILabel        *updateTimeLabel;
+    IBOutlet UIActivityIndicatorView    *loadingIV;
     
     IBOutlet UILabel        *curTempLabel;              // current temperature title
     IBOutlet UILabel        *curDustLabel;            // current Dust
@@ -55,8 +57,12 @@
     
     __weak IBOutlet UIButton *nextCityBtn;
 
-    NSMutableArray                             *mCityList;
-    CityInfo                                   *mCurrentCity;
+    NSMutableArray          *mCityList;
+    NSMutableArray          *mCityDictList;                 // for sealization을 위한 
+    CityInfo                *mCurrentCity;
+    int                     mCurrentCityIdx;
+    BOOL                    bIsReqComplete;
+    
     // current postion
     double								gMylatitude;
     double								gMylongitude;
@@ -66,10 +72,10 @@
     //NSString                            *secondName;
     //NSString                            *thirdName;
     
-    CLLocationManager						*locationManager;
-    CLLocation								*startingPoint;
+    CLLocationManager					*locationManager;
+    CLLocation							*startingPoint;
     
-    NSMutableData *responseData;
+    NSMutableData                       *responseData;
 }
 
 /********************************************************************
@@ -78,6 +84,7 @@
 @property (retain, nonatomic) CLLocationManager					*locationManager;
 @property (retain, nonatomic) CLLocation						*startingPoint;
 @property (retain, nonatomic) NSMutableData						*responseData;
+@property (retain, nonatomic) IBOutlet UIActivityIndicatorView    *loadingIV;
 
 /********************************************************************
  Declare Class functions
@@ -87,6 +94,7 @@
 
 - (IBAction)nextCity:(id)sender;
 
+- (void) initWidgetDatas;
 - (void) initLocationInfo;
 - (void) refreshDatas;
 - (void) getAddressFromDaum:(double)latitude longitude:(double)longitude;
@@ -96,5 +104,8 @@
 - (void) processWeatherResults:(NSDictionary *)jsonDict;
 - (NSString *) makeRequestURL:(NSString *)nssAddr1 addr2:(NSString*)nssAddr2 addr3:(NSString *)nssAddr3;
 - (BOOL) setCityInfo:(CityInfo *)nextCity;
+
+- (void) processPrevData:(int)idx;
+- (void) processRequestIndicator:(BOOL)isComplete;
 
 @end

@@ -51,6 +51,7 @@ typedef enum
     [coder encodeBool:_currentPosition forKey:@"currentPosition"];
     [coder encodeObject:_address forKey:@"address"];
     [coder encodeInt:_index forKey:@"index"];
+    [coder encodeObject:_weatherData forKey:@"weatherData"];
 }
 
 - (id)initWithCoder:(NSCoder *)coder;
@@ -61,6 +62,7 @@ typedef enum
         _currentPosition = [coder decodeBoolForKey:@"currentPosition"];
         _address = [coder decodeObjectForKey:@"address"];
         _index = [coder decodeIntForKey:@"index"];
+        _weatherData = [coder decodeObjectForKey:@"weatherData"];
     }
     return self;
 }
@@ -71,6 +73,7 @@ typedef enum
 @synthesize locationManager;
 @synthesize startingPoint;
 @synthesize responseData;
+@synthesize loadingIV;
 
 /********************************************************************
  *
@@ -83,27 +86,73 @@ typedef enum
  * History		: 20160622 SeanKim Create function
  *
  ********************************************************************/
-- (void)viewDidLoad {
+- (void)viewDidLoad
+{
     [super viewDidLoad];
+    
+    [self processRequestIndicator:TRUE];
+    [self initWidgetDatas];
+}
+
+/********************************************************************
+ *
+ * Name			: viewDidAppear
+ * Description	: process when view(widget) is appear
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 10. 25
+ * Author		: SeanKim
+ * History		: 20161025 SeanKim Create function
+ *
+ ********************************************************************/
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    
+     [self processRequestIndicator:TRUE];
+}
+
+/********************************************************************
+ *
+ * Name			: viewDidAppear
+ * Description	: process when view(widget) is disappear
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 10. 24
+ * Author		: SeanKim
+ * History		: 20161024 SeanKim Create function
+ *
+ ********************************************************************/
+- (void)viewDidDisappear:(BOOL)animated
+{
+    [super viewDidDisappear:animated];
+
+    [locationManager stopUpdatingLocation];
+}
+
+/********************************************************************
+ *
+ * Name			: initWidgetDatas
+ * Description	: initialize widget datas
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 10. 25
+ * Author		: SeanKim
+ * History		: 20161025 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) initWidgetDatas
+{
     [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 130)];
     // Do any additional setup after loading the view from its nib.
     locationView.hidden = true;
-//    self.view.hidden = true;
+    //    self.view.hidden = true;
     
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
     
     NSError *error;
     NSDictionary *jsonDict;
     NSData *tmpData = nil;
-    
-//    NSString *currentWeather = nil;
-//    currentWeather = [sharedUserDefaults stringForKey:@"currentWeather"];
-//    if (currentWeather) {
-//        tmpData = [currentWeather dataUsingEncoding:NSUTF8StringEncoding];
-//        jsonDict = [NSJSONSerialization JSONObjectWithData:tmpData options:0 error:&error];
-//        //NSLog(@"%@", jsonDict);
-//        [self processWeatherResults:jsonDict];
-//    }
     
     NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
     NSLog(@"cityList : %@", cityList);
@@ -120,16 +169,19 @@ typedef enum
     
     tmpData = [cityList dataUsingEncoding:NSUTF8StringEncoding];
     jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
-    
+
     int index = 0;
-    mCityList = [NSMutableArray array];
+    mCityList       = [NSMutableArray array];
+    mCityDictList   = [NSMutableArray array];
     for (NSDictionary *cityDict in jsonDict[@"cityList"]) {
         CityInfo *city = [[CityInfo alloc] init];
         city.currentPosition = [cityDict[@"currentPosition"] boolValue];
         city.address = cityDict[@"address"];
         city.index = index++;
+        city.weatherData = cityDict[@"weatherData"];
         NSLog(@"current position %@ address %@", city.currentPosition?@"true":@"false", city.address);
         [mCityList addObject:city];
+        [mCityDictList addObject:cityDict];
     }
     
     if ([mCityList count] <= 1) {
@@ -146,17 +198,84 @@ typedef enum
     else {
         NSLog(@"load last city info");
     }
-    
+
     [self setCityInfo:currentCity];
     
-    //request data
-    //if current position is true
-    //[self initLocationInfo];
-    //else
-    //nssURL = [self makeRequestURL:nssName1 addr2:nssName2 addr3:nssName3];
-    //[self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER];
+    //    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userDefaultsDidChange:) name:NSUserDefaultsDidChangeNotification object:nil];
+}
 
-//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userDefaultsDidChange:) name:NSUserDefaultsDidChangeNotification object:nil];
+/********************************************************************
+*
+* Name			: saveWeatherInfo
+* Description	: save dictionay weather info
+* Returns		: void
+* Side effects :
+* Date			: 2016. 11. 02
+* Author		: SeanKim
+* History		: 20161102 SeanKim Create function
+*
+********************************************************************/
+- (void) saveWeatherInfo:(NSDictionary *)dict
+{
+    NSError *error = nil;
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    
+    NSMutableDictionary* nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
+    
+    NSMutableDictionary* nsdTmpDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                       [nsdCurCity valueForKey:@"address"], @"address",
+                                       [nsdCurCity valueForKey:@"currentPosition"], @"currentPosition",
+                                       [nsdCurCity valueForKey:@"location"], @"location",
+                                       @"", @"weatherData",
+                                       nil];
+    
+    [nsdTmpDict setObject:dict forKey:@"weatherData"];
+    
+    [mCityDictList setObject:nsdTmpDict atIndexedSubscript:mCurrentCityIdx];
+    
+    // city list array consisted of dictionary make
+    NSMutableDictionary* nsdCityListsDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                       mCityDictList, @"cityList",
+                                       nil];
+    
+    NSData *nsdCityList = [NSJSONSerialization dataWithJSONObject:nsdCityListsDict options:0 error:&error];
+    NSString* nssCityList = [[NSString alloc] initWithData:nsdCityList encoding:NSUTF8StringEncoding];
+    
+    [sharedUserDefaults setObject:nssCityList forKey:@"cityList"];
+    [sharedUserDefaults synchronize];
+}
+
+/********************************************************************
+ *
+ * Name			: processRequestIndicator
+ * Description	: process request indication
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 11. 02
+ * Author		: SeanKim
+ * History		: 20161102 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) processRequestIndicator:(BOOL)isComplete
+{
+    if(isComplete == TRUE)
+    {
+        bIsReqComplete = TRUE;
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [loadingIV stopAnimating];
+            loadingIV.hidden = TRUE;
+        });
+        
+    }
+    else    // False
+    {
+        bIsReqComplete = FALSE;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [loadingIV startAnimating];
+            loadingIV.hidden = FALSE;
+        });
+    }
 }
 
 /********************************************************************
@@ -262,6 +381,17 @@ typedef enum
     [self refreshDatas];
 }
 
+/********************************************************************
+ *
+ * Name			: nextCity
+ * Description	: process next city information
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 06. 25
+ * Author		: SeanKim
+ * History		: 20160625 SeanKim Create function
+ *
+ ********************************************************************/
 - (IBAction)nextCity:(id)sender {
     //nextCity
     NSLog(@"next city");
@@ -368,7 +498,9 @@ typedef enum
     }
     else if(type == TYPE_REQUEST_WEATHER)
     {
+        [self saveWeatherInfo:jsonDict];
         [self processWeatherResults:jsonDict];
+        [self processRequestIndicator:TRUE];
     }
     
     //NSLog(@"request weather result %@", jsonDict);
@@ -503,12 +635,12 @@ typedef enum
     NSString *nssTomImgName = nil;
 
     // Temperature
-    NSUInteger currentTemp = 0;
-    NSUInteger currentHum = 0;
-    NSUInteger todayMinTemp = 0;
-    NSUInteger todayMaxTemp = 0;
-    NSUInteger tomoMinTemp = 0;
-    NSUInteger tomoMaxTemp = 0;
+    NSInteger currentTemp = 0;
+    NSInteger currentHum = 0;
+    NSInteger todayMinTemp = 0;
+    NSInteger todayMaxTemp = 0;
+    NSInteger tomoMinTemp = 0;
+    NSInteger tomoMaxTemp = 0;
     
     // Dust
     NSString    *nssPm10Str = nil;
@@ -523,7 +655,7 @@ typedef enum
     NSString    *nssTodPop = nil;
     NSString    *nssTomPop = nil;
     
-    NSLog(@"processWeatherResults : %@", jsonDict);
+    //NSLog(@"processWeatherResults : %@", jsonDict);
     
     // Address
     nssCityName = [jsonDict objectForKey:@"cityName"];
@@ -555,44 +687,56 @@ typedef enum
     currentDict         = [nsdDailySumDict objectForKey:@"current"];
     currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
     nssPm10Str          = [currentArpltnDict objectForKey:@"pm10Str"];
-    currentTemp         = [[currentDict valueForKey:@"t1h"] unsignedIntValue];
-    currentHum         = [[currentDict valueForKey:@"reh"] unsignedIntValue];
+    currentTemp         = [[currentDict valueForKey:@"t1h"] intValue];
+    currentHum         = [[currentDict valueForKey:@"reh"] intValue];
     
     // Today
     todayDict           = [nsdDailySumDict objectForKey:@"today"];
     nssTodIcon          = [todayDict objectForKey:@"skyIcon"];
     nssTodImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTodIcon];
-    todayMinTemp        = [[todayDict valueForKey:@"taMin"] unsignedIntValue];
-    todayMaxTemp        = [[todayDict valueForKey:@"taMax"] unsignedIntValue];
+    todayMinTemp        = [[todayDict valueForKey:@"taMin"] intValue];
+    todayMaxTemp        = [[todayDict valueForKey:@"taMax"] intValue];
     nssTodPop           = [todayDict objectForKey:@"pop"];
     
     // Tomorrow
     tomoDict            = [nsdDailySumDict objectForKey:@"tomorrow"];
     nssTomIcon          = [tomoDict objectForKey:@"skyIcon"];
     nssTomImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTomIcon];
-    tomoMinTemp         = [[tomoDict valueForKey:@"taMin"] unsignedIntValue];
-    tomoMaxTemp         = [[tomoDict valueForKey:@"taMax"] unsignedIntValue];
+    tomoMinTemp         = [[tomoDict valueForKey:@"taMin"] intValue];
+    tomoMaxTemp         = [[tomoDict valueForKey:@"taMax"] intValue];
     nssTomPop           = [tomoDict objectForKey:@"pop"];
     
     dispatch_async(dispatch_get_main_queue(), ^{
         // Current
-        updateTimeLabel.text    = nssDate;
-        addressLabel.text       = nssAddress;
-        curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
-        curTempLabel.text       = [NSString stringWithFormat:@"%lu˚ %lu%%", currentTemp, currentHum];
-        curDustLabel.text       = [NSString stringWithFormat:@"통합대기 %@", nssPm10Str];
+        if(nssDate)
+            updateTimeLabel.text    = nssDate;
+        if(nssAddress)
+            addressLabel.text       = nssAddress;
+        if(nssCurImgName)
+            curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
+        
+        curTempLabel.text       = [NSString stringWithFormat:@"%ld˚ %ld%%", (long)currentTemp, (long)currentHum];
+        
+        if(nssPm10Str)
+            curDustLabel.text       = [NSString stringWithFormat:@"통합대기 %@", nssPm10Str];
         
         // Today
-        todWTIconIV.image       = [UIImage imageNamed:nssTodImgName];
-        todayMaxTempLabel.text  = [NSString stringWithFormat:@"%lu˚/%lu˚", todayMaxTemp, todayMinTemp];
+        if(nssTodImgName)
+            todWTIconIV.image       = [UIImage imageNamed:nssTodImgName];
+        
+        todayMaxTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)todayMaxTemp, (long)todayMinTemp];
+        
         //todayMinTempLabel.text  = [NSString stringWithFormat:@"%lu˚", todayMinTemp];
-        todayPopLabel.text      = [NSString stringWithFormat:@"강수확률 %@%%", nssTodPop];
+        if(nssTodPop)
+            todayPopLabel.text      = [NSString stringWithFormat:@"강수확률 %@%%", nssTodPop];
         
         // Tomorrow
-        tomoMaxTempLabel.text   = [NSString stringWithFormat:@"%lu˚/%lu˚", tomoMaxTemp, tomoMinTemp];
+        tomoMaxTempLabel.text   = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)tomoMaxTemp, (long)tomoMinTemp];
         //tomoMinTempLabel.text   = [NSString stringWithFormat:@"%lu˚", tomoMinTemp];
-        tomoPopLabel.text       = [NSString stringWithFormat:@"강수확률 %@%%", nssTomPop];
-        tomWTIconIV.image       = [UIImage imageNamed:nssTomImgName];
+        if(nssTomPop)
+            tomoPopLabel.text       = [NSString stringWithFormat:@"강수확률 %@%%", nssTomPop];
+        if(nssTomImgName)
+            tomWTIconIV.image       = [UIImage imageNamed:nssTomImgName];
         
         locationView.hidden = false;
 //        self.view.hidden = false;
@@ -773,14 +917,65 @@ typedef enum
         // just test - delete me
         //[self getAddressFromDaum:gMylatitude longitude:gMylongitude];
     }
+
+    [self processRequestIndicator:TRUE];
+    [locationManager stopUpdatingLocation];
 }
 
-- (BOOL) setCityInfo:(CityInfo *)nextCity {
+/********************************************************************
+ *
+ * Name			: processPrevData
+ * Description	: process previous data
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 11. 02
+ * Author		: SeanKim
+ * History		: 20161102 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) processPrevData:(int)idx
+{
+    NSMutableDictionary *nsdCityInfo    = [mCityDictList objectAtIndex:idx];
+    NSMutableDictionary *nsdWeatherInfo    = [nsdCityInfo objectForKey:@"weatherData"];
+    
+    if(nsdWeatherInfo != nil)
+        [self processWeatherResults:nsdWeatherInfo];
+}
+
+/********************************************************************
+ *
+ * Name			: setCityInfo
+ * Description	: set city infomation
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 11. 02
+ * Author		: SeanKim
+ * History		: 20161102 SeanKim Modified function
+ *
+ ********************************************************************/
+- (BOOL) setCityInfo:(CityInfo *)nextCity
+{
+    if(bIsReqComplete == FALSE)
+    {
+        NSLog(@"Still processing...");
+        return true;
+    }
+    
+    // Starting Weather Info Request
+    bIsReqComplete = FALSE;
+
     locationView.hidden = true;
     NSLog(@"set city : current position %@ address %@ index %d", nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.index);
     
     mCurrentCity = nextCity;
+    mCurrentCityIdx = nextCity.index;
+    
+    [self processPrevData:nextCity.index];
+    
+    [self processRequestIndicator:FALSE];
+    
     if (nextCity.currentPosition) {
+        
         [self initLocationInfo];
     }
     else {
@@ -824,6 +1019,7 @@ typedef enum
         NSLog(@"Expected string is : %@",array);
         NSString *nssURL = [self makeRequestURL:nssAddr1 addr2:nssAddr2 addr3:nssAddr3];
         [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER];
+        NSLog(@"nssURL : %@", nssURL);
     }
     
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
