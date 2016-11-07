@@ -45,12 +45,8 @@ angular.module('starter', [
         }, false);
 
         $ionicPlatform.ready(function() {
-            if (twClientConfig.debug) {
-                Util.ga.debugMode();
-            }
 
             if (ionic.Platform.isIOS()) {
-                Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
                 if (window.applewatch) {
                     applewatch.init(function () {
                         console.log('Succeeded to initialize for apple-watch');
@@ -63,47 +59,7 @@ angular.module('starter', [
                     console.log("set usePreferredTextZoom to false");
                     window.MobileAccessibility.usePreferredTextZoom(false);
                 }
-
-                Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
             }
-
-            document.addEventListener("resume", function() {
-                Util.ga.trackEvent('app', 'status', 'resume');
-            }, false);
-            document.addEventListener("pause", function() {
-                Util.ga.trackEvent('app', 'status', 'pause');
-            }, false);
-            Util.ga.enableUncaughtExceptionReporting(true);
-            Util.ga.setAllowIDFACollection(true);
-
-            if (window.hasOwnProperty("device")) {
-                console.log("UUID:"+window.device.uuid);
-            }
-            console.log("UA:"+ionic.Platform.ua);
-            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-            console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
-            console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
-
-            if (window.screen) {
-                Util.ga.trackEvent('app', 'screen width', window.screen.width);
-                Util.ga.trackEvent('app', 'screen height', window.screen.height);
-            }
-            else if (window.outerHeight) {
-                Util.ga.trackEvent('app', 'outer width', window.outerWidth);
-                Util.ga.trackEvent('app', 'outer height', window.outerHeight);
-            }
-
-            if (window.hasOwnProperty("device")) {
-                Util.ga.trackEvent('app', 'uuid', window.device.uuid);
-            }
-            Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
-            if (window.cordova && cordova.getAppVersion) {
-                cordova.getAppVersion.getVersionNumber().then(function (version) {
-                    Util.version = version;
-                    Util.ga.trackEvent('app', 'version', Util.version);
-                });
-            }
-            Util.ga.platformReady();
 
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
             // for form inputs)
