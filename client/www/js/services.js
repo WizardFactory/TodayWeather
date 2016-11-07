@@ -1558,6 +1558,69 @@ angular.module('starter.services', [])
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
+        //위치 재조정해야 함.
+        if (twClientConfig.debug) {
+            Util.ga.debugMode();
+        }
+
+        if (ionic.Platform.isIOS()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+        } else if (ionic.Platform.isAndroid()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
+        }
+
+        Util.ga.enableUncaughtExceptionReporting(true);
+        Util.ga.setAllowIDFACollection(true);
+
+        if (window.hasOwnProperty("device")) {
+            console.log("UUID:"+window.device.uuid);
+        }
+        console.log("UA:"+ionic.Platform.ua);
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+        if (window.screen) {
+            Util.ga.trackEvent('app', 'screen width', window.screen.width);
+            Util.ga.trackEvent('app', 'screen height', window.screen.height);
+        }
+        else if (window.outerHeight) {
+            Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+            Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+        }
+
+        if (window.hasOwnProperty("device")) {
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+        }
+        Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+        if (window.cordova && cordova.getAppVersion) {
+            cordova.getAppVersion.getVersionNumber().then(function (version) {
+                Util.version = version;
+                Util.ga.trackEvent('app', 'version', Util.version);
+            });
+        }
+        Util.ga.platformReady();
+
+        window.onerror = function(msg, url, line) {
+            var idx = url.lastIndexOf("/");
+            if(idx > -1) {url = url.substring(idx+1);}
+            var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
+            Util.ga.trackEvent('window', 'error', errorMsg);
+            Util.ga.trackException(errorMsg, true);
+            console.log(errorMsg);
+            if (twClientConfig.debug) {
+                alert("ERROR in " + url + " (line #" + line + "): " + msg);
+            }
+            return false; //suppress Error Alert;
+        };
+
+        document.addEventListener("resume", function() {
+            Util.ga.trackEvent('app', 'status', 'resume');
+        }, false);
+        document.addEventListener("pause", function() {
+            Util.ga.trackEvent('app', 'status', 'pause');
+        }, false);
+
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
