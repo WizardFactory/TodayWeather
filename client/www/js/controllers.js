@@ -1422,7 +1422,7 @@ angular.module('starter.controllers', [])
         };
 
         $scope.hasInAppPurchase = function () {
-            return Purchase.hasInAppPurchase;
+            return Purchase.hasInAppPurchase || Purchase.paidAppUrl.length > 0;
         };
 
         init();

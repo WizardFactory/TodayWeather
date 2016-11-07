@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, $location, Util) {
+    .factory('TwAds', function($rootScope, Util) {
         var obj = {};
         obj.enableAds;
         obj.showAds;
@@ -15,9 +15,6 @@ angular.module('service.twads', [])
         obj.interstitialAdUnit = '';
 
         $rootScope.viewAdsBanner = true;
-        $rootScope.clickAdsBanner = function() {
-            $location.path('/purchase');
-        };
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
