@@ -267,7 +267,17 @@ angular.module('starter.services', [])
                 return;
             }
 
-            var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+            var suiteName;
+            /**
+             * 기존 버전 호환성이슈로 Android는 유지.
+             */
+            if (ionic.Platform.isAndroid()) {
+               suiteName = "net.wizardfactory.todayweather_preferences";
+            }
+            else {
+               suiteName = "group.net.wizardfactory.todayweather";
+            }
+            var suitePrefs = plugins.appPreferences.suite(suiteName);
             suitePrefs.store(function (value) {
                 console.log("save preference Success: " + value);
             }, function (error) {
@@ -281,12 +291,14 @@ angular.module('starter.services', [])
                 return;
             }
 
-            /**
-             * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
-             * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
-             * @type {AppPreferences}
-             */
-            var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
+            var suiteName;
+            if (ionic.Platform.isAndroid()) {
+                suiteName = "net.wizardfactory.todayweather_preferences";
+            }
+            else {
+                suiteName = "group.net.wizardfactory.todayweather";
+            }
+            var suitePrefs = plugins.appPreferences.suite(suiteName);
             suitePrefs.fetch(function (value) {
                 console.log("fetch preference Success: " + value);
                 callback(undefined, value);
