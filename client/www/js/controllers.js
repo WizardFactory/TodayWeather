@@ -886,7 +886,7 @@ angular.module('starter.controllers', [])
 
         $scope.headerScroll = function drawShadow() {
             var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
-            if (rect.top > 0) {
+            if (!(rect == undefined) && rect.hasOwnProperty('top') && rect.top > 0) {
                 alphaBar.css('box-shadow','0px 1px 5px 0 rgba(0, 0, 0, 0.26)');
             }
             else {
