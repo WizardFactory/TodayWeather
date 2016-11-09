@@ -18,6 +18,11 @@ angular.module('starter', [
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
         document.addEventListener("deviceready", function () {
+            if (navigator.splashscreen) {
+                console.log('splash screen hide!!!');
+                navigator.splashscreen.hide();
+            }
+
             if (window.IonicDeeplink) {
                 IonicDeeplink.route({
                     '/:fav': {
@@ -35,11 +40,11 @@ angular.module('starter', [
                 console.log('Fail to find ionic deep link plugin');
             }
 
-            if (navigator.splashscreen) {
-                console.log('splash screen hide!!!');
-                navigator.splashscreen.hide();
-            }
             if (!twClientConfig.debug && window.AirBridgePlugin) {
+                window.airbridgeCustomOnboarding = function (__json) {
+                    console.log('Resulted Json String: ' + __json);
+                };
+
                 AirBridgePlugin.initInstance(twClientConfig.airBridgeToken, twClientConfig.airBridgeAppId);
             }
         }, false);
