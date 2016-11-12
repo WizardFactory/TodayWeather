@@ -1432,6 +1432,9 @@ angular.module('starter.controllers', [])
                     $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
                 }
             }, 1000);
+
+            TwAds.init();
+            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
 
         $scope.doTabForecast = function(forecastType) {
@@ -1532,11 +1535,6 @@ angular.module('starter.controllers', [])
                 callback(res);
             });
         };
-
-        $ionicPlatform.ready(function() {
-            //in app purchase plugin이 없으면 enableAds는 undefined임
-            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
-        });
 
         init();
     })

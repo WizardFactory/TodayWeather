@@ -9,7 +9,6 @@ angular.module('service.twads', [])
         obj.showAds;
         obj.requestEnable;
         obj.requestShow;
-        obj.loaded = false;
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
@@ -139,47 +138,30 @@ angular.module('service.twads', [])
             });
         };
 
-        return obj;
-    })
-    .run(function($ionicPlatform, TwAds, Util) {
-
-        $ionicPlatform.ready(function() {
-            var runAdmob = true;
-
-            if (!runAdmob) {
-                console.log('Ad mob is unused');
-                return;
-            }
-
+        obj.init = function () {
             if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
                 //for ads app without inapp and paid app
-                if (TwAds.requestEnable != undefined) {
-                    console.log('set requestEnable='+TwAds.requestEnable);
-                    TwAds.setShowAds(TwAds.requestEnable);
-                    TwAds.setLayout(TwAds.requestEnable);
+                if (obj.requestEnable != undefined) {
+                    console.log('set requestEnable='+obj.requestEnable);
+                    obj.setShowAds(obj.requestEnable);
+                    obj.setLayout(obj.requestEnable);
                 }
                 return;
             }
 
-            if (TwAds.loaded == true) {
-                console.log('TwAds is already loaded');
-                return;
-            }
-            TwAds.loaded = true;
-
             if (ionic.Platform.isIOS()) {
-                TwAds.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
-                TwAds.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
+                obj.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
+                obj.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                TwAds.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
-                TwAds.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
+                obj.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
+                obj.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
             admob.setOptions({
-                publisherId:    TwAds.bannerAdUnit,
-                interstitialAdId: TwAds.interstitialAdUnit,
+                publisherId:    obj.bannerAdUnit,
+                interstitialAdId: obj.interstitialAdUnit,
                 adSize:         admob.AD_SIZE.BANNER,
                 bannerAtTop:    false,
                 overlap:        true,
@@ -190,7 +172,7 @@ angular.module('service.twads', [])
                 autoShowInterstitial:   false
             }, function () {
                 console.log('Set options of Ad mob');
-                TwAds.loadTwAdsInfo();
+                obj.loadTwAdsInfo();
             }, function (e) {
                 console.log('Fail to set options of Ad mob');
                 console.log(e);
@@ -203,6 +185,6 @@ angular.module('service.twads', [])
             document.addEventListener(admob.events.onAdLoaded,function(message){
                 console.log('on banner receive Ad');
             });
-        });
+        };
+        return obj;
     });
-
