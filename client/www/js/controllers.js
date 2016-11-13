@@ -701,8 +701,8 @@ angular.module('starter.controllers', [])
 
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) +
                                 '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -713,12 +713,12 @@ angular.module('starter.controllers', [])
                             deferred.resolve();
                         }, function (error) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                             if (error instanceof Error) {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                             }
 
@@ -741,8 +741,8 @@ angular.module('starter.controllers', [])
 
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                         '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -751,12 +751,12 @@ angular.module('starter.controllers', [])
                     deferred.resolve();
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                     if (error instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                     }
 
@@ -1075,8 +1075,8 @@ angular.module('starter.controllers', [])
 
             WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
+                Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherDatas);
                 city.currentPosition = false;
@@ -1085,7 +1085,7 @@ angular.module('starter.controllers', [])
                 //city.location = location;
 
                 if (WeatherInfo.addCity(city) === false) {
-                    Util.ga.trackEvent('city error', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
+                    Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
                     var msg = "이미 동일한 지역이 추가되어 있습니다.";
                     $scope.showAlert("에러", msg);
                 }
@@ -1098,12 +1098,12 @@ angular.module('starter.controllers', [])
                 $ionicLoading.hide();
             }, function (error) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                         '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                         '(' + error + ')', endTime - startTime);
                 }
 
@@ -1225,8 +1225,8 @@ angular.module('starter.controllers', [])
 
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) +
                                 '(' + index + ')', endTime - startTime);
 
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -1236,12 +1236,12 @@ angular.module('starter.controllers', [])
                             deferred.resolve(city);
                         }, function (error) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                             if (error instanceof Error) {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', ' + error + ')', endTime - startTime);
                             }
 
@@ -1258,8 +1258,8 @@ angular.module('starter.controllers', [])
 
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                         '(' + index + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -1268,12 +1268,12 @@ angular.module('starter.controllers', [])
                     deferred.resolve(city);
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                     if (error instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', ' + error + ')', endTime - startTime);
                     }
 
