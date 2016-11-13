@@ -137,7 +137,8 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 .guide-close {
   font-size: 28px;
   padding: 10px;
-  float: right;
+  position: absolute;
+  right: 0px;
   color: inherit;
 }
 
