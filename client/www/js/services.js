@@ -1178,7 +1178,7 @@ angular.module('starter.services', [])
                 console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
 
                 retryCount--;
-                if (retryCount == 0) {
+                if (retryCount <= 0) {
                     return callback(error, undefined, retryCount);
                 }
                 else {
@@ -1204,7 +1204,7 @@ angular.module('starter.services', [])
                     console.log("code:"+error.code+" message:"+error.message);
 
                     retryCount--;
-                    if (retryCount == 0) {
+                    if (retryCount <= 0) {
                         return callback(error, undefined, retryCount);
                     }
                     else {

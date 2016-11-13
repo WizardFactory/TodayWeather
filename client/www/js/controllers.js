@@ -730,6 +730,7 @@ angular.module('starter.controllers', [])
                         deferred.reject(msg);
                     });
                 }, function () {
+                    Util.ga.trackEvent('position', 'error', 'all');
                     var msg = "현재 위치를 찾을 수 없습니다.";
                     if (ionic.Platform.isAndroid()) {
                         msg += "<br>WIFI와 위치정보를 켜주세요.";
@@ -1003,6 +1004,7 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                 });
             }, function () {
+                Util.ga.trackEvent('position', 'error', 'all');
                 var msg = "현재 위치를 찾을 수 없습니다.";
                 if (ionic.Platform.isAndroid()) {
                     msg += "<br>WIFI와 위치정보를 켜주세요.";
@@ -1251,6 +1253,7 @@ angular.module('starter.controllers', [])
                         deferred.reject();
                     });
                 }, function () {
+                    Util.ga.trackEvent('position', 'error', 'all');
                     deferred.reject();
                 });
             } else {
