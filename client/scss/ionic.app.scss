@@ -134,6 +134,13 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   text-align: left;
 }
 
+.guide-close {
+  font-size: 28px;
+  padding: 10px;
+  float: right;
+  color: inherit;
+}
+
 /* time chart style */
 .line-today {
   stroke: #ffffff;

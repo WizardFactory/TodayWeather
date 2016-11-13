@@ -1591,9 +1591,9 @@ angular.module('starter.controllers', [])
         function update() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
                 $scope.leftText = "<";
-                $scope.rightText = "CLOSE";
+                $scope.rightText = "닫기";
             } else {
-                $scope.leftText = "SKIP";
+                $scope.leftText = "건너뛰기";
                 $scope.rightText = ">";
             }
         }
@@ -1630,9 +1630,11 @@ angular.module('starter.controllers', [])
                 localStorage.setItem("guideVersion", Util.guideVersion.toString());
                 TwAds.setShowAds(true);
                 if (res === true) { // autoSearch
+                    Util.ga.trackEvent('action', 'click', 'auto search');
                     WeatherInfo.disableCity(false);
                     $location.path('/tab/forecast');
                 } else {
+                    Util.ga.trackEvent('action', 'click', 'city search');
                     $location.path('/tab/search');
                 }
             });
@@ -1644,18 +1646,27 @@ angular.module('starter.controllers', [])
 
         $scope.onLeftClick = function() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                Util.ga.trackEvent('action', 'click', 'guide previous');
                 $ionicSlideBoxDelegate.previous();
             } else {
+                Util.ga.trackEvent('action', 'click', 'guide skip');
                 close();
             }
         };
 
         $scope.onRightClick = function() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                Util.ga.trackEvent('action', 'click', 'guide close');
                 close();
             } else {
+                Util.ga.trackEvent('action', 'click', 'guide next');
                 $ionicSlideBoxDelegate.next();
             }
+        };
+
+        $scope.onClose = function() {
+            Util.ga.trackEvent('action', 'click', 'guide top close');
+            close();
         };
 
         $scope.getGuideImg = function (number) {
