@@ -1118,35 +1118,35 @@ angular.module('starter.services', [])
             getAddressFromDaum(lat, long).then(function(address) {
                 console.log(address);
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('data', endTime - startTime, 'get', 'daum address');
-                Util.ga.trackEvent('data', 'get', 'daum address', endTime - startTime);
+                Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
+                Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
 
                 deferred.resolve(address);
             }, function (err) {
                 console.log(err);
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackTiming('address', endTime - startTime, 'error', 'daum');
                 if (err instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'daum(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'daum(' + err + ')', endTime - startTime);
                 }
 
                 startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
                     console.log(address);
                     endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'google address');
-                    Util.ga.trackEvent('data', 'get', 'google address', endTime - startTime);
+                    Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
+                    Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
 
                     deferred.resolve(address);
                 }, function (err) {
                     endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
                     if (err instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', 'google address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                        Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
+                        Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
                     }
 
                     deferred.reject(err);
@@ -1225,13 +1225,13 @@ angular.module('starter.services', [])
                 _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
-                        Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                        Util.ga.trackEvent('data error', 'get', 'position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                        Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
+                        Util.ga.trackEvent('position', 'error', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                         return deferred.reject();
                     }
 
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data', 'get', 'position(retry:' + retryCount + ')', endTime - startTime);
+                    Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
+                    Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
                     deferred.resolve(position.coords);
                 });
 
@@ -1239,13 +1239,13 @@ angular.module('starter.services', [])
                     _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                            Util.ga.trackEvent('data error', 'get', 'native position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                            Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
+                            Util.ga.trackEvent('position', 'error', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             return deferred.reject();
                         }
 
-                        Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                        Util.ga.trackEvent('data', 'get', 'native position(retry:' + retryCount + ')', endTime - startTime);
+                        Util.ga.trackTiming('position', endTime - startTime, 'get', 'native');
+                        Util.ga.trackEvent('position', 'get', 'native(retry:' + retryCount + ')', endTime - startTime);
                         deferred.resolve(position.coords);
                     });
                 }
