@@ -1356,9 +1356,9 @@ angular.module('starter.services', [])
         //region APIs
 
         obj.ga = {
-            startTrackerWithId: function (id) {
+            startTrackerWithId: function (id, dispatchPeriod) {
                 if (typeof $window.ga !== "undefined") {
-                    return $window.ga.startTrackerWithId(id, function(result) {
+                    return $window.ga.startTrackerWithId(id, dispatchPeriod, function(result) {
                         console.log("startTrackerWithId success = " + result);
                     }, function(error) {
                         console.log("startTrackerWithId error = " + error);
@@ -1428,17 +1428,17 @@ angular.module('starter.services', [])
                     });
                 }
             },
-            trackView: function (screenName, campaingUrl, newSession) {
+            trackView: function (screen, campaingUrl, newSession) {
                 if (typeof $window.ga !== "undefined") {
-                    return $window.ga.trackView(screenName, campaingUrl, newSession, function(result) {
+                    return $window.ga.trackView(screen, campaingUrl, newSession, function(result) {
                         console.log("trackView success = " + result);
                     }, function(error) {
                         console.log("trackView error = " + error);
-                        gaArray.push(["trackView", screenName, campaingUrl]);
+                        gaArray.push(["trackView", screen, campaingUrl]);
                     });
                 } else {
                     console.log("trackView undefined");
-                    gaArray.push(["trackView", screenName, campaingUrl]);
+                    gaArray.push(["trackView", screen, campaingUrl]);
                 }
             },
             addCustomDimension: function (key, value) {
@@ -1456,11 +1456,11 @@ angular.module('starter.services', [])
                         console.log("trackEvent success = " + result);
                     }, function(error) {
                         console.log("trackEvent error = " + error);
-                        gaArray.push(["trackEvent", category, action, label, value]);
+                        gaArray.push(["trackEvent", category, action, label, value, newSession]);
                     });
                 } else {
                     console.log("trackEvent undefined");
-                    gaArray.push(["trackEvent", category, action, label, value]);
+                    gaArray.push(["trackEvent", category, action, label, value, newSession]);
                 }
             },
             trackException: function (description, fatal) {
@@ -1550,7 +1550,7 @@ angular.module('starter.services', [])
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
         } else if (ionic.Platform.isAndroid()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
 
             /**
              * 기존 버전 호환성이슈로 Android는 유지.
