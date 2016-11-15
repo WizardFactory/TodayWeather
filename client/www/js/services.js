@@ -1557,6 +1557,11 @@ angular.module('starter.services', [])
              */
             Util.suiteName = "net.wizardfactory.todayweather_preferences";
         }
+        else {
+            console.log("Error : Unknown platform");
+        }
+
+        Util.ga.platformReady();
 
         Util.ga.enableUncaughtExceptionReporting(true);
         Util.ga.setAllowIDFACollection(true);
@@ -1588,7 +1593,6 @@ angular.module('starter.services', [])
                 Util.ga.trackEvent('app', 'version', Util.version);
             });
         }
-        Util.ga.platformReady();
 
         window.onerror = function(msg, url, line) {
             var idx = url.lastIndexOf("/");
