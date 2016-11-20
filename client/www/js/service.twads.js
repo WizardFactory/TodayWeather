@@ -3,21 +3,17 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, $location, Util) {
+    .factory('TwAds', function($rootScope, Util) {
         var obj = {};
         obj.enableAds;
         obj.showAds;
         obj.requestEnable;
         obj.requestShow;
-        obj.loaded = false;
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
 
         $rootScope.viewAdsBanner = true;
-        $rootScope.clickAdsBanner = function() {
-            $location.path('/purchase');
-        };
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
@@ -142,47 +138,30 @@ angular.module('service.twads', [])
             });
         };
 
-        return obj;
-    })
-    .run(function($ionicPlatform, TwAds, Util) {
-
-        $ionicPlatform.ready(function() {
-            var runAdmob = true;
-
-            if (!runAdmob) {
-                console.log('Ad mob is unused');
-                return;
-            }
-
+        obj.init = function () {
             if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
                 //for ads app without inapp and paid app
-                if (TwAds.requestEnable != undefined) {
-                    console.log('set requestEnable='+TwAds.requestEnable);
-                    TwAds.setShowAds(TwAds.requestEnable);
-                    TwAds.setLayout(TwAds.requestEnable);
+                if (obj.requestEnable != undefined) {
+                    console.log('set requestEnable='+obj.requestEnable);
+                    obj.setShowAds(obj.requestEnable);
+                    obj.setLayout(obj.requestEnable);
                 }
                 return;
             }
 
-            if (TwAds.loaded == true) {
-                console.log('TwAds is already loaded');
-                return;
-            }
-            TwAds.loaded = true;
-
             if (ionic.Platform.isIOS()) {
-                TwAds.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
-                TwAds.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
+                obj.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
+                obj.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                TwAds.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
-                TwAds.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
+                obj.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
+                obj.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
             admob.setOptions({
-                publisherId:    TwAds.bannerAdUnit,
-                interstitialAdId: TwAds.interstitialAdUnit,
+                publisherId:    obj.bannerAdUnit,
+                interstitialAdId: obj.interstitialAdUnit,
                 adSize:         admob.AD_SIZE.BANNER,
                 bannerAtTop:    false,
                 overlap:        true,
@@ -193,19 +172,19 @@ angular.module('service.twads', [])
                 autoShowInterstitial:   false
             }, function () {
                 console.log('Set options of Ad mob');
-                TwAds.loadTwAdsInfo();
+                obj.loadTwAdsInfo();
             }, function (e) {
                 console.log('Fail to set options of Ad mob');
                 console.log(e);
             });
 
             document.addEventListener(admob.events.onAdFailedToLoad,function(message){
-                console.log('on banner Failed Receive Ad msg='+JSON.stringify(message));
+                console.log('on banner Failed Receive Ad');
             });
 
             document.addEventListener(admob.events.onAdLoaded,function(message){
-                console.log('on banner receive msg='+JSON.stringify(message));
+                console.log('on banner receive Ad');
             });
-        });
+        };
+        return obj;
     });
-

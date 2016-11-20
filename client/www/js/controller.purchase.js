@@ -17,6 +17,7 @@ angular.module('controller.purchase', [])
         obj.products;
         //for only ads app without in app purchase
         obj.hasInAppPurchase = false;
+        obj.paidAppUrl='';
 
         if (twClientConfig.isPaidApp) {
             obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
@@ -149,7 +150,7 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope) {
+    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope, $location) {
 
         if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
             return;
@@ -210,6 +211,12 @@ angular.module('controller.purchase', [])
         }
 
         $ionicPlatform.ready(function() {
+            if (ionic.Platform.isIOS()) {
+                Purchase.paidAppUrl = twClientConfig.iOSPaidAppUrl;
+            }
+            else if (ionic.Platform.isAndroid()) {
+                Purchase.paidAppUrl = twClientConfig.androidPaidAppUrl;
+            }
 
             Purchase.loadPurchaseInfo();
 
@@ -224,12 +231,24 @@ angular.module('controller.purchase', [])
 
             if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
-                $rootScope.bottomMessage = "오늘날씨 - 어제보다 오늘은?";
+                if (Purchase.paidAppUrl.length > 0) {
+                    $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+                    $rootScope.clickAdsBanner = function() {
+                        $location.path('/purchase');
+                    };
+                }
+                else {
+                    $rootScope.adsBannerMessage = "오늘날씨 - 어제보다 오늘은?";
+                    $rootScope.clickAdsBanner = function() {};
+                }
                 return;
             }
 
             Purchase.hasInAppPurchase = true;
-            $rootScope.bottomMessage = "광고없는 프리미엄을 사용해보세요";
+            $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+            $rootScope.clickAdsBanner = function() {
+                $location.path('/purchase');
+            };
 
             inAppPurchase
                 .getProducts([Purchase.productId])

@@ -701,8 +701,8 @@ angular.module('starter.controllers', [])
 
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) +
                                 '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -713,12 +713,12 @@ angular.module('starter.controllers', [])
                             deferred.resolve();
                         }, function (error) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                             if (error instanceof Error) {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                             }
 
@@ -730,6 +730,7 @@ angular.module('starter.controllers', [])
                         deferred.reject(msg);
                     });
                 }, function () {
+                    Util.ga.trackEvent('position', 'error', 'all');
                     var msg = "현재 위치를 찾을 수 없습니다.";
                     if (ionic.Platform.isAndroid()) {
                         msg += "<br>WIFI와 위치정보를 켜주세요.";
@@ -741,8 +742,8 @@ angular.module('starter.controllers', [])
 
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                         '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -751,12 +752,12 @@ angular.module('starter.controllers', [])
                     deferred.resolve();
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                     if (error instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                     }
 
@@ -886,7 +887,7 @@ angular.module('starter.controllers', [])
 
         $scope.headerScroll = function drawShadow() {
             var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
-            if (rect.top > 0) {
+            if (!(rect == undefined) && rect.hasOwnProperty('top') && rect.top > 0) {
                 alphaBar.css('box-shadow','0px 1px 5px 0 rgba(0, 0, 0, 0.26)');
             }
             else {
@@ -1003,6 +1004,7 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                 });
             }, function () {
+                Util.ga.trackEvent('position', 'error', 'all');
                 var msg = "현재 위치를 찾을 수 없습니다.";
                 if (ionic.Platform.isAndroid()) {
                     msg += "<br>WIFI와 위치정보를 켜주세요.";
@@ -1075,8 +1077,8 @@ angular.module('starter.controllers', [])
 
             WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
+                Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherDatas);
                 city.currentPosition = false;
@@ -1085,7 +1087,7 @@ angular.module('starter.controllers', [])
                 //city.location = location;
 
                 if (WeatherInfo.addCity(city) === false) {
-                    Util.ga.trackEvent('city error', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
+                    Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
                     var msg = "이미 동일한 지역이 추가되어 있습니다.";
                     $scope.showAlert("에러", msg);
                 }
@@ -1098,12 +1100,12 @@ angular.module('starter.controllers', [])
                 $ionicLoading.hide();
             }, function (error) {
                 var endTime = new Date().getTime();
-                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                         '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                         '(' + error + ')', endTime - startTime);
                 }
 
@@ -1225,8 +1227,8 @@ angular.module('starter.controllers', [])
 
                         WeatherUtil.getWeatherInfo(address, WeatherInfo.towns).then(function (weatherDatas) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                            Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(address) +
+                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) +
                                 '(' + index + ')', endTime - startTime);
 
                             var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -1236,12 +1238,12 @@ angular.module('starter.controllers', [])
                             deferred.resolve(city);
                         }, function (error) {
                             var endTime = new Date().getTime();
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                             if (error instanceof Error) {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             } else {
-                                Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(address) +
+                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
                                     '(' + index + ', ' + error + ')', endTime - startTime);
                             }
 
@@ -1251,6 +1253,7 @@ angular.module('starter.controllers', [])
                         deferred.reject();
                     });
                 }, function () {
+                    Util.ga.trackEvent('position', 'error', 'all');
                     deferred.reject();
                 });
             } else {
@@ -1258,8 +1261,8 @@ angular.module('starter.controllers', [])
 
                 WeatherUtil.getWeatherInfo(cityData.address, WeatherInfo.towns).then(function (weatherDatas) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'weather info');
-                    Util.ga.trackEvent('data', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
                         '(' + index + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherDatas);
@@ -1268,12 +1271,12 @@ angular.module('starter.controllers', [])
                     deferred.resolve(city);
                 }, function (error) {
                     var endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'weather info');
+                    Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                     if (error instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + index + ', ' + error + ')', endTime - startTime);
                     }
 
@@ -1296,41 +1299,35 @@ angular.module('starter.controllers', [])
                 $scope.updateInterval = "0";
                 $scope.widgetOpacity = "69";
 
-                ionic.Platform.ready(function() {
-                    if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                        console.log('appPreferences is undefined');
-                        return;
-                    }
+                if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                    console.log('appPreferences is undefined');
+                    return;
+                }
 
-                    /**
-                     * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
-                     * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
-                     * @type {AppPreferences}
-                     */
-                    var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                    suitePrefs.fetch('updateInterval').then(
-                        function (value) {
-                            if (value == null) {
-                                value = "0"
-                            }
-                            $scope.updateInterval = ""+value;
-                            console.log("fetch preference Success: " + value);
-                        }, function (error) {
-                            console.log("fetch preference Error: " + error);
+                var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+                suitePrefs.fetch(
+                    function (value) {
+                        if (value == null) {
+                            value = "0"
                         }
-                    );
-                    suitePrefs.fetch('widgetOpacity').then(
-                        function (value) {
-                            if (value == null) {
-                               value = "69"
-                            }
-                            $scope.widgetOpacity = ""+value;
-                            console.log("fetch preference Success: " + value);
-                        }, function (error) {
-                            console.log("fetch preference Error: " + error);
+                        $scope.updateInterval = ""+value;
+                        console.log("fetch preference Success: " + value);
+                    }, function (error) {
+                        console.log("fetch preference Error: " + error);
+                    }, 'updateInterval'
+                );
+
+                suitePrefs.fetch(
+                    function (value) {
+                        if (value == null) {
+                            value = "69"
                         }
-                    );
-                });
+                        $scope.widgetOpacity = ""+value;
+                        console.log("fetch preference Success: " + value);
+                    }, function (error) {
+                        console.log("fetch preference Error: " + error);
+                    }, 'widgetOpacity'
+                );
             }
         }
 
@@ -1383,46 +1380,42 @@ angular.module('starter.controllers', [])
 
         $scope.changeWidgetOpacity = function (val) {
             console.log("widget opacity ="+ val);
-            ionic.Platform.ready(function() {
-                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('widgetOpacity', +val).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.store(
+                function (value) {
+                    console.log("save preference Success: " + value);
+                },
+                function (error) {
+                    console.log("save preference Error: " + error);
+                }, 'widgetOpacity', +val
+            );
         };
 
         $scope.changeUpdateInterval = function (val) {
-           console.log("update interval ="+ val);
-            ionic.Platform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            console.log("update interval ="+ val);
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('updateInterval', +val).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.store(
+                function (value) {
+                    console.log("save preference Success: " + value);
+                },
+                function (error) {
+                    console.log("save preference Error: " + error);
+                }, 'updateInterval', +val
+            );
         };
 
         $scope.hasInAppPurchase = function () {
-            return Purchase.hasInAppPurchase;
+            return Purchase.hasInAppPurchase || Purchase.paidAppUrl.length > 0;
         };
 
         init();
@@ -1442,6 +1435,9 @@ angular.module('starter.controllers', [])
                     $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
                 }
             }, 1000);
+
+            TwAds.init();
+            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
 
         $scope.doTabForecast = function(forecastType) {
@@ -1543,11 +1539,6 @@ angular.module('starter.controllers', [])
             });
         };
 
-        $ionicPlatform.ready(function() {
-            //in app purchase plugin이 없으면 enableAds는 undefined임
-            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
-        });
-
         init();
     })
 
@@ -1603,9 +1594,9 @@ angular.module('starter.controllers', [])
         function update() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
                 $scope.leftText = "<";
-                $scope.rightText = "CLOSE";
+                $scope.rightText = "닫기";
             } else {
-                $scope.leftText = "SKIP";
+                $scope.leftText = "건너뛰기";
                 $scope.rightText = ">";
             }
         }
@@ -1642,9 +1633,11 @@ angular.module('starter.controllers', [])
                 localStorage.setItem("guideVersion", Util.guideVersion.toString());
                 TwAds.setShowAds(true);
                 if (res === true) { // autoSearch
+                    Util.ga.trackEvent('action', 'click', 'auto search');
                     WeatherInfo.disableCity(false);
                     $location.path('/tab/forecast');
                 } else {
+                    Util.ga.trackEvent('action', 'click', 'city search');
                     $location.path('/tab/search');
                 }
             });
@@ -1656,18 +1649,27 @@ angular.module('starter.controllers', [])
 
         $scope.onLeftClick = function() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                Util.ga.trackEvent('action', 'click', 'guide previous');
                 $ionicSlideBoxDelegate.previous();
             } else {
+                Util.ga.trackEvent('action', 'click', 'guide skip');
                 close();
             }
         };
 
         $scope.onRightClick = function() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
+                Util.ga.trackEvent('action', 'click', 'guide close');
                 close();
             } else {
+                Util.ga.trackEvent('action', 'click', 'guide next');
                 $ionicSlideBoxDelegate.next();
             }
+        };
+
+        $scope.onClose = function() {
+            Util.ga.trackEvent('action', 'click', 'guide top close');
+            close();
         };
 
         $scope.getGuideImg = function (number) {

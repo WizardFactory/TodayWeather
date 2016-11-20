@@ -262,47 +262,33 @@ angular.module('starter.services', [])
 
             console.log('save preference plist='+JSON.stringify(pList));
 
-            $ionicPlatform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.store('cityList', JSON.stringify(pList)).then(
-                    function (value) {
-                        console.log("save preference Success: " + value);
-                    },
-                    function (error) {
-                        console.log("save preference Error: " + error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.store(function (value) {
+                console.log("save preference Success: " + value);
+            }, function (error) {
+                console.log("save preference Error: " + error);
+            }, 'cityList', JSON.stringify(pList));
         };
 
         obj._loadCitiesPreference = function (callback) {
-            $ionicPlatform.ready(function() {
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    return;
-                }
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.log('appPreferences is undefined');
+                return;
+            }
 
-                /**
-                 * android에서는 ios suite name과 상관없이 아래 이름으로 저장됨.
-                 * net.wizardfactory.todayweather.widget.Provider.WidgetProvider
-                 * @type {AppPreferences}
-                 */
-                var suitePrefs = plugins.appPreferences.iosSuite("group.net.wizardfactory.todayweather");
-                suitePrefs.fetch('cityList').then(
-                    function (value) {
-                        console.log("fetch preference Success: " + value);
-                        callback(undefined, value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                        callback(error);
-                    }
-                );
-            });
+            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
+            suitePrefs.fetch(function (value) {
+                console.log("fetch preference Success: " + value);
+                callback(undefined, value);
+            }, function (error) {
+                console.log("fetch preference Error: " + error);
+                callback(error);
+            }, 'cityList');
         };
 
         obj.saveCities = function() {
@@ -1132,35 +1118,35 @@ angular.module('starter.services', [])
             getAddressFromDaum(lat, long).then(function(address) {
                 console.log(address);
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('data', endTime - startTime, 'get', 'daum address');
-                Util.ga.trackEvent('data', 'get', 'daum address', endTime - startTime);
+                Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
+                Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
 
                 deferred.resolve(address);
             }, function (err) {
                 console.log(err);
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('data error', endTime - startTime, 'get', 'daum address');
+                Util.ga.trackTiming('address', endTime - startTime, 'error', 'daum');
                 if (err instanceof Error) {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'daum(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('data error', 'get', 'daum address(' + err + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'daum(' + err + ')', endTime - startTime);
                 }
 
                 startTime = new Date().getTime();
                 getAddressFromGoogle(lat, long).then(function (address) {
                     console.log(address);
                     endTime = new Date().getTime();
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'google address');
-                    Util.ga.trackEvent('data', 'get', 'google address', endTime - startTime);
+                    Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
+                    Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
 
                     deferred.resolve(address);
                 }, function (err) {
                     endTime = new Date().getTime();
-                    Util.ga.trackTiming('data error', endTime - startTime, 'get', 'google address');
+                    Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
                     if (err instanceof Error) {
-                        Util.ga.trackEvent('data error', 'get', 'google address(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                        Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('data error', 'get', 'google address(' + err + ')', endTime - startTime);
+                        Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
                     }
 
                     deferred.reject(err);
@@ -1192,7 +1178,7 @@ angular.module('starter.services', [])
                 console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
 
                 retryCount--;
-                if (retryCount == 0) {
+                if (retryCount <= 0) {
                     return callback(error, undefined, retryCount);
                 }
                 else {
@@ -1218,7 +1204,7 @@ angular.module('starter.services', [])
                     console.log("code:"+error.code+" message:"+error.message);
 
                     retryCount--;
-                    if (retryCount == 0) {
+                    if (retryCount <= 0) {
                         return callback(error, undefined, retryCount);
                     }
                     else {
@@ -1239,13 +1225,13 @@ angular.module('starter.services', [])
                 _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
-                        Util.ga.trackTiming('data error', endTime - startTime, 'get', 'position');
-                        Util.ga.trackEvent('data error', 'get', 'position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                        Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
+                        Util.ga.trackEvent('position', 'error', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                         return deferred.reject();
                     }
 
-                    Util.ga.trackTiming('data', endTime - startTime, 'get', 'position');
-                    Util.ga.trackEvent('data', 'get', 'position(retry:' + retryCount + ')', endTime - startTime);
+                    Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
+                    Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
                     deferred.resolve(position.coords);
                 });
 
@@ -1253,13 +1239,13 @@ angular.module('starter.services', [])
                     _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
-                            Util.ga.trackTiming('data error', endTime - startTime, 'get', 'native position');
-                            Util.ga.trackEvent('data error', 'get', 'native position(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                            Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
+                            Util.ga.trackEvent('position', 'error', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             return deferred.reject();
                         }
 
-                        Util.ga.trackTiming('data', endTime - startTime, 'get', 'native position');
-                        Util.ga.trackEvent('data', 'get', 'native position(retry:' + retryCount + ')', endTime - startTime);
+                        Util.ga.trackTiming('position', endTime - startTime, 'get', 'native');
+                        Util.ga.trackEvent('position', 'get', 'native(retry:' + retryCount + ')', endTime - startTime);
                         deferred.resolve(position.coords);
                     });
                 }
@@ -1545,6 +1531,7 @@ angular.module('starter.services', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.guideVersion = 1.0;
+        obj.suiteName = "group.net.wizardfactory.todayweather";
 
         //obj.url = "/v000705";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
@@ -1555,6 +1542,78 @@ angular.module('starter.services', [])
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
+        //위치 재조정해야 함.
+        if (twClientConfig.debug) {
+            Util.ga.debugMode();
+        }
+
+        if (ionic.Platform.isIOS()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+        } else if (ionic.Platform.isAndroid()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
+
+            /**
+             * 기존 버전 호환성이슈로 Android는 유지.
+             */
+            Util.suiteName = "net.wizardfactory.todayweather_preferences";
+        }
+        else {
+            console.log("Error : Unknown platform");
+        }
+
+        Util.ga.platformReady();
+
+        Util.ga.enableUncaughtExceptionReporting(true);
+        Util.ga.setAllowIDFACollection(true);
+
+        if (window.hasOwnProperty("device")) {
+            console.log("UUID:"+window.device.uuid);
+        }
+        console.log("UA:"+ionic.Platform.ua);
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+        if (window.screen) {
+            Util.ga.trackEvent('app', 'screen width', window.screen.width);
+            Util.ga.trackEvent('app', 'screen height', window.screen.height);
+        }
+        else if (window.outerHeight) {
+            Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+            Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+        }
+
+        if (window.hasOwnProperty("device")) {
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+        }
+        Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+        if (window.cordova && cordova.getAppVersion) {
+            cordova.getAppVersion.getVersionNumber().then(function (version) {
+                Util.version = version;
+                Util.ga.trackEvent('app', 'version', Util.version);
+            });
+        }
+
+        window.onerror = function(msg, url, line) {
+            var idx = url.lastIndexOf("/");
+            if(idx > -1) {url = url.substring(idx+1);}
+            var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
+            Util.ga.trackEvent('window', 'error', errorMsg);
+            Util.ga.trackException(errorMsg, true);
+            console.log(errorMsg);
+            if (twClientConfig.debug) {
+                alert("ERROR in " + url + " (line #" + line + "): " + msg);
+            }
+            return false; //suppress Error Alert;
+        };
+
+        document.addEventListener("resume", function() {
+            Util.ga.trackEvent('app', 'status', 'resume');
+        }, false);
+        document.addEventListener("pause", function() {
+            Util.ga.trackEvent('app', 'status', 'pause');
+        }, false);
+
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
