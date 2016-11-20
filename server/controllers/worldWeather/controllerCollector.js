@@ -18,7 +18,7 @@ var metRequester = require('../../lib/MET/metRequester');
 var owmRequester = require('../../lib/OWM/owmRequester');
 var wuRequester = require('../../lib/WU/wuRequester');
 var dsfRequester = require('../../lib/DSF/dsfRequester');
-
+var controllerKeys = require('./controllerKeys')    ;
 /**
  *
  * @constructor
@@ -26,7 +26,6 @@ var dsfRequester = require('../../lib/DSF/dsfRequester');
 function ConCollector() {
     var self = this;
 
-    self.keybox = config.keyString;
     self.wuLimitation = 80;  // there is limitation to get 100 datas for a mimute from WU server.
 
     self.itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
@@ -38,8 +37,15 @@ function ConCollector() {
                             'humid', 'windspd', 'winddir', 'vis', 'cloud', 'pres', 'oz'];
     self.MAX_DSF_COUNT = 8;
     self.MAX_WU_COUNT = 72;
+
+    self.cKeys = new controllerKeys();
 }
 
+ConCollector.prototype.addKey = function(type, key){
+    var self = this;
+
+    self.cKeys.addKey(type, key);
+};
 /**
  *
  * @returns {{id: string, key: string}}
@@ -47,7 +53,7 @@ function ConCollector() {
  */
 ConCollector.prototype._getWuKey = function(){
     var self = this;
-    return {id: self.keybox.wu_id, key: self.keybox.wu_key};
+    return self.cKeys.getWuKey();
 };
 
 /**
@@ -267,7 +273,7 @@ ConCollector.prototype._divideList = function(list, unit){
  * @param callback
  * @private
  */
-ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCount, callback){
+ConCollector.prototype._getAndSaveWuForecast = function(list, date, retryCount, callback){
     var self = this;
     var failList = [];
 
@@ -299,7 +305,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
                     });
                 }
 
-                requester.getForecast(geocode, key, function(err, result){
+                requester.getForecast(geocode, self._getWuKey(), function(err, result){
                     if(err){
                         print.error('WuF> get fail', location);
                         log.error('WuF> get fail', location);
@@ -321,7 +327,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
             }
 
             if(retryCount > 0){
-                return self._getAndSaveWuForecast(failList, key, date, --retryCount, callback);
+                return self._getAndSaveWuForecast(failList, date, --retryCount, callback);
             }else{
                 callback(err, failList);
                 return;
@@ -339,7 +345,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, key, date, retryCo
  * @param callback
  * @private
  */
-ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCount, callback){
+ConCollector.prototype._getAndSaveWuCurrent = function(list, date, retryCount, callback){
     var self = this;
     var failList = [];
 
@@ -370,7 +376,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
                     });
                 }
 
-                requester.getCurrent(geocode, key, function(err, result){
+                requester.getCurrent(geocode, self._getWuKey(), function(err, result){
                     if(err){
                         print.error('WuC> get fail', location);
                         log.error('WuC> get fail', location);
@@ -392,7 +398,7 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, key, date, retryCou
             }
 
             if(retryCount > 0){
-                return self._getAndSaveWuCurrent(failList, key, date, --retryCount, callback);
+                return self._getAndSaveWuCurrent(failList, date, --retryCount, callback);
             }else{
                 callback(err, failList);
                 return;
@@ -564,7 +570,6 @@ ConCollector.prototype._addWuCurrentToList = function(newData, list){
  * @param callback
  */
 ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, callback){
-    var key = self._getWuKey();
     var failList = [];
 
     try{
@@ -572,7 +577,7 @@ ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, c
         var dividedList = self._divideList(list, self.wuLimitation);
         print.info('WuF> divided count : ', dividedList.length);
 
-        self._getAndSaveWuForecast(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+        self._getAndSaveWuForecast(dividedList.shift(), date, isRetry, function(err, resultList) {
             failList.concat(resultList);
             if(dividedList.length === 0){
                 log.info('WuF> Finish to collect WU forecast');
@@ -584,7 +589,7 @@ ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, c
         if(dividedList.length > 0){
             var timer = setInterval(function(){
                 print.info('WuF> Do task : ', dividedList.length);
-                self._getAndSaveWuForecast(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                self._getAndSaveWuForecast(dividedList.shift(), date, isRetry, function(err, resultList){
                     failList.concat(resultList);
 
                     if(dividedList.length === 0){
@@ -615,7 +620,6 @@ ConCollector.prototype.processWuForecast = function(self, list, date, isRetry, c
  * @param callback
  */
 ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, callback){
-    var key = self._getWuKey();
     var failList = [];
 
     try{
@@ -623,7 +627,7 @@ ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, ca
         var dividedList = self._divideList(list, self.wuLimitation);
         print.info('WuC> divided count : ', dividedList.length);
 
-        self._getAndSaveWuCurrent(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+        self._getAndSaveWuCurrent(dividedList.shift(), date, isRetry, function(err, resultList) {
             failList.concat(resultList);
             if(dividedList.length === 0){
                 log.info('WuC> Finish to collect WU forecast');
@@ -635,7 +639,7 @@ ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, ca
         if(dividedList.length > 0){
             var timer = setInterval(function(){
                 print.info('WuC> Do task : ', dividedList.length);
-                self._getAndSaveWuCurrent(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                self._getAndSaveWuCurrent(dividedList.shift(), date, isRetry, function(err, resultList){
                     failList.concat(resultList);
 
                     if(dividedList.length === 0){
@@ -871,7 +875,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
  */
 ConCollector.prototype._getDSFKey = function(){
     var self = this;
-    return {key: self.keybox.dsf_key};
+    return self.cKeys.getDsfKey();
 };
 
 /**
@@ -1113,7 +1117,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
  * @param callback
  * @private
  */
-ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCount, callback){
+ConCollector.prototype._getAndSaveDSForecast = function(list, date, retryCount, callback){
     var self = this;
     var failList = [];
 
@@ -1145,7 +1149,7 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCo
                     });
                 }
 
-                requester.getForecast(geocode, undefined, key, function(err, result){
+                requester.getForecast(geocode, undefined, self._getDSFKey().key, function(err, result){
                     if(err){
                         print.error('Dsf> get fail', location);
                         log.error('Dsf> get fail', location);
@@ -1167,7 +1171,7 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCo
             }
 
             if(retryCount > 0){
-                return self._getAndSaveDSForecast(failList, key, date, --retryCount, callback);
+                return self._getAndSaveDSForecast(failList, date, --retryCount, callback);
             }else{
                 callback(err, failList);
                 return;
@@ -1185,7 +1189,6 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, key, date, retryCo
  * @param callback
  */
 ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, callback){
-    var key = self._getDSFKey().key;
     var failList = [];
 
     try{
@@ -1193,7 +1196,7 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
         var dividedList = self._divideList(list, self.wuLimitation);
         print.info('Dsf> divided count : ', dividedList.length);
 
-        self._getAndSaveDSForecast(dividedList.shift(), key, date, isRetry, function(err, resultList) {
+        self._getAndSaveDSForecast(dividedList.shift(), date, isRetry, function(err, resultList) {
             failList.concat(resultList);
             if(dividedList.length === 0){
                 log.info('Dsf> Finish to collect WU forecast');
@@ -1205,7 +1208,7 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
         if(dividedList.length > 0){
             var timer = setInterval(function(){
                 print.info('Dsf> Do task : ', dividedList.length);
-                self._getAndSaveDSForecast(dividedList.shift(), key, date, isRetry, function(err, resultList){
+                self._getAndSaveDSForecast(dividedList.shift(), date, isRetry, function(err, resultList){
                     failList.concat(resultList);
 
                     if(dividedList.length === 0){
@@ -1368,7 +1371,7 @@ ConCollector.prototype.runTask = function(isAll, callback){
     }
 
     if(isAll){
-        funcList.push(self.processDSForecast);
+        //funcList.push(self.processDSForecast);
     }
 
     var date = parseInt(self._getTimeString(0).slice(0,10) + '00');
