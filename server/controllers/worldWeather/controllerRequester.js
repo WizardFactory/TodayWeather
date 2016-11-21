@@ -9,8 +9,8 @@ var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
 
-var commandCategory = ['ALL','MET','OWM','WU'];
-var command = ['get_all','get', 'req_add'];
+var commandCategory = ['all','met','owm','wu', 'dsf'];
+var command = ['get_all','get', 'req_add', 'add_key'];
 
 /**
  *
@@ -31,7 +31,8 @@ function ControllerRequester(){
 
         if(!self.isValidCommand(req)){
             req.validReq = false;
-            log.error('Invalid Command');
+            log.error('RQ> Invalid Command');
+            req.result = {status: 'Fail', cmd: req.params.command};
             return next();
         }
 
@@ -75,6 +76,30 @@ function ControllerRequester(){
                     req.result = {status: 'OK', cmd: req.params.command};
                     next();
                 });
+                break;
+            case 'add_key':
+                if(global.collector){
+                    self.addKey(req, function(err){
+                        if(err){
+                            log.error('RQ>  fail to run addKey');
+                            req.result = {status: 'Fail', cmd: req.params.command};
+                            next();
+                            return;
+                        }
+                        log.info('RQ> success adding Key');
+                        req.result = {status: 'OK', cmd: req.params.command};
+                        next();
+                    });
+                }else{
+                    log.info('RQ> There is no collector module');
+                    req.result = {status: 'Fail', cmd: req.params.command};
+                    next();
+                }
+                break;
+
+            default:
+                req.result = {status: 'Fail', cmd: req.params.command};
+                next();
                 break;
         }
     };
@@ -152,6 +177,9 @@ ControllerRequester.prototype.isValidCommand = function(req){
         }
     }
 
+    log.silly('category: ', req.params.category);
+    log.silly('command : ', req.params.command);
+    log.silly(i, commandCategory.length, j , command.length)
     return (i < commandCategory.length && j < command.length);
 };
 /**
@@ -389,6 +417,37 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
             }
         }
     );
+};
+
+ControllerRequester.prototype.addKey = function(req, callback){
+    var self = this;
+    var key = {};
+
+    if(req.query.key_type === undefined){
+        log.error('RQ> There is no key type parmeter');
+        callback('fail_add_key');
+        return;
+    }
+
+    if(req.query.ckey === undefined){
+        log.error('RQ> There is no key parmeter');
+        callback('fail_add_key');
+        return;
+    }
+
+    if(req.query.key_type === 'wu'){
+        if(req.query.key_id === undefined){
+            log.error('RQ> There is no WU key ID parmeter');
+            callback('fail_add_key');
+            return;
+        }
+        key.id = req.query.key_id;
+    }
+    key.key = req.query.ckey;
+
+    global.collector.addKey(req.query.key_type, key);
+    callback(null);
+
 };
 
 module.exports = ControllerRequester;
