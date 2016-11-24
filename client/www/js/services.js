@@ -1088,7 +1088,6 @@ angular.module('starter.services', [])
                             deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
                             return;
                         }
-                        console.log(address);
                         deferred.resolve(address);
                     }
                     else {
@@ -1185,9 +1184,9 @@ angular.module('starter.services', [])
                     //간격을 주지 않으면 계속 실패해버림.
                     setTimeout(function () {
                         _navigatorRetryGetCurrentPosition(retryCount, callback);
-                    }, 200);
+                    }, 500);
                 }
-            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
+            }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         function _nativeRetryGetCurrentPosition(retryCount, callback) {
@@ -1210,9 +1209,9 @@ angular.module('starter.services', [])
                     else {
                         setTimeout(function () {
                             _nativeRetryGetCurrentPosition(retryCount, callback);
-                        }, 200);
+                        }, 500);
                     }
-                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
+                }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         obj.getCurrentPosition = function () {
@@ -1222,7 +1221,7 @@ angular.module('starter.services', [])
                 var startTime = new Date().getTime();
                 var endTime;
 
-                _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
+                _navigatorRetryGetCurrentPosition(2, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
                         Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
@@ -1236,7 +1235,7 @@ angular.module('starter.services', [])
                 });
 
                 if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
+                    _nativeRetryGetCurrentPosition(2, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
                             Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
