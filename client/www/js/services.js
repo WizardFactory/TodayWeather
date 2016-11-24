@@ -246,6 +246,10 @@ angular.module('starter.services', [])
             if (cityIndex === null) {
                 that.setFirstCityIndex();
             }
+            else if (cityIndex >= items.length) {
+                console.log('city index is over');
+                that.setFirstCityIndex();
+            }
         };
 
         obj._saveCitiesPreference = function (cities) {
