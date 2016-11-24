@@ -219,12 +219,17 @@ KmaScraper.prototype._convertKrToEng = function (str) {
 };
 
 /**
- * parsing city weather
+ *
+ * @param pubDate
  * @param callback
+ * @param date
  */
-KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
+KmaScraper.prototype.getCityWeather = function(pubDate, callback, date) {
     var self = this;
     var url = 'http://www.kma.go.kr/weather/observation/currentweather.jsp';
+    if (date) {
+        url += '?tm='+date;
+    }
     req(url, {encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
