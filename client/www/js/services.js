@@ -246,7 +246,7 @@ angular.module('starter.services', [])
             if (cityIndex === null) {
                 that.setFirstCityIndex();
             }
-            else if (cityIndex >= items.length) {
+            else if (cityIndex >= cities.length) {
                 console.log('city index is over');
                 that.setFirstCityIndex();
             }
