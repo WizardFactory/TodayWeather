@@ -310,7 +310,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http, Util) {
+    .factory('WeatherUtil', function ($q, $http, Util, $translate) {
         var obj = {};
 
         //region Function
@@ -401,55 +401,6 @@ angular.module('starter.services', [])
                 d = str.substr(6, 2);
             var data = new Date(y, m, d);
             return (data.getFullYear() == y && data.getMonth() == m && data.getDate() == d) ? data : undefined;
-        }
-
-        /**
-         * day시작 값이 index 0부터 시작하도록, padding value을 맞추어야 함.
-         * @param day
-         * @returns {*}
-         */
-        function getDayString(day) {
-            var dayString = ["엊그제", "그제", "어제", "오늘", "내일", "모레", "글피"];
-            if (-3 <= day && day <= 3) {
-                return dayString[day + 3];
-            }
-            else {
-                if (day < 0) {
-                    return Math.abs(day)+"일 전";
-                }
-                else if (day > 0) {
-                    return Math.abs(day)+"일 후";
-                }
-            }
-            console.error("Fail to get day string day=" + day);
-            return "";
-        }
-
-        function dayToString(day) {
-            switch (day) {
-                case 0:
-                    return "일";
-                    break;
-                case 1:
-                    return "월";
-                    break;
-                case 2:
-                    return "화";
-                    break;
-                case 3:
-                    return "수";
-                    break;
-                case 4:
-                    return "목";
-                    break;
-                case 5:
-                    return "금";
-                    break;
-                case 6:
-                    return "토";
-                    break;
-            }
-            return "";
         }
 
         function convertMidSkyString(skyInfo) {
@@ -631,6 +582,425 @@ angular.module('starter.services', [])
         //endregion
 
         //region APIs
+        var strSameAsYesterday;
+        var strThanYesterday;
+        $translate(['LOC_SAME_AS_YESTERDAY', 'LOC_THAN_YESTERDAY']).then(function (translations) {
+           strSameAsYesterday = translations.LOC_SAME_AS_YESTERDAY;
+            strThanYesterday = translations.LOC_THAN_YESTERDAY;
+        }, function (translationIds) {
+            strSameAsYesterday = translationIds.LOC_SAME_AS_YESTERDAY;
+            strThanYesterday = translationIds.LOC_THAN_YESTERDAY;
+        });
+
+        function _diffTempStr(current, yesterday) {
+            var str = "";
+
+            if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+                var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                if (diffTemp == 0) {
+                    str += strSameAsYesterday;
+                }
+                else {
+                    var tempStr;
+                    if (diffTemp > 0) {
+                        tempStr = '+' + diffTemp;
+                    }
+                    else {
+                        tempStr = '' + diffTemp;
+                    }
+                    str += sprintf(strThanYesterday, tempStr);
+                }
+            }
+            return str;
+        }
+
+        //Most cloudy, Partly cloud, Clear, Sunnay, Cloud, PM10, PM2.5, AQI, Discomfort feelslike, UV, wind, food posioning
+        var translations;
+        $translate([
+            'LOC_MOSTLY_CLOUDY', 'LOC_PARTLY_CLOUDY', 'LOC_CLEAR', 'LOC_SUNNY', 'LOC_CLOUDY', 'LOC_PM10',
+            'LOC_PM25', 'LOC_AQI', 'LOC_DISCOMFORT_INDEX', 'LOC_FEELS_LIKE', 'LOC_UV', 'LOC_WIND',
+            'LOC_FOOD_POISONING'
+        ]).then(function (trans) {
+            translations = trans;
+        }, function (translationIds) {
+            translations = translationIds;
+        });
+
+        function _makeSummary(current, yesterday) {
+            var str = "";
+            var item;
+            var itemList = [];
+            var diffTemp;
+            var tmpGrade;
+
+            if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+                diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                str = current.diffTempStr;
+                item = {str: str, grade: Math.abs(diffTemp)};
+                itemList.push(item);
+            }
+
+            //weather를 type이나, 대치값이 필요.
+            if (current.weather) {
+                if(current.weather == translations.LOC_MOSTLY_CLOUDY ||
+                    current.weather == translations.LOC_PARTLY_CLOUDY ||
+                    current.weather == translations.LOC_CLEAR ||
+                    current.weather == translations.LOC_SUNNY ||
+                    current.weather == translations.LOC_CLOUDY) {
+                    //skip
+                    item = {str: current.weather, grade: 1};
+                }
+                else {
+                    item = {str: current.weather, grade: 3};
+                }
+                itemList.push(item);
+            }
+
+            if (current.arpltn) {
+
+                if (current.arpltn.pm10Grade && current.arpltn.pm10Str) {
+                    tmpGrade = current.arpltn.pm10Grade;
+                    str = translations.LOC_PM10 + " " + current.arpltn.pm10Str;
+                    item = {str: str, grade: tmpGrade};
+                    itemList.push(item);
+                }
+                if (current.arpltn.pm25Grade && current.arpltn.pm25Str) {
+                    tmpGrade = current.arpltn.pm25Grade;
+                    str = translations.LOC_PM25 + " " + current.arpltn.pm25Str;
+                    item = {str: str, grade: tmpGrade};
+                    itemList.push(item);
+                }
+                if (current.arpltn.khaiGrade && current.arpltn.khaiStr) {
+                    tmpGrade = current.arpltn.khaiGrade;
+                    str = translations.LOC_AQI + " " + current.arpltn.khaiStr;
+                    item = {str: str, grade: tmpGrade};
+                    itemList.push(item);
+                }
+            }
+            if (current.rn1 && current.rn1Str && current.ptyStr) {
+                item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+                itemList.push(item);
+            }
+
+            if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
+                tmpGrade = current.dsplsGrade;
+                str = translations.LOC_DISCOMFORT_INDEX + " " + current.dsplsStr;
+                item = {str:str, grade: tmpGrade};
+                itemList.push(item);
+            }
+
+            if (current.sensorytem && current.sensorytem !== current.t1h) {
+                diffTemp = Math.round(current.sensorytem - current.t1h);
+                str = translations.LOC_FEELS_LIKE + " " + current.sensorytem +"˚";
+                item = {str :str, grade: Math.abs(diffTemp)};
+                itemList.push(item);
+            }
+
+            if (current.ultrvGrade && Number(current.time) < 1800) {
+                tmpGrade = current.ultrvGrade;
+                str = translations.LOC_UV + " " + current.ultrvStr;
+                item = {str: str, grade: tmpGrade+1};
+                itemList.push(item);
+            }
+
+            if (current.wsdGrade) {
+                str = translations.LOC_WIND + " " + current.wsd + "m/s";
+                item = {str:str, grade: current.wsdGrade+1};
+                itemList.push(item);
+            }
+
+            if (current.fsnStr) {
+                str = translations.LOC_FOOD_POISONING + " " + current.fsnStr;
+                item = {str: str, grade: current.fsnGrade+1};
+                itemList.push(item);
+            }
+
+            //감기
+
+            itemList.sort(function (a, b) {
+                if(a.grade > b.grade){
+                    return -1;
+                }
+                if(a.grade < b.grade){
+                    return 1;
+                }
+                return 0;
+            });
+
+            console.log(JSON.stringify(itemList));
+
+            return itemList[0].str+", "+itemList[1].str;
+        }
+
+        var airGradeStr = [];
+        $translate(['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS']).then(function (translations) {
+            airGradeStr.push(translations.LOC_GOOD);
+            airGradeStr.push(translations.LOC_MODERATE);
+            airGradeStr.push(translations.LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS);
+            airGradeStr.push(translations.LOC_UNHEALTHY);
+            airGradeStr.push(translations.LOC_VERY_UNHEALTHY);
+            airGradeStr.push(translations.LOC_HAZARDOUS);
+        }, function (translationIds) {
+            airGradeStr.push(translationIds.LOC_GOOD);
+            airGradeStr.push(translationIds.LOC_MODERATE);
+            airGradeStr.push(translationIds.LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS);
+            airGradeStr.push(translationIds.LOC_UNHEALTHY);
+            airGradeStr.push(translationIds.LOC_VERY_UNHEALTHY);
+            airGradeStr.push(translationIds.LOC_HAZARDOUS);
+        });
+
+        function _getSentimentStr(grade) {
+            if (grade >= 3) {
+                grade++;
+            }
+            return airGradeStr[grade-1];
+        }
+
+        function _makeStrOfAqiGrade(arpltn) {
+            if (arpltn.pm10Grade) {
+                arpltn.pm10Str = _getSentimentStr(arpltn.pm10Grade);
+            }
+            if (arpltn.pm25Grade) {
+                arpltn.pm25Str = _getSentimentStr(arpltn.pm25Grade);
+            }
+            if (arpltn.o3Grade) {
+                arpltn.o3Str = _getSentimentStr(arpltn.o3Grade);
+            }
+            if (arpltn.no2Grade) {
+                arpltn.no2Str = _getSentimentStr(arpltn.no2Grade);
+            }
+            if (arpltn.coGrade) {
+                arpltn.coStr = _getSentimentStr(arpltn.coGrade);
+            }
+            if (arpltn.so2Grade) {
+                arpltn.so2Str = _getSentimentStr(arpltn.so2Grade);
+            }
+            if (arpltn.khaiGrade) {
+                arpltn.khaiStr = _getSentimentStr(arpltn.khaiGrade);
+            }
+        }
+
+        var fsnGradeStr = [];
+        $translate(['LOC_ATTENTION', 'LOC_CAUTION', 'LOC_WARNING', 'LOC_HAZARD']).then(function (translations) {
+            fsnGradeStr.push(translations.LOC_ATTENTION) ;
+            fsnGradeStr.push(translations.LOC_CAUTION) ;
+            fsnGradeStr.push(translations.LOC_WARNING) ;
+            fsnGradeStr.push(translations.LOC_HAZARD) ;
+        }, function (translationIds) {
+            fsnGradeStr.push(translationIds.LOC_ATTENTION) ;
+            fsnGradeStr.push(translationIds.LOC_CAUTION) ;
+            fsnGradeStr.push(translationIds.LOC_WARNING) ;
+            fsnGradeStr.push(translationIds.LOC_HAZARD) ;
+        });
+
+        var lowHighGradeStr = [];
+        $translate(['LOC_LOW', 'LOC_NORMAL', 'LOC_HIGH', 'LOC_VERY_HIGH', 'LOC_HAZARD']).then(function (translations) {
+            lowHighGradeStr.push(translations.LOC_LOW) ;
+            lowHighGradeStr.push(translations.LOC_NORMAL) ;
+            lowHighGradeStr.push(translations.LOC_HIGH) ;
+            lowHighGradeStr.push(translations.LOC_VERY_HIGH) ;
+            lowHighGradeStr.push(translations.LOC_HAZARD) ;
+        }, function (translationIds) {
+            lowHighGradeStr.push(translationIds.LOC_LOW) ;
+            lowHighGradeStr.push(translationIds.LOC_NORMAL) ;
+            lowHighGradeStr.push(translationIds.LOC_HIGH) ;
+            lowHighGradeStr.push(translationIds.LOC_VERY_HIGH) ;
+            lowHighGradeStr.push(translationIds.LOC_HAZARD) ;
+        });
+
+        var lowHighGradeStr = [];
+        $translate(['LOC_LOW', 'LOC_NORMAL', 'LOC_HIGH', 'LOC_VERY_HIGH', 'LOC_HAZARD']).then(function (translations) {
+            lowHighGradeStr.push(translations.LOC_LOW) ;
+            lowHighGradeStr.push(translations.LOC_NORMAL) ;
+            lowHighGradeStr.push(translations.LOC_HIGH) ;
+            lowHighGradeStr.push(translations.LOC_VERY_HIGH) ;
+            lowHighGradeStr.push(translations.LOC_HAZARD) ;
+        }, function (translationIds) {
+            lowHighGradeStr.push(translationIds.LOC_LOW) ;
+            lowHighGradeStr.push(translationIds.LOC_NORMAL) ;
+            lowHighGradeStr.push(translationIds.LOC_HIGH) ;
+            lowHighGradeStr.push(translationIds.LOC_VERY_HIGH) ;
+            lowHighGradeStr.push(translationIds.LOC_HAZARD) ;
+        });
+
+        var ptyStr = [];
+        $translate(['LOC_RAINFALL', 'LOC_SNOWFALL']).then(function (translations) {
+            ptyStr.push(translations.LOC_RAINFALL);
+            ptyStr.push(translations.LOC_SNOWFALL);
+        }, function (translationIds) {
+            ptyStr.push(translationIds.LOC_RAINFALL);
+            ptyStr.push(translationIds.LOC_SNOWFALL);
+        });
+
+        function _convertKmaPtyToStr(pty) {
+            if (pty === 1) {
+                return ptyStr[0];
+            }
+            else if (pty === 2) {
+                //return "강수/적설량"
+                return ptyStr[0];
+            }
+            else if (pty === 3) {
+                return ptyStr[1];
+            }
+
+            return "";
+        }
+
+        function _convertKmaRxxToStr(pty, rXX) {
+            var str = "~"+rXX;
+            if (pty === 1 || pty === 2) {
+                str += "mm";
+            }
+            else if (pty === 3) {
+                str += "cm";
+            }
+            else {
+               return "";
+            }
+            return str;
+        }
+
+        var weatherTypeStr = [];
+        $translate(['LOC_CLEAR', 'LOC_PARTLY_CLOUDY', 'LOC_MOSTLY_CLOUDY', 'LOC_CLOUDY', 'LOC_MIST', 'LOC_HAZE',
+        'LOC_FOG', 'LOC_THIN_FOG', 'LOC_DENSE_FOG', 'LOC_FOG_STOPPED', 'LOC_PARTLY_FOG', 'LOC_YELLOW_DUST',
+        'LOC_LIGHT_DRIZZLE', 'LOC_DRIZZLE', 'LOC_HEAVY_DRIZZLE', 'LOC_DRIZZLE_STOPPED', 'LOC_LIGHT_RAIN_AT_TIMES',
+        'LOC_LIGHT_RAIN', 'LOC_HEAVY_RAIN_AT_TIMES', 'LOC_HEAVY_RAIN', 'LOC_LIGHT_SHOWERS', 'LOC_SHOWERS',
+        'LOC_HEAVY_SHOWERS', 'LOC_SHOWERS_STOPPED', 'LOC_RAIN', 'LOC_RAIN_AT_TIMES', 'LOC_RAIN_STOPPED',
+        'LOC_LIGHT_SLEET', 'LOC_HEAVY_SLEET', 'LOC_SLEET_STOPPED', 'LOC_LIGHT_SNOW_AT_TIMES', 'LOC_LIGHT_SNOW',
+        'LOC_SNOW_AT_TIMES', 'LOC_SNOW', 'LOC_HEAVY_SNOW_AT_TIMES', 'LOC_HEAVY_SNOW', 'LOC_LIGHT_SNOW_SHOWERS',
+        'LOC_HEAVY_SNOW_SHOWERS', 'LOC_SNOW_SHOWERS_STOPPED', 'LOC_SNOW_STOPPED', 'LOC_LIGHT_SNOW_PELLETS',
+        'LOC_HEAVY_SNOW_PELLETS', 'LOC_LIGHT_SNOW_STORM', 'LOC_SNOW_STORM', 'LOC_HEAVY_SNOW_STORM', 'LOC_POWDER_SNOW',
+        'LOC_WATER_SPOUT', 'LOC_HAIL', 'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_STOPPED_RAIN',
+        'LOC_THUNDERSHOWERS_STOPPED_SNOW', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_LIGHTNING',
+        'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED']).then(function (translations) {
+            weatherTypeStr.push(translations.LOC_CLEAR);
+            weatherTypeStr.push(translations.LOC_PARTLY_CLOUDY);
+            weatherTypeStr.push(translations.LOC_MOSTLY_CLOUDY);
+            weatherTypeStr.push(translations.LOC_CLOUDY);
+            weatherTypeStr.push(translations.LOC_MIST);
+            weatherTypeStr.push(translations.LOC_HAZE);
+            weatherTypeStr.push(translations.LOC_FOG); //안개변화무
+            weatherTypeStr.push(translations.LOC_THIN_FOG);
+            weatherTypeStr.push(translations.LOC_DENSE_FOG);
+            weatherTypeStr.push(translations.LOC_FOG_STOPPED);
+
+            weatherTypeStr.push(translations.LOC_FOG); //시계내안개
+            weatherTypeStr.push(translations.LOC_PARTLY_FOG);
+            weatherTypeStr.push(translations.LOC_YELLOW_DUST);
+            weatherTypeStr.push(translations.LOC_RAIN); //시계내강수
+            weatherTypeStr.push(translations.LOC_LIGHT_DRIZZLE);
+            weatherTypeStr.push(translations.LOC_DRIZZLE);
+            weatherTypeStr.push(translations.LOC_HEAVY_DRIZZLE);
+            weatherTypeStr.push(translations.LOC_DRIZZLE_STOPPED);
+            weatherTypeStr.push(translations.LOC_LIGHT_RAIN_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_LIGHT_RAIN);
+
+            weatherTypeStr.push(translations.LOC_RAIN_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_RAIN);
+            weatherTypeStr.push(translations.LOC_HEAVY_RAIN_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_HEAVY_RAIN);
+            weatherTypeStr.push(translations.LOC_LIGHT_SHOWERS);
+            weatherTypeStr.push(translations.LOC_SHOWERS);
+            weatherTypeStr.push(translations.LOC_HEAVY_SHOWERS);
+            weatherTypeStr.push(translations.LOC_SHOWERS_STOPPED);
+            weatherTypeStr.push(translations.LOC_RAIN_STOPPED);
+            weatherTypeStr.push(translations.LOC_LIGHT_SLEET);
+
+            weatherTypeStr.push(translations.LOC_HEAVY_SLEET);
+            weatherTypeStr.push(translations.LOC_SLEET_STOPPED);
+            weatherTypeStr.push(translations.LOC_LIGHT_SNOW_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_LIGHT_SNOW);
+            weatherTypeStr.push(translations.LOC_SNOW_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_SNOW);
+            weatherTypeStr.push(translations.LOC_HEAVY_SNOW_AT_TIMES);
+            weatherTypeStr.push(translations.LOC_HEAVY_SNOW);
+            weatherTypeStr.push(translations.LOC_LIGHT_SNOW_SHOWERS);
+            weatherTypeStr.push(translations.LOC_HEAVY_SNOW_SHOWERS);
+
+            weatherTypeStr.push(translations.LOC_SNOW_SHOWERS_STOPPED);
+            weatherTypeStr.push(translations.LOC_SNOW_STOPPED);
+            weatherTypeStr.push(translations.LOC_LIGHT_SNOW_PELLETS);
+            weatherTypeStr.push(translations.LOC_HEAVY_SNOW_PELLETS);
+            weatherTypeStr.push(translations.LOC_LIGHT_SNOW_STORM);
+            weatherTypeStr.push(translations.LOC_SNOW_STORM);
+            weatherTypeStr.push(translations.LOC_HEAVY_SNOW_STORM);
+            weatherTypeStr.push(translations.LOC_POWDER_SNOW);
+            weatherTypeStr.push(translations.LOC_WATER_SPOUT);
+            weatherTypeStr.push(translations.LOC_HAIL);
+
+            weatherTypeStr.push(translations.LOC_THUNDERSHOWERS);
+            weatherTypeStr.push(translations.LOC_THUNDERSHOWERS_HAIL);
+            weatherTypeStr.push(translations.LOC_THUNDERSHOWERS_RAIN_SNOW);
+            weatherTypeStr.push(translations.LOC_THUNDERSHOWERS_STOPPED_RAIN);
+            weatherTypeStr.push(translations.LOC_THUNDERSHOWERS_STOPPED_SNOW);
+            weatherTypeStr.push(translations.LOC_LIGHTNING);
+            weatherTypeStr.push(translations.LOC_BOLT_FROM_THE_BLUE);
+            weatherTypeStr.push(translations.LOC_BOLT_STOPPED);
+        }, function (translationIds) {
+            weatherTypeStr.push(translationIds.LOC_CLEAR);
+            weatherTypeStr.push(translationIds.LOC_PARTLY_CLOUDY);
+            weatherTypeStr.push(translationIds.LOC_MOSTLY_CLOUDY);
+            weatherTypeStr.push(translationIds.LOC_CLOUDY);
+            weatherTypeStr.push(translationIds.LOC_MIST);
+            weatherTypeStr.push(translationIds.LOC_HAZE);
+            weatherTypeStr.push(translationIds.LOC_FOG); //안개변화무
+            weatherTypeStr.push(translationIds.LOC_THIN_FOG);
+            weatherTypeStr.push(translationIds.LOC_DENSE_FOG);
+            weatherTypeStr.push(translationIds.LOC_FOG_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_FOG); //시계내안개
+            weatherTypeStr.push(translationIds.LOC_PARTLY_FOG);
+            weatherTypeStr.push(translationIds.LOC_YELLOW_DUST);
+            weatherTypeStr.push(translationIds.LOC_RAIN); //시계내강수
+            weatherTypeStr.push(translationIds.LOC_LIGHT_DRIZZLE);
+            weatherTypeStr.push(translationIds.LOC_DRIZZLE);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_DRIZZLE);
+            weatherTypeStr.push(translationIds.LOC_DRIZZLE_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_RAIN_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_RAIN);
+            weatherTypeStr.push(translationIds.LOC_RAIN_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_RAIN);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_RAIN_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_RAIN);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SHOWERS);
+            weatherTypeStr.push(translationIds.LOC_SHOWERS);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SHOWERS);
+            weatherTypeStr.push(translationIds.LOC_SHOWERS_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_RAIN_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SLEET);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SLEET);
+            weatherTypeStr.push(translationIds.LOC_SLEET_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SNOW_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SNOW);
+            weatherTypeStr.push(translationIds.LOC_SNOW_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_SNOW);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SNOW_AT_TIMES);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SNOW);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SNOW_SHOWERS);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SNOW_SHOWERS);
+            weatherTypeStr.push(translationIds.LOC_SNOW_SHOWERS_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_SNOW_STOPPED);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SNOW_PELLETS);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SNOW_PELLETS);
+            weatherTypeStr.push(translationIds.LOC_LIGHT_SNOW_STORM);
+            weatherTypeStr.push(translationIds.LOC_SNOW_STORM);
+            weatherTypeStr.push(translationIds.LOC_HEAVY_SNOW_STORM);
+            weatherTypeStr.push(translationIds.LOC_POWDER_SNOW);
+            weatherTypeStr.push(translationIds.LOC_WATER_SPOUT);
+            weatherTypeStr.push(translationIds.LOC_HAIL);
+            weatherTypeStr.push(translationIds.LOC_THUNDERSHOWERS);
+            weatherTypeStr.push(translationIds.LOC_THUNDERSHOWERS_HAIL);
+            weatherTypeStr.push(translationIds.LOC_THUNDERSHOWERS_RAIN_SNOW);
+            weatherTypeStr.push(translationIds.LOC_THUNDERSHOWERS_STOPPED_RAIN);
+            weatherTypeStr.push(translationIds.LOC_THUNDERSHOWERS_STOPPED_SNOW);
+            weatherTypeStr.push(translationIds.LOC_LIGHTNING);
+            weatherTypeStr.push(translationIds.LOC_BOLT_FROM_THE_BLUE);
+            weatherTypeStr.push(translationIds.LOC_BOLT_STOPPED);
+        });
+
+        function _convertKmaWeatherTypeToStr(weatherType) {
+            return weatherTypeStr[weatherType];
+        }
 
         /**
          * wsd : 풍속 4~8 약간 강, 9~13 강, 14~ 매우강
@@ -658,6 +1028,31 @@ angular.module('starter.services', [])
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
 
+            if (!(currentForecast.arpltn == undefined)) {
+                _makeStrOfAqiGrade(currentForecast.arpltn);
+            }
+            if (!(currentForecast.dsplsGrade == undefined)) {
+                currentForecast.dsplsStr = lowHighGradeStr[currentForecast.dsplsGrade-1];
+            }
+            if (!(currentForecast.ultrvGrade == undefined)) {
+                currentForecast.ultrvStr = lowHighGradeStr[currentForecast.ultrvGrade];
+            }
+            if (!(currentForecast.fsnGrade == undefined)) {
+                currentForecast.fsnStr = fsnGradeStr[currentForecast.fsnGrade];
+            }
+            if (!(currentForecast.pty == undefined)) {
+                currentForecast.ptyStr = _convertKmaPtyToStr(currentForecast.pty);
+            }
+            if (!(currentForecast.rn1 == undefined)) {
+               currentForecast.rn1Str = _convertKmaRxxToStr(currentForecast.pty, currentForecast.rn1);
+            }
+            if (!(currentForecast.weatherType == undefined)) {
+                if (Util.language != 'ko') {
+                   currentForecast.weather = _convertKmaWeatherTypeToStr(currentForecast.weatherType);
+                }
+            }
+            currentForecast.diffTempStr = _diffTempStr(currentTownWeather, currentTownWeather.yesterday);
+            currentForecast.summary = _makeSummary(currentTownWeather, currentTownWeather.yesterday);
             return currentForecast;
         };
 
@@ -680,18 +1075,13 @@ angular.module('starter.services', [])
                 var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
                 var diffDays = getDiffDays(convertStringToDate(shortForecast.date), convertStringToDate(currentForecast.date));
-                var day = "";
-                if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
-                    day = getDayString(diffDays);
-                }
                 var isNight = time < 7 || time > 18;
 
                 tempObject = shortForecast;
 
                 tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                tempObject.day = day;
+                tempObject.fromToday = diffDays;
                 tempObject.time = time;
-                tempObject.timeStr = time + "시";
 
                 if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
                     currentIndex = index;
@@ -787,8 +1177,7 @@ angular.module('starter.services', [])
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
 
                 data.fromToday = diffDays;
-                data.fromTodayStr = getDayString(diffDays);
-                data.week = dayToString(convertStringToDate(data.date).getDay());
+                data.dayOfWeek = convertStringToDate(data.date).getDay();
 
                 var skyAm = convertMidSkyString(dayInfo.wfAm);
                 var skyPm = convertMidSkyString(dayInfo.wfPm);
@@ -827,6 +1216,34 @@ angular.module('starter.services', [])
                 if (tmpDisplayCount > displayItemCount) {
                     displayItemCount = tmpDisplayCount;
                 }
+
+                if (!(data.dustForecast == undefined)) {
+                    if (!(data.dustForecast.PM10Grade == undefined)) {
+                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
+                    }
+                    if (!(data.dustForecast.PM25Grade == undefined)) {
+                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
+                    }
+                    if (!(data.dustForecast.O3Grade == undefined)) {
+                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
+                    }
+                    _makeStrOfAqiGrade(data.dustForecast);
+                }
+                if (!(data.ultrvGrade == undefined)) {
+                    data.ultrvStr = lowHighGradeStr[data.ultrvGrade];
+                }
+                if (!(data.fsnGrade == undefined)) {
+                    data.fsnStr = fsnGradeStr[data.fsnGrade];
+                }
+                if (!(data.pty == undefined)) {
+                    data.ptyStr = _convertKmaPtyToStr(data.pty);
+                }
+                if (!(data.rn1 == undefined)) {
+                    data.rn1Str = _convertKmaRxxToStr(data.pty, data.rn1);
+                }
+                if (!(data.r06 == undefined)) {
+                    data.r06Str = _convertKmaRxxToStr(data.pty, data.r06);
+                }
             });
 
             //console.log(tmpDayTable);
@@ -838,11 +1255,11 @@ angular.module('starter.services', [])
          * @param date
          * @returns {string}
          */
-        obj.convertTimeString = function (date) {
-            return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
-                    " " + (date.getHours()<10?"0":"") + date.getHours() +
-                    ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
-        };
+        //obj.convertTimeString = function (date) {
+        //    return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
+        //            " " + (date.getHours()<10?"0":"") + date.getHours() +
+        //            ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
+        //};
 
         /**
          *
@@ -1081,9 +1498,8 @@ angular.module('starter.services', [])
 
         function getAddressFromGoogle(lat, lng) {
             var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
-                "&sensor=true&language=ko";
-
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
+            url += "&language=ko";
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data, status, headers, config, statusText) {
                     if (data.status === "OK") {
@@ -1155,7 +1571,6 @@ angular.module('starter.services', [])
                     deferred.reject(err);
                 });
             });
-
             return deferred.promise;
         };
 
@@ -1535,6 +1950,7 @@ angular.module('starter.services', [])
         obj.version = '';
         obj.guideVersion = 1.0;
         obj.suiteName = "group.net.wizardfactory.todayweather";
+        obj.language;
 
         //obj.url = "/v000705";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
@@ -1563,6 +1979,8 @@ angular.module('starter.services', [])
         else {
             console.log("Error : Unknown platform");
         }
+
+        Util.language = navigator.userLanguage || navigator.language;
 
         Util.ga.platformReady();
 

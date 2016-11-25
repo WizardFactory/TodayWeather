@@ -7,6 +7,7 @@
 // 'starter.controllers' is found in controllers.js
 angular.module('starter', [
     'ionic',
+    'pascalprecht.translate',
     'starter.controllers',
     'starter.services',
     'controller.purchase',
@@ -113,7 +114,25 @@ angular.module('starter', [
         });
     })
 
-    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider, ionicTimePickerProvider) {
+    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider,
+                     ionicTimePickerProvider, $translateProvider) {
+
+        $translateProvider
+            .useStaticFilesLoader({
+                prefix: 'locales/',
+                suffix: '.json'
+            })
+            .registerAvailableLanguageKeys(['en', 'de', 'ko', 'ja', 'zh-ch', 'zh-tw'], {
+                'en_*': 'en',
+                'de_*': 'de',
+                'ko_*': 'ko',
+                'ja_*': 'ja',
+                'zh-hk': 'zh-tw'
+            })
+            .preferredLanguage('en')
+            .fallbackLanguage('en')
+            .determinePreferredLanguage()
+            .useSanitizeValueStrategy('escapeParameters');
 
         //$compileProvider.debugInfoEnabled(twClientConfig.debug);
         $compileProvider.debugInfoEnabled(false);

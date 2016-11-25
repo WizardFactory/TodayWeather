@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
+    .factory('Purchase', function($rootScope, $http, $q, TwAds) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -150,7 +150,7 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope, $location) {
+    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope, $location, $translate) {
 
         if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
             return;
@@ -232,20 +232,32 @@ angular.module('controller.purchase', [])
             if (!window.inAppPurchase) {
                 console.log('in app purchase is not ready');
                 if (Purchase.paidAppUrl.length > 0) {
-                    $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+                    $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+                        $rootScope.adsBannerMessage = bannerMessage;
+                    }, function (translationId) {
+                        $rootScope.adsBannerMessage = translationId;
+                    });
                     $rootScope.clickAdsBanner = function() {
                         $location.path('/purchase');
                     };
                 }
                 else {
-                    $rootScope.adsBannerMessage = "오늘날씨 - 어제보다 오늘은?";
+                    $translate('LOC_TODAYWEATHER').then(function (bannerMessage) {
+                        $rootScope.adsBannerMessage = bannerMessage;
+                    }, function (translationId) {
+                        $rootScope.adsBannerMessage = translationId;
+                    });
                     $rootScope.clickAdsBanner = function() {};
                 }
                 return;
             }
 
             Purchase.hasInAppPurchase = true;
-            $rootScope.adsBannerMessage = "광고없는 프리미엄을 사용해보세요";
+            $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+                $rootScope.adsBannerMessage = bannerMessage;
+            }, function (translationId) {
+                $rootScope.adsBannerMessage = translationId;
+            });
             $rootScope.clickAdsBanner = function() {
                 $location.path('/purchase');
             };
@@ -277,7 +289,7 @@ angular.module('controller.purchase', [])
             checkPurchase();
         });
     })
-    .controller('PurchaseCtrl', function($scope, $ionicPlatform, $ionicLoading, $http, $ionicHistory, $ionicPopup, Purchase, TwAds) {
+    .controller('PurchaseCtrl', function($scope, $ionicPlatform, $ionicLoading, $http, $ionicHistory, $ionicPopup, Purchase, TwAds, $translate) {
 
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
 
@@ -308,8 +320,7 @@ angular.module('controller.purchase', [])
                         $ionicLoading.hide();
                         if (err) {
                             console.log(JSON.stringify(err));
-                            //throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
-                            throw new Error('구매확인 서버에 연결되지 않습니다. 1~2분후에 구매 복원하기 해주세요.');
+                            throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
                         }
                         console.log(JSON.stringify(receiptInfo));
                         if (!receiptInfo.ok) {
@@ -330,7 +341,7 @@ angular.module('controller.purchase', [])
                     console.log('subscribe error');
                     console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: '구매 오류',
+                        title: 'Purchase error',
                         template: err.message
                     });
                 });
@@ -360,8 +371,7 @@ angular.module('controller.purchase', [])
                     $ionicLoading.hide();
                     console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        //title: 'restore error',
-                        title: '복원오류',
+                        title: 'Restore error',
                         template: err.message
                     });
                 });
@@ -383,7 +393,7 @@ angular.module('controller.purchase', [])
             }
         });
 
-        $ionicPlatform.ready(function() {
+        function init() {
             var expirationDate = new Date(Purchase.expirationDate);
             var showRenewDate = new Date();
 
@@ -404,7 +414,15 @@ angular.module('controller.purchase', [])
 
             if (!window.inAppPurchase) {
                 //for develop mode
-                $scope.product = {title:'프리미엄',  price: '$1.09', description: '지금 바로 프리미엄 서비스를 신청하시고, 1년간 광고 없이 사용하세요.'};
+                $translate(['LOC_PREMIUM', 'LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR']).then(function (translations) {
+                    var title = translations.LOC_PREMIUM;
+                    var description = translations.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
+                    $scope.product = {title: title,  price: '$1.09', description: description};
+                }, function (translationIds) {
+                    var title = translationIds.LOC_PREMIUM;
+                    var description = translationIds.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
+                    $scope.product = {title: title,  price: '$1.09', description: description};
+                });
             }
             else {
                 if (Purchase.products && Purchase.products.length) {
@@ -416,5 +434,7 @@ angular.module('controller.purchase', [])
             }
 
             $scope.listWidth = window.innerWidth;
-        });
+        }
+
+        init();
     });

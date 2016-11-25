@@ -4,7 +4,7 @@
         <div class="row" style="height: 10%"></div>
         <div class="row" style="height: 15%">
             <div class="col" style="height: 100%; text-align: center;">
-                <h2 class="display1" style="color: inherit; opacity: 0.87">오늘날씨</h2>
+                <h2 class="display1" style="color: inherit; opacity: 0.87" translate="LOC_TODAYWEATHER"></h2>
             </div>
         </div>
         <div class="row">
@@ -30,37 +30,32 @@
                     <!--</select>-->
                     <!--</label>-->
                     <li class="item item-icon-right setting-title-light">
-                        버전 <span class="item-note setting-title-light" style="color: inherit; font-size:20px">{{version}}</span>
+                        {{'LOC_VERSION'|translate}} <span class="item-note setting-title-light" style="color: inherit; font-size:20px">{{version}}</span>
                     </li>
                     <div ng-if="isAndroid()" class="item setting-title-light" style="padding-bottom: 8px">
-                        <div class="setting-title-light">
-                            위젯설정
-                        </div>
-                        <div style="font-size:10px; padding-top: 4px">
-                            변경 후 위젯 업데이트를 해야 변경사항 적용됩니다.
+                        <div class="setting-title-light" translate="LOC_WIDGET"></div>
+                        <div style="font-size:10px; padding-top: 4px" translate="LOC_AFTER_YOU_MAKE_A_CHANGE_YOU_NEED_TO_UPDATE_THE_WIDGET_TO_APPLY_THE_CHANGES">
                         </div>
                         <label class="item-input item-select setting-subheading-light" style="padding: 0">
-                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter">
-                                업데이트 주기
+                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter" translate="LOC_REFRESH_INTERVAL">
                             </div>
                             <select ng-model="updateInterval" ng-change="changeUpdateInterval(updateInterval)"
                                     style="font-weight: lighter; background-color: inherit; color: inherit; font-size: 17px;opacity: 0.87;">
-                                <option value="0">수동</option>
-                                <option value="30">30분</option>
-                                <option value="60">1시간</option>
-                                <option value="180">3시간</option>
-                                <option value="360">6시간</option>
-                                <option value="720">12시간</option>
+                                <option value="0" translate="LOC_MANUAL"></option>
+                                <option value="30" translate="LOC_30_MINUTES"></option>
+                                <option value="60" translate="LOC_1_HOUR"></option>
+                                <option value="180" translate="LOC_3_HOURS"></option>
+                                <option value="360" translate="LOC_6_HOURS"></option>
+                                <option value="720" translate="LOC_12_HOURS"></option>
                             </select>
                         </label>
                         <hr style="margin: 0; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
                         <label class="item-input item-select setting-subheading-light" style="padding: 0">
-                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter">
-                                투명도
+                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter" translate="LOC_TRANSPARENCY">
                             </div>
                             <select ng-model="widgetOpacity" ng-change="changeWidgetOpacity(widgetOpacity)"
                                     style="font-weight: lighter; background-color: inherit; color: inherit; font-size: 17px;opacity: 0.87;">
-                                <option value="69">기본</option>
+                                <option value="69" translate="LOC_DEFAULT"></option>
                                 <option value="100">0%</option>
                                 <option value="90">10%</option>
                                 <option value="80">20%</option>
@@ -76,23 +71,24 @@
                         </label>
                     </div>
                     <a class="item item-icon-right setting-title-light" href="#/guide">
-                        가이드 보기
+                       {{'LOC_GUIDE'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>
                     <a class="item item-icon-right setting-title-light" href="#/purchase" ng-if="hasInAppPurchase()">
-                        광고제거
+                        {{'LOC_REMOVE_ADS'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>
                     <a class="item item-icon-right setting-title-light" ng-click="sendMail()">
-                        의견보내기
+                        {{'LOC_SEND_FEEDBACK'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>
                     <li class="item item-icon-right setting-title-light" ng-click="openMarket()">
-                        리뷰쓰기
+                        {{'LOC_RATE_THIS_APP'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                         <!--<img src="img/setting-review.png" style="width: 30px">-->
                     </li>
-                    <li class="item item-icon-right setting-title-light"  ng-click="openInfo()">정보
+                    <li class="item item-icon-right setting-title-light"  ng-click="openInfo()">
+                        {{'LOC_ABOUT'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </li>
                 </ul>

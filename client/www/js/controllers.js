@@ -2,7 +2,8 @@
 angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
-                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading, $ionicPopup) {
+                                          Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
+                                          $ionicPopup, $translate) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -21,6 +22,84 @@ angular.module('starter.controllers', [])
         var shortenAddress = "";
 
         $scope.imgPath = Util.imgPath;
+
+        var dayStr = [];
+        $translate(['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT']).then(function (translations) {
+            dayStr.push(translations.LOC_SUN);
+            dayStr.push(translations.LOC_MON);
+            dayStr.push(translations.LOC_TUE);
+            dayStr.push(translations.LOC_WED);
+            dayStr.push(translations.LOC_THU);
+            dayStr.push(translations.LOC_FRI);
+            dayStr.push(translations.LOC_SAT);
+        }, function (translationIds) {
+            dayStr.push(translationIds.LOC_SUN);
+            dayStr.push(translationIds.LOC_MON);
+            dayStr.push(translationIds.LOC_TUE);
+            dayStr.push(translationIds.LOC_WED);
+            dayStr.push(translationIds.LOC_THU);
+            dayStr.push(translationIds.LOC_FRI);
+            dayStr.push(translationIds.LOC_SAT);
+        });
+
+        $scope.dayToString = function(day) {
+            return dayStr[day];
+        };
+
+        var dayFullStr = [];
+        $translate(['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY', 'LOC_FRIDAY', 'LOC_SATURDAY']).then(function (translations) {
+            dayFullStr.push(translations.LOC_SUNDAY);
+            dayFullStr.push(translations.LOC_MONDAY);
+            dayFullStr.push(translations.LOC_TUESDAY);
+            dayFullStr.push(translations.LOC_WEDNESDAY);
+            dayFullStr.push(translations.LOC_THURSDAY);
+            dayFullStr.push(translations.LOC_FRIDAY);
+            dayFullStr.push(translations.LOC_SATURDAY);
+        }, function (translationIds) {
+            dayFullStr.push(translationIds.LOC_SUNDAY);
+            dayFullStr.push(translationIds.LOC_MONDAY);
+            dayFullStr.push(translationIds.LOC_TUESDAY);
+            dayFullStr.push(translationIds.LOC_WEDNESDAY);
+            dayFullStr.push(translationIds.LOC_THURSDAY);
+            dayFullStr.push(translationIds.LOC_FRIDAY);
+            dayFullStr.push(translationIds.LOC_SATURDAY);
+        });
+
+        $scope.dayToFullString = function(day) {
+            return dayFullStr[day];
+        };
+
+        var dayFromTodayStr = [];
+        $translate(['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY', 'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW', 'LOC_FROM_TODAY']).then(function (translations) {
+            dayFromTodayStr.push(translations.LOC_A_COUPLE_OF_DAYS_AGO);
+            dayFromTodayStr.push(translations.LOC_THE_DAY_BEFORE_YESTERDAY);
+            dayFromTodayStr.push(translations.LOC_YESTERDAY);
+            dayFromTodayStr.push(translations.LOC_TODAY);
+            dayFromTodayStr.push(translations.LOC_TOMORROW);
+            dayFromTodayStr.push(translations.LOC_THE_DAY_AFTER_TOMORROW);
+            dayFromTodayStr.push(translations.LOC_TWO_DAYS_AFTER_TOMORROW);
+            dayFromTodayStr.push(translations.LOC_FROM_TODAY);
+        }, function (translationIds) {
+            dayFromTodayStr.push(translationIds.LOC_A_COUPLE_OF_DAYS_AGO);
+            dayFromTodayStr.push(translationIds.LOC_THE_DAY_BEFORE_YESTERDAY);
+            dayFromTodayStr.push(translationIds.LOC_YESTERDAY);
+            dayFromTodayStr.push(translationIds.LOC_TODAY);
+            dayFromTodayStr.push(translationIds.LOC_TOMORROW);
+            dayFromTodayStr.push(translationIds.LOC_THE_DAY_AFTER_TOMORROW);
+            dayFromTodayStr.push(translationIds.LOC_TWO_DAYS_AFTER_TOMORROW);
+            dayFromTodayStr.push(translationIds.LOC_FROM_TODAY);
+        });
+
+        $scope.getDayString = function (day) {
+            if (-3 <= day && day <= 3) {
+                return dayFromTodayStr[day + 3];
+            }
+            else {
+                return day+dayFromTodayStr[dayFromTodayStr.length-1];
+            }
+            console.error("Fail to get day string day=" + day);
+            return "";
+        };
 
         $scope.getSentimentIcon = function (grade) {
            switch (grade) {
@@ -194,8 +273,18 @@ angular.module('starter.controllers', [])
                 }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요', function() {
-                    $location.path('/tab/search');
+                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
+                    var strError = translations.LOC_ERROR;
+                    var message = translations.LOC_ADD_LOCATIONS;
+                    $scope.showAlert(strError, message, function() {
+                        $location.path('/tab/search');
+                    });
+                }, function (translationIds) {
+                    var strError = translationIds.LOC_ERROR;
+                    var message = translationIds.LOC_ADD_LOCATIONS;
+                    $scope.showAlert(strError, message, function() {
+                        $location.path('/tab/search');
+                    });
                 });
                 return;
             }
@@ -433,6 +522,13 @@ angular.module('starter.controllers', [])
         //                style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
         //    </div>
         //</div>
+        var strHour;
+        $translate('LOC_HOUR').then(function (translations) {
+            strHour = translations;
+        }, function (translationIds) {
+            strHour = translationIds;
+        });
+
         function getShortTable() {
             var i;
             var value;
@@ -455,10 +551,10 @@ angular.module('starter.controllers', [])
                 value = cityData.timeTable[i];
                 str += '<div class="col table-items" style="text-align: center;">';
                 if (value.time == 24) {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + '0시' + '</p>';
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + '0'+strHour+ '</p>';
                 }
                 else {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + value.timeStr + '</p>';
+                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + value.time+strHour + '</p>';
                 }
                 str += '</div>';
             }
@@ -500,7 +596,7 @@ angular.module('starter.controllers', [])
                 else {
                     str += ' opacity: 0.84;">';
                 }
-                str +=  value.week + '</p>';
+                str +=  $scope.dayToString(value.dayOfWeek) + '</p>';
                 str += '</div>';
             }
             str += '</div>';
@@ -619,6 +715,16 @@ angular.module('starter.controllers', [])
          * retry popup이 없는 경우 항상 undefined여야 함.
          */
         var confirmPopup;
+        var strError, strClose, strRetry;
+        $translate(['LOC_ERROR', 'LOC_CLOSE', 'LOC_RETRY']).then(function (translations) {
+            strError = translations.LOC_ERROR;
+            strClose = translations.LOC_CLOSE;
+            strRetry = translations.LOC_RETRY;
+        }, function (translationIds) {
+            strError = translationIds.LOC_ERROR;
+            strClose = translationIds.LOC_CLOSE;
+            strRetry = translationIds.LOC_RETRY;
+        });
 
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
@@ -631,7 +737,7 @@ angular.module('starter.controllers', [])
                     $ionicLoading.hide();
                 }, function (msg) {
                     $ionicLoading.hide();
-                    showRetryConfirm("에러", msg, function (retry) {
+                    showRetryConfirm(strError, msg, function (retry) {
                         if (retry) {
                             setTimeout(function () {
                                 loadWeatherData();
@@ -663,12 +769,12 @@ angular.module('starter.controllers', [])
                 title: title,
                 template: template,
                 buttons: [
-                    { text: '닫기' ,
+                    { text: strClose,
                         onTap: function () {
                             return false;
                         }
                     },
-                    { text: '재시도',
+                    { text: strRetry,
                         type: 'button-positive',
                         onTap: function () {
                             return true;
@@ -693,6 +799,22 @@ angular.module('starter.controllers', [])
 
         function updateWeatherData() {
             var deferred = $q.defer();
+            var strFailToGetAddressInfo;
+            var strFailToGetCurrentPostion;
+            var strFailToGetWeatherInfo;
+            var strPleaseTurnOnLocationWiFi;
+
+            $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION', 'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI']).then(function (translations) {
+                strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+                strFailToGetCurrentPostion = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+                strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+                strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            }, function (translationIds) {
+                strFailToGetAddressInfo = translationIds.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+                strFailToGetCurrentPostion = translationIds.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+                strFailToGetWeatherInfo = translationIds.LOC_FAIL_TO_GET_WEATHER_INFO;
+                strPleaseTurnOnLocationWiFi = translationIds.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            });
 
             if (cityData.currentPosition === true) {
                 WeatherUtil.getCurrentPosition().then(function (coords) {
@@ -726,14 +848,13 @@ angular.module('starter.controllers', [])
                             deferred.reject(msg);
                         });
                     }, function () {
-                        var msg = "위치 정보를 가져오지 못하였습니다.";
-                        deferred.reject(msg);
+                        deferred.reject(strFailToGetAddressInfo);
                     });
                 }, function () {
                     Util.ga.trackEvent('position', 'error', 'all');
-                    var msg = "현재 위치를 찾을 수 없습니다.";
+                    var msg = strFailToGetCurrentPostion;
                     if (ionic.Platform.isAndroid()) {
-                        msg += "<br>WIFI와 위치정보를 켜주세요.";
+                        msg += "<br>" + strPleaseTurnOnLocationWiFi;
                     }
                     deferred.reject(msg);
                 });
@@ -760,9 +881,7 @@ angular.module('starter.controllers', [])
                         Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
                             '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                     }
-
-                    var msg = "날씨 정보를 가져오지 못하였습니다.";
-                    deferred.reject(msg);
+                    deferred.reject(strFailToGetWeatherInfo);
                 });
             }
 
@@ -841,7 +960,7 @@ angular.module('starter.controllers', [])
         };
 
         $scope.getDayText = function (value) {
-            return value.fromTodayStr + ' ' + value.date.substr(4,2) + '.' + value.date.substr(6,2);
+            return $scope.getDayString(value.fromToday) + ' ' + value.date.substr(4,2) + '.' + value.date.substr(6,2);
         };
 
         $scope.convertMMDD = function (value) {
@@ -849,28 +968,7 @@ angular.module('starter.controllers', [])
         };
 
         $scope.diffTodayYesterday = function () {
-            var current = cityData.currentWeather;
-            var yesterday = cityData.currentWeather.yesterday;
-            var str = "";
-
-            if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-                var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
-
-                str += "어제";
-                if (diffTemp == 0) {
-                    str += "와 동일";
-                }
-                else {
-                    str += "보다 " + Math.abs(diffTemp);
-                    if (diffTemp < 0) {
-                        str += "˚낮음";
-                    }
-                    else if (diffTemp > 0) {
-                        str += "˚높음";
-                    }
-                }
-            }
-            return str;
+            return cityData.currentWeather.diffTempStr;
         };
 
         $scope.$on('reloadEvent', function(event, sender) {
@@ -895,13 +993,11 @@ angular.module('starter.controllers', [])
             }
         };
 
-        ionic.Platform.ready(function () {
-            init();
-        });
+        init();
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
-                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading) {
+                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading, $translate) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.cityList = [];
@@ -914,45 +1010,55 @@ angular.module('starter.controllers', [])
         function init() {
             $ionicHistory.clearHistory();
 
-            for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
-                var city = WeatherInfo.getCityOfIndex(i);
-                var address = WeatherUtil.getShortenAddress(city.address).split(",");
-                var todayData = null;
+            var strCurrent;
+            var strLocation;
+            $translate(['LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
+                strCurrent = translations.LOC_CURRENT;
+                strLocation = translations.LOC_LOCATION;
+            }, function (translationIds) {
+                strCurrent = translationIds.LOC_CURRENT;
+                strLocation = translationIds.LOC_LOCATION;
+            }).finally(function () {
+                for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
+                    var city = WeatherInfo.getCityOfIndex(i);
+                    var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                    var todayData = null;
 
-                if (city.currentPosition && city.address === null) {
-                    address = ['현재', '위치'];
-                }
-                if (!city.currentWeather) {
-                    city.currentWeather = {};
-                }
-                if (!city.currentWeather.skyIcon) {
-                    city.currentWeather.skyIcon = 'Sun';
-                }
-                if (city.currentWeather.t1h === undefined) {
-                    city.currentWeather.t1h = '-';
-                }
-                if (city.dayTable != null) {
-                    todayData = city.dayTable.filter(function (data) {
-                        return (data.fromToday === 0);
-                    });
-                }
-                if (!todayData || todayData.length === 0) {
-                    todayData = [{tmn:'-', tmx:'-'}];
-                }
+                    if (city.currentPosition && city.address === null) {
+                        address = [strCurrent, strLocation];
+                    }
+                    if (!city.currentWeather) {
+                        city.currentWeather = {};
+                    }
+                    if (!city.currentWeather.skyIcon) {
+                        city.currentWeather.skyIcon = 'Sun';
+                    }
+                    if (city.currentWeather.t1h === undefined) {
+                        city.currentWeather.t1h = '-';
+                    }
+                    if (city.dayTable != null) {
+                        todayData = city.dayTable.filter(function (data) {
+                            return (data.fromToday === 0);
+                        });
+                    }
+                    if (!todayData || todayData.length === 0) {
+                        todayData = [{tmn:'-', tmx:'-'}];
+                    }
 
-                var data = {
-                    address: address,
-                    currentPosition: city.currentPosition,
-                    disable: city.disable,
-                    skyIcon: city.currentWeather.skyIcon,
-                    t1h: city.currentWeather.t1h,
-                    tmn: todayData[0].tmn,
-                    tmx: todayData[0].tmx,
-                    alarmInfo: Push.getAlarm(i)
-                };
-                $scope.cityList.push(data);
-                loadWeatherData(i);
-            }
+                    var data = {
+                        address: address,
+                        currentPosition: city.currentPosition,
+                        disable: city.disable,
+                        skyIcon: city.currentWeather.skyIcon,
+                        t1h: city.currentWeather.t1h,
+                        tmn: todayData[0].tmn,
+                        tmx: todayData[0].tmx,
+                        alarmInfo: Push.getAlarm(i)
+                    };
+                    $scope.cityList.push(data);
+                    loadWeatherData(i);
+                }
+            });
         }
 
         $scope.OnChangeSearchWord = function() {
@@ -975,13 +1081,32 @@ angular.module('starter.controllers', [])
 
             $ionicLoading.show();
 
+            var strFailToGetAddressInfo;
+            var strFailToGetCurrentPostion;
+            var strFailToGetWeatherInfo;
+            var strPleaseTurnOnLocationWiFi;
+            var strError;
+
+            $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION', 'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR']).then(function (translations) {
+                strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+                strFailToGetCurrentPostion = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+                strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+                strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+                strError = translations.LOC_ERROR;
+            }, function (translationIds) {
+                strFailToGetAddressInfo = translationIds.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+                strFailToGetCurrentPostion = translationIds.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+                strFailToGetWeatherInfo = translationIds.LOC_FAIL_TO_GET_WEATHER_INFO;
+                strPleaseTurnOnLocationWiFi = translationIds.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+                strError = translationIds.LOC_ERROR;
+            });
+
             WeatherUtil.getCurrentPosition().then(function (coords) {
                 WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
                     var addressArray = WeatherUtil.convertAddressArray(address);
                     var townAddress = WeatherUtil.getTownFromFullAddress(addressArray);
                     if (townAddress.first === "" && townAddress.second === "" && townAddress.third === "") {
-                        var msg = "현재 위치에 대한 정보를 찾을 수 없습니다.";
-                        $scope.showAlert("에러", msg);
+                        $scope.showAlert(strError, strFailToGetAddressInfo);
                     } else {
                         if (townAddress.third === "") {
                             if (townAddress.second === "") {
@@ -999,17 +1124,16 @@ angular.module('starter.controllers', [])
                     }
                     $ionicLoading.hide();
                 }, function () {
-                    var msg = "위치 정보를 가져오지 못하였습니다.";
-                    $scope.showAlert("에러", msg);
+                    $scope.showAlert(strError, strFailToGetAddressInfo);
                     $ionicLoading.hide();
                 });
             }, function () {
                 Util.ga.trackEvent('position', 'error', 'all');
-                var msg = "현재 위치를 찾을 수 없습니다.";
+                var msg = strFailToGetCurrentPostion;
                 if (ionic.Platform.isAndroid()) {
-                    msg += "<br>WIFI와 위치정보를 켜주세요.";
+                    msg += "<br>" + strPleaseTurnOnLocationWiFi;
                 }
-                $scope.showAlert("에러", msg);
+                $scope.showAlert(strError, msg);
                 $ionicLoading.hide();
             });
         };
@@ -1088,8 +1212,11 @@ angular.module('starter.controllers', [])
 
                 if (WeatherInfo.addCity(city) === false) {
                     Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-                    var msg = "이미 동일한 지역이 추가되어 있습니다.";
-                    $scope.showAlert("에러", msg);
+                    $translate("LOC_ERROR", "LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED").then(function (translations) {
+                        $scope.showAlert(translations.LOC_ERROR, translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED);
+                    }, function (translationIds) {
+                        $scope.showAlert(translationIds.LOC_ERROR, translationIds.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED);
+                    });
                 }
                 else {
                     Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
@@ -1109,8 +1236,12 @@ angular.module('starter.controllers', [])
                         '(' + error + ')', endTime - startTime);
                 }
 
-                var msg = "날씨 정보를 가져오지 못하였습니다.";
-                $scope.showAlert("에러", msg);
+                $translate("LOC_ERROR", "LOC_FAIL_TO_GET_WEATHER_INFO").then(function (translations) {
+                    $scope.showAlert(translations.LOC_ERROR, translations.LOC_FAIL_TO_GET_WEATHER_INFO);
+                }, function (translationIds) {
+                    $scope.showAlert(translationIds.LOC_ERROR, translationIds.LOC_FAIL_TO_GET_WEATHER_INFO);
+                });
+
                 $ionicLoading.hide();
             });
         };
@@ -1290,7 +1421,7 @@ angular.module('starter.controllers', [])
         init();
     })
 
-    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate) {
         function init() {
             $ionicHistory.clearHistory();
 
@@ -1334,13 +1465,21 @@ angular.module('starter.controllers', [])
         $scope.version = Util.version;
 
         $scope.sendMail = function() {
-            Util.ga.trackEvent('action', 'click', 'send mail');
 
             var to = twClientConfig.mailTo;
-            var subject = '의견 보내기';
+            var subject = 'Send feedback';
             var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
                 + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
-            window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+
+            $translate('LOC_SEND_FEEDBACK').then(function (translations) {
+                subject = translations;
+            }, function (translationIds) {
+                subject = translationIds;
+            }).finally(function () {
+                window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+            });
+
+            Util.ga.trackEvent('action', 'click', 'send mail');
         };
 
         $scope.openMarket = function() {
@@ -1370,8 +1509,25 @@ angular.module('starter.controllers', [])
         };
 
         $scope.openInfo = function() {
-            var msg = "기상정보 : 기상청 <br> 대기오염정보 : 환경부/한국환경공단 <br> 인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.";
-            $scope.showAlert("TodayWeather", msg);
+            var strTitle;
+            var strMsg;
+            $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
+                strTitle = translations.LOC_TODAYWEATHER;
+                strMsg = translations.LOC_WEATHER_INFORMATION + " : "  + translations.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
+                strMsg += "<br>";
+                strMsg += translations.LOC_AQI_INFORMATION + " : " + translations.LOC_KOREA_ENVIRONMENT_CORPORATION;
+                strMsg += "<br>";
+                strMsg += translations.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
+            }, function (translationIds) {
+                strTitle = translationIds.LOC_TODAYWEATHER;
+                strMsg = translationIds.LOC_WEATHER_INFORMATION + " : "  + translationIds.LOC_KOREA_METEOROLOGICAL_ADMINISTRATION;
+                strMsg += "<br>";
+                strMsg += translationIds.LOC_AQI_INFORMATION + " : " + translationIds.LOC_KOREA_ENVIRONMENT_CORPORATION;
+                strMsg += "<br>";
+                strMsg += translationIds.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
+            }).finally(function () {
+                $scope.showAlert(strTitle, strMsg);
+            });
         };
 
         $scope.isAndroid = function () {
@@ -1422,19 +1578,19 @@ angular.module('starter.controllers', [])
     })
 
     .controller('TabCtrl', function($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util) {
+                                     $location, TwAds, $rootScope, Util, $translate) {
         var currentTime;
 
         function init() {
             currentTime = new Date();
-            $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime); // 10월 8일(수) 12:23 AM
-            $interval(function() {
-                var newDate = new Date();
-                if(newDate.getMinutes() != currentTime.getMinutes()) {
-                    currentTime = newDate;
-                    $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
-                }
-            }, 1000);
+            //$scope.currentTimeString = WeatherUtil.convertTimeString(currentTime); // 10월 8일(수) 12:23 AM
+            //$interval(function() {
+            //    var newDate = new Date();
+            //    if(newDate.getMinutes() != currentTime.getMinutes()) {
+            //        currentTime = newDate;
+            //        $scope.currentTimeString = WeatherUtil.convertTimeString(currentTime);
+            //    }
+            //}, 1000);
 
             TwAds.init();
             TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
@@ -1442,7 +1598,17 @@ angular.module('starter.controllers', [])
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert('에러', '즐겨찾는 지역을 추가해주세요');
+                var strError;
+                var strAddLocation;
+                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
+                    strError = translations.LOC_ERROR;
+                    strAddLocation = translations.LOC_ADD_LOCATIONS;
+                }, function (translationIds) {
+                    strError = translationIds.LOC_ERROR;
+                    strAddLocation = translationIds.LOC_ADD_LOCATIONS;
+                }).finally(function () {
+                    $scope.showAlert(strError, strAddLocation);
+                });
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
@@ -1479,40 +1645,84 @@ angular.module('starter.controllers', [])
         };
 
         $scope.doTabShare = function() {
+            if (!(window.plugins && window.plugins.socialsharing)) {
+                console.log('plugins socialsharing is undefined');
+                return;
+            }
+            var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
+            if (cityData == undefined || cityData.location == undefined) {
+                console.log('Fail to load city');
+                var strError;
+                var strAddLocation;
+                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
+                    strError = translations.LOC_ERROR;
+                    strAddLocation = translations.LOC_ADD_LOCATIONS;
+                }, function (translationIds) {
+                    strError = translationIds.LOC_ERROR;
+                    strAddLocation = translationIds.LOC_ADD_LOCATIONS;
+                }).finally(function () {
+                    $scope.showAlert(strError, strAddLocation);
+                });
+                return;
+            }
+
+            var address = WeatherUtil.getShortenAddress(cityData.address);
+            var t1h = cityData.currentWeather.t1h;
+            var emoji = WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon);
+            var tmx;
+            var tmn;
+            var summary = cityData.currentWeather.summary;
+            var shareUrl = 'http://abr.ge/mxld';
+            var len = cityData.dayTable.length;
+            for(var i=0;i<len; i++) {
+                var data = cityData.dayTable[i];
+                if (data.fromToday == 0) {
+                    tmx = data.tmx;
+                    tmn = data.tmn;
+                    break;
+                }
+            }
             var message = '';
 
-            if ($location.path() === '/tab/forecast' || $location.path() === '/tab/dailyforecast' ) {
-                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-                if (cityData !== null && cityData.location !== null) {
-                    message += WeatherUtil.getShortenAddress(cityData.address)+'\n';
-                    message += '현재 '+cityData.currentWeather.t1h+'˚ ';
-                    message += WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon)+'\n';
-                    cityData.dayTable.forEach(function(data) {
-                        if (data.fromToday === 0) {
-                            message += '최고 '+data.tmx+'˚, 최저 '+data.tmn+'˚\n';
-                        }
-                    });
-                    message += cityData.currentWeather.summary+'\n\n';
-                }
-            }
+            $translate(['LOC_CURRENT', 'LOC_HIGH', 'LOC_LOW', 'LOC_TODAYWEATHER']).then(function (translations) {
+                message += address+'\n';
+                message += translations.LOC_CURRENT+' '+t1h+'˚ ';
+                message += emoji+'\n';
+                message += translations.LOC_HIGH+' '+tmx+'˚, '+translations.LOC_LOW+' '+tmn+'˚\n';
+                message += summary+'\n\n';
+                message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
+            }, function (translationIds) {
+                message += address+'\n';
+                message += translationIds.LOC_CURRENT+' '+t1h+'˚ ';
+                message += emoji+'\n';
+                message += translationIds.LOC_HIGH+' '+tmx+'˚, '+translationIds.LOC_LOW+' '+tmn+'˚\n';
+                message += summary+'\n\n';
+                message += translationIds.LOC_TODAYWEATHER + ' ' + shareUrl;
+            }).finally(function () {
+                window.plugins.socialsharing.share(message, null, null, null);
+            });
 
-            if (window.plugins && window.plugins.socialsharing) {
-                window.plugins.socialsharing.share(message + '오늘날씨 http://abr.ge/mxld', null, null, null);
-                Util.ga.trackEvent('action', 'tab', 'share');
-                if (!twClientConfig.debug && window.AirBridgePlugin) {
-                    AirBridgePlugin.goal("weathershare");
-                }
-            }
-            else {
-                console.log('plugins socialsharing is undefined');
+            Util.ga.trackEvent('action', 'tab', 'share');
+            if (!twClientConfig.debug && window.AirBridgePlugin) {
+                AirBridgePlugin.goal("weathershare");
             }
         };
+
+        var strOkay;
+        var strCancel;
+        $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
+            strOkay = translations.LOC_OK;
+            strCancel = translations.LOC_CANCEL;
+        }, function (translationIds) {
+            strOkay = translationIds.LOC_OK;
+            strCancel = translationIds.LOC_CANCEL;
+        });
 
         $scope.showAlert = function(title, msg, callback) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
                 template: msg,
-                okText: '확인'
+                okText: strOkay
             });
             alertPopup.then(function() {
                 console.log("alertPopup close");
@@ -1526,8 +1736,8 @@ angular.module('starter.controllers', [])
             var confirmPopup = $ionicPopup.confirm({
                 title: title,
                 template: template,
-                okText: '확인',
-                cancelText: '취소'
+                okText: strOkay,
+                cancelText: strCancel
             });
             confirmPopup.then(function (res) {
                 if (res) {
@@ -1543,10 +1753,18 @@ angular.module('starter.controllers', [])
     })
 
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
-                                      $location, Util, TwAds, $ionicPopup, WeatherInfo) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate) {
         var guideVersion = null;
 
         $scope.data = { 'autoSearch': false };
+
+        var strClose;
+        var strSkip;
+        var strCancel;
+        var strOkay;
+        var strUseYourCurrentLocation;
+        var strFindLocationByName;
+        var strTodayWeather;
 
         function init() {
             //for fast close ads when first loading
@@ -1573,7 +1791,25 @@ angular.module('starter.controllers', [])
 
             guideVersion = localStorage.getItem("guideVersion");
 
-            update();
+            $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK', 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
+                strTodayWeather = translations.LOC_TODAYWEATHER;
+                strClose = translations.LOC_CLOSE;
+                strSkip = translations.LOC_SKIP;
+                strCancel = translations.LOC_CANCEL;
+                strOkay = translations.LOC_OK;
+                strUseYourCurrentLocation = translations.LOC_USE_YOUR_CURRENT_LOCATION;
+                strFindLocationByName = translations.LOC_FIND_LOCATION_BY_NAME;
+            }, function (translationIds) {
+                strTodayWeather = translationIds.LOC_TODAYWEATHER;
+                strClose = translationIds.LOC_CLOSE;
+                strSkip = translationIds.LOC_SKIP;
+                strCancel = translationIds.LOC_CANCEL;
+                strOkay = translationIds.LOC_OK;
+                strUseYourCurrentLocation = translationIds.LOC_USE_YOUR_CURRENT_LOCATION;
+                strFindLocationByName = translationIds.LOC_FIND_LOCATION_BY_NAME;
+            }).finally(function () {
+                update();
+            });
         }
 
         function close() {
@@ -1594,9 +1830,9 @@ angular.module('starter.controllers', [])
         function update() {
             if ($ionicSlideBoxDelegate.currentIndex() == $ionicSlideBoxDelegate.slidesCount() - 1) {
                 $scope.leftText = "<";
-                $scope.rightText = "닫기";
+                $scope.rightText = strClose;
             } else {
-                $scope.leftText = "건너뛰기";
+                $scope.leftText = strSkip;
                 $scope.rightText = ">";
             }
         }
@@ -1604,19 +1840,19 @@ angular.module('starter.controllers', [])
         function showPopup() {
             var popup = $ionicPopup.show({
                 template: '<ion-list>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="true">현재 위치 자동 검색</ion-radio>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="false">직접 지역 이름 검색</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="true">'+strUseYourCurrentLocation+'</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="false">'+strFindLocationByName+'</ion-radio>' +
                     '</ion-list>',
-                title: '지역 검색 방법을 선택하세요.',
+                title: strTodayWeather,
                 scope: $scope,
                 cssClass: 'ionic_popup',
                 buttons: [
                     {
-                        text: '취소',
+                        text: strCancel,
                         type: 'button_cancel'
                     },
                     {
-                        text: '확인',
+                        text: strOkay,
                         type: 'button_close',
                         onTap: function() {
                             return $scope.data.autoSearch;
