@@ -291,7 +291,7 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 .img-detail-aqi {
   height: 24px;
   vertical-align: middle;
-  margin-right: 8px;
+  margin: 0 8px;
 }
 
 .main-content {
@@ -516,21 +516,18 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   font-size: 45px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .display1 {
   font-size: 34px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .headline {
   font-size: 24px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .title {
@@ -575,30 +572,28 @@ p small {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
+  //letter-spacing: 5px;
 }
 
 .body1 {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .caption {
   font-size: 13px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 2px;
+  //letter-spacing: 2px;
 }
 
 .button {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
+  //letter-spacing: 5px;
 }
-
 
 [md-page-header] {
   padding: 0;
