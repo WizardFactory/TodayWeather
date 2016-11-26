@@ -246,6 +246,10 @@ angular.module('starter.services', [])
             if (cityIndex === null) {
                 that.setFirstCityIndex();
             }
+            else if (cityIndex >= items.length) {
+                console.log('city index is over');
+                that.setFirstCityIndex();
+            }
         };
 
         obj._saveCitiesPreference = function (cities) {
@@ -1088,7 +1092,6 @@ angular.module('starter.services', [])
                             deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
                             return;
                         }
-                        console.log(address);
                         deferred.resolve(address);
                     }
                     else {
@@ -1185,9 +1188,9 @@ angular.module('starter.services', [])
                     //간격을 주지 않으면 계속 실패해버림.
                     setTimeout(function () {
                         _navigatorRetryGetCurrentPosition(retryCount, callback);
-                    }, 200);
+                    }, 500);
                 }
-            }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
+            }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         function _nativeRetryGetCurrentPosition(retryCount, callback) {
@@ -1210,9 +1213,9 @@ angular.module('starter.services', [])
                     else {
                         setTimeout(function () {
                             _nativeRetryGetCurrentPosition(retryCount, callback);
-                        }, 200);
+                        }, 500);
                     }
-                }, { maximumAge: 2000, timeout: 3000, enableHighAccuracy: retryCount%2!=0 });
+                }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
         }
 
         obj.getCurrentPosition = function () {
@@ -1222,7 +1225,7 @@ angular.module('starter.services', [])
                 var startTime = new Date().getTime();
                 var endTime;
 
-                _navigatorRetryGetCurrentPosition(4, function (error, position, retryCount) {
+                _navigatorRetryGetCurrentPosition(2, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
                         Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
@@ -1236,7 +1239,7 @@ angular.module('starter.services', [])
                 });
 
                 if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(4, function (error, position, retryCount) {
+                    _nativeRetryGetCurrentPosition(2, function (error, position, retryCount) {
                         endTime = new Date().getTime();
                         if (error) {
                             Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
@@ -1356,9 +1359,9 @@ angular.module('starter.services', [])
         //region APIs
 
         obj.ga = {
-            startTrackerWithId: function (id) {
+            startTrackerWithId: function (id, dispatchPeriod) {
                 if (typeof $window.ga !== "undefined") {
-                    return $window.ga.startTrackerWithId(id, function(result) {
+                    return $window.ga.startTrackerWithId(id, dispatchPeriod, function(result) {
                         console.log("startTrackerWithId success = " + result);
                     }, function(error) {
                         console.log("startTrackerWithId error = " + error);
@@ -1428,17 +1431,17 @@ angular.module('starter.services', [])
                     });
                 }
             },
-            trackView: function (screenName, campaingUrl, newSession) {
+            trackView: function (screen, campaingUrl, newSession) {
                 if (typeof $window.ga !== "undefined") {
-                    return $window.ga.trackView(screenName, campaingUrl, newSession, function(result) {
+                    return $window.ga.trackView(screen, campaingUrl, newSession, function(result) {
                         console.log("trackView success = " + result);
                     }, function(error) {
                         console.log("trackView error = " + error);
-                        gaArray.push(["trackView", screenName, campaingUrl]);
+                        gaArray.push(["trackView", screen, campaingUrl]);
                     });
                 } else {
                     console.log("trackView undefined");
-                    gaArray.push(["trackView", screenName, campaingUrl]);
+                    gaArray.push(["trackView", screen, campaingUrl]);
                 }
             },
             addCustomDimension: function (key, value) {
@@ -1456,11 +1459,11 @@ angular.module('starter.services', [])
                         console.log("trackEvent success = " + result);
                     }, function(error) {
                         console.log("trackEvent error = " + error);
-                        gaArray.push(["trackEvent", category, action, label, value]);
+                        gaArray.push(["trackEvent", category, action, label, value, newSession]);
                     });
                 } else {
                     console.log("trackEvent undefined");
-                    gaArray.push(["trackEvent", category, action, label, value]);
+                    gaArray.push(["trackEvent", category, action, label, value, newSession]);
                 }
             },
             trackException: function (description, fatal) {
@@ -1550,7 +1553,7 @@ angular.module('starter.services', [])
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
         } else if (ionic.Platform.isAndroid()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey);
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
 
             /**
              * 기존 버전 호환성이슈로 Android는 유지.
