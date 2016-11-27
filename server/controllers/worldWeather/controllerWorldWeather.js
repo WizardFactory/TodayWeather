@@ -132,7 +132,7 @@ function controllerWorldWeather(){
             req.error = 'WW> It is not valid version : ' + req.version;
             next();
         }else{
-            log.info('WW > go to next step');
+            log.info('WW > go to next step', meta);
             req.validVersion = true;
             next();
         }
@@ -207,11 +207,11 @@ function controllerWorldWeather(){
                     req.error = 'WW> It is the fist request, will collect weather for this geocode :', req.geocode, req.city;
                     log.error(req.error);
 
-                    self.requestAddingGeocode(req, function(err, result){
+                    self.requestData(req, 'req_add', function(err, result){
                         if(err){
                             log.error('WW> fail to reqeust');
                             req.error = {res: 'fail', msg:'this is the first request of geocode'};
-                            callback('err_exit : Fail to requestAddingGeocode()');
+                            callback('err_exit : Fail to requestData()');
                             return;
                         }
 
@@ -289,6 +289,161 @@ function controllerWorldWeather(){
         });
     };
 
+    self.checkValidDate = function(cDate, sDate){
+        if(cDate.getYear() != sDate.getYear()) {
+            return false;
+        }
+
+        if(cDate.getMonth() != sDate.getMonth()) {
+            return false;
+        }
+
+        if(cDate.getDay() != sDate.getDay()) {
+            return false;
+        }
+
+        if(cDate.getHours() != sDate.getHours()) {
+            return false;
+        }
+
+        return true;
+    };
+
+
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     * @returns {*}
+     */
+    self.queryTwoDaysWeather = function(req, res, next){
+        var cDate = new Date();
+        var meta = {};
+
+        meta.method = 'queryTwoDaysWeather';
+
+        if(!req.validVersion){
+            log.error('TWW> invalid version : ', req.validVersion);
+            return next();
+        }
+
+        if(!self.isValidCategory(req)){
+            return next();
+        }
+
+        self.getCode(req);
+        self.getCountry(req);
+        self.getCity(req);
+
+        if(!req.geocode && !req.city){
+            log.error('It is not valid request');
+            req.error = 'It is not valid request';
+            next();
+            return;
+        }
+
+        log.info('TWW> geocode : ', req.geocode);
+
+        async.waterfall([
+                function(callback){
+                    self.getDataFromWU(req, function(err, result){
+                        if(err){
+                            log.error('TWW> Fail to get WU data: ', err);
+                            callback('err_exit_WU');
+                            return;
+                        }
+
+                        if(!self.checkValidDate(cDate, req.WU.current.dateObj)){
+                            log.error('TWW> invaild WU data');
+                            log.error('TWW> WU CurDate : ', cDate.toString());
+                            log.error('TWW> WU DB Date : ', req.WU.current.dateObj.toString());
+                            callback('err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('TWW> get WU data');
+                        callback(null);
+                    });
+                },
+                function(callback){
+                    self.getDataFromDSF(req, function(err, result){
+                        if(err){
+                            log.error('TWW> Fail to get DSF data', err);
+                            callback('err_exit_DSF');
+                            return;
+                        }
+
+                        if(!self.checkValidDate(cDate, req.DSF.dateObj)){
+                            log.error('TWW> Invaild DSF data');
+                            log.error('TWW> DSF CurDate : ', cDate.toString());
+                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString());
+                            callback('err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('TWW> get DSF data');
+                        callback(null);
+                    });
+                }
+            ],
+            function(err, result){
+                if(err){
+                    log.info('There is no correct weather data... try to request');
+
+                    async.waterfall([
+                            function(cb){
+                                self.requestData(req, 'req_two_days', function(err, result){
+                                    if(err){
+                                        log.error('TWW> fail to reqeust');
+                                        req.error = {res: 'fail', msg:'Fail to request Two days data'};
+                                        cb('err_exit : Fail to requestData()');
+                                        return;
+                                    }
+                                    cb(null);
+                                });
+                            },
+                            function(cb){
+                                self.getDataFromWU(req, function(err, result){
+                                    if(err){
+                                        log.error('TWW> Fail to get WU data: ', err);
+                                        cb('err_exit_WU');
+                                        return;
+                                    }
+
+                                    log.info('TWW> get WU data');
+                                    cb(null);
+                                });
+                            },
+                            function(cb){
+                                self.getDataFromDSF(req, function(err, result){
+                                    if(err){
+                                        log.error('TWW> Fail to get DSF data', err);
+                                        cb('err_exit_DSF');
+                                        return;
+                                    }
+                                    log.info('TWW> get DSF data');
+                                    cb(null);
+                                });
+                            }
+                        ],
+                        function(err, result){
+                            if(err){
+                                log.info('TWW> Error!!!! : ', err);
+                            }else {
+                                log.info('TWW> Finish to req&get Two days weather data');
+                            }
+                            next();
+                        }
+                    );
+                }else{
+                    log.silly('TWW> queryWeather no error');
+                    log.info('TWW> Finish to get Two days weather data');
+                    next();
+                }
+            });
+    };
+
     /**
      *
      * @param req
@@ -341,10 +496,7 @@ function controllerWorldWeather(){
 
             if(forecast.date){
                 req.result.pubDate = {};
-
-                if(forecast.date){
-                    req.result.pubDate.wuForecast = forecast.date;
-                }
+                req.result.pubDate.wuForecast = forecast.date;
             }
             if(forecast.dateObj){
                 if(req.result.pubDate === undefined){
@@ -401,6 +553,8 @@ function controllerWorldWeather(){
             if(req.result.timely === undefined){
                 req.result.timely = [];
             }
+
+            if(req.WU.current.date)
             list.forEach(function(curItem){
                 var isExist = 0;
                 if(curItem.dateObj && curItem.dateObj > curDate){
@@ -1021,16 +1175,11 @@ function controllerWorldWeather(){
         }
     };
 
-    /**
-     *
-     * @param req
-     * @param callback
-     */
-    self.requestAddingGeocode = function(req, callback){
+    self.requestData = function(req, command, callback){
         var base_url = config.url.requester;
         var key = 'abcdefg';
 
-        var url = base_url + 'req/ALL/req_add?key=' + key;
+        var url = base_url + 'req/all/' + command+ '/?key=' + key;
 
         if(req.geocode){
             url += '&gcode=' + req.geocode.lat + ',' + req.geocode.lon;
@@ -1071,5 +1220,6 @@ function controllerWorldWeather(){
 
     return self;
 }
+
 
 module.exports = controllerWorldWeather;

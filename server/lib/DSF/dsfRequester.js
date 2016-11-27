@@ -28,13 +28,15 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
         url += ',' + date;
     }
 
-    //log.info(url);
+    log.info(url);
     self.getData(url, function(err, res){
         if(err){
             callback(err, {isSuccess: false});
             return;
         }
-        res.isSuccess = true;
+        if(res != undefined){
+            res.isSuccess = true;
+        }
         callback(err, res);
         return;
     });

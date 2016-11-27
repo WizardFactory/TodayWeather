@@ -707,6 +707,7 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
                     data.date = date;
                     data.days = [];
                     data.days = newData;
+                    data.dateObj = self._getDateObj(date);
                     //log.info(data);
                     data.save(function(err){
                         if(err){
@@ -768,6 +769,7 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
             }else{
                 list.forEach(function(data, index){
                     data.date = date;
+                    data.dateObj = self._getDateObj(date);
                     data.dataList = self._addWuCurrentToList(newData, data.dataList);
 
                     data.dataList.sort(function(a, b){
@@ -825,7 +827,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                         return;
                     }
 
-                    log.info(result);
+                    log.info('WU Forecase : ', result);
                     self.saveWuForecast(geocode, date, result, function(err, forecastData){
                         cb(undefined, 1);
                     });
@@ -845,7 +847,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                         return;
                     }
 
-                    log.info(result);
+                    log.info('WU Current : ', result);
                     self.saveWuCurrent(geocode, date, result, function(err, currentData){
                         cb(undefined, 1);
                     });
@@ -1061,7 +1063,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 var newItem = new modelDSForecast({geocode:geocode,
                                                     address:{},
                                                     date:date,
-                                                    dateObj: self._getDateObj(date),
+                                                    dateObj: self._getUtcTime(''+date +'000'),
                                                     timeoffset:timeOffset,
                                                     data : weatherData
                 });
@@ -1078,6 +1080,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             }else{
                 list.forEach(function(data, index){
                     data.date = date;
+                    data.dateObj = self._getUtcTime('' + date +'000');
                     data.data.push({
                         current : newData.current,
                         hourly : newData.hourly,
@@ -1184,7 +1187,7 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, date, retryCount, 
  *
  * @param self
  * @param list
- * @param date
+ * @param date : NOTE!!! : UCT timestring
  * @param isRetry
  * @param callback
  */
@@ -1235,13 +1238,13 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
  * @param geocode
  * @param callback
  */
-ConCollector.prototype.requestDsfData = function(geocode, callback){
+ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     var self = this;
     var key = self._getDSFKey().key;
     var dataList = [];
     var requester = new dsfRequester;
 
-    for(var i=1 ; i<8 ; i++){
+    for(var i=From ; i<To ; i++){
         var dateString = self._getTimeString(0 - (24 * i)).slice(0,10) + '00';
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
@@ -1278,6 +1281,7 @@ ConCollector.prototype.requestDsfData = function(geocode, callback){
         }
     );
 };
+
 /**************************************************************************************/
 
 /**
@@ -1370,10 +1374,6 @@ ConCollector.prototype.runTask = function(isAll, callback){
         funcList.push(self.processWuForecast);
     }
 
-    if(isAll){
-        //funcList.push(self.processDSForecast);
-    }
-
     var date = parseInt(self._getTimeString(0).slice(0,10) + '00');
 
     if(funcList.length > 0){
@@ -1399,7 +1399,9 @@ ConCollector.prototype.runTask = function(isAll, callback){
 ConCollector.prototype.doCollect = function(){
     var self = this;
 
-    global.collector = self;
+    if(global.collector === undefined){
+        global.collector = self;
+    }
 
     self.runTask(true);
     setInterval(function() {

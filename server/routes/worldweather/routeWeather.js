@@ -21,5 +21,7 @@ router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand
 router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather,
             worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentData, worldWeather.mergeDsfData, worldWeather.sendResult]);
 
-
+// temporary
+router.get('/:version/:category/:days', worldWeather.checkApiVersion, worldWeather.queryTwoDaysWeather,
+    worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentData, worldWeather.mergeDsfData, worldWeather.sendResult);
 module.exports = router;
