@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">今天天氣</string>
+    <string name="yesterday">昨天</string>
+    <string name="cancel">取消</string>
+    <string name="cmp_yesterday">比昨天%1$s˚</string>
+    <string name="current_position">當前位置</string>
+    <string name="aqi">氣質量</string>
+    <string name="fail_to_get_location">今天天氣 : 無法獲取位置</string>
+    <string name="good">優</string>
+    <string name="hazardous">嚴重污染</string>
+    <string name="moderate">良</string>
+    <string name="unhealthy">中度污染</string>
+    <string name="unhealthy_for_sensitive_groups">輕度污染 </string>
+    <string name="very_unhealthy">重度污染</string>
+    <string name="move_main">轉到應用</string>
+    <string name="msg_do_not_widget_data_plz_update">无气象信息\n点击这里更新天气信息</string>
+    <string name="same_yesterday">昨天一樣</string>
+    <string name="today">今天</string>
+    <string name="tomorrow">明天</string>
+    <string name="update">更新</string>
+    <string name="pm10">PM10</string>
+    <string name="pm25">PM2.5</string>
+</resources>

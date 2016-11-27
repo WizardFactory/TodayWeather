@@ -33,18 +33,20 @@ public class ClockAndThreeDays extends TwWidgetProvider {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
-            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
+                views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
 
-            int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
-            int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
+                int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
+                int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
 
-            for (int i = 0; i < 3; i++) {
-                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
-                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                for (int i = 0; i < 3; i++) {
+                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                }
             }
         }
 

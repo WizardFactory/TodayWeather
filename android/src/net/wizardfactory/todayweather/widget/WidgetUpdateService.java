@@ -43,7 +43,7 @@ import java.util.concurrent.ExecutionException;
 public class WidgetUpdateService extends Service {
     // if find not location in this time, service is terminated.
     private final static int LOCATION_TIMEOUT = 30 * 1000; // 20sec
-    private final static String mUrl = "http://todayweather.wizardfactory.net/v000705/town";
+    private final static String mUrl = "https://todayweather.wizardfactory.net/v000705/town";
 
     private LocationManager mLocationManager = null;
     private boolean mIsLocationManagerRemoveUpdates = false;
@@ -358,11 +358,13 @@ public class WidgetUpdateService extends Service {
 
     private void setClockAndThreedays(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
-            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
+                views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+            }
         }
 
         if (Build.VERSION.SDK_INT >= 17) {
@@ -391,7 +393,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
@@ -400,9 +402,9 @@ public class WidgetUpdateService extends Service {
 
         int skyResourceId;
 
-        views.setTextViewText(R.id.label_yesterday, "어제");
-        views.setTextViewText(R.id.label_today, "오늘");
-        views.setTextViewText(R.id.label_tomorrow, "내일");
+        views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
+        views.setTextViewText(R.id.label_today, context.getString(R.string.today));
+        views.setTextViewText(R.id.label_tomorrow, context.getString(R.string.tomorrow));
 
         for (int i=0; i<3; i++) {
             WeatherData dayData = wData.getDayWeather(i);
@@ -425,16 +427,20 @@ public class WidgetUpdateService extends Service {
             }
 
             if (Build.MANUFACTURER.equals("samsung")) {
-                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
-                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                if (Build.VERSION.SDK_INT >= 16) {
+                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                }
             }
         }
     }
 
     private void setDailyWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+            }
         }
 
         if (wData == null) {
@@ -454,12 +460,12 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
-        views.setTextViewText(R.id.label_yesterday, "어제");
-        views.setTextViewText(R.id.label_today, "오늘");
-        views.setTextViewText(R.id.label_tomorrow, "내일");
+        views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
+        views.setTextViewText(R.id.label_today, context.getString(R.string.today));
+        views.setTextViewText(R.id.label_tomorrow, context.getString(R.string.tomorrow));
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow,
                 R.id.label_twodays, R.id.label_threedays};
@@ -496,10 +502,30 @@ public class WidgetUpdateService extends Service {
             }
 
             if (Build.MANUFACTURER.equals("samsung")) {
-                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
-                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                if (Build.VERSION.SDK_INT >= 16) {
+                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                }
             }
         }
+    }
+
+    private String convertGradeToStr(int grade) {
+        switch (grade) {
+            case 1:
+                return getResources().getString(R.string.good);
+            case 2:
+                return getResources().getString(R.string.moderate);
+            case 3:
+                return getResources().getString(R.string.unhealthy);
+            case 4:
+                return getResources().getString(R.string.very_unhealthy);
+            case 5:
+                return getResources().getString(R.string.hazardous);
+            default:
+                Log.e("UpdateWidgetService", "Unknown grade="+grade);
+        }
+        return "";
     }
 
     private String makeTmnTmxPmPpStr(WeatherData data) {
@@ -526,13 +552,13 @@ public class WidgetUpdateService extends Service {
                 today_tmn_tmx_pm_pp += " ";
                 if (data.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL
                         && data.getPm25Grade() > data.getPm10Grade()) {
-                    today_tmn_tmx_pm_pp += data.getPm25Str();
+                    today_tmn_tmx_pm_pp += convertGradeToStr(data.getPm25Grade());
                 } else {
-                    today_tmn_tmx_pm_pp += data.getPm10Str();
+                    today_tmn_tmx_pm_pp += convertGradeToStr(data.getPm10Grade());
                 }
             } else if (data.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
                 today_tmn_tmx_pm_pp += " ";
-                today_tmn_tmx_pm_pp += data.getPm25Str();
+                today_tmn_tmx_pm_pp += convertGradeToStr(data.getPm25Grade());
             }
         }
         return today_tmn_tmx_pm_pp;
@@ -540,10 +566,12 @@ public class WidgetUpdateService extends Service {
 
     private void setCurrentWeatherAndThreeDays(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
+            }
         }
 
         if (wData == null) {
@@ -563,7 +591,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
@@ -576,9 +604,9 @@ public class WidgetUpdateService extends Service {
 
         views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(currentData));
 
-        views.setTextViewText(R.id.label_yesterday, "어제");
-        views.setTextViewText(R.id.label_today, "오늘");
-        views.setTextViewText(R.id.label_tomorrow, "내일");
+        views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
+        views.setTextViewText(R.id.label_today, context.getString(R.string.today));
+        views.setTextViewText(R.id.label_tomorrow, context.getString(R.string.tomorrow));
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
         int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
@@ -605,21 +633,25 @@ public class WidgetUpdateService extends Service {
             }
 
             if (Build.MANUFACTURER.equals("samsung")) {
-                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
-                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                if (Build.VERSION.SDK_INT >= 16) {
+                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                }
             }
         }
     }
 
     private void setClockAndCurrentWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
-            views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
-            views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 46);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.date, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.time, TypedValue.COMPLEX_UNIT_DIP, 46);
+                views.setTextViewTextSize(R.id.am_pm, TypedValue.COMPLEX_UNIT_DIP, 14);
+                views.setTextViewTextSize(R.id.tmn_tmx_pm_pp, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 46);
+            }
         }
 
         if (Build.VERSION.SDK_INT >= 17) {
@@ -648,7 +680,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
@@ -682,14 +714,16 @@ public class WidgetUpdateService extends Service {
 
     private void setAirQualityIndex(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 18);
-            views.setTextViewTextSize(R.id.aqi_str, TypedValue.COMPLEX_UNIT_DIP, 12);
-            views.setTextViewTextSize(R.id.pm10_str, TypedValue.COMPLEX_UNIT_DIP, 12);
-            views.setTextViewTextSize(R.id.pm25_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.label_aqi, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.label_pm10, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.label_pm25, TypedValue.COMPLEX_UNIT_DIP, 18);
+                views.setTextViewTextSize(R.id.aqi_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+                views.setTextViewTextSize(R.id.pm10_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+                views.setTextViewTextSize(R.id.pm25_str, TypedValue.COMPLEX_UNIT_DIP, 12);
+            }
         }
 
         if (wData == null) {
@@ -710,7 +744,7 @@ public class WidgetUpdateService extends Service {
 
         if (currentData.getAqiPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getAqiPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getAqiPubDate()));
         }
 
         if (currentData.getAqiGrade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
@@ -719,28 +753,30 @@ public class WidgetUpdateService extends Service {
             views.setImageViewResource(R.id.current_pm25_emoji, getDrawableFaceEmoji(currentData.getPm25Grade()));
         }
 
-        views.setTextViewText(R.id.label_aqi, "통합");
-        views.setTextViewText(R.id.label_pm10, "미세");
-        views.setTextViewText(R.id.label_pm25, "초미세");
+        views.setTextViewText(R.id.label_aqi, context.getString(R.string.aqi));
+        views.setTextViewText(R.id.label_pm10, context.getString(R.string.pm10));
+        views.setTextViewText(R.id.label_pm25, context.getString(R.string.pm25));
 
-        if (currentData.getAqiStr() != null) {
-            views.setTextViewText(R.id.aqi_str, currentData.getAqiStr());
+        if (currentData.getAqiGrade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.aqi_str, convertGradeToStr(currentData.getAqiGrade()));
         }
-        if (currentData.getPm10Str() != null) {
-            views.setTextViewText(R.id.pm10_str, currentData.getPm10Str());
+        if (currentData.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.pm10_str, convertGradeToStr(currentData.getPm10Grade()));
         }
-        if (currentData.getPm25Str() != null) {
-            views.setTextViewText(R.id.pm25_str, currentData.getPm25Str());
+        if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.pm25_str, convertGradeToStr(currentData.getPm25Grade()));
         }
     }
 
     private void set2x1CurrentWeather(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.today_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 48);
+            }
         }
 
         if (wData == null) {
@@ -760,7 +796,7 @@ public class WidgetUpdateService extends Service {
         }
         if (currentData.getPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, "업데이트 "+transFormat.format(currentData.getPubDate()));
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
         views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
@@ -784,14 +820,14 @@ public class WidgetUpdateService extends Service {
             if (currentData.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
                 if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL
                         && currentData.getPm25Grade() > currentData.getPm10Grade()) {
-                    views.setTextViewText(R.id.current_pm, "::: "+currentData.getPm25Str());
+                    views.setTextViewText(R.id.current_pm, "::: "+convertGradeToStr(currentData.getPm25Grade()));
                 }
                 else {
-                    views.setTextViewText(R.id.current_pm, "::: "+currentData.getPm10Str());
+                    views.setTextViewText(R.id.current_pm, "::: "+convertGradeToStr(currentData.getPm10Grade()));
                 }
             }
             else if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
-                views.setTextViewText(R.id.current_pm, "::: "+currentData.getPm25Str());
+                views.setTextViewText(R.id.current_pm, "::: "+convertGradeToStr(currentData.getPm25Grade()));
             }
         }
 
@@ -822,9 +858,11 @@ public class WidgetUpdateService extends Service {
 
     private void set1x1WidgetData(Context context, RemoteViews views, WidgetData wData) {
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
-            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
+                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            }
         }
 
         if (wData == null) {
@@ -902,22 +940,22 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "yesterdayElement is NULL");
         }
 
-        double cmpTemp = 0;
+        int cmpTemp = 0;
         String cmpYesterdayTemperatureStr = "";
         if (currentData != null && yesterdayData != null) {
-            cmpTemp = currentData.getTemperature() - yesterdayData.getTemperature();
+            cmpTemp = (int) (currentData.getTemperature() - yesterdayData.getTemperature());
             if (cmpTemp == 0) {
                 cmpYesterdayTemperatureStr = context.getString(R.string.same_yesterday);
             }
-            else if (cmpTemp > 0) {
-                cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
-                        + String.valueOf(Math.round(cmpTemp)) + context.getString(R.string.degree) + " "
-                        + context.getString(R.string.high);
-            }
             else {
-                cmpYesterdayTemperatureStr = context.getString(R.string.cmp_yesterday) + " "
-                        + String.valueOf(Math.round(Math.abs(cmpTemp))) + context.getString(R.string.degree) + " "
-                        + context.getString(R.string.low);
+                String strTemp;
+                if (cmpTemp > 0) {
+                    strTemp = "+"+String.valueOf(cmpTemp);
+                }
+                else {
+                    strTemp = String.valueOf(cmpTemp);
+                }
+                cmpYesterdayTemperatureStr = String.format(getResources().getString(R.string.cmp_yesterday), strTemp);
             }
             views.setTextViewText(R.id.cmp_yesterday_temperature, cmpYesterdayTemperatureStr);
         }

@@ -31,17 +31,19 @@ public class DailyWeather extends TwWidgetProvider {
         super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
 
         if (Build.MANUFACTURER.equals("samsung")) {
-            int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow,
-                    R.id.label_twodays, R.id.label_threedays};
-            int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature,
-                    R.id.tomorrow_temperature, R.id.twodays_temperature, R.id.threedays_temperature};
+            if (Build.VERSION.SDK_INT >= 16) {
+                int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow,
+                        R.id.label_twodays, R.id.label_threedays};
+                int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature,
+                        R.id.tomorrow_temperature, R.id.twodays_temperature, R.id.threedays_temperature};
 
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
-            views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 16);
+                views.setTextViewTextSize(R.id.pubdate, TypedValue.COMPLEX_UNIT_DIP, 16);
 
-            for (int i = 0; i < 5; i++) {
-                views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
-                views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                for (int i = 0; i < 5; i++) {
+                    views.setTextViewTextSize(labelIds[i], TypedValue.COMPLEX_UNIT_DIP, 16);
+                    views.setTextViewTextSize(tempIds[i], TypedValue.COMPLEX_UNIT_DIP, 18);
+                }
             }
         }
     }
