@@ -545,6 +545,7 @@ ConCollector.prototype._parseWuCurrent = function(src, date){
  */
 ConCollector.prototype._addWuCurrentToList = function(newData, list){
     var self = this;
+    var isExist = false;
 
     list.forEach(function(oldData, index){
         if(oldData.date === newData.date){
@@ -553,11 +554,13 @@ ConCollector.prototype._addWuCurrentToList = function(newData, list){
             });
 
             print.info('updated olditem : ', newData.date);
+            isExist = true;
         }
     });
 
-    list.push(newData);
-
+    if(!isExist){
+        list.push(newData);
+    }
     return list;
 };
 
@@ -708,6 +711,7 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
                     data.days = [];
                     data.days = newData;
                     data.dateObj = self._getDateObj(date);
+
                     //log.info(data);
                     data.save(function(err){
                         if(err){
@@ -1079,13 +1083,44 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 //print.info('WuF> add new Item : ', newData);
             }else{
                 list.forEach(function(data, index){
-                    data.date = date;
-                    data.dateObj = self._getUtcTime('' + date +'000');
-                    data.data.push({
-                        current : newData.current,
-                        hourly : newData.hourly,
-                        daily: newData.daily
+                    var isExist = false;
+                    if(data.date < date){
+                        data.date = date;
+                    }
+                    var pubDate = self._getUtcTime('' + date +'000');
+                    if(data.dateObj < pubDate){
+                        data.dateObj = pubDate;
+                    }
+                    data.data.forEach(function(dbItem){
+                        if(dbItem.current.dateObj.getYear() === newData.current.dateObj.getYear() &&
+                            dbItem.current.dateObj.getMonth() === newData.current.dateObj.getMonth() &&
+                            dbItem.current.dateObj.getDay() === newData.current.dateObj.getDay() &&
+                            dbItem.current.dateObj.getHours() === newData.current.dateObj.getHours()) {
+                            dbItem.current = newData.current;
+                            dbItem.hourly = newData.hourly;
+                            dbItem.daily = newData.daily;
+                            isExist = true;
+                        }
                     });
+
+                    if(!isExist){
+                        data.data.push({
+                            current : newData.current,
+                            hourly : newData.hourly,
+                            daily: newData.daily
+                        });
+                    }
+
+                    data.data.sort(function(a, b){
+                        if(a.current.date > b.current.date){
+                            return 1;
+                        }
+                        if(a.current.date < b.current.date){
+                            return -1;
+                        }
+                        return 0;
+                    });
+
                     if(data.data.length > self.MAX_DSF_COUNT){
                         data.data.shift();
                     }
