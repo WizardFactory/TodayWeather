@@ -35,7 +35,7 @@
                            <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
                                ng-repeat="day in dayChart[0].values">
                                <td style="text-align: center; margin: auto">
-                                   <p class="body1" style="margin: 0 0 5px;">{{dayToFullString(day.dayOfWeek)}}</p>
+                                   <p class="body1" style="margin: 0 0 5px;">{{dayToFullString(day.dayOfWeek)|translate}}</p>
                                    <p class="display1" style="margin: 0 0 2px; opacity: 0.84">{{day.date.substr(6,2)}}</p>
                                    <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)}}</p>
                                </td>
@@ -45,18 +45,18 @@
                                        <img height="34px" ng-src="img/{{getSentimentIcon(day.dustForecast.pm10Grade)}}">
                                    </div>
                                    <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
-                                       <p class="body2" ng-class="getGradeColor(day.dustForecast.pm10Grade)" style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
+                                       <p class="body2" ng-class="getGradeColor(day.dustForecast.pm10Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm10Grade)|translate}}</p>
                                    </div>
                                </td>
                                <td style="text-align: center; margin: auto">
                                    <p class="body1" style="margin: 0 0 5px;" translate="LOC_PM25"></p>
                                    <img height="34px" ng-src="img/{{getSentimentIcon(day.dustForecast.pm25Grade)}}">
-                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.pm25Grade)" style="margin: 0 0 5px;">{{day.dustForecast.pm25Str}}</p>
+                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.pm25Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm25Grade)|translate}}</p>
                                </td>
                                <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined">
                                    <p class="body1" style="margin: 0 0 5px;" translate="LOC_O3"></p>
                                    <img height="34px" ng-src="img/{{getSentimentIcon(day.dustForecast.o3Grade)}}">
-                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.o3Grade)" style="margin: 0 0 5px;">{{day.dustForecast.o3Str}}</p>
+                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.o3Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.o3Grade)|translate}}</p>
                                </td>
                            </tr>
                        </table>
@@ -93,14 +93,14 @@
                                    <div class="row subheading" style="margin: 0" ng-if="dayChart[0].values[6].ultrvGrade != undefined || dayChart[0].values[7].ultrvGrade != undefined || dayChart[0].values[8].ultrvGrade != undefined">
                                        <img src="img/Ultrv.png" style="height: 24px; margin: auto 0;">
                                        <div style="margin: auto 8px">
-                                           <p class="subheading" ng-class="getGradeColor(day.ultrvGrade)" style="margin: 0;">{{day.ultrvStr}}</p>
+                                           <p class="subheading" ng-class="getGradeColor(day.ultrvGrade)" style="margin: 0;">{{getLowHighGradeStr(day.ultrvGrade)|translate}}</p>
                                            <span class="caption" translate="LOC_UV"></span>
                                        </div>
                                    </div>
                                    <div class="row subheading" style="margin: 0" ng-if="day.fsnGrade != undefined">
                                        <img src="img/fish.svg" style="height: 20px; margin: auto 2px;">
                                        <div style="margin: auto 8px">
-                                           <p class="subheading" style="margin: 0;" ng-class="getGradeColor(day.fsnGrade)">{{day.fsnStr}}</p>
+                                           <p class="subheading" style="margin: 0;" ng-class="getGradeColor(day.fsnGrade)">{{getAttentionWarningGradeStr(day.fsnGrade)|translate}}</p>
                                            <span class="caption" translate="LOC_FOOD_POISONING"></span>
                                        </div>
                                    </div>

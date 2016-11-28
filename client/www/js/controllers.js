@@ -23,51 +23,35 @@ angular.module('starter.controllers', [])
 
         $scope.imgPath = Util.imgPath;
 
-        var dayStr = [];
-        $translate(['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT']).then(function (translations) {
-            dayStr.push(translations.LOC_SUN);
-            dayStr.push(translations.LOC_MON);
-            dayStr.push(translations.LOC_TUE);
-            dayStr.push(translations.LOC_WED);
-            dayStr.push(translations.LOC_THU);
-            dayStr.push(translations.LOC_FRI);
-            dayStr.push(translations.LOC_SAT);
-        }, function (translationIds) {
-            dayStr.push(translationIds.LOC_SUN);
-            dayStr.push(translationIds.LOC_MON);
-            dayStr.push(translationIds.LOC_TUE);
-            dayStr.push(translationIds.LOC_WED);
-            dayStr.push(translationIds.LOC_THU);
-            dayStr.push(translationIds.LOC_FRI);
-            dayStr.push(translationIds.LOC_SAT);
-        });
+        if ($scope.forecastType == 'mid') {
+            var dayStr = [];
+            $translate(['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT']).then(function (translations) {
+                dayStr.push(translations.LOC_SUN);
+                dayStr.push(translations.LOC_MON);
+                dayStr.push(translations.LOC_TUE);
+                dayStr.push(translations.LOC_WED);
+                dayStr.push(translations.LOC_THU);
+                dayStr.push(translations.LOC_FRI);
+                dayStr.push(translations.LOC_SAT);
+            }, function (translationIds) {
+                dayStr.push(translationIds.LOC_SUN);
+                dayStr.push(translationIds.LOC_MON);
+                dayStr.push(translationIds.LOC_TUE);
+                dayStr.push(translationIds.LOC_WED);
+                dayStr.push(translationIds.LOC_THU);
+                dayStr.push(translationIds.LOC_FRI);
+                dayStr.push(translationIds.LOC_SAT);
+            });
 
-        $scope.dayToString = function(day) {
-            return dayStr[day];
-        };
+            $scope.dayToString = function(day) {
+                return dayStr[day];
+            };
 
-        var dayFullStr = [];
-        $translate(['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY', 'LOC_FRIDAY', 'LOC_SATURDAY']).then(function (translations) {
-            dayFullStr.push(translations.LOC_SUNDAY);
-            dayFullStr.push(translations.LOC_MONDAY);
-            dayFullStr.push(translations.LOC_TUESDAY);
-            dayFullStr.push(translations.LOC_WEDNESDAY);
-            dayFullStr.push(translations.LOC_THURSDAY);
-            dayFullStr.push(translations.LOC_FRIDAY);
-            dayFullStr.push(translations.LOC_SATURDAY);
-        }, function (translationIds) {
-            dayFullStr.push(translationIds.LOC_SUNDAY);
-            dayFullStr.push(translationIds.LOC_MONDAY);
-            dayFullStr.push(translationIds.LOC_TUESDAY);
-            dayFullStr.push(translationIds.LOC_WEDNESDAY);
-            dayFullStr.push(translationIds.LOC_THURSDAY);
-            dayFullStr.push(translationIds.LOC_FRIDAY);
-            dayFullStr.push(translationIds.LOC_SATURDAY);
-        });
-
-        $scope.dayToFullString = function(day) {
-            return dayFullStr[day];
-        };
+            $scope.dayToFullString = function(day) {
+                var dayFullStr = ['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY', 'LOC_FRIDAY', 'LOC_SATURDAY'];
+                return dayFullStr[day];
+            };
+        }
 
         var dayFromTodayStr = [];
         $translate(['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY', 'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW', 'LOC_FROM_TODAY']).then(function (translations) {
@@ -119,6 +103,51 @@ angular.module('starter.controllers', [])
             return 'ic_sentiment_very_dissatisfied_white_24px.svg';
         };
 
+        $scope.getSentimentStr = function(grade) {
+            var airGradeStr = ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'];
+            if (grade >= 3) {
+                grade++;
+            }
+            return airGradeStr[grade-1];
+        };
+
+        $scope.getLowHighGradeStr = function (grade) {
+           var lowHighGradeStr = ['LOC_LOW', 'LOC_NORMAL', 'LOC_HIGH', 'LOC_VERY_HIGH', 'LOC_HAZARD'];
+            return lowHighGradeStr[grade];
+        };
+
+        $scope.getAttentionWarningGradeStr = function (grade) {
+            var awGradeStr = ['LOC_ATTENTION', 'LOC_CAUTION', 'LOC_WARNING', 'LOC_HAZARD'];
+            return awGradeStr[grade];
+        };
+
+        $scope.getWeatherStr = function (current) {
+            if (current.weatherType == undefined || Util.language == 'ko') {
+                if (!(current.weather == undefined)) {
+                    return current.weather;
+                }
+                return "";
+            }
+
+            var weatherTypeStr = ['LOC_CLEAR', 'LOC_PARTLY_CLOUDY', 'LOC_MOSTLY_CLOUDY', 'LOC_CLOUDY', 'LOC_MIST',
+                'LOC_HAZE', 'LOC_FOG', 'LOC_THIN_FOG', 'LOC_DENSE_FOG', 'LOC_FOG_STOPPED',
+
+                'LOC_FOG', 'LOC_PARTLY_FOG', 'LOC_YELLOW_DUST', 'LOC_RAIN', 'LOC_LIGHT_DRIZZLE',
+                'LOC_DRIZZLE', 'LOC_HEAVY_DRIZZLE', 'LOC_DRIZZLE_STOPPED', 'LOC_LIGHT_RAIN_AT_TIMES', 'LOC_LIGHT_RAIN',
+
+                'LOC_RAIN_AT_TIMES', 'LOC_RAIN', 'LOC_HEAVY_RAIN_AT_TIMES', 'LOC_HEAVY_RAIN', 'LOC_LIGHT_SHOWERS',
+                'LOC_SHOWERS', 'LOC_HEAVY_SHOWERS', 'LOC_SHOWERS_STOPPED', 'LOC_RAIN_STOPPED', 'LOC_LIGHT_SLEET',
+
+                'LOC_HEAVY_SLEET', 'LOC_SLEET_STOPPED', 'LOC_LIGHT_SNOW_AT_TIMES', 'LOC_LIGHT_SNOW', 'LOC_SNOW_AT_TIMES',
+                'LOC_SNOW', 'LOC_HEAVY_SNOW_AT_TIMES', 'LOC_HEAVY_SNOW', 'LOC_LIGHT_SNOW_SHOWERS', 'LOC_HEAVY_SNOW_SHOWERS',
+
+                'LOC_SNOW_SHOWERS_STOPPED', 'LOC_SNOW_STOPPED', 'LOC_LIGHT_SNOW_PELLETS', 'LOC_HEAVY_SNOW_PELLETS', 'LOC_LIGHT_SNOW_STORM',
+                'LOC_SNOW_STORM', 'LOC_HEAVY_SNOW_STORM', 'LOC_POWDER_SNOW', 'LOC_WATER_SPOUT', 'LOC_HAIL',
+
+                'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
+                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED'];
+            return weatherTypeStr[type];
+        };
         var regionSize;
         var regionSumSize;
         var bigDigitSize;
@@ -328,7 +357,7 @@ angular.module('starter.controllers', [])
             str +=      '</div>';
             str += '</div></div></div>';
             str += '<p id="summary" class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
-                $scope.currentWeather.summary+'</p>';
+                $rootScope.summary+'</p>';
             return str;
         }
 
@@ -629,7 +658,11 @@ angular.module('starter.controllers', [])
 
             $scope.currentPosition = cityData.currentPosition;
 
-            $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
+            _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
+            _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday).then(function () {
+                $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
+            });
+
 
             $scope.updateTime = (function () {
                if (cityData.currentWeather) {
@@ -967,9 +1000,190 @@ angular.module('starter.controllers', [])
             return value.substr(4,2)+'/'+value.substr(6,2);
         };
 
-        $scope.diffTodayYesterday = function () {
-            return cityData.currentWeather.diffTempStr;
-        };
+        function _diffTodayYesterday(current, yesterday) {
+            var strSameAsYesterday;
+            var strThanYesterday;
+            $translate(['LOC_SAME_AS_YESTERDAY', 'LOC_THAN_YESTERDAY']).then(function (translations) {
+                strSameAsYesterday = translations.LOC_SAME_AS_YESTERDAY;
+                strThanYesterday = translations.LOC_THAN_YESTERDAY;
+            }, function (translationIds) {
+                strSameAsYesterday = translationIds.LOC_SAME_AS_YESTERDAY;
+                strThanYesterday = translationIds.LOC_THAN_YESTERDAY;
+            }).finally(function () {
+                var str = "";
+                if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+                    var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                    if (diffTemp == 0) {
+                        str += strSameAsYesterday;
+                    }
+                    else {
+                        var tempStr;
+                        if (diffTemp > 0) {
+                            tempStr = '+' + diffTemp;
+                        }
+                        else {
+                            tempStr = '' + diffTemp;
+                        }
+                        str += sprintf(strThanYesterday, tempStr);
+                    }
+                }
+                $scope.diffTempStr = str;
+            });
+        }
+
+        function _convertKmaRxxToStr(pty, rXX) {
+            var str = "~"+rXX;
+            if (pty === 1 || pty === 2) {
+                str += "mm";
+            }
+            else if (pty === 3) {
+                str += "cm";
+            }
+            else {
+               return "";
+            }
+            return str;
+        }
+
+        function _convertKmaWsdToStr(windGrade)  {
+            switch (windGrade) {
+                case 0: return "";
+                case 1: return "LOC_LIGHT_WIND";
+                case 2: return "LOC_MODERATE_WIND";
+                case 3: return "LOC_STRONG_WIND";
+                case 4: return "LOC_VERY_STRONG_WIND";
+            }
+            return "";
+        }
+
+        function _makeSummary(current, yesterday) {
+            var deferred = $q.defer();
+            var translations;
+            $translate(['LOC_PM10', 'LOC_PM25', 'LOC_AQI', 'LOC_DISCOMFORT_INDEX', 'LOC_FEELS_LIKE',
+                'LOC_UV', 'LOC_FOOD_POISONING', 'LOC_RAINFALL', 'LOC_SNOWFALL', 'LOC_PRECIPITATION'
+            ]).then(function (trans) {
+                translations = trans;
+            }, function (translationIds) {
+                translations = translationIds;
+            }).finally(function () {
+                var str = "";
+                var item;
+                var itemList = [];
+                var diffTemp;
+                var tmpGrade;
+
+                if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
+                    diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                    str = $scope.diffTempStr;
+                    item = {str: str, grade: Math.abs(diffTemp)};
+                    itemList.push(item);
+                }
+
+                if (!(current.weatherType == undefined)) {
+                    tmpGrade = 1;
+                    if (current.weatherType > 3) {
+                        tmpGrade = 3;
+                    }
+                    item = {str: $translate.instant($scope.getWeatherStr(current)), grade: tmpGrade};
+                    itemList.push(item);
+                }
+
+                if (current.arpltn) {
+                    if (current.arpltn.pm10Grade) {
+                        tmpGrade = current.arpltn.pm10Grade;
+                        str = translations.LOC_PM10 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
+                        item = {str: str, grade: tmpGrade};
+                        itemList.push(item);
+                    }
+                    if (current.arpltn.pm25Grade) {
+                        tmpGrade = current.arpltn.pm25Grade;
+                        str = translations.LOC_PM25 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
+                        item = {str: str, grade: tmpGrade};
+                        itemList.push(item);
+                    }
+                    if (current.arpltn.khaiGrade) {
+                        tmpGrade = current.arpltn.khaiGrade;
+                        str = translations.LOC_AQI + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
+                        item = {str: str, grade: tmpGrade};
+                        itemList.push(item);
+                    }
+                }
+
+                if (current.rn1 && current.pty) {
+                    switch (current.pty) {
+                        case 1:
+                            current.ptyStr = translations.LOC_RAINFALL;
+                            break;
+                        case 2:
+                            current.ptyStr = translations.LOC_PRECIPITATION;
+                            break;
+                        case 3:
+                            current.ptyStr = translations.LOC_SNOWFALL;
+                            break;
+                        default :
+                            current.ptyStr = "";
+                    }
+                    current.rn1Str = _convertKmaRxxToStr(current.pty, rn1);
+                    item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+                    itemList.push(item);
+                }
+
+                if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
+                    tmpGrade = current.dsplsGrade;
+                    str = translations.LOC_DISCOMFORT_INDEX + " ";
+                    str += $translate.instant($scope.getLowHighGradeStr(tmpGrade));
+                    item = {str:str, grade: tmpGrade};
+                    itemList.push(item);
+                }
+
+                if (current.sensorytem && current.sensorytem !== current.t1h) {
+                    diffTemp = Math.round(current.sensorytem - current.t1h);
+                    str = translations.LOC_FEELS_LIKE + " " + current.sensorytem +"˚";
+                    item = {str :str, grade: Math.abs(diffTemp)};
+                    itemList.push(item);
+                }
+
+                if (current.ultrvGrade && Number(current.time) < 1800) {
+                    tmpGrade = current.ultrvGrade;
+                    str = translations.LOC_UV + " ";
+                    str += $translate.instant($scope.getLowHighGradeStr(tmpGrade));
+                    item = {str: str, grade: tmpGrade+1};
+                    itemList.push(item);
+                }
+
+                if (current.wsdGrade) {
+                    str = $translate.instant(_convertKmaWsdToStr(current.wsdGrade));
+                    item = {str:str, grade: current.wsdGrade+1};
+                    itemList.push(item);
+                }
+
+                if (current.fsnGrade) {
+                    var tmpGrade = current.fsnGrade;
+                    str = translations.LOC_FOOD_POISONING + " ";
+                    str += $translate.instant($scope.getAttentionWarningGradeStr(tmpGrade));
+                    item = {str: str, grade: tmpGrade+1};
+                    itemList.push(item);
+                }
+
+                //감기
+
+                itemList.sort(function (a, b) {
+                    if(a.grade > b.grade){
+                        return -1;
+                    }
+                    if(a.grade < b.grade){
+                        return 1;
+                    }
+                    return 0;
+                });
+
+                str = itemList[0].str+","+itemList[1].str;
+                $rootScope.summary = str;
+                deferred.resolve(str);
+            });
+
+            return deferred.promise;
+        }
 
         $scope.$on('reloadEvent', function(event, sender) {
             if (sender == 'resume') {
@@ -1671,7 +1885,7 @@ angular.module('starter.controllers', [])
             var emoji = WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon);
             var tmx;
             var tmn;
-            var summary = cityData.currentWeather.summary;
+            var summary = $rootScope.summary;
             var shareUrl = 'http://abr.ge/mxld';
             var len = cityData.dayTable.length;
             for(var i=0;i<len; i++) {

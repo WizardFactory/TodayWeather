@@ -17,12 +17,12 @@
   "LOC_CO":"CO",
   "LOC_FINE_DUST":"細塵",
   "LOC_ULTRA_FINE_DUST":"超細粉塵",
-  "LOC_GOOD":"好",
-  "LOC_MODERATE":"中度",
-  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS":"敏感性群組不健康",
-  "LOC_UNHEALTHY":"不健康",
-  "LOC_VERY_UNHEALTHY":"非常不健康",
-  "LOC_HAZARDOUS":"危險",
+  "LOC_GOOD":"優",
+  "LOC_MODERATE":"良",
+  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS":"輕度污染",
+  "LOC_UNHEALTHY":"中度污染",
+  "LOC_VERY_UNHEALTHY":"重度污染",
+  "LOC_HAZARDOUS":"嚴重污染",
   "LOC_STATION":"車站",
   "LOC_DETAIL_WEATHER":"詳細天氣",
   "LOC_HUMIDITY":"濕度",
@@ -162,7 +162,7 @@
   "LOC_A_COUPLE_OF_DAYS_AGO":"幾天前",
   "LOC_THE_DAY_BEFORE_YESTERDAY":"前天前",
   "LOC_THE_DAY_AFTER_TOMORROW":"明天之後",
-  "LOC_TWO_DAYS_AFTER_TOMORROW":"兩天后"
+  "LOC_TWO_DAYS_AFTER_TOMORROW":"兩天后",
   "LOC_FROM_TODAY":"從今天",
   "LOC_BEFORE_TODAY":"％d before today",
   "LOC_AFTER_TODAY":"％d after today",
@@ -196,9 +196,8 @@
   "LOC_PARTLY_FOG":"部分霧",
   "LOC_YELLOW_DUST":"黃塵",
   "LOC_LIGHT_DRIZZLE":"輕微毛毛雨",
-  "LOC_HEAVY_DRIZZLE":"大雨毛病"
+  "LOC_HEAVY_DRIZZLE":"大雨毛病",
   "LOC_DRIZZLE_STOPPED":"毛毛雨停止",
-
   "LOC_LIGHT_RAIN_AT_TIMES":"有時輕雨",
   "LOC_HEAVY_RAIN_AT_TIMES":"大雨偶爾",
   "LOC_HEAVY_RAIN":"大雨",
@@ -225,13 +224,16 @@
   "LOC_SNOW_STORM":"雪風暴",
   "LOC_HEAVY_SNOW_STORM":"大雪風暴",
   "LOC_WATER_SPOUT":"水噴嘴",
-  "LOC_HAIL":"Hail",
+  "LOC_HAIL":"冰雹",
   "LOC_THUNDERSHOWERS_STOPPED_RAIN":"雷陣雨停了，雨",
   "LOC_THUNDERSHOWERS_STOPPED_SNOW":"雷陣雨停了，雪",
   "LOC_THUNDERSHOWERS_HAIL":"雷陣雨，冰雹",
   "LOC_THUNDERSHOWERS_RAIN_SNOW":"雷雨，雨/雪",
   "LOC_LIGHTNING":"閃電",
   "LOC_BOLT_FROM_THE_BLUE":"螺栓從藍色",
-  "LOC_BOLT_STOPPED":"螺栓已停止"
-
+  "LOC_BOLT_STOPPED":"螺栓已停止",
+  "LOC_LIGHT_WIND":"光風",
+  "LOC_MODERATE_WIND":"中風",
+  "LOC_STRONG_WIND":"強風",
+  "LOC_VERY_STRONG_WIND":"非常強風"
 }

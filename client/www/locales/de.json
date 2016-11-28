@@ -232,6 +232,10 @@
   "LOC_THUNDERSHOWERS_RAIN_SNOW": "Donnerschauer, Regen / Schnee",
   "LOC_LIGHTNING": "Beleuchtung",
   "LOC_BOLT_FROM_THE_BLUE": "Bolt aus dem Blauen",
-  "LOC_BOLT_STOPPED": "Bolzen gestoppt"
+  "LOC_BOLT_STOPPED": "Bolzen gestoppt",
+  "LOC_LIGHT_WIND": "Leichter Wind",
+  "LOC_MODERATE_WIND": "Moderater Wind",
+  "LOC_STRONG_WIND": "Starker Wind",
+  "LOC_VERY_STRONG_WIND": "Sehr starker Wind"
 }
 
