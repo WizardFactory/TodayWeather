@@ -19,7 +19,7 @@
   "LOC_ULTRA_FINE_DUST" : "초미세먼지",
   "LOC_GOOD" : "좋음",
   "LOC_MODERATE" : "보통",
-  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS" : "민감군에게 유해한 영향 유발",
+  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS" : "민감군주의",
   "LOC_UNHEALTHY" : "나쁨",
   "LOC_VERY_UNHEALTHY" : "매우나쁨",
   "LOC_HAZARDOUS" : "위험",
@@ -231,5 +231,9 @@
   "LOC_THUNDERSHOWERS_RAIN_SNOW" : "뇌우,비/눈",
   "LOC_LIGHTNING": "번개",
   "LOC_BOLT_FROM_THE_BLUE" : "마른뇌전",
-  "LOC_BOLT_STOPPED" : "뇌전끝"
+  "LOC_BOLT_STOPPED" : "뇌전끝",
+  "LOC_LIGHT_WIND" : "바람약함",
+  "LOC_MODERATE_WIND" : "바람약간강함",
+  "LOC_STRONG_WIND" : "바람강함",
+  "LOC_VERY_STRONG_WIND" : "바람매우강함"
 }

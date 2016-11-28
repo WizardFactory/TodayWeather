@@ -17,12 +17,12 @@
   "LOC_CO":"一氧化碳",
   "LOC_FINE_DUST":"微尘",
   "LOC_ULTRA_FINE_DUST":"超细颗粒",
-  "LOC_GOOD":"好",
+  "LOC_GOOD":"优",
   "LOC_MODERATE":"普通",
-  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS":"造成有害影响的敏感群体",
-  "LOC_UNHEALTHY":"穷",
-  "LOC_VERY_UNHEALTHY":"非常差",
-  "LOC_HAZARDOUS":"危险",
+  "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS":"轻度污染",
+  "LOC_UNHEALTHY":"中度污染",
+  "LOC_VERY_UNHEALTHY":"重度污染",
+  "LOC_HAZARDOUS":"严重污染",
   "LOC_STATION":"计量",
   "LOC_DETAIL_WEATHER":"更多天气信息",
   "LOC_HUMIDITY":"滋润",
@@ -231,5 +231,9 @@
   "LOC_THUNDERSHOWERS_RAIN_SNOW":"雷雨，雨/雪",
   "LOC_LIGHTNING":"闪电",
   "LOC_BOLT_FROM_THE_BLUE":"螺栓从蓝色",
-  "LOC_BOLT_STOPPED":"螺栓已停止"
+  "LOC_BOLT_STOPPED":"螺栓已停止",
+  "LOC_LIGHT_WIND":"光风",
+  "LOC_MODERATE_WIND":"中风",
+  "LOC_STRONG_WIND":"强风",
+  "LOC_VERY_STRONG_WIND":"非常强风"
 }

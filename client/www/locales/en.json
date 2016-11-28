@@ -231,5 +231,9 @@
   "LOC_THUNDERSHOWERS_RAIN_SNOW" : "Thundershowers, Rain/Snow",
   "LOC_LIGHTNING": "Lightning",
   "LOC_BOLT_FROM_THE_BLUE" : "Bolt from the blue",
-  "LOC_BOLT_STOPPED" : "Bolt stopped"
+  "LOC_BOLT_STOPPED" : "Bolt stopped",
+  "LOC_LIGHT_WIND" : "Light wind",
+  "LOC_MODERATE_WIND" : "Moderate wind",
+  "LOC_STRONG_WIND" : "Strong wind",
+  "LOC_VERY_STRONG_WIND" : "Very strong wind"
 }
