@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">今日天気</string>
+    <string name="aqi">大気質</string>
+    <string name="yesterday">昨日</string>
+    <string name="cancel"> 取消</string>
+    <string name="cmp_yesterday">昨日より%1$s˚</string>
+    <string name="current_position">現在位置</string>
+    <string name="fail_to_get_location">今日天気 : 場所を取得できません</string>
+    <string name="good">良い</string>
+    <string name="hazardous">危険</string>
+    <string name="moderate">並</string>
+    <string name="unhealthy">健康に良くない</string>
+    <string name="move_main">アプリトップ</string>
+    <string name="msg_do_not_widget_data_plz_update">天気情報がありません。\nここを押して天気情報を更新してください。</string>
+    <string name="same_yesterday">昨日と同じ</string>
+    <string name="today">今日</string>
+    <string name="tomorrow">明日</string>
+    <string name="update">更新</string>
+    <string name="very_unhealthy">極めて健康に良くない</string>
+    <string name="pm10">PM10</string>
+    <string name="pm25">PM2.5</string>
+    <string name="unhealthy_for_sensitive_groups">敏感なグループにとっては健康に良くない</string>
+</resources>
