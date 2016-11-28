@@ -24,6 +24,61 @@ describe('unit test - kma city weather scraping', function() {
     //    });
     //});
 
+    //make for gathering weather description of kma
+    //it('test get city weather from 2015.01.01.01:00', function(done) {
+    //    this.timeout(1000*60*60*12);
+    //
+    //    var scrape = new Scrape();
+    //    var weatherList = [];
+    //    function _findWeather(weather) {
+    //        for (var i=0; i<weatherList.length; i++) {
+    //            if (weather == weatherList[i]) {
+    //                return true;
+    //            }
+    //        }
+    //        return false;
+    //    }
+    //
+    //    var controllerManager = require('../controllers/controllerManager');
+    //    global.manager = new controllerManager();
+    //    var date = new Date("2015.01.01.01:00");
+    //    var kmaTimeLib = require('../lib/kmaTimeLib');
+    //
+    //    function _recursiveGetCityWeather(date) {
+    //
+    //        var dateStr = kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ(date);
+    //        console.log(dateStr);
+    //        scrape.getCityWeather(undefined, function (err, data) {
+    //            if (err) {
+    //                console.log(err);
+    //            }
+    //            if (!data.hasOwnProperty('cityList')) {
+    //                _recursiveGetCityWeather(date);
+    //                return;
+    //            }
+    //            data.cityList.forEach(function (city) {
+    //                if (!_findWeather(city.weather)) {
+    //                    weatherList.push(city.weather);
+    //                }
+    //            });
+    //
+    //            console.log(JSON.stringify(weatherList));
+    //
+    //            if (date.getTime() < (new Date()).getTime()) {
+    //                date.setHours(date.getHours()+1);
+    //                _recursiveGetCityWeather(date);
+    //            }
+    //            else {
+    //                weatherList.push('END');
+    //                console.log(JSON.stringify(weatherList));
+    //                done();
+    //            }
+    //        }, dateStr);
+    //    }
+    //
+    //    _recursiveGetCityWeather(date);
+    //});
+
     //it('test get aws weather', function (done) {
     //    var scrape = new Scrape();
     //    scrape.getAWSWeather('hourly', '2016', function (err, results) {
