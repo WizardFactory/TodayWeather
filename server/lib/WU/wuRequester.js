@@ -53,7 +53,10 @@ wuRequester.prototype.getForecast = function(geocode, key, callback){
             callback(err, {isSuccess: false});
             return;
         }
-        res.isSuccess = true;
+
+        if(res != undefined){
+            res.isSuccess = true;
+        }
         callback(err, res);
         return;
     });

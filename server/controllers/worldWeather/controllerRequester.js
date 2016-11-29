@@ -10,7 +10,7 @@ var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
 
 var commandCategory = ['all','met','owm','wu', 'dsf'];
-var command = ['get_all','get', 'req_add', 'add_key'];
+var command = ['get_all','get', 'req_add', 'req_two_days', 'add_key'];
 
 /**
  *
@@ -42,10 +42,10 @@ function ControllerRequester(){
             case 'get_all':
                 if(req.params.category === 'WU'){
                     var collector;
-                    if(global.collector){
-                        collector = global.collector;
-                    }else{
+                    if(global.collector === undefined){
                         collector = new conCollector;
+                    }else{
+                        collector = global.collector;
                     }
                     collector.runTask(true, function(err){
                         if(err){
@@ -77,6 +77,21 @@ function ControllerRequester(){
                     next();
                 });
                 break;
+
+            case 'req_two_days':
+                self.reqDataForTwoDays(req, function(err){
+                    if(err){
+                        log.error('RQ>  fail to run req_two_days');
+                        req.result = {status: 'Fail', cmd: req.params.command};
+                        next();
+                        return;
+                    }
+                    log.info('RQ> success adding req_two_days');
+                    req.result = {status: 'OK', cmd: req.params.command};
+                    next();
+                });
+                break;
+
             case 'add_key':
                 if(global.collector){
                     self.addKey(req, function(err){
@@ -177,8 +192,8 @@ ControllerRequester.prototype.isValidCommand = function(req){
         }
     }
 
-    log.silly('category: ', req.params.category);
-    log.silly('command : ', req.params.command);
+    log.info('category: ', req.params.category);
+    log.info('command : ', req.params.command);
     log.silly(i, commandCategory.length, j , command.length)
     return (i < commandCategory.length && j < command.length);
 };
@@ -367,7 +382,12 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
             function(cb){
                 // 2. get weather data from provider.
                 req.weather = {};
-                var collector = new conCollector;
+                var collector;
+                if(global.collector === undefined){
+                    collector = new conCollector;
+                }else{
+                    collector = global.collector;
+                }
                 async.parallel([
                         function(callback){
                             collector.requestWuData(req.geocode, function(err, wuData){
@@ -381,7 +401,7 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                             });
                         },
                         function(callback){
-                            collector.requestDsfData(req.geocode, function(err, dsfData){
+                            collector.requestDsfData(req.geocode,1 ,8, function(err, dsfData){
                                 if(err){
                                     log.error('RQ> Fail to requestDsfData');
                                     callback('Fail to requestDsfData');
@@ -415,6 +435,55 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
             if(callback){
                 callback(err, result);
             }
+        }
+    );
+};
+
+ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
+    var self = this;
+    req.weather = {};
+    var collector;
+    if(global.collector === undefined){
+        collector = new conCollector;
+    }else{
+        collector = global.collector;
+    }
+
+    if(!self.parseGeocode(req)) {
+        log.error('There are no geocode : reqDataForTwoDays()');
+        callback('err_no_geocode');
+        return;
+    }
+
+    async.parallel([
+            function(cb){
+                collector.requestWuData(req.geocode, function(err, wuData){
+                    if(err){
+                        log.error('RQ> Fail to requestWuData');
+                        cb('Fail to requestWuData');
+                        return;
+                    }
+
+                    cb(null);
+                });
+            },
+            function(cb){
+                collector.requestDsfData(req.geocode, 0, 2, function(err, dsfData){
+                    if(err){
+                        log.error('RQ> Fail to requestDsfData');
+                        cb('Fail to requestDsfData');
+                        return;
+                    }
+
+                    cb(null);
+                });
+            }
+        ],
+        function(err, result){
+            if(err){
+                log.error('RQ> Fail to request weather');
+            }
+            callback(err, result);
         }
     );
 };

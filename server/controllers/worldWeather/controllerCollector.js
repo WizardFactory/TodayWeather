@@ -545,6 +545,7 @@ ConCollector.prototype._parseWuCurrent = function(src, date){
  */
 ConCollector.prototype._addWuCurrentToList = function(newData, list){
     var self = this;
+    var isExist = false;
 
     list.forEach(function(oldData, index){
         if(oldData.date === newData.date){
@@ -553,11 +554,13 @@ ConCollector.prototype._addWuCurrentToList = function(newData, list){
             });
 
             print.info('updated olditem : ', newData.date);
+            isExist = true;
         }
     });
 
-    list.push(newData);
-
+    if(!isExist){
+        list.push(newData);
+    }
     return list;
 };
 
@@ -707,6 +710,8 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
                     data.date = date;
                     data.days = [];
                     data.days = newData;
+                    data.dateObj = self._getDateObj(date);
+
                     //log.info(data);
                     data.save(function(err){
                         if(err){
@@ -768,6 +773,7 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
             }else{
                 list.forEach(function(data, index){
                     data.date = date;
+                    data.dateObj = self._getDateObj(date);
                     data.dataList = self._addWuCurrentToList(newData, data.dataList);
 
                     data.dataList.sort(function(a, b){
@@ -825,7 +831,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                         return;
                     }
 
-                    log.info(result);
+                    log.info('WU Forecase : ', result);
                     self.saveWuForecast(geocode, date, result, function(err, forecastData){
                         cb(undefined, 1);
                     });
@@ -845,7 +851,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                         return;
                     }
 
-                    log.info(result);
+                    log.info('WU Current : ', result);
                     self.saveWuCurrent(geocode, date, result, function(err, currentData){
                         cb(undefined, 1);
                     });
@@ -1061,7 +1067,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 var newItem = new modelDSForecast({geocode:geocode,
                                                     address:{},
                                                     date:date,
-                                                    dateObj: self._getDateObj(date),
+                                                    dateObj: self._getUtcTime(''+date +'000'),
                                                     timeoffset:timeOffset,
                                                     data : weatherData
                 });
@@ -1077,12 +1083,44 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 //print.info('WuF> add new Item : ', newData);
             }else{
                 list.forEach(function(data, index){
-                    data.date = date;
-                    data.data.push({
-                        current : newData.current,
-                        hourly : newData.hourly,
-                        daily: newData.daily
+                    var isExist = false;
+                    if(data.date < date){
+                        data.date = date;
+                    }
+                    var pubDate = self._getUtcTime('' + date +'000');
+                    if(data.dateObj < pubDate){
+                        data.dateObj = pubDate;
+                    }
+                    data.data.forEach(function(dbItem){
+                        if(dbItem.current.dateObj.getYear() === newData.current.dateObj.getYear() &&
+                            dbItem.current.dateObj.getMonth() === newData.current.dateObj.getMonth() &&
+                            dbItem.current.dateObj.getDay() === newData.current.dateObj.getDay() &&
+                            dbItem.current.dateObj.getHours() === newData.current.dateObj.getHours()) {
+                            dbItem.current = newData.current;
+                            dbItem.hourly = newData.hourly;
+                            dbItem.daily = newData.daily;
+                            isExist = true;
+                        }
                     });
+
+                    if(!isExist){
+                        data.data.push({
+                            current : newData.current,
+                            hourly : newData.hourly,
+                            daily: newData.daily
+                        });
+                    }
+
+                    data.data.sort(function(a, b){
+                        if(a.current.date > b.current.date){
+                            return 1;
+                        }
+                        if(a.current.date < b.current.date){
+                            return -1;
+                        }
+                        return 0;
+                    });
+
                     if(data.data.length > self.MAX_DSF_COUNT){
                         data.data.shift();
                     }
@@ -1184,7 +1222,7 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, date, retryCount, 
  *
  * @param self
  * @param list
- * @param date
+ * @param date : NOTE!!! : UCT timestring
  * @param isRetry
  * @param callback
  */
@@ -1235,13 +1273,13 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
  * @param geocode
  * @param callback
  */
-ConCollector.prototype.requestDsfData = function(geocode, callback){
+ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     var self = this;
     var key = self._getDSFKey().key;
     var dataList = [];
     var requester = new dsfRequester;
 
-    for(var i=1 ; i<8 ; i++){
+    for(var i=From ; i<To ; i++){
         var dateString = self._getTimeString(0 - (24 * i)).slice(0,10) + '00';
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
@@ -1278,6 +1316,7 @@ ConCollector.prototype.requestDsfData = function(geocode, callback){
         }
     );
 };
+
 /**************************************************************************************/
 
 /**
@@ -1370,10 +1409,6 @@ ConCollector.prototype.runTask = function(isAll, callback){
         funcList.push(self.processWuForecast);
     }
 
-    if(isAll){
-        //funcList.push(self.processDSForecast);
-    }
-
     var date = parseInt(self._getTimeString(0).slice(0,10) + '00');
 
     if(funcList.length > 0){
@@ -1399,7 +1434,9 @@ ConCollector.prototype.runTask = function(isAll, callback){
 ConCollector.prototype.doCollect = function(){
     var self = this;
 
-    global.collector = self;
+    if(global.collector === undefined){
+        global.collector = self;
+    }
 
     self.runTask(true);
     setInterval(function() {

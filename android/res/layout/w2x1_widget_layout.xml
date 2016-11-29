@@ -50,7 +50,7 @@
                     android:layout_gravity="center"
                     android:textSize="10sp"
                     android:textColor="#ffffff"
-                    android:text="구름동"
+                    android:text=""
                     android:textAlignment="center"/>
 
                 <!-- current temperature and sky -->
@@ -66,7 +66,7 @@
                         android:textStyle="bold"
                         android:textSize="38sp"
                         android:textColor="#ffffff"
-                        android:text="17"/>
+                        android:text=""/>
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
@@ -95,7 +95,7 @@
                     android:layout_gravity="center"
                     android:textSize="9sp"
                     android:textColor="#ffffff"
-                    android:text="어제보다 5도 높음"
+                    android:text=""
                     android:textAlignment="center"/>
             </LinearLayout>
 
@@ -104,6 +104,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="fill_parent"
                 android:orientation="vertical"
+                android:gravity="center_horizontal"
                 android:layout_marginLeft="5dip"
                 android:weightSum="1">
 
@@ -139,7 +140,7 @@
                             android:textStyle="bold"
                             android:textSize="9sp"
                             android:textColor="#59515c"
-                            android:text="28"/>
+                            android:text=""/>
                         <TextView
                             android:id="@+id/today_separator_temperature"
                             android:layout_width="wrap_content"
@@ -155,7 +156,7 @@
                             android:textStyle="bold"
                             android:textSize="9sp"
                             android:textColor="#59515c"
-                            android:text="14" />
+                            android:text="" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -192,7 +193,7 @@
                             android:textStyle="bold"
                             android:textSize="9sp"
                             android:textColor="#484749"
-                            android:text="22" />
+                            android:text="" />
                         <TextView
                             android:id="@+id/yesterday_separator_temperature"
                             android:layout_width="wrap_content"
@@ -208,7 +209,7 @@
                             android:textStyle="bold"
                             android:textSize="9sp"
                             android:textColor="#484749"
-                            android:text="12" />
+                            android:text="" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

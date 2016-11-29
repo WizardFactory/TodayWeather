@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HeuteWetter</string>
+    <string name="aqi">LQI</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="cmp_yesterday">%1$s˚ als gestern</string>
+    <string name="current_position">Aktueller Standort</string>
+    <string name="fail_to_get_location">HeuteWetter : Fehler beim Abrufen des Standorts.</string>
+    <string name="hazardous">Gefährlich</string>
+    <string name="good">Gut</string>
+    <string name="moderate">Mäßig</string>
+    <string name="unhealthy">Ungesund</string>
+    <string name="unhealthy_for_sensitive_groups">Ungesund für empfindliche Gruppen</string>
+    <string name="very_unhealthy">Sehr ungesund</string>
+    <string name="move_main">Gehen Sie auf die App</string>
+    <string name="msg_do_not_widget_data_plz_update">Wetterinfo ist nichts\nBitte klicken zum Aktualisieren.</string>
+    <string name="pm10">PM10</string>
+    <string name="pm25">PM2.5</string>
+    <string name="same_yesterday">Das gleiche wie gestern</string>
+    <string name="today">Heute</string>
+    <string name="tomorrow">Morgen</string>
+    <string name="update">Aktualisieren</string>
+    <string name="yesterday">Gestern</string>
+</resources>
