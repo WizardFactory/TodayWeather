@@ -571,11 +571,11 @@ function controllerWorldWeather(){
                 if(req.result.daily === undefined){
                     req.result.daily = [];
                 }
-                //log.info('SDATE : ', startDate.toString());
+                log.info('WU SDATE : ', startDate.toString());
 
                 forecast.days.forEach(function(item){
                     //log.info('Daily Data', item.summary.dateObj.toString());
-                    if(item.summary.dateObj >= startDate){
+                    if(item.summary.dateObj.getTime() >= startDate.getTime()){
                         req.result.daily.push(self._makeDailyDataFromWU(item.summary));
 
                         if(req.result.timely === undefined){
@@ -585,19 +585,25 @@ function controllerWorldWeather(){
                         item.forecast.forEach(function(time){
                             var index = -1;
 
-                            for(var i=0 ; i<req.result.timely.length ; i++){
-                                if((req.result.timely[i].date === time.dateObj)
-                                    || req.result.timely[i].date === ('' + time.date + time.time)){
-                                    index = i;
-                                    break;
+                            //log.info('MG WU timely > item', time.dateObj.toString());
+                            if(time.dateObj.getTime() >= startDate.getTime()){
+                                for(var i=0 ; i<req.result.timely.length ; i++){
+                                    if(req.result.timely[i].date.getYear() === time.dateObj.getYear() &&
+                                        req.result.timely[i].date.getMonth() === time.dateObj.getMonth() &&
+                                        req.result.timely[i].date.getDay() === time.dateObj.getDay() &&
+                                        req.result.timely[i].date.getHours() === time.dateObj.getHours()){
+                                        index = i;
+                                        log.info('MergeWU Timely> Found!! same date');
+                                        break;
+                                    }
                                 }
-                            }
 
-                            if(index > 0){
-                                req.result.timely[i] = self._makeTimelyDataFromWU(time);
-                            }
-                            else{
-                                req.result.timely.push(self._makeTimelyDataFromWU(time));
+                                if(index < req.result.timely.length){
+                                    req.result.timely[i] = self._makeTimelyDataFromWU(time);
+                                }
+                                else{
+                                    req.result.timely.push(self._makeTimelyDataFromWU(time));
+                                }
                             }
                         });
                     }
@@ -610,9 +616,12 @@ function controllerWorldWeather(){
 
     self.mergeWuCurrentDataToTimely = function(req, res, next){
         if(req.WU.current){
+            var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
+            var startDate = self._getDateObj(dateString);
+
             var list = req.WU.current.dataList;
             var curDate = new Date();
-            log.info('MG WuCToTimely> curDate ', curDate);
+            log.info('MG WuCToTimely> curDate ', curDate.toString());
 
             if(req.result.timely === undefined){
                 req.result.timely = [];
@@ -633,13 +642,20 @@ function controllerWorldWeather(){
 
             list.forEach(function(curItem){
                 var isExist = 0;
-                if(curItem.dateObj && curItem.dateObj > curDate){
-                    log.info('MG WuCToTimely> skip future data', curItem.dateObj);
+                if(curItem.dateObj && curItem.dateObj.getTime() > curDate.getTime()){
+                    log.info('MG WuCToTimely> skip future data', curItem.dateObj.toString());
+                    return;
+                }
+
+                // 과거 2일까지의 데이터만처리 한다. timely data는 과거 1~2일 데이터만 필요함.
+                if(curItem.dateObj && curItem.dateObj.getTime() < startDate.getTime()){
+                    log.info('MG WuCToTimely> skip past data', curItem.dateObj.toString());
                     return;
                 }
 
                 for(var i=0 ; i<req.result.timely.length ; i++){
-                    if(req.result.timely[i].dateObj === curItem.dateObj){
+                    if(req.result.timely[i].dateObj != undefined &&
+                        req.result.timely[i].dateObj.getTime() === curItem.dateObj.getTime()){
                         isExist = 1;
                         if(curItem.desc){
                             req.result.timely[i].desc = curItem.desc;
@@ -789,8 +805,9 @@ function controllerWorldWeather(){
                 }
                 req.result.pubDate.DSF = dsf.dateObj;
             }
-            log.info('SDate : ', startDate.toString());
-            log.info('CDdate : ', cDate.toString());
+
+            log.info('DSF Daily> SDate : ', startDate.toString());
+            log.info('DSF Daily> CDdate : ', cDate.toString());
 
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
@@ -806,13 +823,76 @@ function controllerWorldWeather(){
                             }
                         });
                         if(!isExist){
-                            log.info('Find! DSF -> Daily : ', dbItem.dateObj.toString());
+                            //log.info('NEW! DSF -> Daily : ', dbItem.dateObj.toString());
                             req.result.daily.push(self._makeDailyDataFromDSF(dbItem));
                         }
                     }
                 });
             });
 
+        }
+        next();
+    };
+
+    self.mergeDsfHourlyData = function(req, res, next){
+        var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
+        var startDate = self._getDateObj(dateString);
+        var cDate = new Date();
+
+        if(req.DSF && req.DSF.data){
+            if(req.result === undefined){
+                req.resutl = {};
+            }
+
+            var dsf = req.DSF;
+
+            if(req.result.location === undefined){
+                req.result.location = {};
+                req.result.location.lat = dsf.geocode.lat;
+                req.result.location.lon = dsf.geocode.lon;
+            }
+
+            if(req.result.timely === undefined){
+                req.result.timely = [];
+            }
+
+            if(dsf.date){
+                if(req.result.pubDate === undefined){
+                    req.result.pubDate = {};
+                }
+                req.result.pubDate.DSF = dsf.date;
+            }
+
+            if(dsf.dateObj){
+                if(req.result.pubDate === undefined){
+                    req.result.pubDate = {};
+                }
+                req.result.pubDate.DSF = dsf.dateObj;
+            }
+
+            log.info('DSF Hourly> SDate : ', startDate.toString());
+            log.info('DSF Hourly> CDdate : ', cDate.toString());
+
+            dsf.data.forEach(function(item){
+                item.hourly.data.forEach(function(dbItem){
+                    var isExist = false;
+                    if(dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+                        req.result.timely.forEach(function(timely){
+                            //log.info('hourlyItem : ', timely.date.toString());
+                            if(timely.date.getYear() === dbItem.dateObj.getYear() &&
+                                timely.date.getMonth() === dbItem.dateObj.getMonth() &&
+                                timely.date.getDay() === dbItem.dateObj.getDay() &&
+                                timely.date.getHours() === dbItem.dateObj.getHours()){
+                                isExist = true;
+                            }
+                        });
+                        if(!isExist){
+                            //log.info('NEW! DSF -> Hourly : ', dbItem.dateObj.toString());
+                            req.result.timely.push(self._makeTimelyDataFromDSF(dbItem));
+                        }
+                    }
+                });
+            });
         }
         next();
     };
@@ -1066,21 +1146,21 @@ function controllerWorldWeather(){
             day.sunset = summary.sunset;
         }
         if(summary.temp_max){
-            day.tempMax_c = summary.temp_max;
-            day.tempMax_f = (summary.temp_max * 9/5)+32;
+            day.tempMax_c = (summary.temp_max - 32) / (9/5);
+            day.tempMax_f = summary.temp_max;
         }
 
         if(summary.temp_min){
-            day.tempMin_c = summary.temp_min;
-            day.tempMin_f = (summary.temp_min * 9/5)+32;
+            day.tempMin_c = (summary.temp_min - 32) / (9/5);
+            day.tempMin_f = summary.temp_min;
         }
         if(summary.ftemp_max){
-            day.ftempMax_c = summary.ftemp_max;
-            day.ftempMax_f = (summary.ftemp_max * 9/5)+32;
+            day.ftempMax_c = (summary.ftemp_max - 32) / (9/5);
+            day.ftempMax_f = summary.ftemp_max;
         }
         if(summary.ftemp_min){
-            day.ftempMin_c = summary.ftemp_min;
-            day.ftempMin_f = (summary.ftemp_min * 9/5)+32;
+            day.ftempMin_c = (summary.ftemp_min - 32) / (9/5);
+            day.ftempMin_f = summary.ftemp_min;
         }
 
         day.precType = 0;
@@ -1094,14 +1174,15 @@ function controllerWorldWeather(){
         if(summary.pre_pro){
             day.precProb = summary.pre_pro * 100;
         }
+        if(summary.pre_int){
+            day.precip = summary.pre_int;
+        }
         if(summary.humid){
             day.humid = summary.humid;
         }
         if(summary.windspd){
-            day.windSpd_ms = summary.windspdmax;
-        }
-        if(summary.windspdmax_mh){
-            day.windSpd_mh = summary.windspdmax_mh;
+            day.windSpd_mh = summary.windspd;
+            day.windSpd_ms = summary.windspd * 0.44704;
         }
         if(summary.pres){
             day.press = summary.pres;
@@ -1111,6 +1192,62 @@ function controllerWorldWeather(){
         }
 
         return day;
+    };
+
+    self._makeTimelyDataFromDSF = function(summary){
+        var timely = {};
+
+        if(summary.date){
+            timely.date = summary.date;
+        }
+        if(summary.dateObj){
+            timely.date = summary.dateObj;
+        }
+        if(summary.summary){
+            timely.desc = summary.summary;
+        }
+        if(summary.temp){
+            timely.temp_c = (summary.temp - 32) / (9/5);
+            timely.temp_f = summary.temp;
+        }
+        if(summary.ftemp){
+            timely.ftemp_c = (summary.ftemp - 32) / (9/5);
+            timely.ftemp_f = summary.ftemp;
+        }
+        if(summary.cloud){
+            timely.cloud = summary.cloud;
+        }
+        if(summary.windspd){
+            timely.windSpd_mh = summary.windspd;
+            timely.windSpd_ms = summary.windspd * 0.44704;
+        }
+        if(summary.humid){
+            timely.humid = summary.humid;
+        }
+        timely.precType = 0;
+        if(summary.pre_type == 'rain'){
+            timely.precType += 1;
+        }
+        if(summary.pre_type == 'snow'){
+            timely.precType += 2;
+        }
+        if(summary.pre_pro){
+            timely.precProb = summary.pre_pro * 100;
+        }
+        if(summary.pre_int){
+            timely.precip = summary.pre_int;
+        }
+        if(summary.vis){
+            timely.vis = ((summary.vis * 1.16093) * 10) / 10;
+        }
+        if(summary.pres){
+            timely.press = summary.press;
+        }
+        if(summary.oz){
+            timely.oz = summary.oz;
+        }
+
+        return timely;
     };
 
     /**

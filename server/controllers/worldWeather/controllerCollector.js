@@ -949,6 +949,9 @@ ConCollector.prototype._parseDSForecast = function(src){
         result.current.summary = src.currently.summary;
         result.current.pre_int = self._getFloatItem(src.currently.precipIntensity);
         result.current.pre_pro = self._getFloatItem(src.currently.precipProbability);
+        if(src.currently.precipType){
+            result.current.pre_type = src.currently.precipType;
+        }
         result.current.temp = self._getFloatItem(src.currently.temperature);
         result.current.ftemp = self._getFloatItem(src.currently.apparentTemperature);
         result.current.humid = self._getFloatItem(src.currently.humidity);
@@ -968,8 +971,14 @@ ConCollector.prototype._parseDSForecast = function(src){
 
             hourlyData.dateObj = self._getUtcTime(item.time + '000');
             hourlyData.date = parseInt(self._convertTimeToDate(item.time + '000'));
+            if(item.summary){
+                hourlyData.summary = item.summary;
+            }
             hourlyData.pre_int = self._getFloatItem(item.precipIntensity);
             hourlyData.pre_pro = self._getFloatItem(item.precipProbability);
+            if(item.precipType){
+                hourlyData.pre_type = item.precipType;
+            }
             hourlyData.temp = self._getFloatItem(item.temperature);
             hourlyData.ftemp = self._getFloatItem(item.apparentTemperature);
             hourlyData.humid = self._getFloatItem(item.humidity);
@@ -999,7 +1008,9 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.pre_intmax = self._getFloatItem(item.precipIntensityMax);
             dailyData.pre_intmaxt = parseInt(self._convertTimeToDate(item.precipIntensityMaxTime + '000'));
             dailyData.pre_pro = self._getFloatItem(item.precipProbability);
-            dailyData.pre_type = self._getFloatItem(item.precipType);
+            if(item.precipType){
+                dailyData.pre_type = item.precipType;
+            }
             dailyData.temp_min = self._getFloatItem(item.temperatureMin);
             dailyData.temp_mint = parseInt(self._convertTimeToDate(item.temperatureMinTime + '000'));
             dailyData.temp_max = self._getFloatItem(item.temperatureMax);

@@ -20,7 +20,7 @@ var wuCurrentSchema = new mongoose.Schema({
         ftemp_f:      {type:Number, default:-100},        // 체감온도
         humid:      {type:Number, default:-100},        // 습도
         windspd:    {type:Number, default:-100},        // meters per second, 풍속
-        windspd_mh:    {type:Number, default:-100},        // meters per hours, 풍속
+        windspd_mh:    {type:Number, default:-100},        // miles per hours, 풍속
         winddir:    {type:Number, default:-100},        // degree, 풍향
         cloud:      {type:Number, default:-100},        // percent, 구름량
         vis:        {type:Number, default:-100},        // kilometers, 가시거리
