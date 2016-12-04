@@ -24,62 +24,28 @@ angular.module('starter.controllers', [])
         $scope.imgPath = Util.imgPath;
 
         if ($scope.forecastType == 'mid') {
-            var dayStr = [];
-            $translate(['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT']).then(function (translations) {
-                dayStr.push(translations.LOC_SUN);
-                dayStr.push(translations.LOC_MON);
-                dayStr.push(translations.LOC_TUE);
-                dayStr.push(translations.LOC_WED);
-                dayStr.push(translations.LOC_THU);
-                dayStr.push(translations.LOC_FRI);
-                dayStr.push(translations.LOC_SAT);
-            }, function (translationIds) {
-                dayStr.push(translationIds.LOC_SUN);
-                dayStr.push(translationIds.LOC_MON);
-                dayStr.push(translationIds.LOC_TUE);
-                dayStr.push(translationIds.LOC_WED);
-                dayStr.push(translationIds.LOC_THU);
-                dayStr.push(translationIds.LOC_FRI);
-                dayStr.push(translationIds.LOC_SAT);
-            });
-
             $scope.dayToString = function(day) {
+                var dayStr = ['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT'];
                 return dayStr[day];
             };
 
             $scope.dayToFullString = function(day) {
-                var dayFullStr = ['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY', 'LOC_FRIDAY', 'LOC_SATURDAY'];
+                var dayFullStr = ['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY',
+                    'LOC_FRIDAY', 'LOC_SATURDAY'];
                 return dayFullStr[day];
             };
         }
 
-        var dayFromTodayStr = [];
-        $translate(['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY', 'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW', 'LOC_FROM_TODAY']).then(function (translations) {
-            dayFromTodayStr.push(translations.LOC_A_COUPLE_OF_DAYS_AGO);
-            dayFromTodayStr.push(translations.LOC_THE_DAY_BEFORE_YESTERDAY);
-            dayFromTodayStr.push(translations.LOC_YESTERDAY);
-            dayFromTodayStr.push(translations.LOC_TODAY);
-            dayFromTodayStr.push(translations.LOC_TOMORROW);
-            dayFromTodayStr.push(translations.LOC_THE_DAY_AFTER_TOMORROW);
-            dayFromTodayStr.push(translations.LOC_TWO_DAYS_AFTER_TOMORROW);
-            dayFromTodayStr.push(translations.LOC_FROM_TODAY);
-        }, function (translationIds) {
-            dayFromTodayStr.push(translationIds.LOC_A_COUPLE_OF_DAYS_AGO);
-            dayFromTodayStr.push(translationIds.LOC_THE_DAY_BEFORE_YESTERDAY);
-            dayFromTodayStr.push(translationIds.LOC_YESTERDAY);
-            dayFromTodayStr.push(translationIds.LOC_TODAY);
-            dayFromTodayStr.push(translationIds.LOC_TOMORROW);
-            dayFromTodayStr.push(translationIds.LOC_THE_DAY_AFTER_TOMORROW);
-            dayFromTodayStr.push(translationIds.LOC_TWO_DAYS_AFTER_TOMORROW);
-            dayFromTodayStr.push(translationIds.LOC_FROM_TODAY);
-        });
-
         $scope.getDayString = function (day) {
+            var dayFromTodayStr =['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY',
+                'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW',
+                'LOC_FROM_TODAY'];
             if (-3 <= day && day <= 3) {
                 return dayFromTodayStr[day + 3];
             }
             else {
-                return day+dayFromTodayStr[dayFromTodayStr.length-1];
+                //이 케이스 아직 없음.
+                return dayFromTodayStr[dayFromTodayStr.length-1];
             }
             console.error("Fail to get day string day=" + day);
             return "";
@@ -146,8 +112,9 @@ angular.module('starter.controllers', [])
 
                 'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
                 'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED'];
-            return weatherTypeStr[type];
+            return weatherTypeStr[current.weatherType];
         };
+
         var regionSize;
         var regionSumSize;
         var bigDigitSize;
@@ -168,6 +135,32 @@ angular.module('starter.controllers', [])
         var alphaBar;
         var pBigDigit;
         var imgBigSkyStateSize;
+
+        var strError = "Error";
+        var strAddLocation = "Add locations";
+        var strClose = "Close";
+        var strRetry = "Retry";
+        var strFailToGetAddressInfo = "Fail to get location information";
+        var strFailToGetCurrentPosition = "Fail to find your current location";
+        var strFailToGetWeatherInfo = "Fail to get weather info.";
+        var strPleaseTurnOnLocationWiFi = "Please turn on location and Wi-FI";
+        $scope.strHour = "h";
+
+        $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
+            'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI']).then(function (translations) {
+            strError = translations.LOC_ERROR;
+            strAddLocation = translations.LOC_ADD_LOCATIONS;
+            strClose = translations.LOC_CLOSE;
+            strRetry = translations.LOC_RETRY;
+            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            $scope.strHour = translations.LOC_HOUR;
+        }, function (translationIds) {
+            console.log("Fail to translate : " + JSON.stringify(translationIds));
+        });
 
         function init() {
             //identifyUser();
@@ -192,6 +185,12 @@ angular.module('starter.controllers', [])
                 bodyHeight = 640;
                 bodyWidth = 360;
             }
+
+            colWidth = bodyWidth/7;
+            if (colWidth > 60) {
+                colWidth = 60;
+            }
+            $scope.colWidth = colWidth;
 
             if (bodyWidth >= TABLET_WIDTH && bodyWidth < bodyHeight) {
                 headerRatio = 0.4;
@@ -267,18 +266,22 @@ angular.module('starter.controllers', [])
 
             regionSize = mainHeight * 0.0306 * padding; //0.051
             regionSize = regionSize<33.04?regionSize:33.04;
+            $scope.regionSize = regionSize;
 
             regionSumSize = mainHeight * 0.0336 * padding; //0.047
             regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
+            $scope.regionSumSize = regionSumSize;
 
             bigDigitSize = mainHeight * 0.16544 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
+            $scope.bigDigitSize = bigDigitSize;
 
             //bigTempPointSize = mainHeight * 0.03384 * padding; //0.0423
             //bigTempPointSize = bigTempPointSize<27.4?bigTempPointSize:27.4;
 
             bigSkyStateSize = mainHeight * 0.11264 * padding; //0.1408
             bigSkyStateSize = bigSkyStateSize<91.2?bigSkyStateSize:91.2;
+            $scope.bigSkyStateSize = bigSkyStateSize;
 
             //smallTimeSize = mainHeight * 0.0299 * smallPadding;
             //smallTimeSize = smallTimeSize<19.37?smallTimeSize:19.37;
@@ -302,18 +305,8 @@ angular.module('starter.controllers', [])
                 }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
-                    var strError = translations.LOC_ERROR;
-                    var message = translations.LOC_ADD_LOCATIONS;
-                    $scope.showAlert(strError, message, function() {
-                        $location.path('/tab/search');
-                    });
-                }, function (translationIds) {
-                    var strError = translationIds.LOC_ERROR;
-                    var message = translationIds.LOC_ADD_LOCATIONS;
-                    $scope.showAlert(strError, message, function() {
-                        $location.path('/tab/search');
-                    });
+                $scope.showAlert(strError, strAddLocation, function() {
+                    $location.path('/tab/search');
                 });
                 return;
             }
@@ -321,44 +314,6 @@ angular.module('starter.controllers', [])
 
             applyWeatherData();
             loadWeatherData();
-        }
-
-        //<p class="textFont" ng-style="::{'font-size':regionSize+'px'}" style="margin: 0">
-        //    <a class="icon ion-ios-location-outline" style="color: white;" ng-if="currentPosition"></a>{{address}}</p>
-        //<div class="row row-no-padding">
-        //    <div style="margin: auto">
-        //        <div class="row row-no-padding">
-        //            <p ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0">{{currentWeather.t1h}}</p>
-        //            <div style="text-align: left; margin: auto">
-        //                <img ng-if="currentWeather.t1h!==undefined" ng-style="::{'height':bigTempPointSize+'px'}"  ng-src="img/{{::reddot}}.png">
-        //                <br>
-        //                <img ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
-        //            </div>
-        //        </div>
-        //    </div>
-        //</div>
-        //<p class="textFont" ng-style="::{'font-size':regionSumSize+'px'}" style="margin: 0;">{{currentWeather.summary}}</p>
-        function getTopMainBox() {
-            var str = '';
-            console.log('address='+shortenAddress);
-            str += '<p id="cityInfo" class="textFont" style="font-size:'+regionSize+'px; margin: 8px 0">';
-            if (cityData.currentPosition) {
-                str += '<a class="icon ion-ios-location-outline" style="color: white;"></a>';
-            }
-            str += shortenAddress+'</p>';
-            str += '<div class="row row-no-padding"> <div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">';
-            str +=      '<p id="pBigDigit" style="font-size: '+bigDigitSize+'px; margin: 0; font-weight:300">'+Math.round(cityData.currentWeather.t1h);
-            str +=      '<span style="font-size: '+bigDigitSize/2+'px;vertical-align: super;">˚</span></p>';
-            str +=      '<div style="text-align: left; margin: auto">';
-            //str +=          '<img id="imgBigTempPointSize" style="height: '+bigTempPointSize+'px; width: '+bigTempPointSize+'px" src="img/reddot.png">';
-            //str +=          '<br>';
-            str +=          '<img id="imgBigSkyStateSize" style="height: '+bigSkyStateSize+'px; width: '+bigSkyStateSize+'px" src="'+Util.imgPath+'/'+
-                                cityData.currentWeather.skyIcon+'.png">';
-            str +=      '</div>';
-            str += '</div></div></div>';
-            str += '<p id="summary" class="textFont" style="font-size: '+regionSumSize+'px; margin: 0;">'+
-                $rootScope.summary+'</p>';
-            return str;
         }
 
         /**
@@ -526,112 +481,6 @@ angular.module('starter.controllers', [])
 
         $scope.getMidTableHeight = getMidTableHeight;
 
-        //<div class="row row-no-padding">
-        //    <div style="width: 26px;"></div>
-        //    <div class="col"
-        //         ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date"
-        //         ng-repeat="value in dayTable">
-        //            <p ng-style="::{'font-size':smallTimeSize+'px'}"
-        //               style="margin: 0; opacity: 0.84">
-        //                {{getDayText(value)}} <span style="font-size: 13px; opacity: 0.54">{{getDayForecast(value)}}</span>
-        //            </p>
-        //    </div>
-        //    <div style="width: 26px;"></div>
-        //</div>
-        //<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-        //<div class="row row-no-padding" style="flex: 1">
-        //    <div class="col table-items" ng-repeat="value in timeTable">
-        //        <p ng-style="::{'font-size':smallTimeSize+'px'}" style="margin: auto">{{value.time}}</p>
-        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.tempIcon}}.png">
-        //        <p ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.t3h}}˚</p>
-        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
-        //        <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
-        //        <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize +'px'}" style="margin: auto">{{value.rn1}}<span
-        //                style="font-size:10px" ng-if="value.pty !== 3">mm</span><span
-        //                style="font-size:10px" ng-if="value.pty === 3">cm</span></p>
-        //    </div>
-        //</div>
-        var strHour;
-        $translate('LOC_HOUR').then(function (translations) {
-            strHour = translations;
-        }, function (translationIds) {
-            strHour = translationIds;
-        });
-
-        function getShortTable() {
-            var i;
-            var value;
-            var str = '';
-
-            str += '<div class="row row-no-padding"> <div style="width: '+colWidth/2+'px;"></div>';
-            for (i=0; i<cityData.dayTable.length; i++) {
-                value = cityData.dayTable[i];
-                if (value.date > cityData.timeTable[0].date && value.date <= cityData.timeTable[cityData.timeTable.length-1].date) {
-                    str += '<div class="col">';
-                    str +=   '<p class="caption" style="margin: 0;">';
-                    str +=       $scope.getDayText(value);
-                    str += '</p></div>';
-                }
-            }
-            str += '<div class="table-border" style="width: '+colWidth/2+'px;"></div> </div>';
-
-            str += '<div class="row row-no-padding" style="border-bottom : 1px solid rgba(254,254,254,0.5);">';
-            for (i=0; i<cityData.timeTable.length; i++) {
-                value = cityData.timeTable[i];
-                str += '<div class="col table-items" style="text-align: center;">';
-                if (value.time == 24) {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + '0'+strHour+ '</p>';
-                }
-                else {
-                    str += '<p class="subheading" style="letter-spacing: 0; margin: auto; padding: 2px;">' + value.time+strHour + '</p>';
-                }
-                str += '</div>';
-            }
-            str += '</div>';
-
-            return str;
-        }
-
-        //<hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
-        //<div class="row row-no-padding" style="flex: 1">
-        //    <div class="col table-items" ng-repeat="value in dayTable">
-        //        <p ng-style="::{'font-size':smallTimeSize+'px',
-        //                'border-bottom':value.fromToday === 0 ? '1px solid rgba(255,255,255,0.8)':'',
-        //                'opacity':value.fromToday===0?'1':'0.84'}" style="margin: auto">{{value.week}}</p>
-
-        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto;" ng-src="{{::imgPath}}/{{value.skyIcon}}.png">
-        //        <p ng-if="value.rn1 === undefined" ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">{{value.pop}}<small>%</small></p>
-        //        <p ng-if="value.rn1 !== undefined" ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">
-        //            {{value.rn1}}
-        //            <span style="font-size:10px" ng-if="value.pty !== 3">mm</span>
-        //            <span style="font-size:10px" ng-if="value.pty === 3">cm</span>
-        //        </p>
-        //        <img ng-style="::{'width':smallImageSize+'px'}" style="margin: auto" ng-src="img/{{value.humidityIcon}}.png">
-        //        <p ng-style="::{'font-size':smallDigitSize+'px'}" style="margin: auto">{{value.reh}}<small>%</small></p>
-        //    </div>
-        //</div>
-        function getMidTable() {
-            var str = '';
-            var i;
-            var value;
-            str += '<div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">';
-            for (i=0; i<cityData.dayTable.length; i++) {
-                value = cityData.dayTable[i];
-                str += '<div class="col table-items">';
-                str +=  '<p class="body1" style="margin: 0;';
-                if (value.fromToday === 0)  {
-                    str += ' opacity: 1;">';
-                }
-                else {
-                    str += ' opacity: 0.84;">';
-                }
-                str +=  $scope.dayToString(value.dayOfWeek) + '</p>';
-                str += '</div>';
-            }
-            str += '</div>';
-            return str;
-        }
-
         function applyWeatherData() {
             console.log('apply weather data');
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
@@ -640,29 +489,16 @@ angular.module('starter.controllers', [])
                 return;
             }
 
-            $scope.timeWidth = getWidthPerCol() * cityData.timeTable.length;
-            $scope.dayWidth = getWidthPerCol() * cityData.dayTable.length;
+            $scope.timeWidth = colWidth * cityData.timeTable.length;
+            console.log("timeWidth="+$scope.timeWidth);
+            $scope.dayWidth = colWidth * cityData.dayTable.length;
 
             shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
+            $scope.address = shortenAddress;
             console.log(shortenAddress);
             $scope.currentWeather = cityData.currentWeather;
-            //console.log($scope.currentWeather);
-            //$scope.timeTable = cityData.timeTable;
-            //console.log($scope.timeTable);
-            $scope.timeChart = cityData.timeChart;
-            //console.log($scope.timeChart);
-            //$scope.dayTable = cityData.dayTable;
-            //console.log($scope.dayTable);
-            $scope.dayChart = cityData.dayChart;
-            //console.log($scope.dayChart);
 
             $scope.currentPosition = cityData.currentPosition;
-
-            _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-            _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday).then(function () {
-                $scope.topMainBox = $sce.trustAsHtml(getTopMainBox());
-            });
-
 
             $scope.updateTime = (function () {
                if (cityData.currentWeather) {
@@ -676,71 +512,76 @@ angular.module('starter.controllers', [])
                    }
                }
             })();
+
             // To share weather information for apple watch.
             // AppleWatch.setWeatherData(cityData);
 
-            setTimeout(function () {
-                //var mainHeight = document.getElementById('ionContentBody').offsetHeight;
-                var mainHeight = bodyHeight * contentRatio;
-                var padding = 0;
+            var mainHeight = bodyHeight * contentRatio;
+            var padding = 0;
 
-                //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
-                //광고 제거 버전했을 때, AQI가 보이게 padding맞춤. 나머지 14px는 chart에서 사용됨.
-                if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
-                    padding += 36;
-                }
+            //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
+            //광고 제거 버전했을 때, AQI가 보이게 padding맞춤. 나머지 14px는 chart에서 사용됨.
+            if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+                padding += 36;
+            }
 
-                if (bodyHeight === 480) {
-                    //iphone4
+            if (bodyHeight === 480) {
+                //iphone4
+                padding -= 32;
+            }
+            else if (ionic.Platform.isAndroid()) {
+                //status bar
+                padding += 24;
+                if (bodyHeight <= 512) {
+                    //view2 4:3
                     padding -= 32;
                 }
-                else if (ionic.Platform.isAndroid()) {
-                   //status bar
-                    padding += 24;
-                    if (bodyHeight <= 512) {
-                        //view2 4:3
-                        padding -= 32;
-                    }
+            }
+
+            if($scope.forecastType == 'short') {
+                if (showAqi && cityData.currentWeather.arpltn) {
+                    padding += 36;
                 }
-
+                var chartShortHeight = mainHeight - (143 + padding);
+                $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
+            }
+            else {
+                if (showAqi && cityData.dayTable.length >= 8 && cityData.dayTable[7].dustForecast) {
+                    padding+=36;
+                }
+                var chartMidHeight = mainHeight - (136+padding);
+                $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
+            }
+            /**
+             * loading을 분산시켜서 탭 전환을 빠르게 보이도록 함.
+             */
+            setTimeout(function () {
+                $scope.showDetailWeather = true;
+                _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
+                _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday);
+                $scope.dayTable = cityData.dayTable;
                 if($scope.forecastType == 'short') {
-                    //topMainBox height is startHeight
-                    if (showAqi && cityData.currentWeather.arpltn) {
-                        padding+=36;
-                    }
-                    var chartShortHeight = mainHeight - (143+padding);
-                    $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
-                    $scope.shortTable =  $sce.trustAsHtml(getShortTable());
+                    $scope.timeTable = cityData.timeTable;
+                    $scope.timeChart = cityData.timeChart;
 
-                    setTimeout(function () {
-                        // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-                        if (ionic.Platform.isAndroid()) {
-                            $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                        } else {
-                            $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
-                        }
-                    }, 0);
+                    // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                    if (ionic.Platform.isAndroid()) {
+                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                    } else {
+                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                    }
                 }
                 else {
-                    if (showAqi && cityData.dayTable[7].dustForecast) {
-                        padding+=36;
+                    $scope.dayChart = cityData.dayChart;
+
+                    if (ionic.Platform.isAndroid()) {
+                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
+                    } else {
+                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
+                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
                     }
-                    var chartMidHeight = mainHeight - (128+padding);
-                    $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
-                    $scope.midTable = $sce.trustAsHtml(getMidTable());
-
-                    setTimeout(function () {
-                        if (ionic.Platform.isAndroid()) {
-                            $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                            $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
-                        } else {
-                            $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
-                            $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
-                        }
-                    }, 0);
                 }
-
-                $scope.showDetailWeather = true;
             });
         }
 
@@ -748,17 +589,6 @@ angular.module('starter.controllers', [])
          * retry popup이 없는 경우 항상 undefined여야 함.
          */
         var confirmPopup;
-        var strError, strClose, strRetry;
-        $translate(['LOC_ERROR', 'LOC_CLOSE', 'LOC_RETRY']).then(function (translations) {
-            strError = translations.LOC_ERROR;
-            strClose = translations.LOC_CLOSE;
-            strRetry = translations.LOC_RETRY;
-        }, function (translationIds) {
-            strError = translationIds.LOC_ERROR;
-            strClose = translationIds.LOC_CLOSE;
-            strRetry = translationIds.LOC_RETRY;
-        });
-
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 if (confirmPopup) {
@@ -832,23 +662,6 @@ angular.module('starter.controllers', [])
 
         function updateWeatherData() {
             var deferred = $q.defer();
-            var strFailToGetAddressInfo;
-            var strFailToGetCurrentPostion;
-            var strFailToGetWeatherInfo;
-            var strPleaseTurnOnLocationWiFi;
-
-            $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION', 'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI']).then(function (translations) {
-                strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-                strFailToGetCurrentPostion = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-                strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
-                strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-            }, function (translationIds) {
-                strFailToGetAddressInfo = translationIds.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-                strFailToGetCurrentPostion = translationIds.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-                strFailToGetWeatherInfo = translationIds.LOC_FAIL_TO_GET_WEATHER_INFO;
-                strPleaseTurnOnLocationWiFi = translationIds.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-            });
-
             if (cityData.currentPosition === true) {
                 WeatherUtil.getCurrentPosition().then(function (coords) {
                     WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
@@ -877,15 +690,14 @@ angular.module('starter.controllers', [])
                                     '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                             }
 
-                            var msg = "날씨 정보를 가져오지 못하였습니다.";
-                            deferred.reject(msg);
+                            deferred.reject(strFailToGetWeatherInfo);
                         });
                     }, function () {
                         deferred.reject(strFailToGetAddressInfo);
                     });
                 }, function () {
                     Util.ga.trackEvent('position', 'error', 'all');
-                    var msg = strFailToGetCurrentPostion;
+                    var msg = strFailToGetCurrentPosition;
                     if (ionic.Platform.isAndroid()) {
                         msg += "<br>" + strPleaseTurnOnLocationWiFi;
                     }
@@ -921,18 +733,6 @@ angular.module('starter.controllers', [])
             return deferred.promise;
         }
 
-        function getWidthPerCol() {
-            if (colWidth)  {
-                return colWidth;
-            }
-
-            colWidth = bodyWidth/7;
-            if (colWidth > 60) {
-                colWidth = 60;
-            }
-            return colWidth;
-        }
-
         function getTodayPosition() {
             var time = new Date();
             var index = 0;
@@ -943,7 +743,7 @@ angular.module('starter.controllers', [])
 
                 //large tablet
                 if (bodyWidth >= TABLET_WIDTH) {
-                    return getWidthPerCol()*index;
+                    return colWidth*index;
                 }
 
                 if(hours >= 3) {
@@ -957,7 +757,7 @@ angular.module('starter.controllers', [])
                     index += 1;
                 }
 
-                return getWidthPerCol()*index;
+                return colWidth*index;
             }
             else if ($scope.forecastType === 'mid') {
 
@@ -967,9 +767,9 @@ angular.module('starter.controllers', [])
                 }
                 //today is 3th.
                 index = 5;
-                return getWidthPerCol()*index;
+                return colWidth*index;
             }
-            return getWidthPerCol()*index;
+            return colWidth*index;
         }
 
         $scope.onSwipeLeft = function() {
@@ -992,23 +792,19 @@ angular.module('starter.controllers', [])
             loadWeatherData();
         };
 
-        $scope.getDayText = function (value) {
-            return $scope.getDayString(value.fromToday) + ' ' + value.date.substr(4,2) + '.' + value.date.substr(6,2);
-        };
-
         $scope.convertMMDD = function (value) {
             return value.substr(4,2)+'/'+value.substr(6,2);
         };
 
         function _diffTodayYesterday(current, yesterday) {
-            var strSameAsYesterday;
-            var strThanYesterday;
+            var strSameAsYesterday = "Same as yesterday";
+            var strThanYesterday = "%s˚ than yesterday";
+
             $translate(['LOC_SAME_AS_YESTERDAY', 'LOC_THAN_YESTERDAY']).then(function (translations) {
                 strSameAsYesterday = translations.LOC_SAME_AS_YESTERDAY;
                 strThanYesterday = translations.LOC_THAN_YESTERDAY;
             }, function (translationIds) {
-                strSameAsYesterday = translationIds.LOC_SAME_AS_YESTERDAY;
-                strThanYesterday = translationIds.LOC_THAN_YESTERDAY;
+                console.log("Fail to translate : " + JSON.stringify(translationIds));
             }).finally(function () {
                 var str = "";
                 if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
@@ -1221,58 +1017,72 @@ angular.module('starter.controllers', [])
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
 
+        var strFailToGetAddressInfo = "Fail to get location information";
+        var strFailToGetCurrentPosition = "Fail to find your current location";
+        var strFailToGetWeatherInfo = "Fail to get weather info.";
+        var strPleaseTurnOnLocationWiFi = "Please turn on location and Wi-FI";
+        var strError = "Error";
+        var strAlreadyTheSameLocationHasBeenAdded = "Already the same location has been added.";
+        var strCurrent = "Current";
+        var strLocation = "Location";
+
+        $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
+            'LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED', 'LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
+            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            strError = translations.LOC_ERROR;
+            strAlreadyTheSameLocationHasBeenAdded = translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED;
+            strCurrent = translations.LOC_CURRENT;
+            strLocation = translations.LOC_LOCATION;
+        }, function (translationIds) {
+            console.log("Fail to translate : " + JSON.stringify(translationIds));
+        });
+
         function init() {
             $ionicHistory.clearHistory();
 
-            var strCurrent;
-            var strLocation;
-            $translate(['LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
-                strCurrent = translations.LOC_CURRENT;
-                strLocation = translations.LOC_LOCATION;
-            }, function (translationIds) {
-                strCurrent = translationIds.LOC_CURRENT;
-                strLocation = translationIds.LOC_LOCATION;
-            }).finally(function () {
-                for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
-                    var city = WeatherInfo.getCityOfIndex(i);
-                    var address = WeatherUtil.getShortenAddress(city.address).split(",");
-                    var todayData = null;
+            for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
+                var city = WeatherInfo.getCityOfIndex(i);
+                var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                var todayData = null;
 
-                    if (city.currentPosition && city.address === null) {
-                        address = [strCurrent, strLocation];
-                    }
-                    if (!city.currentWeather) {
-                        city.currentWeather = {};
-                    }
-                    if (!city.currentWeather.skyIcon) {
-                        city.currentWeather.skyIcon = 'Sun';
-                    }
-                    if (city.currentWeather.t1h === undefined) {
-                        city.currentWeather.t1h = '-';
-                    }
-                    if (city.dayTable != null) {
-                        todayData = city.dayTable.filter(function (data) {
-                            return (data.fromToday === 0);
-                        });
-                    }
-                    if (!todayData || todayData.length === 0) {
-                        todayData = [{tmn:'-', tmx:'-'}];
-                    }
-
-                    var data = {
-                        address: address,
-                        currentPosition: city.currentPosition,
-                        disable: city.disable,
-                        skyIcon: city.currentWeather.skyIcon,
-                        t1h: city.currentWeather.t1h,
-                        tmn: todayData[0].tmn,
-                        tmx: todayData[0].tmx,
-                        alarmInfo: Push.getAlarm(i)
-                    };
-                    $scope.cityList.push(data);
-                    loadWeatherData(i);
+                if (city.currentPosition && city.address === null) {
+                    address = [strCurrent, strLocation];
                 }
-            });
+                if (!city.currentWeather) {
+                    city.currentWeather = {};
+                }
+                if (!city.currentWeather.skyIcon) {
+                    city.currentWeather.skyIcon = 'Sun';
+                }
+                if (city.currentWeather.t1h === undefined) {
+                    city.currentWeather.t1h = '-';
+                }
+                if (city.dayTable != null) {
+                    todayData = city.dayTable.filter(function (data) {
+                        return (data.fromToday === 0);
+                    });
+                }
+                if (!todayData || todayData.length === 0) {
+                    todayData = [{tmn:'-', tmx:'-'}];
+                }
+
+                var data = {
+                    address: address,
+                    currentPosition: city.currentPosition,
+                    disable: city.disable,
+                    skyIcon: city.currentWeather.skyIcon,
+                    t1h: city.currentWeather.t1h,
+                    tmn: todayData[0].tmn,
+                    tmx: todayData[0].tmx,
+                    alarmInfo: Push.getAlarm(i)
+                };
+                $scope.cityList.push(data);
+                loadWeatherData(i);
+            }
         }
 
         $scope.OnChangeSearchWord = function() {
@@ -1294,26 +1104,6 @@ angular.module('starter.controllers', [])
             $scope.isEditing = false;
 
             $ionicLoading.show();
-
-            var strFailToGetAddressInfo;
-            var strFailToGetCurrentPostion;
-            var strFailToGetWeatherInfo;
-            var strPleaseTurnOnLocationWiFi;
-            var strError;
-
-            $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION', 'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR']).then(function (translations) {
-                strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-                strFailToGetCurrentPostion = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-                strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
-                strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-                strError = translations.LOC_ERROR;
-            }, function (translationIds) {
-                strFailToGetAddressInfo = translationIds.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-                strFailToGetCurrentPostion = translationIds.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-                strFailToGetWeatherInfo = translationIds.LOC_FAIL_TO_GET_WEATHER_INFO;
-                strPleaseTurnOnLocationWiFi = translationIds.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-                strError = translationIds.LOC_ERROR;
-            });
 
             WeatherUtil.getCurrentPosition().then(function (coords) {
                 WeatherUtil.getAddressFromGeolocation(coords.latitude, coords.longitude).then(function (address) {
@@ -1343,7 +1133,7 @@ angular.module('starter.controllers', [])
                 });
             }, function () {
                 Util.ga.trackEvent('position', 'error', 'all');
-                var msg = strFailToGetCurrentPostion;
+                var msg = strFailToGetCurrentPosition;
                 if (ionic.Platform.isAndroid()) {
                     msg += "<br>" + strPleaseTurnOnLocationWiFi;
                 }
@@ -1426,11 +1216,7 @@ angular.module('starter.controllers', [])
 
                 if (WeatherInfo.addCity(city) === false) {
                     Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-                    $translate("LOC_ERROR", "LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED").then(function (translations) {
-                        $scope.showAlert(translations.LOC_ERROR, translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED);
-                    }, function (translationIds) {
-                        $scope.showAlert(translationIds.LOC_ERROR, translationIds.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED);
-                    });
+                    $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                 }
                 else {
                     Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
@@ -1450,11 +1236,7 @@ angular.module('starter.controllers', [])
                         '(' + error + ')', endTime - startTime);
                 }
 
-                $translate("LOC_ERROR", "LOC_FAIL_TO_GET_WEATHER_INFO").then(function (translations) {
-                    $scope.showAlert(translations.LOC_ERROR, translations.LOC_FAIL_TO_GET_WEATHER_INFO);
-                }, function (translationIds) {
-                    $scope.showAlert(translationIds.LOC_ERROR, translationIds.LOC_FAIL_TO_GET_WEATHER_INFO);
-                });
+                $scope.showAlert(strError, strFailToGetWeatherInfo);
 
                 $ionicLoading.hide();
             });
@@ -1535,7 +1317,21 @@ angular.module('starter.controllers', [])
                 ipObj1.inputTime = 8*60*60; //AM 8:00
             }
 
-            ionicTimePicker.openTimePicker(ipObj1);
+            var strSetting = "Setting";
+            var strDelete = "Delete";
+            var strClose = "Close";
+            $translate(['LOC_SETTING', 'LOC_DELETE', 'LOC_CLOSE']).then(function (translations) {
+                strSetting = translations.LOC_SETTING;
+                strDelete = translations.LOC_DELETE;
+                strClose = translations.LOC_CLOSE;
+            }, function (translationIds) {
+                console.log("Fail to translate "+ JSON.stringify(translationIds));
+            }).finally(function () {
+                ipObj1.setLabel = strSetting;
+                ipObj1.cancelLabel = strDelete;
+                ipObj1.closeLabel = strClose;
+                ionicTimePicker.openTimePicker(ipObj1);
+            });
         };
 
         function loadWeatherData(index) {
@@ -1722,8 +1518,11 @@ angular.module('starter.controllers', [])
             }
         };
 
+        /**
+         * 설정에 정보 팝업으로, 늦게 로딩되어도 상관없고 호출될 가능성이 적으므로 그냥 현상태 유지.
+         */
         $scope.openInfo = function() {
-            var strTitle;
+            var strTitle = "TodayWeather";
             var strMsg;
             $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
                 strTitle = translations.LOC_TODAYWEATHER;
@@ -1794,6 +1593,18 @@ angular.module('starter.controllers', [])
     .controller('TabCtrl', function($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
                                      $location, TwAds, $rootScope, Util, $translate) {
         var currentTime;
+        var strError = "Error";
+        var strAddLocation = "Add locations";
+        var strOkay = "OK";
+        var strCancel = "Cancel";
+        $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_OK', 'LOC_CANCEL']).then(function (translations) {
+            strError = translations.LOC_ERROR;
+            strAddLocation = translations.LOC_ADD_LOCATIONS;
+            strOkay = translations.LOC_OK;
+            strCancel = translations.LOC_CANCEL;
+        }, function (translationIds) {
+            console.log("Fail to translate : "+JSON.stringify(translationIds));
+        });
 
         function init() {
             currentTime = new Date();
@@ -1812,17 +1623,7 @@ angular.module('starter.controllers', [])
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                var strError;
-                var strAddLocation;
-                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
-                    strError = translations.LOC_ERROR;
-                    strAddLocation = translations.LOC_ADD_LOCATIONS;
-                }, function (translationIds) {
-                    strError = translationIds.LOC_ERROR;
-                    strAddLocation = translationIds.LOC_ADD_LOCATIONS;
-                }).finally(function () {
-                    $scope.showAlert(strError, strAddLocation);
-                });
+                $scope.showAlert(strError, strAddLocation);
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
@@ -1866,17 +1667,7 @@ angular.module('starter.controllers', [])
             var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData == undefined || cityData.location == undefined) {
                 console.log('Fail to load city');
-                var strError;
-                var strAddLocation;
-                $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS']).then(function (translations) {
-                    strError = translations.LOC_ERROR;
-                    strAddLocation = translations.LOC_ADD_LOCATIONS;
-                }, function (translationIds) {
-                    strError = translationIds.LOC_ERROR;
-                    strAddLocation = translationIds.LOC_ADD_LOCATIONS;
-                }).finally(function () {
-                    $scope.showAlert(strError, strAddLocation);
-                });
+                $scope.showAlert(strError, strAddLocation);
                 return;
             }
 
@@ -1922,16 +1713,6 @@ angular.module('starter.controllers', [])
             }
         };
 
-        var strOkay;
-        var strCancel;
-        $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
-            strOkay = translations.LOC_OK;
-            strCancel = translations.LOC_CANCEL;
-        }, function (translationIds) {
-            strOkay = translationIds.LOC_OK;
-            strCancel = translationIds.LOC_CANCEL;
-        });
-
         $scope.showAlert = function(title, msg, callback) {
             var alertPopup = $ionicPopup.alert({
                 title: title,
@@ -1972,13 +1753,13 @@ angular.module('starter.controllers', [])
 
         $scope.data = { 'autoSearch': false };
 
-        var strClose;
-        var strSkip;
-        var strCancel;
-        var strOkay;
-        var strUseYourCurrentLocation;
-        var strFindLocationByName;
-        var strTodayWeather;
+        var strClose = "Close";
+        var strSkip = "Skip";
+        var strCancel = "Cancel";
+        var strOkay = "OK";
+        var strUseYourCurrentLocation = "Use your current location";
+        var strFindLocationByName = "Find location by name";
+        var strTodayWeather = "TodayWeather";
 
         function init() {
             //for fast close ads when first loading
@@ -2005,7 +1786,8 @@ angular.module('starter.controllers', [])
 
             guideVersion = localStorage.getItem("guideVersion");
 
-            $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK', 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
+            $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK',
+                'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
                 strTodayWeather = translations.LOC_TODAYWEATHER;
                 strClose = translations.LOC_CLOSE;
                 strSkip = translations.LOC_SKIP;
@@ -2014,13 +1796,7 @@ angular.module('starter.controllers', [])
                 strUseYourCurrentLocation = translations.LOC_USE_YOUR_CURRENT_LOCATION;
                 strFindLocationByName = translations.LOC_FIND_LOCATION_BY_NAME;
             }, function (translationIds) {
-                strTodayWeather = translationIds.LOC_TODAYWEATHER;
-                strClose = translationIds.LOC_CLOSE;
-                strSkip = translationIds.LOC_SKIP;
-                strCancel = translationIds.LOC_CANCEL;
-                strOkay = translationIds.LOC_OK;
-                strUseYourCurrentLocation = translationIds.LOC_USE_YOUR_CURRENT_LOCATION;
-                strFindLocationByName = translationIds.LOC_FIND_LOCATION_BY_NAME;
+                console.log("Fail to translate : " + JSON.stringify(translationIds));
             }).finally(function () {
                 update();
             });

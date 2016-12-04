@@ -4,9 +4,21 @@
             <div class="cityArrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
                 <span class="icon-left ion-chevron-left"></span>
             </div>
-
-            <div id="bigInfoBox" class="topMainBox" ng-bind-html="topMainBox"></div>
-
+            <div id="bigInfoBox" class="topMainBox">
+                <p id="cityInfo" class="textFont" ng-style="::{'font-size':regionSize+'px'}" style="margin: 8px 0">
+                    <a ng-if="currentPosition" class="icon ion-ios-location-outline" style="color: white;"> </a>{{address}}
+                </p>
+                <div class="row row-no-padding"><div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">
+                    <p id="pBigDigit" ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0; font-weight:300">
+                        {{currentWeather.t1h}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
+                    </p>
+                    <div style="text-align: left; margin: auto">
+                        <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
+                    </div>
+                </div></div></div>
+                <p id="summary" class="textFont" ng-style="::{'font-size':regionSumSize+'px'}" style="margin: 0;">{{summary}}
+                </p>
+            </div>
             <div class="cityArrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
                 <span class="icon-right ion-chevron-right"></span>
             </div>
@@ -17,27 +29,34 @@
                  scrollbar-x="false" has-bouncing="false" style="top: 0">
         <div id="contentBody">
             <div md-header-picture ng-style="{'height':headerHeight+'px'}"></div>
-            <div class="main-content"
-                 ng-class="{'short-forecast':forecastType==='short', 'mid-forecast':forecastType==='mid'}">
+            <div class="main-content mid-forecast">
                <div class="col extend-content">
                     <ion-scroll delegate-handle="weeklyChart" direction="x" zooming="false" has-bouncing="false"
                                 scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                         <div class="col chartBox" style="margin: auto" ng-style="{'width':dayWidth +'px'}">
-                            <div id="midTable" class="col table-content" ng-bind-html="midTable"></div>
+                            <div id="midTable" class="col table-content" ng-if="dayTable">
+                                <div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">
+                                    <div class="col table-items" ng-repeat="value in dayTable">
+                                        <p class="body1" style="margin: 0;"
+                                           ng-style="{'opacity': value.fromToday===0?'1':'0.84'}">{{dayToString(value.dayOfWeek)|translate}}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                             <div ng-mid-chart class="chart-content" ng-style="{'height':chartMidHeight+'px'}"></div>
                         </div>
                     </ion-scroll>
 
-                   <div class="col" style="margin: 0;padding: 0" ng-if="showDetailWeather">
-                       <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                       <p class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DAILY_AQI_FORECAST"></p>
+                   <div class="col" style="margin: 0;padding: 0">
+                       <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                       <p ng-if="dayChart" class="caption" style="margin: 5px;" translate="LOC_DAILY_AQI_FORECAST"></p>
                        <table style="width: 100%">
                            <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
                                ng-repeat="day in dayChart[0].values">
                                <td style="text-align: center; margin: auto">
                                    <p class="body1" style="margin: 0 0 5px;">{{dayToFullString(day.dayOfWeek)|translate}}</p>
                                    <p class="display1" style="margin: 0 0 2px; opacity: 0.84">{{day.date.substr(6,2)}}</p>
-                                   <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)}}</p>
+                                   <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)|translate}}</p>
                                </td>
                                <td style="text-align: center; margin: auto">
                                    <p class="body1" style="margin: 0 0 5px;" translate="LOC_PM10"></p>
@@ -60,14 +79,14 @@
                                </td>
                            </tr>
                        </table>
-                       <hr style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                       <p class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
+                       <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                       <p ng-if="dayChart" class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
                        <ion-scroll delegate-handle="weeklyTable" direction="x" zooming="false" has-bouncing="false"
                                    scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                            <div class="row" style="margin: auto;">
                                <div style="margin: 0 auto; min-width: 132px" ng-if="$index == 6 || $index == 7 || $index == 8" ng-repeat="day in dayChart[0].values">
                                    <div class="row" style="margin: 0">
-                                       <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)}}</a>
+                                       <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
                                    </div>
                                    <div class="row" style="margin: 0" ng-if="day.reh">
                                        <img ng-src="img/Humidity-{{day.reh?day.reh - day.reh%10:'00'}}.png" style="height: 24px; margin: auto 0;">

@@ -135,7 +135,7 @@
   "LOC_TRANSPARENCY" : "투명도",
   "LOC_DEFAULT" : "기본",
   "LOC_FAIL_TO_CONNECT_VALIDATION_SERVER" : "구매확인 서버에 연결되지 않습니다.",
-  "LOC_PLEASE_RESTORE_AFTER_1-2_MINUTES" : "1~2분후에 구매 복원하기 해주세요.",
+  "LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES" : "1~2분후에 구매 복원하기 해주세요.",
   "LOC_PURCHASE_ERROR" : "구매오류",
   "LOC_RESTORING_PURCHASES" : "구매 복원중...",
   "LOC_RESTORE_ERROR" : "복원오류",
@@ -235,5 +235,7 @@
   "LOC_LIGHT_WIND" : "바람약함",
   "LOC_MODERATE_WIND" : "바람약간강함",
   "LOC_STRONG_WIND" : "바람강함",
-  "LOC_VERY_STRONG_WIND" : "바람매우강함"
+  "LOC_VERY_STRONG_WIND" : "바람매우강함",
+  "LOC_PURCHASING" : "구매중...",
+  "LOC_DELETE" : "삭제"
 }
