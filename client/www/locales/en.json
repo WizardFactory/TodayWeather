@@ -124,7 +124,7 @@
   "LOC_EXPIRY_DATE" : "Expiry date",
   "LOC_RENEW" : "Renew",
   "LOC_DISCOMFORT_INDEX" : "Discomfort index",
-  "LOC_AFTER_YOU_MAKE_A_CHANGE_YOU_NEED_TO_UPDATE_THE_WIDGET_TO_APPLY_THE_CHANGES" : "After you make a change, you need to update the widget to apply the changes.",
+  "LOC_AFTER_YOU_MAKE_A_CHANGE_YOU_NEED_TO_UPDATE_THE_WIDGET_TO_APPLY_THE_CHANGES" : "Need to update the widget to apply the changes.",
   "LOC_REFRESH_INTERVAL" : "Refresh interval",
   "LOC_MANUAL" : "Manual",
   "LOC_30_MINUTES" : "30 Minutes",
@@ -135,7 +135,7 @@
   "LOC_TRANSPARENCY" : "Transparency",
   "LOC_DEFAULT" : "Default",
   "LOC_FAIL_TO_CONNECT_VALIDATION_SERVER" : "Fail to connect validation server",
-  "LOC_PLEASE_RESTORE_AFTER_1-2_MINUTES" : "Please restore after 1~2 minutes",
+  "LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES" : "Please restore after 1~2 minutes",
   "LOC_PURCHASE_ERROR" : "Purchase error",
   "LOC_RESTORING_PURCHASES" : "Restoring Purchases...",
   "LOC_RESTORE_ERROR" : "Restore error",
@@ -157,7 +157,7 @@
   "LOC_CURRENT" : "Current",
   "LOC_OK" : "OK",
   "LOC_CANCEL": "Cancel",
-  "LOC_USE_YOUR_CURRENT_LOCATION" : "Use your current location",
+  "LOC_USE_YOUR_CURRENT_LOCATION" : "Use current location",
   "LOC_FIND_LOCATION_BY_NAME" : "Find location by name",
   "LOC_A_COUPLE_OF_DAYS_AGO" : "A couple of days ago",
   "LOC_THE_DAY_BEFORE_YESTERDAY" : "The day before yesterday",
@@ -235,5 +235,7 @@
   "LOC_LIGHT_WIND" : "Light wind",
   "LOC_MODERATE_WIND" : "Moderate wind",
   "LOC_STRONG_WIND" : "Strong wind",
-  "LOC_VERY_STRONG_WIND" : "Very strong wind"
+  "LOC_VERY_STRONG_WIND" : "Very strong wind",
+  "LOC_PURCHASING" : "Purchasing...",
+  "LOC_DELETE" : "Delete"
 }

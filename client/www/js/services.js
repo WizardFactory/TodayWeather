@@ -310,7 +310,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http, Util, $translate) {
+    .factory('WeatherUtil', function ($q, $http, Util) {
         var obj = {};
 
         //region Function

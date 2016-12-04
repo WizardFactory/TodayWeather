@@ -293,8 +293,26 @@ angular.module('controller.purchase', [])
 
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
 
+        var strPurchaseError = "Purchase error";
+        var strFailToConnectServer = "Fail to connect validation server.";
+        var strPleaseRestoreAfter = "Please restore after 1~2 minutes";
+        var strRestoringPurchases = "Restoring Purchases...";
+        var strRestoreError = "Restore error";
+        var strPurchasing = "Purchasing...";
+        $translate(['LOC_PURCHASE_ERROR', 'LOC_FAIL_TO_CONNECT_VALIDATION_SERVER', 'LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES',
+            'LOC_RESTORING_PURCHASES', 'LOC_RESTORE_ERROR', 'LOC_PURCHASING']).then(function (translations) {
+            strPurchaseError = translations.LOC_PURCHASE_ERROR;
+            strFailToConnectServer = translations.LOC_FAIL_TO_CONNECT_VALIDATION_SERVER;
+            strPleaseRestoreAfter = translations.LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES;
+            strRestoringPurchases = translations.LOC_RESTORING_PURCHASES;
+            strRestoreError = translations.LOC_RESTORE_ERROR;
+            strPurchasing = translations.LOC_PURCHASING;
+        }, function (translationIds) {
+           console.log("Fail to translations "+JSON.stringify(translationIds));
+        });
+
         $scope.order = function () {
-            $ionicLoading.show({ template: spinner + 'Purchasing...' });
+            $ionicLoading.show({ template: spinner + strPurchasing });
             console.log('subscribe product='+Purchase.productId);
             inAppPurchase
                 .subscribe(Purchase.productId)
@@ -320,7 +338,8 @@ angular.module('controller.purchase', [])
                         $ionicLoading.hide();
                         if (err) {
                             console.log(JSON.stringify(err));
-                            throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
+                            var msg =  strFailToConnectServer + " " + strPleaseRestoreAfter;
+                            throw new Error(msg);
                         }
                         console.log(JSON.stringify(receiptInfo));
                         if (!receiptInfo.ok) {
@@ -338,17 +357,17 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
-                    console.log('subscribe error');
+                    console.log(strPurchaseError);
                     console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: 'Purchase error',
+                        title: strPurchaseError,
                         template: err.message
                     });
                 });
         };
 
         $scope.restore = function () {
-            $ionicLoading.show({ template: spinner + 'Restoring Purchases...' });
+            $ionicLoading.show({ template: spinner + strRestoringPurchases });
 
             Purchase.updatePurchaseInfo()
                 .then(function (receiptInfo) {
@@ -371,7 +390,7 @@ angular.module('controller.purchase', [])
                     $ionicLoading.hide();
                     console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: 'Restore error',
+                        title: strRestoreError,
                         template: err.message
                     });
                 });
@@ -414,13 +433,14 @@ angular.module('controller.purchase', [])
 
             if (!window.inAppPurchase) {
                 //for develop mode
+                var title = "Premium";
+                var description = "Subscribe to premium and use without Ads for 1 year";
                 $translate(['LOC_PREMIUM', 'LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR']).then(function (translations) {
-                    var title = translations.LOC_PREMIUM;
-                    var description = translations.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
-                    $scope.product = {title: title,  price: '$1.09', description: description};
+                    title = translations.LOC_PREMIUM;
+                    description = translations.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
                 }, function (translationIds) {
-                    var title = translationIds.LOC_PREMIUM;
-                    var description = translationIds.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
+                    console.log("Fail to translations "+JSON.stringify(translationIds));
+                }).finally(function () {
                     $scope.product = {title: title,  price: '$1.09', description: description};
                 });
             }
