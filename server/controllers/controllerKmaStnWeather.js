@@ -104,7 +104,7 @@ controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
  * @returns {*}
  * @private
  */
-controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
+controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, opt) {
     var propertyName = ['stnId', 'stnName', 'weather', 'visibility', 'cloud', 'heavyCloud', 't1h', 'dpt', 'sensoryTem', 'dspls',
                         'r1d', 's1d', 'reh', 'wdd', 'vec', 'wsd', 'hPa', 'rs1h', 'rs1d', 'rns'];
     var propertyCount = 0;
@@ -113,8 +113,46 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, t1h) {
 
     for (var j=0; j<stnWeatherList.length; j++) {
         var stnWeatherInfo = stnWeatherList[j];
+        if (stnWeatherInfo.isT1hStn && mergedStnWeatherInfo) {
+            //clear t1h, dpt, sensoryTem, dspls in mergedStnWeatherInfo
+            mergedStnWeatherInfo.t1h = undefined;
+            mergedStnWeatherInfo.dpt = undefined;
+            mergedStnWeatherInfo.sensoryTem = undefined;
+            mergedStnWeatherInfo.dspls = undefined;
+        }
+        if (stnWeatherInfo.isRainStn && mergedStnWeatherInfo) {
+            //clear r1d, s1d, rs1h, rs1d, rns in mergedStnWeatherInfo
+            mergedStnWeatherInfo.r1d = undefined;
+            mergedStnWeatherInfo.s1d = undefined;
+            mergedStnWeatherInfo.rs1h = undefined;
+            mergedStnWeatherInfo.rs1d = undefined;
+            mergedStnWeatherInfo.rns = undefined;
+        }
 
         for (var i=2; i<propertyName.length; i++) {
+            if (!(opt == undefined)) {
+                if (opt.skipReh) {
+                    if (propertyName[i] == 'reh') {
+                        continue;
+                    }
+                }
+                if (opt.skipWsd) {
+                    if (propertyName[i] == 'wsd' || propertyName[i] == 'wdd' || propertyName[i] == 'vec' ) {
+                        continue;
+                    }
+                }
+                if (opt.skipTemp) {
+                    if (propertyName[i] == 't1h' || propertyName[i] == 'dpt' || propertyName[i] == 'sensoryTem' || propertyName[i] == 'dspls') {
+                        continue;
+                    }
+                }
+                if (opt.skipRain) {
+                    if (propertyName[i] == 'rns' || propertyName[i] == 'r1d' || propertyName[i] == 's1d' || propertyName[i] == 'rs1h' || propertyName[i] == 'rs1d') {
+                        continue;
+                    }
+                }
+            }
+
             if (stnWeatherInfo[propertyName[i]] != undefined) {
                 if (mergedStnWeatherInfo && mergedStnWeatherInfo[propertyName[i]] != undefined) {
                     log.silly('it already has property, skip property=', propertyName[i]);
@@ -222,12 +260,16 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                     }
                 }
 
-                var stnWeatherInfo = JSON.parse(JSON.stringify(minuteData));
-                stnWeatherInfo.stnId = stnInfo.stnId;
-                stnWeatherInfo.stnName = stnInfo.stnName;
-                stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
-
-                mCallback(err, stnWeatherInfo);
+                for (var key in minuteData) {
+                    stnInfo[key] = minuteData[key];
+                }
+                mCallback(err, stnInfo);
+                //var stnWeatherInfo = JSON.parse(JSON.stringify(minuteData));
+                //stnWeatherInfo.stnId = stnInfo.stnId;
+                //stnWeatherInfo.stnName = stnInfo.stnName;
+                //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
+                //
+                //mCallback(err, stnWeatherInfo);
             });
         },
         function (err, results) {
@@ -285,24 +327,31 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
 
            var hourlyData = stnWeatherList[0].hourlyData[0];
 
-           //for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
-           //    if (stnWeatherList[0].hourlyData[i].date === dateTime) {
-           //        hourlyData = stnWeatherList[0].hourlyData[i];
-           //        break;
-           //    }
-           //}
+           for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
+               if (stnWeatherList[0].hourlyData[i].date === dateTime) {
+                   hourlyData = stnWeatherList[0].hourlyData[i];
+                   break;
+               }
+           }
 
            if (hourlyData == undefined) {
                log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
                return mCallback();
            }
 
-           var stnWeatherInfo = JSON.parse(JSON.stringify(hourlyData));
-           stnWeatherInfo.stnId = stnInfo.stnId;
-           stnWeatherInfo.stnName = stnInfo.stnName;
-           stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
 
-           mCallback(err, stnWeatherInfo);
+           for (var key in hourlyData) {
+               stnInfo[key] = hourlyData[key];
+           }
+           stnInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+           mCallback(err, stnInfo);
+
+           //var stnWeatherInfo = JSON.parse(JSON.stringify(hourlyData));
+           //stnWeatherInfo.stnId = stnInfo.stnId;
+           //stnWeatherInfo.stnName = stnInfo.stnName;
+           //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
+           //stnWeatherInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+           //mCallback(err, stnWeatherInfo);
        });
     }, function (err, results) {
         if (err)  {
@@ -379,7 +428,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
             cb(err, results);
         });
     }, function (stnHourWeatherList, cb) {
-        var mergedStnWeather = self._mergeStnWeatherList(stnHourWeatherList, t1h);
+        var mergedStnWeather = self._mergeStnWeatherList(stnHourWeatherList);
         if (mergedStnWeather == undefined) {
             return cb(new Error('Fail to make stn Hourly Weather info town='+JSON.stringify(townInfo)));
         }
@@ -431,7 +480,7 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
                })
             },
             function (stnMinuteWeatherList, aCallback) {
-                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList, t1h);
+                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList);
                 if (mergedStnWeather == undefined) {
                     return aCallback(new Error('Fail to make stn Minute Weather info town='+JSON.stringify(townInfo)));
                 }
@@ -451,4 +500,135 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
     return this;
 };
 
+/**
+ * stnHourly와 stnMinute의 합치면서, hourly가 동네예보와 1도 이상 차이는 측정소의 온도는 skip함.
+ * @param townInfo
+ * @param dateTime
+ * @param t1h
+ * @param callback
+ */
+controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, current, callback) {
+    var self = this;
+
+    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
+    var stnDateHour = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ(dateTime);
+    var currentTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
+    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+    var opt = {};
+
+    async.waterfall([
+            function (aCallback) {
+                async.parallel([function (pCallback) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
+                        if (err) {
+                            return pCallback(err);
+                        }
+                        return pCallback(err, kmaStnList);
+                    });
+                }, function (pCallback) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+                        if (err) {
+                            return pCallback(err);
+                        }
+                        return pCallback(err, kmaStnList);
+                    });
+                }], function (err, results) {
+                    if (err) {
+                        return aCallback(err);
+                    }
+                    //var stnList = self._filterStnList(results[0].concat(results[1])) ;
+                    var stnList = results[0].concat(results[1]) ;
+                    aCallback(err, stnList);
+                });
+            }, function (stnList, cb) {
+                self._getStnHourlyList(stnList, currentTime, function (err, results) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    cb(err, results);
+                });
+            }, function (stnHourWeatherList, aCallback) {
+                var listFiltered = [];
+                var t1hIndex;
+                var rainIndex;
+                var cityWeatherIndex;
+                var pushedIndex;
+                stnHourWeatherList.forEach(function (stnHourWeather, index) {
+                    if (Math.abs(stnHourWeather.t1h - current.t1h) < 1 && t1hIndex == undefined) {
+                        stnHourWeather.isT1hStn = true;
+                        listFiltered.push(stnHourWeather);
+                        t1hIndex = pushedIndex = index;
+                        if (!(current.reh == undefined) && Math.abs(current.reh - stnHourWeather.reh) > 10) {
+                            opt.skipReh = true;
+                        }
+                        if (!(current.wsd == undefined) && !(stnHourWeather.wsd == undefined) &&
+                            Math.abs(current.wsd - stnHourWeather.wsd) > 1) {
+                            opt.skipWsd = true;
+                        }
+                    }
+
+                    if (stnHourWeather.rnsHitRate > 0.5 && rainIndex == undefined) {
+                        stnHourWeather.isRainStn = true;
+                        if (pushedIndex != index) {
+                            listFiltered.push(stnHourWeather);
+                            pushedIndex = index;
+                        }
+                        rainIndex =  index;
+                    }
+                    if (stnHourWeather.isCityWeather && cityWeatherIndex == undefined) {
+                        if (pushedIndex != index) {
+                            listFiltered.push(stnHourWeather);
+                            pushedIndex = index;
+                        }
+                        cityWeatherIndex = index;
+                    }
+                });
+
+                if (t1hIndex == undefined) {
+                    opt.skipTemp = true;
+                }
+                if (rainIndex == undefined) {
+                    opt.skipRain = true;
+                }
+                aCallback(undefined, listFiltered);
+            }, function (stnList, cb) {
+                if (stnDateHour != currentTime) {
+                    //update to last time
+                    self._getStnHourlyList(stnList, stnDateHour, function (err, results) {
+                        if (err) {
+                            return cb(err);
+                        }
+                        cb(err, results);
+                    });
+                }
+                else {
+                   cb(undefined, stnList);
+                }
+            }, function (stnList, aCallback) {
+                self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
+                    if (err) {
+                        return aCallback(err);
+                    }
+                    aCallback(err, results);
+                })
+            }, function (stnMinuteWeatherList, aCallback) {
+                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList, opt);
+                if (mergedStnWeather == undefined) {
+                    return aCallback(new Error('Fail to make stn checked Minute Weather info town='+JSON.stringify(townInfo)));
+                }
+                else {
+                    mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
+                }
+                aCallback(undefined, mergedStnWeather);
+            }
+        ],
+        function (err, result) {
+            if (err)  {
+                return callback(err);
+            }
+            callback(err, result);
+        });
+
+    return this;
+};
 module.exports = controllerKmaStnWeather;
