@@ -558,11 +558,11 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                         stnHourWeather.isT1hStn = true;
                         listFiltered.push(stnHourWeather);
                         t1hIndex = pushedIndex = index;
-                        if (!(current.reh == undefined) && Math.abs(current.reh - stnHourWeather.reh) > 10) {
+                        if (!(current.reh == undefined) && Math.abs(current.reh - stnHourWeather.reh) >= 10) {
                             opt.skipReh = true;
                         }
                         if (!(current.wsd == undefined) && !(stnHourWeather.wsd == undefined) &&
-                            Math.abs(current.wsd - stnHourWeather.wsd) > 1) {
+                            Math.abs(current.wsd - stnHourWeather.wsd) >= 1) {
                             opt.skipWsd = true;
                         }
                     }
@@ -586,6 +586,8 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
 
                 if (t1hIndex == undefined) {
                     opt.skipTemp = true;
+                    opt.skipReh = true;
+                    opt.skipWsd = true;
                 }
                 if (rainIndex == undefined) {
                     opt.skipRain = true;
