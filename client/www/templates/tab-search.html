@@ -18,12 +18,26 @@
                     </div>
                 </div>
             </div>
+            <div class="item item-divider" style="color: white" ng-if="searchResults.length > 0">
+                powered by TodayWeather
+            </div>
+            <div class="item" ng-repeat="result in searchResults2" ng-click="OnSelectResult(result)">
+                <div class="row row-no-padding">
+                    <div class="col search-item">
+                        <!--{{result.first}} {{result.second}} {{result.third}}-->
+                        {{result.description}}
+                    </div>
+                </div>
+            </div>
+            <div class="item item-divider" ng-if="searchResults2.length > 0">
+                <img src="img/powered_by_google_on_non_white.png" width="144px">
+            </div>
         </div>
         <div class="list list-inset" ng-if="searchWord===undefined">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
-                        <p style="color: white; opacity: 0.84; font-size: inherit">{{city.address[0]}}<br>{{city.address[1]}}
+                        <p style="color: white; opacity: 0.84; font-size: inherit">{{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
                             <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
                         </p>
                     </div>
