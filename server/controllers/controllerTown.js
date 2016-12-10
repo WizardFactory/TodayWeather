@@ -1026,7 +1026,7 @@ function ControllerTown() {
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHMM(now);
                 log.info(date+time);
-                controllerKmaStnWeather.getStnMinute(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
+                controllerKmaStnWeather.getStnCheckedMinute(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
                         next();
@@ -1039,8 +1039,12 @@ function ControllerTown() {
                         return;
                     }
 
+                    stnWeatherInfo.t1h = undefined;
+
                     for (var key in stnWeatherInfo) {
-                        req.current[key] = stnWeatherInfo[key];
+                        if (!(stnWeatherInfo[key] == undefined)) {
+                            req.current[key] = stnWeatherInfo[key];
+                        }
                     }
 
                     //24시 01분부터 1시까지 날짜 맞지 않음.

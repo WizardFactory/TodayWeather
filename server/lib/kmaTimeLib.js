@@ -112,6 +112,14 @@ kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM = function(dateStr) {
     return str;
 };
 
+kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ = function(dateStr) {
+    var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
+    if (dateStr.length > 8) {
+        str += '.' + dateStr.substr(8,2) + ':00';
+    }
+    return str;
+};
+
 /**
  * for kma scraper
  * @param date
