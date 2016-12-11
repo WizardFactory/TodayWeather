@@ -642,6 +642,10 @@ function controllerWorldWeather(){
 
             list.forEach(function(curItem){
                 var isExist = 0;
+                if(curItem.dateObj.getHours() != 0 && (curItem.dateObj.getHours() % 3) != 0){
+                    return;
+                }
+
                 if(curItem.dateObj && curItem.dateObj.getTime() > curDate.getTime()){
                     log.info('MG WuCToTimely> skip future data', curItem.dateObj.toString());
                     return;
@@ -876,7 +880,8 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.hourly.data.forEach(function(dbItem){
                     var isExist = false;
-                    if(dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+                    if((dbItem.dateObj.getHours() == 0 || (dbItem.dateObj.getHours() % 3) == 0)  &&
+                        dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
                         req.result.timely.forEach(function(timely){
                             //log.info('hourlyItem : ', timely.date.toString());
                             if(timely.date.getYear() === dbItem.dateObj.getYear() &&
@@ -1006,7 +1011,7 @@ function controllerWorldWeather(){
             result.temp_c = time.tmp;
         }
         if(time.tmp_f){
-            result.temp_f = time.tmp_f
+            result.temp_f = time.tmp_f;
         }
         if(time.ftmp){
             result.ftemp_c = time.ftmp;
@@ -1115,10 +1120,10 @@ function controllerWorldWeather(){
             day.humid = summary.humax;
         }
         if(summary.windspdmax){
-            day.windSpd_ms = summary.windspdmax;
+            day.windSpd_ms = parseFloat(summary.windspdmax.toFixed(2));
         }
         if(summary.windspdmax_mh){
-            day.windSpd_mh = summary.windspdmax_mh;
+            day.windSpd_mh = parseFloat(summary.windspdmax_mh.toFixed(2));
         }
         if(summary.slpmax){
             day.press = summary.slpmax;
@@ -1146,21 +1151,21 @@ function controllerWorldWeather(){
             day.sunset = summary.sunset;
         }
         if(summary.temp_max){
-            day.tempMax_c = (summary.temp_max - 32) / (9/5);
-            day.tempMax_f = summary.temp_max;
+            day.tempMax_c = parseFloat(((summary.temp_max - 32) / (9/5)).toFixed(1));
+            day.tempMax_f = parseFloat((summary.temp_max).toFixed(1));
         }
 
         if(summary.temp_min){
-            day.tempMin_c = (summary.temp_min - 32) / (9/5);
-            day.tempMin_f = summary.temp_min;
+            day.tempMin_c = parseFloat(((summary.temp_min - 32) / (9/5)).toFixed(1));
+            day.tempMin_f = parseFloat((summary.temp_min).toFixed(1));
         }
         if(summary.ftemp_max){
-            day.ftempMax_c = (summary.ftemp_max - 32) / (9/5);
-            day.ftempMax_f = summary.ftemp_max;
+            day.ftempMax_c = parseFloat(((summary.ftemp_max - 32) / (9/5)).toFixed(1));
+            day.ftempMax_f = parseFloat((summary.ftemp_max).toFixed(1));
         }
         if(summary.ftemp_min){
-            day.ftempMin_c = (summary.ftemp_min - 32) / (9/5);
-            day.ftempMin_f = summary.ftemp_min;
+            day.ftempMin_c = parseFloat(((summary.ftemp_min - 32) / (9/5)).toFixed(1));
+            day.ftempMin_f = parseFloat((summary.ftemp_min).toFixed(1));
         }
 
         day.precType = 0;
@@ -1181,14 +1186,14 @@ function controllerWorldWeather(){
             day.humid = summary.humid;
         }
         if(summary.windspd){
-            day.windSpd_mh = summary.windspd;
-            day.windSpd_ms = summary.windspd * 0.44704;
+            day.windSpd_mh = parseFloat(summary.windspd.toFixed(1));
+            day.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(1));
         }
         if(summary.pres){
             day.press = summary.pres;
         }
         if(summary.vis){
-            day.vis = ((summary.vis * 1.16093) * 10) / 10;
+            day.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(1));
         }
 
         return day;
@@ -1207,19 +1212,19 @@ function controllerWorldWeather(){
             timely.desc = summary.summary;
         }
         if(summary.temp){
-            timely.temp_c = (summary.temp - 32) / (9/5);
-            timely.temp_f = summary.temp;
+            timely.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
+            timely.temp_f = parseFloat(summary.temp.toFixed(1));
         }
         if(summary.ftemp){
-            timely.ftemp_c = (summary.ftemp - 32) / (9/5);
-            timely.ftemp_f = summary.ftemp;
+            timely.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
+            timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
             timely.cloud = summary.cloud;
         }
         if(summary.windspd){
-            timely.windSpd_mh = summary.windspd;
-            timely.windSpd_ms = summary.windspd * 0.44704;
+            timely.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
+            timely.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.humid){
             timely.humid = summary.humid;
@@ -1238,7 +1243,7 @@ function controllerWorldWeather(){
             timely.precip = summary.pre_int;
         }
         if(summary.vis){
-            timely.vis = ((summary.vis * 1.16093) * 10) / 10;
+            timely.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
         }
         if(summary.pres){
             timely.press = summary.press;
