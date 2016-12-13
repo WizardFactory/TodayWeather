@@ -17,7 +17,9 @@ router.get('/', function(req, res) {
     res.render('index', { title: 'TodayWeather' });
 });
 
-router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand, worldWeather.showUsage, worldWeather.sendResult]);
+router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand, worldWeather.showUsage,
+    worldWeather.sendResult]);
+
 router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather,
     worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentDataToTimely, worldWeather.mergeWuCurrentData,
     worldWeather.mergeDsfData, worldWeather.sendResult]);
@@ -25,5 +27,7 @@ router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.qu
 // temporary
 router.get('/:version/:category/:days', worldWeather.checkApiVersion, worldWeather.queryTwoDaysWeather,
     worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentDataToTimely, worldWeather.mergeWuCurrentData,
-    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfHourlyData, worldWeather.dataSort, worldWeather.sendResult);
+    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfHourlyData, worldWeather.dataSort, worldWeather.addLocalTime,
+    worldWeather.sendResult);
+
 module.exports = router;

@@ -709,16 +709,19 @@ function controllerWorldWeather(){
     };
 
     self.mergeWuCurrentData = function(req, res, next){
+        var i;
+        var curDate = new Date();
+
         if(req.WU.current){
             var list = req.WU.current.dataList;
-            var curDate = new Date();
-            log.info('MG WuC> curDate ', curDate);
+            log.info('MG WuC> curDate ', curDate.toISOString());
 
             if(req.result.current === undefined){
                 req.result.current = {};
             }
 
-            list.forEach(function(curItem){
+            for (i=list.length-1; i>=0; i--) {
+                var curItem = list[i];
                 if(curItem.dateObj
                     && curItem.dateObj.getYear() === curDate.getYear()
                     && curItem.dateObj.getMonth() === curDate.getMonth()
@@ -727,10 +730,46 @@ function controllerWorldWeather(){
                     log.info('MG WuC> Find matched current date', curItem.dateObj.toString());
 
                     req.result.current = self._makeTimelyDataFromWUCurrent(curItem);
+                    break;
                 }
+            }
+        }
+        //add yesterday info
+        if (req.DSF.data && req.result.current) {
+            var yesterday =  new Date(curDate);
+            yesterday.setDate(yesterday.getDate()-1);
+            log.info('MG WuC> yesterday ', yesterday.toISOString());
 
+            for (i=req.DSF.data.length-1;i>=0;i--) {
+                var curItem = req.DSF.data[i].current;
+                log.info(curItem.dateObj.toString());
 
-            });
+                if(curItem.dateObj
+                    && curItem.dateObj.getYear() === yesterday.getYear()
+                    && curItem.dateObj.getMonth() === yesterday.getMonth()
+                    && curItem.dateObj.getDate() === yesterday.getDate()) {
+                    if (curItem.dateObj.getHours() === yesterday.getHours()) {
+                        log.info('MG DSF> Find matched yesterday date', curItem.dateObj.toString());
+                        req.result.current.yesterday = self._makeTimelyDataFromDSF(curItem);
+                        next();
+                        return;
+                    }
+                    else {
+                        log.error('MG DSF> Fail to find matched current data of yesterday', curItem.dateObj.toString());
+                        var hourly = req.DSF.data[i].hourly.data;
+                        for (var j=hourly.length-1; j>= 0; j--) {
+                            if (hourly[j].dateObj.getHours() === yesterday.getHours()) {
+                                log.info('MG DSF> Find matched yesterday date in hourly ' + hourly[j].toString());
+                                req.result.current.yesterday = self._makeTimelyDataFromDSF(hourly[j]);
+                                next();
+                                return;
+                            }
+                        }
+                        log.error('MG DSF> Fail to find matched hourly data of yesterday');
+                    }
+                    break;
+                }
+            }
         }
         next();
     };
@@ -930,6 +969,75 @@ function controllerWorldWeather(){
         }
 
         next();
+    };
+
+    function _getLocalTimeStr(utcTime, offset) {
+        var date = new Date(utcTime);
+        date.setMinutes(date.getMinutes()+offset);
+
+        return date.getUTCFullYear()+
+            '.'+manager.leadingZeros(date.getUTCMonth()+1, 2)+
+            '.'+manager.leadingZeros(date.getUTCDate(), 2) +
+            ' '+manager.leadingZeros(date.getUTCHours(), 2) +
+            ':'+manager.leadingZeros(date.getUTCMinutes(), 2);
+    }
+
+    function _addLocalTimeToWeatherData(weatherData, offset) {
+
+        if (weatherData.hasOwnProperty('current')) {
+            var current = weatherData.current;
+            current.localTime = _getLocalTimeStr(current.date, offset);
+            if (current.hasOwnProperty('yesterday')) {
+                var yesterday = current.yesterday;
+                yesterday.localTime = _getLocalTimeStr(yesterday.date, offset);
+            }
+        }
+
+        ['daily', 'timely'].forEach(function (listName) {
+            if (weatherData.hasOwnProperty(listName)) {
+                var daily = weatherData.daily;
+                daily.forEach(function (dayInfo) {
+                    dayInfo.localTime = _getLocalTimeStr(dayInfo.date, offset);
+                });
+            }
+        });
+    }
+
+    self.addLocalTime = function (req, res, next) {
+
+        //find chached data
+        //else
+        var lat;
+        var lon;
+        var timestamp;
+        var url;
+
+        if (req.result && req.result.location) {
+            lat = req.result.location.lat;
+            lon = req.result.location.lon;
+            timestamp = (new Date()).getTime();
+            url = "https://maps.googleapis.com/maps/api/timezone/json";
+            url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
+            log.info(url);
+            request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
+                if (err) {
+                    log.error(err);
+                }
+                else {
+                    try {
+                        var result = body;
+                        var offset = (result.dstOffset+result.rawOffset)/60; //convert to min
+                        req.result.timezone = body;
+                        _addLocalTimeToWeatherData(req.result, offset);
+                    }
+                    catch (e) {
+                        log.error(e);
+                    }
+                }
+
+                next();
+            });
+        }
     };
 
     /*******************************************************************************
@@ -1177,13 +1285,13 @@ function controllerWorldWeather(){
         }
 
         if(summary.pre_pro){
-            day.precProb = summary.pre_pro * 100;
+            day.precProb = Math.round(summary.pre_pro * 100);
         }
         if(summary.pre_int){
             day.precip = summary.pre_int;
         }
         if(summary.humid){
-            day.humid = summary.humid;
+            day.humid = Math.round(summary.humid*100);
         }
         if(summary.windspd){
             day.windSpd_mh = parseFloat(summary.windspd.toFixed(1));
@@ -1199,7 +1307,14 @@ function controllerWorldWeather(){
         return day;
     };
 
-    self._makeTimelyDataFromDSF = function(summary){
+    /**
+     * "oz":272.12,"pres":1014.19,"cloud":0.92,"vis":10,"winddir":359,"windspd":5.07,"humid":0.9,
+     * "ftemp":38.51,"temp":41.77,"pre_pro":0.17,"pre_int":0.0042,"summary":"Mostly Cloudy",
+     * "date":201612072200,"dateObj":"2016-12-07T13:00:00.000Z"
+     * @param summary
+     * @private
+     */
+    self._makeTimelyDataFromDSF = function (summary) {
         var timely = {};
 
         if(summary.date){
@@ -1219,15 +1334,18 @@ function controllerWorldWeather(){
             timely.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
             timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
-        if(summary.cloud){
-            timely.cloud = summary.cloud;
+        if (summary.cloud) {
+            timely.cloud = Math.round(summary.cloud * 100); // to percent
         }
         if(summary.windspd){
-            timely.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
-            timely.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            timely.windSpd_mh = Math.round(summary.windspd*1609.344); // mi/h -> m/h
+            timely.windSpd_ms = +(summary.windspd*0.44704).toFixed(2); // mi/h -> m/s
+        }
+        if (summary.winddir) {
+            timely.winddir = summary.winddir;
         }
         if(summary.humid){
-            timely.humid = summary.humid;
+            timely.humid = summary.humid * 100;
         }
         timely.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1237,18 +1355,18 @@ function controllerWorldWeather(){
             timely.precType += 2;
         }
         if(summary.pre_pro){
-            timely.precProb = summary.pre_pro * 100;
+            timely.precProb = summary.pre_pro * 100; //to percent
         }
-        if(summary.pre_int){
-            timely.precip = summary.pre_int;
+        if (summary.pre_int) {
+            timely.precip = summary.pre_int * 25.4; //in -> mm
         }
         if(summary.vis){
-            timely.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
+            timely.vis = Math.round(summary.vis * 1.16093); //mile -> km
         }
         if(summary.pres){
-            timely.press = summary.press;
+            timely.press = summary.pres; //mb -> hpa
         }
-        if(summary.oz){
+        if (summary.oz) {
             timely.oz = summary.oz;
         }
 
@@ -1282,7 +1400,7 @@ function controllerWorldWeather(){
      */
     self.getCode = function(req){
         if(req.query.gcode === undefined){
-            log.silly('WW> can not find geocode from qurey');
+            log.silly('WW> can not find geocode from query');
             return false;
         }
 
@@ -1497,7 +1615,7 @@ function controllerWorldWeather(){
 
         async.parallel([
                 function(cb){
-                    modelWuCurrent.find({geocode:geocode}, function(err, list){
+                    modelWuCurrent.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Current data');
                             //cb(new Error('gFU> fail to get WU Current data'));
@@ -1517,7 +1635,7 @@ function controllerWorldWeather(){
                     });
                 },
                 function(cb){
-                    modelWuForecast.find({geocode:geocode}, function(err, list){
+                    modelWuForecast.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Forecast data');
                             //cb(new Error('gFU> fail to get WU Forecast data'));
@@ -1558,7 +1676,7 @@ function controllerWorldWeather(){
             lon: parseFloat(req.geocode.lon)
         };
 
-        modelDSForecast.find({geocode:geocode}, function(err, list){
+        modelDSForecast.find({geocode:geocode}).lean().exec(function(err, list){
             if(err){
                 log.error('gDSF> fail to get DSF data');
                 callback(err);
