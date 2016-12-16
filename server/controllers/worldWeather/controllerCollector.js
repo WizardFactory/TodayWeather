@@ -1103,14 +1103,14 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         data.dateObj = pubDate;
                     }
                     data.data.forEach(function(dbItem){
-                        if(dbItem.current.dateObj.getYear() === newData.current.dateObj.getYear() &&
-                            dbItem.current.dateObj.getMonth() === newData.current.dateObj.getMonth() &&
-                            dbItem.current.dateObj.getDay() === newData.current.dateObj.getDay() &&
-                            dbItem.current.dateObj.getHours() === newData.current.dateObj.getHours()) {
-                            dbItem.current = newData.current;
-                            dbItem.hourly = newData.hourly;
-                            dbItem.daily = newData.daily;
-                            isExist = true;
+                        /**
+                         * 예보가, 오늘 과거 날씨를 overwrite하는 것을 방지.
+                         */
+                        if (dbItem.current.dateObj == newData.current.dateObj) {
+                                dbItem.current = newData.current;
+                                dbItem.hourly = newData.hourly;
+                                dbItem.daily = newData.daily;
+                                isExist = true;
                         }
                     });
 
@@ -1280,7 +1280,7 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
 };
 
 /**
- *
+ * 지정한 날짜의 local time 0부터 데이터를 hourly에 넣어서 줌.
  * @param geocode
  * @param callback
  */
@@ -1295,6 +1295,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
     }
+    dataList.push(null);//for getting forecast
 
     async.mapSeries(dataList,
         function(date, cb){
