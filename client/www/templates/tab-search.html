@@ -45,8 +45,8 @@
                         <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
                     </div>
                     <div class="search-item" style="text-align: center;" ng-click="OnSelectCity($index)">
-                        {{city.t1h}}˚<br>
-                        <span style="font-size: 12px;">{{city.tmn}}˚/{{city.tmx}}˚</span>
+                        {{city.t1h.toFixed(0)}}˚<br>
+                        <span style="font-size: 12px;">{{city.tmn.toFixed(0)}}˚/{{city.tmx.toFixed(0)}}˚</span>
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenTimePicker($index)">
                         <a class="icon" ng-class="city.alarmInfo == undefined?'ion-android-notifications-none':'ion-android-notifications'"></a>

@@ -389,7 +389,7 @@ angular.module('starter.services', [])
         }
 
         /**
-         *
+         * target에 시간이 가지고 있으면, 값 차이가 발생함.
          * @param {Date} target
          * @param {Date} current
          * @returns {number}
@@ -399,8 +399,9 @@ angular.module('starter.services', [])
                 console.log("target or current is invalid");
                 return 0;
             }
+            var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
             var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
-            return Math.ceil((target - date) / (1000 * 3600 * 24));
+            return Math.ceil((targetDay - date) / (1000 * 3600 * 24));
         }
 
         /**
@@ -571,14 +572,14 @@ angular.module('starter.services', [])
         }
 
         /**
-         * url 업데이트 필요.
+         * http://localhost:3000/ww/010000/current/2?gcode=44.0,30.00
          * @param location
          * @returns {*}
          */
         function getGeoWeatherInfo (location) {
             var deferred = $q.defer();
-            var url = Util.url + '/coordinates';
-            url += "/" + location.lat + '/'+location.long;
+            var url = twClientConfig.serverUrl + '/ww/010000/current/2';
+            url += "?gcode=" + location.lat + ','+location.long;
 
             console.log(url);
             $http({method: 'GET', url: url, timeout: 10*1000})
@@ -597,7 +598,7 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url = twClientConfig.serverUrl +'/town';
+            var url = twClientConfig.serverUrl +'/v000705/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -759,11 +760,12 @@ angular.module('starter.services', [])
         obj.parseMidTownWeather = function (midData, currentTime) {
             var tmpDayTable = [];
             var displayItemCount = 0;
+            var todayInfo;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
                 return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
             }
-            midData.dailyData.forEach(function (dayInfo) {
+            midData.dailyData.forEach(function (dayInfo, index) {
                 var data;
                 data = dayInfo;
 
@@ -786,6 +788,11 @@ angular.module('starter.services', [])
                 }
                 else {
                     data.humidityIcon = "Humidity-00";
+                }
+
+                if (diffDays == 0) {
+                    todayInfo = data;
+                    todayInfo.index = index;
                 }
 
                 tmpDayTable.push(data);
@@ -824,7 +831,7 @@ angular.module('starter.services', [])
             });
 
             //console.log(tmpDayTable);
-            return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable, today: todayInfo};
         };
 
         /**
@@ -1333,23 +1340,27 @@ angular.module('starter.services', [])
 
             return $q.all(promises);
         };
-        /**
-         *
-         * @param weatherDataList
-         * @returns {{}}
-         */
-        obj.convertWeatherData = function (weatherDataList) {
-            var that = this;
+
+
+        function _parseKmaWeather(that, weatherData) {
             var data = {};
-            var currentTime = new Date();
-            var weatherData = {};
-            weatherDataList.forEach(function (weatherObject) {
-                if (weatherObject.hasOwnProperty("data")) {
-                    weatherData = weatherObject.data;
-                }
-            });
+            var currentTime;
+            var todayInfo;
+            if (weatherData.current && weatherData.current.stnDateTime) {
+                currentTime = new Date(weatherData.current.stnDateTime);
+            }
+            else if (weatherData.current.date && !(weatherData.current.time == undefined)) {
+                currentTime = convertStringToDate(weatherData.current.date);
+                currentTime.setHours(parseInt(weatherData.current.time.substr(0, 2)))
+            }
+
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
+            todayInfo = midTownWeather.today;
 
             var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+            currentForecast.today = todayInfo;
+
+            //console.log(midTownWeather);
 
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
@@ -1360,13 +1371,10 @@ angular.module('starter.services', [])
             /**
              * @type {Array}
              */
-            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
-            //console.log(midTownWeather);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
-            data.dayTable = midTownWeather.dayTable;
             data.dayChart = [{
                 values: midTownWeather.dayTable,
                 temp: currentForecast.t1h,
@@ -1374,6 +1382,481 @@ angular.module('starter.services', [])
             }];
 
             return data;
+        }
+
+        /**
+         *
+         * @param windDir
+         * @returns {*}
+         * @private
+         */
+        function _convertWindDirToWdd(windDir) {
+            switch(windDir) {
+                case 0: return "N";
+                case 22.5: return "NEN";
+                case 45: return "NE";
+                case 67.5: return "ENE";
+                case 90: return "E";
+                case 112.5: return "ESE";
+                case 135: return "ES";
+                case 157.5: return "SES";
+                case 180: return "S";
+                case 202.5: return "SWS";
+                case 225: return "SW";
+                case 247.5: return "WSW";
+                case 270: return "W";
+                case 292.5: return "WNW";
+                case 315: return "WN";
+                case 337.5: return "NWN";
+                case 360: return "N";
+            }
+        }
+
+        function _parseWorldSkyState(precType, cloud, isNight) {
+            var skyIconName = "";
+
+            if (isNight) {
+                skyIconName = "Moon";
+            }
+            else {
+                skyIconName = "Sun";
+            }
+
+            if (!(cloud == undefined)) {
+                if (cloud <= 20) {
+                    skyIconName += "";
+                }
+                else if (cloud <= 50) {
+                    skyIconName += "SmallCloud";
+                }
+                else if (cloud <= 80) {
+                    skyIconName += "BigCloud";
+                }
+                else {
+                    skyIconName = "Cloud";
+                }
+            }
+            else {
+               if (precType > 0)  {
+                   skyIconName = "Cloud";
+               }
+            }
+
+            switch (precType) {
+                case 0:
+                    skyIconName += "";
+                    break;
+                case 1:
+                    skyIconName += "Rain";
+                    break;
+                case 2:
+                    skyIconName += "Snow";
+                    break;
+                case 3:
+                    skyIconName += "RainSnow";
+                    break;
+                case 4: //우박
+                    skyIconName += "RainSnow";
+                    break;
+                default:
+                    console.log('Fail to parse precType='+precType);
+                    break;
+            }
+
+            //if (lgt === 1) {
+            //    skyIconName += "Lightning";
+            //}
+
+            return skyIconName;
+        }
+
+        function _parseWorldCurrentWeather(current, todayInfo, currentTime) {
+            var sunrise = 7;
+            var sunset = 18;
+            var isNight = false;
+            var yesterday = {};
+
+            if (todayInfo.sunrise) {
+                sunrise = todayInfo.sunrise/100;
+            }
+            if (todayInfo.sunset) {
+                sunset = todayInfo.sunset/100;
+            }
+            isNight = currentTime < sunrise || currentTime > sunset;
+
+            if (current.temp_c == undefined) {
+                console.log("Error temp_c of current is undefined");
+            }
+
+            if (current.precType == undefined) {
+               console.log("Error precType of current is undefined");
+                current.precType = 0;
+            }
+
+            if (current.cloud == undefined) {
+                console.log("Error cloud of current is undefined");
+            }
+
+            if (current.yesterday) {
+                if (current.yesterday.temp_c == undefined) {
+                    console.log("yesterday temp_c is undefined!!");
+                }
+                yesterday.t1h = current.yesterday.temp_c;
+                yesterday.summary = current.yesterday.desc;
+            }
+           return {
+               date: new Date(current.localTime),
+               summary: current.desc,
+               t1h: current.temp_c,
+               sensoryTem: current.ftemp_c,
+               reh: current.humid,
+               wsd: current.windSpd_ms,
+               wdd: _convertWindDirToWdd(current.windDir),
+               skyIcon: _parseWorldSkyState(current.precType, current.cloud, isNight),
+               visibility: current.vis,
+               hPa: current.press,
+               today: todayInfo,
+               yesterday: yesterday
+           }
+        }
+
+        function _convertDateToYYYYMMDD(date) {
+
+            //I don't know why one more create Date object by aleckim
+            var d = new Date(date);
+            var month = '' + (d.getMonth() + 1);
+            var day = '' + d.getDate();
+            var year = d.getFullYear();
+
+            if (month.length < 2) { month = '0' + month; }
+            if (day.length < 2) { day = '0' + day; }
+
+            return year+month+day;
+        }
+
+        function _parseWorldHourlyWeather(hourly, currentTime, todayInfo) {
+            var data = [];
+
+            if (!hourly || !Array.isArray(hourly)) {
+                console.log('hourly is not array');
+                return {timeTable: [], timeChart: []};
+            }
+
+            var currentIndex;
+            var displayItemCount = 0;
+            var todayIndex;
+            var yesterday = new Date(currentTime);
+            yesterday.setDate(yesterday.getDate()-1);
+
+            hourly.forEach(function (hourlyObj, index) {
+                var tempObject = {};
+                var date = new Date(hourlyObj.localTime);
+                var time = date.getHours();
+                var diffDays = getDiffDays(date, todayInfo.dateObj);
+                var sunrise = todayInfo.sunrise/100;
+                var sunset = todayInfo.sunset/100;
+                var isNight = time < sunrise || time > sunset;
+
+                tempObject.date = _convertDateToYYYYMMDD(date);
+                tempObject.time = date.getHours();
+                tempObject.fromToday = diffDays;
+                if (hourlyObj.temp_c == undefined) {
+                    console.log("Error temp_c of hourly is undefined " + JSON.stringify(hourlyObj));
+                    tempObject.t3h = data[data.length-1].t3h;
+                }
+                else {
+                    tempObject.t3h = hourlyObj.temp_c;
+                }
+
+                tempObject.wsd = hourlyObj.windSpd_ms;
+                tempObject.reh = hourlyObj.humid;
+                if (hourlyObj.precType) {
+                    tempObject.pty = hourlyObj.precType;
+                }
+                else {
+                    tempObject.pty = 0;
+                }
+                if (hourlyObj.cloud == undefined) {
+                    console.log("Error cloud of hourly is undefined " + JSON.stringify(hourlyObj));
+                    tempObject.cloud = 0;
+                }
+                else {
+                    tempObject.cloud = hourlyObj.cloud;
+                }
+                tempObject.skyIcon = _parseWorldSkyState(tempObject.pty, tempObject.cloud, isNight);
+
+                if (hourlyObj.precProb == undefined) {
+                    //console.log("preProb of hourly " + JSON.stringify(hourlyObj));
+                    tempObject.pop = 0;
+                }
+                else {
+                    tempObject.pop = hourlyObj.precProb;
+                }
+
+                if (hourlyObj.precip) {
+                    tempObject.rn1 = hourlyObj.precip;
+                    tempObject.r06 = 0;
+                }
+                else {
+                    tempObject.rn1 = 0;
+                    tempObject.r06 = 0;
+                }
+
+                if (currentIndex == undefined) {
+                    if (currentTime.getDate() == date.getDate()) {
+                        todayIndex = index;
+                        var currentHours = currentTime.getHours();
+                        if (currentHours == time) {
+                            currentIndex = index;
+                            //hourly[index].currentIndex = true;
+                            tempObject.currentIndex = true;
+                        }
+                        else if (currentHours < time) {
+                           if (index == 0)  {
+                               console.log("Error current index is -1");
+                               currentIndex = -1;
+                           }
+                            else {
+                               currentIndex = index-1;
+                               //hourly[index-1].currentIndex = true;
+                               data[index-1].currentIndex = true;
+                           }
+                        }
+                        else if (currentHours > time) {
+                            //24시가 다음날 0으로 오는 경우
+                            if (time >= 21) {
+                                if (currentHours >= 21) {
+                                    currentIndex = index;
+                                    tempObject.currentIndex = true;
+                                }
+                                else {
+                                    console.log("Fail to find curren "+currentHours);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                tempObject.visibility = hourlyObj.vis;
+
+                var tmpDisplayCount = 0;
+                //data on chart from yesterday
+                if (diffDays > -2) {
+                    if (tempObject.skyIcon != undefined) {
+                        tmpDisplayCount++;
+                    }
+                    if (tempObject.pop && tempObject.pop > 0) {
+                        tmpDisplayCount++;
+                    }
+                    if (displayItemCount == 2) {
+                        if ((tempObject.rn1 && tempObject.rn1 > 0)
+                            || (tempObject.r06 && tempObject.r06 > 0)
+                            || (tempObject.s06 && tempObject.s06 > 0)) {
+                            tmpDisplayCount++;
+                        }
+                    }
+                    if (tmpDisplayCount > displayItemCount) {
+                        displayItemCount = tmpDisplayCount;
+                    }
+                }
+
+                data.push(tempObject);
+            });
+
+            console.log(JSON.stringify(data));
+
+            if (currentIndex == undefined) {
+                console.log("Fail to find current index");
+                currentIndex = hourly.length-1;
+            }
+
+            var timeTable = data.slice(8);
+            var timeChart = [
+                {
+                    name: "yesterday",
+                    values: data.slice(0, data.length - 8).map(function (d) {
+                        return {name: "yesterday", value: d};
+                    })
+                },
+                {
+                    name: "today",
+                    values: data.slice(8).map(function (d) {
+                        return {name: "today", value: d};
+                    }),
+                    currentIndex: currentIndex - 8,
+                    displayItemCount: displayItemCount
+                }
+            ];
+
+            return {timeTable: timeTable, timeChart: timeChart};
+
+        }
+
+
+        function _parseWorldDailyWeather(daily, currentTime) {
+
+            var tmpDayTable = [];
+            var displayItemCount = 0;
+            var todayInfo;
+
+            daily.forEach(function (dayInfo, index) {
+                var data = {};
+                //data = dayInfo;
+                var date = new Date(dayInfo.localTime);
+
+                var diffDays = getDiffDays(date, currentTime);
+
+                data.date = _convertDateToYYYYMMDD(date);
+                data.dateObj = date;
+                data.fromToday = diffDays;
+                data.dayOfWeek = date.getDay();
+
+                if (dayInfo.tempMax_c == undefined) {
+                    console.log('Fail to get tempMax_c from '+JSON.stringify(dayInfo));
+                }
+                else {
+                    data.tmx = dayInfo.tempMax_c;
+                }
+                if (dayInfo.tempMin_c == undefined) {
+                    console.log('Fail to get tempMin_c from '+JSON.stringify(dayInfo));
+                }
+                else {
+                    data.tmn = dayInfo.tempMin_c;
+                }
+                if (dayInfo.precProb == undefined) {
+                    data.pop = 0;
+                }
+                else {
+                    data.pop = dayInfo.precProb;
+                }
+                if (dayInfo.precType == undefined) {
+                    console.log('Fail to get precType from '+JSON.stringify(dayInfo));
+                    data.pty = 0;
+                }
+                else {
+                    data.pty = dayInfo.precType;
+                }
+
+                var sky = _parseWorldSkyState(data.pty);
+                data.skyIcon = sky;
+                data.skyAm = sky;
+                data.skyPm = sky;
+
+                if (!(dayInfo.humid == undefined)) {
+                    data.reh = dayInfo.humid;
+                    if (data.reh !== undefined) {
+                        data.humidityIcon = decideHumidityIcon(data.reh);
+                    }
+                    else {
+                        data.humidityIcon = "Humidity-00";
+                    }
+                }
+
+                if (!(dayInfo.windSpd_ms == undefined)) {
+                    data.wsd = dayInfo.windSpd_ms;
+                }
+                if (!(dayInfo.press == undefined)) {
+                    data.hPa = dayInfo.press;
+                }
+                if (!(dayInfo.vis == undefined)) {
+                   data.visibility = dayInfo.vis;
+                }
+
+                tmpDayTable.push(data);
+
+                if (data.fromToday == 0) {
+                    todayInfo = data;
+                    todayInfo.index = index;
+                }
+
+                var tmpDisplayCount = 0;
+
+                if (data.skyAm != undefined || data.skyPm != undefined) {
+                    if (data.skyAm != data.skyPm && data.skyAm && data.skyPm) {
+                        tmpDisplayCount = tmpDisplayCount | 4;
+                    }
+                }
+
+                if (data.pop && data.pop > 0 && data.fromToday >= 0) {
+                    tmpDisplayCount = tmpDisplayCount | 2;
+                }
+                if ((data.rn1 && data.rn1 > 0)
+                    || (data.r06 && data.r06 > 0)
+                    || (data.s06 && data.s06 > 0)) {
+                    tmpDisplayCount = tmpDisplayCount | 1;
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
+                }
+
+                if (!(data.dustForecast == undefined)) {
+                    if (!(data.dustForecast.PM10Grade == undefined)) {
+                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
+                    }
+                    if (!(data.dustForecast.PM25Grade == undefined)) {
+                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
+                    }
+                    if (!(data.dustForecast.O3Grade == undefined)) {
+                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
+                    }
+                }
+            });
+            console.log(JSON.stringify(tmpDayTable));
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable, today: todayInfo};
+        }
+
+        function _parseWorldWeather(weatherData) {
+            var data = {};
+            var currentTime;
+            var todayInfo;
+            var midTownWeather;
+            var shortTownWeather;
+
+            if (weatherData.current && weatherData.current.localTime) {
+                currentTime = new Date(weatherData.current.localTime);
+            }
+            else {
+                console.log("Error fail to get current date !!");
+                currentTime = new Date();
+            }
+
+            console.log("current time="+currentTime.toString());
+
+            midTownWeather =_parseWorldDailyWeather(weatherData.daily, currentTime);
+            todayInfo = midTownWeather.today;
+            shortTownWeather = _parseWorldHourlyWeather(weatherData.timely, currentTime, todayInfo);
+            data.currentWeather = _parseWorldCurrentWeather(weatherData.current, todayInfo, currentTime.getHours());
+            data.timeTable = shortTownWeather.timeTable;
+            data.timeChart = shortTownWeather.timeChart;
+            data.dayChart = [{
+                values: midTownWeather.dayTable,
+                temp: data.currentWeather.t1h,
+                displayItemCount: midTownWeather.displayItemCount
+            }];
+
+            return data;
+        }
+
+        /**
+         *
+         * @param weatherDataList
+         * @returns {{}}
+         */
+        obj.convertWeatherData = function (weatherDataList) {
+            var that = this;
+            var weatherData = {};
+            weatherDataList.forEach(function (weatherObject) {
+                if (weatherObject.hasOwnProperty("data")) {
+                    weatherData = weatherObject.data;
+                }
+            });
+
+            if (weatherData.hasOwnProperty('regionName')) {
+                return _parseKmaWeather(that, weatherData);
+            }
+            else {
+                return _parseWorldWeather(weatherData);
+            }
         };
 
         obj.getWeatherEmoji = function (skyIcon) {
@@ -1407,7 +1890,7 @@ angular.module('starter.services', [])
         //endregion
 
         obj.geolocationNormalize = function (coords) {
-            var baseLength = 0.25;
+            var baseLength = 0.02;
             var lat = coords.lat;
             var lon = coords.long;
             console.log (lat + " " + lon);

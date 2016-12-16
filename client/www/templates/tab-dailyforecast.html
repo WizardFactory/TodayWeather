@@ -10,7 +10,7 @@
                 </p>
                 <div class="row row-no-padding"><div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">
                     <p id="pBigDigit" ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0; font-weight:300">
-                        {{currentWeather.t1h}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
+                        {{currentWeather.t1h.toFixed(0)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
                     </p>
                     <div style="text-align: left; margin: auto">
                         <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
@@ -34,9 +34,9 @@
                     <ion-scroll delegate-handle="weeklyChart" direction="x" zooming="false" has-bouncing="false"
                                 scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                         <div class="col chartBox" style="margin: auto" ng-style="{'width':dayWidth +'px'}">
-                            <div id="midTable" class="col table-content" ng-if="dayTable">
+                            <div id="midTable" class="col table-content" ng-if="dayChart[0].values">
                                 <div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">
-                                    <div class="col table-items" ng-repeat="value in dayTable">
+                                    <div class="col table-items" ng-repeat="value in dayChart[0].values">
                                         <p class="body1" style="margin: 0;"
                                            ng-style="{'opacity': value.fromToday===0?'1':'0.84'}">{{dayToString(value.dayOfWeek)|translate}}
                                         </p>
@@ -79,12 +79,12 @@
                                </td>
                            </tr>
                        </table>
-                       <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                       <p ng-if="dayChart" class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
+                       <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                       <p ng-if="hasDustForecast()" class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
                        <ion-scroll delegate-handle="weeklyTable" direction="x" zooming="false" has-bouncing="false"
                                    scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                            <div class="row" style="margin: auto;">
-                               <div style="margin: 0 auto; min-width: 132px" ng-if="$index == 6 || $index == 7 || $index == 8" ng-repeat="day in dayChart[0].values">
+                               <div style="margin: 0 auto; min-width: 132px" ng-if="checkDailyDetailWeather(day)" ng-repeat="day in dayChart[0].values">
                                    <div class="row" style="margin: 0">
                                        <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
                                    </div>
@@ -102,14 +102,14 @@
                                            <span class="caption" translate="LOC_WIND"></span>
                                        </div>
                                    </div>
-                                   <div class="row subheading" style="margin: 0" ng-if="dayChart[0].values[6].pop || dayChart[0].values[7].pop || dayChart[0].values[8].pop">
+                                   <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['pop'])">
                                        <img src="img/Umbrella.png" style="height: 24px; margin: auto 0;">
                                        <div style="margin: auto 8px">
                                            <p class="subheading" style="margin: 0;">{{day.pop}}<small>%</small></p>
                                            <span class="caption" translate="LOC_PROBABILITY_OF_PRECIPITATION"></span>
                                        </div>
                                    </div>
-                                   <div class="row subheading" style="margin: 0" ng-if="dayChart[0].values[6].ultrvGrade != undefined || dayChart[0].values[7].ultrvGrade != undefined || dayChart[0].values[8].ultrvGrade != undefined">
+                                   <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['ultrvGrade'])">
                                        <img src="img/Ultrv.png" style="height: 24px; margin: auto 0;">
                                        <div style="margin: auto 8px">
                                            <p class="subheading" ng-class="getGradeColor(day.ultrvGrade)" style="margin: 0;">{{getLowHighGradeStr(day.ultrvGrade)|translate}}</p>
@@ -123,7 +123,7 @@
                                            <span class="caption" translate="LOC_FOOD_POISONING"></span>
                                        </div>
                                    </div>
-                                   <div class="row subheading" style="margin: 0" ng-if="haveRainSnowFall(dayChart[0].values[6]) || haveRainSnowFall(dayChart[0].values[7]) || haveRainSnowFall(dayChart[0].values[8])">
+                                   <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['pty', 'rn1', 'r06', 's06'])">
                                        <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
                                        <div style="margin: auto 8px">
                                            <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getRainSnowFallSymbol(day)}}</small></p>

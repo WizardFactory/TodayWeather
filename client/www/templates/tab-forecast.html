@@ -11,7 +11,7 @@
                 </p>
                 <div class="row row-no-padding"><div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">
                     <p id="pBigDigit" ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0; font-weight:300">
-                        {{currentWeather.t1h}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
+                        {{currentWeather.t1h.toFixed(0)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
                     </p>
                     <div style="text-align: left; margin: auto">
                         <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
@@ -40,8 +40,8 @@
                                     <div class="row row-no-padding">
                                         <div ng-style="::{'width':colWidth/2+'px'}"></div>
                                         <div class="col"
-                                             ng-if="value.date > timeTable[0].date && value.date <= timeTable[timeTable.length-1].date"
-                                             ng-repeat="value in dayTable">
+                                             ng-if="$index > 1 && isNextDay(value)"
+                                             ng-repeat="value in timeTable">
                                             <p class="caption" style="margin: 0;">{{getDayString(value.fromToday)|translate}} {{value.date.substr(4,2) + '.' + value.date.substr(6,2)}}</p>
                                         </div>
                                         <div class="table-border" ng-style="::{'width':colWidth/2+'px'}"></div>

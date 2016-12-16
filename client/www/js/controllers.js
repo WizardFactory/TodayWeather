@@ -34,7 +34,89 @@ angular.module('starter.controllers', [])
                     'LOC_FRIDAY', 'LOC_SATURDAY'];
                 return dayFullStr[day];
             };
+
+            $scope.hasDustForecast = function () {
+                if ($scope.dayChart == undefined) {
+                    return false;
+                }
+                for (var i=$scope.dayChart[0].values.length-1; i>=0; i--) {
+                    var day = $scope.dayChart[0].values[i];
+                    if (day.fromToday == 0) {
+                        if (day.hasOwnProperty('dustForecast')) {
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+                return false;
+            };
+
+            $scope.checkDailyDetailWeather = function (day) {
+               if (day.fromToday == -1 || day.fromToday == 0 || day.fromToday == 1)  {
+                   return true;
+               }
+                return false;
+            };
+
+            /**
+             * it's false whean preperty is 0 or undefined
+             * @param obj
+             * @param propertyNameList
+             * @private
+             */
+            function _hasProperty(obj, propertyNameList) {
+                for (var i=propertyNameList.length-1; i>=0; i--)  {
+                    if (obj[propertyNameList[i]]) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            $scope.hasPropertyInThreeDays = function(propertyNameList) {
+                var todayIndex = $scope.currentWeather.today.index;
+                if (todayIndex == undefined) {
+                    console.log("today index is undefined, daily list has not today data");
+                    return false;
+                }
+
+                var dayTable = $scope.dayChart[0].values;
+                if (dayTable) {
+                    if (_hasProperty(dayTable[todayIndex], propertyNameList)) {
+                        return true;
+                    }
+                    if (todayIndex > 0) {
+                        var yesterday = dayTable[todayIndex-1];
+                        if (_hasProperty(yesterday, propertyNameList)) {
+                            return true;
+                        }
+                    }
+                    if (todayIndex < dayTable.length-1) {
+                        var tomorrow = dayTable[todayIndex+1];
+                        if (_hasProperty(tomorrow, propertyNameList)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
         }
+
+        if ($scope.forecastType == 'short') {
+            var preDayInHourlyTable;
+            $scope.isNextDay = function(weatherData) {
+                if (preDayInHourlyTable == undefined) {
+                    preDayInHourlyTable = weatherData.date;
+                    return true;
+                }
+                else if (preDayInHourlyTable != weatherData.date) {
+                    preDayInHourlyTable = weatherData.date;
+                    return true;
+                }
+                return false;
+            }
+        }
+
 
         $scope.getDayString = function (day) {
             var dayFromTodayStr =['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY',
@@ -396,18 +478,6 @@ angular.module('starter.controllers', [])
             return "";
         }
 
-        /**
-         * pty가 0이라도 예보상으로 비가 온다고 했거나, 비가 오지 않는다고 했지만 실제로 비가 온 경우도 있음.
-         * @param day
-         * @returns {boolean}
-         */
-        $scope.haveRainSnowFall = function (day) {
-            return !!((day.pty != undefined && day.pty > 0) ||
-            (day.rn1 != undefined && day.rn1 > 0) ||
-            (day.r06 != undefined && day.r06 > 0) ||
-            (day.s06 != undefined && day.s06 > 0));
-        };
-
         $scope.getRainSnowFall = function (value) {
             var ret = _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
             if (ret == "") {
@@ -482,6 +552,8 @@ angular.module('starter.controllers', [])
         $scope.getMidTableHeight = getMidTableHeight;
 
         function applyWeatherData() {
+            var dayTable;
+
             console.log('apply weather data');
             cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData === null || cityData.address === null) {
@@ -489,9 +561,11 @@ angular.module('starter.controllers', [])
                 return;
             }
 
+            dayTable = cityData.dayChart[0].values;
+
             $scope.timeWidth = colWidth * cityData.timeTable.length;
-            console.log("timeWidth="+$scope.timeWidth);
-            $scope.dayWidth = colWidth * cityData.dayTable.length;
+            $scope.dayWidth = colWidth * dayTable.length;
+
 
             if (cityData.name) {
                 shortenAddress = cityData.name;
@@ -513,8 +587,13 @@ angular.module('starter.controllers', [])
                    }
                    else {
                        var tmpDate = cityData.currentWeather.date;
-                       return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
-                           " " + cityData.currentWeather.time + ":00";
+                       if (tmpDate instanceof Date) {
+                           return tmpDate.toDateString();
+                       }
+                       else {
+                           return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                               " " + cityData.currentWeather.time + ":00";
+                       }
                    }
                }
             })();
@@ -552,7 +631,7 @@ angular.module('starter.controllers', [])
                 $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
             }
             else {
-                if (showAqi && cityData.dayTable.length >= 8 && cityData.dayTable[7].dustForecast) {
+                if (showAqi && dayTable.length >= 8 && dayTable[cityData.currentWeather.today.index].dustForecast) {
                     padding+=36;
                 }
                 var chartMidHeight = mainHeight - (136+padding);
@@ -565,7 +644,6 @@ angular.module('starter.controllers', [])
                 $scope.showDetailWeather = true;
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
                 _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday);
-                $scope.dayTable = cityData.dayTable;
                 if($scope.forecastType == 'short') {
                     $scope.timeTable = cityData.timeTable;
                     $scope.timeChart = cityData.timeChart;
@@ -742,27 +820,31 @@ angular.module('starter.controllers', [])
         }
 
         function getTodayPosition() {
-            var time = new Date();
             var index = 0;
+            var i;
 
             if ($scope.forecastType === 'short') {
-                var hours = time.getHours();
-                index = 7; //yesterday 21h
-
-                //large tablet
-                if (bodyWidth >= TABLET_WIDTH) {
-                    return colWidth*index;
+                if ($scope.timeTable == undefined) {
+                    console.log("time table is undefined");
+                    return 0;
                 }
 
-                if(hours >= 3) {
-                    //start today
-                    index+=1;
+                if ($scope.timeTable.length*colWidth < TABLET_WIDTH) {
+                    return 0;
                 }
-                if (hours >= 6) {
-                    index+=1;
+
+                for (i = $scope.timeTable.length-1; i >= 0; i--) {
+                    if (!($scope.timeTable[i].currentIndex == undefined) && $scope.timeTable[i].currentIndex) {
+                        index = i;
+                        break;
+                    }
                 }
-                if (hours >= 9) {
-                    index += 1;
+
+                if (index >= 1) {
+                    index = index-1;
+                }
+                else {
+                    index = 0;
                 }
 
                 return colWidth*index;
@@ -770,11 +852,34 @@ angular.module('starter.controllers', [])
             else if ($scope.forecastType === 'mid') {
 
                 //large tablet
-                if (bodyWidth >= 720) {
+                if (bodyWidth >= TABLET_WIDTH) {
                     return 0;
                 }
+                var dayTable = $scope.dayChart[0].values;
+                if (dayTable == undefined) {
+                    console.log("day table is undefined");
+                    return 0;
+                }
+                else {
+                    if ($scope.currentWeather && $scope.currentWeather.today &&
+                        !($scope.currentWeather.today.index == undefined)) {
+                        index = $scope.currentWeather.today.index;
+                    }
+                    for (i = dayTable.length-1; i >= 0; i--) {
+                        if (dayTable[i].fromToday == 0) {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
                 //today is 3th.
-                index = 5;
+                if (index >= 2) {
+                    index = index-2;
+                }
+                else {
+                    index = 0;
+                }
+
                 return colWidth*index;
             }
             return colWidth*index;
@@ -1068,7 +1173,7 @@ angular.module('starter.controllers', [])
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
                 var address = WeatherUtil.getShortenAddress(city.address).split(",");
-                var todayData = null;
+                var todayData;
 
                 if (city.name) {
                     address = [city.name];
@@ -1086,12 +1191,9 @@ angular.module('starter.controllers', [])
                 if (city.currentWeather.t1h === undefined) {
                     city.currentWeather.t1h = '-';
                 }
-                if (city.dayTable != null) {
-                    todayData = city.dayTable.filter(function (data) {
-                        return (data.fromToday === 0);
-                    });
-                }
-                if (!todayData || todayData.length === 0) {
+
+                todayData = city.currentWeather.today;
+                if (todayData == undefined) {
                     todayData = [{tmn:'-', tmx:'-'}];
                 }
 
@@ -1101,8 +1203,8 @@ angular.module('starter.controllers', [])
                     disable: city.disable,
                     skyIcon: city.currentWeather.skyIcon,
                     t1h: city.currentWeather.t1h,
-                    tmn: todayData[0].tmn,
-                    tmx: todayData[0].tmx,
+                    tmn: todayData.tmn,
+                    tmx: todayData.tmx,
                     alarmInfo: Push.getAlarm(i)
                 };
                 $scope.cityList.push(data);
@@ -1129,7 +1231,7 @@ angular.module('starter.controllers', [])
             service.getPlacePredictions({
                 input: $scope.searchWord,
                 types: ['(regions)'],
-                componentRestrictions: {country: 'kr'}
+                componentRestrictions: {}
             }, callbackAutocomplete);
         };
 
@@ -1418,10 +1520,7 @@ angular.module('starter.controllers', [])
                         WeatherInfo.updateCity(index, city);
 
                         var address = WeatherUtil.getShortenAddress(city.address).split(",");
-                        var todayData = city.dayTable.filter(function (data) {
-                            return (data.fromToday === 0);
-                        });
-
+                        var todayData = city.currentWeather.today;
                         var data = $scope.cityList[index];
                         if (city.name) {
                             data.address = [];
@@ -1432,8 +1531,8 @@ angular.module('starter.controllers', [])
                         }
                         data.skyIcon = city.currentWeather.skyIcon;
                         data.t1h = city.currentWeather.t1h;
-                        data.tmn = todayData[0].tmn;
-                        data.tmx = todayData[0].tmx;
+                        data.tmn = todayData.tmn;
+                        data.tmx = todayData.tmx;
                     }
                 });
             }
@@ -1772,15 +1871,11 @@ angular.module('starter.controllers', [])
             var tmn;
             var summary = $rootScope.summary;
             var shareUrl = 'http://abr.ge/mxld';
-            var len = cityData.dayTable.length;
-            for(var i=0;i<len; i++) {
-                var data = cityData.dayTable[i];
-                if (data.fromToday == 0) {
-                    tmx = data.tmx;
-                    tmn = data.tmn;
-                    break;
-                }
+            if (cityData.currentWeather.today) {
+                tmx = cityData.currentWeather.today.tmx;
+                tmn = cityData.currentWeather.today.tmn;
             }
+
             var message = '';
 
             $translate(['LOC_CURRENT', 'LOC_HIGH', 'LOC_LOW', 'LOC_TODAYWEATHER']).then(function (translations) {
