@@ -298,7 +298,7 @@ function controllerWorldWeather(){
             return false;
         }
 
-        if(cDate.getDay() != sDate.getDay()) {
+        if(cDate.getDate() != sDate.getDate()) {
             return false;
         }
 
@@ -346,32 +346,32 @@ function controllerWorldWeather(){
         log.info('TWW> geocode : ', req.geocode);
 
         async.waterfall([
-                function(callback){
-                    self.getDataFromWU(req, function(err, result){
-                        if(err){
-                            log.error('TWW> Fail to get WU data: ', err);
-                            callback('err_exit_WU');
-                            return;
-                        }
-
-                        if(req.WU.current.dataList === undefined){
-                            log.error('TWW> There is no WU data');
-                            callback('err_exit_notValid');
-                            return;
-                        }
-
-                        if(!self.checkValidDate(cDate, req.WU.current.dateObj)){
-                            log.error('TWW> invaild WU data');
-                            log.error('TWW> WU CurDate : ', cDate.toString());
-                            log.error('TWW> WU DB Date : ', req.WU.current.dateObj.toString());
-                            callback('err_exit_notValid');
-                            return;
-                        }
-
-                        log.info('TWW> get WU data');
-                        callback(null);
-                    });
-                },
+                //function(callback){
+                //    self.getDataFromWU(req, function(err, result){
+                //        if(err){
+                //            log.error('TWW> Fail to get WU data: ', err);
+                //            callback('err_exit_WU');
+                //            return;
+                //        }
+                //
+                //        if(req.WU.current.dataList === undefined){
+                //            log.error('TWW> There is no WU data');
+                //            callback('err_exit_notValid');
+                //            return;
+                //        }
+                //
+                //        if(!self.checkValidDate(cDate, req.WU.current.dateObj)){
+                //            log.error('TWW> invaild WU data');
+                //            log.error('TWW> WU CurDate : ', cDate.toString());
+                //            log.error('TWW> WU DB Date : ', req.WU.current.dateObj.toString());
+                //            callback('err_exit_notValid');
+                //            return;
+                //        }
+                //
+                //        log.info('TWW> get WU data');
+                //        callback(null);
+                //    });
+                //},
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
@@ -387,7 +387,7 @@ function controllerWorldWeather(){
                         }
 
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
-                            log.error('TWW> Invaild DSF data');
+                            log.error('TWW> Invalid DSF data');
                             log.error('TWW> DSF CurDate : ', cDate.toString());
                             log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString());
                             callback('err_exit_notValid');
@@ -415,18 +415,18 @@ function controllerWorldWeather(){
                                     cb(null);
                                 });
                             },
-                            function(cb){
-                                self.getDataFromWU(req, function(err, result){
-                                    if(err){
-                                        log.error('TWW> Fail to get WU data: ', err);
-                                        cb('err_exit_WU');
-                                        return;
-                                    }
-
-                                    log.info('TWW> get WU data');
-                                    cb(null);
-                                });
-                            },
+                            //function(cb){
+                            //    self.getDataFromWU(req, function(err, result){
+                            //        if(err){
+                            //            log.error('TWW> Fail to get WU data: ', err);
+                            //            cb('err_exit_WU');
+                            //            return;
+                            //        }
+                            //
+                            //        log.info('TWW> get WU data');
+                            //        cb(null);
+                            //    });
+                            //},
                             function(cb){
                                 self.getDataFromDSF(req, function(err, result){
                                     if(err){
@@ -537,7 +537,7 @@ function controllerWorldWeather(){
         var dateString = self._getTimeString(0 - 24).slice(0,10) + '00';
         var startDate = self._getDateObj(dateString);
 
-        if(req.WU.forecast){
+        if(req.WU && req.WU.forecast){
             if(req.result === undefined){
                 req.result = {};
             }
@@ -590,7 +590,7 @@ function controllerWorldWeather(){
                                 for(var i=0 ; i<req.result.timely.length ; i++){
                                     if(req.result.timely[i].date.getYear() === time.dateObj.getYear() &&
                                         req.result.timely[i].date.getMonth() === time.dateObj.getMonth() &&
-                                        req.result.timely[i].date.getDay() === time.dateObj.getDay() &&
+                                        req.result.timely[i].date.getDate() === time.dateObj.getDate() &&
                                         req.result.timely[i].date.getHours() === time.dateObj.getHours()){
                                         index = i;
                                         log.info('MergeWU Timely> Found!! same date');
@@ -615,7 +615,7 @@ function controllerWorldWeather(){
     };
 
     self.mergeWuCurrentDataToTimely = function(req, res, next){
-        if(req.WU.current){
+        if(req.WU && req.WU.current){
             var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
             var startDate = self._getDateObj(dateString);
 
@@ -709,28 +709,88 @@ function controllerWorldWeather(){
     };
 
     self.mergeWuCurrentData = function(req, res, next){
-        if(req.WU.current){
+        var i;
+        var curDate = new Date();
+
+        var offset = 0;
+        if (req.result && req.result.timezone && req.result.timezone.offset) {
+            offset = req.result.timezone.offset;
+        }
+
+        if(req.WU && req.WU.current){
             var list = req.WU.current.dataList;
-            var curDate = new Date();
-            log.info('MG WuC> curDate ', curDate);
+            log.info('MG WuC> curDate ', curDate.toISOString());
 
             if(req.result.current === undefined){
                 req.result.current = {};
             }
 
-            list.forEach(function(curItem){
+            for (i=list.length-1; i>=0; i--) {
+                var curItem = list[i];
                 if(curItem.dateObj
                     && curItem.dateObj.getYear() === curDate.getYear()
                     && curItem.dateObj.getMonth() === curDate.getMonth()
-                    && curItem.dateObj.getDay() === curDate.getDay()
+                    && curItem.dateObj.getDate() === curDate.getDate()
                     && curItem.dateObj.getHours() === curDate.getHours()){
-                    log.info('MG WuC> Find matched current date', curItem.dateObj.toString());
+                    log.info('MG WuC> Find matched current date', curItem.dateObj.toISOString());
 
+                    curItem.localTime = _getLocalTimeStr(curItem.dateObj, offset);
                     req.result.current = self._makeTimelyDataFromWUCurrent(curItem);
+                    break;
                 }
+            }
+        }
+        else if (req.DSF && req.DSF.data) {
+            log.info('MG DSF> curDate ', curDate.toISOString());
 
+            if (req.result.current === undefined) {
+                req.result.current = {};
+            }
+            for (i = req.DSF.data.length - 1; i >= 0; i--) {
+                var curItem = req.DSF.data[i].current;
+                log.info(curItem.dateObj.toString());
 
-            });
+                if (curItem.dateObj
+                    && curItem.dateObj.getYear() === curDate.getYear()
+                    && curItem.dateObj.getMonth() === curDate.getMonth()
+                    && curItem.dateObj.getDate() === curDate.getDate()
+                    && curItem.dateObj.getHours() === curDate.getHours()) {
+
+                    curItem.localTime = _getLocalTimeStr(curItem.dateObj, offset);
+                    log.info('MG DSF> Find matched curDate date', curItem.dateObj.toISOString());
+                    log.info(JSON.stringify(curItem));
+                    req.result.current = self._makeTimelyDataFromDSF(curItem);
+                    break;
+                }
+            }
+        }
+
+        //add yesterday info
+        if (req.DSF && req.DSF.data && req.result && req.result.current) {
+            var yesterday =  new Date(curDate);
+            yesterday.setDate(yesterday.getDate()-1);
+            log.info('MG DSF> yesterday ', yesterday.toISOString());
+
+            for (i=req.DSF.data.length-1;i>=0;i--) {
+                var curItem = req.DSF.data[i].current;
+                log.info(curItem.dateObj.toString());
+
+                var hourly = req.DSF.data[i].hourly.data;
+                for (var j=hourly.length-1; j>= 0; j--) {
+                    if (hourly[j].dateObj
+                        && hourly[j].dateObj.getMonth() === yesterday.getMonth()
+                        && hourly[j].dateObj.getDate() === yesterday.getDate()
+                        && hourly[j].dateObj.getHours() === yesterday.getHours()) {
+                        hourly[j].localTime = _getLocalTimeStr(hourly[j].dateObj, offset);
+                        log.info('MG DSF> Find matched yesterday date in hourly ' + hourly[j].dateObj.toISOString());
+                        log.info(JSON.stringify(hourly[j]));
+                        req.result.current.yesterday = self._makeTimelyDataFromDSF(hourly[j]);
+                        next();
+                        return;
+                    }
+                }
+            }
+            log.error('MG DSF> Fail to find matched hourly data of yesterday');
         }
         next();
     };
@@ -779,6 +839,15 @@ function controllerWorldWeather(){
         var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
         var startDate = self._getDateObj(dateString);
         var cDate = new Date();
+        //cDate.setDate(cDate.getDate()+10);
+
+        var offset = 0;
+        if (req.result && req.result.timezone && req.result.timezone.offset) {
+            offset = req.result.timezone.offset;
+        }
+
+        startDate.setMinutes(startDate.getMinutes()+offset);
+        cDate.setDate(startDate.getDate()+15);
 
         if(req.DSF && req.DSF.data){
             if(req.result === undefined){
@@ -816,18 +885,21 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
                     var isExist = false;
-                    if(dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+
+                    var localDate = new Date(dbItem.dateObj);
+                    localDate.setMinutes(localDate.getMinutes()+offset);
+                    dbItem.localTime = _getLocalTimeStr(dbItem.dateObj, offset);
+
+                    if(localDate >= startDate && localDate < cDate){
                         req.result.daily.forEach(function(dailyItem){
-                            //log.info('dailyItem : ', dailyItem.date.toString());
-                            if(dailyItem.date.getYear() === dbItem.dateObj.getYear() &&
-                                dailyItem.date.getMonth() === dbItem.dateObj.getMonth() &&
-                                dailyItem.date.getDay() === dbItem.dateObj.getDay() &&
-                                dailyItem.date.getHours() === dbItem.dateObj.getHours()){
+                            //log.info('dailyItem : ', dbItem.localTime);
+
+                            if (dailyItem.localTime == dbItem.localTime) {
                                 isExist = true;
                             }
                         });
                         if(!isExist){
-                            //log.info('NEW! DSF -> Daily : ', dbItem.dateObj.toString());
+                            //log.info('NEW! DSF -> Daily : ', dbItem.localTime);
                             req.result.daily.push(self._makeDailyDataFromDSF(dbItem));
                         }
                     }
@@ -842,6 +914,13 @@ function controllerWorldWeather(){
         var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
         var startDate = self._getDateObj(dateString);
         var cDate = new Date();
+
+        var offset = 0;
+        if (req.result && req.result.timezone && req.result.timezone.offset) {
+            offset = req.result.timezone.offset;
+        }
+        startDate.setMinutes(startDate.getMinutes()+offset);
+        cDate.setDate(startDate.getDate()+15);
 
         if(req.DSF && req.DSF.data){
             if(req.result === undefined){
@@ -880,19 +959,21 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.hourly.data.forEach(function(dbItem){
                     var isExist = false;
-                    if((dbItem.dateObj.getHours() == 0 || (dbItem.dateObj.getHours() % 3) == 0)  &&
-                        dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+
+                    var localDate = new Date(dbItem.dateObj);
+                    localDate.setMinutes(localDate.getMinutes()+offset);
+                    dbItem.localTime = _getLocalTimeStr(dbItem.dateObj, offset);
+
+                    if((localDate.getHours() == 0 || (localDate.getHours() % 3) == 0)  &&
+                        localDate >= startDate && localDate < cDate){
                         req.result.timely.forEach(function(timely){
-                            //log.info('hourlyItem : ', timely.date.toString());
-                            if(timely.date.getYear() === dbItem.dateObj.getYear() &&
-                                timely.date.getMonth() === dbItem.dateObj.getMonth() &&
-                                timely.date.getDay() === dbItem.dateObj.getDay() &&
-                                timely.date.getHours() === dbItem.dateObj.getHours()){
+                            //log.info('hourlyItem : ', dbItem.localTime);
+                            if (timely.localTime == dbItem.localTime) {
                                 isExist = true;
                             }
                         });
                         if(!isExist){
-                            //log.info('NEW! DSF -> Hourly : ', dbItem.dateObj.toString());
+                            //log.info('NEW! DSF -> Hourly : ', dbItem.localTime);
                             req.result.timely.push(self._makeTimelyDataFromDSF(dbItem));
                         }
                     }
@@ -932,6 +1013,100 @@ function controllerWorldWeather(){
         next();
     };
 
+    /**
+     * dark sky의 경우 daily에 있는 date가 항상 local time 0시 이지만,
+     * 아닌 경우 reset이 필요.
+     * @param utcTime
+     * @param offset
+     * @param resetHour
+     * @returns {string}
+     * @private
+     */
+    function _getLocalTimeStr(utcTime, offset, resetHour) {
+        var date = new Date(utcTime);
+        date.setMinutes(date.getMinutes()+offset);
+
+        if (resetHour) {
+            return date.getUTCFullYear()+
+                '.'+manager.leadingZeros(date.getUTCMonth()+1, 2)+
+                '.'+manager.leadingZeros(date.getUTCDate(), 2) +
+                ' '+manager.leadingZeros(00, 2) +
+                ':'+manager.leadingZeros(00, 2);
+        }
+
+        return date.getUTCFullYear()+
+            '.'+manager.leadingZeros(date.getUTCMonth()+1, 2)+
+            '.'+manager.leadingZeros(date.getUTCDate(), 2) +
+            ' '+manager.leadingZeros(date.getUTCHours(), 2) +
+            ':'+manager.leadingZeros(date.getUTCMinutes(), 2);
+    }
+
+    function _addLocalTimeToWeatherData(weatherData, offset) {
+
+        if (weatherData.hasOwnProperty('current')) {
+            var current = weatherData.current;
+            current.localTime = _getLocalTimeStr(current.date, offset);
+            if (current.hasOwnProperty('yesterday')) {
+                var yesterday = current.yesterday;
+                yesterday.localTime = _getLocalTimeStr(yesterday.date, offset);
+            }
+        }
+
+        ['daily', 'timely'].forEach(function (listName) {
+            if (weatherData.hasOwnProperty(listName)) {
+                var dataList = weatherData[listName];
+                dataList.forEach(function (weatherInfo) {
+                    if (listName == 'daily') {
+                        weatherInfo.localTime = _getLocalTimeStr(weatherInfo.date, offset, true);
+                    }
+                    else {
+                        weatherInfo.localTime = _getLocalTimeStr(weatherInfo.date, offset);
+                    }
+                });
+            }
+        });
+    }
+
+    self.addLocalTime = function (req, res, next) {
+
+        //find chached data
+        //else
+        var lat;
+        var lon;
+        var timestamp;
+        var url;
+
+        if (req.geocode) {
+            if (req.result == undefined) {
+                req.result = {};
+            }
+
+            lat = req.geocode.lat;
+            lon = req.geocode.lon;
+            timestamp = (new Date()).getTime();
+            url = "https://maps.googleapis.com/maps/api/timezone/json";
+            url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
+            log.info(url);
+            request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
+                if (err) {
+                    log.error(err);
+                }
+                else {
+                    try {
+                        var result = body;
+                        req.result.timezone = body;
+                        req.result.timezone.offset = (result.dstOffset+result.rawOffset)/60; //convert to min
+                    }
+                    catch (e) {
+                        log.error(e);
+                    }
+                }
+
+                next();
+            });
+        }
+    };
+
     /*******************************************************************************
      * * ***************************************************************************
      * * Private Functions (For internal)
@@ -954,6 +1129,9 @@ function controllerWorldWeather(){
         }
         if(time.dateObj){
             result.date = time.dateObj;
+        }
+        if (time.localTime) {
+            result.localTime = time.localTime;
         }
         if(time.desc){
             result.desc = time.desc;
@@ -1056,6 +1234,7 @@ function controllerWorldWeather(){
 
         return result;
     };
+
     self._makeDailyDataFromWU = function(summary){
         var day = {};
 
@@ -1141,6 +1320,9 @@ function controllerWorldWeather(){
         if(summary.dateObj){
             day.date = summary.dateObj;
         }
+        if (summary.localTime) {
+            day.localTime = summary.localTime;
+        }
         if(summary.summary){
             day.desc = summary.summary;
         }
@@ -1177,13 +1359,13 @@ function controllerWorldWeather(){
         }
 
         if(summary.pre_pro){
-            day.precProb = summary.pre_pro * 100;
+            day.precProb = Math.round(summary.pre_pro * 100);
         }
         if(summary.pre_int){
             day.precip = summary.pre_int;
         }
         if(summary.humid){
-            day.humid = summary.humid;
+            day.humid = Math.round(summary.humid*100);
         }
         if(summary.windspd){
             day.windSpd_mh = parseFloat(summary.windspd.toFixed(1));
@@ -1199,7 +1381,14 @@ function controllerWorldWeather(){
         return day;
     };
 
-    self._makeTimelyDataFromDSF = function(summary){
+    /**
+     * "oz":272.12,"pres":1014.19,"cloud":0.92,"vis":10,"winddir":359,"windspd":5.07,"humid":0.9,
+     * "ftemp":38.51,"temp":41.77,"pre_pro":0.17,"pre_int":0.0042,"summary":"Mostly Cloudy",
+     * "date":201612072200,"dateObj":"2016-12-07T13:00:00.000Z"
+     * @param summary
+     * @private
+     */
+    self._makeTimelyDataFromDSF = function (summary) {
         var timely = {};
 
         if(summary.date){
@@ -1207,6 +1396,9 @@ function controllerWorldWeather(){
         }
         if(summary.dateObj){
             timely.date = summary.dateObj;
+        }
+        if (summary.localTime) {
+            timely.localTime = summary.localTime;
         }
         if(summary.summary){
             timely.desc = summary.summary;
@@ -1219,15 +1411,18 @@ function controllerWorldWeather(){
             timely.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
             timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
-        if(summary.cloud){
-            timely.cloud = summary.cloud;
+        if (summary.cloud) {
+            timely.cloud = Math.round(summary.cloud * 100); // to percent
         }
         if(summary.windspd){
-            timely.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
-            timely.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            timely.windSpd_mh = Math.round(summary.windspd*1609.344); // mi/h -> m/h
+            timely.windSpd_ms = +(summary.windspd*0.44704).toFixed(2); // mi/h -> m/s
+        }
+        if (summary.winddir) {
+            timely.winddir = summary.winddir;
         }
         if(summary.humid){
-            timely.humid = summary.humid;
+            timely.humid = Math.round(summary.humid * 100);
         }
         timely.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1237,18 +1432,18 @@ function controllerWorldWeather(){
             timely.precType += 2;
         }
         if(summary.pre_pro){
-            timely.precProb = summary.pre_pro * 100;
+            timely.precProb = Math.round(summary.pre_pro * 100); //to percent
         }
-        if(summary.pre_int){
-            timely.precip = summary.pre_int;
+        if (summary.pre_int) {
+            timely.precip = +(summary.pre_int * 25.4).toFixed(1); //in -> mm
         }
         if(summary.vis){
-            timely.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
+            timely.vis = Math.round(summary.vis * 1.16093); //mile -> km
         }
         if(summary.pres){
-            timely.press = summary.press;
+            timely.press = summary.pres; //mb -> hpa
         }
-        if(summary.oz){
+        if (summary.oz) {
             timely.oz = summary.oz;
         }
 
@@ -1282,7 +1477,7 @@ function controllerWorldWeather(){
      */
     self.getCode = function(req){
         if(req.query.gcode === undefined){
-            log.silly('WW> can not find geocode from qurey');
+            log.silly('WW> can not find geocode from query');
             return false;
         }
 
@@ -1497,7 +1692,7 @@ function controllerWorldWeather(){
 
         async.parallel([
                 function(cb){
-                    modelWuCurrent.find({geocode:geocode}, function(err, list){
+                    modelWuCurrent.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Current data');
                             //cb(new Error('gFU> fail to get WU Current data'));
@@ -1517,7 +1712,7 @@ function controllerWorldWeather(){
                     });
                 },
                 function(cb){
-                    modelWuForecast.find({geocode:geocode}, function(err, list){
+                    modelWuForecast.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Forecast data');
                             //cb(new Error('gFU> fail to get WU Forecast data'));
@@ -1558,7 +1753,7 @@ function controllerWorldWeather(){
             lon: parseFloat(req.geocode.lon)
         };
 
-        modelDSForecast.find({geocode:geocode}, function(err, list){
+        modelDSForecast.find({geocode:geocode}).lean().exec(function(err, list){
             if(err){
                 log.error('gDSF> fail to get DSF data');
                 callback(err);

@@ -15,21 +15,24 @@ var dsForecastSchema = new mongoose.Schema({
             dateObj:    {type: Object, default: Date},  // UTC time
             date:       {type: Number, default: 0}, // GMT time
             summary:    {type: String, default: ''},
-            pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
-            pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
+            pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4) (in inches of liquid water per hour)
+            pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1) precipProbability
             pre_type:   {type: String, default:''}, // rain, snow, sleet
             temp:       {type: Number, default:0},
-            ftemp:      {type: Number, default:0},  // 체감온도
+            ftemp:      {type: Number, default:0},  // 체감온도, apparentTemperature
             humid:      {type: Number, default:0},  // 습도 percentage (0 ~ 1)
             windspd:    {type: Number, default:0},  // miles per hour
-            winddir:    {type: Number, default:0},  // degrees
+            winddir:    {type: Number, default:0},  // degrees windBearing
             vis:        {type: Number, default:0},  // in miles
-            cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
-            pres:       {type: Number, default:0},  // millibar
+            cloud:      {type: Number, default:0},  // percentage (0 ~ 1), cloudCover
+            pres:       {type: Number, default:0},  // millibar(mb)
             oz:         {type: Number, default:0}   // dobson unit
+            //icon
+            //dewPoint
         },
         hourly:{
             summary:        {type:String, default:''},
+            //icon
             data:[{
                 dateObj:    {type: Object, default: Date}, // UTC time
                 date:       {type: Number, default:0},  // GMT time
@@ -46,11 +49,15 @@ var dsForecastSchema = new mongoose.Schema({
                 cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:       {type: Number, default:0},  // millibar
                 oz:         {type: Number, default:0}   // dobson unit
+                //icon
+                //precipAccumulation ?
+                //dewPoint
             }]
 
         },
         daily:{
             summary: {type:String, default:''},
+            //icon
             data:[{
                 dateObj:        {type: Object, default: Date},  // UTC time
                 date:           {type: Number, default:0},  // GMT time
@@ -66,7 +73,7 @@ var dsForecastSchema = new mongoose.Schema({
                 temp_min:       {type: Number, default:0},
                 temp_mint:      {type: Number, default:0},
                 temp_max:       {type: Number, default:0},
-                temp_maxt:      {type: Number, default:0},
+                temp_maxt:      {type: Number, default:0}, //temperatureMaxTime
                 ftemp_min:      {type: Number, default:0},  // 체감온도,
                 ftemp_mint:     {type: Number, default:0},
                 ftemp_max:      {type: Number, default:0},
@@ -78,6 +85,8 @@ var dsForecastSchema = new mongoose.Schema({
                 cloud:          {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:           {type: Number, default:0},  // millibar
                 oz:             {type: Number, default:0}   // dobson unit
+                //icon
+                //dewpoint
             }]
         }
     }]
