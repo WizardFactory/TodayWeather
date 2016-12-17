@@ -990,6 +990,8 @@ function controllerWorldWeather(){
         next();
     };
 
+
+
     /*******************************************************************************
      * * ***************************************************************************
      * * Private Functions (For internal)
@@ -1178,10 +1180,10 @@ function controllerWorldWeather(){
             day.humid = summary.humax;
         }
         if(summary.windspdmax){
-            day.windSpd_ms = parseFloat(summary.windspdmax.toFixed(2));
+            day.windSpd_ms = Math.round(summary.windspdmax);
         }
         if(summary.windspdmax_mh){
-            day.windSpd_mh = parseFloat(summary.windspdmax_mh.toFixed(2));
+            day.windSpd_mh = Math.round(summary.windspdmax_mh);
         }
         if(summary.slpmax){
             day.press = summary.slpmax;
@@ -1235,23 +1237,23 @@ function controllerWorldWeather(){
         }
 
         if(summary.pre_pro){
-            day.precProb = summary.pre_pro * 100;
+            day.precProb = Math.round(summary.pre_pro * 100);
         }
         if(summary.pre_int){
             day.precip = summary.pre_int;
         }
         if(summary.humid){
-            day.humid = summary.humid;
+            day.humid = Math.round(summary.humid * 100);
         }
         if(summary.windspd){
-            day.windSpd_mh = parseFloat(summary.windspd.toFixed(1));
-            day.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(1));
+            day.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            day.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.pres){
             day.press = summary.pres;
         }
         if(summary.vis){
-            day.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(1));
+            day.vis = Math.round(summary.vis * 1.16093);
         }
 
         return day;
@@ -1278,14 +1280,14 @@ function controllerWorldWeather(){
             timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            timely.cloud = summary.cloud;
+            timely.cloud = Math.round(summary.cloud);
         }
         if(summary.windspd){
-            timely.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
-            timely.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            timely.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            timely.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.humid){
-            timely.humid = summary.humid;
+            timely.humid = Math.round(summary.humid * 100);
         }
         timely.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1301,10 +1303,10 @@ function controllerWorldWeather(){
             timely.precip = summary.pre_int;
         }
         if(summary.vis){
-            timely.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
+            timely.vis = Math.round(summary.vis * 1.16093);
         }
         if(summary.pres){
-            timely.press = summary.press;
+            timely.press = summary.pres;
         }
         if(summary.oz){
             timely.oz = summary.oz;
@@ -1334,17 +1336,17 @@ function controllerWorldWeather(){
             current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            current.cloud = summary.cloud;
+            current.cloud = Math.round(summary.cloud);
         }
         if(summary.windspd){
-            current.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
-            current.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            current.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            current.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.winddir){
             current.Dir = summary.winddir;
         }
         if(summary.humid){
-            current.humid = summary.humid;
+            current.humid = Math.round(summary.humid * 100);
         }
         current.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1360,7 +1362,7 @@ function controllerWorldWeather(){
             current.precip = parseFloat(summary.pre_int.toFixed(2));
         }
         if(summary.vis){
-            current.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
+            current.vis = Math.round(summary.vis * 1.16093);
         }
         if(summary.pres){
             current.press = summary.press;
