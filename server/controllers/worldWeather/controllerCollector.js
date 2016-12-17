@@ -1099,7 +1099,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         data.date = date;
                     }
                     var pubDate = self._getUtcTime('' + date +'000');
-                    if(data.dateObj < pubDate){
+                    if(data.dateObj.getTime() < pubDate.getTime()){
                         data.dateObj = pubDate;
                     }
                     data.data.forEach(function(dbItem){
@@ -1295,11 +1295,15 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
     }
+    dataList.push('cur');
 
     async.mapSeries(dataList,
         function(date, cb){
             // get forecast
             log.info('date : ', date);
+            if(date === 'cur'){
+                date = undefined;
+            }
             requester.getForecast(geocode, date, key, function(err, result){
                 if(err){
                     print.error('Req Dsf> get fail', geocode);
@@ -1309,6 +1313,10 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                 }
 
                 log.info(result);
+                if(date === undefined){
+                    var dateString = self._getTimeString(0).slice(0,10) + '00';
+                    date = self._getDateObj(dateString).getTime() / 1000;
+                }
                 self.saveDSForecast(geocode, date, result, function(err){
                     cb(null, result);
                 });

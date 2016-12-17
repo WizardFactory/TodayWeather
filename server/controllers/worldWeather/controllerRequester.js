@@ -456,6 +456,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
     }
 
     async.parallel([
+            /*
             function(cb){
                 collector.requestWuData(req.geocode, function(err, wuData){
                     if(err){
@@ -467,6 +468,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                     cb(null);
                 });
             },
+            */
             function(cb){
                 collector.requestDsfData(req.geocode, 0, 2, function(err, dsfData){
                     if(err){
