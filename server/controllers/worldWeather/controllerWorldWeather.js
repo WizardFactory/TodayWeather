@@ -346,6 +346,8 @@ function controllerWorldWeather(){
         log.info('TWW> geocode : ', req.geocode);
 
         async.waterfall([
+                /*
+                * No use WU data.
                 function(callback){
                     self.getDataFromWU(req, function(err, result){
                         if(err){
@@ -372,6 +374,7 @@ function controllerWorldWeather(){
                         callback(null);
                     });
                 },
+                */
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
@@ -415,6 +418,7 @@ function controllerWorldWeather(){
                                     cb(null);
                                 });
                             },
+                            /*
                             function(cb){
                                 self.getDataFromWU(req, function(err, result){
                                     if(err){
@@ -427,6 +431,7 @@ function controllerWorldWeather(){
                                     cb(null);
                                 });
                             },
+                            */
                             function(cb){
                                 self.getDataFromDSF(req, function(err, result){
                                     if(err){
@@ -792,22 +797,22 @@ function controllerWorldWeather(){
                 req.result.location.lon = dsf.geocode.lon;
             }
 
-            if(req.result.daily === undefined){
-                req.result.daily = [];
-            }
-
-            if(dsf.date){
+            if(dsf.date != undefined){
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
                 req.result.pubDate.DSF = dsf.date;
             }
 
-            if(dsf.dateObj){
+            if(dsf.dateObj != undefined){
                 if(req.result.pubDate === undefined){
                     req.result.pubDate = {};
                 }
                 req.result.pubDate.DSF = dsf.dateObj;
+            }
+
+            if(req.result.daily === undefined){
+                req.result.daily = [];
             }
 
             log.info('DSF Daily> SDate : ', startDate.toString());
@@ -816,7 +821,7 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
                     var isExist = false;
-                    if(dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+                    if(dbItem.dateObj >= startDate){
                         req.result.daily.forEach(function(dailyItem){
                             //log.info('dailyItem : ', dailyItem.date.toString());
                             if(dailyItem.date.getYear() === dbItem.dateObj.getYear() &&
@@ -845,7 +850,7 @@ function controllerWorldWeather(){
 
         if(req.DSF && req.DSF.data){
             if(req.result === undefined){
-                req.resutl = {};
+                req.result = {};
             }
 
             var dsf = req.DSF;
@@ -854,10 +859,6 @@ function controllerWorldWeather(){
                 req.result.location = {};
                 req.result.location.lat = dsf.geocode.lat;
                 req.result.location.lon = dsf.geocode.lon;
-            }
-
-            if(req.result.timely === undefined){
-                req.result.timely = [];
             }
 
             if(dsf.date){
@@ -874,6 +875,10 @@ function controllerWorldWeather(){
                 req.result.pubDate.DSF = dsf.dateObj;
             }
 
+            if(req.result.timely === undefined){
+                req.result.timely = [];
+            }
+
             log.info('DSF Hourly> SDate : ', startDate.toString());
             log.info('DSF Hourly> CDdate : ', cDate.toString());
 
@@ -881,7 +886,7 @@ function controllerWorldWeather(){
                 item.hourly.data.forEach(function(dbItem){
                     var isExist = false;
                     if((dbItem.dateObj.getHours() == 0 || (dbItem.dateObj.getHours() % 3) == 0)  &&
-                        dbItem.dateObj >= startDate && dbItem.dateObj < cDate){
+                        dbItem.dateObj >= startDate){
                         req.result.timely.forEach(function(timely){
                             //log.info('hourlyItem : ', timely.date.toString());
                             if(timely.date.getYear() === dbItem.dateObj.getYear() &&
@@ -899,6 +904,59 @@ function controllerWorldWeather(){
                 });
             });
         }
+        next();
+    };
+
+    self.mergeDsfCurrentData = function(req, res, next) {
+        var dateString = self._getTimeString(0).slice(0, 10) + '00';
+        var startDate = self._getDateObj(dateString);
+        var cDate = new Date();
+
+        if (req.DSF && req.DSF.data) {
+            if (req.result === undefined) {
+                req.result = {};
+            }
+
+            var dsf = req.DSF;
+
+            if (req.result.location === undefined) {
+                req.result.location = {};
+                req.result.location.lat = dsf.geocode.lat;
+                req.result.location.lon = dsf.geocode.lon;
+            }
+
+            if (dsf.date) {
+                if (req.result.pubDate === undefined) {
+                    req.result.pubDate = {};
+                }
+                req.result.pubDate.DSF = dsf.date;
+            }
+
+            if (dsf.dateObj) {
+                if (req.result.pubDate === undefined) {
+                    req.result.pubDate = {};
+                }
+                req.result.pubDate.DSF = dsf.dateObj;
+            }
+
+            if (req.result.current === undefined) {
+                req.result.current = {}
+            }
+
+            log.info('DSF current> SDate : ', startDate.toString());
+            log.info('DSF current> CDdate : ', cDate.toString());
+
+            dsf.data.forEach(function (item) {
+                if (startDate.getYear() === item.current.dateObj.getYear() &&
+                    startDate.getMonth() === item.current.dateObj.getMonth() &&
+                    startDate.getDay() === item.current.dateObj.getDay() &&
+                    startDate.getHours() === item.current.dateObj.getHours()) {
+                    log.info('DSF current > Found current data');
+                    req.result.current = self._makeCurrentDataFromDSFCurrent(item.current);
+                }
+            });
+        }
+
         next();
     };
 
@@ -931,6 +989,8 @@ function controllerWorldWeather(){
 
         next();
     };
+
+
 
     /*******************************************************************************
      * * ***************************************************************************
@@ -1120,10 +1180,10 @@ function controllerWorldWeather(){
             day.humid = summary.humax;
         }
         if(summary.windspdmax){
-            day.windSpd_ms = parseFloat(summary.windspdmax.toFixed(2));
+            day.windSpd_ms = Math.round(summary.windspdmax);
         }
         if(summary.windspdmax_mh){
-            day.windSpd_mh = parseFloat(summary.windspdmax_mh.toFixed(2));
+            day.windSpd_mh = Math.round(summary.windspdmax_mh);
         }
         if(summary.slpmax){
             day.press = summary.slpmax;
@@ -1177,23 +1237,23 @@ function controllerWorldWeather(){
         }
 
         if(summary.pre_pro){
-            day.precProb = summary.pre_pro * 100;
+            day.precProb = Math.round(summary.pre_pro * 100);
         }
         if(summary.pre_int){
             day.precip = summary.pre_int;
         }
         if(summary.humid){
-            day.humid = summary.humid;
+            day.humid = Math.round(summary.humid * 100);
         }
         if(summary.windspd){
-            day.windSpd_mh = parseFloat(summary.windspd.toFixed(1));
-            day.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(1));
+            day.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            day.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.pres){
             day.press = summary.pres;
         }
         if(summary.vis){
-            day.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(1));
+            day.vis = Math.round(summary.vis * 1.16093);
         }
 
         return day;
@@ -1220,14 +1280,14 @@ function controllerWorldWeather(){
             timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            timely.cloud = summary.cloud;
+            timely.cloud = Math.round(summary.cloud);
         }
         if(summary.windspd){
-            timely.windSpd_mh = parseFloat(summary.windspd.toFixed(2));
-            timely.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
+            timely.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            timely.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.humid){
-            timely.humid = summary.humid;
+            timely.humid = Math.round(summary.humid * 100);
         }
         timely.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1237,22 +1297,81 @@ function controllerWorldWeather(){
             timely.precType += 2;
         }
         if(summary.pre_pro){
-            timely.precProb = summary.pre_pro * 100;
+            timely.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
         }
         if(summary.pre_int){
             timely.precip = summary.pre_int;
         }
         if(summary.vis){
-            timely.vis = parseFloat((((summary.vis * 1.16093) * 10) / 10).toFixed(2));
+            timely.vis = Math.round(summary.vis * 1.16093);
         }
         if(summary.pres){
-            timely.press = summary.press;
+            timely.press = summary.pres;
         }
         if(summary.oz){
             timely.oz = summary.oz;
         }
 
         return timely;
+    };
+
+    self._makeCurrentDataFromDSFCurrent = function(summary){
+        var current = {};
+
+        if(summary.date){
+            current.date = summary.date;
+        }
+        if(summary.dateObj){
+            current.date = summary.dateObj;
+        }
+        if(summary.summary){
+            current.desc = summary.summary;
+        }
+        if(summary.temp){
+            current.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
+            current.temp_f = parseFloat(summary.temp.toFixed(1));
+        }
+        if(summary.ftemp){
+            current.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
+            current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
+        }
+        if(summary.cloud){
+            current.cloud = Math.round(summary.cloud);
+        }
+        if(summary.windspd){
+            current.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            current.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+        }
+        if(summary.winddir){
+            current.Dir = summary.winddir;
+        }
+        if(summary.humid){
+            current.humid = Math.round(summary.humid * 100);
+        }
+        current.precType = 0;
+        if(summary.pre_type == 'rain'){
+            current.precType += 1;
+        }
+        if(summary.pre_type == 'snow'){
+            current.precType += 2;
+        }
+        if(summary.pre_pro){
+            current.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
+        }
+        if(summary.pre_int){
+            current.precip = parseFloat(summary.pre_int.toFixed(2));
+        }
+        if(summary.vis){
+            current.vis = Math.round(summary.vis * 1.16093);
+        }
+        if(summary.pres){
+            current.press = summary.press;
+        }
+        if(summary.oz){
+            current.oz = summary.oz;
+        }
+
+        return current;
     };
 
     /**
@@ -1636,8 +1755,8 @@ function controllerWorldWeather(){
                 }
 
                 var result = JSON.parse(body);
-                log.silly('WW> request success');
-                log.silly(result);
+                log.info('WW> request success');
+                log.info(result);
                 if(result.status == 'OK'){
                     // adding geocode OK
                     callback(0, result);
