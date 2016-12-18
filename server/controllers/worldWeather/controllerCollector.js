@@ -94,7 +94,7 @@ ConCollector.prototype._getTimeString = function(tzOffset) {
         offset = tzOffset;
     }
 
-    var tz = now.getTime() + (offset * 3600000);
+    var tz = now.getTime() + (offset * 3600000) + (now.getTimezoneOffset() * 60000);
     now.setTime(tz);
 
     result =
@@ -1073,26 +1073,27 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             if(data.offset){
                 timeOffset = parseInt(data.offset);
             }
-            if(list.length === 0){
+            if(list.length === 0) {
                 print.info('Dsf> First time');
-                var newItem = new modelDSForecast({geocode:geocode,
-                                                    address:{},
-                                                    date:date,
-                                                    dateObj: self._getUtcTime(''+date +'000'),
-                                                    timeoffset:timeOffset,
-                                                    data : weatherData
+                var newItem = new modelDSForecast({
+                    geocode: geocode,
+                    address: {},
+                    date: date,
+                    dateObj: self._getUtcTime('' + date + '000'),
+                    timeoffset: timeOffset,
+                    data: weatherData
                 });
-                newItem.save(function(err){
-                    if(err){
+                newItem.save(function (err) {
+                    if (err) {
                         log.error('Dsf> fail to add the new data to DB :', geocode, err);
                         print.error('Dsf> fail to add the new data to DB :', geocode);
                     }
-                    if(callback){
+                    if (callback) {
                         callback(err, newData);
                     }
                 });
+            }else {
                 //print.info('WuF> add new Item : ', newData);
-            }else{
                 list.forEach(function(data, index){
                     var isExist = false;
                     if(data.date < date){
@@ -1102,11 +1103,10 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     if(data.dateObj.getTime() < pubDate.getTime()){
                         data.dateObj = pubDate;
                     }
+
                     data.data.forEach(function(dbItem){
-                        if(dbItem.current.dateObj.getYear() === newData.current.dateObj.getYear() &&
-                            dbItem.current.dateObj.getMonth() === newData.current.dateObj.getMonth() &&
-                            dbItem.current.dateObj.getDay() === newData.current.dateObj.getDay() &&
-                            dbItem.current.dateObj.getHours() === newData.current.dateObj.getHours()) {
+                        log.info('DB Item', dbItem.current.dateObj.toString());
+                        if(dbItem.current.dateObj.getTime() === newData.current.dateObj.getTime()){
                             dbItem.current = newData.current;
                             dbItem.hourly = newData.hourly;
                             dbItem.daily = newData.daily;
@@ -1279,6 +1279,17 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
     }
 };
 
+ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
+    modelDSForecast.remove({geocode:geocode}).lean().exec(function(err, list){
+        if(err){
+            log.error('Dsf DB> fail to get db data', err);
+            return callback(err);
+        }
+        log.silly('Dsf DB > remove all data');
+        callback(undefined);
+    });
+};
+
 /**
  *
  * @param geocode
@@ -1297,43 +1308,49 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     }
     dataList.push('cur');
 
-    async.mapSeries(dataList,
-        function(date, cb){
-            // get forecast
-            log.info('date : ', date);
-            if(date === 'cur'){
-                date = undefined;
-            }
-            requester.getForecast(geocode, date, key, function(err, result){
-                if(err){
-                    print.error('Req Dsf> get fail', geocode);
-                    log.error('Req Dsf> get fail', geocode);
-                    cb(null);
-                    return;
-                }
-
-                log.info(result);
-                if(date === undefined){
-                    var dateString = self._getTimeString(0).slice(0,10) + '00';
-                    date = self._getDateObj(dateString).getTime() / 1000;
-                }
-                self.saveDSForecast(geocode, date, result, function(err){
-                    cb(null, result);
-                });
-            });
-        },
-        function(err, DsfData){
-            if(err){
-                log.error(err);
-            }
-
-            if(DsfData){
-                callback(err, DsfData);
-            }else{
-                callback(err);
-            }
+    self.removeAllDsfDb(geocode, function(err){
+        if(err){
+            log.error('Req Dsf> fail to delete all data');
+            return callback(err);
         }
-    );
+        async.mapSeries(dataList,
+            function(date, cb){
+                // get forecast
+                log.info('date : ', date);
+                if(date === 'cur'){
+                    date = undefined;
+                }
+                requester.getForecast(geocode, date, key, function(err, result){
+                    if(err){
+                        print.error('Req Dsf> get fail', geocode);
+                        log.error('Req Dsf> get fail', geocode);
+                        cb(null);
+                        return;
+                    }
+
+                    log.info(result);
+                    if(date === undefined){
+                        var dateString = self._getTimeString(0).slice(0,10) + '00';
+                        date = self._getDateObj(dateString).getTime() / 1000;
+                    }
+                    self.saveDSForecast(geocode, date, result, function(err){
+                        cb(null, result);
+                    });
+                });
+            },
+            function(err, DsfData){
+                if(err){
+                    log.error(err);
+                }
+
+                if(DsfData){
+                    callback(err, DsfData);
+                }else{
+                    callback(err);
+                }
+            }
+        );
+    });
 };
 
 /**************************************************************************************/
