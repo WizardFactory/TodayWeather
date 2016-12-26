@@ -662,7 +662,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         //check data complete
         result = listResult[0];
         if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
-            result.pty === template.pty) {
+            result.pty === template.pty || result.t1h === template.t1h) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
