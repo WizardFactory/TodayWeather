@@ -237,5 +237,6 @@
   "LOC_STRONG_WIND":"强风",
   "LOC_VERY_STRONG_WIND":"非常强风",
   "LOC_PURCHASING" : "购买...",
-  "LOC_DELETE" : "删除"
+  "LOC_DELETE" : "删除",
+  "LOC_UNITS" : "单位"
 }

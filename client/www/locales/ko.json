@@ -237,5 +237,6 @@
   "LOC_STRONG_WIND" : "바람강함",
   "LOC_VERY_STRONG_WIND" : "바람매우강함",
   "LOC_PURCHASING" : "구매중...",
-  "LOC_DELETE" : "삭제"
+  "LOC_DELETE" : "삭제",
+  "LOC_UNITS" : "단위설정"
 }

@@ -100,15 +100,15 @@
                                 </div>
                                 <div class="row subheading">
                                     <img src="img/wind-and-cloud.svg" style="height: 20px; margin: 0 2px">
-                                    <p class="detail-item-p">{{'LOC_WIND'|translate}} {{currentWeather.wdd}} {{currentWeather.wsd}}<small>m/s</small></p>
+                                    <p class="detail-item-p">{{'LOC_WIND'|translate}} {{currentWeather.wdd}} {{currentWeather.wsd}}<small>{{getWindSpdUnit()}}</small></p>
                                 </div>
                                 <div class="row subheading">
                                     <img src="img/ic_visibility_white_24px.svg" style="height: 24px">
-                                    <p class="detail-item-p">{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>km</small></p>
+                                    <p class="detail-item-p">{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit}}</small></p>
                                 </div>
                                 <div class="row subheading">
                                     <img src="img/ic_vertical_align_bottom_white_24px.svg" style="height: 24px">
-                                    <p class="detail-item-p"}}>{{'LOC_PRESSURE'|translate}} {{currentWeather.hPa}}<small>hPa</small></p>
+                                    <p class="detail-item-p"}}>{{'LOC_PRESSURE'|translate}} {{currentWeather.hPa}}<small>{{getPressUnit()}}</small></p>
                                 </div>
                                 <div class="row subheading" ng-if="currentWeather.dspls && currentWeather.dspls > 60">
                                     <img src="img/angry.svg" style="height: 20px; margin: 0 2px">
@@ -124,7 +124,7 @@
                                 </div>
                                 <div class="row subheading" ng-if="currentWeather.rn1">
                                     <img src="img/glass-with-water.svg" style="height: 20px; margin: 0 2px">
-                                    <p class="detail-item-p">{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>mm</small></p>
+                                    <p class="detail-item-p">{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>{{getPrecipUnit()}}</small></p>
                                 </div>
                                 <div class="row subheading">
                                     <i class="icon ion-clock" style="font-size: 22px; margin: 0 2px"></i>

@@ -32,6 +32,10 @@
                     <li class="item item-icon-right setting-title-light">
                         {{'LOC_VERSION'|translate}} <span class="item-note setting-title-light" style="color: inherit; font-size:20px">{{version}}</span>
                     </li>
+                    <a class="item item-icon-right setting-title-light" href="#/units">
+                        {{'LOC_UNITS'|translate}}
+                        <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
+                    </a>
                     <div ng-if="isAndroid()" class="item setting-title-light" style="padding-bottom: 8px">
                         <div class="setting-title-light" translate="LOC_WIDGET"></div>
                         <div style="font-size:10px; padding-top: 4px" translate="LOC_AFTER_YOU_MAKE_A_CHANGE_YOU_NEED_TO_UPDATE_THE_WIDGET_TO_APPLY_THE_CHANGES">

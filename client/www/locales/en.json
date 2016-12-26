@@ -237,5 +237,6 @@
   "LOC_STRONG_WIND" : "Strong wind",
   "LOC_VERY_STRONG_WIND" : "Very strong wind",
   "LOC_PURCHASING" : "Purchasing...",
-  "LOC_DELETE" : "Delete"
+  "LOC_DELETE" : "Delete",
+  "LOC_UNITS" : "Units"
 }

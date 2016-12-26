@@ -323,7 +323,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http, Util) {
+    .factory('WeatherUtil', function ($q, $http, Util, Units) {
         var obj = {};
 
         //region Function
@@ -630,7 +630,7 @@ angular.module('starter.services', [])
          * @param {Object} currentTownWeather
          * @returns {{}}
          */
-        obj.parseCurrentTownWeather = function (currentTownWeather) {
+        obj.parseCurrentTownWeather = function (currentTownWeather, units) {
             var currentForecast = {};
             var time;
             var isNight;
@@ -647,6 +647,38 @@ angular.module('starter.services', [])
             currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
                 currentTownWeather.lgt, isNight);
 
+            if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                currentForecast.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.t1h);
+                currentForecast.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.sensorytem);
+                currentForecast.sensoryTem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.sensoryTem);
+                currentForecast.dpt = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.dpt);
+                currentForecast.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.heatIndex);
+                if (!(currentForecast.yesterday == undefined)) {
+                    currentForecast.yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.t1h);
+                }
+            }
+            if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                currentForecast.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rn1);
+                currentForecast.rs1h = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1h);
+                currentForecast.rs1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1d);
+                currentForecast.r1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.r1d);
+                if (!(currentForecast.yesterday == undefined)) {
+                    currentForecast.yesterday.rn1 = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.rn1);
+                }
+            }
+            if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                currentForecast.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), currentForecast.wsd);
+                if (!(currentForecast.yesterday == undefined)) {
+                    currentForecast.yesterday.wsd = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.wsd);
+                }
+            }
+            if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                currentForecast.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), currentForecast.hPa);
+            }
+            if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                currentForecast.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), currentForecast.visibility);
+            }
+
             return currentForecast;
         };
 
@@ -655,7 +687,7 @@ angular.module('starter.services', [])
          * @param {Object} currentForecast
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        obj.parseShortTownWeather = function (shortForecastList, currentForecast) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast, units) {
             var data = [];
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
@@ -725,6 +757,24 @@ angular.module('starter.services', [])
                     }
                 }
 
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    tempObject.t3h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.t3h);
+                    tempObject.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.tmn);
+                    tempObject.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.tmx);
+                    tempObject.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.sensorytem);
+                    tempObject.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.heatIndex);
+                }
+
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    tempObject.r06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.r06);
+                    tempObject.s06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.s06);
+                    tempObject.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.rn1);
+                }
+
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    tempObject.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), tempObject.wsd);
+                }
+
                 data.push(tempObject);
 
                 return true;
@@ -757,7 +807,7 @@ angular.module('starter.services', [])
          * @param currentTime
          * @returns {Array}
          */
-        obj.parseMidTownWeather = function (midData, currentTime) {
+        obj.parseMidTownWeather = function (midData, currentTime, units) {
             var tmpDayTable = [];
             var displayItemCount = 0;
             var todayInfo;
@@ -782,6 +832,20 @@ angular.module('starter.services', [])
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    data.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmx);
+                    data.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmn);
+                }
+
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    data.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.rn1);
+                    data.r06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.r06);
+                    data.s06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.s06);
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    data.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), data.wsd);
+                }
 
                 if (data.reh !== undefined) {
                     data.humidityIcon = decideHumidityIcon(data.reh);
@@ -1346,6 +1410,17 @@ angular.module('starter.services', [])
             var data = {};
             var currentTime;
             var todayInfo;
+
+            if (weatherData.units == undefined) {
+                var obj = {};
+                obj.temperatureUnit = "C";
+                obj.windSpeedUnit = "m/s";
+                obj.pressureUnit = "hPa";
+                obj.distanceUnit = "m";
+                obj.precipitationUnit = "mm";
+                weatherData.units = obj;
+            }
+
             if (weatherData.current && weatherData.current.stnDateTime) {
                 currentTime = new Date(weatherData.current.stnDateTime);
             }
@@ -1354,10 +1429,10 @@ angular.module('starter.services', [])
                 currentTime.setHours(parseInt(weatherData.current.time.substr(0, 2)))
             }
 
-            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime, weatherData.units);
             todayInfo = midTownWeather.today;
 
-            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.units);
             currentForecast.today = todayInfo;
 
             //console.log(midTownWeather);
@@ -1365,7 +1440,7 @@ angular.module('starter.services', [])
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, weatherData.units);
             //console.log(shortTownWeather);
 
             /**
@@ -1470,7 +1545,7 @@ angular.module('starter.services', [])
             return skyIconName;
         }
 
-        function _parseWorldCurrentWeather(current, todayInfo, currentTime) {
+        function _parseWorldCurrentWeather(current, todayInfo, currentTime, units) {
             var sunrise = 7;
             var sunset = 18;
             var isNight = false;
@@ -1504,6 +1579,25 @@ angular.module('starter.services', [])
                 yesterday.t1h = current.yesterday.temp_c;
                 yesterday.summary = current.yesterday.desc;
             }
+
+            if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                current.temp_c = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), current.temp_c);
+                current.ftemp_c = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), current.ftemp_c);
+                yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), yesterday.t1h);
+            }
+            if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                current.windSpd_ms = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), current.windSpd_ms);
+            }
+            if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                current.press = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), current.press);
+            }
+            if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                current.vis = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), current.vis);
+            }
+            if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                current.precip = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), current.precip);
+            }
+
            return {
                date: new Date(current.localTime),
                summary: current.desc,
@@ -1515,6 +1609,7 @@ angular.module('starter.services', [])
                skyIcon: _parseWorldSkyState(current.precType, current.cloud, isNight),
                visibility: current.vis,
                hPa: current.press,
+               rn1: current.precip,
                today: todayInfo,
                yesterday: yesterday
            }
@@ -1534,7 +1629,7 @@ angular.module('starter.services', [])
             return year+month+day;
         }
 
-        function _parseWorldHourlyWeather(hourly, currentTime, todayInfo) {
+        function _parseWorldHourlyWeather(hourly, currentTime, todayInfo, units) {
             var data = [];
 
             if (!hourly || !Array.isArray(hourly)) {
@@ -1567,6 +1662,7 @@ angular.module('starter.services', [])
                 else {
                     tempObject.t3h = hourlyObj.temp_c;
                 }
+                tempObject.sensorytem = hourlyObj.ftemp_c;
 
                 tempObject.wsd = hourlyObj.windSpd_ms;
                 tempObject.reh = hourlyObj.humid;
@@ -1602,6 +1698,27 @@ angular.module('starter.services', [])
                     tempObject.r06 = 0;
                 }
 
+                tempObject.hPa = hourlyObj.press;
+                tempObject.visibility = hourlyObj.vis;
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    tempObject.t3h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.t3h);
+                    tempObject.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.sensorytem);
+                    //dewpoint
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    tempObject.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), tempObject.wsd);
+                }
+                if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                    tempObject.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), tempObject.hPa);
+                }
+                if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                    tempObject.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), tempObject.visibility);
+                }
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    tempObject.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.rn1);
+                }
+
                 if (currentIndex == undefined) {
                     if (currentTime.getDate() == date.getDate()) {
                         todayIndex = index;
@@ -1612,15 +1729,15 @@ angular.module('starter.services', [])
                             tempObject.currentIndex = true;
                         }
                         else if (currentHours < time) {
-                           if (index == 0)  {
-                               console.log("Error current index is -1");
-                               currentIndex = -1;
-                           }
+                            if (index == 0)  {
+                                console.log("Error current index is -1");
+                                currentIndex = -1;
+                            }
                             else {
-                               currentIndex = index-1;
-                               //hourly[index-1].currentIndex = true;
-                               data[index-1].currentIndex = true;
-                           }
+                                currentIndex = index-1;
+                                //hourly[index-1].currentIndex = true;
+                                data[index-1].currentIndex = true;
+                            }
                         }
                         else if (currentHours > time) {
                             //24시가 다음날 0으로 오는 경우
@@ -1636,8 +1753,6 @@ angular.module('starter.services', [])
                         }
                     }
                 }
-
-                tempObject.visibility = hourlyObj.vis;
 
                 var tmpDisplayCount = 0;
                 //data on chart from yesterday
@@ -1693,7 +1808,7 @@ angular.module('starter.services', [])
         }
 
 
-        function _parseWorldDailyWeather(daily, currentTime) {
+        function _parseWorldDailyWeather(daily, currentTime, units) {
 
             var tmpDayTable = [];
             var displayItemCount = 0;
@@ -1761,6 +1876,26 @@ angular.module('starter.services', [])
                 if (!(dayInfo.vis == undefined)) {
                    data.visibility = dayInfo.vis;
                 }
+                if (!(dayInfo.precip == undefined)) {
+                    data.rn1 = dayInfo.precip;
+                }
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    data.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmx);
+                    data.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmn);
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    data.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), data.wsd);
+                }
+                if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                    data.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), data.hPa);
+                }
+                if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                    data.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), data.visibility);
+                }
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    data.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.rn1);
+                }
 
                 tmpDayTable.push(data);
 
@@ -1812,6 +1947,16 @@ angular.module('starter.services', [])
             var midTownWeather;
             var shortTownWeather;
 
+            if (weatherData.units == undefined) {
+                var obj = {};
+                obj.temperatureUnit = "C";
+                obj.windSpeedUnit = "m/s";
+                obj.pressureUnit = "hPa";
+                obj.distanceUnit = "m";
+                obj.precipitationUnit = "mm";
+                weatherData.units = obj;
+            }
+
             if (weatherData.current && weatherData.current.localTime) {
                 currentTime = new Date(weatherData.current.localTime);
             }
@@ -1822,10 +1967,10 @@ angular.module('starter.services', [])
 
             console.log("current time="+currentTime.toString());
 
-            midTownWeather =_parseWorldDailyWeather(weatherData.daily, currentTime);
+            midTownWeather =_parseWorldDailyWeather(weatherData.daily, currentTime, weatherData.units);
             todayInfo = midTownWeather.today;
-            shortTownWeather = _parseWorldHourlyWeather(weatherData.timely, currentTime, todayInfo);
-            data.currentWeather = _parseWorldCurrentWeather(weatherData.current, todayInfo, currentTime.getHours());
+            shortTownWeather = _parseWorldHourlyWeather(weatherData.timely, currentTime, todayInfo, weatherData.units);
+            data.currentWeather = _parseWorldCurrentWeather(weatherData.current, todayInfo, currentTime.getHours(), weatherData.units);
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
             data.dayChart = [{
@@ -2090,6 +2235,7 @@ angular.module('starter.services', [])
         obj.guideVersion = 1.0;
         obj.suiteName = "group.net.wizardfactory.todayweather";
         obj.language;
+        obj.region;
 
         //obj.url = "/v000705";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
@@ -2120,6 +2266,17 @@ angular.module('starter.services', [])
         }
 
         Util.language = navigator.userLanguage || navigator.language;
+        if (navigator.globalization) {
+            navigator.globalization.getLocaleName(
+                function (locale) {
+                    Util.region = locale.value.split('-')[1];
+                    console.log('region: ' + Util.region + '\n');
+                },
+                function () {
+                    console.log('Error getting locale\n');
+                }
+            );
+        }
 
         Util.ga.platformReady();
 

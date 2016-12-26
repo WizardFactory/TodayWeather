@@ -3,7 +3,7 @@ angular.module('starter.controllers', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
-                                          $ionicPopup, $translate) {
+                                          $ionicPopup, $translate, Units) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -448,48 +448,10 @@ angular.module('starter.controllers', [])
             return ret;
         }
 
-        /**
-         * 적설량과, 강우량 구분
-         * @param pty
-         * @param rn1
-         * @param r06
-         * @param s06
-         * @returns {*}
-         * @private
-         */
-        function _makeRainSnowFallSymbol(pty, rn1, r06, s06) {
-            if (pty != undefined && pty === 3) {
-                return "cm";
-            }
-            else if (pty != undefined && pty > 0) {
-                return "mm";
-            }
-
-            if (r06 != undefined && r06 > 0) {
-                return "mm";
-            }
-            if (s06 != undefined && s06 > 0) {
-                return "cm";
-            }
-
-            if (rn1 != undefined && rn1 > 0) {
-                return "mm";
-            }
-            return "";
-        }
-
         $scope.getRainSnowFall = function (value) {
             var ret = _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
             if (ret == "") {
                 ret = "0";
-            }
-            return ret;
-        };
-
-        $scope.getRainSnowFallSymbol = function (value) {
-            var ret = _makeRainSnowFallSymbol(value.pty, value.rn1, value.r06, value.s06);
-            if (ret == "") {
-                ret = "mm";
             }
             return ret;
         };
@@ -1114,6 +1076,26 @@ angular.module('starter.controllers', [])
             else {
                 alphaBar.css('box-shadow','initial');
             }
+        };
+
+        $scope.getTempUnit = function () {
+           return Units.getUnit('temperatureUnit');
+        };
+
+        $scope.getWindSpdUnit = function () {
+            return Units.getUnit('windSpeedUnit');
+        };
+
+        $scope.getPressUnit = function () {
+            return Units.getUnit('pressureUnit');
+        };
+
+        $scope.getDistanceUnit = function () {
+            return Units.getUnit('distanceUnit');
+        };
+
+        $scope.getPrecipUnit = function () {
+            return Units.getUnit('precipitationUnit');
         };
 
         init();

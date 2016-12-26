@@ -98,7 +98,7 @@
                                    <div class="row subheading" style="margin: 0" ng-if="day.wsd">
                                        <img src="img/wind-and-cloud.svg" style="height: 22px; margin: auto 1px;">
                                        <div style="margin: auto 8px">
-                                           <p class="subheading" style="margin: 0;">{{day.wsd}}<small>m/s</small></p>
+                                           <p class="subheading" style="margin: 0;">{{day.wsd}}<small>{{getWindSpdUnit()}}</small></p>
                                            <span class="caption" translate="LOC_WIND"></span>
                                        </div>
                                    </div>
@@ -126,7 +126,7 @@
                                    <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['pty', 'rn1', 'r06', 's06'])">
                                        <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
                                        <div style="margin: auto 8px">
-                                           <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getRainSnowFallSymbol(day)}}</small></p>
+                                           <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getPrecipUnit()}}</small></p>
                                            <span class="caption" ng-if="getRainSnowFallSymbol(day)=='cm'">{{'LOC_DAILY_SHOWFALL'|translate}}</span>
                                            <span class="caption" ng-if="getRainSnowFallSymbol(day)!='cm'">{{'LOC_DAILY_PRECIPITATION'|translate}}</span>
                                        </div>

@@ -13,9 +13,10 @@ angular.module('starter', [
     'controller.purchase',
     'service.twads',
     'service.push',
-    'ionic-timepicker'
+    'ionic-timepicker',
+    'controller.units'
 ])
-    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state) {
+    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
         document.addEventListener("deviceready", function () {
@@ -73,6 +74,8 @@ angular.module('starter', [
                 cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
                 cordova.plugins.Keyboard.disableScroll(true);
             }
+
+            Units.loadUnits();
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
@@ -107,6 +110,10 @@ angular.module('starter', [
             } else if (toState.name === 'guide') {
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
+                }
+            } else if (toState.name === 'units') {
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#444');
                 }
             }
 
@@ -1100,7 +1107,11 @@ angular.module('starter', [
                 templateUrl: 'templates/purchase.html',
                 controller: "PurchaseCtrl"
             })
-            // setup an abstract state for the tabs directive
+            .state('units', {
+                url: '/units',
+                templateUrl: 'templates/units.html',
+                controller: 'UnitsCtrl'
+            })
             .state('tab', {
                 url: '/tab',
                 abstract: true,
