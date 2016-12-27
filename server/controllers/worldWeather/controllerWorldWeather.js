@@ -1404,7 +1404,7 @@ function controllerWorldWeather(){
             day.ftempMin_f = parseFloat((summary.ftemp_min).toFixed(1));
         }
         if(summary.cloud){
-            day.cloud = +summary.cloud.toFixed(2);
+            day.cloud = Math.round(summary.cloud * 100);
         }
         day.precType = 0;
         if(summary.pre_type == 'rain'){
@@ -1461,7 +1461,7 @@ function controllerWorldWeather(){
             hourly.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            hourly.cloud = +summary.cloud.toFixed(2);
+            hourly.cloud = Math.round(summary.cloud * 100);
         }
         if(summary.windspd){
             hourly.windSpd_mh = Math.round(summary.windspd * 1609.344);
@@ -1520,7 +1520,7 @@ function controllerWorldWeather(){
             current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            current.cloud = +summary.cloud.toFixed(2);
+            current.cloud = Math.round(summary.cloud * 100);
         }
         if(summary.windspd){
             current.windSpd_mh = Math.round(summary.windspd * 1609.344);
