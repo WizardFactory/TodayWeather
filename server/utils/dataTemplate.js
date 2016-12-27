@@ -44,7 +44,7 @@ var defaultData = {
         press: -1000,
         oz: -1000,
     }],
-    timely:[{
+    hourly:[{
         date: -1000,
         desc: '',
         temp_c: -1000,

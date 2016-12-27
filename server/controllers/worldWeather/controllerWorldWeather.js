@@ -312,7 +312,8 @@ function controllerWorldWeather(){
     self._compareDateString = function(first, second){
         //log.info('Compare Date', first, second);
 
-        if(first.slice(0, 10) === second.slice(0, 10)){
+        // YYYY.mm.dd HH:MM
+        if(first.slice(0, 13) === second.slice(0, 13)){
             return true;
         }
         return false;
@@ -320,8 +321,9 @@ function controllerWorldWeather(){
 
 
     self._chechHour = function(date, hourList){
+        // YYYY.mm.dd HH:MM
         for(var i=0 ; i<hourList.length ; i++){
-            if(date.slice(8, 10) === hourList[i]){
+            if(date.slice(11, 13) === hourList[i]){
                 return true;
             }
         }
@@ -365,6 +367,15 @@ function controllerWorldWeather(){
         log.info('TWW> geocode : ', req.geocode);
 
         async.waterfall([
+                function(callback){
+                    self.getLocalTimezone(req, function(err){
+                        if(err){
+                            log.error('Fail to get LocalTimezone : ', err);
+                        }
+                    });
+
+                    return callback(null);
+                },
                 /*
                 * No use WU data.
                 function(callback){
@@ -535,15 +546,15 @@ function controllerWorldWeather(){
             offset = tzOffset;
         }
 
-        var tz = now.getTime() + (offset * 3600000) + (now.getTimezoneOffset() * 60000);
+        var tz = now.getTime() + (offset * 3600000);
         now.setTime(tz);
 
         result =
-            self._leadingZeros(now.getFullYear(), 4) +
-            self._leadingZeros(now.getMonth() + 1, 2) +
-            self._leadingZeros(now.getDate(), 2) +
-            self._leadingZeros(now.getHours(), 2) +
-            self._leadingZeros(now.getMinutes(), 2);
+            self._leadingZeros(now.getUTCFullYear(), 4) + '.' +
+            self._leadingZeros(now.getUTCMonth() + 1, 2) + '.' +
+            self._leadingZeros(now.getUTCDate(), 2) + ' ' +
+            self._leadingZeros(now.getUTCHours(), 2) + ':' +
+            self._leadingZeros(now.getUTCMinutes(), 2);
 
         return result;
     };
@@ -551,11 +562,11 @@ function controllerWorldWeather(){
     self._convertTimeString = function(timevalue){
         var self = this;
 
-        return self._leadingZeros(timevalue.getFullYear(), 4) +
-            self._leadingZeros(timevalue.getMonth() + 1, 2) +
-            self._leadingZeros(timevalue.getDate(), 2) +
-            self._leadingZeros(timevalue.getHours(), 2) +
-            self._leadingZeros(timevalue.getMinutes(), 2);
+        return self._leadingZeros(timevalue.getUTCFullYear(), 4) + '.' +
+            self._leadingZeros(timevalue.getUTCMonth() + 1, 2) + '.' +
+            self._leadingZeros(timevalue.getUTCDate(), 2) + ' ' +
+            self._leadingZeros(timevalue.getUTCHours(), 2) + ':' +
+            self._leadingZeros(timevalue.getUTCMinutes(), 2);
 
     };
 
@@ -615,31 +626,31 @@ function controllerWorldWeather(){
                     if(item.summary.dateObj.getTime() >= startDate.getTime()){
                         req.result.daily.push(self._makeDailyDataFromWU(item.summary));
 
-                        if(req.result.timely === undefined){
-                            req.result.timely = [];
+                        if(req.result.hourly === undefined){
+                            req.result.hourly = [];
                         }
 
                         item.forecast.forEach(function(time){
                             var index = -1;
 
-                            //log.info('MG WU timely > item', time.dateObj.toString());
+                            //log.info('MG WU hourly > item', time.dateObj.toString());
                             if(time.dateObj.getTime() >= startDate.getTime()){
-                                for(var i=0 ; i<req.result.timely.length ; i++){
-                                    if(req.result.timely[i].date.getYear() === time.dateObj.getYear() &&
-                                        req.result.timely[i].date.getMonth() === time.dateObj.getMonth() &&
-                                        req.result.timely[i].date.getDate() === time.dateObj.getDate() &&
-                                        req.result.timely[i].date.getHours() === time.dateObj.getHours()){
+                                for(var i=0 ; i<req.result.hourly.length ; i++){
+                                    if(req.result.hourly[i].date.getYear() === time.dateObj.getYear() &&
+                                        req.result.hourly[i].date.getMonth() === time.dateObj.getMonth() &&
+                                        req.result.hourly[i].date.getDate() === time.dateObj.getDate() &&
+                                        req.result.hourly[i].date.getHours() === time.dateObj.getHours()){
                                         index = i;
-                                        log.info('MergeWU Timely> Found!! same date');
+                                        log.info('MergeWU hourly> Found!! same date');
                                         break;
                                     }
                                 }
 
-                                if(index < req.result.timely.length){
-                                    req.result.timely[i] = self._makeTimelyDataFromWU(time);
+                                if(index < req.result.hourly.length){
+                                    req.result.hourly[i] = self._makehourlyDataFromWU(time);
                                 }
                                 else{
-                                    req.result.timely.push(self._makeTimelyDataFromWU(time));
+                                    req.result.hourly.push(self._makeHourlyDataFromWU(time));
                                 }
                             }
                         });
@@ -651,17 +662,17 @@ function controllerWorldWeather(){
         next();
     };
 
-    self.mergeWuCurrentDataToTimely = function(req, res, next){
+    self.mergeWuCurrentDataToHourly = function(req, res, next){
         if(req.WU.current){
             var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
             var startDate = self._getDateObj(dateString);
 
             var list = req.WU.current.dataList;
             var curDate = new Date();
-            log.info('MG WuCToTimely> curDate ', curDate.toString());
+            log.info('MG WuCToHourly> curDate ', curDate.toString());
 
-            if(req.result.timely === undefined){
-                req.result.timely = [];
+            if(req.result.hourly === undefined){
+                req.result.hourly = [];
             }
 
             if(req.WU.current.date){
@@ -684,60 +695,60 @@ function controllerWorldWeather(){
                 }
 
                 if(curItem.dateObj && curItem.dateObj.getTime() > curDate.getTime()){
-                    log.info('MG WuCToTimely> skip future data', curItem.dateObj.toString());
+                    log.info('MG WuCToHourly> skip future data', curItem.dateObj.toString());
                     return;
                 }
 
-                // 과거 2일까지의 데이터만처리 한다. timely data는 과거 1~2일 데이터만 필요함.
+                // 과거 2일까지의 데이터만처리 한다. hourly data는 과거 1~2일 데이터만 필요함.
                 if(curItem.dateObj && curItem.dateObj.getTime() < startDate.getTime()){
-                    log.info('MG WuCToTimely> skip past data', curItem.dateObj.toString());
+                    log.info('MG WuCToHourly> skip past data', curItem.dateObj.toString());
                     return;
                 }
 
-                for(var i=0 ; i<req.result.timely.length ; i++){
-                    if(req.result.timely[i].dateObj != undefined &&
-                        req.result.timely[i].dateObj.getTime() === curItem.dateObj.getTime()){
+                for(var i=0 ; i<req.result.hourly.length ; i++){
+                    if(req.result.hourly[i].dateObj != undefined &&
+                        req.result.hourly[i].dateObj.getTime() === curItem.dateObj.getTime()){
                         isExist = 1;
                         if(curItem.desc){
-                            req.result.timely[i].desc = curItem.desc;
+                            req.result.hourly[i].desc = curItem.desc;
                         }
                         if(curItem.temp){
-                            req.result.timely[i].temp_c = curItem.temp;
+                            req.result.hourly[i].temp_c = curItem.temp;
                         }
                         if(curItem.temp_f){
-                            req.result.timely[i].temp_f = curItem.temp_f;
+                            req.result.hourly[i].temp_f = curItem.temp_f;
                         }
                         if(curItem.ftemp){
-                            req.result.timely[i].ftemp_c = curItem.ftemp;
+                            req.result.hourly[i].ftemp_c = curItem.ftemp;
                         }
                         if(curItem.ftemp_f){
-                            req.result.timely[i].ftemp_f = curItem.ftemp_f;
+                            req.result.hourly[i].ftemp_f = curItem.ftemp_f;
                         }
                         if(curItem.humid){
-                            req.result.timely[i].humid = curItem.humid;
+                            req.result.hourly[i].humid = curItem.humid;
                         }
                         if(curItem.windspd){
-                            req.result.timely[i].windSpd_ms = curItem.windspd;
+                            req.result.hourly[i].windSpd_ms = curItem.windspd;
                         }
                         if(curItem.windspd_mh){
-                            req.result.timely[i].windSpd_mh = curItem.windspd_mh;
+                            req.result.hourly[i].windSpd_mh = curItem.windspd_mh;
                         }
                         if(curItem.winddir){
-                            req.result.timely[i].windDir = curItem.winddir;
+                            req.result.hourly[i].windDir = curItem.winddir;
                         }
                         if(curItem.cloud){
-                            req.result.timely[i].cloud = curItem.cloud;
+                            req.result.hourly[i].cloud = curItem.cloud;
                         }
                         if(curItem.vis){
-                            req.result.timely[i].vis = curItem.vis;
+                            req.result.hourly[i].vis = curItem.vis;
                         }
                         if(curItem.slp){
-                            req.result.timely[i].press = curItem.slp;
+                            req.result.hourly[i].press = curItem.slp;
                         }
                     }
                 }
                 if(isExist === 0){
-                    req.result.timely.push(self._makeTimelyDataFromWUCurrent(curItem));
+                    req.result.hourly.push(self._makeHourlyDataFromWUCurrent(curItem));
                 }
 
             });
@@ -763,7 +774,7 @@ function controllerWorldWeather(){
                     && curItem.dateObj.getHours() === curDate.getHours()){
                     log.info('MG WuC> Find matched current date', curItem.dateObj.toString());
 
-                    req.result.current = self._makeTimelyDataFromWUCurrent(curItem);
+                    req.result.current = self._makeHourlyDataFromWUCurrent(curItem);
                 }
 
 
@@ -777,7 +788,7 @@ function controllerWorldWeather(){
         DSF Util
      **********************************************************
      **********************************************************/
-    self.getLocalTimezone = function (req, res, next) {
+    self.getLocalTimezone = function (req, callback) {
 
         //find chached data
         //else
@@ -786,49 +797,48 @@ function controllerWorldWeather(){
         var timestamp;
         var url;
 
-        if(req.DSF && req.DSF.geocode){
-            var dsf = req.DSF;
-            if(dsf.geocode.hasOwnProperty('lat') && dsf.geocode.hasOwnProperty('lon')){
-                lat = dsf.geocode.lat;
-                lon = dsf.geocode.lon;
-                timestamp = (new Date()).getTime();
-                url = "https://maps.googleapis.com/maps/api/timezone/json";
-                url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
+        if(req.hasOwnProperty('result') === false){
+            req.result = {};
+        }
+        if(req.result.hasOwnProperty('timezone') === false){
+            req.result.timezone = {};
+        }
+        req.result.timezone.min = 0;
+        req.result.timezone.ms = 0;
 
-                request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
-                    if (err) {
-                        log.error('DSF Timezone > Fail to get timezone', err);
+        if(req.geocode.hasOwnProperty('lat') && req.geocode.hasOwnProperty('lon')){
+            lat = req.geocode.lat;
+            lon = req.geocode.lon;
+            timestamp = (new Date()).getTime();
+            url = "https://maps.googleapis.com/maps/api/timezone/json";
+            url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
+
+            request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
+                if (err) {
+                    log.error('DSF Timezone > Fail to get timezone', err);
+                    return callback(err);
+                }
+                else {
+                    try {
+                        log.silly(body);
+                        var result = body;
+                        var offset = (result.dstOffset+result.rawOffset);
+                        req.result.timezone.min = offset/60; //convert to min;
+                        req.result.timezone.ms = offset * 1000; // convert to millisecond
+
+                        log.info('DSF Timezone > ', req.result.timezone);
+
+                        return callback(0);
                     }
-                    else {
-                        try {
-                            if(req.hasOwnProperty('result') === false){
-                                req.result = {};
-                            }
-                            if(req.result.hasOwnProperty('timezone') === false){
-                                req.result.timezone = {};
-                            }
-
-                            log.silly(body);
-                            var result = body;
-                            var offset = (result.dstOffset+result.rawOffset);
-                            req.result.timezone.min = offset/60; //convert to min;
-                            req.result.timezone.ms = offset * 1000; // convert to millisecond
-
-                            log.info('DSF Timezone > ', req.result.timezone);
-                        }
-                        catch (e) {
-                            log.error(e);
-                        }
+                    catch (e) {
+                        log.error(e);
+                        return callback(e);
                     }
-                    next();
-                });
-            }else{
-                log.error('there is no geocode from DSF data');
-                next();
-            }
+                }
+            });
         }else{
-            log.error('There is no DSF or geocode');
-            next();
+            log.error('there is no geocode from DSF data');
+            callback(1);
         }
     };
 
@@ -884,8 +894,8 @@ function controllerWorldWeather(){
                 req.result.daily = [];
             }
 
-            if(req.result.timely === undefined){
-                req.result.timely = [];
+            if(req.result.hourly === undefined){
+                req.result.hourly = [];
             }
 
             if(dsf.date){
@@ -910,8 +920,8 @@ function controllerWorldWeather(){
     self.mergeDsfDailyData = function(req, res, next){
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min / 60;
-            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,10) + '00';
-            var curDate = self._getTimeString(timeOffset).slice(0,10) + '00';
+            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
+            var curDate = self._getTimeString(timeOffset).slice(0,14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -948,7 +958,7 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
                     var isExist = false;
-                    if(+dbItem.dateObj >= +startDate){
+                    if(new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime()){
                         req.result.daily.forEach(function(dailyItem, index){
                             //log.info('dailyItem : ', dailyItem.date);
                             if(self._compareDateString(dailyItem.date, dbItem.dateObj)){
@@ -971,9 +981,9 @@ function controllerWorldWeather(){
     self.mergeDsfHourlyData = function(req, res, next){
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min / 60;
-            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,10) + '00';
-            var yesterdayDate = self._getTimeString(0 - 24 + timeOffset).slice(0, 10) + '00';
-            var curDate = self._getTimeString(timeOffset).slice(0, 10) + '00';
+            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
+            var yesterdayDate = self._getTimeString(0 - 24 + timeOffset).slice(0, 14) + '00';
+            var curDate = self._getTimeString(timeOffset).slice(0, 14) + '00';
 
             if(req.result === undefined){
                 req.result = {};
@@ -1001,8 +1011,8 @@ function controllerWorldWeather(){
                 req.result.pubDate.DSF = dsf.dateObj;
             }
 
-            if(req.result.timely === undefined){
-                req.result.timely = [];
+            if(req.result.hourly === undefined){
+                req.result.hourly = [];
             }
 
             if (req.result.thisTime === undefined) {
@@ -1033,17 +1043,17 @@ function controllerWorldWeather(){
 
                     isExist = false;
                     if(self._chechHour(dbItem.dateObj, ['00','03','06','09','12','15','18','21','24']) &&
-                        +dbItem.dateObj >= +startDate){
-                        req.result.timely.forEach(function(timely, index){
-                            //log.info('hourlyItem : ', timely.date.toString());
-                            if(self._compareDateString(timely.date, dbItem.dateObj)){
-                                req.result.timely[index] = self._makeTimelyDataFromDSF(dbItem);
+                        new Date(dbItem.dateObj).getTime() >= new Date(startDate).getTime()){
+                        req.result.hourly.forEach(function(hourly, index){
+                            //log.info('hourlyItem : ', hourly.date.toString());
+                            if(self._compareDateString(hourly.date, dbItem.dateObj)){
+                                req.result.hourly[index] = self._makeHourlyDataFromDSF(dbItem);
                                 isExist = true;
                             }
                         });
                         if(!isExist){
                             //log.info('NEW! DSF -> Hourly : ', dbItem.dateObj.toString());
-                            req.result.timely.push(self._makeTimelyDataFromDSF(dbItem));
+                            req.result.hourly.push(self._makeHourlyDataFromDSF(dbItem));
                         }
                     }
                 });
@@ -1055,8 +1065,8 @@ function controllerWorldWeather(){
     self.mergeDsfCurrentData = function(req, res, next) {
         if (req.DSF && req.DSF.data) {
             var timeOffset = req.result.timezone.min / 60;
-            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,10) + '00';
-            var curDate = self._getTimeString(timeOffset).slice(0, 10) + '00';
+            var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
+            var curDate = self._getTimeString(timeOffset).slice(0, 14) + '00';
 
             if (req.result === undefined) {
                 req.result = {};
@@ -1127,9 +1137,9 @@ function controllerWorldWeather(){
                 return 0;
             });
         }
-        if(req.result.timely){
-            log.info('sort timely');
-            req.result.timely.sort(function(a, b){
+        if(req.result.hourly){
+            log.info('sort hourly');
+            req.result.hourly.sort(function(a, b){
                 if(a.date > b.date){
                     return 1;
                 }
@@ -1172,7 +1182,7 @@ function controllerWorldWeather(){
         })
     };
 
-    self._makeTimelyDataFromWUCurrent = function(time){
+    self._makeHourlyDataFromWUCurrent = function(time){
         var result = {};
 
         if(time.date){
@@ -1221,7 +1231,7 @@ function controllerWorldWeather(){
         return result;
     };
 
-    self._makeTimelyDataFromWU = function(time){
+    self._makeHourlyDataFromWU = function(time){
         var result = {};
 
         if(time.date && time.time){
@@ -1393,7 +1403,9 @@ function controllerWorldWeather(){
             day.ftempMin_c = parseFloat(((summary.ftemp_min - 32) / (9/5)).toFixed(1));
             day.ftempMin_f = parseFloat((summary.ftemp_min).toFixed(1));
         }
-
+        if(summary.cloud){
+            day.cloud = +summary.cloud.toFixed(2);
+        }
         day.precType = 0;
         if(summary.pre_type == 'rain'){
             day.precType += 1;
@@ -1415,6 +1427,9 @@ function controllerWorldWeather(){
             day.windSpd_mh = Math.round(summary.windspd * 1609.344);
             day.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
+        if(summary.winddir){
+            day.windDir = summary.winddir;
+        }
         if(summary.pres){
             day.press = summary.pres;
         }
@@ -1425,60 +1440,63 @@ function controllerWorldWeather(){
         return day;
     };
 
-    self._makeTimelyDataFromDSF = function(summary){
-        var timely = {};
+    self._makeHourlyDataFromDSF = function(summary){
+        var hourly = {};
 
         if(summary.date){
-            timely.date = summary.date;
+            hourly.date = summary.date;
         }
         if(summary.dateObj){
-            timely.date = summary.dateObj;
+            hourly.date = summary.dateObj;
         }
         if(summary.summary){
-            timely.desc = summary.summary;
+            hourly.desc = summary.summary;
         }
         if(summary.temp){
-            timely.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
-            timely.temp_f = parseFloat(summary.temp.toFixed(1));
+            hourly.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
+            hourly.temp_f = parseFloat(summary.temp.toFixed(1));
         }
         if(summary.ftemp){
-            timely.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
-            timely.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
+            hourly.ftemp_c = parseFloat(((summary.ftemp - 32) / (9/5)).toFixed(1));
+            hourly.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            timely.cloud = Math.round(summary.cloud);
+            hourly.cloud = +summary.cloud.toFixed(2);
         }
         if(summary.windspd){
-            timely.windSpd_mh = Math.round(summary.windspd * 1609.344);
-            timely.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+            hourly.windSpd_mh = Math.round(summary.windspd * 1609.344);
+            hourly.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+        }
+        if(summary.winddir){
+            hourly.windDir = summary.winddir;
         }
         if(summary.humid){
-            timely.humid = Math.round(summary.humid * 100);
+            hourly.humid = Math.round(summary.humid * 100);
         }
-        timely.precType = 0;
+        hourly.precType = 0;
         if(summary.pre_type == 'rain'){
-            timely.precType += 1;
+            hourly.precType += 1;
         }
         if(summary.pre_type == 'snow'){
-            timely.precType += 2;
+            hourly.precType += 2;
         }
         if(summary.pre_pro){
-            timely.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
+            hourly.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
         }
         if(summary.pre_int){
-            timely.precip = summary.pre_int;
+            hourly.precip = summary.pre_int;
         }
         if(summary.vis){
-            timely.vis = Math.round(summary.vis * 1.16093);
+            hourly.vis = Math.round(summary.vis * 1.16093);
         }
         if(summary.pres){
-            timely.press = summary.pres;
+            hourly.press = summary.pres;
         }
         if(summary.oz){
-            timely.oz = summary.oz;
+            hourly.oz = summary.oz;
         }
 
-        return timely;
+        return hourly;
     };
 
     self._makeCurrentDataFromDSFCurrent = function(summary){
@@ -1502,14 +1520,14 @@ function controllerWorldWeather(){
             current.ftemp_f = parseFloat(summary.ftemp.toFixed(1));
         }
         if(summary.cloud){
-            current.cloud = Math.round(summary.cloud);
+            current.cloud = +summary.cloud.toFixed(2);
         }
         if(summary.windspd){
             current.windSpd_mh = Math.round(summary.windspd * 1609.344);
             current.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.winddir){
-            current.Dir = summary.winddir;
+            current.windDir = summary.winddir;
         }
         if(summary.humid){
             current.humid = Math.round(summary.humid * 100);
@@ -1531,7 +1549,7 @@ function controllerWorldWeather(){
             current.vis = Math.round(summary.vis * 1.16093);
         }
         if(summary.pres){
-            current.press = summary.press;
+            current.press = summary.pres;
         }
         if(summary.oz){
             current.oz = summary.oz;
@@ -1909,6 +1927,12 @@ function controllerWorldWeather(){
 
         if(req.city){
             url += '&city=' + req.city;
+        }
+
+        if(req.result.timezone.min){
+            url += '&timezone=' + req.result.timezone.min / 60;
+        }else{
+            url += '&timezone=0';
         }
 
         log.info('WW> req url : ', url);

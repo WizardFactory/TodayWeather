@@ -226,6 +226,17 @@ ControllerRequester.prototype.parseGeocode = function(req){
     return true;
 };
 
+ControllerRequester.prototype.parseTimezone = function(req){
+    if(req.query.timezone === undefined){
+        log.silly('RQ> There are no timezone');
+        return false;
+    }
+    req.timezone = parseInt(req.query.timezone);
+
+    log.info('RQ timezone> ', req.timezone);
+
+    return true;
+};
 /**
  *
  * @param req
@@ -455,6 +466,10 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
         return;
     }
 
+    if(!self.parseTimezone(req)){
+        req.timezone = 0;
+    }
+
     async.parallel([
             /*
             function(cb){
@@ -470,7 +485,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
             },
             */
             function(cb){
-                collector.requestDsfData(req.geocode, 0, 2, function(err, dsfData){
+                collector.requestDsfData(req.geocode, 0, 2, req.timezone, function(err, dsfData){
                     if(err){
                         log.error('RQ> Fail to requestDsfData');
                         cb('Fail to requestDsfData');

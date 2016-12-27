@@ -94,15 +94,15 @@ ConCollector.prototype._getTimeString = function(tzOffset) {
         offset = tzOffset;
     }
 
-    var tz = now.getTime() + (offset * 3600000) + (now.getTimezoneOffset() * 60000);
+    var tz = now.getTime() + (offset * 3600000);
     now.setTime(tz);
 
     result =
-        self._leadingZeros(now.getFullYear(), 4) +
-        self._leadingZeros(now.getMonth() + 1, 2) +
-        self._leadingZeros(now.getDate(), 2) +
-        self._leadingZeros(now.getHours(), 2) +
-        self._leadingZeros(now.getMinutes(), 2);
+        self._leadingZeros(now.getUTCFullYear(), 4) +
+        self._leadingZeros(now.getUTCMonth() + 1, 2) +
+        self._leadingZeros(now.getUTCDate(), 2) +
+        self._leadingZeros(now.getUTCHours(), 2) +
+        self._leadingZeros(now.getUTCMinutes(), 2);
 
     return result;
 };
@@ -1295,14 +1295,14 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
  * @param geocode
  * @param callback
  */
-ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
+ConCollector.prototype.requestDsfData = function(geocode, From, To, timezone, callback){
     var self = this;
     var key = self._getDSFKey().key;
     var dataList = [];
     var requester = new dsfRequester;
 
     for(var i=From ; i<To ; i++){
-        var dateString = self._getTimeString(0 - (24 * i)).slice(0,10) + '00';
+        var dateString = self._getTimeString(0 - (24 * i) + timezone).slice(0,10) + '00';
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
     }
@@ -1330,7 +1330,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
 
                     log.info(result);
                     if(date === undefined){
-                        var dateString = self._getTimeString(0).slice(0,10) + '00';
+                        var dateString = self._getTimeString(0 + timezone).slice(0,10) + '00';
                         date = self._getDateObj(dateString).getTime() / 1000;
                     }
                     self.saveDSForecast(geocode, date, result, function(err){
