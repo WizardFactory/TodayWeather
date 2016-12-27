@@ -3230,6 +3230,13 @@ ControllerTown.prototype._createOrGet3hSummaryList = function(list, date, strTim
 
 };
 
+/**
+ * object에가 key값 아래 3개의 array로 데이터가 들어 있음.
+ * t1h 등 당시 시간 데이터에서 에러가 있는 경우 이전 시간 데이터 사용하게 수정.
+ * @param summary
+ * @returns {{}}
+ * @private
+ */
 ControllerTown.prototype._convertSummaryTo3H = function (summary) {
     var newItem = {};
     var key;
@@ -3243,35 +3250,40 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
         else if (key === 'lgt') {
             newItem[key] = self._summaryLgt(summary[key], -1);
         }
-        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv') {
+        else if(key === 't1h' || key === 'wsd' || key == 'reh' || key === 'uuu' || key === 'vvv' || key === 'vec') {
+            var invalidValue = -50;
+            switch (key) {
+                case 't1h': invalidValue = -50; break;
+                case 'wsd': invalidValue = -1; break;
+                case 'reh': invalidValue = -1; break;
+                case 'uuu': invalidValue = -100; break;
+                case 'vvv': invalidValue = -100; break;
+                case 'vec': invalidValue = -1; break;
+            }
+
             var time = parseInt(summary.time[summary.time.length-1].substr(0, 2));
             if (time%3 === 0) {
-                newItem[key] = +(summary[key][summary[key].length-1]).toFixed(1);
+                var arrayIndex = summary[key].length-1;
+                newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
+                if (newItem[key] == invalidValue) {
+                    log.error("Invalid data :" + key + " " + summary.date3h+" "+summary.time3h);
+                    arrayIndex = arrayIndex-1;
+                    newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
+                    if (newItem[key] == invalidValue) {
+                        arrayIndex = arrayIndex-1;
+                        newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
+                    }
+                    log.info("set :" + key + " arrayIndex:" + arrayIndex + " "+ summary.date3h+" "+summary.time3h);
+                }
             }
             else {
                 log.debug("Fail to find current data :" + key + " " + summary.date3h+" "+summary.time3h);
             }
-
-            //if (curItem[key] != undefined && curItem[key] != -50) {
-            //    newItem[key] = +(curItem[key]).toFixed(1);
-            //}
-            //else {
-            //    log.error("Fail to find current data :" + key + " " + curItem.date+" "+curItem.time);
-            //    if (prv1[key] != undefined && prv1[key] != -50) {
-            //        newItem[key] = +(prv1[key]).toFixed(1);
-            //    }
-            //    else if (prv2[key] != undefined && prv2[key] != -50) {
-            //        newItem[key] = +(prv2[key]).toFixed(1);
-            //    }
-            //    else {
-            //        newItem[key] = tmpList[tmpList.length-1][key];
-            //    }
-            //}
         }
         else if(key === 'rn1') {
             newItem[key] = self._sum(summary[key], -1);
         }
-        else if(key === 'sky' || key === 'vec' )  {
+        else if(key === 'sky')  {
             newItem[key] = self._average(summary[key], -1, 0);
         }
     }

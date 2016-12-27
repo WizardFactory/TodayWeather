@@ -161,6 +161,7 @@ LifeIndexKmaController._appendFromDb = function(town, callback) {
                         return cb(err, indexDataList[i]);
                     }
                 }
+                return cb(new Error("Fail to find life index town="+JSON.stringify(town)));
             });
         }
     ], function(err, result) {
