@@ -650,7 +650,6 @@ angular.module('starter.services', [])
             if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
                 currentForecast.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.t1h);
                 currentForecast.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.sensorytem);
-                currentForecast.sensoryTem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.sensoryTem);
                 currentForecast.dpt = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.dpt);
                 currentForecast.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.heatIndex);
                 if (!(currentForecast.yesterday == undefined)) {
@@ -1202,15 +1201,19 @@ angular.module('starter.services', [])
                         }
                     }
 
-                    var arrayStr = address.split(" ");
+                    //"Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
+                    var arrayStr = address.split(",");
+                    if (arrayStr.length <= 1)  {
+                        //"대한민국 서울 송파구 잠실본동"
+                        arrayStr = address.split(" ");
+                    }
                     if (arrayStr[0] == country_long_name) {
                         name = arrayStr[arrayStr.length-1];
                     }
                     else {
                         name = arrayStr[0];
                     }
-                    //remove ',' from "Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
-                    name = name.replace(/,/g,'');
+
                     var geoInfo =  {country: country, address: address};
                     geoInfo.location = {lat:lat, long: lng};
                     geoInfo.name = name;
@@ -1545,11 +1548,12 @@ angular.module('starter.services', [])
             return skyIconName;
         }
 
-        function _parseWorldCurrentWeather(current, todayInfo, currentTime, units) {
+        function _parseWorldCurrentWeather(thisTime, todayInfo, currentTime, units) {
             var sunrise = 7;
             var sunset = 18;
             var isNight = false;
-            var yesterday = {};
+            var yesterday = thisTime[0];
+            var current = thisTime[1];
 
             if (todayInfo.sunrise) {
                 sunrise = todayInfo.sunrise/100;
@@ -1572,12 +1576,12 @@ angular.module('starter.services', [])
                 console.log("Error cloud of current is undefined");
             }
 
-            if (current.yesterday) {
-                if (current.yesterday.temp_c == undefined) {
+            if (yesterday) {
+                if (yesterday.temp_c == undefined) {
                     console.log("yesterday temp_c is undefined!!");
                 }
-                yesterday.t1h = current.yesterday.temp_c;
-                yesterday.summary = current.yesterday.desc;
+                yesterday.t1h = yesterday.temp_c;
+                yesterday.summary = yesterday.desc;
             }
 
             if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
@@ -1585,6 +1589,7 @@ angular.module('starter.services', [])
                 current.ftemp_c = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), current.ftemp_c);
                 yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), yesterday.t1h);
             }
+
             if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
                 current.windSpd_ms = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), current.windSpd_ms);
             }
@@ -1599,10 +1604,11 @@ angular.module('starter.services', [])
             }
 
            return {
-               date: new Date(current.localTime),
+               date: _convertDateToYYYYMMDD(new Date(current.date)),
+               stnDateTime: current.date,
                summary: current.desc,
                t1h: current.temp_c,
-               sensoryTem: current.ftemp_c,
+               sensorytem: current.ftemp_c,
                reh: current.humid,
                wsd: current.windSpd_ms,
                wdd: _convertWindDirToWdd(current.windDir),
@@ -1645,7 +1651,7 @@ angular.module('starter.services', [])
 
             hourly.forEach(function (hourlyObj, index) {
                 var tempObject = {};
-                var date = new Date(hourlyObj.localTime);
+                var date = new Date(hourlyObj.date);
                 var time = date.getHours();
                 var diffDays = getDiffDays(date, todayInfo.dateObj);
                 var sunrise = todayInfo.sunrise/100;
@@ -1673,7 +1679,7 @@ angular.module('starter.services', [])
                     tempObject.pty = 0;
                 }
                 if (hourlyObj.cloud == undefined) {
-                    console.log("Error cloud of hourly is undefined " + JSON.stringify(hourlyObj));
+                    console.log("Warning cloud of hourly is undefined " + JSON.stringify(hourlyObj));
                     tempObject.cloud = 0;
                 }
                 else {
@@ -1690,7 +1696,7 @@ angular.module('starter.services', [])
                 }
 
                 if (hourlyObj.precip) {
-                    tempObject.rn1 = hourlyObj.precip;
+                    tempObject.rn1 = +(hourlyObj.precip.toFixed(1));
                     tempObject.r06 = 0;
                 }
                 else {
@@ -1817,7 +1823,7 @@ angular.module('starter.services', [])
             daily.forEach(function (dayInfo, index) {
                 var data = {};
                 //data = dayInfo;
-                var date = new Date(dayInfo.localTime);
+                var date = new Date(dayInfo.date);
 
                 var diffDays = getDiffDays(date, currentTime);
 
@@ -1877,7 +1883,7 @@ angular.module('starter.services', [])
                    data.visibility = dayInfo.vis;
                 }
                 if (!(dayInfo.precip == undefined)) {
-                    data.rn1 = dayInfo.precip;
+                    data.rn1 = +dayInfo.precip.toFixed(1);
                 }
 
                 if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
@@ -1957,8 +1963,8 @@ angular.module('starter.services', [])
                 weatherData.units = obj;
             }
 
-            if (weatherData.current && weatherData.current.localTime) {
-                currentTime = new Date(weatherData.current.localTime);
+            if (weatherData.thisTime && weatherData.thisTime[1].date) {
+                currentTime = new Date(weatherData.thisTime[1].date);
             }
             else {
                 console.log("Error fail to get current date !!");
@@ -1970,7 +1976,7 @@ angular.module('starter.services', [])
             midTownWeather =_parseWorldDailyWeather(weatherData.daily, currentTime, weatherData.units);
             todayInfo = midTownWeather.today;
             shortTownWeather = _parseWorldHourlyWeather(weatherData.timely, currentTime, todayInfo, weatherData.units);
-            data.currentWeather = _parseWorldCurrentWeather(weatherData.current, todayInfo, currentTime.getHours(), weatherData.units);
+            data.currentWeather = _parseWorldCurrentWeather(weatherData.thisTime, todayInfo, currentTime.getHours(), weatherData.units);
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
             data.dayChart = [{

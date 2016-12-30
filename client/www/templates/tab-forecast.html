@@ -104,9 +104,9 @@
                                 </div>
                                 <div class="row subheading">
                                     <img src="img/ic_visibility_white_24px.svg" style="height: 24px">
-                                    <p class="detail-item-p">{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit}}</small></p>
+                                    <p class="detail-item-p">{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit()}}</small></p>
                                 </div>
-                                <div class="row subheading">
+                                <div class="row subheading" ng-if="currentWeather.hPa">
                                     <img src="img/ic_vertical_align_bottom_white_24px.svg" style="height: 24px">
                                     <p class="detail-item-p"}}>{{'LOC_PRESSURE'|translate}} {{currentWeather.hPa}}<small>{{getPressUnit()}}</small></p>
                                 </div>

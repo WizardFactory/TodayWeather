@@ -1048,7 +1048,12 @@ angular.module('starter.controllers', [])
                     return 0;
                 });
 
-                str = itemList[0].str+","+itemList[1].str;
+
+                str = itemList[0].str;
+                if (itemList.length > 1) {
+                    str += ","+itemList[1].str;
+                }
+
                 $rootScope.summary = str;
                 deferred.resolve(str);
             });

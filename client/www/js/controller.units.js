@@ -373,7 +373,7 @@ angular.module('controller.units', [])
                 return _convertPrecipitation(from, to, val);
             }
 
-            console.log('Fail to convert from '+from+" to "+to+" value="+value);
+            console.log('Fail to convert from '+from+" to "+to+" value="+val);
             return val;
         };
 
