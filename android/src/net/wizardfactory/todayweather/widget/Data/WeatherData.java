@@ -5,7 +5,6 @@ import net.wizardfactory.todayweather.widget.JsonElement.WeatherElement;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.StringTokenizer;
 
 /**
  * This class consist of weather data for one day . data from JsonElement.

@@ -12,6 +12,7 @@ public class WidgetData {
     WeatherData before24hWeather = null; //the weather is before 24hours
     WeatherData daysWeather[] = null;
     String Loc = null;
+    Units units = null;
 
     public WidgetData() {
         daysWeather = new WeatherData[MAX_WEAHTER_INDEX+1];
@@ -47,5 +48,13 @@ public class WidgetData {
 
     public void setLoc(String loc) {
         Loc = loc;
+    }
+
+    public void setUnits(Units units) {
+        this.units = units;
+    }
+
+    public Units getUnits() {
+        return units;
     }
 }

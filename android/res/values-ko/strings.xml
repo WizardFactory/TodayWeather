@@ -21,4 +21,6 @@
  <string name="unhealthy">나쁨</string>
  <string name="very_unhealthy">매우나쁨</string>
  <string name="hazardous">위험</string>
+ <string name="this_location_is_not_supported">이 위치는 대기정보를 제공하지 않습니다</string>
+ <string name="fail_to_get_geoinfo">오늘날씨 : 지역정보를 가지고 오지 못하였습니다</string>
 </resources>

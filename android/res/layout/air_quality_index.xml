@@ -31,6 +31,15 @@
             android:id="@+id/pubdate"
             android:layout_alignParentRight="true" />
 
+        <TextView
+            android:text=""
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/location"
+            android:layout_alignLeft="@+id/location"
+            android:id="@+id/errMsg"
+            android:visibility="invisible" />
+
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
