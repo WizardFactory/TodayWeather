@@ -150,7 +150,7 @@ function controllerWorldWeather(){
         meta.method = 'queryWeather';
 
         if(!req.validVersion){
-            log.error('WW> invalid version : ', req.validVersion);
+            log.error('WW queryWeather> invalid version : ', req.validVersion);
             return next();
         }
 
@@ -163,7 +163,7 @@ function controllerWorldWeather(){
         self.getCity(req);
 
         if(!req.geocode && !req.city){
-            log.error('It is not valid request');
+            log.error('WW queryWeather> It is not valid request');
             req.error = 'It is not valid request';
             next();
             return;
@@ -181,7 +181,7 @@ function controllerWorldWeather(){
                                 callback('err_exit');
                                 return;
                             }
-                            log.info('WW> load geocode, count:', self.geocodeList.length);
+                            log.info('WW queryWeather> load geocode, count:', self.geocodeList.length);
                             callback(null);
                         });
                     }else{
@@ -192,24 +192,24 @@ function controllerWorldWeather(){
                 // 2. check geocode if it is in the geocodelist or not.
                 function(callback){
                     if(req.city !== undefined && self.checkCityName(req.city)){
-                        log.info('WW> matched by city name');
+                        log.info('WW queryWeather> matched by city name');
                         callback(null);
                         return;
                     }
 
                     if(req.geocode !== undefined && self.checkGeocode(req.geocode)){
-                        log.info('WW> matched by geocode');
+                        log.info('WW queryWeather> matched by geocode');
                         callback(null);
                         return;
                     }
 
                     // Need to send request to add this geocode.
-                    req.error = 'WW> It is the fist request, will collect weather for this geocode :', req.geocode, req.city;
+                    req.error = 'WW queryWeather> It is the fist request, will collect weather for this geocode :', req.geocode, req.city;
                     log.error(req.error);
 
                     self.requestData(req, 'req_add', function(err, result){
                         if(err){
-                            log.error('WW> fail to reqeust');
+                            log.error('WW queryWeather> fail to reqeust');
                             req.error = {res: 'fail', msg:'this is the first request of geocode'};
                             callback('err_exit : Fail to requestData()');
                             return;
@@ -219,9 +219,9 @@ function controllerWorldWeather(){
                         // TODO : Perhaps it'll take for long time, so need to find out other way to update.
                         self.loadGeocodeList(function(err){
                             if(err){
-                                log.error('WW> Fail to update geocode list, count:', self.geocodeList.length);
+                                log.error('WW queryWeather> Fail to update geocode list, count:', self.geocodeList.length);
                             }else{
-                                log.silly('WW> update geocode list, count:', self.geocodeList.length);
+                                log.silly('WW queryWeather> update geocode list, count:', self.geocodeList.length);
                             }
 
                             req.error = undefined;
@@ -233,7 +233,7 @@ function controllerWorldWeather(){
                 // 3. get MET data from DB by using geocode.
                 function(callback){
                     self.getDataFromMET(req, function(err){
-                        log.info('WW> get MET data');
+                        log.info('WW queryWeather> get MET data');
 
                         // goto next step
                         callback(null);
@@ -242,7 +242,7 @@ function controllerWorldWeather(){
                 // 4. get OWM data from DB by using geocode
                 function(callback){
                     self.getDataFromOWM(req, function(err){
-                        log.info('WW> get OWM data');
+                        log.info('WW queryWeather> get OWM data');
 
                         // goto next step
                         callback(null);
@@ -252,11 +252,11 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getDataFromWU(req, function(err, result){
                         if(err){
-                            log.error('WW> Fail to get WU data: ', err);
+                            log.error('WW queryWeather> Fail to get WU data: ', err);
                             callback(null);
                             return;
                         }
-                        log.info('WW> get WU data');
+                        log.info('WW queryWeather> get WU data');
 
                         // goto next step
                         callback(null);
@@ -266,11 +266,11 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
-                            log.error('WW> Fail to get DSF data', err);
+                            log.error('WW queryWeather> Fail to get DSF data', err);
                             callback(null);
                             return;
                         }
-                        log.info('WW> get DSF data');
+                        log.info('WW queryWeather> get DSF data');
 
                         // goto next step
                         callback(null);
@@ -284,7 +284,7 @@ function controllerWorldWeather(){
                 log.silly('WW> queryWeather no error')
             }
 
-            log.info('WW> Finish to make weather data');
+            log.info('WW queryWeather> Finish to get weather data');
             next();
         });
     };
@@ -571,8 +571,10 @@ function controllerWorldWeather(){
     };
 
     self._getDateObj = function(date){
-        var d = date.toString();
-        var dateObj = new Date(d.slice(0,4)+'/'+d.slice(4,6)+'/'+ d.slice(6,8)+' '+d.slice(8,10)+':'+ d.slice(10,12));
+        // YYYY.MM.DD HH:MM
+        //var d = date.toString();
+        //var dateObj = new Date(d.slice(0,4)+'/'+d.slice(5,7)+'/'+ d.slice(8,10)+' '+d.slice(11,13)+':'+ d.slice(10,12));
+        var dateObj = new Date(date);
 
         //log.info('dateobj :', dateObj.toString());
         //log.info(''+d.slice(0,4)+'/'+d.slice(4,6)+'/'+ d.slice(6,8)+' '+d.slice(8,10)+':'+ d.slice(10,12));
@@ -582,10 +584,10 @@ function controllerWorldWeather(){
 *   WU Util
 ***********************************************************/
     self.mergeWuForecastData = function(req, res, next){
-        var dateString = self._getTimeString(0 - 24).slice(0,10) + '00';
+        var dateString = self._getTimeString(0 - 24).slice(0,14) + '00';
         var startDate = self._getDateObj(dateString);
 
-        if(req.WU.forecast){
+        if(req.hasOwnProperty('WU') && req.WU.forecast){
             if(req.result === undefined){
                 req.result = {};
             }
@@ -619,7 +621,7 @@ function controllerWorldWeather(){
                 if(req.result.daily === undefined){
                     req.result.daily = [];
                 }
-                log.info('WU SDATE : ', startDate.toString());
+                log.info('WU mergeWuForecastData> SDATE : ', startDate.toString());
 
                 forecast.days.forEach(function(item){
                     //log.info('Daily Data', item.summary.dateObj.toString());
@@ -641,13 +643,13 @@ function controllerWorldWeather(){
                                         req.result.hourly[i].date.getDate() === time.dateObj.getDate() &&
                                         req.result.hourly[i].date.getHours() === time.dateObj.getHours()){
                                         index = i;
-                                        log.info('MergeWU hourly> Found!! same date');
+                                        log.info('WU mergeWuForecastData> MergeWU hourly : Found!! same date');
                                         break;
                                     }
                                 }
 
                                 if(index < req.result.hourly.length){
-                                    req.result.hourly[i] = self._makehourlyDataFromWU(time);
+                                    req.result.hourly[i] = self._makeHourlyDataFromWU(time);
                                 }
                                 else{
                                     req.result.hourly.push(self._makeHourlyDataFromWU(time));
@@ -663,8 +665,8 @@ function controllerWorldWeather(){
     };
 
     self.mergeWuCurrentDataToHourly = function(req, res, next){
-        if(req.WU.current){
-            var dateString = self._getTimeString(0 - 48).slice(0,10) + '00';
+        if(req.hasOwnProperty('WU') && req.WU.current && req.WU.current.dataList){
+            var dateString = self._getTimeString(0 - 48).slice(0,14) + '00';
             var startDate = self._getDateObj(dateString);
 
             var list = req.WU.current.dataList;
@@ -757,7 +759,7 @@ function controllerWorldWeather(){
     };
 
     self.mergeWuCurrentData = function(req, res, next){
-        if(req.WU.current){
+        if(req.hasOwnProperty('WU') && req.WU.current && req.WU.current.dataList){
             var list = req.WU.current.dataList;
             var curDate = new Date();
             log.info('MG WuC> curDate ', curDate);
@@ -803,7 +805,7 @@ function controllerWorldWeather(){
         if(req.result.hasOwnProperty('timezone') === false){
             req.result.timezone = {};
         }
-        req.result.timezone.min = 0;
+        req.result.timezone.min = (100 * 60);
         req.result.timezone.ms = 0;
 
         if(req.geocode.hasOwnProperty('lat') && req.geocode.hasOwnProperty('lon')){
@@ -1929,7 +1931,9 @@ function controllerWorldWeather(){
             url += '&city=' + req.city;
         }
 
-        if(req.result.timezone.min){
+        if(req.hasOwnProperty('result') &&
+            req.result.hasOwnProperty('timezone') &&
+            req.result.timezone.min != (100 * 60)){
             url += '&timezone=' + req.result.timezone.min / 60;
         }else{
             url += '&timezone=0';

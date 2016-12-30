@@ -4,7 +4,7 @@
 "use strict";
 
 var events = require('events');
-var req = require('request');
+var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
@@ -274,7 +274,7 @@ ControllerRequester.prototype.parseAddress = function(req){
  * @param address
  * @param callback
  */
-ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, callback){
+ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, timeOffset, callback){
     var self = this;
     var meta = {};
     meta.method = 'saveGeocodeToDb';
@@ -283,13 +283,56 @@ ControllerRequester.prototype.saveGeocodeToDb = function(geocode, address, callb
     log.silly(meta);
     var newGeocodeItem = new modelGeocode({
         geocode: geocode,
-        address: address
+        address: address,
+        timeOffset : timeOffset
     });
 
     newGeocodeItem.save(function(err){
-        log.info('RQ> save geocode :', err);
+        log.info('RQ saveGeocodeToDb> save geocode :', err);
         callback(err);
     });
+};
+
+ControllerRequester.prototype.getLocalTimeOffset = function (geocode, callback) {
+    var timestamp;
+    var url;
+
+    if(geocode.hasOwnProperty('lat') && geocode.hasOwnProperty('lon')){
+        timestamp = (new Date()).getTime();
+        url = "https://maps.googleapis.com/maps/api/timezone/json";
+        url += "?location="+geocode.lat+","+geocode.lon+"&timestamp="+Math.floor(timestamp/1000);
+
+        request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
+            if (err) {
+                log.error('RQ Timezone > Fail to get timezone', err);
+                return callback(err);
+            }
+            else {
+                try {
+                    if(body.status == 'ZERO_RESULTS') {
+                        log.error('RQ Timezone > There is no timezone');
+                        return callback('RQ Timezone > error');
+                    }
+
+                    log.info(body);
+                    var result = body;
+                    var offset = (result.dstOffset+result.rawOffset);
+                    result = (offset / 60) / 60; //convert to hour;
+
+                    log.info('RQ Timezone > getLocalTimeOffset : ', result);
+
+                    return callback(0, result);
+                }
+                catch (e) {
+                    log.error(e);
+                    return callback(e);
+                }
+            }
+        });
+    }else{
+        log.error('RQ Timezone > there is no geocode');
+        callback(1);
+    }
 };
 
 /**
@@ -304,7 +347,7 @@ ControllerRequester.prototype.addLocation = function(req, callback){
             function(cb){
                 // 1. paese geocode from URL
                 if(!self.parseGeocode(req)){
-                    log.silly('There are no geocode');
+                    log.silly('RQ addLocation> There are no geocode');
                     cb(undefined, false);
                 }else{
                     cb(undefined, true);
@@ -312,13 +355,13 @@ ControllerRequester.prototype.addLocation = function(req, callback){
             },
             function(isGeocode, cb){
                 if(!self.parseAddress(req)){
-                    log.silly('There are no address');
+                    log.silly('RQ addLocation> There are no address');
                     if(isGeocode){
-                        log.info('Only have geocode');
+                        log.info('RQ addLocation> Only have geocode');
                         cb(null);
                         return;
                     }else{
-                        log.error('There are no geocode or city name');
+                        log.error('RQ addLocation> There are no geocode or city name');
                         cb('err_exit_no_parameter');
                         return;
                     }
@@ -326,25 +369,45 @@ ControllerRequester.prototype.addLocation = function(req, callback){
                 cb(null);
             },
             function(cb){
-                // 2. save Geocode to DB
+                // set timezone
+                if(req.hasOwnProperty('geocode')){
+                    self.getLocalTimeOffset(req.geocode, function(err, result){
+                        if(err){
+                            log.error('RQ addLocation> Fail to get localtimeoffset : ', err);
+                        }else{
+                            req.timeOffset = result;
+                        }
+                        cb(null);
+                    });
+                }else{
+                    log.error('RQ addLocation> cannot get geocode');
+                    cb(null);
+                }
+            },
+            function(cb){
+                // save Geocode to DB
                 var address = {country:'', city:'', zipcode:'', postcode:''};
                 var geocode = {lat:1, lon:1};
+                var timeOffset = 100;
 
-                if(req.address){
-                    if(req.address.country){
+                if(req.hasOwnProperty('address')){
+                    if(req.address.hasOwnProperty('country')){
                         address.country = req.address.country;
                     }
-                    if(req.address.city){
+                    if(req.address.hasOwnProperty('city')){
                         address.city = req.address.city;
                     }
                 }
-                if(req.geocode){
+                if(req.hasOwnProperty('geocode')){
                     geocode = req.geocode;
                 }
+                if(req.hasOwnProperty('timeOffset')){
+                    timeOffset = req.timeOffset;
+                }
 
-                self.saveGeocodeToDb(geocode, address, function(err){
+                self.saveGeocodeToDb(geocode, address, timeOffset, function(err){
                     if(err){
-                        req.err = new Error('RQ> Can not save geocode to DB');
+                        req.err = new Error('RQ addLocation> Can not save geocode to DB');
                         cb('err_exit_save');
                         return;
                     }
@@ -358,9 +421,9 @@ ControllerRequester.prototype.addLocation = function(req, callback){
         ],
         function(err, result){
             if(err){
-                log.info('RQ> end of adding geocode :', err);
+                log.info('RQ addLocation> end of adding geocode :', err);
             }else{
-                log.silly('RQ> success adding geocode :', err);
+                log.silly('RQ addLocation> success adding geocode :', err);
             }
 
             if(callback){
@@ -394,14 +457,19 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                 // 2. get weather data from provider.
                 req.weather = {};
                 var collector;
+                var timeOffset = 100;
+
                 if(global.collector === undefined){
                     collector = new conCollector;
                 }else{
                     collector = global.collector;
                 }
+                if(req.hasOwnProperty('timeOffset')){
+                    timeOffset = req.timeOffset;
+                }
                 async.parallel([
                         function(callback){
-                            collector.requestWuData(req.geocode, function(err, wuData){
+                            collector.requestWuData(req.geocode, timeOffset, function(err, wuData){
                                 if(err){
                                     log.error('RQ> Fail to requestWuData');
                                     callback('Fail to requestWuData');
@@ -412,7 +480,7 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
                             });
                         },
                         function(callback){
-                            collector.requestDsfData(req.geocode,1 ,8, function(err, dsfData){
+                            collector.requestDsfData(req.geocode,1 ,8, timeOffset, function(err, dsfData){
                                 if(err){
                                     log.error('RQ> Fail to requestDsfData');
                                     callback('Fail to requestDsfData');
