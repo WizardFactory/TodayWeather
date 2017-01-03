@@ -94,15 +94,15 @@ ConCollector.prototype._getTimeString = function(tzOffset) {
         offset = tzOffset;
     }
 
-    var tz = now.getTime() + (offset * 3600000) + (now.getTimezoneOffset() * 60000);
+    var tz = now.getTime() + (offset * 3600000);
     now.setTime(tz);
 
     result =
-        self._leadingZeros(now.getFullYear(), 4) +
-        self._leadingZeros(now.getMonth() + 1, 2) +
-        self._leadingZeros(now.getDate(), 2) +
-        self._leadingZeros(now.getHours(), 2) +
-        self._leadingZeros(now.getMinutes(), 2);
+        self._leadingZeros(now.getUTCFullYear(), 4) +
+        self._leadingZeros(now.getUTCMonth() + 1, 2) +
+        self._leadingZeros(now.getUTCDate(), 2) +
+        self._leadingZeros(now.getUTCHours(), 2) +
+        self._leadingZeros(now.getUTCMinutes(), 2);
 
     return result;
 };
@@ -315,7 +315,7 @@ ConCollector.prototype._getAndSaveWuForecast = function(list, date, retryCount, 
                     }
 
                     log.info(result);
-                    self.saveWuForecast(geocode, date, result, function(err){
+                    self.saveWuForecast(geocode, date, location.timeOffset, result, function(err){
                         cb(null);
                     });
                 });
@@ -386,9 +386,9 @@ ConCollector.prototype._getAndSaveWuCurrent = function(list, date, retryCount, c
                     }
 
                     log.info(result);
-                    self.saveWuCurrent(geocode, date, result, function(err){
+                    self.saveWuCurrent(geocode, date, location.timeOffset.result, function(err){
                         cb(null);
-                    })
+                    });
                 });
             });
         },
@@ -671,7 +671,7 @@ ConCollector.prototype.processWuCurrent = function(self, list, date, isRetry, ca
  * @param data
  * @param callback
  */
-ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
+ConCollector.prototype.saveWuForecast = function(geocode, date, timeOffset, data, callback){
     var self = this;
 
     try{
@@ -694,7 +694,12 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
             if(list.length === 0){
                 print.info('WuF> First time');
                 //var newItem = new modelWuForecast({geocode: geocode, address: {country:'', city:'', zipcode:0, postcode:0}, date:curDate, days: newData});
-                var newItem = new modelWuForecast({geocode:geocode, address:{}, date:date, dateObj: self._getDateObj(date), days:newData});
+                var newItem = new modelWuForecast({geocode:geocode, address:{},
+                    date:date,
+                    dateObj: self._getDateObj(date),
+                    timeOffset: timeOffset,
+                    days:newData});
+
                 newItem.save(function(err){
                     if(err){
                         log.error('WuF> fail to add the new data to DB :', geocode);
@@ -740,7 +745,7 @@ ConCollector.prototype.saveWuForecast = function(geocode, date, data, callback){
  * @param data
  * @param callback
  */
-ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
+ConCollector.prototype.saveWuCurrent = function(geocode, date, timeOffset, data, callback){
     var self = this;
 
     try{
@@ -759,7 +764,11 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
                 var dataList = [];
                 dataList.push(newData);
                 print.info('WuC> First time');
-                var newItem = new modelWuCurrent({geocode:geocode, address:{}, date:date, dateObj: self._getDateObj(date),dataList:dataList});
+                var newItem = new modelWuCurrent({geocode:geocode, address:{},
+                    date:date,
+                    dateObj: self._getDateObj(date),
+                    timeOffset: timeOffset,
+                    dataList:dataList});
                 newItem.save(function(err){
                     if(err){
                         log.error('WuC> fail to add the new data to DB :', geocode);
@@ -815,10 +824,14 @@ ConCollector.prototype.saveWuCurrent = function(geocode, date, data, callback){
  * @param geocode
  * @param callback
  */
-ConCollector.prototype.requestWuData = function(geocode, callback){
+ConCollector.prototype.requestWuData = function(geocode, timeOffset, callback){
     var self = this;
     var date = parseInt(self._getTimeString(0).slice(0,10) + '00');
     var requester = new wuRequester;
+
+    if(timeOffset > 24 || timeOffset < -24){
+        timeOffset = 0;
+    }
 
     async.waterfall([
             function(cb){
@@ -831,8 +844,8 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                         return;
                     }
 
-                    log.info('WU Forecase : ', result);
-                    self.saveWuForecast(geocode, date, result, function(err, forecastData){
+                    log.info('WU Forecast : ', result);
+                    self.saveWuForecast(geocode, date, timeOffset, result, function(err, forecastData){
                         cb(undefined, 1);
                     });
                 });
@@ -852,7 +865,7 @@ ConCollector.prototype.requestWuData = function(geocode, callback){
                     }
 
                     log.info('WU Current : ', result);
-                    self.saveWuCurrent(geocode, date, result, function(err, currentData){
+                    self.saveWuCurrent(geocode, date, timeOffset, result, function(err, currentData){
                         cb(undefined, 1);
                     });
                 });
@@ -1052,7 +1065,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 return;
             }
             var newData = self._parseDSForecast(data);
-            var timeOffset = -100;
+            var timeOffset = 100;
             var weatherData = [];
             weatherData.push({
                 current : newData.current,
@@ -1070,7 +1083,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             //    log.info('D> ',item);
             //});
 
-            if(data.offset){
+            if(data.hasOwnProperty('offset')){
                 timeOffset = parseInt(data.offset);
             }
             if(list.length === 0) {
@@ -1080,7 +1093,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     address: {},
                     date: date,
                     dateObj: self._getUtcTime('' + date + '000'),
-                    timeoffset: timeOffset,
+                    timeOffset: timeOffset,
                     data: weatherData
                 });
                 newItem.save(function (err) {
@@ -1186,8 +1199,8 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, date, retryCount, 
 
             modelDSForecast.find({geocode:geocode}, function(err, list){
                 if(err){
-                    log.error('Dsf> _getAndSaveWuForecast : Fail to get DB');
-                    print.error('Dsf> _getAndSaveWuForecast : Fail to get DB');
+                    log.error('Dsf> _getAndSaveDSForecast : Fail to get DB');
+                    print.error('Dsf> _getAndSaveDSForecast : Fail to get DB');
                     cb(null);
                     return;
                 }
@@ -1295,14 +1308,18 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
  * @param geocode
  * @param callback
  */
-ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
+ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, callback){
     var self = this;
     var key = self._getDSFKey().key;
     var dataList = [];
     var requester = new dsfRequester;
 
+    if(timeOffset > 24 || timeOffset < -24){
+        timeOffset = 0;
+    }
+
     for(var i=From ; i<To ; i++){
-        var dateString = self._getTimeString(0 - (24 * i)).slice(0,10) + '00';
+        var dateString = self._getTimeString(0 - (24 * i) + timeOffset).slice(0,10) + '00';
         var now = self._getDateObj(dateString).getTime() / 1000;
         dataList.push(now);
     }
@@ -1330,7 +1347,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
 
                     log.info(result);
                     if(date === undefined){
-                        var dateString = self._getTimeString(0).slice(0,10) + '00';
+                        var dateString = self._getTimeString(0 + timeOffset).slice(0,10) + '00';
                         date = self._getDateObj(dateString).getTime() / 1000;
                     }
                     self.saveDSForecast(geocode, date, result, function(err){
@@ -1439,6 +1456,7 @@ ConCollector.prototype.runTask = function(isAll, callback){
 
     if(minute === 30 || isAll){
         funcList.push(self.processWuCurrent);
+        funcList.push(self.processDSForecast);
     }
 
     if(minute === 1 || isAll){

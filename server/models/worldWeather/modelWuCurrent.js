@@ -9,6 +9,7 @@ var wuCurrentSchema = new mongoose.Schema({
     address: {country:String, city:String, zipcode:Number, postcode:Number},
     date: Number,                                       // GMT time YYYYMMDDHHMM
     dateObj: {type: Object, default: Date},             // UTC time
+    timeOffset: {type: Number, default: 0},
     dataList:[{
         dateObj:    {type: Object, default: Date},      // UTC time
         date:       {type:Number, default:-100},        // YYYYMMDDHHMM
