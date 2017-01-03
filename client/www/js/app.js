@@ -129,12 +129,12 @@ angular.module('starter', [
                 prefix: 'locales/',
                 suffix: '.json'
             })
-            .registerAvailableLanguageKeys(['en', 'de', 'ko', 'ja', 'zh-ch', 'zh-tw'], {
+            .registerAvailableLanguageKeys(['en', 'de', 'ko', 'ja', 'zh-CN', 'zh-TW'], {
                 'en_*': 'en',
                 'de_*': 'de',
                 'ko_*': 'ko',
                 'ja_*': 'ja',
-                'zh-hk': 'zh-tw'
+                'zh-HK': 'zh-TW'
             })
             .preferredLanguage('en')
             .fallbackLanguage('en')
