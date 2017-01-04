@@ -530,7 +530,13 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         pty: -1, /* 강수 형태 : 1%, invalid : -1 */
         rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
         sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
-        lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+        lgt: -1, /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+        t1h: -50,
+        reh: -1,
+        uuu: -100,
+        vvv: -100,
+        vec: -1,
+        wsd: -1
     };
 
     //log.info('shortestData count : ' + listItem.length);
@@ -563,14 +569,20 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.my = parseInt(item.ny[0]);
 
                 var val = parseFloat(item.fcstValue[0]);
-                if (val < 0) {
-                    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
-                }
+                //if (val < 0) {
+                //    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                //}
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
                 else if(item.category[0] === 'RN1') {result.rn1 = val;}
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
+                else if(item.category[0] === 'T1H') {result.t1h = val;}
+                else if(item.category[0] === 'REH') {result.reh = val;}
+                else if(item.category[0] === 'UUU') {result.uuu = val;}
+                else if(item.category[0] === 'VVV') {result.vvv = val;}
+                else if(item.category[0] === 'VEC') {result.vec = val;}
+                else if(item.category[0] === 'WSD') {result.wsd = val;}
                 else{
                     log.error(new Error('Known property '+item.category[0]));
                 }

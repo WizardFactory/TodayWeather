@@ -704,13 +704,23 @@ function ControllerTown() {
                 if(shortestItem.date === currentTime.date && shortestItem.time === currentTime.time){
                     log.silly('MRbyST> update current data');
                     shortestString.forEach(function(string){
-                        if (shortestItem[string] < 0)  {
-                            log.error('MRbyST> '+string+' item is invalid '+JSON.stringify(meta)+
-                                ' mCoord='+JSON.stringify(coord)+' item='+JSON.stringify(shortestItem));
+                        if (string == 't1h'){
+                            if (shortestItem[string] != -50) {
+                                current[string] = shortestItem[string];
+                                return;
+                            }
                         }
-                        else {
+                        else if (string == 'uuu' || string == 'vvv') {
+                            if (shortestItem[string] != -100) {
+                                current[string] = shortestItem[string];
+                                return;
+                            }
+                        }
+                        else if (shortestItem[string] != -1) {
                             current[string] = shortestItem[string];
+                            return;
                         }
+                        log.error('MRbyST> '+string+' item is invalid item='+JSON.stringify(shortestItem));
                     });
                     current.date = currentTime.date;
                     current.time = currentTime.time;
@@ -786,7 +796,7 @@ function ControllerTown() {
      * @param shortList
      * @param shortestList
      * @param currentTime
-     * @param useTime
+     * @param useTime - shortest가 적용될 시간임. 10시일 경우 12시로 넘어옴.
      * @private
      */
     this._mergeShortByShortest = function (shortList, shortestList, currentTime, useTime) {
@@ -798,12 +808,13 @@ function ControllerTown() {
             return;
         }
 
+        //사용대 시간보다 3시간전데이터부터 사용함.
         var filterdList = shortestList.filter(function (obj) {
             var objTime = parseInt(obj.time.substr(0,2));
             if(parseInt(currentTime.date) < parseInt(obj.date)) {
                 return true;
             }
-            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime < objTime) {
+            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime-3 < objTime) {
                 return true;
             }
             return false;
@@ -819,9 +830,28 @@ function ControllerTown() {
                 if (shortest3h.date === short.date && shortest3h.time === short.time) {
                     for (var key in shortest3h) {
                         if (key === 'rn1') {
+                            if (shortest3h[key] == -1) {
+                                continue;
+                            }
                             short.shortestRn1 = shortest3h[key]
                         }
+                        else if (key === 't1h') {
+                            if (shortest3h[key] == -50) {
+                                continue;
+                            }
+                           short.t3h = shortest3h.t1h;
+                        }
                         else {
+                            if (key == 'uuu' || key == 'vvv') {
+                                if (shortest3h[key] == -100) {
+                                    continue;
+                                }
+                            }
+                            else {
+                                if (shortest3h[key] == -1) {
+                                    continue;
+                                }
+                            }
                             short[key] = shortest3h[key];
                         }
                     }
@@ -1346,13 +1376,15 @@ function ControllerTown() {
         if (yesterdayDate.time == '0000') {
            kmaTimeLib.convert0Hto24H(yesterdayDate);
         }
+
         /**
-         * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하기 때문에,
-         * yesterday도 데이터가 없는 경우에는 그 이전 데이터를 사용하게 변경
+         * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
+         * 새로 데이터를 수집하면 23시간전부터 있음.
+         * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
          */
-        for (var i=req.currentList.length-1; i>=0; i--) {
+        for (var i=0; i<req.currentList.length-1; i++) {
             if (req.currentList[i].date == yesterdayDate.date &&
-                parseInt(req.currentList[i].time) <= parseInt(req.current.time))
+                parseInt(req.currentList[i].time) >= parseInt(req.current.time))
             {
                 yesterdayItem =  req.currentList[i];
                 break;
