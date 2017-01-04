@@ -69,7 +69,7 @@ app.use('/v000803', require('./routes/v000803'));
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
-global.shortestString = ['pty', 'rn1', 'sky', 'lgt'];
+global.shortestString = ['pty', 'rn1', 'sky', 'lgt', 't1h', 'uuu', 'vvv', 'reh', 'vec', 'wsd'];
 global.commonString = ['date', 'time'];
 global.rssString = ['ftm', 'date', 'temp', 'tmx', 'tmn', 'sky', 'pty', 'wfKor', 'wfEn', 'pop', 'r12', 's12', 'ws', 'wd', 'wdKor', 'wdEn', 'reh', 'r06', 's06'];
 global.forecastString = ['cnt', 'wfsv'];
