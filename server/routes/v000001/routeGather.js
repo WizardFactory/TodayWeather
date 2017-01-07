@@ -154,7 +154,25 @@ router.get('/healthday', function(req, res) {
 
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
-    scrape.getStnHourlyWeather(function (err, results) {
+    scrape.getStnHourlyWeather(undefined, function (err, results) {
+        if (err) {
+            if (err === 'skip') {
+                log.info('stn hourly weather info is already updated');
+            }
+            else {
+                log.error(err);
+            }
+        }
+        else {
+            log.silly(results);
+        }
+        res.send();
+    });
+});
+
+router.get('/kmaStnPastHourly', function (req, res) {
+    var scrape = new Scrape();
+    scrape.getStnPastHourlyWeather(8, function (err, results) {
         if (err) {
             if (err === 'skip') {
                 log.info('stn hourly weather info is already updated');

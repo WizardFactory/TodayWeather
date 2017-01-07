@@ -121,6 +121,19 @@ kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ = function(dateStr) {
 };
 
 /**
+ * 2017.01.07.15:00 -> 201701071500
+ * @param dateStr
+ * @returns {string}
+ */
+kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM = function(dateStr) {
+    var str = dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
+    if (dateStr.length > 10) {
+        str += dateStr.substr(11,2) + dateStr.substr(14,2);
+    }
+    return str;
+};
+
+/**
  * for kma scraper
  * @param date
  * @returns {string}

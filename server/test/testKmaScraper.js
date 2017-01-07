@@ -149,6 +149,34 @@ describe('unit test - kma city weather scraping', function() {
     //});
 
     //it('test get kma stn weather info', function (done) {
+    //    this.timeout( 24*1000*60*60);
+    //
+    //    var controllerManager = require('../controllers/controllerManager');
+    //    global.manager = new controllerManager();
+    //
+    //    log.info('connect db');
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //    var scrape = new Scrape();
+    //    scrape.getStnPastHourlyWeather(8, function (err, results) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        log.info(results);
+    //        done();
+    //    });
+    //});
+
+    //it('test get kma stn weather info', function (done) {
     //    this.timeout( 30*1000);
     //
     //    var controllerManager = require('../controllers/controllerManager');
