@@ -2011,6 +2011,15 @@ Manager.prototype.startManager = function(){
             });
         }
     ], function () {
+
+        /**
+         * currents를  과거 8일까지 복원하지 못하는 경우에 사용한다
+         * 단독으로 돌리는 경우에는 testKmaScraper를 사용하는 용이함.
+         */
+        //self.asyncTasks.push(function (callback) {
+        //    self._requestApi("kmaStnPastHourly", callback);
+        //});
+
         //self.checkTimeAndPushTask(true);
         self.checkTimeAndRequestTask(true);
         self.task();
