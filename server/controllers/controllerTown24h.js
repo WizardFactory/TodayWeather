@@ -42,6 +42,11 @@ function ControllerTown24h() {
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
 
+            //과거 short가 없는 경우 -1로 client로 넘어가는 것을 방지함. 이것은 short에 대한 merge가 완료된 후에 해야 함.
+            if (short.pop == undefined || short.pop == -1) {
+                short.pop = 0;
+            }
+
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, short.date);
             daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
             daySummary.taMin = daySummary.taMin === undefined ? -50:daySummary.taMin;

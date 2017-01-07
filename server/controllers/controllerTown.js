@@ -736,6 +736,175 @@ function ControllerTown() {
         return false;
     };
 
+    this.updateCurrentListForValidation = function (req, res, next) {
+        if (req.currentList == undefined) {
+            req.currentList = [];
+        }
+
+        var tempCurrent = {date:"", time:"", mx: -1, my:-1, t1h: -50, rn1: -1, sky: -1, uuu:-1, vvv:-1, reh:-1,
+            pty: -1, lgt: -1, vec: -1, wsd: -1};
+
+        var currentDateList = [];
+        for(var i=8*24 ; i>=0; i--){
+            var currentDate = self._getCurrentTimeValue(9-i);
+            currentDateList.push(currentDate) ;
+        }
+
+        currentDateList.forEach(function (currentDate) {
+            for (var i=0; i<req.currentList.length; i++) {
+                var current =  req.currentList[i];
+                if (current.date == currentDate.date && current.time == currentDate.time) {
+                    return;
+                }
+            }
+
+            //log.info("add date="+currentDate.date+" time="+currentDate.time);
+            tempCurrent.date = currentDate.date;
+            tempCurrent.time = currentDate.time;
+            req.currentList.push(JSON.parse(JSON.stringify(tempCurrent)));
+        });
+
+        req.currentList.sort(function (a, b) {
+            if(a.date > b.date){
+                return 1;
+            }
+            else if(a.date < b.date){
+                return -1;
+            }
+            else if(a.date === b.date){
+                if (a.time > b.time) {
+                    return 1;
+                }
+                else if (a.time < b.time){
+                    return -1;
+                }
+            }
+            return 0;
+        });
+
+        if (req.currentList.length >= manager.MAX_CURRENT_COUNT) {
+            req.currentList = req.currentList.slice((req.currentList.length - manager.MAX_CURRENT_COUNT));
+        }
+
+        next();
+        return this;
+    };
+
+    function _convertCloud2SKy(cloud) {
+        if (cloud <= 2) {
+            return 1;
+        }
+        else if (cloud <= 5) {
+            return 2;
+        }
+        else if (cloud <= 8) {
+            return 3;
+        }
+        else {
+            return 4;
+        }
+
+        return 0;
+    }
+
+    function _convertStnWeather2Pty(rns, weather) {
+        if (weather == undefined) {
+            return 0;
+        }
+        if (weather.indexOf("비") >= 0) {
+            return 1;
+        }
+        else if (weather.indexOf("진눈깨비") >= 0) {
+            return 2;
+        }
+        else if (weather.indexOf("눈") >= 0) {
+            return 3;
+        }
+        else if (rns == true) {
+            return 1;
+        }
+        return 0;
+    }
+
+    function _convertStnWeather2Lgt(weather) {
+        if (weather == undefined) {
+            return 0;
+        }
+        if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
+           return 1;
+        }
+
+        return 0;
+    }
+
+    this.mergeCurrentByStnHourly = function (req, res, next) {
+        var meta = {};
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = 'mergeCurrentByStnHourly';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+        log.info('>sID=',req.sessionID, meta);
+
+        self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+            controllerKmaStnWeather.getCityHourlyList(townInfo,  function (err, stnWeatherInfo) {
+                if (stnWeatherInfo == undefined) {
+                    log.error("Fail to find stnWeatherInfo");
+                    next();
+                    return;
+                }
+                var hourlyList = stnWeatherInfo.hourlyData;
+                req.currentList.forEach(function (current) {
+                    if (current.t1h != -50) {
+                       return;
+                    }
+
+                    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
+                    for (var i=0; i<hourlyList.length; i++) {
+                        var hourlyData = hourlyList[i];
+                        if (hourlyData.date == stnDateTime)  {
+                            current.t1h = hourlyData.t1h;
+                            current.rn1 = hourlyData.rs1h;
+                            current.sky = _convertCloud2SKy(hourlyData.cloud);
+                            current.reh = hourlyData.reh;
+                            current.pty = _convertStnWeather2Pty(hourlyData.rns, hourlyData.weather);
+                            current.lgt = _convertStnWeather2Lgt(hourlyData.weather);
+                            current.vec = hourlyData.vec;
+                            current.wsd = hourlyData.wsd;
+                            return;
+                        }
+                    }
+                });
+
+                if (req.current == undefined || req.current.t1h == undefined || req.current.t1h == -50) {
+                    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
+
+                    for (var i=hourlyList.length-1; i>=0; i--) {
+                        var hourlyData = hourlyList[i];
+                        if (hourlyData.date == stnDateTime)  {
+                            req.current.t1h = hourlyData.t1h;
+                            req.current.rn1 = hourlyData.rs1h;
+                            req.current.sky = _convertCloud2SKy(hourlyData.cloud);
+                            req.current.reh = hourlyData.reh;
+                            req.current.pty = _convertStnWeather2Pty(hourlyData.rns, hourlyData.weather);
+                            req.current.lgt = _convertStnWeather2Lgt(hourlyData.weather);
+                            req.current.vec = hourlyData.vec;
+                            req.current.wsd = hourlyData.wsd;
+                            break;
+                        }
+                    }
+                }
+                next();
+            });
+        });
+
+        return this;
+    };
+
     this.mergeCurrentByShortest = function (req, res, next) {
         var meta = {};
 
@@ -3295,17 +3464,20 @@ ControllerTown.prototype._convertSummaryTo3H = function (summary) {
 
             var time = parseInt(summary.time[summary.time.length-1].substr(0, 2));
             if (time%3 === 0) {
-                var arrayIndex = summary[key].length-1;
-                newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
-                if (newItem[key] == invalidValue) {
-                    log.error("Invalid data :" + key + " " + summary.date3h+" "+summary.time3h);
-                    arrayIndex = arrayIndex-1;
-                    newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
-                    if (newItem[key] == invalidValue) {
-                        arrayIndex = arrayIndex-1;
-                        newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
+                var arrayIndex = -1;
+                for (var i=summary[key].length-1; i>=0; i--) {
+                    if (summary[key][i] == undefined || summary[key][i] == invalidValue) {
+                        continue;
                     }
+                    arrayIndex = i;
+                    break;
+                }
+                if (arrayIndex < 0) {
+                    log.debug("Fail to find current data :" + key + " " + summary.date3h+" "+summary.time3h);
+                }
+                else {
                     log.info("set :" + key + " arrayIndex:" + arrayIndex + " "+ summary.date3h+" "+summary.time3h);
+                    newItem[key] = +(summary[key][arrayIndex]).toFixed(1);
                 }
             }
             else {
