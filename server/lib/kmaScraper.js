@@ -403,7 +403,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
  * @private
  */
 KmaScraper.prototype._checkPubdate = function(date, callback)  {
-    KmaStnHourly.find({}).lean().exec(function (err, stnHourlyList) {
+    KmaStnHourly.find({}).limit(1).lean().exec(function (err, stnHourlyList) {
         if (err) {
             return callback(err);
         }
@@ -412,14 +412,18 @@ KmaScraper.prototype._checkPubdate = function(date, callback)  {
         }
 
         for (var i=0; i<stnHourlyList.length; i++) {
-            if (stnHourlyList[i].pubDate != date) {
-                log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
-                return  callback(err, false);
+            var hourlyData = stnHourlyList[i].hourlyData;
+            for (var j=0; j<hourlyData.length; j++) {
+                var hourlyObj = hourlyData[j];
+                if (date == hourlyObj.date) {
+                    log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
+                    return  callback(err, true);
+                }
             }
         }
 
-        log.debug('check pub date : kma stn weather already updated');
-        return callback(err, true);
+        //log.debug('check pub date : kma stn weather already updated');
+        return callback(err, false);
     });
 
     return this;
@@ -833,6 +837,9 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     //log.info(pubDateList);
     async.mapSeries(pubDateList, function (pubDate, aCallback) {
        self.getStnHourlyWeather(pubDate, function (err, results) {
+           if (err == 'skip') {
+              return aCallback(undefined, results);
+           }
            aCallback(err, results);
        });
     }, function (err, results) {
@@ -857,17 +864,19 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
 
     async.waterfall([
         //skip check pubdate to overwrite new data
-        //function (cb) {
-        //    //check update time
-        //    self._checkPubdate(pubDate, function (err, isLatest) {
-        //        if (err) {
-        //            return cb(err);
-        //        }
-        //        if (isLatest) {
-        //            return cb('skip');
-        //        }
-        //        cb();
-        //    });},
+        //stn 마다 모두 확인하는 것이 아니기 때문에, 최종으로 check없이 한번더 저장필요.
+        function (cb) {
+            //check update time
+            self._checkPubdate(pubDate, function (err, hasData) {
+                if (err) {
+                    return cb(err);
+                }
+                if (hasData) {
+                    return cb('skip');
+                }
+                cb();
+            });
+        },
         function (cb) {
             log.info('get aws weather');
             self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
