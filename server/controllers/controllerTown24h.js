@@ -504,6 +504,42 @@ function ControllerTown24h() {
         return next();
     };
 
+    this.insertSkyIcon = function (req, res, next) {
+        if(req.short){
+            req.short.forEach(function (data) {
+                var time = parseInt(data.time.substr(0, 2));
+                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+            });
+        }
+        if(req.shortest){
+            req.shortest.forEach(function (data) {
+                var time = parseInt(data.time.substr(0, 2));
+                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+            });
+        }
+        if(req.current){
+            var data = req.current;
+            var time = parseInt(data.time.substr(0, 2));
+            data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+        }
+        if(req.midData){
+            req.midData.dailyData.forEach(function (data) {
+                if (data.sky) {
+                    data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, false);
+                }
+                if (data.skyAm) {
+                    data.skyAmIcon = self._parseSkyState(data.skyAm, data.ptyAm, data.lgtAm, false);
+                }
+                if (data.skyPm) {
+                    data.skyPmIcon = self._parseSkyState(data.skyPm, data.ptyPm, data.lgtPm, false);
+                }
+            });
+        }
+
+        next();
+        return this;
+    };
+
     this.sendDailySummaryResult = function (req, res) {
         var meta = {};
 
