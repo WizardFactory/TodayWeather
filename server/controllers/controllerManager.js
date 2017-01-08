@@ -957,8 +957,9 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 }
                 else {
                     log.silly(item);
-                    log.verbose(dataTypeName, " request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
-                    failedList.push(item.mCoord);
+                    log.verbose(dataTypeName, " request retry date:",item.options.date,' time:',item.options.time);
+                    var baseTime = {date: item.options.date, time: item.options.time};
+                    failedList.push(baseTime);
                     //this index was not rcvData
                     cb(undefined, item);
                 }
@@ -968,8 +969,9 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 if (err) {
                     log.error(err);
                 }
+                log.info(dataTypeName + ' failedList='+failedList.length);
                 if (failedList.length) {
-                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, baseTimeList, --retryCount, callback);
+                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, failedList, --retryCount, callback);
                 }
                 log.info('received All ', dataTypeName, ' of baseTimes=', baseTimeList.length);
                 if (callback) {
