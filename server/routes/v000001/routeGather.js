@@ -15,6 +15,22 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
+router.get('/current/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("current", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
+    });
+});
+
 router.get('/current', function(req, res) {
     manager.getTownCurrentData(9, server_key, function (err) {
         if (err) {
@@ -106,12 +122,44 @@ router.get('/kecoForecast', function(req, res) {
     });
 });
 
+router.get('/short/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("short", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
+    });
+});
+
 router.get('/short', function(req, res) {
     manager.getTownShortData(9, server_key, function (err) {
         if (err) {
             log.error(err);
         }
         res.send();
+    });
+});
+
+router.get('/shortest/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("shortest", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
     });
 });
 
