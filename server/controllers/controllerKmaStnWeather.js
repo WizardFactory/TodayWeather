@@ -385,9 +385,12 @@ controllerKmaStnWeather._filterStnList = function (stnList) {
 
 controllerKmaStnWeather.getCityHourlyList = function (townInfo, callback) {
     var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
         if (err) {
             return callback(err);
+        }
+        if (kmaStnList.length == 0) {
+            return callback(new Error("Fail to find kma stn"));
         }
 
         KmaStnHourly.find({stnId: kmaStnList[0].stnId}).lean().exec(function (err, stnWeatherList) {
@@ -426,7 +429,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
                 return pCallback(err, kmaStnList);
             });
         }, function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }
@@ -545,7 +548,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                         return pCallback(err, kmaStnList);
                     });
                 }, function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                         if (err) {
                             return pCallback(err);
                         }
