@@ -2,6 +2,7 @@ package net.wizardfactory.todayweather.widget.JsonElement;
 
 import android.util.Log;
 
+import net.wizardfactory.todayweather.widget.Data.Units;
 import net.wizardfactory.todayweather.widget.Data.WeatherData;
 import net.wizardfactory.todayweather.widget.Data.WidgetData;
 
@@ -11,7 +12,6 @@ import org.json.JSONObject;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -30,6 +30,15 @@ public class WeatherElement {
     private WeatherShortestElement[] weatherShortests = null;
     private WeatherCurrentElement weatherCurrent = null;
     private WeatherMidDataElement weatherMidData = null;
+    private Units units;
+
+    public void setUnits(Units units) {
+        this.units = units;
+    }
+
+    public Units getUnits() {
+        return units;
+    }
 
     public String getRegionName() { return regionName; }
 
@@ -106,6 +115,12 @@ public class WeatherElement {
                 }
                 if (reader.has("midData")) {
                     retElement.setWeatherMidData(WeatherMidDataElement.parsingMidDataElementString2Json(reader.getJSONObject("midData").toString()));
+                }
+                if (reader.has("units")) {
+                    retElement.setUnits(new Units(reader.optString("units")));
+                }
+                else {
+                    retElement.setUnits(new Units());
                 }
             }
             else {
@@ -245,6 +260,8 @@ public class WeatherElement {
 
                 retWidgetData.setDayWeather(i, dayData);
             }
+
+            retWidgetData.setUnits(units);
         }
         else {
             Log.e("WeatherElement", "CurrentWeather is NULL!!");
