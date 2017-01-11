@@ -14,5 +14,5 @@
  ********************************************************************/
 
 #define DAUM_SERVICE_KEY            @"6d0116e2c49361cb75eaf12f665e6360"
-#define TODAYWEATHER_URL            @"http://todayweather.wizardfactory.net"
+#define TODAYWEATHER_URL            @"https://todayweather.wizardfactory.net"
 #endif /* WidgetConfig_h */

@@ -12,6 +12,7 @@
 #import <UIKit/UIKit.h>
 
 #import	<CoreLocation/CoreLocation.h>
+#import "TodayWeatherShowMore.h"
 
 @interface CityInfo : NSObject
 @property (nonatomic) id identifier;
@@ -22,6 +23,9 @@
 - (void) encodeWithCoder : (NSCoder *)encode ;
 - (id) initWithCoder : (NSCoder *)decode;
 @end
+
+@class TodayViewController;
+@class TodayWeatherShowMore;
 
 /********************************************************************
  Declare Class Definitions
@@ -36,17 +40,9 @@
     IBOutlet UILabel        *curDustLabel;            // current Dust
 
     IBOutlet UIImageView    *curWTIconIV;            // current weather status
-    IBOutlet UIImageView    *todWTIconIV;            // today weather status
-    IBOutlet UIImageView    *tomWTIconIV;            // tomorrow weather status
     
-    IBOutlet UILabel        *todayMaxTempLabel;         // today Max Temperature
-    IBOutlet UILabel        *todayMinTempLabel;         // today Min Temperature
-    IBOutlet UILabel        *todayPopLabel;             // today Pop Temperature
-    
-    IBOutlet UILabel        *tomoMaxTempLabel;          // tomorrow Max Temperature
-    IBOutlet UILabel        *tomoMinTempLabel;          // tomorrow Min Temperature
-    IBOutlet UILabel        *tomoPopLabel;              // tomorrow Pop Temperature
-    
+    IBOutlet UILabel        *todayMaxMinTempLabel;         // today Max/Min Temperature
+        
     IBOutlet UIButton       *editWidgetBtn;
     IBOutlet UIButton       *updateDataBtn;
     
@@ -67,15 +63,39 @@
     double								gMylatitude;
     double								gMylongitude;
     
-    //BOOL                                gCurrentPostion;
-    //NSString                            *firstName;
-    //NSString                            *secondName;
-    //NSString                            *thirdName;
-    
     CLLocationManager					*locationManager;
     CLLocation							*startingPoint;
     
     NSMutableData                       *responseData;
+    
+    
+    BOOL                                bIsDateView;
+    __weak IBOutlet UIView *showMoreView;
+    
+    TodayWeatherShowMore        *todayWSM;
+    NSDictionary                *curJsonDict;
+    
+@public
+    __weak IBOutlet UILabel *time1Label;
+    __weak IBOutlet UILabel *time2Label;
+    __weak IBOutlet UILabel *time3Label;
+    __weak IBOutlet UILabel *time4Label;
+    __weak IBOutlet UILabel *time5Label;
+    __weak IBOutlet UILabel *time6Label;
+    
+    __weak IBOutlet UILabel *temp1Label;
+    __weak IBOutlet UILabel *temp2Label;
+    __weak IBOutlet UILabel *temp3Label;
+    __weak IBOutlet UILabel *temp4Label;
+    __weak IBOutlet UILabel *temp5Label;
+    __weak IBOutlet UILabel *temp6Label;
+    
+    __weak IBOutlet UIImageView *showMore1IV;
+    __weak IBOutlet UIImageView *showMore2IV;
+    __weak IBOutlet UIImageView *showMore3IV;
+    __weak IBOutlet UIImageView *showMore4IV;
+    __weak IBOutlet UIImageView *showMore5IV;
+    __weak IBOutlet UIImageView *showMore6IV;
 }
 
 /********************************************************************
@@ -89,8 +109,13 @@
 /********************************************************************
  Declare Class functions
  ********************************************************************/
++ (TodayViewController *)sharedInstance;
+
 - (IBAction) editWidget:(id)sender;
 - (IBAction) updateData:(id)sender;
+- (IBAction)toggleShowMore:(id)sender;
+- (IBAction)moveMainApp:(id)sender;
+
 
 - (IBAction)nextCity:(id)sender;
 
@@ -101,11 +126,15 @@
 - (void) requestAsyncByURLSession:(NSString *)nssURL reqType:(NSUInteger)type;
 - (void) makeJSONWithData:(NSData *)jsonData reqType:(NSUInteger)type;
 - (void) parseJSONData:(NSDictionary *)jsonDict;
-- (void) processWeatherResults:(NSDictionary *)jsonDict;
+- (void) processWeatherResultsWithShowMore:(NSDictionary *)jsonDict;
 - (NSString *) makeRequestURL:(NSString *)nssAddr1 addr2:(NSString*)nssAddr2 addr3:(NSString *)nssAddr3;
 - (BOOL) setCityInfo:(CityInfo *)nextCity;
 
 - (void) processPrevData:(int)idx;
 - (void) processRequestIndicator:(BOOL)isComplete;
+- (void) processShowMore;
+
+- (NSDictionary *) getCurJsonDict;
+- (void) setCurJsonDict:(NSDictionary *)dict;
 
 @end
