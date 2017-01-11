@@ -786,7 +786,12 @@ function ControllerTown() {
                             current[string] = shortestItem[string];
                             return;
                         }
-                        log.error('MRbyST> '+string+' item is invalid item='+JSON.stringify(shortestItem));
+                        if (string == 'wsd') {
+                            log.warn('MRbyST> '+string+' item is invalid item='+JSON.stringify(shortestItem));
+                        }
+                        else {
+                            log.error('MRbyST> '+string+' item is invalid item='+JSON.stringify(shortestItem));
+                        }
                     });
                     current.date = currentTime.date;
                     current.time = currentTime.time;
@@ -1214,8 +1219,9 @@ function ControllerTown() {
                         log.info('overwrite all data');
                     }
 
+                    //체크 가능한 값이 아래 3가지뿐임. t1h는 실제로 0도일 수 있지만, 에러인 경우에도 0으로 옴.
                     if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
-                        log.error('stnWeatherInfo is invalid!');
+                        log.warn('stnWeatherInfo is invalid!', meta);
                         stnHourlyFirst = false;
                     }
 
@@ -1292,7 +1298,7 @@ function ControllerTown() {
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHMM(now);
-                log.info(date+time);
+                log.debug(date+time, meta);
                 controllerKmaStnWeather.getStnCheckedMinute(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
@@ -1300,8 +1306,9 @@ function ControllerTown() {
                         return;
                     }
 
+                    //체크 가능한 값이 아래 3가지뿐임. t1h는 실제로 0도일 수 있지만, 에러인 경우에도 0으로 옴.
                     if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
-                        log.error('stnWeatherInfo is invalid!');
+                        log.warn('stnWeatherInfo is invalid!', meta);
                         next();
                         return;
                     }
@@ -3019,6 +3026,10 @@ ControllerTown.prototype._average = function(list, invalidValue, digits) {
     }
     else {
         validList = list;
+    }
+
+    if (validList.length == 0) {
+       return -1;
     }
 
     return +(self._sum(validList)/validList.length).toFixed(digits);

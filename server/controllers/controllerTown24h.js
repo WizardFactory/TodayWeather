@@ -109,7 +109,9 @@ function ControllerTown24h() {
                         //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
                     }
                     else {
-                        log.error("It has r06 but pty is zero short index="+i);
+                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
+                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
+                        log.warn("It has r06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
                     }
                     req.short[i-1].r06 = 0;
                     req.short[i].r06 = 0;
@@ -138,7 +140,9 @@ function ControllerTown24h() {
                         //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
                     }
                     else {
-                        log.error("It has s06 but pty is zero short index=" + i);
+                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
+                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
+                        log.warn("It has s06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
                     }
                     req.short[i-1].s06 = 0;
                     req.short[i].s06 = 0;
@@ -580,7 +584,6 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
 
         result.regionName = regionName;
         result.cityName = cityName;
@@ -593,6 +596,9 @@ function ControllerTown24h() {
             result.shortRssPubDate = req.shortRssPubDate;
         }
         if(req.short) {
+            if (req.short == undefined || req.short.length == undefined || req.short.length < 41) {
+                log.error("Short is invalid >sID=",req.sessionID, meta)
+            }
             result.short = req.short;
         }
         if (req.shortestPubDate) {
@@ -605,14 +611,23 @@ function ControllerTown24h() {
             result.currentPubDate = req.currentPubDate;
         }
         if(req.current) {
+            if (req.current == undefined || req.current.t1h == undefined || req.current.yesterday == undefined) {
+                log.error("Current is invalid >sID=",req.sessionID, meta)
+            }
             result.current = req.current;
         }
         if(req.midData) {
+            if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
+                || req.midData.dailyData.length < 18) {
+                log.error("daily Data is invalid >sID=",req.sessionID, meta)
+            }
             result.midData = req.midData;
         }
         if (req.dailySummary) {
             result.dailySummary = req.dailySummary;
         }
+
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
         res.json(result);
 
         return this;
@@ -647,7 +662,7 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
             skyIconName = "Cloud";
             break;
         default:
-            console.log('Fail to parse sky='+sky);
+            log.error('Fail to parse sky='+sky);
             break;
     }
 
@@ -665,7 +680,7 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
             skyIconName += "Snow";
             break;
         default:
-            console.log('Fail to parse pty='+pty);
+            log.error('Fail to parse pty='+pty);
             break;
     }
 
