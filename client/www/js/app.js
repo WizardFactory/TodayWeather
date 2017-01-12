@@ -17,6 +17,7 @@ angular.module('starter', [
     'controller.units'
 ])
     .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
+        //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
         document.addEventListener("deviceready", function () {
@@ -134,7 +135,9 @@ angular.module('starter', [
                 'de_*': 'de',
                 'ko_*': 'ko',
                 'ja_*': 'ja',
-                'zh-HK': 'zh-TW'
+                'zh_HK': 'zh-TW',
+                'zh_TW': 'zh-TW',
+                'zh_*': 'zh-CN'
             })
             .preferredLanguage('en')
             .fallbackLanguage('en')

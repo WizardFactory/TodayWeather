@@ -1425,7 +1425,10 @@ angular.module('starter.services', [])
             }
 
             if (weatherData.current && weatherData.current.stnDateTime) {
-                currentTime = new Date(weatherData.current.stnDateTime);
+                //iOS Safari에서 parsing 못함.
+                var dateStr = weatherData.current.stnDateTime.split(".");
+                var timeStr = dateStr[dateStr.length-1].split(":");
+                currentTime = new Date(dateStr[0], parseInt(dateStr[1])-1, dateStr[2], timeStr[0], timeStr[1]);
             }
             else if (weatherData.current.date && !(weatherData.current.time == undefined)) {
                 currentTime = convertStringToDate(weatherData.current.date);
