@@ -2061,12 +2061,6 @@ Manager.prototype.startManager = function(){
             });
         },
         function (callback) {
-            townRss.loadList(function(){
-                log.info('Rss> complete loadList for Rss.');
-                callback();
-            });
-        },
-        function (callback) {
             taskKmaIndexService.loadAreaList(function () {
                 log.info('KmaIndex> complete loadAreaList for KMA Index.');
                 callback();

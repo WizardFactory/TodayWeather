@@ -596,7 +596,7 @@ function ControllerTown24h() {
             result.shortRssPubDate = req.shortRssPubDate;
         }
         if(req.short) {
-            if (req.short == undefined || req.short.length == undefined || req.short.length < 41) {
+            if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
                 log.error("Short is invalid >sID=",req.sessionID, meta)
             }
             result.short = req.short;
