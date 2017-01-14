@@ -1060,7 +1060,7 @@ Manager.prototype._checkPubDate = function(model, srcList, dateString, callback)
     return this;
 };
 
-Manager.prototype._getShortQueryTime = function (baseTime) {
+Manager.prototype.getShortQueryTime = function (baseTime) {
     var self = this;
     var currentDate = self.getWorldTime(baseTime);
     var dateString = {
@@ -1108,7 +1108,7 @@ Manager.prototype._getShortQueryTime = function (baseTime) {
     return dateString;
 };
 
-Manager.prototype._getShortestQueryTime = function (baseTime) {
+Manager.prototype.getShortestQueryTime = function (baseTime) {
     var self = this;
     var currentDate = self.getWorldTime(baseTime);
     var dateString = {
@@ -1134,7 +1134,7 @@ Manager.prototype._getShortestQueryTime = function (baseTime) {
     return dateString;
 };
 
-Manager.prototype._getCurrentQueryTime = function (baseTime) {
+Manager.prototype.getCurrentQueryTime = function (baseTime) {
     var self = this;
     var currentDate = self.getWorldTime(baseTime);
     var dateString = {
@@ -1158,7 +1158,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
     meta.fName = 'getTownShortData';
     //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
 
-    var dateString = self._getShortQueryTime(baseTime);
+    var dateString = self.getShortQueryTime(baseTime);
 
     log.info('S> +++ GET SHORT INFO : ', dateString);
 
@@ -1213,7 +1213,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
 Manager.prototype.getTownShortestData = function(baseTime, key, callback){
     var self = this;
 
-    var dateString = self._getShortestQueryTime(baseTime);
+    var dateString = self.getShortestQueryTime(baseTime);
 
     log.info('ST> +++ GET SHORTEST INFO : ', dateString);
 
@@ -1270,7 +1270,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
     var self = this;
 
-    var dateString = self._getCurrentQueryTime(baseTime);
+    var dateString = self.getCurrentQueryTime(baseTime);
     //log.info(currentDate);
     //log.info(hour, minute);
 
@@ -1582,15 +1582,15 @@ Manager.prototype.getKmaData = function (typeStr, mCoord, serviceKey, callback) 
 
     if (typeStr == 'current') {
         dataType = collectInfo.DATA_TYPE.TOWN_CURRENT;
-        dateString= self._getCurrentQueryTime(9);
+        dateString= self.getCurrentQueryTime(9);
     }
     else if (typeStr == 'shortest') {
         dataType = collectInfo.DATA_TYPE.TOWN_SHORTEST;
-        dateString = self._getShortestQueryTime(9);
+        dateString = self.getShortestQueryTime(9);
     }
     else if (typeStr == 'short') {
         dataType = collectInfo.DATA_TYPE.TOWN_SHORT;
-        dateString = self._getShortQueryTime(9);
+        dateString = self.getShortQueryTime(9);
     }
 
     collectInfo.srcList = [mCoord];
