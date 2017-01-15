@@ -215,36 +215,48 @@ function ControllerTown() {
     };
 
     this.checkDBValidation = function(req, res, next) {
-        if (req.modelCurrent == undefined && req.modelShort == undefined && req.modelShortest == undefined ) {
-            async.parallel([
-                function (callback) {
-                    var apiName = "current/"+req.coord.mx+"/"+req.coord.my;
-                    self._requestApi(apiName, function (err, result) {
-                        if (err == undefined) {
-                            req.modelCurrent = result;
-                        }
-                        callback();
-                    });
-                },
-                function (callback) {
-                    var apiName = "short/"+req.coord.mx+"/"+req.coord.my;
-                    self._requestApi(apiName, function (err, result) {
-                        if (err == undefined) {
-                            req.modelShort = result;
-                        }
-                        callback();
-                    });
-                },
-                function (callback) {
-                    var apiName = "shortest/"+req.coord.mx+"/"+req.coord.my;
-                    self._requestApi(apiName, function (err, result) {
-                        if (err == undefined) {
-                            req.modelShortest = result;
-                        }
-                        callback();
-                    });
-                }
-            ], function () {
+        var funcArray = [];
+        var currentPubDate = manager.getCurrentQueryTime(9);
+        if (req.modelCurrent == undefined || req.modelCurrent.pubDate != currentPubDate.date+currentPubDate.time) {
+            funcArray.push(function (callback) {
+                var apiName = "current/"+req.coord.mx+"/"+req.coord.my;
+                self._requestApi(apiName, function (err, result) {
+                    if (err == undefined) {
+                        req.modelCurrent = result;
+                    }
+                    callback();
+                });
+            });
+        }
+
+        var shortPubDate = manager.getShortQueryTime(9);
+        if (req.modelShort == undefined || req.modelShort.pubDate != shortPubDate.date+shortPubDate.time) {
+            funcArray.push(function (callback) {
+                var apiName = "short/"+req.coord.mx+"/"+req.coord.my;
+                self._requestApi(apiName, function (err, result) {
+                    if (err == undefined) {
+                        req.modelShort = result;
+                    }
+                    callback();
+                });
+            });
+        }
+
+        var shortestPubDate = manager.getShortestQueryTime(9);
+        if (req.modelShortest == undefined || req.modelShortest.pubDate != shortestPubDate.date+shortestPubDate.time) {
+            funcArray.push(function (callback) {
+                var apiName = "shortest/"+req.coord.mx+"/"+req.coord.my;
+                self._requestApi(apiName, function (err, result) {
+                    if (err == undefined) {
+                        req.modelShortest = result;
+                    }
+                    callback();
+                });
+            });
+        }
+
+        if (funcArray.length ) {
+            async.parallel(funcArray, function () {
                next();
             });
         }
