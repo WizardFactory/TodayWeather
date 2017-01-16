@@ -27,8 +27,8 @@ var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
     {db:modelShortest, name:'modelShortest'},
-    {db:modelShortRss, name:'modelShortRss'}
 ];
+
 var midArray = [
     {db:modelMidForecast, name:'modelMidForecast'},
     {db:modelMidLand, name:'modelMidLand'},
@@ -90,7 +90,7 @@ function ControllerTown() {
                             function(item, cb){
                                 self._getTownDataFromDB(item.db, coord, undefined, function(err, data){
                                     if (err) {
-                                        log.error(new Error('GaD> error to get data : '+ err.message));
+                                        log.error(new Error('GaD> error to get data : '+ err.message + ' name='+item.name));
                                         return cb(err);
                                     }
                                     req[item.name] = data;
