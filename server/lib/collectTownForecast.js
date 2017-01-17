@@ -503,6 +503,18 @@ CollectData.prototype.organizeShortData = function(index, listData){
             }
         }
 
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t3h === template.t3h) {
+            log.error('Fail get full short data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
+            data.wsd === template.wsd) {
+            log.warn('Fail get full short data -'+JSON.stringify(data));
+        }
+
         listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
@@ -587,6 +599,18 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                     log.error(new Error('Known property '+item.category[0]));
                 }
             }
+        }
+
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t1h === template.t1h) {
+            log.error('Fail get full shortest data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
+            data.vec === template.vec || data.wsd === template.wsd) {
+            log.warn('Fail get full shortest data -'+JSON.stringify(data));
         }
 
         listResult.sort(self._sortByDateTime);
