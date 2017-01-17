@@ -313,7 +313,12 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            log.warn(err);
+            if (err.code == "ETIMEDOUT") {
+                log.debug(err);
+            }
+            else {
+                log.warn(err);
+            }
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -353,8 +358,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 if(err || (result.response.header[0].resultCode[0] !== '0000') ||
                     (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
-                    log.error(meta);
+                    log.warn('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
+                    log.warn(meta);
                     self.emit('recvFail', index);
                 }
                 else{

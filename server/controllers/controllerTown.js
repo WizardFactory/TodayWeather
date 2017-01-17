@@ -207,8 +207,8 @@ function ControllerTown() {
                 log.error(err);
                 return callback();
             }
-            if ( response.statusCode >= 400) {
-                log.error(new Error("response.statusCode="+response.statusCode));
+            if (response.statusCode >= 400) {
+                err = new Error("api="+apiName+" statusCode="+response.statusCode);
             }
             callback(err, body);
         });
@@ -216,8 +216,7 @@ function ControllerTown() {
 
     this.checkDBValidation = function(req, res, next) {
         var funcArray = [];
-        var currentPubDate = manager.getCurrentQueryTime(9);
-        if (req.modelCurrent == undefined || req.modelCurrent.pubDate != currentPubDate.date+currentPubDate.time) {
+        if (req.modelCurrent == undefined) {
             funcArray.push(function (callback) {
                 var apiName = "current/"+req.coord.mx+"/"+req.coord.my;
                 self._requestApi(apiName, function (err, result) {
@@ -229,8 +228,7 @@ function ControllerTown() {
             });
         }
 
-        var shortPubDate = manager.getShortQueryTime(9);
-        if (req.modelShort == undefined || req.modelShort.pubDate != shortPubDate.date+shortPubDate.time) {
+        if (req.modelShort == undefined) {
             funcArray.push(function (callback) {
                 var apiName = "short/"+req.coord.mx+"/"+req.coord.my;
                 self._requestApi(apiName, function (err, result) {
@@ -242,8 +240,7 @@ function ControllerTown() {
             });
         }
 
-        var shortestPubDate = manager.getShortestQueryTime(9);
-        if (req.modelShortest == undefined || req.modelShortest.pubDate != shortestPubDate.date+shortestPubDate.time) {
+        if (req.modelShortest == undefined) {
             funcArray.push(function (callback) {
                 var apiName = "shortest/"+req.coord.mx+"/"+req.coord.my;
                 self._requestApi(apiName, function (err, result) {
@@ -1332,55 +1329,88 @@ function ControllerTown() {
                         return;
                     }
 
-                    stnWeatherInfo.t1h = undefined;
+                    /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
+                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함. */
+                    var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
+                    var stnFirst = true;
+                    if (!(req.currentPubDate == undefined)) {
+                        var currentTime = kmaTimeLib.convertStringToDate(req.currentPubDate);
+
+                        if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
+
+                            log.info('>sID=',req.sessionID,
+                                'use api first, just append new data of stn hourly weather info', meta);
+                            stnFirst = false;
+                        }
+                        else {
+                            log.info('>sID=',req.sessionID, 'overwrite all data', meta);
+                        }
+                    }
 
                     for (var key in stnWeatherInfo) {
-                        if (!(stnWeatherInfo[key] == undefined)) {
+                        if (stnFirst || req.current[key] == undefined) {
                             req.current[key] = stnWeatherInfo[key];
                         }
                     }
 
-                    //24시 01분부터 1시까지 날짜 맞지 않음.
-                    //req.current.date = date;
-                    req.current.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
 
-                    req.current.overwrite = true;
-                    if (req.current.rns === true) {
-                        if (req.current.pty === 0) {
-                            log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
-                                req.params.region + req.params.city + req.params.town);
+                    if (req.current.rn1 == undefined) {
+                        req.current.rn1 = stnWeatherInfo.rs1h;
+                    }
+                    if (req.current.sky == undefined) {
+                        req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                    }
+                    if (req.current.pty == undefined) {
+                        req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                    }
+                    if (req.current.lgt == undefined) {
+                        req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                    }
 
-                            //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
-                            if (req.current.t1h > 2) {
-                                req.current.pty = 1;
+                    if (stnFirst) {
+                        //24시 01분부터 1시까지 날짜 맞지 않음.
+                        //req.current.date = date;
+                        req.current.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
+
+                        req.current.overwrite = true;
+                        if (req.current.rns === true) {
+                            if (req.current.pty === 0) {
+                                log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
+                                    req.params.region + req.params.city + req.params.town);
+
+                                //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                                if (req.current.t1h > 2) {
+                                    req.current.pty = 1;
+                                }
+                                else if (req.current.t1h > -1) {
+                                    req.current.pty = 2;
+                                }
+                                else {
+                                    req.current.pty = 3;
+                                }
+                                if (req.current.sky === 1) {
+                                    req.current.sky = 2;
+                                }
                             }
-                            else if (req.current.t1h > -1) {
-                                req.current.pty = 2;
+                            req.current.rn1 = req.current.rs1h;
+                            if (req.current.rn1 > 10) {
+                                req.current.rn1 = Math.round(req.current.rn1);
                             }
                             else {
-                                req.current.pty = 3;
-                            }
-                            if (req.current.sky === 1) {
-                                req.current.sky = 2;
+                                req.current.rn1 = +(req.current.rn1).toFixed(1);
                             }
                         }
-                        req.current.rn1 = req.current.rs1h;
-                        if (req.current.rn1 > 10) {
-                            req.current.rn1 = Math.round(req.current.rn1);
+                        else if (req.current.rns === false) {
+                            //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
+                            //if (req.current.pty != 0) {
+                            //    log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
+                            //        req.params.region + req.params.city + req.params.town);
+                            //    req.current.pty = 0;
+                            //}
                         }
                         else {
-                            req.current.rn1 = +(req.current.rn1).toFixed(1);
+                            log.debug('we did not get rns info');
                         }
-                    }
-                    else if (req.current.rns === false) {
-                        if (req.current.pty != 0) {
-                            log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
-                                req.params.region + req.params.city + req.params.town);
-                            req.current.pty = 0;
-                        }
-                    }
-                    else {
-                        log.debug('we did not get rns info');
                     }
                     next();
                 });

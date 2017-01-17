@@ -89,7 +89,7 @@ if (config.mode === 'gather' || config.mode === 'local') {
     manager.startManager();
 }
 
-if (config.mode === 'push' || config.mode === 'local') {
+if (config.mode === 'push') {
     var ControllerPush = require('./controllers/controllerPush');
     var co = new ControllerPush();
     co.start();
