@@ -877,6 +877,7 @@ static TodayViewController *todayVC = nil;
     NSString        *nssDateTime = nil;
     NSString        *nssDate = nil;
     NSString        *nssTime = nil;
+    NSString        *nssLiveTime = nil;
     NSString        *nssHour = nil;
     NSString        *nssMinute = nil;
     int             curDate = 0;
@@ -945,13 +946,21 @@ static TodayViewController *todayVC = nil;
     nssDate             = [currentDict objectForKey:@"date"];
     curDate             = [nssDate intValue];
     
-    nssTime             = [currentDict objectForKey:@"time"];
-    curTime             = [nssDate intValue];
-    
-    if(nssTime != nil)
-    {
-        nssHour             = [nssTime substringToIndex:2];
-        nssMinute           = [nssTime substringFromIndex:2];
+    nssLiveTime             = [currentDict objectForKey:@"liveTime"];
+    if (nssLiveTime != nil) {
+        curTime             = [nssLiveTime intValue];
+        nssHour             = [nssLiveTime substringToIndex:2];
+        nssMinute           = [nssLiveTime substringFromIndex:2];
+    }
+    else {
+        nssTime             = [currentDict objectForKey:@"time"];
+        curTime             = [nssTime intValue];
+        
+        if(nssTime != nil)
+        {
+            nssHour             = [nssTime substringToIndex:2];
+            nssMinute           = [nssTime substringFromIndex:2];
+        }
     }
     
     nssDateTime         = [NSString stringWithFormat:@"업데이트 %@:%@", nssHour, nssMinute];
