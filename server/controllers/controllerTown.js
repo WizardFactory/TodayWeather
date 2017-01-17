@@ -990,6 +990,13 @@ function ControllerTown() {
         return this;
     };
 
+    /**
+     * 사용하지 않음. #823
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown}
+     */
     this.mergeCurrentByShortest = function (req, res, next) {
         var meta = {};
 
