@@ -72,7 +72,8 @@
         "DEEPLINK_HOST": "net.wizardfactory.todayweather",
         "ANDROID_PATH_PREFIX": "/"
       }
-    }
+    },
+    "cordova.plugins.diagnostic"
   ],
   "cordovaPlatforms": [
     "ios",
