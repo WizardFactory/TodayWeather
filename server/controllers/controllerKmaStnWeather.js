@@ -576,6 +576,11 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                 var cityWeatherIndex;
                 var pushedIndex;
                 stnHourWeatherList.forEach(function (stnHourWeather, index) {
+                    if (current.t1h == undefined && stnHourWeather.isCityWeather) {
+                        stnHourWeather.isT1hStn = true;
+                        listFiltered.push(stnHourWeather);
+                        t1hIndex = pushedIndex = index;
+                    }
                     if (Math.abs(stnHourWeather.t1h - current.t1h) < 1 && t1hIndex == undefined) {
                         stnHourWeather.isT1hStn = true;
                         listFiltered.push(stnHourWeather);
@@ -611,7 +616,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                     opt.skipReh = true;
                     opt.skipWsd = true;
                 }
-                if (rainIndex == undefined) {
+                if (!(current.pty == undefined) && rainIndex == undefined) {
                     opt.skipRain = true;
                 }
                 aCallback(undefined, listFiltered);
@@ -631,7 +636,12 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
             }, function (stnList, aCallback) {
                 self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
                     if (err) {
-                        return aCallback(err);
+                        log.error(err);
+                        return aCallback(undefined, stnList);
+                    }
+                    if (results.length == 0) {
+                        log.error("Fail to get stn minute, so use hourly");
+                        return aCallback(undefined, stnList);
                     }
                     aCallback(err, results);
                 })
