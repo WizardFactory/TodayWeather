@@ -72,6 +72,7 @@
         "ANDROID_PATH_PREFIX": "/"
       }
     },
+    "cordova-plugin-globalization",
     "cordova.plugins.diagnostic"
   ],
   "cordovaPlatforms": [

@@ -15,22 +15,6 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
-router.get('/current/:mx/:my', function(req, res) {
-    if (req.params.mx == undefined || req.params.my == undefined) {
-        res.sendStatus(400);
-        return;
-    }
-    var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("current", mCoord, server_key, function (err, results) {
-        if (err) {
-            res.status(500).send(err.message);
-        }
-        else {
-            res.send(results);
-        }
-    });
-});
-
 router.get('/current', function(req, res) {
     manager.getTownCurrentData(9, server_key, function (err) {
         if (err) {
@@ -122,44 +106,12 @@ router.get('/kecoForecast', function(req, res) {
     });
 });
 
-router.get('/short/:mx/:my', function(req, res) {
-    if (req.params.mx == undefined || req.params.my == undefined) {
-        res.sendStatus(400);
-        return;
-    }
-    var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("short", mCoord, server_key, function (err, results) {
-        if (err) {
-            res.status(500).send(err.message);
-        }
-        else {
-            res.send(results);
-        }
-    });
-});
-
 router.get('/short', function(req, res) {
     manager.getTownShortData(9, server_key, function (err) {
         if (err) {
             log.error(err);
         }
         res.send();
-    });
-});
-
-router.get('/shortest/:mx/:my', function(req, res) {
-    if (req.params.mx == undefined || req.params.my == undefined) {
-        res.sendStatus(400);
-        return;
-    }
-    var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("shortest", mCoord, server_key, function (err, results) {
-        if (err) {
-            res.status(500).send(err.message);
-        }
-        else {
-            res.send(results);
-        }
     });
 });
 
@@ -202,25 +154,7 @@ router.get('/healthday', function(req, res) {
 
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
-    scrape.getStnHourlyWeather(undefined, function (err, results) {
-        if (err) {
-            if (err === 'skip') {
-                log.info('stn hourly weather info is already updated');
-            }
-            else {
-                log.error(err);
-            }
-        }
-        else {
-            log.silly(results);
-        }
-        res.send();
-    });
-});
-
-router.get('/kmaStnPastHourly', function (req, res) {
-    var scrape = new Scrape();
-    scrape.getStnPastHourlyWeather(8, function (err, results) {
+    scrape.getStnHourlyWeather(function (err, results) {
         if (err) {
             if (err === 'skip') {
                 log.info('stn hourly weather info is already updated');

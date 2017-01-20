@@ -1,0 +1,61 @@
+<ion-view title="Units">
+    <ion-header-bar class="bar bar-header bar-light">
+        <button class="button button-icon icon ion-android-arrow-back" ng-click="onClose()"></button>
+        <h1 class="title">{{'LOC_UNITS'|translate}}</h1>
+    </ion-header-bar>
+    <ion-content scroll="false" style="background-color: #F5F5F5;">
+        <div class="list">
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_TEMPERATURE_UNIT'|translate}}
+                </div>
+                <select ng-model="temperatureUnit" ng-change="setUnit('temperatureUnit', temperatureUnit)">
+                    <option value="C">C</option>
+                    <option value="F">F</option>
+                </select>
+            </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_WIND_SPEED_UNIT'|translate}}
+                </div>
+                <select ng-model="windSpeedUnit" ng-change="setUnit('windSpeedUnit', windSpeedUnit)">
+                    <option value="mph">mph</option>
+                    <option value="km/h">km/h</option>
+                    <option value="m/s">m/s</option>
+                    <option value="bft">beaufort</option>
+                    <option value="kt">knotes</option>
+                </select>
+            </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_PRESSURE_UNIT'|translate}}
+                </div>
+                <select ng-model="pressureUnit" ng-change="setUnit('pressureUnit', pressureUnit)">
+                    <option value="mmHg">mmHg</option>
+                    <option value="inHg">inHg</option>
+                    <option value="mb">mbar</option>
+                    <option value="hPa">hPa</option>
+                </select>
+            </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_DISTANCE'|translate}}
+                </div>
+                <select ng-model="distanceUnit" ng-change="setUnit('distanceUnit', distanceUnit)">
+                    <option value="m">m,km</option>
+                    <option value="mi">miles</option>
+                </select>
+            </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_PRECIPITATION'|translate}}
+                </div>
+                <select ng-model="precipitationUnit" ng-change="setUnit('precipitationUnit', precipitationUnit)">
+                    <option value="mm">mm,cm</option>
+                    <option value="in">inch</option>
+                </select>
+            </label>
+        </div>
+    </ion-content>
+</ion-view>
+

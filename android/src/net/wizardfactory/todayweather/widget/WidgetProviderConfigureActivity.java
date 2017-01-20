@@ -13,12 +13,12 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.Provider.W1x1CurrentWeather;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import net.wizardfactory.todayweather.R;
+import net.wizardfactory.todayweather.widget.Provider.W1x1CurrentWeather;
 
 /**
  * The configuration screen for the {@link W1x1CurrentWeather W1x1CurrentWeather} AppWidget.
@@ -171,12 +171,7 @@ public class WidgetProviderConfigureActivity extends Activity {
                     address = context.getString(R.string.current_position);
                 }
                 else {
-                    if (object.has("name")) {
-                        address = object.get("name").toString();
-                    }
-                    else {
-                        address = object.get("address").toString();
-                    }
+                    address = object.get("address").toString();
                 }
             }
             catch (JSONException e) {
@@ -190,31 +185,6 @@ public class WidgetProviderConfigureActivity extends Activity {
             cityButton.setText(address);
             citylist_layout.addView(cityButton);
         }
-    }
-
-    public static String loadUnitsPref(Context context) {
-       SharedPreferences prefs = context.getSharedPreferences(CITYLIST_PREFS_NAME, 0);
-        String key = "units";
-        if (prefs.contains(key)) {
-           String jsonStr = prefs.getAll().get(key).toString();
-            Log.i("widgetConfigure", jsonStr);
-            try {
-                JSONObject result = new JSONObject(jsonStr);
-                if (result == null) {
-                    Log.e("widgetConfigure", "Fail to get units information");
-                    return null;
-                }
-                return jsonStr;
-            }
-            catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.w("widgetConfigure", "Fail to load units information");
-        }
-
-        return null;
     }
 
     @Override

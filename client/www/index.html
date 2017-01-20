@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
     <meta http-equiv="Content-Security-Policy">
-    <title>TodayWeather</title>
+    <title translate="LOC_TODAYWEATHER"></title>
 
     <!-- compiled css output -->
     <link href="css/ionic.app.min.css" rel="stylesheet">
@@ -15,9 +15,15 @@
     <!-- cordova script (this will be a 404 during development) -->
     <script src="cordova.js"></script>
 
+    <script src="lib/angular-translate/angular-translate.min.js"></script>
+    <script src="lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min.js"></script>
+    <script src="lib/sprintf/dist/sprintf.min.js"></script>
+
     <!-- d3 chart -->
     <script src="lib/d3/d3.min.js"></script>
     <script src="lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js"></script>
+
+    <script src="http://maps.googleapis.com/maps/api/js?libraries=places"></script>
 
     <!-- your app's js -->
     <script src="js/app.js"></script>
@@ -28,6 +34,7 @@
     <script src="js/service.push.js"></script>
     <script src="tw.client.config.js"></script>
     <script src="data/town.js"></script>
+    <script src="js/controller.units.js"></script>
 
     <script>
         document.addEventListener('deviceready', function() {

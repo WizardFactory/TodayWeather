@@ -14,7 +14,6 @@
     <string name="temperature_separator" translatable="false">/</string>
     <string name="msg_do_not_widget_data_plz_update">Weather info is nothing\nPlease click to update.</string>
     <string name="fail_to_get_location">TodayWeather : Fail to get location</string>
-    <string name="fail_to_get_geoinfo">TodayWeather : Fail to get geo information</string>
     <string name="current_position">Current Position</string>
     <string name="weather_icon" translatable="false">weather icon</string>
     <string name="aqi">AQI</string>
@@ -28,6 +27,5 @@
     <string name="unhealthy">Unhealthy</string>
     <string name="unhealthy_for_sensitive_groups">Unhealthy for sensitive groups</string>
     <string name="very_unhealthy">Very unhealthy</string>
-    <string name="this_location_is_not_supported">This location is not support AQI information</string>
     <string name="google_app_id">362303467798</string>
 </resources>

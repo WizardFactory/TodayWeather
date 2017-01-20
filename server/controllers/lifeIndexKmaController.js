@@ -161,7 +161,6 @@ LifeIndexKmaController._appendFromDb = function(town, callback) {
                         return cb(err, indexDataList[i]);
                     }
                 }
-                return cb(new Error("Fail to find life index town="+JSON.stringify(town)));
             });
         }
     ], function(err, result) {
@@ -264,7 +263,7 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.debug('DiscomfortIndex > invalid parameter.');
+        log.warn('DiscomfortIndex > invalid parameter.');
         return -1;
     }
 
@@ -279,7 +278,7 @@ LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortInde
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.debug('DiscomfortString > invalid parameter');
+        log.warn('DiscomfortString > invalid parameter');
         return discomfortGrade;
     }
 
@@ -305,7 +304,7 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.debug('DiscomfortString > invalid parameter');
+        log.warn('DiscomfortString > invalid parameter');
         return "";
     }
 
@@ -336,7 +335,7 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.debug('DecompositionIndex > invalid parameter.');
+        log.warn('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -358,7 +357,7 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     if(DecompositionIndex === undefined
         || DecompositionIndex < 0)
     {
-        log.debug('DecompositionString > invalid parameter');
+        log.warn('DecompositionString > invalid parameter');
         return "";
     }
 
@@ -387,7 +386,7 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.debug('DecompositionIndex > invalid parameter.');
+        log.warn('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -426,7 +425,7 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     if(heatIndex === undefined
         || heatIndex < 0) 
     {
-        log.debug('HeatIndexString > invalid parameter');
+        log.warn('HeatIndexString > invalid parameter');
         return "";
     }
         
@@ -454,7 +453,7 @@ LifeIndexKmaController.getFrostString = function(temperature) {
     if(temperature === undefined
         || temperature < -50)
     {
-        log.debug('FrostString > invalid parameter.');
+        log.warn('FrostString > invalid parameter.');
         return -1;
     }
 
@@ -481,7 +480,7 @@ LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperat
     if(temperature === undefined
         || temperature < -50)
     {
-        log.debug('FrostString > invalid parameter.');
+        log.warn('FrostString > invalid parameter.');
         return -1;
     }
 

@@ -8,7 +8,6 @@ var wuForecastSchema = new mongoose.Schema({
     address: {country:String, city:String, zipcode:Number, postcode:Number},
     date:    {type: Number, default: 0},                    // YYYYMMDDHHMM
     dateObj: {type: Object, default: Date},                 // UTC time
-    timeOffset: {type: Number, default: 0},
     days:[{
         summary :{
             dateObj:    {type: Object, default: Date},      // UTC time

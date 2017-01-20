@@ -18,25 +18,7 @@ $dark:                            #444 !default;
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
-  font-weight: 300; //Light
-}
-
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
-  font-weight: 400; //Normal
-}
-
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
-  font-weight: 700; //Bold
-}
-
-$font-family-base: "Bareun Dotum Pro", sans-serif !default;
+$font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif !default;
 
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
@@ -291,7 +273,7 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 .img-detail-aqi {
   height: 24px;
   vertical-align: middle;
-  margin-right: 8px;
+  margin: 0 8px;
 }
 
 .main-content {
@@ -516,21 +498,18 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   font-size: 45px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .display1 {
   font-size: 34px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .headline {
   font-size: 24px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .title {
@@ -575,30 +554,28 @@ p small {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
+  //letter-spacing: 5px;
 }
 
 .body1 {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .caption {
   font-size: 13px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 2px;
+  //letter-spacing: 2px;
 }
 
 .button {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
+  //letter-spacing: 5px;
 }
-
 
 [md-page-header] {
   padding: 0;

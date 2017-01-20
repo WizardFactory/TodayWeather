@@ -383,28 +383,6 @@ controllerKmaStnWeather._filterStnList = function (stnList) {
     });
 };
 
-controllerKmaStnWeather.getCityHourlyList = function (townInfo, callback) {
-    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
-        if (err) {
-            return callback(err);
-        }
-        if (kmaStnList.length == 0) {
-            return callback(new Error("Fail to find kma stn"));
-        }
-
-        KmaStnHourly.find({stnId: kmaStnList[0].stnId}).lean().exec(function (err, stnWeatherList) {
-            if (err) {
-                return callback(err);
-            }
-            if (stnWeatherList.length == 0) {
-                return callback(new Error("Fail to find stn weather list stnId="+kmaStnList[0].stnId));
-            }
-            callback(undefined, stnWeatherList[0]);
-        });
-    });
-};
-
 /**
  * KMA station은 시도별날씨 정보를 제공하는 곳과 아닌 곳이 있어서 두개 구분하고, 시도별날씨를 요청에 꼭 하나 넣도록 한다.
  * 근접한 측정소의 온도값이 다은 측정소보다 차가 크다면, 산이나 높은 고도에 있는 것으로 보고, 측정값을 제외한다.
@@ -429,7 +407,7 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
                 return pCallback(err, kmaStnList);
             });
         }, function (pCallback) {
-            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+            KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                 if (err) {
                     return pCallback(err);
                 }
@@ -548,7 +526,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                         return pCallback(err, kmaStnList);
                     });
                 }, function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
                         if (err) {
                             return pCallback(err);
                         }
@@ -576,11 +554,6 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                 var cityWeatherIndex;
                 var pushedIndex;
                 stnHourWeatherList.forEach(function (stnHourWeather, index) {
-                    if (current.t1h == undefined && stnHourWeather.isCityWeather) {
-                        stnHourWeather.isT1hStn = true;
-                        listFiltered.push(stnHourWeather);
-                        t1hIndex = pushedIndex = index;
-                    }
                     if (Math.abs(stnHourWeather.t1h - current.t1h) < 1 && t1hIndex == undefined) {
                         stnHourWeather.isT1hStn = true;
                         listFiltered.push(stnHourWeather);
@@ -616,7 +589,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                     opt.skipReh = true;
                     opt.skipWsd = true;
                 }
-                if (!(current.pty == undefined) && rainIndex == undefined) {
+                if (rainIndex == undefined) {
                     opt.skipRain = true;
                 }
                 aCallback(undefined, listFiltered);
@@ -636,12 +609,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
             }, function (stnList, aCallback) {
                 self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
                     if (err) {
-                        log.error(err);
-                        return aCallback(undefined, stnList);
-                    }
-                    if (results.length == 0) {
-                        log.error("Fail to get stn minute, so use hourly");
-                        return aCallback(undefined, stnList);
+                        return aCallback(err);
                     }
                     aCallback(err, results);
                 })

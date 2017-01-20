@@ -8,8 +8,7 @@ var mongoose = require('mongoose');
 
 var tSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
-    address:{country:String, city:String, zipcode:Number, postcode:Number},
-    timeOffset: {type: Number, default: 0}
+    address:{country:String, city:String, zipcode:Number, postcode:Number}
 });
 
 tSchema.index({"geocode.lat": 1, "geocode.lon": 1});

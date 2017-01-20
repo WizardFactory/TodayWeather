@@ -21,6 +21,4 @@
     <string name="update">更新</string>
     <string name="pm10">PM10</string>
     <string name="pm25">PM2.5</string>
-    <string name="this_location_is_not_supported">This location is not support AQI information</string>
-    <string name="fail_to_get_geoinfo">TodayWeather : Fail to get geo information</string>
 </resources>

@@ -25,7 +25,7 @@ var defaultData = {
         land: -1000,
         temp: -1000
     },
-    thisTime:[{
+    current:{
         date:-1000,
         desc: '',
         temp_c: -1000,
@@ -43,8 +43,8 @@ var defaultData = {
         vis: -1000,
         press: -1000,
         oz: -1000,
-    }],
-    hourly:[{
+    },
+    timely:[{
         date: -1000,
         desc: '',
         temp_c: -1000,

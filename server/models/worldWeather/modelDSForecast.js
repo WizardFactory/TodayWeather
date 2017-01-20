@@ -9,7 +9,7 @@ var dsForecastSchema = new mongoose.Schema({
     address: {country:String, city:String, zipcode:Number, postcode:Number},
     date:    {type: Number, default: 0},   // GMT time YYYYMMDDHHMM
     dateObj: {type: Object, default: Date},// UTC time
-    timeOffset: {type: Number, default: 0},
+    timeoffset: {type: Number, default: 0},
     data: [{
         current:{
             dateObj:    {type: Object, default: Date},  // UTC time

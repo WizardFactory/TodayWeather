@@ -40,7 +40,7 @@ function TownRss(){
     self.on('recvFail', function(index, item){
         setTimeout(function(){
             self.getData(index, item);
-        }, 500);
+        }, 3 * 1000);
     });
 
     self.on('recvSuccess', function(index){
@@ -63,15 +63,15 @@ TownRss.prototype.loadList = function(completionCallback){
 
      town.getCoord(function(err, coordList){
          if(err){
-             log.error('ShortRSS> failed to get coord');
+             log.error('RSS> failed to get coord');
          } else {
-             log.silly('ShortRSS> coord: ', coordList);
+             log.silly('RSS> coord: ', coordList);
              coordList.forEach(function (coord) {
                  var item = {mCoord: coord};
                  self.coordDb.push(item);
              });
 
-             log.info('ShortRSS> coord count : ', self.coordDb.length);
+             log.info('RSS> coord count : ', self.coordDb.length);
          }
 
          if(completionCallback) {
@@ -94,7 +94,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
     meta.method = 'getShortRss';
     meta.url = url;
 
-    log.verbose('get short rss URL : ', url);
+    log.verbose('get rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
         if(err){
             log.warn('failed to req (%d)', index);
@@ -178,7 +178,7 @@ TownRss.prototype.calculateTime = function(cur, offset){
  *   @param string
  *   @return Number
  */
-TownRss.prototype.convertWeatherString = function(string){
+TownRss.prototype.convertWeaterString = function(string){
     /* 날씨 요약 : 1.맑음 2.구름조금 3. 구름많음 4.흐림 5.비 6.눈비 7.눈 */
     /* 날씨 요약eng : 1.clear 2.Partly Cloudy 3.Mostly Cloudy 4.Cloudy 5.Rain 6.Snow/Rain 7.Snow */
     /* ① 동(E) ② 북(N) ③ 북동(NE) ④ 북서(NW) ⑤ 남(S) ⑥ 남동(SE) ⑦ 남서(SW) ⑧ 서(W) */
@@ -285,8 +285,8 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
             template.tmn = parseFloat(item.tmn[0]);
             template.sky = parseFloat(item.sky[0]);
             template.pty = parseFloat(item.pty[0]);
-            template.wfKor = self.convertWeatherString(item.wfKor[0]);
-            template.wfEn = self.convertWeatherString(item.wfEn[0]);
+            template.wfKor = self.convertWeaterString(item.wfKor[0]);
+            template.wfEn = self.convertWeaterString(item.wfEn[0]);
             template.pop = parseFloat(item.pop[0]);
             template.r12 = parseFloat(item.r12[0]);
             template.s12 = parseFloat(item.s12[0]);
@@ -295,8 +295,8 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
                 template.ws = +template.ws.toFixed(1);
             }
             template.wd = parseFloat(item.wd[0]);
-            template.wdKor = self.convertWeatherString(item.wdKor[0]);
-            template.wfEn = self.convertWeatherString(item.wfEn[0]);
+            template.wdKor = self.convertWeaterString(item.wdKor[0]);
+            template.wfEn = self.convertWeaterString(item.wfEn[0]);
             template.reh = parseFloat(item.reh[0]);
             template.r06 = parseFloat(item.r06[0]);
             template.s06 = parseFloat(item.s06[0]);
@@ -351,7 +351,7 @@ TownRss.prototype.lastestPubDate = function() {
         self.leadingZeros(now.getDate(), 2) + resultTime;
 
     return result;
-};
+}
 
 /*
  *   @param index
@@ -492,7 +492,7 @@ TownRss.prototype.getData = function(index, item, cb){
     var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
     self.getShortRss(index, url, function(err, RssData){
         if(err){
-            log.error('failed to get short rss (%d)', index);
+            log.error('failed to get rss (%d)', index);
             if(err == self.RETRY){
                 self.emit('recvFail', index, item);
             }
@@ -537,74 +537,69 @@ TownRss.prototype.mainTask = function(completionCallback){
     var self = this;
     var gridList;
 
-    log.info('RSS> start rss!');
+    log.info('RSS> start rss!1');
 
-    self.loadList(function (err) {
-        if (err) {
-            return completionCallback(err);
-        }
+    gridList = self.coordDb;
 
-        gridList = self.coordDb;
+    self.receivedCount = 0;
+    if(gridList.length == 0){
+        log.info('RSS> there are no town list');
+        return;
+    }
 
-        self.receivedCount = 0;
-        if(gridList.length == 0){
-            log.info('RSS> there are no town list');
-            return;
-        }
+    var lastestPubDate = self.lastestPubDate();
 
-        var lastestPubDate = self.lastestPubDate();
+    var index = 0;
 
-        var index = 0;
-
-        async.map(gridList,
-            function(item, callback) {
-                async.waterfall([
-                        function(cb) {
-                            shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
-                                index++;
-                                if(err
-                                    || (list.length === 0)
-                                    || (list[0].pubDate === undefined)) {
-                                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                                    cb(err, item);
-                                } else {
-                                    if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                                        log.debug('shortRss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                                        cb(err, item);
-                                    } else {
-                                        log.debug('shortRss : already latest data');
-                                        cb(err, undefined);
-                                    }
-                                }
-                            })
-                        },
-                        function(item, cb) {
-                            if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)
-                            {
-                                self.getData(index, item, cb);
+    async.map(gridList,
+        function(item, callback) {
+            async.waterfall([
+                function(cb) {
+                    shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
+                        index++;
+                        if(err
+                            || (list.length === 0)
+                            || (list[0].pubDate === undefined)) {
+                            log.info('rss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                            cb(err, item);
+                        } else {
+                            if (Number(list[0].pubDate) < Number(lastestPubDate)) {
+                                log.debug('rss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                                cb(err, item);
                             } else {
-                                //already updated
-                                //log.info('rss : invalid item value.');
-                                cb();
+                                log.debug('rss : already latest data');
+                                cb(err, undefined);
                             }
-                        }],
-                    function(err) {
-                        if(callback) {
-                            callback();
                         }
                     })
-            }, function(err, result) {
-                log.info('shortRss: finished !!' + index);
-                if(completionCallback) {
-                    completionCallback(err);
-                }
-            });
-    });
+                },
+                function(item, cb) {
+                    if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)
+                    {
+                        self.getData(index, item, cb);
+                    } else {
+                        //already updated
+                        //log.info('rss : invalid item value.');
+                        cb();
+                    }
+                }],
+                function(err) {
+                    if(callback) {
+                        callback();
+                    }
+                })
+         }, function(err, result) {
+            log.info('rss: finished !!' + index);
+            if(completionCallback) {
+                completionCallback();
+            }
+        });
 };
 
 TownRss.prototype.StartShortRss = function(){
     var self = this;
 
+    self.loadList();
     self.mainTask();
 
     self.loopTownRssID = setInterval(function() {

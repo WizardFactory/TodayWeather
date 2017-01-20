@@ -313,12 +313,7 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            if (err.code == "ETIMEDOUT") {
-                log.debug(err);
-            }
-            else {
-                log.warn(err);
-            }
+            log.warn(err);
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -358,8 +353,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 if(err || (result.response.header[0].resultCode[0] !== '0000') ||
                     (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.warn('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
-                    log.warn(meta);
+                    log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
+                    log.error(meta);
                     self.emit('recvFail', index);
                 }
                 else{
@@ -508,18 +503,6 @@ CollectData.prototype.organizeShortData = function(index, listData){
             }
         }
 
-        var data = listResult[0];
-        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
-            data.t3h === template.t3h) {
-            log.error('Fail get full short data -'+JSON.stringify(data));
-            self.emit('recvFail', index);
-            return;
-        }
-        if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
-            data.wsd === template.wsd) {
-            log.warn('Fail get full short data -'+JSON.stringify(data));
-        }
-
         listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
@@ -547,13 +530,7 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         pty: -1, /* 강수 형태 : 1%, invalid : -1 */
         rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
         sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
-        lgt: -1, /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
-        t1h: -50,
-        reh: -1,
-        uuu: -100,
-        vvv: -100,
-        vec: -1,
-        wsd: -1
+        lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
     };
 
     //log.info('shortestData count : ' + listItem.length);
@@ -586,36 +563,18 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.my = parseInt(item.ny[0]);
 
                 var val = parseFloat(item.fcstValue[0]);
-                //if (val < 0) {
-                //    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
-                //}
+                if (val < 0) {
+                    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                }
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
                 else if(item.category[0] === 'RN1') {result.rn1 = val;}
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
-                else if(item.category[0] === 'T1H') {result.t1h = val;}
-                else if(item.category[0] === 'REH') {result.reh = val;}
-                else if(item.category[0] === 'UUU') {result.uuu = val;}
-                else if(item.category[0] === 'VVV') {result.vvv = val;}
-                else if(item.category[0] === 'VEC') {result.vec = val;}
-                else if(item.category[0] === 'WSD') {result.wsd = val;}
                 else{
                     log.error(new Error('Known property '+item.category[0]));
                 }
             }
-        }
-
-        var data = listResult[0];
-        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
-            data.t1h === template.t1h) {
-            log.error('Fail get full shortest data -'+JSON.stringify(data));
-            self.emit('recvFail', index);
-            return;
-        }
-        if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
-            data.vec === template.vec || data.wsd === template.wsd) {
-            log.warn('Fail get full shortest data -'+JSON.stringify(data));
         }
 
         listResult.sort(self._sortByDateTime);
@@ -703,7 +662,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         //check data complete
         result = listResult[0];
         if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
-            result.pty === template.pty || result.t1h === template.t1h) {
+            result.pty === template.pty) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;

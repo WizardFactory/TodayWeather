@@ -17,7 +17,7 @@ window.twClientConfig = {
     iOSPaidAppUrl : 'https://itunes.apple.com/',
     androidPaidAppUrl : 'market://',
     etcUrl : 'https://',
-    serverUrl : 'https://tw-wzdfac.rhcloud.com/v000705',
+    serverUrl : 'https://tw-wzdfac.rhcloud.com',
     mailTo : 'todayweather@wizardfactory.net',
     isPaidApp : false,
     debug : true
