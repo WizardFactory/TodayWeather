@@ -218,6 +218,9 @@ angular.module('starter.controllers', [])
         var pBigDigit;
         var imgBigSkyStateSize;
 
+        // retry popup이 없는 경우 항상 undefined여야 함.
+        var confirmPopup;
+        var isLoadingIndicator = false;
         var strError = "Error";
         var strAddLocation = "Add locations";
         var strClose = "Close";
@@ -528,7 +531,6 @@ angular.module('starter.controllers', [])
             $scope.timeWidth = colWidth * cityData.timeTable.length;
             $scope.dayWidth = colWidth * dayTable.length;
 
-
             if (cityData.name) {
                 shortenAddress = cityData.name;
             }
@@ -631,36 +633,20 @@ angular.module('starter.controllers', [])
             });
         }
 
-        /**
-         * retry popup이 없는 경우 항상 undefined여야 함.
-         */
-        var confirmPopup;
-        function loadWeatherData() {
-            if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                if (confirmPopup) {
-                    confirmPopup.close();
-                    confirmPopup = undefined;
+        function showLoadingIndicator() {
+            $ionicLoading.show().then(function() {
+                // retry 시에 show 후에 바로 hide를 할 때 hide의 resolve가 먼저 처리되어 LoadingIndicator가 보여지는 경우가 있음
+                // 실제로 show가 되면 상태를 체크하여 hide를 다시 요청함
+                if (isLoadingIndicator == false) {
+                    $ionicLoading.hide();
                 }
-                $ionicLoading.show();
-                updateWeatherData().then(function () {
-                    $ionicLoading.hide();
-                }, function (msg) {
-                    $ionicLoading.hide();
-                    showRetryConfirm(strError, msg, function (retry) {
-                        if (retry) {
-                            setTimeout(function () {
-                                loadWeatherData();
-                            }, 0);
-                        }
-                    });
-                }).finally(function () {
-                    console.log('finish update weather data');
-                    shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
-                });
-                return;
-            }
+            });
+            isLoadingIndicator = true;
+        }
 
+        function hideLoadingIndicator() {
             $ionicLoading.hide();
+            isLoadingIndicator = false;
         }
 
         /**
@@ -670,10 +656,11 @@ angular.module('starter.controllers', [])
          * @param template
          * @param callback
          */
-        function showRetryConfirm(title, template, callback) {
+        function showRetryConfirm(title, template) {
             if (confirmPopup) {
                 confirmPopup.close();
             }
+
             confirmPopup = $ionicPopup.show({
                 title: title,
                 template: template,
@@ -695,10 +682,12 @@ angular.module('starter.controllers', [])
                 .then(function (res) {
                     if (res) {
                         console.log("Retry");
+                        setTimeout(function () {
+                            $scope.$broadcast('reloadEvent');
+                        }, 0);
                     } else {
                         console.log("Close");
                     }
-                    callback(res);
                 })
                 .finally(function () {
                     console.log('called finally');
@@ -706,77 +695,158 @@ angular.module('starter.controllers', [])
                 });
         }
 
-        function updateWeatherData() {
+        function loadWeatherData() {
+            if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+                showLoadingIndicator();
+
+                updateCurrentPosition().then(function() {
+                    updateWeatherData().then(function () {
+                        hideLoadingIndicator();
+                    }, function (msg) {
+                        hideLoadingIndicator();
+                        showRetryConfirm(strError, msg);
+                    });
+                }, function(msg) {
+                    hideLoadingIndicator();
+                    if (msg !== null) {
+                        showRetryConfirm(strError, msg);
+                    }
+                });
+                return;
+            }
+
+            hideLoadingIndicator();
+        }
+
+        function updateCurrentPosition() {
             var deferred = $q.defer();
-            if (cityData.currentPosition === true) {
-                WeatherUtil.getCurrentPosition().then(function (coords) {
-                    WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                        var startTime = new Date().getTime();
 
-                        WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
-                            var endTime = new Date().getTime();
-                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+            if (cityData.currentPosition === false) {
+                deferred.resolve();
+                return deferred.promise;
+            }
 
-                            var city = WeatherUtil.convertWeatherData(weatherData);
-                            city.name = geoInfo.name;
-                            city.country = geoInfo.country;
-                            city.address = geoInfo.address;
-                            city.location = {"lat": coords.latitude, "long": coords.longitude};
-                            WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
-                            applyWeatherData();
-                            deferred.resolve();
-                        }, function (error) {
-                            var endTime = new Date().getTime();
-                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
-                            if (error instanceof Error) {
-                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                    '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                            } else {
-                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                    '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+
+                if (ionic.Platform.isIOS()) {
+                    if (Util.isLocationEnabled()) {
+                        _getCurrentPosition(deferred, true, true);
+                    } else if (Util.locationStatus === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED) {
+                        // location service가 off 상태로 시작한 경우에는 denied로 설정되어 있음. on 상태인 경우에 not_requested로 들어옴
+                        _getCurrentPosition(deferred, true, undefined);
+                    } else {
+                        _getCurrentPosition(deferred, false, undefined);
+                    }
+                }
+                else if (ionic.Platform.isAndroid()) {
+                    if (Util.isLocationEnabled()) {
+                        cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
+                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                                _getCurrentPosition(deferred, true, true);
+                            } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                                _getCurrentPosition(deferred, true, false);
+                            } else if (status === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED
+                                || status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                _getCurrentPosition(deferred, true, undefined);
                             }
+                        }, function (error) {
+                            console.error("Error getting for location authorization status: " + error);
+                        });
+                    } else {
+                        _getCurrentPosition(deferred, false, undefined);
+                    }
+                }
+            }
+            else {
+                _getCurrentPosition(deferred, true, true);
+            }
 
-                            deferred.reject(strFailToGetWeatherInfo);
+            return deferred.promise;
+        }
+
+        function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
+            var msg;
+            if (isLocationEnabled === true) {
+                if (isLocationAuthorized === true) {
+                    WeatherUtil.getCurrentPosition().then(function (coords) {
+                        WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
+                            cityData.name = geoInfo.name;
+                            cityData.country = geoInfo.country;
+                            cityData.address = geoInfo.address;
+                            cityData.location = {"lat": coords.latitude, "long": coords.longitude};
+                            WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
+                            deferred.resolve();
+                        }, function () {
+                            deferred.reject(strFailToGetAddressInfo);
                         });
                     }, function () {
-                        deferred.reject(strFailToGetAddressInfo);
+                        Util.ga.trackEvent('position', 'error', 'all');
+                        msg = strFailToGetCurrentPosition;
+                        if (ionic.Platform.isAndroid()) {
+                            msg += "<br>" + strPleaseTurnOnLocationWiFi;
+                        }
+                        deferred.reject(msg);
                     });
-                }, function () {
-                    Util.ga.trackEvent('position', 'error', 'all');
-                    var msg = strFailToGetCurrentPosition;
-                    if (ionic.Platform.isAndroid()) {
-                        msg += "<br>" + strPleaseTurnOnLocationWiFi;
+                } else if (isLocationAuthorized === false) {
+                    if (cityData.address === null && cityData.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
+                        msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                        deferred.reject(msg);
+                    } else { // 위치 서비스가 꺼져있으면 저장된 위치로 날씨 업데이트
+                        deferred.resolve();
                     }
-                    deferred.reject(msg);
-                });
-            } else {
-                var startTime = new Date().getTime();
-
-                WeatherUtil.getWorldWeatherInfo(cityData).then(function (weatherData) {
-                    var endTime = new Date().getTime();
-                    Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
-                        '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
-
-                    var city = WeatherUtil.convertWeatherData(weatherData);
-                    WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
-                    applyWeatherData();
-                    deferred.resolve();
-                }, function (error) {
-                    var endTime = new Date().getTime();
-                    Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
-                    if (error instanceof Error) {
-                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                    } else {
-                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
-                            '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
+                } else if (isLocationAuthorized === undefined) {
+                    hideLoadingIndicator();
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                        // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
+                        // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
+                        cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
+                            // ios에서는 registerLocationStateChangeHandler에서 locationStatus가 변경되고 reload 이벤트가 발생함
+                            if (ionic.Platform.isAndroid() && status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                                $scope.$broadcast('reloadEvent');
+                            }
+                        }, null, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
-                    deferred.reject(strFailToGetWeatherInfo);
-                });
+                    deferred.reject(null);
+                }
             }
+            else if (isLocationEnabled === false) {
+                if (cityData.address === null && cityData.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
+                    msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                    deferred.reject(msg);
+                }
+                else { // 위치 서비스가 꺼져있으면 저장된 위치로 날씨 업데이트
+                    deferred.resolve();
+                }
+            }
+        }
+
+        function updateWeatherData() {
+            var deferred = $q.defer();
+            var startTime = new Date().getTime();
+
+            WeatherUtil.getWorldWeatherInfo(cityData).then(function (weatherData) {
+                var endTime = new Date().getTime();
+                Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
+                Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
+
+                var city = WeatherUtil.convertWeatherData(weatherData);
+                WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
+                applyWeatherData();
+                deferred.resolve();
+            }, function (error) {
+                var endTime = new Date().getTime();
+                Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
+                if (error instanceof Error) {
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                } else {
+                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
+                        '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
+                }
+
+                deferred.reject(strFailToGetWeatherInfo);
+            });
 
             return deferred.promise;
         }
@@ -1062,12 +1132,22 @@ angular.module('starter.controllers', [])
         }
 
         $scope.$on('reloadEvent', function(event, sender) {
-            if (sender == 'resume') {
-               if (confirmPopup)  {
-                   console.log('skip event when retry load popup is shown');
-                   return;
-               }
+            console.log("reloadEvent");
+            if (sender === 'resume') {
+                if (confirmPopup) {
+                    console.log('skip event when retry load popup is shown');
+                    return;
+                }
+                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === false) {
+                    return;
+                }
+            } else if (sender === 'locationOn') {
+                // currentPosition이고 confirmPopup이 없는 경우에만 reload
+                if (cityData.currentPosition === false || confirmPopup) {
+                    return;
+                }
             }
+
             console.log('called by update weather event');
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
@@ -1117,6 +1197,7 @@ angular.module('starter.controllers', [])
 
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
+        var isLoadingIndicator = false;
 
         var strFailToGetAddressInfo = "Fail to get location information";
         var strFailToGetCurrentPosition = "Fail to find your current location";
@@ -1225,30 +1306,21 @@ angular.module('starter.controllers', [])
         $scope.OnSearchCurrentPosition = function() {
             $scope.isEditing = false;
 
-            $ionicLoading.show();
+            showLoadingIndicator();
 
-            WeatherUtil.getCurrentPosition().then(function (coords) {
-                WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                    $scope.searchResults = [];
-                    $scope.searchResults2 = [];
-                    $scope.searchWord = geoInfo.name;
-                    $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
-                    $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
-                    searchIndex = -1;
-
-                    $ionicLoading.hide();
-                }, function () {
-                    $scope.showAlert(strError, strFailToGetAddressInfo);
-                    $ionicLoading.hide();
-                });
-            }, function () {
-                Util.ga.trackEvent('position', 'error', 'all');
-                var msg = strFailToGetCurrentPosition;
-                if (ionic.Platform.isAndroid()) {
-                    msg += "<br>" + strPleaseTurnOnLocationWiFi;
+            updateCurrentPosition().then(function(geoInfo) {
+                hideLoadingIndicator();
+                $scope.searchResults = [];
+                $scope.searchResults2 = [];
+                $scope.searchWord = geoInfo.name;
+                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
+                $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
+                searchIndex = -1;
+            }, function(msg) {
+                hideLoadingIndicator();
+                if (msg !== null) {
+                    $scope.showAlert(strError, msg);
                 }
-                $scope.showAlert(strError, msg);
-                $ionicLoading.hide();
             });
         };
 
@@ -1499,6 +1571,99 @@ angular.module('starter.controllers', [])
             });
         };
 
+        function showLoadingIndicator() {
+            $ionicLoading.show().then(function() {
+                // 위치 권한이 거부된 경우 show 후에 바로 hide를 할 때 hide의 resolve가 먼저 처리되어 LoadingIndicator가 보여지는 경우가 있음
+                // 실제로 show가 되면 상태를 체크하여 hide를 다시 요청함
+                if (isLoadingIndicator == false) {
+                    $ionicLoading.hide();
+                }
+            });
+            isLoadingIndicator = true;
+        }
+
+        function hideLoadingIndicator() {
+            $ionicLoading.hide();
+            isLoadingIndicator = false;
+        }
+
+        function updateCurrentPosition() {
+            var deferred = $q.defer();
+
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                if (ionic.Platform.isIOS()) {
+                    if (Util.isLocationEnabled()) {
+                        _getCurrentPosition(deferred, true, true);
+                    } else if (Util.locationStatus === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED) {
+                        // location service가 off 상태로 시작한 경우에는 denied로 설정되어 있음. on 상태인 경우에 not_requested로 들어옴
+                        _getCurrentPosition(deferred, true, undefined);
+                    } else {
+                        _getCurrentPosition(deferred, false, undefined);
+                    }
+                } else if (ionic.Platform.isAndroid()) {
+                    if (Util.isLocationEnabled()) {
+                        cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
+                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                                _getCurrentPosition(deferred, true, true);
+                            } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                                _getCurrentPosition(deferred, true, false);
+                            } else if (status === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED
+                                || status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                _getCurrentPosition(deferred, true, undefined);
+                            }
+                        }, function (error) {
+                            console.error("Error getting for location authorization status: " + error);
+                        });
+                    } else {
+                        _getCurrentPosition(deferred, false, undefined);
+                    }
+                }
+            }
+            else {
+                //for browser
+                _getCurrentPosition(deferred, true, true);
+            }
+
+            return deferred.promise;
+        }
+
+        function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
+            var msg;
+            if (isLocationEnabled === true) {
+                if (isLocationAuthorized === true) {
+                    WeatherUtil.getCurrentPosition().then(function (coords) {
+                        WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
+                            deferred.resolve(geoInfo);
+                        }, function () {
+                            deferred.reject(strFailToGetAddressInfo);
+                        });
+                    }, function () {
+                        Util.ga.trackEvent('position', 'error', 'all');
+                        msg = strFailToGetCurrentPosition;
+                        if (ionic.Platform.isAndroid()) {
+                            msg += "<br>" + strPleaseTurnOnLocationWiFi;
+                        }
+                        deferred.reject(msg);
+                    });
+                } else if (isLocationAuthorized === false) {
+                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                    deferred.reject(msg);
+                } else if (isLocationAuthorized === undefined) {
+                    $ionicLoading.hide();
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                        // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
+                        // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
+                        cordova.plugins.diagnostic.requestLocationAuthorization(function () {
+                        }, null, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
+                    }
+                    deferred.reject(null);
+                }
+            } else if (isLocationEnabled === false) {
+                msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                deferred.reject(msg);
+            }
+        }
+
         function loadWeatherData(index) {
             if (WeatherInfo.canLoadCity(index) === true) {
                 updateWeatherData(index).then(function (city) {
@@ -1532,46 +1697,11 @@ angular.module('starter.controllers', [])
          */
         function updateWeatherData(index) {
             var deferred = $q.defer();
-
             var cityData = WeatherInfo.getCityOfIndex(index);
-            if (cityData.currentPosition === true) {
-                WeatherUtil.getCurrentPosition().then(function (coords) {
-                    WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                        var startTime = new Date().getTime();
 
-                        WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
-                            var endTime = new Date().getTime();
-                            Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                            Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                '(' + index + ')', endTime - startTime);
-
-                            var city = WeatherUtil.convertWeatherData(weatherData);
-                            city.currentPosition = true;
-                            city.name = geoInfo.name;
-                            city.country = geoInfo.country;
-                            city.address = geoInfo.address;
-                            city.location = {"lat": coords.latitude, "long": coords.longitude};
-                            deferred.resolve(city);
-                        }, function (error) {
-                            var endTime = new Date().getTime();
-                            Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
-                            if (error instanceof Error) {
-                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                    '(' + index + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                            } else {
-                                Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(geoInfo.address) +
-                                    '(' + index + ', ' + error + ')', endTime - startTime);
-                            }
-
-                            deferred.reject();
-                        });
-                    }, function () {
-                        deferred.reject();
-                    });
-                }, function () {
-                    Util.ga.trackEvent('position', 'error', 'all');
-                    deferred.reject();
-                });
+            // 현재 위치는 저장된 위치가 있는 경우에만 날씨 데이터를 업데이트함
+            if (cityData.currentPosition === true && cityData.address === null && cityData.location === null) {
+                deferred.reject();
             } else {
                 var startTime = new Date().getTime();
 
@@ -1582,7 +1712,7 @@ angular.module('starter.controllers', [])
                         '(' + index + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherData);
-                    city.currentPosition = false;
+                    city.currentPosition = cityData.currentPosition;
                     city.name = cityData.name;
                     city.country = cityData.country;
                     city.address = cityData.address;
@@ -1807,11 +1937,11 @@ angular.module('starter.controllers', [])
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
-                $scope.$broadcast('reloadEvent', 'tab');
+                $scope.$broadcast('reloadEvent');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
-                $scope.$broadcast('reloadEvent', 'tab');
+                $scope.$broadcast('reloadEvent');
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {

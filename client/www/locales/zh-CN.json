@@ -238,5 +238,7 @@
   "LOC_VERY_STRONG_WIND":"非常强风",
   "LOC_PURCHASING" : "购买...",
   "LOC_DELETE" : "删除",
-  "LOC_UNITS" : "单位"
+  "LOC_UNITS" : "单位",
+  "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "访问位置服务已被拒绝。",
+  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "请开启位置服务以找到您当前的位置。"
 }

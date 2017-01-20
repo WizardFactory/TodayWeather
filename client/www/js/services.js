@@ -2252,6 +2252,32 @@ angular.module('starter.services', [])
         //obj.url = "https://todayweather.wizardfactory.net/v000705";
         //obj.url = window.twClientConfig.serverUrl;
 
+        // android는 diagnostic.locationMode, ios는 diagnostic.permissionStatus를 나타냄
+        obj.locationStatus = undefined;
+
+        obj.isLocationEnabled = function() {
+            var that = this;
+
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                if (ionic.Platform.isIOS()) {
+                    if (that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED
+                        || that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
+                        return true;
+                    }
+                } else if (ionic.Platform.isAndroid()) {
+                    if (that.locationStatus === cordova.plugins.diagnostic.locationMode.HIGH_ACCURACY
+                        || that.locationStatus === cordova.plugins.diagnostic.locationMode.BATTERY_SAVING
+                        || that.locationStatus === cordova.plugins.diagnostic.locationMode.DEVICE_ONLY) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else {
+                return true;
+            }
+        };
+
         return obj;
     })
     .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
@@ -2262,6 +2288,15 @@ angular.module('starter.services', [])
 
         if (ionic.Platform.isIOS()) {
             Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+
+            // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                }, function (error) {
+                    console.error("Error getting for location enabled status: " + error);
+                });
+            }
         } else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
 
@@ -2269,6 +2304,15 @@ angular.module('starter.services', [])
              * 기존 버전 호환성이슈로 Android는 유지.
              */
             Util.suiteName = "net.wizardfactory.todayweather_preferences";
+
+            // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                    Util.locationStatus = locationMode;
+                }, function(error) {
+                    console.error("Error getting for location mode: " + error);
+                });
+            }
         }
         else {
             console.log("Error : Unknown platform");
@@ -2343,8 +2387,22 @@ angular.module('starter.services', [])
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
-            if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
-                $rootScope.$broadcast('reloadEvent', 'resume');
-            }
+            $rootScope.$broadcast('reloadEvent', 'resume');
         });
+
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+            // ios는 실행 시 registerLocationStateChangeHandler 호출되어 locationStatus가 설정됨
+            cordova.plugins.diagnostic.registerLocationStateChangeHandler(function (state) {
+                var oldLocationEnabled = Util.isLocationEnabled();
+
+                console.log("Location state changed to: " + state);
+                Util.locationStatus = state;
+
+                if (oldLocationEnabled === false && Util.isLocationEnabled()) {
+                    $rootScope.$broadcast('reloadEvent', 'locationOn');
+                }
+            }, function (error) {
+                console.error("Error registering for location state changes: " + error);
+            });
+        }
     });

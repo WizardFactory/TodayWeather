@@ -238,5 +238,7 @@
   "LOC_VERY_STRONG_WIND" : "바람매우강함",
   "LOC_PURCHASING" : "구매중...",
   "LOC_DELETE" : "삭제",
-  "LOC_UNITS" : "단위설정"
+  "LOC_UNITS" : "단위설정",
+  "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "위치 서비스에 대한 사용이 거부되었습니다.",
+  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "사용자의 현재위치를 찾기 위해서 위치 서비스를 켜주세요."
 }

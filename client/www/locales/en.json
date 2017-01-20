@@ -238,5 +238,7 @@
   "LOC_VERY_STRONG_WIND" : "Very strong wind",
   "LOC_PURCHASING" : "Purchasing...",
   "LOC_DELETE" : "Delete",
-  "LOC_UNITS" : "Units"
+  "LOC_UNITS" : "Units",
+  "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "Access to Location Services has been denied.",
+  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "Please turn on location services to find your current location."
 }
