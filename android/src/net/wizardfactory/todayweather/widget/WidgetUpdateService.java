@@ -49,8 +49,7 @@ public class WidgetUpdateService extends Service {
     // if find not location in this time, service is terminated.
     private final static int LOCATION_TIMEOUT = 30 * 1000; // 20sec
     private final static String mUrl = "https://todayweather.wizardfactory.net";
-//    private final static String mUrl = "https://tw-wzdfac.rhcloud.com";
-    private final static String kmaApiUrl = "/v000705/town";
+    private final static String kmaApiUrl = "/v000803/town";
     private final static String worldWeatherApiUrl = "/ww/010000/current/2?gcode=";
 
     private LocationManager mLocationManager = null;
@@ -60,7 +59,6 @@ public class WidgetUpdateService extends Service {
     private AppWidgetManager mAppWidgetManager;
     private int mLayoutId;
 
-    private String mLocationName = null;
     private Units mLocalUnits = null;
 
     @Override
@@ -97,6 +95,7 @@ public class WidgetUpdateService extends Service {
         JSONObject location = null;
         double lat = 0;
         double lng = 0;
+        String locationName = null;
 
         if (jsonCityInfoStr == null) {
             Log.i("Service", "cityInfo is null, so this widget is zombi");
@@ -114,13 +113,27 @@ public class WidgetUpdateService extends Service {
             JSONObject jsonCityInfo = new JSONObject(jsonCityInfoStr);
             currentPosition = jsonCityInfo.getBoolean("currentPosition");
             address = jsonCityInfo.get("address").toString();
-            country = jsonCityInfo.get("country").toString();
-            location = jsonCityInfo.getJSONObject("location");
-            lat = location.getDouble("lat");
-            lng = location.getDouble("long");
-            mLocationName = jsonCityInfo.get("name").toString();
+            if (jsonCityInfo.has(country)) {
+                country = jsonCityInfo.get("country").toString();
+            }
+            else {
+                country = "KR";
+            }
+            if (jsonCityInfo.has("location")) {
+                location = jsonCityInfo.getJSONObject("location");
+                lat = location.getDouble("lat");
+                lng = location.getDouble("long");
+            }
+            if (jsonCityInfo.has("name")) {
+                locationName = jsonCityInfo.get("name").toString();
+            }
 
-            mLocalUnits = new Units(jsonUnitsStr);
+            if (jsonUnitsStr != null) {
+                mLocalUnits = new Units(jsonUnitsStr);
+            }
+            else {
+                mLocalUnits = new Units();
+            }
         } catch (JSONException e) {
             Log.e("Service", "JSONException: " + e.getMessage());
             return;
@@ -152,19 +165,19 @@ public class WidgetUpdateService extends Service {
         } else {
             Log.i("Service", "Update address=" + address + " app widget id=" + widgetId);
             //check country
-            if (country.equals("KR")) {
+            if (country != null && country.equals("KR")) {
                 String addr = AddressesElement.makeUrlAddress(address);
                 if (addr != null) {
                     addr = mUrl + kmaApiUrl + addr;
                     String jsonData = getWeatherDataFromServer(addr);
-                    updateWidget(widgetId, jsonData);
+                    updateWidget(widgetId, jsonData, locationName);
                 }
             }
             else {
                 String addr = mUrl + worldWeatherApiUrl + lat + "," + lng;
                 Log.i("Service", "url="+addr);
                 String jsonData = getWeatherDataFromServer(addr);
-                updateWorldWeatherWidget(widgetId, jsonData);
+                updateWorldWeatherWidget(widgetId, jsonData, locationName);
                 //make world weather url
             }
         }
@@ -251,21 +264,19 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        mLocationName = geoInfo.getName();
-
         if (geoInfo.getCountry().equals("KR")) {
             //convert address to korean and url
             url = location2Address(lat, lon);
             if (url != null) {
                 jsonData = getWeatherDataFromServer(url);
-                updateWidget(widgetId, jsonData);
+                updateWidget(widgetId, jsonData, geoInfo.getName());
             }
         }
         else {
             url = mUrl + worldWeatherApiUrl + lat + "," + lon;
             Log.i("Service", "url="+url);
             jsonData = getWeatherDataFromServer(url);
-            updateWorldWeatherWidget(widgetId, jsonData);
+            updateWorldWeatherWidget(widgetId, jsonData, geoInfo.getName());
         }
     }
 
@@ -423,7 +434,7 @@ public class WidgetUpdateService extends Service {
         return retJsonStr;
     }
 
-    private void updateWorldWeatherWidget(int widgetId, String jsonStr) {
+    private void updateWorldWeatherWidget(int widgetId, String jsonStr, String locationName) {
         if (jsonStr == null) {
             Log.e("WidgetUpdateService", "jsonData is NULL");
             Toast.makeText(getApplicationContext(), "Fail to get world weather data", Toast.LENGTH_LONG).show();
@@ -454,7 +465,9 @@ public class WidgetUpdateService extends Service {
         }
 
         WidgetData wData = new WidgetData();
-        wData.setLoc(mLocationName);
+        if (locationName != null) {
+            wData.setLoc(locationName);
+        }
         wData.setUnits(WorldWeatherElement.getUnits(jsonStr));
 
         if (mLayoutId == R.layout.w2x1_widget_layout) {
@@ -524,7 +537,7 @@ public class WidgetUpdateService extends Service {
      * @param widgetId
      * @param jsonStr
      */
-    private void updateWidget(int widgetId, String jsonStr) {
+    private void updateWidget(int widgetId, String jsonStr, String locationName) {
         if (jsonStr == null) {
             Log.e("WidgetUpdateService", "jsonData is NULL");
             return;
@@ -552,7 +565,9 @@ public class WidgetUpdateService extends Service {
 
         // make today, yesterday weather info class
         WidgetData wData = weatherElement.makeWidgetData();
-        wData.setLoc(mLocationName);
+        if (locationName != null) {
+            wData.setLoc(locationName);
+        }
         Context context = getApplicationContext();
         // input weather content to widget layout
 

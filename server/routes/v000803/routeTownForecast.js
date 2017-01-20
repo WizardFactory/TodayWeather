@@ -64,9 +64,9 @@ router.get('/:region/:city', [cTown.getAllDataFromDb, cTown.checkDBValidation, c
  */
 router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
-                                    cTown.convert0Hto24H,  cTown.mergeShortWithCurrentList,
+                                    cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.sendResult]);
@@ -76,7 +76,7 @@ router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.checkDBValidat
  */
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid,
                                     cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getKeco,
-                                    cTown.getKecoDustForecast, cTown.insertIndex,
+                                    cTown.getKecoDustForecast, cTown.insertIndex, cTown.insertSkyIcon,
                                     cTown.insertStrForData, cTown.insertSkyIcon, cTown.sendResult]);
 
 router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
