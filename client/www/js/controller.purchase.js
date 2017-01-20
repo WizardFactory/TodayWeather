@@ -368,12 +368,22 @@ angular.module('controller.purchase', [])
         };
 
         $scope.goBack = function() {
-            TwAds.setShowAds(true);
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
             $ionicHistory.goBack();
         };
 
         $scope.$on('$ionicView.leave', function() {
-            TwAds.setShowAds(true);
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
         });
 
         $scope.$on('$ionicView.enter', function() {
