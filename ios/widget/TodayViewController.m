@@ -10,6 +10,7 @@
 #import <NotificationCenter/NotificationCenter.h>
 
 #import "WidgetConfig.h"
+#import "TodayWeatherUtil.h"
 
 /********************************************************************
  Enumration
@@ -34,6 +35,10 @@ typedef enum
 #define STR_INPUT_COORD                 @"&inputCoordSystem=WGS84"
 #define STR_OUTPUT_JSON                 @"&output=json"
 #define API_DAILY_TOWN                  @"v000705/daily/town"
+#define API_JUST_TOWN                   @"v000705/town"
+
+#define WIDGET_COMPACT_HEIGHT           110.0
+#define WIDGET_PADDING                  215.0
 
 /********************************************************************
  Interface
@@ -75,6 +80,51 @@ typedef enum
 @synthesize responseData;
 @synthesize loadingIV;
 
+static TodayViewController *todayVC = nil;
+
+/********************************************************************
+ *
+ * Name			: sharedInstance
+ * Description	: For shared instance (singleton)
+ * Returns		: TodayViewController *
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
++ (TodayViewController *)sharedInstance {
+    if(todayVC == nil)
+    {
+        NSLog(@"todayVC : %@", todayVC);
+        
+        todayVC = [[TodayViewController alloc] initWithNibName:@"TodayViewController"			bundle:nil];
+    }
+
+    return todayVC;
+}
+
+/********************************************************************
+ *
+ * Name			: initWithNibName
+ * Description	: init with nib name
+ * Returns		: id
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self)
+    {
+    }
+    
+    return self;
+}
+
 /********************************************************************
  *
  * Name			: viewDidLoad
@@ -90,8 +140,88 @@ typedef enum
 {
     [super viewDidLoad];
     
+    NSLog(@"self : %@", self);
+    
+    todayVC = self;
+    
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
+    [self processShowMore];
+}
+
+/********************************************************************
+ *
+ * Name			: processShowMore
+ * Description	: process ShowMore feature
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) processShowMore
+{
+    // This will remove extra separators from tableview
+    //self.articleTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    
+    NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    NSLog(@"version : %ld.%ld.%ld", nsOSVer.majorVersion, nsOSVer.minorVersion, nsOSVer.patchVersion);
+    
+    if(nsOSVer.majorVersion >= 10)
+    {
+        // Add the iOS 10 Show More ability
+        NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+        NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
+        
+        if(cityList == nil)
+            [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
+        else
+            [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeExpanded];
+        showMoreView.hidden = NO;
+    }
+    else
+    {
+        addressLabel.textColor  = [UIColor lightGrayColor];
+        curTempLabel.textColor  = [UIColor lightGrayColor];
+        showMoreView.hidden = YES;
+        NSLog(@"This OSVersion can't use Show More feature!!!");
+    }
+}
+
+/********************************************************************
+ *
+ * Name			: widgetActiveDisplayModeDidChange
+ * Description	: widgetActiveDisplayModeDidChange
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (void)widgetActiveDisplayModeDidChange:(NCWidgetDisplayMode)activeDisplayMode withMaximumSize:(CGSize)maxSize
+{
+    if (activeDisplayMode == NCWidgetDisplayModeCompact){
+        // Changed to compact mode
+        self.preferredContentSize   = maxSize;
+        [todayWSM transitView:showMoreView
+                   transition:UIViewAnimationTransitionFlipFromLeft
+                     duration:0.75f];
+        showMoreView.hidden         = true;
+        NSLog(@"NCWidgetDisplayModeCompact height : %f", self.preferredContentSize.height);
+        
+    }
+    else
+    {
+        // Changed to expanded mode
+        self.preferredContentSize   = CGSizeMake(self.view.frame.size.width, WIDGET_PADDING);
+        [todayWSM transitView:showMoreView
+                   transition:UIViewAnimationTransitionFlipFromRight
+                     duration:0.75f];
+        showMoreView.hidden         = false;
+        NSLog(@"expanded height : %f", self.preferredContentSize.height);
+    }
 }
 
 /********************************************************************
@@ -143,11 +273,13 @@ typedef enum
  ********************************************************************/
 - (void) initWidgetDatas
 {
-    [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, 130)];
+    todayWSM = [[TodayWeatherShowMore alloc] init];
+    
+    [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, WIDGET_COMPACT_HEIGHT)];
     // Do any additional setup after loading the view from its nib.
     locationView.hidden = true;
-    //    self.view.hidden = true;
-    
+    bIsDateView = true;
+
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
     
     NSError *error;
@@ -155,16 +287,22 @@ typedef enum
     NSData *tmpData = nil;
     
     NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
-    NSLog(@"cityList : %@", cityList);
+    //NSLog(@"cityList : %@", cityList);
     
     if (cityList == nil) {
         //You have to run todayweather for add citylist
         NSLog(@"show no location view");
-        noLocationView.hidden = false;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            noLocationView.hidden = false;
+            showMoreView.hidden     = TRUE;
+        });
+        
         return;
     }
     else {
-        noLocationView.hidden = true;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            noLocationView.hidden = true;
+        });
     }
     
     tmpData = [cityList dataUsingEncoding:NSUTF8StringEncoding];
@@ -200,8 +338,6 @@ typedef enum
     }
 
     [self setCityInfo:currentCity];
-    
-    //    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userDefaultsDidChange:) name:NSUserDefaultsDidChangeNotification object:nil];
 }
 
 /********************************************************************
@@ -220,6 +356,18 @@ typedef enum
     NSError *error = nil;
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
     
+    if(mCityDictList == nil)
+    {
+        NSLog(@"mCityDictList is nil");
+        return;
+    }
+    
+    if([mCityDictList count] <= mCurrentCityIdx)
+    {
+        NSLog(@"idx is invalid!!!");
+        return;
+    }
+    
     NSMutableDictionary* nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
     
     NSMutableDictionary* nsdTmpDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
@@ -228,8 +376,18 @@ typedef enum
                                        [nsdCurCity valueForKey:@"location"], @"location",
                                        @"", @"weatherData",
                                        nil];
+    if(dict == nil)
+    {
+        NSLog(@"dict is null!!!");
+        return;
+    }
     
     [nsdTmpDict setObject:dict forKey:@"weatherData"];
+    if(nsdTmpDict == nil)
+    {
+        NSLog(@"nsdTmpDict is null!!!");
+        return;
+    }
     
     [mCityDictList setObject:nsdTmpDict atIndexedSubscript:mCurrentCityIdx];
     
@@ -239,7 +397,13 @@ typedef enum
                                        nil];
     
     NSData *nsdCityList = [NSJSONSerialization dataWithJSONObject:nsdCityListsDict options:0 error:&error];
+    
     NSString* nssCityList = [[NSString alloc] initWithData:nsdCityList encoding:NSUTF8StringEncoding];
+    if(nssCityList == nil)
+    {
+        NSLog(@"dict is null!!!");
+        return;
+    }
     
     [sharedUserDefaults setObject:nssCityList forKey:@"cityList"];
     [sharedUserDefaults synchronize];
@@ -383,6 +547,94 @@ typedef enum
 
 /********************************************************************
  *
+ * Name			: toggleShowMore
+ * Description	: process between showMore and compact
+ * Returns		: IBAction
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (IBAction)toggleShowMore:(id)sender
+{
+    NSDictionary *curDict = [self getCurJsonDict];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if(bIsDateView == true)
+        {
+            [todayWSM processByTimeData:curDict];
+            bIsDateView = false;
+        }
+        else
+        {
+            [todayWSM processDailyData:curDict];
+            bIsDateView = true;
+        }
+    });
+}
+
+/********************************************************************
+ *
+ * Name			: moveMainApp
+ * Description	: move to main application
+ * Returns		: IBAction
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (IBAction)moveMainApp:(id)sender;
+{
+    NSLog(@"move Main Appication!!!");
+    NSString *nssURL = [NSString stringWithFormat:@"todayweather://%d", mCurrentCity.index];
+    
+    NSLog(@"mCurrentCity.index : %d", mCurrentCity.index);
+    
+    NSURL *pjURL = [NSURL URLWithString:nssURL];
+    NSLog(@"pjURL : %@", pjURL);
+    
+    [self.extensionContext openURL:pjURL completionHandler:nil];
+}
+
+/********************************************************************
+ *
+ * Name			: getCurJsonDict
+ * Description	: get current JSON dictionary
+ * Returns		: NSDictionary *
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (NSDictionary *) getCurJsonDict
+{
+    return curJsonDict;
+}
+
+/********************************************************************
+ *
+ * Name			: setCurJsonDict
+ * Description	: set current JSON dictionary
+ * Returns		: void
+ * Side effects :
+ * Date			: 2016. 12. 29
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) setCurJsonDict:(NSDictionary *)dict
+{
+    if(curJsonDict == nil)
+    {
+        curJsonDict = [[NSDictionary alloc] initWithDictionary:dict];
+    }
+}
+
+/********************************************************************
+ *
  * Name			: nextCity
  * Description	: process next city information
  * Returns		: void
@@ -499,7 +751,7 @@ typedef enum
     else if(type == TYPE_REQUEST_WEATHER)
     {
         [self saveWeatherInfo:jsonDict];
-        [self processWeatherResults:jsonDict];
+        [self processWeatherResultsWithShowMore:jsonDict];
         [self processRequestIndicator:TRUE];
     }
     
@@ -579,7 +831,7 @@ typedef enum
 {
     NSString *nssURL = nil;
     NSCharacterSet *set = nil;
-    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, API_DAILY_TOWN];
+    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, API_JUST_TOWN];
     if (nssAddr1 != nil) {
         nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr1];
     }
@@ -603,47 +855,48 @@ typedef enum
     return nssURL;
 }
 
-
 /********************************************************************
  *
- * Name			: processWeatherResults
- * Description	: draw weather request results
+ * Name			: processWeatherResultsWithShowMore
+ * Description	: draw weather request results WithShowMore
  * Returns		: void
  * Side effects :
- * Date			: 2016. 06. 25
+ * Date			: 2016. 11. 16
  * Author		: SeanKim
- * History		: 20160625 SeanKim Create function
+ * History		: 20161116 SeanKim Create function
  *
  ********************************************************************/
-- (void) processWeatherResults:(NSDictionary *)jsonDict
+- (void) processWeatherResultsWithShowMore:(NSDictionary *)jsonDict
 {
     NSDictionary *nsdDailySumDict = nil;
     NSDictionary *currentDict = nil;
     NSDictionary *currentArpltnDict = nil;
     NSDictionary *todayDict = nil;
-    NSDictionary *tomoDict = nil;
     
     // Date
-    NSString    *nssDate = nil;
-
+    NSString        *nssDateTime = nil;
+    NSString        *nssDate = nil;
+    NSString        *nssTime = nil;
+    NSString        *nssLiveTime = nil;
+    NSString        *nssHour = nil;
+    NSString        *nssMinute = nil;
+    int             curDate = 0;
+    int             curTime = 0;
+        
     // Image
     NSString *nssCurIcon = nil;
     NSString *nssCurImgName = nil;
     NSString *nssTodIcon = nil;
     NSString *nssTodImgName = nil;
-    NSString *nssTomIcon = nil;
-    NSString *nssTomImgName = nil;
-
+    
     // Temperature
     NSInteger currentTemp = 0;
-    NSInteger currentHum = 0;
+    //NSInteger currentHum = 0;
     NSInteger todayMinTemp = 0;
     NSInteger todayMaxTemp = 0;
-    NSInteger tomoMinTemp = 0;
-    NSInteger tomoMaxTemp = 0;
     
     // Dust
-    NSString    *nssPm10Str = nil;
+    NSString    *nssAirState = nil;
     
     // Address
     NSString    *nssCityName = nil;
@@ -653,9 +906,14 @@ typedef enum
     
     // Pop
     NSString    *nssTodPop = nil;
-    NSString    *nssTomPop = nil;
     
-    //NSLog(@"processWeatherResults : %@", jsonDict);
+    //NSLog(@"processWeatherResultsWithShowMore : %@", jsonDict);
+    if(jsonDict == nil)
+    {
+        NSLog(@"jsonDict is nil!!!");
+        return;
+    }
+    [self setCurJsonDict:jsonDict];
     
     // Address
     nssCityName = [jsonDict objectForKey:@"cityName"];
@@ -677,70 +935,97 @@ typedef enum
         }
     }
     
-    // Daily Summary
-    nsdDailySumDict = [jsonDict objectForKey:@"dailySummary"];
-    nssDate     = [nsdDailySumDict objectForKey:@"date"];
-    nssCurIcon   = [nsdDailySumDict objectForKey:@"icon"];
-    nssCurImgName = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
 
     // Current
-    currentDict         = [nsdDailySumDict objectForKey:@"current"];
-    currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
-    nssPm10Str          = [currentArpltnDict objectForKey:@"pm10Str"];
-    currentTemp         = [[currentDict valueForKey:@"t1h"] intValue];
-    currentHum         = [[currentDict valueForKey:@"reh"] intValue];
+    currentDict         = [jsonDict objectForKey:@"current"];
     
+    nssCurIcon   = [currentDict objectForKey:@"skyIcon"];
+    nssCurImgName = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
+    //nssCurImgName = [NSString stringWithFormat:@"weatherIcon2-color/Sun.png"];
+    
+    nssDate             = [currentDict objectForKey:@"date"];
+    curDate             = [nssDate intValue];
+    
+    nssLiveTime             = [currentDict objectForKey:@"liveTime"];
+    if (nssLiveTime != nil) {
+        curTime             = [nssLiveTime intValue];
+        nssHour             = [nssLiveTime substringToIndex:2];
+        nssMinute           = [nssLiveTime substringFromIndex:2];
+    }
+    else {
+        nssTime             = [currentDict objectForKey:@"time"];
+        curTime             = [nssTime intValue];
+        
+        if(nssTime != nil)
+        {
+            nssHour             = [nssTime substringToIndex:2];
+            nssMinute           = [nssTime substringFromIndex:2];
+        }
+    }
+    
+    nssDateTime         = [NSString stringWithFormat:@"업데이트 %@:%@", nssHour, nssMinute];
+    
+    currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
+    nssAirState         = [todayWSM getAirState:currentArpltnDict];
+    id idT1h    = [currentDict valueForKey:@"t1h"];
+    if(idT1h)
+    {
+        currentTemp     = [idT1h intValue];
+    }
+    //currentHum         = [[currentDict valueForKey:@"reh"] intValue];
+
+    todayDict = [TodayWeatherUtil getTodayDictionary:jsonDict];
+
     // Today
-    todayDict           = [nsdDailySumDict objectForKey:@"today"];
     nssTodIcon          = [todayDict objectForKey:@"skyIcon"];
     nssTodImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTodIcon];
-    todayMinTemp        = [[todayDict valueForKey:@"taMin"] intValue];
-    todayMaxTemp        = [[todayDict valueForKey:@"taMax"] intValue];
+    id idTaMin  = [todayDict valueForKey:@"taMin"];
+    if(idTaMin)
+        todayMinTemp    = [idTaMin intValue];
+    
+    id idTaMax  = [todayDict valueForKey:@"taMax"];
+    if(idTaMax)
+        todayMaxTemp        = [idTaMax intValue];
+
     nssTodPop           = [todayDict objectForKey:@"pop"];
     
-    // Tomorrow
-    tomoDict            = [nsdDailySumDict objectForKey:@"tomorrow"];
-    nssTomIcon          = [tomoDict objectForKey:@"skyIcon"];
-    nssTomImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssTomIcon];
-    tomoMinTemp         = [[tomoDict valueForKey:@"taMin"] intValue];
-    tomoMaxTemp         = [[tomoDict valueForKey:@"taMax"] intValue];
-    nssTomPop           = [tomoDict objectForKey:@"pop"];
+    NSLog(@"todayMinTemp:%@, todayMaxTemp:%@", [todayDict valueForKey:@"taMin"], [todayDict valueForKey:@"taMax"]);
+    NSLog(@"todayMinTemp:%ld, todayMaxTemp:%ld", todayMinTemp, todayMaxTemp);
     
     dispatch_async(dispatch_get_main_queue(), ^{
         // Current
         if(nssDate)
-            updateTimeLabel.text    = nssDate;
+            updateTimeLabel.text    = nssDateTime;
+        NSLog(@"=======>  date : %@", nssDateTime);
         if(nssAddress)
             addressLabel.text       = nssAddress;
         if(nssCurImgName)
             curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
         
-        curTempLabel.text       = [NSString stringWithFormat:@"%ld˚ %ld%%", (long)currentTemp, (long)currentHum];
+        curTempLabel.text       = [NSString stringWithFormat:@"%ld˚", (long)currentTemp];
         
-        if(nssPm10Str)
-            curDustLabel.text       = [NSString stringWithFormat:@"통합대기 %@", nssPm10Str];
+        if(nssAirState)
+            curDustLabel.text       = nssAirState;
         
-        // Today
-        if(nssTodImgName)
-            todWTIconIV.image       = [UIImage imageNamed:nssTodImgName];
-        
-        todayMaxTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)todayMaxTemp, (long)todayMinTemp];
-        
-        //todayMinTempLabel.text  = [NSString stringWithFormat:@"%lu˚", todayMinTemp];
         if(nssTodPop)
-            todayPopLabel.text      = [NSString stringWithFormat:@"강수확률 %@%%", nssTodPop];
-        
-        // Tomorrow
-        tomoMaxTempLabel.text   = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)tomoMaxTemp, (long)tomoMinTemp];
-        //tomoMinTempLabel.text   = [NSString stringWithFormat:@"%lu˚", tomoMinTemp];
-        if(nssTomPop)
-            tomoPopLabel.text       = [NSString stringWithFormat:@"강수확률 %@%%", nssTomPop];
-        if(nssTomImgName)
-            tomWTIconIV.image       = [UIImage imageNamed:nssTomImgName];
+        {
+            int todPop = [nssTodPop intValue]; //todPop = 50;
+            if(todPop == 0)
+            {
+                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)todayMaxTemp, (long)todayMinTemp];
+            }
+            else
+            {
+                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"강수 %d%%   %ld˚/ %ld˚", todPop, (long)todayMinTemp, (long)todayMaxTemp];
+            }
+        }
         
         locationView.hidden = false;
-//        self.view.hidden = false;
+        //        self.view.hidden = false;
     });
+    
+    // Draw ShowMore
+    [todayWSM           processDailyData:jsonDict];
 }
 
 /********************************************************************
@@ -841,7 +1126,11 @@ typedef enum
  ********************************************************************/
 - (void) initLocationInfo
 {
-    self.locationManager = [[CLLocationManager	alloc]	init];
+    if(locationManager == nil)
+    {
+        locationManager = [[CLLocationManager	alloc]	init];
+    }
+    
     locationManager.delegate = self;
     locationManager.desiredAccuracy = kCLLocationAccuracyBest;
     
@@ -935,11 +1224,25 @@ typedef enum
  ********************************************************************/
 - (void) processPrevData:(int)idx
 {
+    if(mCityDictList == nil)
+    {
+        NSLog(@"mCityDictList is nil");
+        return;
+    }
+    
+    if([mCityDictList count] <= idx)
+    {
+        NSLog(@"idx is invalid!!!");
+        return;
+    }
+        
+    //NSLog(@"idx : %d, mCityDictList : %@", idx, mCityDictList);
+    // idx가 count보다 높은 경우는 return함. mCityDictList가 null일때도 리턴함. 근본 원인을 밝혀야함
     NSMutableDictionary *nsdCityInfo    = [mCityDictList objectAtIndex:idx];
     NSMutableDictionary *nsdWeatherInfo    = [nsdCityInfo objectForKey:@"weatherData"];
     
     if(nsdWeatherInfo != nil)
-        [self processWeatherResults:nsdWeatherInfo];
+        [self processWeatherResultsWithShowMore:nsdWeatherInfo];
 }
 
 /********************************************************************

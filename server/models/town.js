@@ -31,33 +31,20 @@ tSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
 tSchema.index({town:1});
 tSchema.index({"town.first": 'text', "town.second": 'text', "town.third": 'text'}, {default_language: 'none'});
 
-var mCoord = [];
-var areaCode = [];
-
+/**
+ * runtime으로 towns가 갱신되므로, cache하면 안됨.
+ * @type {{getCoord: Function, getAreaNo: Function}}
+ */
 tSchema.statics = {
     getCoord : function(cb) {
-        if(mCoord.length === 0){
-            this.distinct("mCoord").exec(function(err, result){
-                mCoord = result;
-                cb(err, mCoord);
-            });
-        }
-        else{
-            //log.info('get mx,my : ', mCoord.length);
-            cb(0, mCoord);
-        }
+        this.distinct("mCoord").exec(function(err, result){
+            cb(err, result);
+        });
     },
-    getCode : function(cb) {
-        if(areaCode.length === 0){
-            this.distinct('areaCode').exec(function(err, result){
-                areaCode = result;
-                cb(err, areaCode);
-            });
-        }else{
-            //log.info('get areacode : ', areaCode.length)
-            cb(0, areaCode);
-        }
-
+    getAreaNo : function(cb) {
+        this.distinct('areaNo').exec(function(err, result){
+            cb(err, result);
+        });
     }
 };
 

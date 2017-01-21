@@ -341,22 +341,30 @@ angular.module('starter', [
                                 if (d.value.rn1) {
                                     return d.value.rn1>=10?Math.round(d.value.rn1):d.value.rn1;
                                 }
-                                else if (d.value.r06) {
-                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.r06;
-                                }
                                 else if (d.value.s06) {
                                     return d.value.s06>=10?Math.round(d.value.s06):d.value.s06;
+                                }
+                                else if (d.value.r06) {
+                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.r06;
                                 }
                                 return '';
                             })
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.value.rn1 || d.value.r06) {
-                                    return 'mm';
+                                if (d.value.rn1 > 0) {
+                                    if (d.value.pty == 3) {
+                                        return 'cm';
+                                    }
+                                    else  {
+                                        return 'mm';
+                                    }
                                 }
                                 else if (d.value.s06) {
                                     return 'cm';
+                                }
+                                else if (d.value.r06) {
+                                    return 'mm';
                                 }
                             });
 
@@ -870,11 +878,11 @@ angular.module('starter', [
                                 if (d.rn1) {
                                     value = d.rn1;
                                 }
-                                else if (d.r06) {
-                                    value = d.r06;
-                                }
                                 else if (d.s06) {
                                     value = d.s06;
+                                }
+                                else if (d.r06) {
+                                    value = d.r06;
                                 }
                                 else {
                                     return '';
@@ -887,11 +895,19 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.rn1 || d.r06) {
-                                    return 'mm';
+                                if (d.rn1 > 0) {
+                                    if (d.pty == 3) {
+                                        return 'cm';
+                                    }
+                                    else {
+                                        return 'mm';
+                                    }
                                 }
                                 else if (d.s06) {
-                                   return 'cm';
+                                    return 'cm';
+                                }
+                                else if (d.r06) {
+                                    return 'mm';
                                 }
                                 return "";
                             });

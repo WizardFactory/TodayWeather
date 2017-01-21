@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.22",
+  "version": "0.9.24",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -22,7 +22,6 @@
     "clean-css": "=2.2.2",
     "cordova-config-utils": "^1.0.3",
     "cordova-uglify": "^0.2.5",
-    "gulp-cordova-plugin-remove": "^1.0.0",
     "gulp-shell": "^0.5.2",
     "gulp-util": "^2.2.14",
     "imagemin": "=3.2.0",
@@ -72,7 +71,8 @@
         "DEEPLINK_HOST": "net.wizardfactory.todayweather",
         "ANDROID_PATH_PREFIX": "/"
       }
-    }
+    },
+    "cordova.plugins.diagnostic"
   ],
   "cordovaPlatforms": [
     "ios",

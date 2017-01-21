@@ -313,7 +313,12 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            log.warn(err);
+            if (err.code == "ETIMEDOUT") {
+                log.debug(err);
+            }
+            else {
+                log.warn(err);
+            }
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -353,8 +358,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 if(err || (result.response.header[0].resultCode[0] !== '0000') ||
                     (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
-                    log.error(meta);
+                    log.warn('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
+                    log.warn(meta);
                     self.emit('recvFail', index);
                 }
                 else{
@@ -503,6 +508,18 @@ CollectData.prototype.organizeShortData = function(index, listData){
             }
         }
 
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t3h === template.t3h) {
+            log.error('Fail get full short data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
+            data.wsd === template.wsd) {
+            log.warn('Fail get full short data -'+JSON.stringify(data));
+        }
+
         listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
@@ -587,6 +604,18 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                     log.error(new Error('Known property '+item.category[0]));
                 }
             }
+        }
+
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t1h === template.t1h) {
+            log.error('Fail get full shortest data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
+            data.vec === template.vec || data.wsd === template.wsd) {
+            log.warn('Fail get full shortest data -'+JSON.stringify(data));
         }
 
         listResult.sort(self._sortByDateTime);

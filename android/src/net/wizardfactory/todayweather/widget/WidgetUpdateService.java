@@ -23,16 +23,21 @@ import android.widget.RemoteViews;
 import android.widget.Toast;
 
 import net.wizardfactory.todayweather.R;
+import net.wizardfactory.todayweather.widget.Data.Units;
 import net.wizardfactory.todayweather.widget.Data.WeatherData;
 import net.wizardfactory.todayweather.widget.Data.WidgetData;
 import net.wizardfactory.todayweather.widget.JsonElement.AddressesElement;
+import net.wizardfactory.todayweather.widget.JsonElement.GeoInfo;
 import net.wizardfactory.todayweather.widget.JsonElement.WeatherElement;
+import net.wizardfactory.todayweather.widget.JsonElement.WorldWeatherElement;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -43,7 +48,9 @@ import java.util.concurrent.ExecutionException;
 public class WidgetUpdateService extends Service {
     // if find not location in this time, service is terminated.
     private final static int LOCATION_TIMEOUT = 30 * 1000; // 20sec
-    private final static String mUrl = "https://todayweather.wizardfactory.net/v000705/town";
+    private final static String mUrl = "https://todayweather.wizardfactory.net";
+    private final static String kmaApiUrl = "/v000803/town";
+    private final static String worldWeatherApiUrl = "/ww/010000/current/2?gcode=";
 
     private LocationManager mLocationManager = null;
     private boolean mIsLocationManagerRemoveUpdates = false;
@@ -51,6 +58,8 @@ public class WidgetUpdateService extends Service {
     private Context mContext;
     private AppWidgetManager mAppWidgetManager;
     private int mLayoutId;
+
+    private Units mLocalUnits = null;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -82,6 +91,11 @@ public class WidgetUpdateService extends Service {
         String jsonCityInfoStr = WidgetProviderConfigureActivity.loadCityInfoPref(context, widgetId);
         boolean currentPosition = true;
         String address = null;
+        String country = null;
+        JSONObject location = null;
+        double lat = 0;
+        double lng = 0;
+        String locationName = null;
 
         if (jsonCityInfoStr == null) {
             Log.i("Service", "cityInfo is null, so this widget is zombi");
@@ -93,10 +107,33 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
+        String jsonUnitsStr = WidgetProviderConfigureActivity.loadUnitsPref(context);
+
         try {
             JSONObject jsonCityInfo = new JSONObject(jsonCityInfoStr);
             currentPosition = jsonCityInfo.getBoolean("currentPosition");
             address = jsonCityInfo.get("address").toString();
+            if (jsonCityInfo.has(country)) {
+                country = jsonCityInfo.get("country").toString();
+            }
+            else {
+                country = "KR";
+            }
+            if (jsonCityInfo.has("location")) {
+                location = jsonCityInfo.getJSONObject("location");
+                lat = location.getDouble("lat");
+                lng = location.getDouble("long");
+            }
+            if (jsonCityInfo.has("name")) {
+                locationName = jsonCityInfo.get("name").toString();
+            }
+
+            if (jsonUnitsStr != null) {
+                mLocalUnits = new Units(jsonUnitsStr);
+            }
+            else {
+                mLocalUnits = new Units();
+            }
         } catch (JSONException e) {
             Log.e("Service", "JSONException: " + e.getMessage());
             return;
@@ -127,11 +164,21 @@ public class WidgetUpdateService extends Service {
             myHandler.postDelayed(myRunnable, LOCATION_TIMEOUT);
         } else {
             Log.i("Service", "Update address=" + address + " app widget id=" + widgetId);
-            String addr = AddressesElement.makeUrlAddress(address);
-            if (addr != null) {
-                addr = mUrl + addr;
+            //check country
+            if (country != null && country.equals("KR")) {
+                String addr = AddressesElement.makeUrlAddress(address);
+                if (addr != null) {
+                    addr = mUrl + kmaApiUrl + addr;
+                    String jsonData = getWeatherDataFromServer(addr);
+                    updateWidget(widgetId, jsonData, locationName);
+                }
+            }
+            else {
+                String addr = mUrl + worldWeatherApiUrl + lat + "," + lng;
+                Log.i("Service", "url="+addr);
                 String jsonData = getWeatherDataFromServer(addr);
-                updateWidget(widgetId, jsonData);
+                updateWorldWeatherWidget(widgetId, jsonData, locationName);
+                //make world weather url
             }
         }
     }
@@ -207,9 +254,127 @@ public class WidgetUpdateService extends Service {
     };
 
     private void findAddressAndWeatherUpdate(int widgetId, double lat, double lon) {
-        String addr = location2Address(lat, lon);
-        String jsonData = getWeatherDataFromServer(addr);
-        updateWidget(widgetId, jsonData);
+        GeoInfo geoInfo = location2GeoInfo(lat, lon);
+        String url = null;
+        String jsonData = null;
+
+        if (geoInfo == null) {
+            Log.e("Service", "Fail to get geo info");
+            Toast.makeText(getApplicationContext(), R.string.fail_to_get_geoinfo, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (geoInfo.getCountry().equals("KR")) {
+            //convert address to korean and url
+            url = location2Address(lat, lon);
+            if (url != null) {
+                jsonData = getWeatherDataFromServer(url);
+                updateWidget(widgetId, jsonData, geoInfo.getName());
+            }
+        }
+        else {
+            url = mUrl + worldWeatherApiUrl + lat + "," + lon;
+            Log.i("Service", "url="+url);
+            jsonData = getWeatherDataFromServer(url);
+            updateWorldWeatherWidget(widgetId, jsonData, geoInfo.getName());
+        }
+    }
+
+    private GeoInfo location2GeoInfo(double lat, double lon) {
+        GeoInfo geoInfo = null;
+
+        Log.i("Service", "lat : " + lat + ", lon " + lon);
+        try {
+            String lang = Locale.getDefault().getLanguage();
+            String geourl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
+                    lat + "," + lon + "&language="+lang;
+            String retJson = new GetHttpsServerAysncTask(geourl).execute().get();
+
+            JSONObject reader = new JSONObject(retJson);
+            if (reader != null) {
+                String status = reader.getString("status");
+                if (!status.equals("OK")) {
+                    Log.e("AddressesElement", "status=" + status);
+                    return geoInfo;
+                }
+                JSONArray results = reader.getJSONArray("results");
+                JSONObject result  = null;
+
+                int i;
+                for (i=0; i<results.length(); i++) {
+                    result = results.getJSONObject(i);
+                    JSONArray types = result.getJSONArray("types");
+                    String type = types.getString(0);
+                    if (type.equals("postal_code")) {
+                       break;
+                    }
+                }
+                if (i == results.length()) {
+                    Log.e("service", "Fail to find address");
+                    return geoInfo;
+                }
+                String address = result.getString("formatted_address");
+                if (address == null || address.length() == 0) {
+                    Log.e("service", "Fail to find address");
+                    return geoInfo;
+                }
+
+                geoInfo = new GeoInfo();
+                geoInfo.setLat(lat);
+                geoInfo.setLng(lon);
+                geoInfo.setAddress(address);
+
+                JSONArray addressComponents = result.getJSONArray("address_components");
+                JSONObject addressComponent = null;
+                for (i=0; i<addressComponents.length(); i++) {
+                    addressComponent = addressComponents.getJSONObject(i);
+                    JSONArray types = addressComponent.getJSONArray("types");
+                    String type = types.getString(0);
+                    if (type.equals("country")) {
+                        break;
+                    }
+                }
+                if (i == results.length() || addressComponent == null) {
+                    Log.e("service", "Fail to find country");
+                    return geoInfo;
+                }
+
+                geoInfo.setCountry(addressComponent.getString("short_name"));
+
+                String countryLongName = addressComponent.getString("long_name");
+
+                String name;
+                //"Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
+                String[] addr = address.split(",");
+                if (addr.length == 1) {
+                    //"대한민국 서울 송파구 잠실본동"
+                    addr = address.split(" ");
+                }
+                if (addr[0].equals(countryLongName)) {
+                    name = addr[addr.length-1];
+                }
+                else {
+                    name = addr[0];
+                }
+
+                geoInfo.setName(name);
+                Log.e("Service", geoInfo.getAddress());
+            }
+            else {
+                Log.e("Service", "Fail to get address info");
+                return geoInfo;
+            }
+        } catch (InterruptedException e) {
+            Log.e("Service", e.toString());
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            Log.e("Service", e.toString());
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return geoInfo;
     }
 
     private String location2Address(double lat, double lon) {
@@ -218,7 +383,7 @@ public class WidgetUpdateService extends Service {
         Log.i("Service", "lat : " + lat + ", lon " + lon);
         try {
             String geourl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
-                    lat + "," + lon + "&sensor=true&language=ko";
+                    lat + "," + lon + "&language=ko";
             String retJson = new GetHttpsServerAysncTask(geourl).execute().get();
 
             AddressesElement addrsElement = AddressesElement.parsingAddressJson2String(retJson);
@@ -232,7 +397,7 @@ public class WidgetUpdateService extends Service {
                 retAddr = addrsElement.findDongAddressFromGoogleGeoCodeResults();
                 retAddr = addrsElement.makeUrlAddress(retAddr);
             }
-            retAddr = mUrl + retAddr;
+            retAddr = mUrl + kmaApiUrl + retAddr;
         } catch (InterruptedException e) {
             Log.e("Service", e.toString());
             e.printStackTrace();
@@ -269,12 +434,110 @@ public class WidgetUpdateService extends Service {
         return retJsonStr;
     }
 
+    private void updateWorldWeatherWidget(int widgetId, String jsonStr, String locationName) {
+        if (jsonStr == null) {
+            Log.e("WidgetUpdateService", "jsonData is NULL");
+            Toast.makeText(getApplicationContext(), "Fail to get world weather data", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        /**
+         * context, manager를 member 변수로 변환하면 단순해지지만 동작 확인 필요.
+         */
+        try {
+            mContext = getApplicationContext();
+            mAppWidgetManager = AppWidgetManager.getInstance(mContext);
+            mLayoutId = mAppWidgetManager.getAppWidgetInfo(widgetId).initialLayout;
+        } catch (Exception e) {
+            Log.e("Service", "Exception: " + e.getMessage());
+            return;
+        }
+
+        Context context = getApplicationContext();
+        // input weather content to widget layout
+
+        RemoteViews views = new RemoteViews(context.getPackageName(), mLayoutId);
+
+        int opacity = WidgetProviderConfigureActivity.getWidgetOpacity(context);
+        if (opacity > -1) {
+            int color = (255*opacity/100) << 24 + 0x231f20;
+            views.setInt(R.id.bg_layout, "setBackgroundColor", color);
+        }
+
+        WidgetData wData = new WidgetData();
+        if (locationName != null) {
+            wData.setLoc(locationName);
+        }
+        wData.setUnits(WorldWeatherElement.getUnits(jsonStr));
+
+        if (mLayoutId == R.layout.w2x1_widget_layout) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            wData.setBefore24hWeather(WorldWeatherElement.getBefore24hWeather(jsonStr));
+            set2x1WidgetData(context, views, wData);
+            Log.i("UpdateWorldWeather", "set2x1WidgetData id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.w1x1_current_weather) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            set1x1WidgetData(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 1x1WidgetData id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.w2x1_current_weather) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            set2x1CurrentWeather(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 2x1 current weather id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.air_quality_index) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            setAirQualityIndex(context, views, wData);
+            Log.i("UpdateWorldWeather", "set air quality index id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.clock_and_current_weather) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            setClockAndCurrentWeather(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 3x1 clock and current weather id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.current_weather_and_three_days) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            wData.setDayWeather(0, WorldWeatherElement.getDayWeatherFromToday(jsonStr, -1));
+            wData.setDayWeather(1, WorldWeatherElement.getDayWeatherFromToday(jsonStr, 0));
+            wData.setDayWeather(2, WorldWeatherElement.getDayWeatherFromToday(jsonStr, 1));
+            setCurrentWeatherAndThreeDays(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 3x1 clock and current weather id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.daily_weather) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            wData.setDayWeather(0, WorldWeatherElement.getDayWeatherFromToday(jsonStr, -1));
+            for (int i=0; i<5; i++) {
+                wData.setDayWeather(i, WorldWeatherElement.getDayWeatherFromToday(jsonStr, i-1));
+            }
+            setDailyWeather(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 4x1 daily weather id=" + widgetId);
+        }
+        else if (mLayoutId == R.layout.clock_and_three_days) {
+            wData.setCurrentWeather(WorldWeatherElement.getCurrentWeather(jsonStr));
+            wData.setDayWeather(0, WorldWeatherElement.getDayWeatherFromToday(jsonStr, -1));
+            wData.setDayWeather(1, WorldWeatherElement.getDayWeatherFromToday(jsonStr, 0));
+            wData.setDayWeather(2, WorldWeatherElement.getDayWeatherFromToday(jsonStr, 1));
+            setClockAndThreedays(context, views, wData);
+            Log.i("UpdateWorldWeather", "set 4x1 clock and three days id=" + widgetId);
+        }
+
+        // Create an Intent to launch menu
+        Intent intent = new Intent(context, WidgetMenuActivity.class);
+        intent.putExtra("LAYOUT_ID", mLayoutId);
+        // intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
+
+        mAppWidgetManager.updateAppWidget(widgetId, views);
+    }
+
     /**
      * location listener에서 widgetId가 업데이트됨.
      * @param widgetId
      * @param jsonStr
      */
-    private void updateWidget(int widgetId, String jsonStr) {
+    private void updateWidget(int widgetId, String jsonStr, String locationName) {
         if (jsonStr == null) {
             Log.e("WidgetUpdateService", "jsonData is NULL");
             return;
@@ -302,6 +565,9 @@ public class WidgetUpdateService extends Service {
 
         // make today, yesterday weather info class
         WidgetData wData = weatherElement.makeWidgetData();
+        if (locationName != null) {
+            wData.setLoc(locationName);
+        }
         Context context = getApplicationContext();
         // input weather content to widget layout
 
@@ -381,8 +647,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
+            // setting town
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
@@ -406,15 +672,18 @@ public class WidgetUpdateService extends Service {
         views.setTextViewText(R.id.label_today, context.getString(R.string.today));
         views.setTextViewText(R.id.label_tomorrow, context.getString(R.string.tomorrow));
 
+        double temp;
         for (int i=0; i<3; i++) {
             WeatherData dayData = wData.getDayWeather(i);
             String day_temperature = "";
             if (dayData.getMinTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
-                day_temperature += (int)dayData.getMinTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMinTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
                 day_temperature += " ";
-                day_temperature += (int)dayData.getMaxTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMaxTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
 
@@ -448,8 +717,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
+            // setting town
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
@@ -476,15 +745,18 @@ public class WidgetUpdateService extends Service {
 
         int skyResourceId;
 
+        double temp;
         for (int i=0; i<5; i++) {
             WeatherData dayData = wData.getDayWeather(i);
             String day_temperature = "";
             if (dayData.getMinTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
-                day_temperature += (int)dayData.getMinTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMinTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
                 day_temperature += " ";
-                day_temperature += (int)dayData.getMaxTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMaxTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
 
@@ -528,24 +800,24 @@ public class WidgetUpdateService extends Service {
         return "";
     }
 
-    private String makeTmnTmxPmPpStr(WeatherData data) {
+    private String makeTmnTmxPmPpStr(WidgetData wData) {
+        WeatherData data = wData.getCurrentWeather();
         String today_tmn_tmx_pm_pp = "";
+        double temp;
         if (data.getMinTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL)  {
-            today_tmn_tmx_pm_pp += String.valueOf((int) data.getMinTemperature())+"°";
+            temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), data.getMinTemperature());
+            today_tmn_tmx_pm_pp += String.valueOf(Math.round(temp))+"°";
         }
         if (data.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL)  {
             today_tmn_tmx_pm_pp += " ";
-            today_tmn_tmx_pm_pp += String.valueOf((int) data.getMaxTemperature())+"°";
+            temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), data.getMaxTemperature());
+            today_tmn_tmx_pm_pp += String.valueOf(Math.round(temp))+"°";
         }
 
         if (data.getRn1() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL && data.getRn1() != 0 ) {
             today_tmn_tmx_pm_pp += " ";
-            if (data.getRn1Str() != null) {
-                today_tmn_tmx_pm_pp += data.getRn1Str();
-            }
-            else {
-                today_tmn_tmx_pm_pp += data.getRn1();
-            }
+            String precipStr = mLocalUnits.convertUnitsStr(wData.getUnits().getPrecipitationUnit(), data.getRn1());
+            today_tmn_tmx_pm_pp += precipStr+mLocalUnits.getPrecipitationUnit();
         }
         else {
             if (data.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
@@ -579,8 +851,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
+            // setting town
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
@@ -594,7 +866,8 @@ public class WidgetUpdateService extends Service {
             views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
-        views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
+        String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+        views.setTextViewText(R.id.current_temperature, tempStr+"°");
 
         int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
         if (skyResourceId == -1) {
@@ -602,7 +875,7 @@ public class WidgetUpdateService extends Service {
         }
         views.setImageViewResource(R.id.current_sky, skyResourceId);
 
-        views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(currentData));
+        views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(wData));
 
         views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
         views.setTextViewText(R.id.label_today, context.getString(R.string.today));
@@ -612,15 +885,18 @@ public class WidgetUpdateService extends Service {
         int[] tempIds = {R.id.yesterday_temperature, R.id.today_temperature, R.id.tomorrow_temperature};
         int[] skyIds = {R.id.yesterday_sky, R.id.today_sky, R.id.tomorrow_sky};
 
+        double temp;
         for (int i=0; i<3; i++) {
             WeatherData dayData = wData.getDayWeather(i);
             String day_temperature = "";
             if (dayData.getMinTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
-                day_temperature += (int)dayData.getMinTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMinTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             if (dayData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL) {
                 day_temperature += " ";
-                day_temperature += (int)dayData.getMaxTemperature()+"°";;
+                temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), dayData.getMaxTemperature());
+                day_temperature += Math.round(temp)+"°";;
             }
             views.setTextViewText(tempIds[i], day_temperature);
 
@@ -668,8 +944,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
+            // setting town
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
@@ -683,14 +959,15 @@ public class WidgetUpdateService extends Service {
             views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
-        views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
+        String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+        views.setTextViewText(R.id.current_temperature, tempStr+"°");
 
         int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
         if (skyResourceId == -1) {
             skyResourceId = R.drawable.sun;
         }
         views.setImageViewResource(R.id.current_sky, skyResourceId);
-        views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(currentData));
+        views.setTextViewText(R.id.tmn_tmx_pm_pp, makeTmnTmxPmPpStr(wData));
     }
 
     /**
@@ -731,8 +1008,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
+            // setting town
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
@@ -745,6 +1022,12 @@ public class WidgetUpdateService extends Service {
         if (currentData.getAqiPubDate() != null) {
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
             views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getAqiPubDate()));
+        }
+        else {
+            Log.i("UpdateWidgetService", "Fail to get aqi pub date");
+            views.setTextViewText(R.id.errMsg, context.getString(R.string.this_location_is_not_supported));
+            views.setViewVisibility(R.id.errMsg, View.VISIBLE);
+            return;
         }
 
         if (currentData.getAqiGrade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
@@ -784,7 +1067,6 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
             views.setTextViewText(R.id.location, wData.getLoc());
         }
@@ -799,7 +1081,8 @@ public class WidgetUpdateService extends Service {
             views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
         }
 
-        views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
+        String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+        views.setTextViewText(R.id.current_temperature, tempStr+"°");
 
         int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
         if (skyResourceId == -1) {
@@ -808,13 +1091,8 @@ public class WidgetUpdateService extends Service {
         views.setImageViewResource(R.id.current_sky, skyResourceId);
 
         if (currentData.getRn1() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL && currentData.getRn1() != 0 ) {
-
-            if (currentData.getRn1Str() != null) {
-                views.setTextViewText(R.id.current_pm, currentData.getRn1Str());
-            }
-            else {
-                views.setTextViewText(R.id.current_pm, String.valueOf(currentData.getRn1()));
-            }
+            String precipStr = mLocalUnits.convertUnitsStr(wData.getUnits().getPrecipitationUnit(), currentData.getRn1());
+            views.setTextViewText(R.id.current_pm, precipStr + mLocalUnits.getPrecipitationUnit());
         }
         else {
             if (currentData.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
@@ -832,12 +1110,15 @@ public class WidgetUpdateService extends Service {
         }
 
         String today_temperature = "";
+        double temp;
         if (currentData.getMinTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL)  {
-            today_temperature += String.valueOf((int) currentData.getMinTemperature())+"°";
+            temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMinTemperature());
+            today_temperature += String.valueOf(Math.round(temp))+"°";
         }
         if (currentData.getMaxTemperature() != WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL)  {
             today_temperature += " ";
-            today_temperature += String.valueOf((int) currentData.getMaxTemperature())+"°";
+            temp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMaxTemperature());
+            today_temperature += String.valueOf(Math.round(temp))+"°";
         }
         views.setTextViewText(R.id.today_temperature, today_temperature);
     }
@@ -870,7 +1151,6 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
             views.setTextViewText(R.id.location, wData.getLoc());
         }
@@ -881,7 +1161,8 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        views.setTextViewText(R.id.current_temperature, String.valueOf((int)currentData.getTemperature()+"°"));
+        String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+        views.setTextViewText(R.id.current_temperature, tempStr+"°");
 
         int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
         if (skyResourceId == -1) {
@@ -889,8 +1170,8 @@ public class WidgetUpdateService extends Service {
         }
         views.setImageViewResource(R.id.current_sky, skyResourceId);
 
-        views.setTextViewText(R.id.current_pm, ":::");
         if (currentData.getPm10Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.current_pm, ":::");
             if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL
                     && currentData.getPm25Grade() > currentData.getPm10Grade()) {
                 views.setTextColor(R.id.current_pm, getColorAqiGrade(currentData.getPm25Grade()));
@@ -900,6 +1181,7 @@ public class WidgetUpdateService extends Service {
             }
         }
         else if (currentData.getPm25Grade() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.current_pm, ":::");
             views.setTextColor(R.id.current_pm, getColorAqiGrade(currentData.getPm25Grade()));
         }
     }
@@ -910,17 +1192,21 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
-        // setting town
         if (wData.getLoc() != null) {
             views.setTextViewText(R.id.location, wData.getLoc());
         }
 
         // process current weather data
         WeatherData currentData = wData.getCurrentWeather();
+        double tempMax;
+        double tempMin;
         if (currentData != null) {
-            views.setTextViewText(R.id.yesterday_temperature, String.valueOf((int)currentData.getTemperature()));
-            views.setTextViewText(R.id.today_high_temperature, String.valueOf((int) currentData.getMaxTemperature()));
-            views.setTextViewText(R.id.today_low_temperature, String.valueOf((int) currentData.getMinTemperature()));
+            String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+            tempMax =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMaxTemperature());
+            tempMin =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMinTemperature());
+            views.setTextViewText(R.id.yesterday_temperature, tempStr);
+            views.setTextViewText(R.id.today_high_temperature, String.valueOf(Math.round(tempMax)));
+            views.setTextViewText(R.id.today_low_temperature, String.valueOf(Math.round(tempMin)));
 //                views.setTextViewText(R.id.cmp_yesterday_temperature, currentData.getSummary());
             int skyResourceId = getResources().getIdentifier(currentData.getSkyImageName(), "drawable", getPackageName());
             if (skyResourceId == -1) {
@@ -934,8 +1220,10 @@ public class WidgetUpdateService extends Service {
         // process yesterday that same as current time, weather data
         WeatherData yesterdayData = wData.getBefore24hWeather();
         if (yesterdayData != null) {
-            views.setTextViewText(R.id.yesterday_high_temperature, String.valueOf((int) yesterdayData.getMaxTemperature()));
-            views.setTextViewText(R.id.yesterday_low_temperature, String.valueOf((int) yesterdayData.getMinTemperature()));
+            tempMax =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getMaxTemperature());
+            tempMin =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getMinTemperature());
+            views.setTextViewText(R.id.yesterday_high_temperature, String.valueOf(Math.round(tempMax)));
+            views.setTextViewText(R.id.yesterday_low_temperature, String.valueOf(Math.round(tempMin)));
         } else {
             Log.e("UpdateWidgetService", "yesterdayElement is NULL");
         }
@@ -943,7 +1231,9 @@ public class WidgetUpdateService extends Service {
         int cmpTemp = 0;
         String cmpYesterdayTemperatureStr = "";
         if (currentData != null && yesterdayData != null) {
-            cmpTemp = (int) (currentData.getTemperature() - yesterdayData.getTemperature());
+            double currentTemp = mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+            double before24hTemp =  mLocalUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getTemperature());
+            cmpTemp = (int)Math.round(currentTemp - before24hTemp);
             if (cmpTemp == 0) {
                 cmpYesterdayTemperatureStr = context.getString(R.string.same_yesterday);
             }

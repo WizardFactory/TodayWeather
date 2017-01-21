@@ -264,7 +264,7 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DiscomfortIndex > invalid parameter.');
+        log.debug('DiscomfortIndex > invalid parameter.');
         return -1;
     }
 
@@ -279,7 +279,7 @@ LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortInde
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.warn('DiscomfortString > invalid parameter');
+        log.debug('DiscomfortString > invalid parameter');
         return discomfortGrade;
     }
 
@@ -305,7 +305,7 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.warn('DiscomfortString > invalid parameter');
+        log.debug('DiscomfortString > invalid parameter');
         return "";
     }
 
@@ -336,7 +336,7 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DecompositionIndex > invalid parameter.');
+        log.debug('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -358,7 +358,7 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     if(DecompositionIndex === undefined
         || DecompositionIndex < 0)
     {
-        log.warn('DecompositionString > invalid parameter');
+        log.debug('DecompositionString > invalid parameter');
         return "";
     }
 
@@ -387,7 +387,7 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DecompositionIndex > invalid parameter.');
+        log.debug('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -426,7 +426,7 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     if(heatIndex === undefined
         || heatIndex < 0) 
     {
-        log.warn('HeatIndexString > invalid parameter');
+        log.debug('HeatIndexString > invalid parameter');
         return "";
     }
         
@@ -454,7 +454,7 @@ LifeIndexKmaController.getFrostString = function(temperature) {
     if(temperature === undefined
         || temperature < -50)
     {
-        log.warn('FrostString > invalid parameter.');
+        log.debug('FrostString > invalid parameter.');
         return -1;
     }
 
@@ -481,7 +481,7 @@ LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperat
     if(temperature === undefined
         || temperature < -50)
     {
-        log.warn('FrostString > invalid parameter.');
+        log.debug('FrostString > invalid parameter.');
         return -1;
     }
 
