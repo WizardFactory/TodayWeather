@@ -1392,12 +1392,14 @@ function ControllerTown() {
                                     req.current.sky = 2;
                                 }
                             }
-                            req.current.rn1 = req.current.rs1h;
-                            if (req.current.rn1 > 10) {
-                                req.current.rn1 = Math.round(req.current.rn1);
-                            }
-                            else {
-                                req.current.rn1 = +(req.current.rn1).toFixed(1);
+                            if (req.current.rs1h > 0) {
+                                req.current.rn1 = req.current.rs1h;
+                                if (req.current.rn1 > 10) {
+                                    req.current.rn1 = Math.round(req.current.rn1);
+                                }
+                                else {
+                                    req.current.rn1 = +(req.current.rn1).toFixed(1);
+                                }
                             }
                         }
                         else if (req.current.rns === false) {
