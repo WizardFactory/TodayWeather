@@ -227,6 +227,10 @@ angular.module('starter.services', [])
             }
             city.loadTime = new Date();
 
+            if (newCityInfo.source) {
+                city.source = newCityInfo.source;
+            }
+
             that.saveCities();
         };
 
@@ -1461,6 +1465,7 @@ angular.module('starter.services', [])
                 temp: currentForecast.t1h,
                 displayItemCount: midTownWeather.displayItemCount
             }];
+            data.source = "KMA";
 
             return data;
         }
@@ -1999,6 +2004,12 @@ angular.module('starter.services', [])
                     temp: data.currentWeather.t1h,
                     displayItemCount: midTownWeather.displayItemCount
                 }];
+
+                if (weatherData.hasOwnProperty('pubDate')) {
+                    if (weatherData.pubDate.hasOwnProperty('DSF')) {
+                       data.source = "DSF";
+                    }
+                }
             }
             catch (e) {
                 console.log(e);

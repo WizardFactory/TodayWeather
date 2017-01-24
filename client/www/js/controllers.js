@@ -131,6 +131,21 @@ angular.module('starter.controllers', [])
 
         }
 
+        $scope.openUrl = function (src) {
+            if (window.cordova && cordova.InAppBrowser) {
+                cordova.InAppBrowser.open(src, "_system");
+                Util.ga.trackEvent('action', 'click', 'open market');
+            }
+            else {
+                var options = {
+                    location: "yes",
+                    clearcache: "yes",
+                    toolbar: "no"
+                };
+                window.open(src, "_blank", options);
+            }
+        };
+
         $scope.getDayString = function (day) {
             var dayFromTodayStr =['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY',
                 'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW',
@@ -556,6 +571,10 @@ angular.module('starter.controllers', [])
             if (cityData === null || cityData.address === null) {
                 console.log("fail to getCityOfIndex");
                 return;
+            }
+
+            if (cityData.source) {
+                $scope.source = cityData.source;
             }
 
             dayTable = cityData.dayChart[0].values;
