@@ -48,8 +48,8 @@
                     </ion-scroll>
 
                    <div class="col" style="margin: 0;padding: 0">
-                       <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                       <p ng-if="dayChart" class="caption" style="margin: 5px;" translate="LOC_DAILY_AQI_FORECAST"></p>
+                       <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                       <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;" translate="LOC_DAILY_AQI_FORECAST"></p>
                        <table style="width: 100%">
                            <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
                                ng-repeat="day in dayChart[0].values">
@@ -79,8 +79,8 @@
                                </td>
                            </tr>
                        </table>
-                       <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                       <p ng-if="hasDustForecast()" class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
+                       <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
+                       <p ng-if="dayChart" class="caption" style="margin: 5px 5px 0 5px;" translate="LOC_DETAIL_WEATHER"></p>
                        <ion-scroll delegate-handle="weeklyTable" direction="x" zooming="false" has-bouncing="false"
                                    scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                            <div class="row" style="margin: auto;">
