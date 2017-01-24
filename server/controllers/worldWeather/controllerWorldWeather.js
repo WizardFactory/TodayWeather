@@ -372,9 +372,8 @@ function controllerWorldWeather(){
                         if(err){
                             log.error('Fail to get LocalTimezone : ', err);
                         }
+                        return callback(null);
                     });
-
-                    return callback(null);
                 },
                 /*
                 * No use WU data.
@@ -1028,7 +1027,7 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(item){
                 item.hourly.data.forEach(function(dbItem){
                     var isExist = false;
-                    if(self._compareDateString(yesterdayDate, dbItem.dateObj)){
+                    if(self._compareDateString(yesterdayDate, dbItem.dateObj)) {
                         req.result.thisTime.forEach(function(thisTime, index){
                             if(thisTime.date != undefined &&
                                 self._compareDateString(yesterdayDate, thisTime.date)){
@@ -1054,7 +1053,7 @@ function controllerWorldWeather(){
                             }
                         });
                         if(!isExist){
-                            //log.info('NEW! DSF -> Hourly : ', dbItem.dateObj.toString());
+                            //log.info('NEW! DSF -> Hourly : ', dbItem.dateObj.toString(), JSON.stringify(dbItem));
                             req.result.hourly.push(self._makeHourlyDataFromDSF(dbItem));
                         }
                     }
@@ -1802,7 +1801,7 @@ function controllerWorldWeather(){
 
         async.parallel([
                 function(cb){
-                    modelWuCurrent.find({geocode:geocode}, function(err, list){
+                    modelWuCurrent.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Current data');
                             //cb(new Error('gFU> fail to get WU Current data'));
@@ -1822,7 +1821,7 @@ function controllerWorldWeather(){
                     });
                 },
                 function(cb){
-                    modelWuForecast.find({geocode:geocode}, function(err, list){
+                    modelWuForecast.find({geocode:geocode}).lean().exec(function(err, list){
                         if(err){
                             log.error('gWU> fail to get WU Forecast data');
                             //cb(new Error('gFU> fail to get WU Forecast data'));
@@ -1863,7 +1862,7 @@ function controllerWorldWeather(){
             lon: parseFloat(req.geocode.lon)
         };
 
-        modelDSForecast.find({geocode:geocode}, function(err, list){
+        modelDSForecast.find({geocode:geocode}).lean().exec(function(err, list){
             if(err){
                 log.error('gDSF> fail to get DSF data');
                 callback(err);
