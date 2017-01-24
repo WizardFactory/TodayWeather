@@ -1101,12 +1101,16 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         log.error('Dsf> fail to add the new data to DB :', geocode, err);
                         print.error('Dsf> fail to add the new data to DB :', geocode);
                     }
+                    else {
+                        log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
+                    }
                     if (callback) {
                         callback(err, newData);
                     }
                 });
-            }else {
-                //print.info('WuF> add new Item : ', newData);
+            }
+            else {
+                //print.info('Dsf> add new Item : ', newData);
                 list.forEach(function(data, index){
                     var isExist = false;
                     if(data.date < date){
@@ -1118,7 +1122,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     }
 
                     data.data.forEach(function(dbItem){
-                        log.info('DB Item', dbItem.current.dateObj.toString());
+                        //log.info('DB Item', dbItem.current.dateObj.toString());
                         if(dbItem.current.dateObj.getTime() === newData.current.dateObj.getTime()){
                             dbItem.current = newData.current;
                             dbItem.hourly = newData.hourly;
@@ -1152,7 +1156,10 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     //log.info(data);
                     data.save(function(err){
                         if(err){
-                            log.error('Dsf> fail to save to DB :', geocode);
+                            log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
+                        }
+                        else {
+                            log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                         }
 
                         if(callback){
@@ -1319,9 +1326,15 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     }
 
     for(var i=From ; i<To ; i++){
-        var dateString = self._getTimeString(0 - (24 * i) + timeOffset).slice(0,10) + '00';
-        var now = self._getDateObj(dateString).getTime() / 1000;
-        dataList.push(now);
+        var reqTime = new Date();
+        reqTime.setUTCMinutes(0);
+        reqTime.setUTCSeconds(0);
+        reqTime.setUTCMilliseconds(0);
+        reqTime.setUTCDate(reqTime.getDate()-i);
+        reqTime.setUTCHours(-timeOffset); //timeZone의 반대로 가야 함.
+        //log.info("reqTime="+reqTime.toISOString());
+        var nTime = reqTime.getTime()/1000;
+        dataList.push(nTime);
     }
     dataList.push('cur');
 
@@ -1333,9 +1346,11 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
         async.mapSeries(dataList,
             function(date, cb){
                 // get forecast
-                log.info('date : ', date);
                 if(date === 'cur'){
                     date = undefined;
+                }
+                else {
+                    log.info('date : ', (new Date(date*1000)).toISOString());
                 }
                 requester.getForecast(geocode, date, key, function(err, result){
                     if(err){
@@ -1345,7 +1360,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                         return;
                     }
 
-                    log.info(result);
+                    //log.info(result);
                     if(date === undefined){
                         var dateString = self._getTimeString(0 + timeOffset).slice(0,10) + '00';
                         date = self._getDateObj(dateString).getTime() / 1000;
