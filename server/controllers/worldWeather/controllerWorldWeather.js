@@ -1444,7 +1444,7 @@ function controllerWorldWeather(){
             day.press = summary.pres;
         }
         if(summary.vis){
-            day.vis = Math.round(summary.vis * 1.16093);
+            day.vis = Math.round(summary.vis * 1.609344);
         }
 
         return day;
@@ -1497,7 +1497,7 @@ function controllerWorldWeather(){
             hourly.precip = summary.pre_int;
         }
         if(summary.vis){
-            hourly.vis = Math.round(summary.vis * 1.16093);
+            hourly.vis = Math.round(summary.vis * 1.609344);
         }
         if(summary.pres){
             hourly.press = summary.pres;
@@ -1556,7 +1556,8 @@ function controllerWorldWeather(){
             current.precip = parseFloat(summary.pre_int.toFixed(2));
         }
         if(summary.vis){
-            current.vis = Math.round(summary.vis * 1.16093);
+            //miles -> km
+            current.vis = Math.round(summary.vis * 1.609344);
         }
         if(summary.pres){
             current.press = summary.pres;
