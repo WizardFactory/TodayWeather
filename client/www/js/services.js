@@ -1419,13 +1419,7 @@ angular.module('starter.services', [])
             var todayInfo;
 
             if (weatherData.units == undefined) {
-                var obj = {};
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "m/s";
-                obj.pressureUnit = "hPa";
-                obj.distanceUnit = "m";
-                obj.precipitationUnit = "mm";
-                weatherData.units = obj;
+                weatherData.units = Units.getDefaultUnits();
             }
 
             if (weatherData.current && weatherData.current.stnDateTime) {
@@ -1564,12 +1558,13 @@ angular.module('starter.services', [])
             var current = thisTime[1];
 
             if (todayInfo.sunrise) {
-                sunrise = todayInfo.sunrise/100;
+                sunrise = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunrise);
             }
             if (todayInfo.sunset) {
-                sunset = todayInfo.sunset/100;
+                sunset = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunset);
             }
-            isNight = currentTime < sunrise || currentTime > sunset;
+
+            isNight = currentTime < sunrise.getHours() || currentTime> sunset.getHours();
 
             if (current.temp_c == undefined) {
                 console.log("Error temp_c of current is undefined");
@@ -1971,13 +1966,7 @@ angular.module('starter.services', [])
             var shortTownWeather;
 
             if (weatherData.units == undefined) {
-                var obj = {};
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "m/s";
-                obj.pressureUnit = "hPa";
-                obj.distanceUnit = "m";
-                obj.precipitationUnit = "mm";
-                weatherData.units = obj;
+                weatherData.units = Units.getDefaultUnits();
             }
 
             try {
