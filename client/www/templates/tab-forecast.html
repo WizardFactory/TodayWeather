@@ -32,15 +32,15 @@
             <div md-header-picture ng-style="::{'height':headerHeight+'px'}"></div>
             <div class="main-content short-forecast">
                 <div class="col extend-content">
-                    <div style="position: relative">
+                    <div style="position: relative" ng-if="timeWidth">
                         <ion-scroll delegate-handle="timeChart" direction="x" zooming="false" has-bouncing="false"
                                     scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
                             <div class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
                                 <div id="shortTable" class="col table-content" ng-if="timeTable">
                                     <div class="row row-no-padding day-title-list">
                                         <!--마지막 0시에 대한 날짜는 표기 하지 않음.-->
-                                        <div class="col day-title" ng-style="{'left': getDayPosition($index)+'px'}"
-                                             ng-if="$index > 1 && $index < timeTable.length-1 && isNextDay(value)"
+                                        <div class="col day-title" ng-style="{'left': getDayPosition(value, $index)+'px'}"
+                                             ng-if="$index < timeTable.length-1 && isNextDay(value, $index)"
                                              ng-repeat="value in timeTable">
                                             <p class="caption" style="margin: 0;">{{getDayString(value.fromToday)|translate}} {{value.date.substr(4,2) + '.' + value.date.substr(6,2)}}</p>
                                         </div>

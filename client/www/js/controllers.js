@@ -104,7 +104,10 @@ angular.module('starter.controllers', [])
 
         if ($scope.forecastType == 'short') {
             var preDayInHourlyTable;
-            $scope.isNextDay = function(weatherData) {
+            $scope.isNextDay = function(weatherData, index) {
+                if (weatherData.time == 24 && index == 0) {
+                    return false;
+                }
                 if (preDayInHourlyTable == undefined) {
                     preDayInHourlyTable = weatherData.date;
                     return true;
@@ -116,19 +119,18 @@ angular.module('starter.controllers', [])
                 return false;
             };
 
-            $scope.getDayPosition = function(index) {
-                if (index < 8) {
-                    index = 0;
-                }
-                else {
-                    //24시로 표기시에 3시에 날짜가 변경되므로, 한칸 당겨야 함.
-                    //todo : 외국의 경우 재조정필요.
+            /**
+             * 위치가 정확하지는 않지만, 모레와 과거에 대한 데이터가 가변일때 제대로 표시됨.
+             * 24시 표기에서는 index를 한칸 당김.
+             * @param index
+             * @returns {number}
+             */
+            $scope.getDayPosition = function(value, index) {
+                if (value.time > 0) {
                     index -= 1;
                 }
-                var left = $scope.colWidth/2 + index*colWidth;
-                return left;
+                return $scope.colWidth/2 + index*colWidth;
             };
-
         }
 
         $scope.openUrl = function (src) {

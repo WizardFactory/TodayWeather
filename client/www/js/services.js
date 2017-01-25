@@ -1630,7 +1630,6 @@ angular.module('starter.services', [])
         }
 
         function _convertDateToYYYYMMDD(date) {
-
             //I don't know why one more create Date object by aleckim
             var d = new Date(date);
             var month = '' + (d.getMonth() + 1);
@@ -1671,9 +1670,9 @@ angular.module('starter.services', [])
                 var date = _convertYYYYoMMoDD_HH8MMtoDate(hourlyObj.date);
                 var time = date.getHours();
                 var diffDays = getDiffDays(date, todayInfo.dateObj);
-                var sunrise = todayInfo.sunrise/100;
-                var sunset = todayInfo.sunset/100;
-                var isNight = time < sunrise || time > sunset;
+                var sunrise = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunrise);
+                var sunset = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunset);
+                var isNight = time < sunrise.getHours() || time > sunset.getHours();
 
                 tempObject.date = _convertDateToYYYYMMDD(date);
                 tempObject.time = date.getHours();
@@ -1838,8 +1837,8 @@ angular.module('starter.services', [])
             var todayInfo;
 
             daily.forEach(function (dayInfo, index) {
-                var data = {};
-                //data = dayInfo;
+                var data;
+                data = JSON.parse(JSON.stringify(dayInfo));
                 //var date = new Date(dayInfo.date);
                 var date = _convertYYYYoMMoDD_HH8MMtoDate(dayInfo.date);
 

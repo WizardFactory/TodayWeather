@@ -125,7 +125,7 @@ angular.module('controller.units', [])
         };
 
         obj.getUnit = function (unit) {
-            console.log('get unit='+unit+' val='+obj[unit]);
+            //console.log('get unit='+unit+' val='+obj[unit]);
             return obj[unit];
         };
 
