@@ -418,6 +418,7 @@ function controllerWorldWeather(){
                             return;
                         }
 
+                        //validation을 통과했는데, yesterday 못 만드는 경우 있음.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data');
                             log.error('TWW> DSF CurDate : ', cDate.toString());
@@ -869,8 +870,16 @@ function controllerWorldWeather(){
                     log.info('convert DSF LocalTime > daily');
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
-                        time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms)
+                        time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms);
                         dailyItem.dateObj = self._convertTimeString(time);
+
+                        time.setTime(dailyItem.sunrise.getTime() + req.result.timezone.ms);
+                        dailyItem.sunrise = self._convertTimeString(time);
+
+                        time.setTime(dailyItem.sunset.getTime() + req.result.timezone.ms);
+                        dailyItem.sunset = self._convertTimeString(time);
+
+                        //mint, maxt, pre_intmaxt
                     });
                 }
             });

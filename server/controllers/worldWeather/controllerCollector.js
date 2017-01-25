@@ -1014,24 +1014,24 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.dateObj = self._getUtcTime(item.time + '000');
             dailyData.date = parseInt(self._convertTimeToDate(item.time + '000'));
             dailyData.summary = item.summary;
-            dailyData.sunrise = parseInt(self._convertTimeToDate(item.sunriseTime + '000'));
-            dailyData.sunset = parseInt(self._convertTimeToDate(item.sunsetTime + '000'));
+            dailyData.sunrise = self._getUtcTime(item.sunriseTime + '000');
+            dailyData.sunset = self._getUtcTime(item.sunsetTime + '000');
             dailyData.moonphase = self._getFloatItem(item.moonPhase);
             dailyData.pre_int = self._getFloatItem(item.precipIntensity);
             dailyData.pre_intmax = self._getFloatItem(item.precipIntensityMax);
-            dailyData.pre_intmaxt = parseInt(self._convertTimeToDate(item.precipIntensityMaxTime + '000'));
+            dailyData.pre_intmaxt = self._getUtcTime(item.precipIntensityMaxTime + '000');
             dailyData.pre_pro = self._getFloatItem(item.precipProbability);
             if(item.precipType){
                 dailyData.pre_type = item.precipType;
             }
             dailyData.temp_min = self._getFloatItem(item.temperatureMin);
-            dailyData.temp_mint = parseInt(self._convertTimeToDate(item.temperatureMinTime + '000'));
+            dailyData.temp_mint = self._getUtcTime(item.temperatureMinTime + '000');
             dailyData.temp_max = self._getFloatItem(item.temperatureMax);
-            dailyData.temp_maxt = parseInt(self._convertTimeToDate(item.temperatureMaxTime + '000'));
+            dailyData.temp_maxt = self._getUtcTime(item.temperatureMaxTime + '000');
             dailyData.ftemp_min = self._getFloatItem(item.apparentTemperatureMin);
-            dailyData.ftemp_mint = parseInt(self._convertTimeToDate(item.apparentTemperatureMinTime + '000'));
+            dailyData.ftemp_mint = self._getUtcTime(item.apparentTemperatureMinTime + '000');
             dailyData.ftemp_max = self._getFloatItem(item.apparentTemperatureMax);
-            dailyData.ftemp_maxt = parseInt(self._convertTimeToDate(item.apparentTemperatureMaxTime + '000'));
+            dailyData.ftemp_maxt = self._getUtcTime(item.apparentTemperatureMaxTime + '000');
             dailyData.humid = self._getFloatItem(item.humidity);
             dailyData.windspd = self._getFloatItem(item.windSpeed);
             dailyData.winddir = self._getFloatItem(item.windBearing);
@@ -1310,6 +1310,34 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
     });
 };
 
+ConCollector.prototype._getLocalLast0H = function (timeOffset) {
+    var utcTime = new Date();
+    var localTime = new Date();
+    localTime.setUTCMinutes(localTime.getUTCMinutes()+timeOffset);
+
+    if (utcTime.getUTCDate() == localTime.getUTCDate()) {
+        //same day
+        log.info('same day');
+    }
+    else if (utcTime.getUTCDate() < localTime.getUTCDate()) {
+       //next day
+        log.info('next day');
+        utcTime.setUTCDate(utcTime.getUTCDate()+1);
+    }
+    else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
+       //previous day
+        log.info('previous day');
+        utcTime.setUTCDate(utcTime.getUTCDate()-1);
+    }
+    utcTime.setUTCHours(0);
+    utcTime.setUTCMinutes(0);
+    utcTime.setUTCSeconds(0);
+    utcTime.setUTCMilliseconds(0);
+    utcTime.setUTCMinutes(-timeOffset);
+
+    return utcTime;
+};
+
 /**
  *
  * @param geocode
@@ -1321,21 +1349,18 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     var dataList = [];
     var requester = new dsfRequester;
 
-    if(timeOffset > 24 || timeOffset < -24){
+    if(timeOffset > 14 || timeOffset < -11){
         timeOffset = 0;
     }
 
+    var reqTime = self._getLocalLast0H(timeOffset*60);
     for(var i=From ; i<To ; i++){
-        var reqTime = new Date();
-        reqTime.setUTCMinutes(0);
-        reqTime.setUTCSeconds(0);
-        reqTime.setUTCMilliseconds(0);
-        reqTime.setUTCDate(reqTime.getDate()-i);
-        reqTime.setUTCHours(-timeOffset); //timeZone의 반대로 가야 함.
+        reqTime.setUTCDate(reqTime.getUTCDate()-i);
         //log.info("reqTime="+reqTime.toISOString());
         var nTime = reqTime.getTime()/1000;
         dataList.push(nTime);
     }
+
     dataList.push('cur');
 
     self.removeAllDsfDb(geocode, function(err){
