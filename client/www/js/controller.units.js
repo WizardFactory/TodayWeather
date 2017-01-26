@@ -353,7 +353,7 @@ angular.module('controller.units', [])
 
         function _convertPrecipitation(from, to, val) {
             if (from == 'mm') {
-                return parseFloat((val*0.03937).toFixed(1));
+                return parseFloat((val*0.03937).toFixed(2));
             }
             else if (from =='in') {
                 return parseFloat((val*25.4).toFixed(1));
@@ -362,7 +362,7 @@ angular.module('controller.units', [])
 
         obj.convertUnits = function (from, to, val) {
             if (val == undefined) {
-                console.log("val is undefined!!");
+                //console.log("val is undefined!!");
                 return val;
             }
             if (from == to) {

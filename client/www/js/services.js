@@ -660,12 +660,26 @@ angular.module('starter.services', [])
                     currentForecast.yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.t1h);
                 }
             }
+
+            if (currentForecast.pty == 3 && currentForecast.rn1) {
+                currentForecast.rn1 *= 10;
+            }
+            if (currentForecast.s1d) {
+                currentForecast.s1d *= 10;
+            }
+
             if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
                 currentForecast.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rn1);
                 currentForecast.rs1h = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1h);
                 currentForecast.rs1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1d);
                 currentForecast.r1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.r1d);
                 if (!(currentForecast.yesterday == undefined)) {
+                    if (currentForecast.yesterday.pty == 3) {
+                        currentForecast.yesterday.rn1 *= 10;
+                    }
+                    if (currentForecast.yesterday.s1d) {
+                       currentForecast.yesterday.s1d *= 10;
+                    }
                     currentForecast.yesterday.rn1 = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.rn1);
                 }
             }
@@ -768,6 +782,13 @@ angular.module('starter.services', [])
                     tempObject.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.heatIndex);
                 }
 
+                if (tempObject.pty == 3 && tempObject.rn1) {
+                    tempObject.rn1 *= 10;
+                }
+                if (tempObject.s06) {
+                    tempObject.s06 *= 10;
+                }
+
                 if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
                     tempObject.r06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.r06);
                     tempObject.s06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.s06);
@@ -839,6 +860,14 @@ angular.module('starter.services', [])
                 if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
                     data.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmx);
                     data.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmn);
+                }
+
+                if (data.pty == 3 && data.rn1) {
+                    //convert cm to mm of snow
+                    data.rn1 *= 10;
+                }
+                if (data.s06) {
+                    data.s06 *= 10;
                 }
 
                 if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {

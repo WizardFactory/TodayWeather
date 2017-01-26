@@ -387,21 +387,10 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.value.rn1) {
-                                    if (d.value.pty == 3)  {
-                                        return 'cm';
-                                    }
-                                    else {
-                                        return 'mm';
-                                    }
+                                if (d.value.rn1 || d.value.s06 || d.value.r06) {
+                                    return scope.getPrecipUnit(d.value);
                                 }
-                                else if (d.value.s06) {
-                                    return 'cm';
-                                }
-                                else if (d.value.r06) {
-                                    return 'mm';
-                                }
-                                return "";
+                                return '';
                             });
 
                         hourObject.filter(function(d, i) {
@@ -947,21 +936,10 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.rn1) {
-                                    if (d.pty == 3)  {
-                                        return 'cm';
-                                    }
-                                    else {
-                                        return 'mm';
-                                    }
+                                if (d.rn1 || d.s06 || d.r06) {
+                                    return scope.getPrecipUnit(d);
                                 }
-                                else if (d.s06) {
-                                    return 'cm';
-                                }
-                                else if (d.r06) {
-                                    return 'mm';
-                                }
-                                return "";
+                                return '';
                             });
 
                         var rects = group.selectAll('.rect')
