@@ -226,12 +226,17 @@ ControllerRequester.prototype.parseGeocode = function(req){
     return true;
 };
 
+/**
+ * must be supporting 30 mins
+ * @param req
+ * @returns {boolean}
+ */
 ControllerRequester.prototype.parseTimezone = function(req){
     if(req.query.timezone === undefined){
         log.silly('RQ> There are no timezone');
         return false;
     }
-    req.timezone = parseInt(req.query.timezone);
+    req.timezone = req.query.timezone;
 
     log.info('RQ timezone> ', req.timezone);
 

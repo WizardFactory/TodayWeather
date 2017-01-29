@@ -418,6 +418,7 @@ function controllerWorldWeather(){
                             return;
                         }
 
+                        //validation을 통과했는데, yesterday 못 만드는 경우 있음.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data');
                             log.error('TWW> DSF CurDate : ', cDate.toString());
@@ -869,8 +870,16 @@ function controllerWorldWeather(){
                     log.info('convert DSF LocalTime > daily');
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
-                        time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms)
+                        time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms);
                         dailyItem.dateObj = self._convertTimeString(time);
+
+                        time.setTime(dailyItem.sunrise.getTime() + req.result.timezone.ms);
+                        dailyItem.sunrise = self._convertTimeString(time);
+
+                        time.setTime(dailyItem.sunset.getTime() + req.result.timezone.ms);
+                        dailyItem.sunset = self._convertTimeString(time);
+
+                        //mint, maxt, pre_intmaxt
                     });
                 }
             });
@@ -1435,7 +1444,7 @@ function controllerWorldWeather(){
             day.press = summary.pres;
         }
         if(summary.vis){
-            day.vis = Math.round(summary.vis * 1.16093);
+            day.vis = Math.round(summary.vis * 1.609344);
         }
 
         return day;
@@ -1488,7 +1497,7 @@ function controllerWorldWeather(){
             hourly.precip = summary.pre_int;
         }
         if(summary.vis){
-            hourly.vis = Math.round(summary.vis * 1.16093);
+            hourly.vis = Math.round(summary.vis * 1.609344);
         }
         if(summary.pres){
             hourly.press = summary.pres;
@@ -1547,7 +1556,8 @@ function controllerWorldWeather(){
             current.precip = parseFloat(summary.pre_int.toFixed(2));
         }
         if(summary.vis){
-            current.vis = Math.round(summary.vis * 1.16093);
+            //miles -> km
+            current.vis = Math.round(summary.vis * 1.609344);
         }
         if(summary.pres){
             current.press = summary.pres;
