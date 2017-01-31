@@ -40,7 +40,7 @@ router.get('/', [cTown.getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,

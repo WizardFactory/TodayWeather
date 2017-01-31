@@ -43,6 +43,15 @@ function ControllerTown() {
     this.dbTownList = [];
 
     var self = this;
+    this.checkParamValidation = function(req, res, next) {
+        var regionName = req.params.region;
+        if (regionName == '중국' || regionName == '일본' || regionName == '미국') {
+            log.info('We did not support this region '+regionName);
+            res.status(400).send("We didn't support this region");
+        }
+        return this;
+    };
+
     /**
      *
      * @param req
