@@ -89,6 +89,7 @@ controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
         case '번개': return 55;
         case '마른뇌전': return 56;
         case '뇌전끝': return 57;
+        case '얼음싸라기': return 58;
         default :
             log.error("Fail weatherStr="+weatherStr);
     }

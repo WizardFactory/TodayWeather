@@ -891,13 +891,19 @@ function ControllerTown() {
         if (weather == undefined) {
             return 0;
         }
-        if (weather.indexOf("비") >= 0) {
+        if (weather.indexOf("끝") >= 0) {
+            return 0;
+        }
+        else if (weather.indexOf("비") >= 0) {
             return 1;
         }
         else if (weather.indexOf("진눈깨비") >= 0) {
             return 2;
         }
         else if (weather.indexOf("눈") >= 0) {
+            return 3;
+        }
+        else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
             return 3;
         }
         else if (rns == true) {
@@ -1330,7 +1336,9 @@ function ControllerTown() {
                     }
 
                     /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
-                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함. */
+                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함.
+                        current -> 도시별 날씨 -> AWS 분단위 -> 초단기 */
+
                     var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
                     var stnFirst = true;
                     if (!(req.currentPubDate == undefined)) {
@@ -1353,18 +1361,30 @@ function ControllerTown() {
                         }
                     }
 
+                    if (stnFirst) {
+                        req.current.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
+                        req.current.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
+                    }
 
-                    if (req.current.rn1 == undefined) {
-                        req.current.rn1 = stnWeatherInfo.rs1h;
+                    if (req.current.rn1 == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.rs1h == undefined)) {
+                            req.current.rn1 = stnWeatherInfo.rs1h;
+                        }
                     }
-                    if (req.current.sky == undefined) {
-                        req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                    if (req.current.sky == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.cloud == undefined)) {
+                            req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                        }
                     }
-                    if (req.current.pty == undefined) {
-                        req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                    if (req.current.pty == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.weather == undefined) && !(stnWeatherInfo.rns == undefined)) {
+                            req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                        }
                     }
-                    if (req.current.lgt == undefined) {
-                        req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                    if (req.current.lgt == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.weather == undefined)) {
+                            req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                        }
                     }
 
                     if (stnFirst) {
