@@ -11,12 +11,18 @@ angular.module('controller.units', [])
         obj.distanceUnit;
         obj.precipitationUnit;
 
-        function _initUnits() {
+        function _getDefaultUnits() {
+            var obj = {};
             obj.temperatureUnit = "C";
             obj.windSpeedUnit = "m/s";
             obj.pressureUnit = "hPa";
-            obj.distanceUnit = "m";
+            obj.distanceUnit = "km";
             obj.precipitationUnit = "mm";
+            return obj;
+        }
+
+        function _initUnits() {
+            obj = _getDefaultUnits();
 
             if (Util.region == 'KR') {
                 //skip
@@ -25,7 +31,7 @@ angular.module('controller.units', [])
                 obj.temperatureUnit = "C";
                 obj.windSpeedUnit = "m/s";
                 obj.pressureUnit = "mmHg";
-                obj.distanceUnit = "m";
+                obj.distanceUnit = "km";
                 obj.precipitationUnit = "mm";
             }
             else if (Util.region == 'US') {
@@ -39,27 +45,31 @@ angular.module('controller.units', [])
                 obj.temperatureUnit = "C";
                 obj.windSpeedUnit = "km/h";
                 obj.pressureUnit = "mb";
-                obj.distanceUnit = "m";
+                obj.distanceUnit = "km";
                 obj.precipitationUnit = "mm";
             }
             else if (Util.region == 'CN') {
                 obj.temperatureUnit = "C";
                 obj.windSpeedUnit = "km/h";
                 obj.pressureUnit = "hPa";
-                obj.distanceUnit = "m";
+                obj.distanceUnit = "km";
                 obj.precipitationUnit = "mm";
             }
             else if (Util.region == 'TW') {
                 obj.temperatureUnit = "C";
                 obj.windSpeedUnit = "km/h";
                 obj.pressureUnit = "mmHg";
-                obj.distanceUnit = "m";
+                obj.distanceUnit = "km";
                 obj.precipitationUnit = "mm";
             }
             else {
                //set default
             }
         }
+
+        obj.getDefaultUnits = function () {
+            return _getDefaultUnits();
+        };
 
         obj.loadUnits = function () {
             var units;
@@ -333,17 +343,17 @@ angular.module('controller.units', [])
         }
 
         function _convertDistance(from, to, val) {
-            if (from == 'm') {
-                return parseFloat((val*39.370079).toFixed(1));
+            if (from == 'km') {
+                return parseFloat((val*0.621371).toFixed(1));
             }
             else if (from =='mi') {
-                return parseFloat((val*0.0254).toFixed(1));
+                return parseFloat((val*1.609344).toFixed(1));
             }
         }
 
         function _convertPrecipitation(from, to, val) {
             if (from == 'mm') {
-                return parseFloat((val*0.03937).toFixed(1));
+                return parseFloat((val*0.03937).toFixed(2));
             }
             else if (from =='in') {
                 return parseFloat((val*25.4).toFixed(1));
@@ -352,7 +362,7 @@ angular.module('controller.units', [])
 
         obj.convertUnits = function (from, to, val) {
             if (val == undefined) {
-                console.log("val is undefined!!");
+                //console.log("val is undefined!!");
                 return val;
             }
             if (from == to) {
@@ -368,7 +378,7 @@ angular.module('controller.units', [])
             if (from == 'mmHg' || from == 'inHg' || from == 'hPa' || from == 'mb') {
                 return _convertPressure(from, to, val);
             }
-            if (from == 'm' || from == 'mi') {
+            if (from == 'km' || from == 'mi') {
                 return _convertDistance(from, to, val);
             }
             if (from == 'mm' || from == 'in') {
@@ -404,6 +414,7 @@ angular.module('controller.units', [])
 
         $scope.setUnit = function (unit, value) {
             if (Units.setUnit(unit, value)) {
+                Units.saveUnits();
                 _resetUpdateTimeCities();
             }
         };

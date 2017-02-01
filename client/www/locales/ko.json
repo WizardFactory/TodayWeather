@@ -50,7 +50,7 @@
   "LOC_TEMPERATURE_UNIT" : "온도단위",
   "LOC_WIND_SPEED_UNIT" : "풍속단위",
   "LOC_PRESSURE_UNIT" : "기압단위",
-  "LOC_DISTANCE" : "거리",
+  "LOC_DISTANCE_UNIT": "거리",
   "LOC_DEW_POINT" : "이슬점",
   "LOC_TIME_ZONE" : "시간대",
   "LOC_PREMIUM" : "프리미엄",

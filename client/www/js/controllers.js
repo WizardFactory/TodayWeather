@@ -486,19 +486,22 @@ angular.module('starter.controllers', [])
         $scope.getRainSnowFallSymbol = function (value) {
             if (value.rn1 > 0) {
                if (value.pty == 3)  {
-                   return "cm"
+                   return "snow";
                }
                 else {
-                   return "mm"
+                   return "rain";
                }
             }
             else if (value.s06 > 0) {
-                return "cm"
+                return "snow";
             }
             else if (value.r06 > 0) {
-                return "mm"
+                return "rain";
             }
-        }
+            else {
+                return "rain";
+            }
+        };
 
         $scope.getRainSnowFall = function (value) {
             var ret = _makeRainSnowFallValueStr(value.pty, value.rn1, value.r06, value.s06);
@@ -1237,15 +1240,15 @@ angular.module('starter.controllers', [])
         };
 
         $scope.getPrecipUnit = function (data) {
-            var val = Units.getUnit('precipitationUnit');
-            if (val == 'mm') {
-                if (data.pty == 3) {
-                   return 'cm';
-                }
-                else {
-                    return 'mm';
-                }
-            }
+            //var val = Units.getUnit('precipitationUnit');
+            //if (val == 'mm') {
+            //    if (data.pty == 3) {
+            //       return 'cm';
+            //    }
+            //    else {
+            //        return 'mm';
+            //    }
+            //}
             return Units.getUnit('precipitationUnit');
         };
 

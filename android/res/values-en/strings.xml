@@ -5,12 +5,12 @@
  <string name="today">Today</string>
  <string name="tomorrow">Tomorrow</string>
  <string name="same_yesterday">Same as yesterday</string>
- <string name="cmp_yesterday">%1$s˚ than yesterday</string>
+ <string name="cmp_yesterday">%1$s˚ from yesterday</string>
  <string name="update">Update</string>
- <string name="move_main">Go to the app</string>
- <string name="msg_do_not_widget_data_plz_update">Weather info is nothing\nPlease click to update.</string>
- <string name="fail_to_get_location">TodayWeather : Fail to get location</string>
- <string name="current_position">Current Position</string>
+ <string name="move_main">Go to App</string>
+ <string name="msg_do_not_widget_data_plz_update">Unable to retrieve weather information.\nClick here to refresh.</string>
+ <string name="fail_to_get_location">TodayWeather : Unable to detect your location.</string>
+ <string name="current_position">Current Location</string>
  <string name="cancel">Cancel</string>
  <string name="aqi">AQI</string>
  <string name="pm10">PM10</string>
@@ -21,6 +21,6 @@
  <string name="unhealthy">Unhealthy</string>
  <string name="very_unhealthy">Very unhealthy</string>
  <string name="hazardous">Hazardous</string>
- <string name="this_location_is_not_supported">This location is not support AQI information</string>
- <string name="fail_to_get_geoinfo">TodayWeather : Fail to get geo information</string>
+ <string name="this_location_is_not_supported">No weather data available</string>
+ <string name="fail_to_get_geoinfo">TodayWeather : Unable to retrieve local data</string>
 </resources>

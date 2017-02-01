@@ -39,10 +39,10 @@
             </label>
             <label class="item item-input item-select">
                 <div class="input-label">
-                    {{'LOC_DISTANCE'|translate}}
+                    {{'LOC_DISTANCE_UNIT'|translate}}
                 </div>
                 <select ng-model="distanceUnit" ng-change="setUnit('distanceUnit', distanceUnit)">
-                    <option value="m">m,km</option>
+                    <option value="km">km</option>
                     <option value="mi">miles</option>
                 </select>
             </label>
@@ -51,7 +51,7 @@
                     {{'LOC_PRECIPITATION'|translate}}
                 </div>
                 <select ng-model="precipitationUnit" ng-change="setUnit('precipitationUnit', precipitationUnit)">
-                    <option value="mm">mm,cm</option>
+                    <option value="mm">mm</option>
                     <option value="in">inch</option>
                 </select>
             </label>

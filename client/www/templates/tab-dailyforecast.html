@@ -127,8 +127,8 @@
                                        <img src="img/glass-with-water.svg" style="height: 20px; margin: auto 2px;">
                                        <div style="margin: auto 8px">
                                            <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getPrecipUnit(day)}}</small></p>
-                                           <span class="caption" ng-if="getRainSnowFallSymbol(day)=='cm'">{{'LOC_DAILY_SNOWFALL'|translate}}</span>
-                                           <span class="caption" ng-if="getRainSnowFallSymbol(day)!='cm'">{{'LOC_DAILY_PRECIPITATION'|translate}}</span>
+                                           <span class="caption" ng-if="getRainSnowFallSymbol(day)=='snow'">{{'LOC_DAILY_SNOWFALL'|translate}}</span>
+                                           <span class="caption" ng-if="getRainSnowFallSymbol(day)=='rain'">{{'LOC_DAILY_PRECIPITATION'|translate}}</span>
                                        </div>
                                    </div>
                                </div>
