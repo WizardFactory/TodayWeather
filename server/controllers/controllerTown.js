@@ -49,6 +49,9 @@ function ControllerTown() {
             log.info('We did not support this region '+regionName);
             res.status(400).send("We didn't support this region");
         }
+        else {
+            next();
+        }
         return this;
     };
 
