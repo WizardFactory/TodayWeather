@@ -187,6 +187,8 @@ static TodayViewController *todayVC = nil;
         showMoreView.hidden = YES;
         NSLog(@"This OSVersion can't use Show More feature!!!");
     }
+    
+    [todayWSM showDailyWeatherAsWidth];
 }
 
 /********************************************************************
@@ -209,8 +211,7 @@ static TodayViewController *todayVC = nil;
                    transition:UIViewAnimationTransitionFlipFromLeft
                      duration:0.75f];
         showMoreView.hidden         = true;
-        NSLog(@"NCWidgetDisplayModeCompact height : %f", self.preferredContentSize.height);
-        
+        NSLog(@"NCWidgetDisplayModeCompact width : %f, height : %f", self.preferredContentSize.width, self.preferredContentSize.height);
     }
     else
     {
@@ -276,6 +277,9 @@ static TodayViewController *todayVC = nil;
     todayWSM = [[TodayWeatherShowMore alloc] init];
     
     [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, WIDGET_COMPACT_HEIGHT)];
+    
+    NSLog(@"width : %f", self.view.bounds.size.width);
+    
     // Do any additional setup after loading the view from its nib.
     locationView.hidden = true;
     bIsDateView = true;
@@ -526,7 +530,11 @@ static TodayViewController *todayVC = nil;
 - (IBAction) editWidget:(id)sender
 {
     NSURL *pjURL = [NSURL URLWithString:@"todayweather://"];
-    [self.extensionContext openURL:pjURL completionHandler:nil];
+    NSLog(@"pjURL : %@", pjURL);
+    [self.extensionContext openURL:pjURL completionHandler:^(BOOL success) {
+        NSLog(@"fun=%s after completion. success=%d", __func__, success);
+    }];
+    //[self.extensionContext openURL:pjURL completionHandler:nil];
 }
 
 /********************************************************************
@@ -686,9 +694,10 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (void) getAddressFromDaum:(double)latitude longitude:(double)longitude
 {
+    //35.281741, 127.292345 <- 곡성군 에러
     // FIXME - for emulator - delete me
-    //latitude = 37.574226;
-    //longitude = 127.191671;
+    // latitude = 35.281741;
+    // longitude = 127.292345;
     
     NSString *nssURL = [NSString stringWithFormat:@"%@%@%@%@%g%@%g%@%@", STR_DAUM_COORD2ADDR_URL, STR_APIKEY, DAUM_SERVICE_KEY, STR_LONGITUDE, longitude, STR_LATITUDE, latitude, STR_INPUT_COORD, STR_OUTPUT_JSON];
     
@@ -868,7 +877,6 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (void) processWeatherResultsWithShowMore:(NSDictionary *)jsonDict
 {
-    NSDictionary *nsdDailySumDict = nil;
     NSDictionary *currentDict = nil;
     NSDictionary *currentArpltnDict = nil;
     NSDictionary *todayDict = nil;

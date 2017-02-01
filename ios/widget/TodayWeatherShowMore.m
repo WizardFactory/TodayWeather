@@ -11,6 +11,13 @@
 #import "TodayWeatherUtil.h"
 #import "TodayViewController.h"
 
+#define FIVE_DAILY_WT_WMARGIN   2           // Sum of LR Margin 4
+#define FIVE_DAILY_WT_WIDTH     60
+
+#define FIVE_DAILY_IMG_MARGIN    12
+#define FIVE_DAILY_IMG_WIDTH     36
+#define FIVE_DAILY_IMG_HEIGHT    36
+
 @implementation TodayWeatherShowMore
 
 /********************************************************************
@@ -293,5 +300,50 @@
     [UIView	commitAnimations];
 }
 
+
+/********************************************************************
+ *
+ * Name			: showDailyWeatherAsWidth
+ * Description	: showDailyWeatherAsWidth
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 01. 23
+ * Author		: SeanKim
+ * History		: 20170123 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) showDailyWeatherAsWidth
+{
+    TodayViewController *TVC = [TodayViewController sharedInstance];
+    NSLog(@"[showDailyWeatherAsWidth] TVC.view.bounds.size.width :%f", TVC.view.bounds.size.width);
+    // actual width is 304, margin is 16
+    if(TVC.view.bounds.size.width <= 320.00)
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            TVC->time6Label.hidden      = YES;
+            TVC->temp6Label.hidden      = YES;
+            TVC->showMore6IV.hidden     = YES;
+            
+            TVC->time1Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN, 10, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->time2Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH, 10, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->time3Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*2, 10, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->time4Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*3, 10, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->time5Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*4, 10, FIVE_DAILY_WT_WIDTH, 21);
+            
+            TVC->showMore1IV.frame      = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_IMG_MARGIN, 36, FIVE_DAILY_IMG_WIDTH, FIVE_DAILY_IMG_HEIGHT);
+            TVC->showMore2IV.frame      = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_IMG_MARGIN*3 + FIVE_DAILY_IMG_WIDTH, 36, FIVE_DAILY_IMG_WIDTH, FIVE_DAILY_IMG_HEIGHT);
+            TVC->showMore3IV.frame      = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_IMG_MARGIN*5 + FIVE_DAILY_IMG_WIDTH*2, 36, FIVE_DAILY_IMG_WIDTH, FIVE_DAILY_IMG_HEIGHT);
+            TVC->showMore4IV.frame      = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_IMG_MARGIN*7 + FIVE_DAILY_IMG_WIDTH*3, 36, FIVE_DAILY_IMG_WIDTH, FIVE_DAILY_IMG_HEIGHT);
+            TVC->showMore5IV.frame      = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_IMG_MARGIN*9 + FIVE_DAILY_IMG_WIDTH*4, 36, FIVE_DAILY_IMG_WIDTH, FIVE_DAILY_IMG_HEIGHT);
+            
+            TVC->temp1Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN, 80, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->temp2Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH, 80, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->temp3Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*2, 80, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->temp4Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*3, 80, FIVE_DAILY_WT_WIDTH, 21);
+            TVC->temp5Label.frame       = CGRectMake(FIVE_DAILY_WT_WMARGIN + FIVE_DAILY_WT_WIDTH*4, 80, FIVE_DAILY_WT_WIDTH, 21);
+        });
+    }
+
+}
 
 @end
