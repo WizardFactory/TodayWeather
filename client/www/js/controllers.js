@@ -547,13 +547,13 @@ angular.module('starter.controllers', [])
                 displayItemCount = 7;
             }
             //최소한 한개의 이미지는 존재함.
-            val += $scope.smallImageSize*0.8;
+            val += $scope.smallImageSize;
 
             if (displayItemCount & 4) {
-                val += $scope.smallImageSize*0.8;
+                val += $scope.smallImageSize;
             }
             else {
-                val += $scope.smallImageSize*0.8/2;
+                val += $scope.smallImageSize/2;
             }
             if (displayItemCount & 2) {
                 //pop - body1
@@ -651,9 +651,10 @@ angular.module('starter.controllers', [])
                 $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
             }
             else {
-                if (showAqi && dayTable.length >= 8 && dayTable[cityData.currentWeather.today.index].dustForecast) {
-                    padding+=36;
-                }
+                //오전 오후를 상하에서 좌우로 변경시에 적용 가능
+                //if (showAqi && dayTable.length >= 8 && dayTable[cityData.currentWeather.today.index].dustForecast) {
+                //    padding+=36;
+                //}
                 var chartMidHeight = mainHeight - (136+padding);
                 $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
             }
