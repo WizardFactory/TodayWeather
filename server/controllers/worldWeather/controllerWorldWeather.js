@@ -77,6 +77,7 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
+        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         if(req.error){
             res.json(req.error);
             return;
@@ -121,9 +122,11 @@ function controllerWorldWeather(){
 
         meta.method = 'checkApiVersion';
         meta.version = req.params.version;
+        meta.sID = req.sessionID;
+
         req.version = req.params.version;
 
-        log.info(meta);
+        log.info("WW>",meta);
 
         // todo: To check all version and make way to alternate route.
         if(req.version !== '010000') {
@@ -132,7 +135,7 @@ function controllerWorldWeather(){
             req.error = 'WW> It is not valid version : ' + req.version;
             next();
         }else{
-            log.info('WW > go to next step', meta);
+            log.info('WW> go to next step', meta);
             req.validVersion = true;
             next();
         }
@@ -341,11 +344,11 @@ function controllerWorldWeather(){
     self.queryTwoDaysWeather = function(req, res, next){
         var cDate = new Date();
         var meta = {};
-
         meta.method = 'queryTwoDaysWeather';
+        meta.sID = req.sessionID;
 
         if(!req.validVersion){
-            log.error('TWW> invalid version : ', req.validVersion);
+            log.error('TWW> invalid version : ', req.validVersion, meta);
             return next();
         }
 
@@ -358,19 +361,19 @@ function controllerWorldWeather(){
         self.getCity(req);
 
         if(!req.geocode && !req.city){
-            log.error('It is not valid request');
+            log.error('It is not valid request', meta);
             req.error = 'It is not valid request';
             next();
             return;
         }
 
-        log.info('TWW> geocode : ', req.geocode);
+        log.info('TWW> geocode : ', req.geocode, meta);
 
         async.waterfall([
                 function(callback){
                     self.getLocalTimezone(req, function(err){
                         if(err){
-                            log.error('Fail to get LocalTimezone : ', err);
+                            log.error('Fail to get LocalTimezone : ', err, meta);
                         }
                         return callback(null);
                     });
@@ -407,40 +410,40 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
-                            log.error('TWW> Fail to get DSF data', err);
+                            log.error('TWW> Fail to get DSF data', err, meta);
                             callback('err_exit_DSF');
                             return;
                         }
 
                         if(req.DSF === undefined){
-                            log.error('TWW> There is no DSF data');
+                            log.error('TWW> There is no DSF data', meta);
                             callback('err_exit_notValid');
                             return;
                         }
 
                         //validation을 통과했는데, yesterday 못 만드는 경우 있음.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
-                            log.error('TWW> Invaild DSF data');
-                            log.error('TWW> DSF CurDate : ', cDate.toString());
-                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString());
+                            log.error('TWW> Invaild DSF data', meta);
+                            log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
+                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
                             callback('err_exit_notValid');
                             return;
                         }
 
-                        log.info('TWW> get DSF data');
+                        log.info('TWW> get DSF data', meta);
                         callback(null);
                     });
                 }
             ],
             function(err, result){
                 if(err){
-                    log.info('There is no correct weather data... try to request');
+                    log.info('TWW> There is no correct weather data... try to request', meta);
 
                     async.waterfall([
                             function(cb){
                                 self.requestData(req, 'req_two_days', function(err, result){
                                     if(err){
-                                        log.error('TWW> fail to reqeust');
+                                        log.error('TWW> fail to request', meta);
                                         req.error = {res: 'fail', msg:'Fail to request Two days data'};
                                         cb('err_exit : Fail to requestData()');
                                         return;
@@ -465,27 +468,27 @@ function controllerWorldWeather(){
                             function(cb){
                                 self.getDataFromDSF(req, function(err, result){
                                     if(err){
-                                        log.error('TWW> Fail to get DSF data', err);
+                                        log.error('TWW> Fail to get DSF data', err, meta);
                                         cb('err_exit_DSF');
                                         return;
                                     }
-                                    log.info('TWW> get DSF data');
+                                    log.info('TWW> get DSF data', meta);
                                     cb(null);
                                 });
                             }
                         ],
                         function(err, result){
                             if(err){
-                                log.info('TWW> Error!!!! : ', err);
+                                log.info('TWW> Error!!!! : ', err, meta);
                             }else {
-                                log.info('TWW> Finish to req&get Two days weather data');
+                                log.info('TWW> Finish to req&get Two days weather data', meta);
                             }
                             next();
                         }
                     );
                 }else{
                     log.silly('TWW> queryWeather no error');
-                    log.info('TWW> Finish to get Two days weather data');
+                    log.info('TWW> Finish to get Two days weather data', meta);
                     next();
                 }
             });
@@ -799,6 +802,9 @@ function controllerWorldWeather(){
         var timestamp;
         var url;
 
+        var meta = {};
+        meta.sID = req.sessionID;
+
         if(req.hasOwnProperty('result') === false){
             req.result = {};
         }
@@ -817,7 +823,7 @@ function controllerWorldWeather(){
 
             request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
                 if (err) {
-                    log.error('DSF Timezone > Fail to get timezone', err);
+                    log.error('DSF Timezone > Fail to get timezone', err, meta);
                     return callback(err);
                 }
                 else {
@@ -828,7 +834,7 @@ function controllerWorldWeather(){
                         req.result.timezone.min = offset/60; //convert to min;
                         req.result.timezone.ms = offset * 1000; // convert to millisecond
 
-                        log.info('DSF Timezone > ', req.result.timezone);
+                        log.info('DSF Timezone > ', req.result.timezone, meta);
 
                         return callback(0);
                     }
@@ -839,12 +845,14 @@ function controllerWorldWeather(){
                 }
             });
         }else{
-            log.error('there is no geocode from DSF data');
+            log.error('there is no geocode from DSF data', meta);
             callback(1);
         }
     };
 
     self.convertDsfLocalTime = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
 
         if(req.DSF && req.result.timezone){
             var dsf = req.DSF;
@@ -852,13 +860,13 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
                     var time = new Date();
-                    log.info('convert DSF LocalTime > current');
+                    log.info('convert DSF LocalTime > current', meta);
                     time.setTime(dsfItem.current.dateObj.getTime() + req.result.timezone.ms);
                     dsfItem.current.dateObj = self._convertTimeString(time);
                 }
 
                 if(dsfItem.hourly){
-                    log.info('convert DSF LocalTime > hourly');
+                    log.info('convert DSF LocalTime > hourly', meta);
                     dsfItem.hourly.data.forEach(function(hourlyItem){
                         var time = new Date();
                         time.setTime(hourlyItem.dateObj.getTime() + req.result.timezone.ms);
@@ -867,7 +875,7 @@ function controllerWorldWeather(){
                 }
 
                 if(dsfItem.daily){
-                    log.info('convert DSF LocalTime > daily');
+                    log.info('convert DSF LocalTime > daily', meta);
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
                         time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms);
@@ -928,6 +936,9 @@ function controllerWorldWeather(){
     };
 
     self.mergeDsfDailyData = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
+
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min / 60;
             var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
@@ -962,8 +973,8 @@ function controllerWorldWeather(){
                 req.result.daily = [];
             }
 
-            log.info('DSF Daily> SDate : ', startDate);
-            log.info('DSF Daily> CDdate : ', curDate);
+            log.info('DSF Daily> SDate : ', startDate, meta);
+            log.info('DSF Daily> CDdate : ', curDate, meta);
 
             dsf.data.forEach(function(item){
                 item.daily.data.forEach(function(dbItem){
@@ -989,6 +1000,9 @@ function controllerWorldWeather(){
     };
 
     self.mergeDsfHourlyData = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
+
         if(req.DSF && req.DSF.data){
             var timeOffset = req.result.timezone.min / 60;
             var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
@@ -1029,9 +1043,9 @@ function controllerWorldWeather(){
                 req.result.thisTime = [];
             }
 
-            log.info('DSF Hourly> SDate : ', startDate);
-            log.info('DSF Hourly> yesterday : ', yesterdayDate);
-            log.info('DSF Hourly> CDate : ', curDate);
+            log.info('DSF Hourly> SDate : ', startDate, meta);
+            log.info('DSF Hourly> yesterday : ', yesterdayDate, meta);
+            log.info('DSF Hourly> CDate : ', curDate, meta);
 
             dsf.data.forEach(function(item){
                 item.hourly.data.forEach(function(dbItem){
@@ -1046,7 +1060,7 @@ function controllerWorldWeather(){
                         });
 
                         if(!isExist){
-                            log.info('DSF yesterday > Found yesterday data', dbItem.dateObj);
+                            log.info('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
                             req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem));
                         }
                     }
@@ -1073,6 +1087,9 @@ function controllerWorldWeather(){
     };
 
     self.mergeDsfCurrentData = function(req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+
         if (req.DSF && req.DSF.data) {
             var timeOffset = req.result.timezone.min / 60;
             var startDate = self._getTimeString(0 - 48 + timeOffset).slice(0,14) + '00';
@@ -1108,8 +1125,8 @@ function controllerWorldWeather(){
                 req.result.thisTime = [];
             }
 
-            log.info('DSF current> SDate : ', startDate);
-            log.info('DSF current> CDdate : ', curDate);
+            log.info('DSF current> SDate : ', startDate, meta);
+            log.info('DSF current> CDdate : ', curDate, meta);
 
             dsf.data.forEach(function (item) {
                 var isExist = false;
@@ -1123,7 +1140,7 @@ function controllerWorldWeather(){
                     });
 
                     if(!isExist){
-                        log.info('DSF current > Found current data', item.current.dateObj.toString());
+                        log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
                         req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(item.current));
                     }
                 }
@@ -1135,8 +1152,11 @@ function controllerWorldWeather(){
     };
 
     self.dataSort = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
+
         if(req.result.thisTime){
-            log.info('sort thisTime');
+            log.debug('sort thisTime', meta);
             req.result.thisTime.sort(function(a, b){
                 if(a.date > b.date){
                     return 1;
@@ -1148,7 +1168,7 @@ function controllerWorldWeather(){
             });
         }
         if(req.result.hourly){
-            log.info('sort hourly');
+            log.debug('sort hourly', meta);
             req.result.hourly.sort(function(a, b){
                 if(a.date > b.date){
                     return 1;
@@ -1161,7 +1181,7 @@ function controllerWorldWeather(){
         }
 
         if(req.result.daily){
-            log.info('sort daily');
+            log.debug('sort daily', meta);
             req.result.daily.sort(function(a, b){
                 if(a.date > b.date){
                     return 1;
@@ -1434,8 +1454,8 @@ function controllerWorldWeather(){
             day.humid = Math.round(summary.humid * 100);
         }
         if(summary.windspd){
-            day.windSpd_mh = Math.round(summary.windspd * 1609.344);
-            day.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+            day.windSpd_mh = summary.windspd;
+            day.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.winddir){
             day.windDir = summary.winddir;
@@ -1474,8 +1494,8 @@ function controllerWorldWeather(){
             hourly.cloud = Math.round(summary.cloud * 100);
         }
         if(summary.windspd){
-            hourly.windSpd_mh = Math.round(summary.windspd * 1609.344);
-            hourly.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+            hourly.windSpd_mh = summary.windspd;
+            hourly.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.winddir){
             hourly.windDir = summary.winddir;
@@ -1533,8 +1553,8 @@ function controllerWorldWeather(){
             current.cloud = Math.round(summary.cloud * 100);
         }
         if(summary.windspd){
-            current.windSpd_mh = Math.round(summary.windspd * 1609.344);
-            current.windSpd_ms = +((summary.windspd * 0.44704).toFixed(2));
+            current.windSpd_mh = summary.windspd;
+            current.windSpd_ms = parseFloat((summary.windspd * 0.44704).toFixed(2));
         }
         if(summary.winddir){
             current.windDir = summary.winddir;
@@ -1867,6 +1887,9 @@ function controllerWorldWeather(){
     };
 
     self.getDataFromDSF = function(req, callback){
+        var meta = {};
+        meta.sID = req.sessionID;
+
         var geocode = {
             lat: parseFloat(req.geocode.lat),
             lon: parseFloat(req.geocode.lon)
@@ -1874,13 +1897,13 @@ function controllerWorldWeather(){
 
         modelDSForecast.find({geocode:geocode}).lean().exec(function(err, list){
             if(err){
-                log.error('gDSF> fail to get DSF data');
+                log.error('gDSF> fail to get DSF data', meta);
                 callback(err);
                 return;
             }
 
             if(list.length === 0){
-                log.error('gDSF> There is no DSF data for ', geocode);
+                log.error('gDSF> There is no DSF data for ', geocode, meta);
                 callback(err);
                 return;
             }
@@ -1923,6 +1946,9 @@ function controllerWorldWeather(){
     };
 
     self.requestData = function(req, command, callback){
+        var meta = {};
+        meta.sID = req.sessionID;
+
         var base_url = config.url.requester;
         var key = 'abcdefg';
 
@@ -1948,18 +1974,18 @@ function controllerWorldWeather(){
             url += '&timezone=0';
         }
 
-        log.info('WW> req url : ', url);
+        log.info('WW> req url : ', url, meta);
         try{
             request.get(url, {timeout: 1000 * 20}, function(err, response, body){
                 if(err){
-                    log.error('WW> Fail to request adding geocode to db');
+                    log.error('WW> Fail to request adding geocode to db', meta);
                     callback(err);
                     return;
                 }
 
                 var result = JSON.parse(body);
-                log.info('WW> request success');
-                log.info(result);
+                log.info('WW> request success', meta);
+                log.info('WW> '+ JSON.stringify(result), meta);
                 if(result.status == 'OK'){
                     // adding geocode OK
                     callback(0, result);

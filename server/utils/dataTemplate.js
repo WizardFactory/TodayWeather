@@ -33,7 +33,7 @@ var defaultData = {
         ftemp_c: -1000,
         ftemp_f: -1000,
         cloud: -1000,
-        windSpd_mh: -1000,
+        windSpd_mh: -1000,      //miles per hour
         windSpd_ms: -1000,
         windDir: -1000,
         humid: -1000,
