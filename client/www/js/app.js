@@ -819,17 +819,17 @@ angular.module('starter', [
                                 return "img/weatherIcon2-color/" + d.skyAm + ".png";
                             })
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize * 0.8) / 2;
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
                             })
                             .attr("y", function (d) {
                                 var y = 17 + 2;
                                 if (d.skyAm == d.skyPm || d.skyPm == undefined) {
-                                    y += scope.smallImageSize * 0.8 / 3;
+                                    y += scope.smallImageSize / 3;
                                 }
                                 return y;
                             })
-                            .attr("width", scope.smallImageSize * 0.8)
-                            .attr("height", scope.smallImageSize * 0.8)
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize)
                             .filter(function (d) {
                                 return d.skyAm == undefined;
                             }).remove();
@@ -840,20 +840,20 @@ angular.module('starter', [
                                 return "img/weatherIcon2-color/" + d.skyPm + ".png";
                             })
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize * 0.8) / 2;
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
                             })
                             .attr("y", function (d) {
                                 var y = 17;
                                 if (d.skyAm == undefined) {
-                                    y += 2 + scope.smallImageSize * 0.8 / 3;
+                                    y += 2 + scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize * 0.8
+                                    y += scope.smallImageSize
                                 }
                                 return y;
                             })
-                            .attr("width", scope.smallImageSize * 0.8)
-                            .attr("height", scope.smallImageSize * 0.8)
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize)
                             .filter(function (d) {
                                 return d.skyAm == d.skyPm || d.skyPm == undefined;
                             }).remove();
@@ -866,12 +866,12 @@ angular.module('starter', [
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function (d) {
-                                var y = 17 + scope.smallImageSize * 0.8;
+                                var y = 17 + scope.smallImageSize;
                                 if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
-                                    y += scope.smallImageSize * 0.8 / 3;
+                                    y += scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize * 0.8;
+                                    y += scope.smallImageSize;
                                 }
                                 y += 14;
                                 return y;
@@ -900,12 +900,12 @@ angular.module('starter', [
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .attr("y", function (d) {
-                                var y = 17 + scope.smallImageSize * 0.8;
+                                var y = 17 + scope.smallImageSize;
                                 if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
-                                    y += scope.smallImageSize * 0.8 / 3;
+                                    y += scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize * 0.8;
+                                    y += scope.smallImageSize;
                                 }
                                 y += 2; //margin
                                 if (d.pop && d.fromToday >= 0) {
