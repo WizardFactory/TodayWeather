@@ -830,7 +830,9 @@ angular.module('starter.controllers', [])
                             cityData.name = geoInfo.name;
                             cityData.country = geoInfo.country;
                             cityData.address = geoInfo.address;
-                            cityData.location = {"lat": coords.latitude, "long": coords.longitude};
+                            //device location을 사용하기 위해서는 아래 코드 사용하면 됨.
+                            //cityData.location = WeatherUtil.geolocationNormalize({"lat": coords.latitude, "long": coords.longitude});
+                            cityData.location = geoInfo.location;
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                             deferred.resolve();
                         }, function () {
