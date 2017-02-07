@@ -82,6 +82,7 @@ angular.module('controller.units', [])
         };
 
         obj.loadUnits = function () {
+            var self = this;
             var units;
             var key;
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
@@ -89,7 +90,7 @@ angular.module('controller.units', [])
                 units = JSON.parse(localStorage.getItem("units"));
                 if (units == undefined) {
                     _initUnits();
-                    obj.saveUnits();
+                    self.saveUnits();
                 }
                 else {
                     for (key in units) {
@@ -106,7 +107,7 @@ angular.module('controller.units', [])
                 units = JSON.parse(value);
                 if (units == undefined) {
                     _initUnits();
-                    obj.saveUnits();
+                    self.saveUnits();
                 }
                 else {
                     for (key in units) {
@@ -116,7 +117,7 @@ angular.module('controller.units', [])
             }, function (error) {
                 console.log("fetch preference Error: " + error);
                 _initUnits();
-                obj.saveUnits();
+                self.saveUnits();
             }, 'units');
         };
 
