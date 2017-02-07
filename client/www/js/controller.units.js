@@ -71,6 +71,16 @@ angular.module('controller.units', [])
             return _getDefaultUnits();
         };
 
+        obj.getAllUnits = function () {
+            return {
+                "temperatureUnit": obj.temperatureUnit,
+                "windSpeedUnit": obj.windSpeedUnit,
+                "pressureUnit": obj.pressureUnit,
+                "distanceUnit": obj.distanceUnit,
+                "precipitationUnit": obj.precipitationUnit
+            };
+        };
+
         obj.loadUnits = function () {
             var units;
             var key;
