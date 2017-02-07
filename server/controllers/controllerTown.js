@@ -2572,13 +2572,14 @@ ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, 
  */
 ControllerTown.prototype._convertKmaPtyToStr = function(pty) {
     if (pty === 1) {
-        return "강수량";
+        return __("LOC_PRECIPITATION");
     }
     else if (pty === 2) {
-        return "강수/적설량"
+        //return "강수/적설량"
+        return __("LOC_PRECIPITATION");
     }
     else if (pty === 3) {
-        return "적설량";
+        return __("LOC_SNOWFALL");
     }
 
     return "";
@@ -2642,25 +2643,25 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 ControllerTown.prototype._makeArpltnStr = function (data) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.parsePm10Info(data.pm10Grade);
+        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10");
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.parsePm25Info(data.pm25Grade);
+        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25");
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.parseO3Info(data.o3Grade);
+        data.o3Str = KecoController.grade2str(data.o3Grade, "o3");
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.parseNo2Info(data.no2Grade);
+        data.no2Str = KecoController.grade2str(data.no2Grade, "no2");
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.parseCoInfo(data.coGrade);
+        data.coStr = KecoController.grade2str(data.coGrade, "co");
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.parseSo2Info(data.so2Grade);
+        data.so2Str = KecoController.grade2str(data.so2Grade, "so2");
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.parseKhaiInfo(data.khaiGrade);
+        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai");
     }
     return this;
 };
@@ -2747,10 +2748,10 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
 ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
     switch (wsdGrade) {
         case 0: return "";
-        case 1: return "약함";
-        case 2: return "약간강함";
-        case 3: return "강함";
-        case 4: return "매우강함";
+        case 1: return __("LOC_LIGHT_WIND");
+        case 2: return __("LOC_MODERATE_WIND");
+        case 3: return __("LOC_STRONG_WIND");
+        case 4: return __("LOC_VERY_STRONG_WIND");
     }
     return "";
 };
@@ -4134,16 +4135,16 @@ ControllerTown.prototype._parseSensoryTem = function(sensoryTem) {
         return "";
     }
     else if ( -10 < sensoryTem && sensoryTem < 0) {
-        return "관심";
+        return __("LOC_ATTENTION");
     }
     else if ( -25 < sensoryTem && sensoryTem <= -10) {
-        return "주의";
+        return __("LOC_CAUTION");
     }
     else if ( -45 < sensoryTem && sensoryTem <= -25) {
-        return "경고";
+        return __("LOC_WARNING");
     }
     else if (sensoryTem <= -45) {
-        return "위험";
+        return __("LOC_HAZARD");
     }
     return "";
 };

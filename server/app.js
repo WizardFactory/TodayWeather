@@ -44,6 +44,22 @@ mongoose.connect(config.db.path, options, function(err) {
 
 var app = express();
 var session = require('express-session');
+var i18n = require('i18n');
+
+i18n.configure({
+    // setup some locales - other locales default to en silently
+    locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+
+    // sets a custom cookie name to parse locale settings from
+    cookie: 'twcookie',
+
+    // where to store json files - defaults to './locales'
+    directory: __dirname + '/locales',
+
+    register: global
+});
+
+global.i18n = i18n;
 
 // Use the session middleware
 app.use(session({ secret: 'wizard factory', cookie: { maxAge: 60000 }}));
@@ -59,6 +75,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(i18n.init);
 
 app.use('/', require('./routes/v000001'));
 app.use('/v000001', require('./routes/v000001'));
