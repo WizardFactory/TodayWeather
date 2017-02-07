@@ -20,119 +20,24 @@ function arpltnController() {
 
 }
 
-arpltnController.parseSo2Info = function (so2Grade) {
-    switch (so2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown so2Grade="+so2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseCoInfo = function (coGrade) {
-    switch (coGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown coGrade="+coGrade);
-    }
-    return "";
-};
-
-arpltnController.parseNo2Info = function (no2Grade) {
-    switch (no2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown no2Grade="+no2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseO3Info = function (o3Grade) {
-    switch (o3Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown o3Grade="+o3Grade);
-    }
-    return "";
-};
-
-arpltnController.parseKhaiInfo = function (khaiGrade) {
-    switch (khaiGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown khaiGrade="+khaiGrade);
-    }
-    return "";
-};
-
 /**
- *
- * @param pm10Grade
+ * AQI grade 공통 사용.
+ * @param grade
+ * @param type so2, o3, co, no2
  * @returns {*}
  */
-arpltnController.parsePm10Info = function(pm10Grade) {
-    switch (pm10Grade) {
+arpltnController.grade2str = function (grade, type) {
+     switch (grade) {
         case 1:
-            return "좋음";
+            return __("LOC_GOOD");
         case 2:
-            return "보통";
+            return __("LOC_MODERATE");
         case 3:
-            return "나쁨";
+            return __("LOC_UNHEALTHY");
         case 4:
-            return "매우나쁨";
+            return __("LOC_VERY_UNHEALTHY");
         default :
-            log.error("Unknown pm10Grade="+pm10Grade);
-    }
-    return "";
-};
-
-arpltnController.parsePm25Info = function (pm25Grade) {
-    switch (pm25Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown pm25Grade="+pm25Grade);
+            log.error("Unknown grade="+grade+" type="+type);
     }
     return "";
 };

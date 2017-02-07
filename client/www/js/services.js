@@ -2170,6 +2170,11 @@ angular.module('starter.services', [])
         };
         //endregion
 
+        /**
+         * hochimin의 경우 106.6296638 가 두자리로 떨어지지 않음.
+         * @param coords
+         * @returns {{lat: number, long: number}}
+         */
         obj.geolocationNormalize = function (coords) {
             //var baseLength = 0.02;
             //var lat = coords.lat;

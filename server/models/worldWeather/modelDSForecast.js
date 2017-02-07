@@ -58,7 +58,7 @@ var dsForecastSchema = new mongoose.Schema({
                 sunrise:        {type: Object, default: Date},  // UTC time
                 sunset:         {type: Object, default: Date},  // UTC time
                 moonphase:      {type: Number, default:0},  // fractional part(0:new moon, 0.25:first quarter moon, 0.5:full moon, 0.75:last quarter moon)
-                pre_int:        {type: Number, default:0},  // 강수 강도inches per hour (0, 0.002, 0.017, 0.1, 0.4)
+                pre_int:        {type: Number, default:0},  // 강수 강도 inches per hour (0, 0.002, 0.017, 0.1, 0.4)
                 pre_intmax:     {type: Number, default:0},  // 시간당 최대 강수량 inches
                 pre_intmaxt:    {type: Object, default: Date},  // 최대 강수 시간
                 pre_pro:        {type: Number, default:0},  // 강수 유/무 (0 or 1)

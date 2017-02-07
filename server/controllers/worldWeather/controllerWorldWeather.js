@@ -416,7 +416,7 @@ function controllerWorldWeather(){
                         }
 
                         if(req.DSF === undefined){
-                            log.error('TWW> There is no DSF data', meta);
+                            log.warn('TWW> There is no DSF data', meta);
                             callback('err_exit_notValid');
                             return;
                         }
@@ -1448,7 +1448,8 @@ function controllerWorldWeather(){
             day.precProb = Math.round(summary.pre_pro * 100);
         }
         if(summary.pre_int){
-            day.precip = summary.pre_int;
+            //inches per hourly to mm per daily
+            day.precip = parseFloat((summary.pre_int*25.4*24).toFixed(1));
         }
         if(summary.humid){
             day.humid = Math.round(summary.humid * 100);
@@ -1514,7 +1515,7 @@ function controllerWorldWeather(){
             hourly.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
         }
         if(summary.pre_int){
-            hourly.precip = summary.pre_int;
+            hourly.precip = parseFloat((summary.pre_int*25.4).toFixed(1));
         }
         if(summary.vis){
             hourly.vis = Math.round(summary.vis * 1.609344);
@@ -1573,7 +1574,7 @@ function controllerWorldWeather(){
             current.precProb = parseFloat((summary.pre_pro * 100).toFixed(2));
         }
         if(summary.pre_int){
-            current.precip = parseFloat(summary.pre_int.toFixed(2));
+            current.precip = parseFloat((summary.pre_int*25.4).toFixed(1));
         }
         if(summary.vis){
             //miles -> km
@@ -1903,7 +1904,7 @@ function controllerWorldWeather(){
             }
 
             if(list.length === 0){
-                log.error('gDSF> There is no DSF data for ', geocode, meta);
+                log.warn('gDSF> There is no DSF data for ', geocode, meta);
                 callback(err);
                 return;
             }

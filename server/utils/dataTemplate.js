@@ -58,7 +58,7 @@ var defaultData = {
         humid: -1000,
         precType: -1000,   // 0: 없음 1:비 2:눈 3:비+눈 4:우박
         precProb: -1000,
-        precip: -1000,
+        precip: -1000,      //mm per hour
         vis: -1000,
         press: -1000,
         oz: -1000,

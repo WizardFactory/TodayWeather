@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location) {
+    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units) {
         var obj = {};
         obj.config = {
             "android": {
@@ -23,7 +23,7 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/push';
+        obj.pushUrl = twClientConfig.serverUrl + '/v000705'+'/push';
 
         //attach push object to the window object for android event
         //obj.push;
@@ -66,20 +66,26 @@ angular.module('service.push', [])
 
         /**
          * loadPushInfo로 데이터를 읽어온 경우 time은 string임.
+         * controllers에서 localTime으로 설정한 후, 여기서 UTC기준으로 전달함.
          * @param alarmInfo
          */
         function postPushInfo(alarmInfo) {
             var time = alarmInfo.time;
             var pushTime = time.getUTCHours() * 60 * 60 + time.getUTCMinutes() * 60;
-
             var pushInfo = { registrationId: obj.pushData.registrationId,
                 type: obj.pushData.type,
                 pushTime: pushTime,
                 cityIndex: alarmInfo.cityIndex,
-                town: alarmInfo.town };
+                town: alarmInfo.town,               //first, second, third
+                name: alarmInfo.name,
+                location: alarmInfo.location,       //lat, long
+                source: alarmInfo.source,           //KMA or DSF, ...
+                units: Units.getAllUnits()
+            };
+            //name, units
             $http({
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language},
                 url: obj.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
@@ -231,6 +237,11 @@ angular.module('service.push', [])
             var alarmInfo = {cityIndex: cityIndex, town: town, time: time};
             var self = this;
 
+            var city = WeatherInfo.getCityOfIndex(cityIndex);
+
+            alarmInfo = {cityIndex: cityIndex, town: town, time: time,
+                        location: city.location, name: city.name, source: city.source};
+
             if (!callback) {
                 callback = function (err) {
                     if (err) {
@@ -326,8 +337,6 @@ angular.module('service.push', [])
         return obj;
     })
     .run(function($ionicPlatform, Push) {
-        $ionicPlatform.ready(function() {
-
             Push.loadPushInfo();
 
             if (!window.PushNotification) {
@@ -362,6 +371,5 @@ angular.module('service.push', [])
                    console.log('start push registrationId='+registrationId);
                 });
             }
-        });
     });
 
