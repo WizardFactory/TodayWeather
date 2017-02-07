@@ -387,7 +387,7 @@ angular.module('starter.controllers', [])
             regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
             $scope.regionSumSize = regionSumSize;
 
-            bigDigitSize = mainHeight * 0.16544 * padding; //0.2193
+            bigDigitSize = mainHeight * 0.12264 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
             $scope.bigDigitSize = bigDigitSize;
 
@@ -1014,7 +1014,13 @@ angular.module('starter.controllers', [])
             }).finally(function () {
                 var str = "";
                 if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-                    var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                    var diffTemp = current.t1h - yesterday.t1h;
+                    if (Units.getUnit("temperatureUnit") == 'F') {
+                       diffTemp = Math.round(diffTemp);
+                    }
+                    else {
+                        diffTemp = parseFloat(diffTemp.toFixed(1));
+                    }
                     if (diffTemp == 0) {
                         str += strSameAsYesterday;
                     }
@@ -1140,7 +1146,7 @@ angular.module('starter.controllers', [])
 
                 if (current.sensorytem && current.sensorytem !== current.t1h) {
                     diffTemp = Math.round(current.sensorytem - current.t1h);
-                    str = translations.LOC_FEELS_LIKE + " " + current.sensorytem +"˚";
+                    str = translations.LOC_FEELS_LIKE + " " + $scope.getTemp(current.sensorytem) +"˚";
                     item = {str :str, grade: Math.abs(diffTemp)};
                     itemList.push(item);
                 }
@@ -1251,6 +1257,18 @@ angular.module('starter.controllers', [])
             //    }
             //}
             return Units.getUnit('precipitationUnit');
+        };
+
+        /**
+         * @returns {number}
+         */
+        $scope.getTemp = function (temp) {
+            if (Units.getUnit('temperatureUnit') == 'F') {
+                return Math.round(temp);
+            }
+            else {
+                return temp;
+            }
         };
 
         init();
