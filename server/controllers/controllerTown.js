@@ -2414,35 +2414,21 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     }
 
     if (current.arpltn) {
-
-        if (current.arpltn.pm10Grade && current.arpltn.pm10Str) {
-            tmpGrade = current.arpltn.pm10Grade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-           item = {str: "미세먼지"+" "+ current.arpltn.pm10Str, grade: tmpGrade};
-            itemList.push(item);
-        }
-        if (current.arpltn.pm25Grade && current.arpltn.pm25Str) {
+        str = "통합대기" + " " + current.arpltn.khaiStr;
+        tmpGrade = current.arpltn.khaiGrade;
+        if (tmpGrade < current.arpltn.pm25Grade) {
+            str = "초미세먼지"+" "+ current.arpltn.pm25Str;
             tmpGrade = current.arpltn.pm25Grade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-            item = {str: "초미세먼지"+" "+ current.arpltn.pm25Str, grade: tmpGrade};
-            itemList.push(item);
         }
-        if (current.arpltn.khaiGrade && current.arpltn.khaiStr) {
-            tmpGrade = current.arpltn.khaiGrade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-            item = {str: "통합대기" + " " + current.arpltn.khaiStr, grade: tmpGrade};
-            itemList.push(item);
+        if (tmpGrade < current.arpltn.pm10Grade) {
+            str = "미세먼지" + " " + current.arpltn.pm10Str;
+            tmpGrade = current.arpltn.pm10Grade;
         }
+
+        item = {str: str, grade: tmpGrade};
+        itemList.push(item);
     }
+
     if (current.rn1 && current.rn1Str && current.ptyStr) {
         item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
         itemList.push(item);
@@ -2450,10 +2436,6 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
         tmpGrade = current.dsplsGrade;
-        if (tmpGrade == 1) {
-            //좋은 보통보다 높고, 나쁨보다 낮음.
-            tmpGrade = 2.5
-        }
         item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
         itemList.push(item);
     }
@@ -2466,10 +2448,6 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     if (current.ultrv && Number(current.time) < 1800) {
         tmpGrade = current.ultrvGrade;
-        if (tmpGrade == 0) {
-            //좋은 보통보다 높고, 나쁨보다 낮음.
-            tmpGrade = 1.5
-        }
         item = {str:"자외선"+" "+current.ultrvStr, grade: tmpGrade+1};
         itemList.push(item);
     }
