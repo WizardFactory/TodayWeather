@@ -670,15 +670,21 @@ angular.module('starter.controllers', [])
                     $scope.timeChart = cityData.timeChart;
 
                     // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                    // ios에서 scroll 할때 scroll freeze되는 현상 있음.
+                    // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                     } else {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                        //$ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
                     }
                 }
                 else {
                     $scope.dayChart = cityData.dayChart;
 
+                    /**
+                     * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
+                     */
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
