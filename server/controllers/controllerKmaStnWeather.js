@@ -25,7 +25,7 @@ function controllerKmaStnWeather() {
  */
 controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
     if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
-       return;
+       return -1;
     }
 
     switch (weatherStr) {
