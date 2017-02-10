@@ -534,15 +534,24 @@ angular.module('starter.services', [])
         /**
          *
          * @param {Object[]} results
-         * @returns {string}
+         * @returns {*}
          */
         function findLocationFromGoogleGeoCodeResults(results) {
-            var location = {}; //{"lat": Number, "long": Number};
+            var location; //{"lat": Number, "long": Number};
 
-            results.forEach(function (result) {
-                location.lat = result.geometry.location.lat;
-                location.long = result.geometry.location.lng;
-            });
+            if (results.length == 0) {
+                console.log("result.length = 0");
+                return location;
+            }
+            if (results[0].geometry && results[0].geometry.location) {
+                location = {};
+                location.lat = results[0].geometry.location.lat;
+                location.long = results[0].geometry.location.lng;
+            }
+            else {
+                console.log("fail to parsing results");
+            }
+
             return location;
         }
 
@@ -1103,6 +1112,7 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
+            console.log(url);
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === 'OK') {
                     try {
@@ -1138,6 +1148,8 @@ angular.module('starter.services', [])
         /**
          * 한국어가 아닌 주소 일수 있음.
          * address가 국내이면, daum에서 주소를 새로 갱신해서 geoInfo에 추가함.
+         * controllers.js에서는 geoInfo.name값을 사용하지 않고 다른 값을
+         * 사용하지만 코드 통일성 및 추후 사용때문에 name값을 넣기는 함.
          * @param {String} address
          */
         obj.getGeoInfoFromAddress = function (address) {
@@ -1146,8 +1158,11 @@ angular.module('starter.services', [])
             getGeoCodeFromGoogle(address).then(function (geoInfo) {
                 console.log(geoInfo);
                 if (geoInfo.country == "KR") {
-                    getAddressFromDaum(geoInfo.location.lat, geoInfo.location.long).then(function (address) {
-                        geoInfo.address = address;
+                    getAddressFromDaum(geoInfo.location.lat, geoInfo.location.long).then(function (data) {
+                        geoInfo.address = data.address;
+                        if (Util.language.indexOf("ko") != -1 && data.name) {
+                                geoInfo.name = data.name;
+                        }
                         console.log(geoInfo);
                         deferred.resolve(geoInfo);
                     }, function (error) {
@@ -1156,6 +1171,8 @@ angular.module('starter.services', [])
                     });
                     return;
                 }
+
+                geoInfo.location = obj.geolocationNormalize(geoInfo.location);
                 console.log(geoInfo);
                 deferred.resolve(geoInfo);
             }, function (err) {
@@ -1169,6 +1186,12 @@ angular.module('starter.services', [])
             return deferred.promise;
         };
 
+        /**
+         *
+         * @param lat
+         * @param lng
+         * @returns {*|promise}
+         */
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
@@ -1178,13 +1201,15 @@ angular.module('starter.services', [])
                 '&inputCoordSystem=WGS84'+
                 '&output=json';
 
+            console.log(url);
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data, status, headers, config, statusText) {
                     if (data.fullName) {
                         var address = data.fullName;
+                        var name = data.name;
 
                         address = '대한민국 ' + address;
-                        deferred.resolve(address);
+                        deferred.resolve({address: address, name: name});
                     }
                     else {
                         deferred.reject(new Error('Fail to get address name'));
@@ -1201,6 +1226,7 @@ angular.module('starter.services', [])
 
         /**
          * address에서 왼쪽에 국가가 나오거나, 오른쪽에 국가가 나옴 반대쪽 지명을 name으로 사용.
+         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
          * @param lat
          * @param lng
          * @returns {*}
@@ -1209,45 +1235,83 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
 
+            console.log(url);
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === "OK") {
-                    var result;
+                    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+                    var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+                    var local_types = [ "locality", "political" ];
+                    var country_types = ["country"];
+                    var sub_level2_name;
+                    var sub_level1_name;
+                    var local_name;
+                    var country_name;
+
                     for (var i=0; i < data.results.length; i++) {
-                        if (data.results[i].types[0] == "postal_code") {
-                            result = data.results[i];
+                        var result = data.results[i];
+                        for (var j=0; j < result.address_components.length; j++) {
+                            var address_component = result.address_components[j];
+                            if ( address_component.types[0] == sub_level2_types[0]
+                                && address_component.types[1] == sub_level2_types[1]
+                                && address_component.types[2] == sub_level2_types[2] ) {
+                               sub_level2_name = address_component.short_name;
+                            }
+
+                            if ( address_component.types[0] == sub_level1_types[0]
+                                && address_component.types[1] == sub_level1_types[1]
+                                && address_component.types[2] == sub_level1_types[2] ) {
+                               sub_level1_name = address_component.short_name;
+                            }
+
+                            if ( address_component.types[0] == local_types[0]
+                                && address_component.types[1] == local_types[1] ) {
+                               local_name = address_component.short_name;
+                            }
+
+                            if ( address_component.types[0] == country_types[0] ) {
+                               country_name = address_component.short_name;
+                            }
+
+                            if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                                break;
+                            }
+                        }
+
+                        if (sub_level2_name && sub_level1_name && local_name && country_name) {
                             break;
                         }
                     }
-                    var address = result.formatted_address;
-                    if (!address || address.length === 0) {
-                        deferred.reject(new Error("Fail to find formatted_address from " + data.results[0].formatted_address));
-                        return;
-                    }
-                    var country;
-                    var country_long_name;
+
                     var name;
-                    for (i=0; i< result.address_components.length; i++) {
-                        if (result.address_components[i].types[0] == "country") {
-                            country =  result.address_components[i].short_name;
-                            country_long_name =  result.address_components[i].long_name;
-                            break;
+                    var address = "";
+                    if (sub_level2_name) {
+                        address += sub_level2_name;
+                        name = sub_level2_name
+                    }
+                    if (sub_level1_name) {
+                        address += " " + sub_level1_name;
+                        if (name == undefined) {
+                            name = sub_level1_name;
+                        }
+                    }
+                    if (local_name) {
+                        address += " " + local_name;
+                        if (name == undefined) {
+                            name = local_name;
+                        }
+                    }
+                    if (country_name) {
+                        address += " " + country_name;
+                        if (name == undefined) {
+                            name = country_name;
                         }
                     }
 
-                    //"Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
-                    var arrayStr = address.split(",");
-                    if (arrayStr.length <= 1)  {
-                        //"대한민국 서울 송파구 잠실본동"
-                        arrayStr = address.split(" ");
-                    }
-                    if (arrayStr[0] == country_long_name) {
-                        name = arrayStr[arrayStr.length-1];
-                    }
-                    else {
-                        name = arrayStr[0];
+                    if (name == undefined || name == country_name) {
+                        console.log("Fail to find location address");
                     }
 
-                    var geoInfo =  {country: country, address: address};
+                    var geoInfo =  {country: country_name, address: address};
                     geoInfo.location = {lat:lat, long: lng};
                     geoInfo.name = name;
                     deferred.resolve(geoInfo);
@@ -1280,14 +1344,18 @@ angular.module('starter.services', [])
                 Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
 
                 console.log(geoInfo);
+                //todo: if (geoInfo.country == "KR" && source == "KMA")
                 if (geoInfo.country == "KR") {
                     startTime = new Date().getTime();
-                    getAddressFromDaum(lat, long).then(function (address) {
+                    getAddressFromDaum(lat, long).then(function (data) {
                         endTime = new Date().getTime();
                         Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
                         Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
 
-                        geoInfo.address = address;
+                        geoInfo.address = data.address;
+                        if (Util.language.indexOf("ko") != -1 && data.name) {
+                            geoInfo.name = data.name;
+                        }
                         console.log(geoInfo);
                         deferred.resolve(geoInfo);
                     }, function (err) {
@@ -1304,7 +1372,10 @@ angular.module('starter.services', [])
                     });
                 }
                 else {
-                    deferred.resolve(geoInfo);
+                    getGeoCodeFromGoogle(geoInfo.address).then(function (info) {
+                        geoInfo.location = obj.geolocationNormalize(info.location);
+                        deferred.resolve(geoInfo);
+                    });
                 }
             }, function (err) {
                 endTime = new Date().getTime();
@@ -1333,6 +1404,17 @@ angular.module('starter.services', [])
                 //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
                 //경기 수원시 영통구 광교1동
                 //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                // Tokyo 35.6894875,139.6917064
+                //position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+                // Shanghai 31.227797,121.475194
+                //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
+                // NY 40.663527,-73.960852
+                //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
+                // Berlin 52.516407,13.403322
+                //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
+                // Hochinminh 10.779001,106.662796
+                //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
 
                 console.log('navigator geolocation');
                 console.log(position);
@@ -1434,8 +1516,7 @@ angular.module('starter.services', [])
                 promises.push(getTownWeatherInfo(town));
             }
             else {
-                var location = obj.geolocationNormalize(geoInfo.location);
-                promises.push(getGeoWeatherInfo(location));
+                promises.push(getGeoWeatherInfo(geoInfo.location));
             }
 
             return $q.all(promises);
@@ -2095,16 +2176,16 @@ angular.module('starter.services', [])
          * @returns {{lat: number, long: number}}
          */
         obj.geolocationNormalize = function (coords) {
-            var baseLength = 0.02;
-            var lat = coords.lat;
-            var lon = coords.long;
-            console.log (lat + " " + lon);
+            //var baseLength = 0.02;
+            //var lat = coords.lat;
+            //var lon = coords.long;
+            //console.log (lat + " " + lon);
+            //
+            //var normal_lat = lat - (lat%baseLength) + baseLength/2;
+            //var normal_lon = lon - (lon%baseLength) + baseLength/2;
+            //return {lat: normal_lat, long: normal_lon};
 
-            var normal_lat = lat - (lat%baseLength) + baseLength/2;
-            var normal_lon = lon - (lon%baseLength) + baseLength/2;
-            normal_lat = parseFloat(normal_lat.toFixed(2));
-            normal_lon = parseFloat(normal_lon.toFixed(2));
-            return {lat: normal_lat, long: normal_lon};
+            return {lat: parseFloat(coords.lat.toFixed(3)), long: parseFloat(coords.long.toFixed(3))}
         };
 
         return obj;
