@@ -13,7 +13,7 @@
   "LOC_PM25" : "초미세먼지",
   "LOC_O3" : "오존",
   "LOC_NO2" : "이산화질소",
-  "LOC_SO2" : "이황산가스",
+  "LOC_SO2" : "아황산가스",
   "LOC_CO" : "일산화탄소",
   "LOC_FINE_DUST" : "미세먼지",
   "LOC_ULTRA_FINE_DUST" : "초미세먼지",
