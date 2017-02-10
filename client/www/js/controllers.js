@@ -391,7 +391,7 @@ angular.module('starter.controllers', [])
             regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
             $scope.regionSumSize = regionSumSize;
 
-            bigDigitSize = mainHeight * 0.16544 * padding; //0.2193
+            bigDigitSize = mainHeight * 0.12264 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
             $scope.bigDigitSize = bigDigitSize;
 
@@ -674,15 +674,21 @@ angular.module('starter.controllers', [])
                     $scope.timeChart = cityData.timeChart;
 
                     // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                    // ios에서 scroll 할때 scroll freeze되는 현상 있음.
+                    // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                     } else {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
+                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
+                        //$ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
                     }
                 }
                 else {
                     $scope.dayChart = cityData.dayChart;
 
+                    /**
+                     * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
+                     */
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
@@ -834,7 +840,9 @@ angular.module('starter.controllers', [])
                             cityData.name = geoInfo.name;
                             cityData.country = geoInfo.country;
                             cityData.address = geoInfo.address;
-                            cityData.location = {"lat": coords.latitude, "long": coords.longitude};
+                            //device location을 사용하기 위해서는 아래 코드 사용하면 됨.
+                            //cityData.location = WeatherUtil.geolocationNormalize({"lat": coords.latitude, "long": coords.longitude});
+                            cityData.location = geoInfo.location;
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                             deferred.resolve();
                         }, function () {
@@ -1018,7 +1026,13 @@ angular.module('starter.controllers', [])
             }).finally(function () {
                 var str = "";
                 if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-                    var diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+                    var diffTemp = current.t1h - yesterday.t1h;
+                    if (Units.getUnit("temperatureUnit") == 'F') {
+                       diffTemp = Math.round(diffTemp);
+                    }
+                    else {
+                        diffTemp = parseFloat(diffTemp.toFixed(1));
+                    }
                     if (diffTemp == 0) {
                         str += strSameAsYesterday;
                     }
@@ -1095,24 +1109,21 @@ angular.module('starter.controllers', [])
                 }
 
                 if (current.arpltn) {
-                    if (current.arpltn.pm10Grade) {
-                        tmpGrade = current.arpltn.pm10Grade;
-                        str = translations.LOC_PM10 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
+                    var arpltn = current.arpltn;
+                    var locStr = translations.LOC_AQI;
+                    tmpGrade = arpltn.khaiGrade;
+                    if (tmpGrade < arpltn.pm25Grade) {
+                        locStr = translations.LOC_PM25;
+                        tmpGrade = arpltn.pm25Grade;
                     }
-                    if (current.arpltn.pm25Grade) {
-                        tmpGrade = current.arpltn.pm25Grade;
-                        str = translations.LOC_PM25 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
+                    if (tmpGrade < arpltn.pm10Grade) {
+                        locStr = translations.LOC_PM10;
+                        tmpGrade = arpltn.pm10Grade;
                     }
-                    if (current.arpltn.khaiGrade) {
-                        tmpGrade = current.arpltn.khaiGrade;
-                        str = translations.LOC_AQI + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
-                    }
+
+                    str = locStr + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
+                    item = {str: str, grade: tmpGrade};
+                    itemList.push(item);
                 }
 
                 if (current.rn1 && current.pty) {
@@ -1144,7 +1155,7 @@ angular.module('starter.controllers', [])
 
                 if (current.sensorytem && current.sensorytem !== current.t1h) {
                     diffTemp = Math.round(current.sensorytem - current.t1h);
-                    str = translations.LOC_FEELS_LIKE + " " + current.sensorytem +"˚";
+                    str = translations.LOC_FEELS_LIKE + " " + $scope.getTemp(current.sensorytem) +"˚";
                     item = {str :str, grade: Math.abs(diffTemp)};
                     itemList.push(item);
                 }
@@ -1186,7 +1197,7 @@ angular.module('starter.controllers', [])
 
                 str = itemList[0].str;
                 if (itemList.length > 1) {
-                    str += ","+itemList[1].str;
+                    str += ", "+itemList[1].str;
                 }
 
                 $rootScope.summary = str;
@@ -1255,6 +1266,18 @@ angular.module('starter.controllers', [])
             //    }
             //}
             return Units.getUnit('precipitationUnit');
+        };
+
+        /**
+         * @returns {number}
+         */
+        $scope.getTemp = function (temp) {
+            if (Units.getUnit('temperatureUnit') == 'F') {
+                return Math.round(temp);
+            }
+            else {
+                return temp;
+            }
         };
 
         init();

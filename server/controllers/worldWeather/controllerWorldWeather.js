@@ -1482,6 +1482,7 @@ function controllerWorldWeather(){
         }
         if(summary.summary){
             hourly.desc = summary.summary;
+            hourly.weatherType = self._description2weatherType(summary.summary);
         }
         if(summary.temp){
             hourly.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
@@ -1526,7 +1527,6 @@ function controllerWorldWeather(){
         if(summary.oz){
             hourly.oz = summary.oz;
         }
-
         return hourly;
     };
 
@@ -1541,6 +1541,7 @@ function controllerWorldWeather(){
         }
         if(summary.summary){
             current.desc = summary.summary;
+            current.weatherType = self._description2weatherType(summary.summary);
         }
         if(summary.temp){
             current.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
@@ -1586,7 +1587,6 @@ function controllerWorldWeather(){
         if(summary.oz){
             current.oz = summary.oz;
         }
-
         return current;
     };
 
@@ -1998,6 +1998,86 @@ function controllerWorldWeather(){
         catch(e){
             callback(new Error('WW> something wrong!'));
         }
+    };
+
+    self._description2weatherType = function (weatherStr) {
+        if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
+            return;
+        }
+
+        weatherStr = weatherStr.toLowerCase();
+
+        switch (weatherStr) {
+            case 'sunny':
+            case 'clear': return 0;
+            case 'partly cloudy': return 1;
+            case 'mostly cloudy': return 2;
+            case 'cloudy':
+            case 'overcast': return 3;
+            case 'mist': return 4;
+            case 'haze': return 5;
+            case 'fog': return 6;
+            case 'thin fog': return 7;
+            case 'dense fog':
+            case 'foggy': return 8;
+            case 'fog clear': return 9;
+            case '시계내안개': return 10;
+            case 'partly fog': return 11;
+            case 'yellow dust': return 12;
+            case '시계내강수': return 13;
+            case 'light drizzle': return 14;
+            case 'drizzle': return 15;
+            case 'heavy drizzle': return 16;
+            case 'drizzle clear': return 17;
+            case 'light rain at times': return 18;
+            case 'light rain': return 19;
+            case 'rain at times': return 20;
+            case 'rain': return 21;
+            case 'heavy rain at times': return 22;
+            case 'heavy rain': return 23;
+            case 'light showers': return 24;
+            case 'showers': return 25;
+            case 'heavy showers': return 26;
+            case 'showers clear': return 27;
+            case 'rain clear': return 28;
+            case 'light sleet': return 29;
+            case 'heavy sleet': return 30;
+            case 'sleet clear': return 31;
+            case 'light snow at times': return 32;
+            case 'light snow': return 33;
+            case 'snow at times': return 34;
+            case 'snow': return 35;
+            case 'heavy snow at times': return 36;
+            case 'heavy snow': return 37;
+            case 'light snow showers': return 38;
+            case 'heavy snow showers': return 39;
+            case 'snow showers clear': return 40;
+            case 'snow clear': return 41;
+            case 'light snow pellets': return 42;
+            case 'heavy snow pellets': return 43;
+            case 'light snowstorm': return 44;
+            case 'snowstorm': return 45;
+            case 'heavy snowstorm': return 46;
+            case 'flurries': return 47;
+            case 'waterspout': return 48;
+            case 'hail': return 49;
+            case 'thundershowers': return 50;
+            case 'thundershowers hail': return 51;
+            case 'thundershowers snow/rain':
+            case 'thundershowers rain/snow': return 52;
+            case 'thundershowers clear, rain': return 53;
+            case 'thundershowers clear, snow': return 54;
+            case 'lightning': return 55;
+            case 'dry lightning': return 56;
+            case 'thunderstorm clear': return 57;
+            case 'ice pellets': return 58;
+            case 'breezy': return 59;
+            case 'humid': return 60;
+            case 'windy': return 61;
+            default :
+                log.error("Fail weatherStr="+weatherStr);
+        }
+        return -1;
     };
 
     return self;

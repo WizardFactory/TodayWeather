@@ -25,7 +25,7 @@ function controllerKmaStnWeather() {
  */
 controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
     if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
-       return;
+       return -1;
     }
 
     switch (weatherStr) {
@@ -221,7 +221,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                 //log.info(dateTime);
                 //log.info(stnWeatherList[0].pubDate);
                 if ((new Date(stnWeatherList[0].pubDate)).getTime() < limitTime) {
-                    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
+                    log.warn('It(Minute) was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
                     return mCallback();
                 }
 
@@ -234,7 +234,10 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
 
                 var minuteData = minuteList[minuteList.length-1];
                 if (minuteData == undefined) {
-                    log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
+                    /**
+                     * 몇몇 STN은 hourly 데이터만 제공하는 경우도 있음.
+                     */
+                    log.warn('It(Minute) does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
                     return mCallback();
                 }
 

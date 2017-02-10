@@ -11,7 +11,7 @@
                 </p>
                 <div class="row row-no-padding"><div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">
                     <p id="pBigDigit" ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0; font-weight:300">
-                        {{currentWeather.t1h.toFixed(0)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
+                        {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
                     </p>
                     <div style="text-align: left; margin: auto">
                         <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png">
@@ -115,7 +115,7 @@
                                 </div>
                                 <div class="row subheading" ng-if="currentWeather.sensorytem">
                                     <img src="img/ic_person_outline_white_24px.svg" style="height: 24px">
-                                    <p class="detail-item-p">{{'LOC_FEELS_LIKE'|translate}} {{currentWeather.sensorytem}}˚</p>
+                                    <p class="detail-item-p">{{'LOC_FEELS_LIKE'|translate}} {{getTemp(currentWeather.sensorytem)}}˚</p>
                                 </div>
                                 <div class="row subheading" ng-if="!(currentWeather.weatherType == undefined)">
                                     <img ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png" style="height: 24px">
