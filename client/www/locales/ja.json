@@ -241,4 +241,8 @@
   "LOC_UNITS" : "単位の設定",
   "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "位置情報サービスの使用が拒否されました。",
   "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "ユーザーの現在の位置を探すため、位置情報サービスをオンにしてください。"
+  "LOC_ICE_PELLETS" : "氷萩機",
+  "LOC_BREEZY": "軽風",
+  "LOC_WINDY": "風",
+  "LOC_HUMID": "湿気の多い"
 }

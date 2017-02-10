@@ -207,6 +207,10 @@ angular.module('starter.controllers', [])
                 return "";
             }
 
+            /**
+             * 순서가 server의 _description2weatherType, _makeWeatherType와 동일해야 함.
+             * @type {string[]}
+             */
             var weatherTypeStr = ['LOC_CLEAR', 'LOC_PARTLY_CLOUDY', 'LOC_MOSTLY_CLOUDY', 'LOC_CLOUDY', 'LOC_MIST',
                 'LOC_HAZE', 'LOC_FOG', 'LOC_THIN_FOG', 'LOC_DENSE_FOG', 'LOC_FOG_STOPPED',
 
@@ -223,7 +227,7 @@ angular.module('starter.controllers', [])
                 'LOC_SNOW_STORM', 'LOC_HEAVY_SNOW_STORM', 'LOC_POWDER_SNOW', 'LOC_WATER_SPOUT', 'LOC_HAIL',
 
                 'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
-                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED'];
+                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY', 'LOC_HUMID', 'LOC_WINDY'];
             return weatherTypeStr[current.weatherType];
         };
 

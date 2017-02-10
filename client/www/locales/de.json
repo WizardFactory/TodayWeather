@@ -241,5 +241,9 @@
   "LOC_DELETE": "Löschen",
   "LOC_UNITS" : "Einheiten",
   "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "Der Zugriff auf Standortdienste wurde verweigert.",
-  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "Bitte aktivieren Sie die Standortdienste, um Ihren aktuellen Standort zu finden."
+  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "Bitte aktivieren Sie die Standortdienste, um Ihren aktuellen Standort zu finden.",
+  "LOC_ICE_PELLETS" : "Eisstücke",
+  "LOC_BREEZY": "Luftigen",
+  "LOC_WINDY": "Windiger",
+  "LOC_HUMID": "Feuchten"
 }
