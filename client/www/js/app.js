@@ -686,7 +686,8 @@ angular.module('starter', [
 
                         if (svg != undefined) {
                             svg.selectAll("*").remove();
-                            svg.attr('height', height);
+                            svg.attr('width', width)
+                               .attr('height', height);
                         }
                         else {
                             svg = d3.select(iElement[0]).append('svg')
@@ -1063,18 +1064,20 @@ angular.module('starter', [
                             console.log('new value is undefined or already set same width='+width);
                             return;
                         }
+                        console.log('update dayWidth='+newValue);
                         width = newValue;
-                        if (scope.dayChart == undefined) {
-                            console.log('day chart is undefined in dayWidth');
-                            return;
-                        }
-                        if (svg == undefined) {
-                            initSvg();
-                        }
-                        else {
-                            x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                            svg.attr('width', width);
-                        }
+                        return;
+                        // if (scope.dayChart == undefined) {
+                        //     console.log('day chart is undefined in dayWidth');
+                        //     return;
+                        // }
+                        // if (svg == undefined) {
+                        //     initSvg();
+                        // }
+                        // else {
+                        //     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        //     svg.attr('width', width);
+                        // }
                     });
 
                     scope.$watch('dayChart', function (newVal) {
@@ -1082,14 +1085,15 @@ angular.module('starter', [
                             return;
                         }
                         console.log("update dayChart");
-                        if (svg == undefined) {
-                            initSvg();
-                        }
-                        else {
-                            margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
-                            y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-                            svg.selectAll('.day-table').remove();
-                        }
+                        // if (svg == undefined) {
+                        //     initSvg();
+                        // }
+                        // else {
+                        //     margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
+                        //     y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+                        //     svg.selectAll('.day-table').remove();
+                        // }
+                        initSvg();
                         chart();
                     });
                 }
