@@ -1099,24 +1099,21 @@ angular.module('starter.controllers', [])
                 }
 
                 if (current.arpltn) {
-                    if (current.arpltn.pm10Grade) {
-                        tmpGrade = current.arpltn.pm10Grade;
-                        str = translations.LOC_PM10 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
+                    var arpltn = current.arpltn;
+                    var locStr = translations.LOC_AQI;
+                    tmpGrade = arpltn.khaiGrade;
+                    if (tmpGrade < arpltn.pm25Grade) {
+                        locStr = translations.LOC_PM25;
+                        tmpGrade = arpltn.pm25Grade;
                     }
-                    if (current.arpltn.pm25Grade) {
-                        tmpGrade = current.arpltn.pm25Grade;
-                        str = translations.LOC_PM25 + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
+                    if (tmpGrade < arpltn.pm10Grade) {
+                        locStr = translations.LOC_PM10;
+                        tmpGrade = arpltn.pm10Grade;
                     }
-                    if (current.arpltn.khaiGrade) {
-                        tmpGrade = current.arpltn.khaiGrade;
-                        str = translations.LOC_AQI + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                        item = {str: str, grade: tmpGrade};
-                        itemList.push(item);
-                    }
+
+                    str = locStr + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
+                    item = {str: str, grade: tmpGrade};
+                    itemList.push(item);
                 }
 
                 if (current.rn1 && current.pty) {
@@ -1190,7 +1187,7 @@ angular.module('starter.controllers', [])
 
                 str = itemList[0].str;
                 if (itemList.length > 1) {
-                    str += ","+itemList[1].str;
+                    str += ", "+itemList[1].str;
                 }
 
                 $rootScope.summary = str;
