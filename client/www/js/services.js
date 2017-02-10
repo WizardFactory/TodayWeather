@@ -611,7 +611,7 @@ angular.module('starter.services', [])
 
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url = twClientConfig.serverUrl +'/v000705/town';
+            var url = twClientConfig.serverUrl +'/v000803/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -2380,10 +2380,10 @@ angular.module('starter.services', [])
         obj.language;
         obj.region;
 
-        //obj.url = "/v000705";
-        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
-        //obj.url = "https://tw-wzdfac.rhcloud.com/v000705";
-        //obj.url = "https://todayweather.wizardfactory.net/v000705";
+        //obj.url = "/v000803";
+        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000803";
+        //obj.url = "https://tw-wzdfac.rhcloud.com/v000803";
+        //obj.url = "https://todayweather.wizardfactory.net/v000803";
         //obj.url = window.twClientConfig.serverUrl;
 
         // android는 diagnostic.locationMode, ios는 diagnostic.permissionStatus를 나타냄
