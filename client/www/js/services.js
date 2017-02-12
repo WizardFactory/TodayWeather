@@ -1720,6 +1720,7 @@ angular.module('starter.services', [])
                date: _convertDateToYYYYMMDD(new Date(current.date)),
                stnDateTime: current.date,
                summary: current.desc,
+               weatherType: current.weatherType,
                t1h: current.temp_c,
                sensorytem: current.ftemp_c,
                reh: current.humid,

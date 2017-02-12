@@ -200,7 +200,7 @@ angular.module('starter.controllers', [])
         };
 
         $scope.getWeatherStr = function (current) {
-            if (current.weatherType == undefined || Util.language == 'ko') {
+            if (current.weatherType == undefined) {
                 if (!(current.weather == undefined)) {
                     return current.weather;
                 }
