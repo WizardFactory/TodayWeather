@@ -164,7 +164,7 @@ public class WidgetUpdateService extends Service {
             Log.i("Service", "Update address=" + geoInfo.getAddress() + " app widget id=" + widgetId);
             //check country
             if (geoInfo.getCountry() == null || geoInfo.getCountry().equals("KR")) {
-                String addr = AddressesElement.makeUrlAddress(geoInfo.getCountry());
+                String addr = AddressesElement.makeUrlAddress(geoInfo.getAddress());
                 if (addr != null) {
                     addr = mUrl + kmaApiUrl + addr;
                     String jsonData = getWeatherDataFromServer(addr);
