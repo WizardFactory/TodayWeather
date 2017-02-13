@@ -2454,7 +2454,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     if (current.wsdGrade && current.wsdStr) {
         //약함(1)을 보통으로 보고 보정 1함.
-        item = {str:"바람이"+" "+ current.wsdStr, grade: current.wsdGrade+1};
+        item = {str: current.wsdStr, grade: current.wsdGrade+1};
         itemList.push(item);
     }
 
