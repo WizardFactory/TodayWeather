@@ -369,7 +369,7 @@ public class WidgetUpdateService extends Service {
         try {
             String lang = Locale.getDefault().getLanguage();
             String geourl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
-                    lat + "," + lon + "&lang="+lang;
+                    lat + "," + lon + "&language="+lang;
 
             //Log.i("Service", "url="+geourl);
             String retJson = new GetHttpsServerAysncTask(geourl).execute().get();
