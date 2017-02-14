@@ -40,7 +40,7 @@
     "cordova-plugin-x-socialsharing",
     "cordova-plugin-inapppurchase",
     "cordova-plugin-whitelist",
-    "cordova-plugin-google-analytics",
+    "cordova-plugin-google-analytics@1.7.1",
     {
       "variables": {
         "SENDER_ID": ""
@@ -73,7 +73,7 @@
       }
     },
     "cordova-plugin-globalization",
-    "cordova.plugins.diagnostic"
+    "cordova.plugins.diagnostic@3.3.3"
   ],
   "cordovaPlatforms": [
     "ios",
