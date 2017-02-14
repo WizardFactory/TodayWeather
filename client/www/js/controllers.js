@@ -1284,7 +1284,8 @@ angular.module('starter.controllers', [])
     })
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
-                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading, $translate) {
+                                        $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
+                                        $translate, $ocLazyLoad) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -1320,8 +1321,24 @@ angular.module('starter.controllers', [])
             console.log("Fail to translate : " + JSON.stringify(translationIds));
         });
 
-        var service = new google.maps.places.AutocompleteService();
+        var service;
+        if (window.google == undefined) {
+            $ocLazyLoad.load('js!//maps.googleapis.com/maps/api/js?libraries=places').then(function () {
+                service = new google.maps.places.AutocompleteService();
+            }, function (e) {
+                console.log(e);
+                window.alert(e);
+            });
+        }
+        else {
+            service = new google.maps.places.AutocompleteService();
+        }
+
         var callbackAutocomplete = function(predictions, status) {
+            if (google == undefined) {
+                console.log('Fail to load google maps places');
+                return;
+            }
             if (status != google.maps.places.PlacesServiceStatus.OK) {
                 console.log(status);
                 return;
@@ -1393,11 +1410,13 @@ angular.module('starter.controllers', [])
             $scope.OnScrollResults();
 
             console.log($scope.searchWord);
-            service.getPlacePredictions({
-                input: $scope.searchWord,
-                types: ['(regions)'],
-                componentRestrictions: {}
-            }, callbackAutocomplete);
+            if (!(service == undefined)) {
+                service.getPlacePredictions({
+                    input: $scope.searchWord,
+                    types: ['(regions)'],
+                    componentRestrictions: {}
+                }, callbackAutocomplete);
+            }
         };
 
         $scope.OnSearchCurrentPosition = function() {

@@ -14,7 +14,8 @@ angular.module('starter', [
     'service.twads',
     'service.push',
     'ionic-timepicker',
-    'controller.units'
+    'controller.units',
+    'oc.lazyLoad'
 ])
     .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
         //$translate.use('ja');
