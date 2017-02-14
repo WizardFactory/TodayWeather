@@ -9,6 +9,7 @@
     "ionic-timepicker": "https://github.com/WizardFactory/ionic-timepicker.git#cb42d5a",
     "angular-translate": "^2.13.0",
     "angular-translate-loader-static-files": "^2.13.0",
-    "sprintf": "^1.0.3"
+    "sprintf": "^1.0.3",
+    "oclazyload": "^1.1.0"
   }
 }
