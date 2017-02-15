@@ -627,7 +627,7 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
 ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     var self = this;
     //check source
-    if (pushInfo.source == 'KMA') {
+    if (pushInfo.source == undefined || pushInfo.source == 'KMA') {
         self._requestKmaDailySummary(pushInfo, function (err, results) {
             if (err) {
                 return callback(err);
