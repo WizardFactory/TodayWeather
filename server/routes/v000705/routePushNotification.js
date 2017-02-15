@@ -18,16 +18,35 @@ var ControllerPush = require('../../controllers/controllerPush');
  * create or update pushInfo
  */
 router.post('/', function(req, res) {
-    //log.info('accept-language:'+req.headers['accept-language']);
-    //log.info('post : '+ JSON.stringify(req.body));
+    log.info('post : '+ JSON.stringify(req.body));
+    log.info('accept-language:'+req.headers['accept-language']);
 
     //update modelPush
     //return _id
     var pushInfo = req.body;
     var language = req.headers['accept-language'];
-    language = language.substr(0, language.length-3);
-    pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
+    if (language == undefined) {
+        log.warn("accept-language is undefined");
+        language = 'en';
+    }
+    else {
+        language = language.split(',')[0];
+        if (language) {
+            language = language.substr(0, language.length-3);
+        }
+        else {
+            log.error("Fail to parse language="+req.headers['accept-language']);
+            language = 'en';
+        }
+    }
+
     pushInfo.lang = language;
+    if (pushInfo.location) {
+        pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
+    }
+    if (pushInfo.source == undefined) {
+        pushInfo.source = "KMA"
+    }
 
     log.info('pushInfo : '+ JSON.stringify(pushInfo));
     var co = new ControllerPush();
