@@ -117,13 +117,13 @@ public class WidgetUpdateService extends Service {
             else {
                 geoInfo.setCountry("KR");
             }
-            if (jsonCityInfo.has("location")) {
+            if (jsonCityInfo.has("location") && !jsonCityInfo.isNull("location")) {
                 location = jsonCityInfo.getJSONObject("location");
                 geoInfo.setLat(geoInfo.toNormalize(location.getDouble("lat")));
                 geoInfo.setLng(geoInfo.toNormalize(location.getDouble("long")));
             }
-            if (jsonCityInfo.has("name")) {
-                geoInfo.setName(jsonCityInfo.get("name").toString());
+            if (jsonCityInfo.has("name") && !jsonCityInfo.isNull("name")) {
+                geoInfo.setName(jsonCityInfo.getString("name"));
             }
 
             if (jsonUnitsStr != null) {
@@ -382,11 +382,11 @@ public class WidgetUpdateService extends Service {
                     return geoInfo;
                 }
 
-                String sub_level2_types[] = { "political", "sublocality", "sublocality_level_2" };
+                //String sub_level2_types[] = { "political", "sublocality", "sublocality_level_2" };
                 String sub_level1_types[] = { "political", "sublocality", "sublocality_level_1" };
                 String local_types[] = { "locality", "political" };
                 String country_types[] = { "country" };
-                String sub_level2_name = null;
+                //String sub_level2_name = null;
                 String sub_level1_name = null;
                 String local_name = null;
                 String country_name = null;
@@ -401,11 +401,11 @@ public class WidgetUpdateService extends Service {
                     for (int j=0; j<addressComponents.length(); j++) {
                         JSONObject addressComponent = addressComponents.getJSONObject(j);
                         JSONArray types = addressComponent.getJSONArray("types");
-                        if (types.getString(0).equals(sub_level2_types[0])
-                                && types.getString(1).equals(sub_level2_types[1])
-                                && types.getString(2).equals(sub_level2_types[2]) ) {
-                           sub_level2_name = addressComponent.getString("short_name");
-                        }
+                        //if (types.getString(0).equals(sub_level2_types[0])
+                        //        && types.getString(1).equals(sub_level2_types[1])
+                        //        && types.getString(2).equals(sub_level2_types[2]) ) {
+                        //   sub_level2_name = addressComponent.getString("short_name");
+                        //}
 
                         if (types.getString(0).equals(sub_level1_types[0])
                                 && types.getString(1).equals(sub_level1_types[1])
@@ -422,13 +422,15 @@ public class WidgetUpdateService extends Service {
                             country_name = addressComponent.getString("short_name");
                         }
 
-                        if (sub_level2_name != null && sub_level1_name != null
+                        //if (sub_level2_name != null && sub_level1_name != null
+                        if (sub_level1_name != null
                                 && local_name != null && country_name != null) {
                             break;
                         }
                     }
 
-                    if (sub_level2_name != null && sub_level1_name != null
+                    //if (sub_level2_name != null && sub_level1_name != null
+                    if (sub_level1_name != null
                             && local_name != null && country_name != null) {
                         break;
                     }
@@ -436,10 +438,10 @@ public class WidgetUpdateService extends Service {
 
                 String name = null;
                 String address = "";
-                if (sub_level2_name != null) {
-                    address += sub_level2_name;
-                    name = sub_level2_name;
-                }
+                //if (sub_level2_name != null) {
+                //    address += sub_level2_name;
+                //    name = sub_level2_name;
+                //}
                 if (sub_level1_name != null) {
                     address += " " + sub_level1_name;
                     if (name == null) {

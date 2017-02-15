@@ -1169,12 +1169,12 @@ angular.module('starter.services', [])
                         console.log(error);
                         deferred.reject(error);
                     });
-                    return;
                 }
-
-                geoInfo.location = obj.geolocationNormalize(geoInfo.location);
-                console.log(geoInfo);
-                deferred.resolve(geoInfo);
+                else {
+                    geoInfo.location = obj.geolocationNormalize(geoInfo.location);
+                    console.log(geoInfo);
+                    deferred.resolve(geoInfo);
+                }
             }, function (err) {
                 if (err == undefined) {
                     err = new Error("Fail to get geo code from google");
@@ -1238,11 +1238,11 @@ angular.module('starter.services', [])
             console.log(url);
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === "OK") {
-                    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+                    // var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
                     var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
                     var local_types = [ "locality", "political" ];
                     var country_types = ["country"];
-                    var sub_level2_name;
+                    // var sub_level2_name;
                     var sub_level1_name;
                     var local_name;
                     var country_name;
@@ -1251,11 +1251,11 @@ angular.module('starter.services', [])
                         var result = data.results[i];
                         for (var j=0; j < result.address_components.length; j++) {
                             var address_component = result.address_components[j];
-                            if ( address_component.types[0] == sub_level2_types[0]
-                                && address_component.types[1] == sub_level2_types[1]
-                                && address_component.types[2] == sub_level2_types[2] ) {
-                               sub_level2_name = address_component.short_name;
-                            }
+                            // if ( address_component.types[0] == sub_level2_types[0]
+                            //     && address_component.types[1] == sub_level2_types[1]
+                            //     && address_component.types[2] == sub_level2_types[2] ) {
+                            //    sub_level2_name = address_component.short_name;
+                            // }
 
                             if ( address_component.types[0] == sub_level1_types[0]
                                 && address_component.types[1] == sub_level1_types[1]
@@ -1272,22 +1272,24 @@ angular.module('starter.services', [])
                                country_name = address_component.short_name;
                             }
 
-                            if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                            // if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                            if (sub_level1_name && local_name && country_name) {
                                 break;
                             }
                         }
 
-                        if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                        // if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                        if (sub_level1_name && local_name && country_name) {
                             break;
                         }
                     }
 
                     var name;
                     var address = "";
-                    if (sub_level2_name) {
-                        address += sub_level2_name;
-                        name = sub_level2_name
-                    }
+                    // if (sub_level2_name) {
+                    //     address += sub_level2_name;
+                    //     name = sub_level2_name
+                    // }
                     if (sub_level1_name) {
                         address += " " + sub_level1_name;
                         if (name == undefined) {
@@ -1406,7 +1408,7 @@ angular.module('starter.services', [])
                 //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
 
                 // Tokyo 35.6894875,139.6917064
-                //position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+                // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
                 // Shanghai 31.227797,121.475194
                 //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
                 // NY 40.663527,-73.960852
@@ -2186,7 +2188,7 @@ angular.module('starter.services', [])
             //var normal_lon = lon - (lon%baseLength) + baseLength/2;
             //return {lat: normal_lat, long: normal_lon};
 
-            return {lat: parseFloat(coords.lat.toFixed(3)), long: parseFloat(coords.long.toFixed(3))}
+            return {lat: parseFloat(coords.lat.toFixed(2)), long: parseFloat(coords.long.toFixed(2))}
         };
 
         return obj;
