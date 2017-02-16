@@ -86,5 +86,4 @@
   <icon src="resources/android/icon/drawable-xhdpi-icon.png"/>
   <allow-navigation href="*"/>
   <allow-intent href="mailto:*"/>
-  <plugin name="cordova-plugin-google-analytics" spec="1.7.1" />
 </widget>
