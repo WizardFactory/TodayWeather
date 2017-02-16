@@ -1323,7 +1323,7 @@ angular.module('starter.controllers', [])
 
         var service;
         if (window.google == undefined) {
-            $ocLazyLoad.load('js!//maps.googleapis.com/maps/api/js?libraries=places').then(function () {
+            $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 console.log(e);
