@@ -86,6 +86,13 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background-size: contain;
 }
 
+.guide-content-head {
+  width: 100%;
+  margin: 0 0 10px;
+  text-align: center;
+  color: inherit;
+}
+
 .guide-content-text {
   width: 100%;
   margin: 0 0 5px;
@@ -104,14 +111,14 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .guide-pager-left {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: left;
   text-align: right;
 }
 
 .guide-pager-right {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: right;
   text-align: left;
 }
@@ -457,20 +464,25 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 /* popup */
 .ionic_popup .popup {
   background-color: #ffffff;
+  width: 280px;
 }
 
 .ionic_popup .popup-head {
-  height: 44px;
-  background-color: #03A9F4;
-  text-align: center;
-  line-height: 44px;
+  display: none;
 }
 
-.ionic_popup .popup-title {
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-}
+//.ionic_popup .popup-head {
+//  height: 44px;
+//  background-color: #03A9F4;
+//  text-align: center;
+//  line-height: 44px;
+//}
+//
+//.ionic_popup .popup-title {
+//  color: #ffffff;
+//  font-size: 18px;
+//  font-weight: 700;
+//}
 
 .ionic_popup .popup-body {
   padding: 0;

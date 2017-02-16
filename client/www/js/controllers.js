@@ -2180,7 +2180,7 @@ angular.module('starter.controllers', [])
                                       $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate) {
         var guideVersion = null;
 
-        $scope.data = { 'autoSearch': false };
+        $scope.data = { 'autoSearch': true };
 
         var strClose = "Close";
         var strSkip = "Skip";
@@ -2267,12 +2267,11 @@ angular.module('starter.controllers', [])
                 cssClass: 'ionic_popup',
                 buttons: [
                     {
-                        text: strCancel,
-                        type: 'button_cancel'
+                        text: strCancel
                     },
                     {
                         text: strOkay,
-                        type: 'button_close',
+                        type: 'button-positive',
                         onTap: function() {
                             return $scope.data.autoSearch;
                         }
