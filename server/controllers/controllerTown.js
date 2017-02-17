@@ -2548,19 +2548,21 @@ ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, 
  * @param pty
  * @returns {*}
  */
-ControllerTown.prototype._convertKmaPtyToStr = function(pty) {
+ControllerTown.prototype._convertKmaPtyToStr = function(pty, translate) {
+    var ret = "";
+    var ts = translate == undefined ? global : translate;
     if (pty === 1) {
-        return __("LOC_PRECIPITATION");
+        ret = ts.__("LOC_PRECIPITATION");
     }
     else if (pty === 2) {
         //return "강수/적설량"
-        return __("LOC_PRECIPITATION");
+        ret = ts.__("LOC_PRECIPITATION");
     }
     else if (pty === 3) {
-        return __("LOC_SNOWFALL");
+        ret = ts.__("LOC_SNOWFALL");
     }
 
-    return "";
+    return ret;
 };
 
 /**

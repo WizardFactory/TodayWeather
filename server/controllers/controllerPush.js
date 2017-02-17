@@ -13,6 +13,7 @@ var cTown = new ControllerTown24h();
 var UnitConverter = require('../lib/unitConverter');
 var unitConverter = new UnitConverter();
 
+var KecoController = require('../controllers/kecoController');
 var LifeIndexKmaController = require('./lifeIndexKmaController');
 
 var apnGateway;
@@ -39,6 +40,8 @@ var server_access_key = config.push.gcmAccessKey;
 
 var apnConnection = new apn.Connection(apnOptions);
 var sender = new gcm.Sender(server_access_key);
+
+var i18n = require('i18n');
 
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
@@ -190,7 +193,16 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
 ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     var pushMsg;
 
-    i18n.setLocale(pushInfo.lang);
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+
+    trans.setLocale(pushInfo.lang);
 
     var location = "";
     if (pushInfo.name) {
@@ -216,11 +228,11 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     var theDay;
     if (time < 18) {
         theDay = dailyInfo.dailySummary.today;
-        dailySummary += __("LOC_TODAY")+": ";
+        dailySummary += trans.__("LOC_TODAY")+": ";
     }
     else {
         theDay = dailyInfo.dailySummary.tomorrow;
-        dailySummary += __("LOC_TOMORROW")+": ";
+        dailySummary += trans.__("LOC_TOMORROW")+": ";
     }
 
     if (theDay.skyIconAm && theDay.skyIconPm) {
@@ -246,22 +258,21 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
                //It's raining or snowing so we didn't show pop
             }
             else {
-                dailyArray.push(__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
+                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
             }
         }
     }
 
-    if (theDay.pmGrade && theDay.pmGrade > 1) {
-        if (theDay.pmStr) {
-            dailyArray.push(__("LOC_PM10") + " " + theDay.pmStr);
-        }
+    if (theDay.pmGrade) {
+        //미세먼지예보는 grade 값이 다름.
+        dailyArray.push(trans.__("LOC_PM10") + " " + KecoController.grade2str(theDay.pmGrade+1, 'PM', trans));
     }
-    if (theDay.ultrvGrade && theDay.ultrvGrade >= 2) {
-        //dailyArray.push(__("LOC_UV")+" "+theDay.ultrvStr);
-        dailyArray.push(__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
+    if (theDay.ultrvGrade) {
+        dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
     }
-    if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
-        dailyArray.push(__("LOC_O3")+" "+theDay.dustForecast.O3Str);
+    //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
+    if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
+        dailyArray.push(trans.__("LOC_O3") + " "+ KecoController.grade2str(theDay.dustForecast.O3Str+1, 'O3', trans));
     }
 
     //불쾌지수
@@ -285,10 +296,10 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     }
 
     if (current.arpltn && current.arpltn.khaiGrade) {
-        hourlyArray.push(__("LOC_AQI")+" "+ current.arpltn.khaiStr);
+        hourlyArray.push(trans.__("LOC_AQI")+" "+ KecoController.grade2str(current.arpltn.khaiGrade, "khai", trans));
     }
     if (current.pty && current.pty > 0 && current.rn1 != undefined) {
-        current.ptyStr = cTown._convertKmaPtyToStr(current.pty);
+        current.ptyStr = cTown._convertKmaPtyToStr(current.pty, trans);
         current.rn1 = unitConverter.convertUnits(dailyInfo.units.precipitationUnit, pushInfo.units.precipitationUnit, current.rn1);
         hourlyArray.push(current.ptyStr+" "+ current.rn1 + pushInfo.units.precipitationUnit);
     }
@@ -350,19 +361,19 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
     return this;
 };
 
-ControllerPush.prototype._pty2str = function (pty) {
+ControllerPush.prototype._pty2str = function (pty, translate) {
     if (pty === 1) {
-        return __("LOC_PRECIPITATION");
+        return translate.__("LOC_PRECIPITATION");
     }
     else if (pty === 2) {
-        return __("LOC_SNOWFALL");
+        return translate.__("LOC_SNOWFALL");
     }
     else if (pty === 3) {
         //return "강수/적설량"
-        return __("LOC_PRECIPITATION");
+        return translate.__("LOC_PRECIPITATION");
     }
     else if (pty === 4) {
-        return __("LOC_HAIL");
+        return translate.__("LOC_HAIL");
     }
 
     return "";
@@ -430,8 +441,15 @@ ControllerPush.prototype._parseWorldSkyState = function(precType, cloud, isNight
 ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherData) {
     var self = this;
     var pushMsg;
-
-    i18n.setLocale(pushInfo.lang);
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+    trans.setLocale(pushInfo.lang);
 
     var location = "";
     if (pushInfo.name) {
@@ -452,12 +470,12 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
 
     if (time < 18) {
         targetDate = currentDate.getDate();
-        dailySummary += __("LOC_TODAY")+": ";
+        dailySummary += trans.__("LOC_TODAY")+": ";
     }
     else {
         currentDate.setDate(currentDate.getDate()+1);
         targetDate = currentDate.getDate();
-        dailySummary += __("LOC_TOMORROW")+": ";
+        dailySummary += trans.__("LOC_TOMORROW")+": ";
     }
 
     var dailyList = worldWeatherData.daily;
@@ -513,23 +531,23 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
                //current is raining or snowing so we didn't pop
             }
             else {
-                dailyArray.push(__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.precProb+"%");
+                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.precProb+"%");
             }
         }
     }
 
     //if (theDay.pmGrade && theDay.pmGrade > 1) {
     //    if (theDay.pmStr) {
-    //        dailyArray.push(__("LOC_PM10") + " " + theDay.pmStr);
+    //        dailyArray.push(trans.__("LOC_PM10") + " " + theDay.pmStr);
     //    }
     //}
 
     //if (theDay.ultrvGrade && theDay.ultrvGrade >= 2) {
-    //    dailyArray.push(__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
+    //    dailyArray.push(trans.__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
     //}
 
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
-    //    dailyArray.push(__("LOC_O3")+" "+theDay.dustForecast.O3Str);
+    //    dailyArray.push(trans.__("LOC_O3")+" "+theDay.dustForecast.O3Str);
     //}
 
     //불쾌지수
@@ -558,11 +576,11 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     }
 
     //if (current.arpltn && current.arpltn.khaiGrade) {
-    //    hourlyArray.push(__("LOC_AQI")+" "+ current.arpltn.khaiStr);
+    //    hourlyArray.push(trans.__("LOC_AQI")+" "+ current.arpltn.khaiStr);
     //}
 
     if (current.precType && current.precType > 0 && current.precip != undefined) {
-        current.precStr = self._pty2str(current.precType);
+        current.precStr = self._pty2str(current.precType, trans);
         current.precip = unitConverter.convertUnits(worldWeatherData.units.precipitationUnit, pushInfo.units.precipitationUnit, current.precip);
         hourlyArray.push(current.precStr+" "+ current.precip + pushInfo.units.precipitationUnit);
     }
@@ -621,11 +639,27 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
 
 /**
  * convert rest api to function call
+ * use default for old push db
  * @param town
  * @param callback
  */
 ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     var self = this;
+
+    if (pushInfo.lang == undefined) {
+        pushInfo.lang = 'ko';
+    }
+
+    if (pushInfo.units == undefined) {
+        var obj = {};
+        obj.temperatureUnit = "C";
+        obj.windSpeedUnit = "m/s";
+        obj.pressureUnit = "hPa";
+        obj.distanceUnit = "km";
+        obj.precipitationUnit = "mm";
+        pushInfo.units = obj;
+    }
+
     //check source
     if (pushInfo.source == undefined || pushInfo.source == 'KMA') {
         self._requestKmaDailySummary(pushInfo, function (err, results) {

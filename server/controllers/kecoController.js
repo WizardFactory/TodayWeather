@@ -26,16 +26,18 @@ function arpltnController() {
  * @param type so2, o3, co, no2
  * @returns {*}
  */
-arpltnController.grade2str = function (grade, type) {
-     switch (grade) {
+arpltnController.grade2str = function (grade, type, translate) {
+    var ts = translate == undefined?global:translate;
+
+    switch (grade) {
         case 1:
-            return __("LOC_GOOD");
+            return ts.__("LOC_GOOD");
         case 2:
-            return __("LOC_MODERATE");
+            return ts.__("LOC_MODERATE");
         case 3:
-            return __("LOC_UNHEALTHY");
+            return ts.__("LOC_UNHEALTHY");
         case 4:
-            return __("LOC_VERY_UNHEALTHY");
+            return ts.__("LOC_VERY_UNHEALTHY");
         default :
             log.error("Unknown grade="+grade+" type="+type);
     }

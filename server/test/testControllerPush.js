@@ -53,7 +53,34 @@ describe('unit test - controller push', function() {
         }
     };
 
-    //var pushInfo = {
+    //var pushInfo0 = {
+    //    registrationId: 'asdf',
+    //    pushTime: 6900,
+    //    cityIndex: 0,
+    //    type: 'ios',
+    //    town: {first: '서울특별시', second: '송파구', third: '잠실본동'}
+    //};
+
+    //var pushInfo2 = {
+    //    registrationId: 'asdf',
+    //    pushTime: 6900,
+    //    cityIndex: 0,
+    //    type: 'ios',
+    //    town: {first: '서울특별시', second: '송파구', third: '잠실본동'},
+    //    geo: [36, 102],
+    //    lang: 'en',
+    //    name: 'jamsil',
+    //    source: 'KMA',
+    //    units: {
+    //        temperatureUnit: "F",
+    //        windSpeedUnit: "mph",
+    //        pressureUnit: "mbar",
+    //        distanceUnit: "miles",
+    //        precipitationUnit: "inch"
+    //    }
+    //};
+
+    //var pushInfo3 = {
     //    registrationId: 'asdf',
     //    pushTime: 6900,
     //    cityIndex: 0,
@@ -124,10 +151,19 @@ describe('unit test - controller push', function() {
     //        else {
     //            console.log(result);
     //        }
-    //       done();
+    //       //done();
+    //    });
+    //
+    //    co.requestDailySummary(pushInfo0, function (err, result) {
+    //        if (err) {
+    //            console.log(err);
+    //        }
+    //        else {
+    //            console.log(result);
+    //        }
+    //       //done();
     //    });
     //});
-
 });
 
 
