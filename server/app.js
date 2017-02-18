@@ -59,8 +59,6 @@ i18n.configure({
     register: global
 });
 
-global.i18n = i18n;
-
 // Use the session middleware
 app.use(session({ secret: 'wizard factory', cookie: { maxAge: 60000 }}));
 
