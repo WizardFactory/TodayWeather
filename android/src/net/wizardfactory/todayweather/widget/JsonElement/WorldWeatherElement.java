@@ -90,6 +90,9 @@ public class WorldWeatherElement {
         try {
             JSONObject reader = new JSONObject(jsonStr);
             if (reader != null) {
+                JSONObject timezone = reader.getJSONObject("timezone");
+                currentWeather.setTimeZoneOffsetMS(timezone.getInt("ms"));
+
                 JSONArray thisTime = reader.getJSONArray("thisTime");
                 JSONObject current = thisTime.getJSONObject(1);
                 currentWeather.setTemperature(current.getDouble("temp_c"));

@@ -39,7 +39,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -362,6 +364,22 @@ public class WidgetUpdateService extends Service {
         return geoInfo;
     }
 
+    /**
+     *
+     // Tokyo 35.6894875,139.6917064
+     // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+     // Shanghai 31.227797,121.475194
+     //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
+     // NY 40.663527,-73.960852
+     //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
+     // Berlin 52.516407,13.403322
+     //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
+     // Hochinminh 10.779001,106.662796
+     //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
+     * @param lat
+     * @param lon
+     * @return
+     */
     private GeoInfo location2GeoInfo(double lat, double lon) {
         GeoInfo geoInfo = null;
 
@@ -382,11 +400,11 @@ public class WidgetUpdateService extends Service {
                     return geoInfo;
                 }
 
-                //String sub_level2_types[] = { "political", "sublocality", "sublocality_level_2" };
+                String sub_level2_types[] = { "political", "sublocality", "sublocality_level_2" };
                 String sub_level1_types[] = { "political", "sublocality", "sublocality_level_1" };
                 String local_types[] = { "locality", "political" };
                 String country_types[] = { "country" };
-                //String sub_level2_name = null;
+                String sub_level2_name = null;
                 String sub_level1_name = null;
                 String local_name = null;
                 String country_name = null;
@@ -401,11 +419,11 @@ public class WidgetUpdateService extends Service {
                     for (int j=0; j<addressComponents.length(); j++) {
                         JSONObject addressComponent = addressComponents.getJSONObject(j);
                         JSONArray types = addressComponent.getJSONArray("types");
-                        //if (types.getString(0).equals(sub_level2_types[0])
-                        //        && types.getString(1).equals(sub_level2_types[1])
-                        //        && types.getString(2).equals(sub_level2_types[2]) ) {
-                        //   sub_level2_name = addressComponent.getString("short_name");
-                        //}
+                        if (types.getString(0).equals(sub_level2_types[0])
+                                && types.getString(1).equals(sub_level2_types[1])
+                                && types.getString(2).equals(sub_level2_types[2]) ) {
+                           sub_level2_name = addressComponent.getString("short_name");
+                        }
 
                         if (types.getString(0).equals(sub_level1_types[0])
                                 && types.getString(1).equals(sub_level1_types[1])
@@ -422,15 +440,13 @@ public class WidgetUpdateService extends Service {
                             country_name = addressComponent.getString("short_name");
                         }
 
-                        //if (sub_level2_name != null && sub_level1_name != null
-                        if (sub_level1_name != null
+                        if (sub_level2_name != null && sub_level1_name != null
                                 && local_name != null && country_name != null) {
                             break;
                         }
                     }
 
-                    //if (sub_level2_name != null && sub_level1_name != null
-                    if (sub_level1_name != null
+                    if (sub_level2_name != null && sub_level1_name != null
                             && local_name != null && country_name != null) {
                         break;
                     }
@@ -438,10 +454,13 @@ public class WidgetUpdateService extends Service {
 
                 String name = null;
                 String address = "";
-                //if (sub_level2_name != null) {
-                //    address += sub_level2_name;
-                //    name = sub_level2_name;
-                //}
+                //국내는 동단위까지 표기해야 함.
+                if (country_name != null && country_name.equals("KR")) {
+                    if (sub_level2_name != null) {
+                        address += sub_level2_name;
+                        name = sub_level2_name;
+                    }
+                }
                 if (sub_level1_name != null) {
                     address += " " + sub_level1_name;
                     if (name == null) {
@@ -771,9 +790,28 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime()+offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(pubDate));
+        }
+        if (Build.VERSION.SDK_INT >= 17) {
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                String zoneIds[] = TimeZone.getAvailableIDs(currentData.getTimeZoneOffsetMS());
+                if (zoneIds.length > 0) {
+                    views.setString(R.id.time, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.date, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.am_pm, "setTimeZone", zoneIds[0]);
+                } else {
+                    Log.e("UpdateWidgetService", "Fail to find time zone ids");
+                }
+            }
         }
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
@@ -841,9 +879,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
@@ -975,9 +1020,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
@@ -1068,9 +1120,28 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime()+offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(pubDate));
+        }
+        if (Build.VERSION.SDK_INT >= 17) {
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                String zoneIds[] = TimeZone.getAvailableIDs(currentData.getTimeZoneOffsetMS());
+                if (zoneIds.length > 0) {
+                    views.setString(R.id.time, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.date, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.am_pm, "setTimeZone", zoneIds[0]);
+                } else {
+                    Log.e("UpdateWidgetService", "Fail to find time zone ids");
+                }
+            }
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
@@ -1190,9 +1261,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());

@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -62,12 +61,14 @@ public class WidgetProviderConfigureActivity extends Activity {
 //            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 //            W1x1CurrentWeather.updateAppWidget(context, appWidgetManager, mAppWidgetId);
 
-            if (Build.VERSION.SDK_INT < 16) {
+            //7.0이상에서 위젯 설치시에 업데이트가 되지 않음.
+            //기존 디바이스에서 APPWIDGET_UPDATE가 두번 불려도 Service에서 cityInfo가 없어서 종료됨.
+            //if (Build.VERSION.SDK_INT < 16) {
                 // update widget weather data using service
                 Intent serviceIntent = new Intent(context, WidgetUpdateService.class);
                 serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
                 context.startService(serviceIntent);
-            }
+            //}
 
             // Make sure we pass back the original appWidgetId
             Intent resultValue = new Intent();

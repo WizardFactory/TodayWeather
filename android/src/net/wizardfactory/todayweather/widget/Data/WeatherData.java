@@ -31,6 +31,15 @@ public class WeatherData {
     private Date date = null; //날씨정보 날짜
     private String rn1Str = null;
     private double rn1 = WeatherElement.DEFAULT_WEATHER_DOUBLE_VAL;
+    private int timeZoneOffsetMS = WeatherElement.DEFAULT_WEATHER_INT_VAL;
+
+    public void setTimeZoneOffsetMS(int timeZoneOffsetMS) {
+        this.timeZoneOffsetMS = timeZoneOffsetMS;
+    }
+
+    public int getTimeZoneOffsetMS() {
+        return timeZoneOffsetMS;
+    }
 
     public void setRn1(double rn1) {
         this.rn1 = rn1;

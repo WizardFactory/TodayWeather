@@ -46,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text=""
+            android:text="@string/loading"
             android:textSize="14dp"
             android:includeFontPadding="false"
             android:id="@+id/pubdate"
