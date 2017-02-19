@@ -748,10 +748,7 @@ angular.module('starter.services', [])
                         var nextTime = parseInt(shortForecastList[index+1].time.slice(0, -2));
                         if (currentForecast.time < nextTime) {
                             currentIndex = index;
-                            /**
-                             * chart는 기준 index부터 뒤로 rect를 그리고, table은 기준값 기준으로 앞으로 데이터를 선정하기 때문에 선택된 index에 한칸으로 가야 함
-                             */
-                            shortForecastList[index+1].currentIndex = true;
+                            shortForecastList[index].currentIndex = true;
                         }
                     }
                 }
@@ -1877,7 +1874,7 @@ angular.module('starter.services', [])
                                     tempObject.currentIndex = true;
                                 }
                                 else {
-                                    console.log("Fail to find curren "+currentHours);
+                                    console.log("Fail to find current "+currentHours);
                                 }
                             }
                         }

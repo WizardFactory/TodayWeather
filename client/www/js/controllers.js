@@ -322,21 +322,13 @@ angular.module('starter.controllers', [])
                     contentRatio = 0.60;
                 }
                 else {
-                    headerRatio = 0.33;
-                    contentRatio = 0.67;
-                }
-            }
-            else {
-                if (ionic.Platform.isIOS()) {
-                    headerRatio = 0.33;
-                    contentRatio = 0.67;
-                }
-                else {
-                    //0.32는 되어야, top main box가 16:9비율이 나옴.
-                    //차후 top main box에 사진 들어가는 것을 고려.
                     headerRatio = 0.32;
                     contentRatio = 0.68;
                 }
+            }
+            else {
+                headerRatio = 0.32;
+                contentRatio = 0.68;
             }
 
             /* The height of a toolbar by default in Angular Material */
@@ -648,7 +640,7 @@ angular.module('starter.controllers', [])
             }
 
             if($scope.forecastType == 'short') {
-                if (showAqi && cityData.currentWeather.arpltn) {
+                if (showAqi) {
                     padding += 36;
                 }
                 var chartShortHeight = mainHeight - (143 + padding);
@@ -929,21 +921,16 @@ angular.module('starter.controllers', [])
             var i;
 
             if ($scope.forecastType === 'short') {
-                if ($scope.timeTable == undefined) {
-                    console.log("time table is undefined");
+                if ($scope.timeChart == undefined || $scope.timeChart.length <= 1) {
+                    console.log("time chart is undefined");
                     return 0;
                 }
 
-                if ($scope.timeTable.length*colWidth < TABLET_WIDTH) {
+                if ($scope.timeChart[1].length*colWidth < TABLET_WIDTH) {
                     return 0;
                 }
 
-                for (i = $scope.timeTable.length-1; i >= 0; i--) {
-                    if (!($scope.timeTable[i].currentIndex == undefined) && $scope.timeTable[i].currentIndex) {
-                        index = i;
-                        break;
-                    }
-                }
+                index = $scope.timeChart[1].currentIndex;
 
                 if (index >= 1) {
                     index = index-1;
@@ -970,10 +957,12 @@ angular.module('starter.controllers', [])
                         !($scope.currentWeather.today.index == undefined)) {
                         index = $scope.currentWeather.today.index;
                     }
-                    for (i = dayTable.length-1; i >= 0; i--) {
-                        if (dayTable[i].fromToday == 0) {
-                            index = i;
-                            break;
+                    else {
+                        for (i = dayTable.length-1; i >= 0; i--) {
+                            if (dayTable[i].fromToday == 0) {
+                                index = i;
+                                break;
+                            }
                         }
                     }
                 }
