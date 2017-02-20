@@ -42,7 +42,7 @@ angular.module('controller.purchase', [])
         };
 
         obj.checkReceiptValidation = function(storeReceipt, callback) {
-            var url = twClientConfig.serverUrl  + '/check-purchase';
+            var url = twClientConfig.serverUrl  + '/v000705' + '/check-purchase';
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -397,11 +397,22 @@ angular.module('controller.purchase', [])
         };
 
         $scope.goBack = function() {
-            TwAds.setShowAds(true);
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
             $ionicHistory.goBack();
         };
 
         $scope.$on('$ionicView.leave', function() {
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
             TwAds.setShowAds(true);
         });
 
