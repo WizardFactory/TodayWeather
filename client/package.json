@@ -38,15 +38,15 @@
     "cordova-plugin-statusbar",
     "cordova-plugin-inappbrowser",
     "cordova-plugin-x-socialsharing",
-    "cordova-plugin-inapppurchase",
+    "cordova-plugin-inapppurchase@1.0.0",
     "cordova-plugin-whitelist",
     "cordova-plugin-google-analytics@1.7.1",
     {
       "variables": {
-        "SENDER_ID": ""
+        "SENDER_ID": "11111111111"
       },
       "locator": "phonegap-plugin-push",
-      "id": "phonegap-plugin-push"
+      "id": "phonegap-plugin-push@1.8.4"
     },
     "cordova-plugin-app-preferences",
     "cordova-plugin-app-version",

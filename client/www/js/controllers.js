@@ -2166,7 +2166,7 @@ angular.module('starter.controllers', [])
     })
 
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
-                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
         var guideVersion = null;
 
         $scope.data = { 'autoSearch': true };
@@ -2179,9 +2179,18 @@ angular.module('starter.controllers', [])
         var strFindLocationByName = "Find location by name";
         var strTodayWeather = "TodayWeather";
 
+        function _setShowAds(show) {
+            if (show == true && Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+                TwAds.setShowAds(true);
+            }
+            else if (show == false) {
+                TwAds.setShowAds(false);
+            }
+        }
+
         function init() {
             //for fast close ads when first loading
-            TwAds.setShowAds(false);
+            _setShowAds(false);
 
             var bodyHeight;
 
@@ -2225,11 +2234,11 @@ angular.module('starter.controllers', [])
                 showPopup();
             } else {
                 if (Util.guideVersion == Number(guideVersion)) {
-                    TwAds.setShowAds(true);
+                    _setShowAds(true);
                     $location.path('/tab/setting');
                 } else {
                     localStorage.setItem("guideVersion", Util.guideVersion.toString());
-                    TwAds.setShowAds(true);
+                    _setShowAds(true);
                     $location.path('/tab/forecast');
                 }
             }
@@ -2274,7 +2283,7 @@ angular.module('starter.controllers', [])
                 }
 
                 localStorage.setItem("guideVersion", Util.guideVersion.toString());
-                TwAds.setShowAds(true);
+                _setShowAds(true);
                 if (res === true) { // autoSearch
                     Util.ga.trackEvent('action', 'click', 'auto search');
                     WeatherInfo.disableCity(false);
@@ -2330,11 +2339,11 @@ angular.module('starter.controllers', [])
         };
 
         $scope.$on('$ionicView.leave', function() {
-            TwAds.setShowAds(true);
+            _setShowAds(true);
         });
 
         $scope.$on('$ionicView.enter', function() {
-            TwAds.setShowAds(false);
+            _setShowAds(false);
             $ionicSlideBoxDelegate.slide(0);
         });
 

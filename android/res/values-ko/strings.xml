@@ -12,7 +12,7 @@
  <string name="fail_to_get_location">오늘날씨 : 위치정보를 가져오지 못 하였습니다.</string>
  <string name="current_position">현재위치</string>
  <string name="cancel">취소</string>
- <string name="aqi">대기질</string>
+ <string name="aqi">통합대기</string>
  <string name="pm10">미세</string>
  <string name="pm25">초미세</string>
  <string name="good">좋음</string>
