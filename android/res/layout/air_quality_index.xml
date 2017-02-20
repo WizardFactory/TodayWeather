@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
+            android:text="@string/loading"
             android:textSize="12dp"
             android:includeFontPadding="false"
             android:layout_alignParentTop="true"

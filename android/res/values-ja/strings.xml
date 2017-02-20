@@ -23,4 +23,5 @@
     <string name="unhealthy_for_sensitive_groups">乳幼児、お年寄りは注意</string>
     <string name="this_location_is_not_supported">この位置は大気情報を提供していません。</string>
     <string name="fail_to_get_geoinfo">今日天気：地域情報を取得できませんでした。</string>
+    <string name="loading">Loading</string>
 </resources>
