@@ -192,7 +192,7 @@
   "LOC_VERY_HIGH" : "매우 높음",
   "LOC_THIN_FOG" : "안개엷어짐",
   "LOC_DENSE_FOG" : "안개강해짐",
-  "LOC_FOG_CLEARED" : "안개끝",
+  "LOC_FOG_STOPPED" : "안개끝",
   "LOC_PARTLY_FOG" : "부분안개",
   "LOC_YELLOW_DUST" : "황사",
   "LOC_LIGHT_DRIZZLE" : "약한이슬비",

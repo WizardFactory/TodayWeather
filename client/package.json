@@ -45,8 +45,8 @@
       "variables": {
         "SENDER_ID": "11111111111"
       },
-      "locator": "phonegap-plugin-push",
-      "id": "phonegap-plugin-push@1.8.4"
+      "locator": "phonegap-plugin-push@1.8.4",
+      "id": "phonegap-plugin-push"
     },
     "cordova-plugin-app-preferences",
     "cordova-plugin-app-version",

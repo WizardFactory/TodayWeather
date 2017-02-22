@@ -192,7 +192,7 @@
   "LOC_VERY_HIGH": "非常に高い",
   "LOC_THIN_FOG": "薄い霧",
   "LOC_DENSE_FOG": "濃霧",
-  "LOC_FOG_CLEARED": "霧はれる",
+  "LOC_FOG_STOPPED": "霧はれる",
   "LOC_PARTLY_FOG": "一部霧",
   "LOC_YELLOW_DUST": "黄砂",
   "LOC_LIGHT_DRIZZLE": "弱い霧雨",
