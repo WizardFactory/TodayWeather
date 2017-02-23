@@ -1487,7 +1487,16 @@ function ControllerTown() {
 
         req.midData.dailyData.forEach(function (dailyData) {
             var skyInfoAm = self._convertKorStrToSky(dailyData.wfAm);
+            if (skyInfoAm == undefined) {
+                log.warn(JSON.stringify(dailyData), meta);
+                skyInfoAm = {sky: 1, pty: 0, lgt: 0};
+            }
             var skyInfoPm = self._convertKorStrToSky(dailyData.wfPm);
+            if (skyInfoPm == undefined) {
+                log.warn(JSON.stringify(dailyData), meta);
+                skyInfoPm = {sky: 1, pty: 0, lgt: 0};
+            }
+
             dailyData.skyAm = skyInfoAm.sky;
             dailyData.ptyAm = skyInfoAm.pty;
             dailyData.lgtAm = skyInfoAm.lgt;
@@ -4291,7 +4300,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
  * @private
  */
 ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
-    var sky = 0;
+    var sky = 1;
     var pty = 0;
     var lgt = 0;
 
@@ -4355,8 +4364,7 @@ ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
             break;
         default :
             log.error("Fail to convert skystring="+skyKorStr);
-            break;
-
+            return undefined;
     }
     return  {sky: sky, pty: pty, lgt: lgt};
 };
