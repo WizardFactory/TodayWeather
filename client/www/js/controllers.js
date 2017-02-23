@@ -1040,20 +1040,6 @@ angular.module('starter.controllers', [])
             });
         }
 
-        function _convertKmaRxxToStr(pty, rXX) {
-            var str = "~"+rXX;
-            if (pty === 1 || pty === 2) {
-                str += "mm";
-            }
-            else if (pty === 3) {
-                str += "cm";
-            }
-            else {
-               return "";
-            }
-            return str;
-        }
-
         function _convertKmaWsdToStr(windGrade)  {
             switch (windGrade) {
                 case 0: return "";
@@ -1129,7 +1115,7 @@ angular.module('starter.controllers', [])
                         default :
                             current.ptyStr = "";
                     }
-                    current.rn1Str = _convertKmaRxxToStr(current.pty, rn1);
+                    current.rn1Str = current.rn1 + Units.getUnit("precipitationUnit");
                     item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
                     itemList.push(item);
                 }
