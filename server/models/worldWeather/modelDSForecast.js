@@ -17,7 +17,7 @@ var dsForecastSchema = new mongoose.Schema({
             summary:    {type: String, default: ''},
             pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
             pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
-            pre_type:   {type: String, default:''}, // rain, snow, sleet
+            pre_type:   {type: String, default:''}, // rain, snow, sleet 이값으로는 icon선정할수 없음.
             temp:       {type: Number, default:0},
             ftemp:      {type: Number, default:0},  // 체감온도
             humid:      {type: Number, default:0},  // 습도 percentage (0 ~ 1)
@@ -26,7 +26,8 @@ var dsForecastSchema = new mongoose.Schema({
             vis:        {type: Number, default:0},  // in miles
             cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
             pres:       {type: Number, default:0},  // millibar
-            oz:         {type: Number, default:0}   // dobson unit
+            oz:         {type: Number, default:0},   // dobson unit
+            icon:       {type: String, default: ''} //icon이 강수 1순위(과거는 pre_pro가 낮아도 icon이 rain인 경우 있음), pre_pro 2순위
         },
         hourly:{
             summary:        {type:String, default:''},
@@ -45,7 +46,8 @@ var dsForecastSchema = new mongoose.Schema({
                 vis:        {type: Number, default:0},  // in miles
                 cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:       {type: Number, default:0},  // millibar
-                oz:         {type: Number, default:0}   // dobson unit
+                oz:         {type: Number, default:0},   // dobson unit
+                icon:       {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]
 
         },
@@ -77,7 +79,8 @@ var dsForecastSchema = new mongoose.Schema({
                 vis:            {type: Number, default:0},  // in miles
                 cloud:          {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:           {type: Number, default:0},  // millibar
-                oz:             {type: Number, default:0}   // dobson unit
+                oz:             {type: Number, default:0},   // dobson unit
+                icon:           {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]
         }
     }]
