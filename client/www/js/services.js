@@ -657,8 +657,10 @@ angular.module('starter.services', [])
             //time is used in ngShortChart
             currentForecast.time = time;
 
-            currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
-                currentTownWeather.lgt, isNight);
+            if (currentForecast.skyIcon == undefined) {
+                currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
+                    currentTownWeather.lgt, isNight);
+            }
 
             if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
                 currentForecast.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.t1h);
@@ -731,7 +733,10 @@ angular.module('starter.services', [])
 
                 tempObject = shortForecast;
 
-                tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
+                if (tempObject.skyIcon == undefined) {
+                    tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
+                }
+
                 tempObject.fromToday = diffDays;
                 tempObject.time = time;
 
@@ -854,11 +859,17 @@ angular.module('starter.services', [])
                 data.fromToday = diffDays;
                 data.dayOfWeek = convertStringToDate(data.date).getDay();
 
-                var skyAm = convertMidSkyString(dayInfo.wfAm);
-                var skyPm = convertMidSkyString(dayInfo.wfPm);
-                data.skyIcon = getHighPrioritySky(skyAm, skyPm);
-                data.skyAm = skyAm;
-                data.skyPm = skyPm;
+                data.skyAm = dayInfo.skyAmIcon;
+                data.skyPm = dayInfo.skyPmIcon;
+                if (data.skyAm == undefined) {
+                    data.skyAm = convertMidSkyString(dayInfo.wfAm);
+                }
+                if (data.skyPm == undefined) {
+                    data.skyPm = convertMidSkyString(dayInfo.wfPm);
+                }
+                if (data.skyIcon == undefined) {
+                    data.skyIcon = getHighPrioritySky(skyAm, skyPm);
+                }
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
@@ -1414,6 +1425,8 @@ angular.module('starter.services', [])
                 //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
                 // Hochinminh 10.779001,106.662796
                 //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
+                //경상북도/영천시/대전동
+                //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
 
                 console.log('navigator geolocation');
                 console.log(position);
@@ -1715,23 +1728,27 @@ angular.module('starter.services', [])
                 current.precip = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), current.precip);
             }
 
-           return {
-               date: _convertDateToYYYYMMDD(new Date(current.date)),
-               stnDateTime: current.date,
-               summary: current.desc,
-               weatherType: current.weatherType,
-               t1h: current.temp_c,
-               sensorytem: current.ftemp_c,
-               reh: current.humid,
-               wsd: current.windSpd_ms,
-               wdd: _convertWindDirToWdd(current.windDir),
-               skyIcon: _parseWorldSkyState(current.precType, current.cloud, isNight),
-               visibility: current.vis,
-               hPa: current.press,
-               rn1: current.precip,
-               today: todayInfo,
-               yesterday: yesterday
-           }
+            var skyIcon = current.skyIcon;
+            if (skyIcon == undefined) {
+                skyIcon = _parseWorldSkyState(current.precType, current.cloud, isNight);
+            }
+            return {
+                date: _convertDateToYYYYMMDD(new Date(current.date)),
+                stnDateTime: current.date,
+                summary: current.desc,
+                weatherType: current.weatherType,
+                t1h: current.temp_c,
+                sensorytem: current.ftemp_c,
+                reh: current.humid,
+                wsd: current.windSpd_ms,
+                wdd: _convertWindDirToWdd(current.windDir),
+                skyIcon: skyIcon,
+                visibility: current.vis,
+                hPa: current.press,
+                rn1: current.precip,
+                today: todayInfo,
+                yesterday: yesterday
+            }
         }
 
         function _convertDateToYYYYMMDD(date) {
@@ -1806,7 +1823,10 @@ angular.module('starter.services', [])
                 else {
                     tempObject.cloud = hourlyObj.cloud;
                 }
-                tempObject.skyIcon = _parseWorldSkyState(tempObject.pty, tempObject.cloud, isNight);
+                tempObject.skyIcon = hourlyObj.skyIcon;
+                if (tempObject.skyIcon == undefined) {
+                    tempObject.skyIcon = _parseWorldSkyState(tempObject.pty, tempObject.cloud, isNight);
+                }
 
                 if (hourlyObj.precProb == undefined) {
                     //console.log("preProb of hourly " + JSON.stringify(hourlyObj));
@@ -1980,7 +2000,10 @@ angular.module('starter.services', [])
                     data.pty = dayInfo.precType;
                 }
 
-                var sky = _parseWorldSkyState(data.pty);
+                var sky = dayInfo.skyIcon;
+                if (sky == undefined) {
+                    sky = _parseWorldSkyState(data.pty, data.cloud, false);
+                }
                 data.skyIcon = sky;
                 data.skyAm = sky;
                 data.skyPm = sky;
