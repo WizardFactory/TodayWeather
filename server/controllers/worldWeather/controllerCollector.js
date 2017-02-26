@@ -1090,7 +1090,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 timeOffset = parseInt(data.offset);
             }
             if(list.length === 0) {
-                print.info('Dsf> First time');
+                print.info('Dsf> First time : ', self._getUtcTime('' + date + '000').toString());
                 var newItem = new modelDSForecast({
                     geocode: geocode,
                     address: {},
@@ -1120,6 +1120,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         data.date = date;
                     }
                     var pubDate = self._getUtcTime('' + date +'000');
+                    //log.info('dateOBJ : ', pubDate.toString());
                     if(data.dateObj.getTime() < pubDate.getTime()){
                         data.dateObj = pubDate;
                     }
@@ -1360,7 +1361,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     for(var i=From ; i<To ; i++){
         reqTime.setUTCDate(reqTime.getUTCDate()-i);
         //log.info("reqTime="+reqTime.toISOString());
-        var nTime = reqTime.getTime()/1000;
+        var nTime = parseInt(reqTime.getTime()/1000);
         dataList.push(nTime);
     }
 
@@ -1390,8 +1391,9 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
 
                     //log.info(result);
                     if(date === undefined){
-                        var dateString = self._getTimeString(0 + timeOffset).slice(0,10) + '00';
-                        date = self._getDateObj(dateString).getTime() / 1000;
+                        var curTime = new Date();
+                        date = parseInt(curTime.getTime() / 1000);
+                        //log.info('Req Dsf> cur : ', date.toString());
                     }
                     self.saveDSForecast(geocode, date, result, function(err){
                         cb(null, result);
