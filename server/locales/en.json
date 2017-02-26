@@ -23,7 +23,7 @@
   "LOC_UNHEALTHY" : "Unhealthy",
   "LOC_VERY_UNHEALTHY" : "Very unhealthy",
   "LOC_HAZARDOUS" : "Hazardous",
-  "LOC_STATION" : "Weather Station",
+  "LOC_STATION" : "Station",
   "LOC_DETAIL_WEATHER" : "Weather details",
   "LOC_HUMIDITY" : "Humidity",
   "LOC_UV" : "UV Index",
@@ -36,8 +36,8 @@
   "LOC_SUNRISE" : "Sunrise",
   "LOC_SUNSET" : "Sunset",
   "LOC_DETAIL_AQI" : "Air Quality Details",
-  "LOC_HOURLY_FORECAST" : "Hourly Forecast",
-  "LOC_DAILY_FORECAST" : "Daily Forecast",
+  "LOC_HOURLY_FORECAST" : "Hourly",
+  "LOC_DAILY_FORECAST" : "Daily",
   "LOC_PRECIPITATION" : "Precipitation",
   "LOC_RAINFALL" : "Rainfall",
   "LOC_SNOWFALL" : "Snowfall",
@@ -240,5 +240,9 @@
   "LOC_DELETE" : "Delete",
   "LOC_UNITS" : "Units",
   "LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED" : "Access to Location Services has been denied.",
-  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "Please turn on location services to find your current location."
+  "LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION" : "Please turn on location services to find your current location.",
+  "LOC_ICE_PELLETS" : "ice pellets",
+  "LOC_BREEZY": "Breezy",
+  "LOC_WINDY": "Windy",
+  "LOC_HUMID": "Humid"
 }

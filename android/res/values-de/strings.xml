@@ -6,7 +6,7 @@
     <string name="cmp_yesterday">%1$s˚ als Gestern</string>
     <string name="current_position">Aktueller Standort</string>
     <string name="fail_to_get_location">HeuteWetter : kein Standort-Information verfügbar</string>
-    <string name="hazardous">Gefährlich</string>
+    <string name="hazardous">Gefahr</string>
     <string name="good">Gut</string>
     <string name="moderate">mäßig</string>
     <string name="unhealthy">ungesund</string>
