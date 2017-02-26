@@ -428,6 +428,8 @@ function controllerWorldWeather(){
                             return;
                         }
 
+                        log.info('cDate : ', cDate.toString());
+                        log.info('DB Date : ', req.DSF.dateObj.toString());
                         //validation을 통과했는데, yesterday 못 만드는 경우 있음.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data', meta);
