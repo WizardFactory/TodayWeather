@@ -28,10 +28,12 @@ function ControllerRequester(){
      * @returns {*}
      */
     self.runCommand = function(req, res, next){
+        var meta = {};
+        meta.sID = req.sessionID;
 
         if(!self.isValidCommand(req)){
             req.validReq = false;
-            log.error('RQ> Invalid Command');
+            log.error('RQ> Invalid Command', meta);
             req.result = {status: 'Fail', cmd: req.params.command};
             return next();
         }
@@ -49,7 +51,7 @@ function ControllerRequester(){
                     }
                     collector.runTask(true, function(err){
                         if(err){
-                            log.error('command error : get_all');
+                            log.error('command error : get_all', meta);
                             req.result = {status: 'Fail', cmd: req.params.command};
                         }else{
                             req.result = {status: 'OK', category: req.params.category, cmd: req.params.command};
@@ -67,12 +69,12 @@ function ControllerRequester(){
             case 'req_add':
                 self.addNewLocation(req, function(err){
                     if(err){
-                        log.error('RQ>  fail to run req_add_geocode');
+                        log.error('RQ>  fail to run req_add_geocode', meta);
                         req.result = {status: 'Fail', cmd: req.params.command};
                         next();
                         return;
                     }
-                    log.info('RQ> success adding geocode');
+                    log.info('RQ> success adding geocode', meta);
                     req.result = {status: 'OK', cmd: req.params.command};
                     next();
                 });
@@ -81,12 +83,12 @@ function ControllerRequester(){
             case 'req_two_days':
                 self.reqDataForTwoDays(req, function(err){
                     if(err){
-                        log.error('RQ>  fail to run req_two_days');
+                        log.error('RQ>  fail to run req_two_days', meta);
                         req.result = {status: 'Fail', cmd: req.params.command};
                         next();
                         return;
                     }
-                    log.info('RQ> success adding req_two_days');
+                    log.info('RQ> success adding req_two_days', meta);
                     req.result = {status: 'OK', cmd: req.params.command};
                     next();
                 });
@@ -96,17 +98,17 @@ function ControllerRequester(){
                 if(global.collector){
                     self.addKey(req, function(err){
                         if(err){
-                            log.error('RQ>  fail to run addKey');
+                            log.error('RQ>  fail to run addKey', meta);
                             req.result = {status: 'Fail', cmd: req.params.command};
                             next();
                             return;
                         }
-                        log.info('RQ> success adding Key');
+                        log.info('RQ> success adding Key', meta);
                         req.result = {status: 'OK', cmd: req.params.command};
                         next();
                     });
                 }else{
-                    log.info('RQ> There is no collector module');
+                    log.info('RQ> There is no collector module', meta);
                     req.result = {status: 'Fail', cmd: req.params.command};
                     next();
                 }
@@ -128,14 +130,16 @@ function ControllerRequester(){
      */
     self.checkKey = function(req, res, next){
         var self = this;
+        var meta = {};
+        meta.sID = req.sessionID;
 
         if(req.query.key === undefined){
             req.validReq = false;
-            log.error('RQ> Unknown user connect to the server');
+            log.error('RQ> Unknown user connect to the server', meta);
             return next();
         }
 
-        log.info('RQ> key : ', req.query.key);
+        log.debug('RQ> key : ', req.query.key, meta);
 
         //todo: Check user key.
         // !!! CAUTION !!! This is Administrator's KEY.
@@ -151,6 +155,7 @@ function ControllerRequester(){
      * @param res
      */
     self.sendResult = function(req, res){
+        log.info('@@ - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         if(req.result){
             res.json(req.result);
         }
@@ -173,6 +178,8 @@ function ControllerRequester(){
  */
 ControllerRequester.prototype.isValidCommand = function(req){
     var i, j;
+    var meta = {};
+    meta.sID = req.sessionID;
 
     if(req.params.category === undefined ||
         req.params.command === undefined){
@@ -192,9 +199,9 @@ ControllerRequester.prototype.isValidCommand = function(req){
         }
     }
 
-    log.info('category: ', req.params.category);
-    log.info('command : ', req.params.command);
-    log.silly(i, commandCategory.length, j , command.length)
+    log.info('category: ', req.params.category, meta);
+    log.info('command : ', req.params.command, meta);
+    log.silly(i, commandCategory.length, j , command.length);
     return (i < commandCategory.length && j < command.length);
 };
 /**
@@ -203,8 +210,11 @@ ControllerRequester.prototype.isValidCommand = function(req){
  * @returns {boolean}
  */
 ControllerRequester.prototype.parseGeocode = function(req){
+    var meta = {};
+    meta.sID = req.sessionID;
+
     if(req.query.gcode === undefined){
-        log.silly('RQ> There are no geocode');
+        log.silly('RQ> There are no geocode', meta);
         return false;
     }
     var geocodeString = req.query.gcode;
@@ -212,7 +222,7 @@ ControllerRequester.prototype.parseGeocode = function(req){
     //log.info('code:', geocodeString);
     var codelist = geocodeString.split(',');
     if(codelist.length !== 2){
-        log.error('RQ> geocode has somthing wrong : ', codelist);
+        log.error('RQ> geocode has something wrong : ', codelist, meta);
         return false;
     }
 
@@ -221,19 +231,27 @@ ControllerRequester.prototype.parseGeocode = function(req){
         lon: parseFloat(codelist[1])
     };
 
-    log.info('RQ> ', req.geocode);
+    log.info('RQ> ', req.geocode, meta);
 
     return true;
 };
 
+/**
+ * must be supporting 30 mins
+ * @param req
+ * @returns {boolean}
+ */
 ControllerRequester.prototype.parseTimezone = function(req){
+    var meta = {};
+    meta.sID = req.sessionID;
+
     if(req.query.timezone === undefined){
-        log.silly('RQ> There are no timezone');
+        log.silly('RQ> There are no timezone', meta);
         return false;
     }
-    req.timezone = parseInt(req.query.timezone);
+    req.timezone = req.query.timezone;
 
-    log.info('RQ timezone> ', req.timezone);
+    log.info('RQ timezone> ', req.timezone, meta);
 
     return true;
 };
@@ -520,6 +538,9 @@ ControllerRequester.prototype.addNewLocation = function(req, callback){
 
 ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
     var self = this;
+    var meta = {};
+    meta.sID = req.sessionID;
+
     req.weather = {};
     var collector;
     if(global.collector === undefined){
@@ -529,7 +550,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
     }
 
     if(!self.parseGeocode(req)) {
-        log.error('There are no geocode : reqDataForTwoDays()');
+        log.error('There are no geocode : reqDataForTwoDays()', meta);
         callback('err_no_geocode');
         return;
     }
@@ -555,7 +576,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
             function(cb){
                 collector.requestDsfData(req.geocode, 0, 2, req.timezone, function(err, dsfData){
                     if(err){
-                        log.error('RQ> Fail to requestDsfData');
+                        log.error('RQ> Fail to requestDsfData', meta);
                         cb('Fail to requestDsfData');
                         return;
                     }
@@ -566,7 +587,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
         ],
         function(err, result){
             if(err){
-                log.error('RQ> Fail to request weather');
+                log.error('RQ> Fail to request weather', meta);
             }
             callback(err, result);
         }
@@ -575,23 +596,26 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
 
 ControllerRequester.prototype.addKey = function(req, callback){
     var self = this;
+    var meta = {};
+    meta.sID = req.sessionID;
+
     var key = {};
 
     if(req.query.key_type === undefined){
-        log.error('RQ> There is no key type parmeter');
+        log.error('RQ> There is no key type parameter', meta);
         callback('fail_add_key');
         return;
     }
 
     if(req.query.ckey === undefined){
-        log.error('RQ> There is no key parmeter');
+        log.error('RQ> There is no key parameter', meta);
         callback('fail_add_key');
         return;
     }
 
     if(req.query.key_type === 'wu'){
         if(req.query.key_id === undefined){
-            log.error('RQ> There is no WU key ID parmeter');
+            log.error('RQ> There is no WU key ID parameter', meta);
             callback('fail_add_key');
             return;
         }

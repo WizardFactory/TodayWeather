@@ -18,25 +18,7 @@ $dark:                            #444 !default;
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
-  font-weight: 300; //Light
-}
-
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
-  font-weight: 400; //Normal
-}
-
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
-  font-weight: 700; //Bold
-}
-
-$font-family-base: "Bareun Dotum Pro", sans-serif !default;
+$font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif !default;
 
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
@@ -104,6 +86,13 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   background-size: contain;
 }
 
+.guide-content-head {
+  width: 100%;
+  margin: 0 0 10px;
+  text-align: center;
+  color: inherit;
+}
+
 .guide-content-text {
   width: 100%;
   margin: 0 0 5px;
@@ -122,14 +111,14 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 
 .guide-pager-left {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: left;
   text-align: right;
 }
 
 .guide-pager-right {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: right;
   text-align: left;
 }
@@ -228,6 +217,18 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   height: 10px;
   display: inline-block;
 }
+
+.day-title-list {
+  position: relative;
+  height: 14px;
+}
+
+.day-title {
+  position: absolute;
+  top: 0;
+  width: 300px;
+}
+
 /* day chart style */
 .rect {
   fill: #ffffff;
@@ -291,7 +292,7 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 .img-detail-aqi {
   height: 24px;
   vertical-align: middle;
-  margin-right: 8px;
+  margin: 0 8px;
 }
 
 .main-content {
@@ -463,20 +464,25 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 /* popup */
 .ionic_popup .popup {
   background-color: #ffffff;
+  width: 280px;
 }
 
 .ionic_popup .popup-head {
-  height: 44px;
-  background-color: #03A9F4;
-  text-align: center;
-  line-height: 44px;
+  display: none;
 }
 
-.ionic_popup .popup-title {
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-}
+//.ionic_popup .popup-head {
+//  height: 44px;
+//  background-color: #03A9F4;
+//  text-align: center;
+//  line-height: 44px;
+//}
+//
+//.ionic_popup .popup-title {
+//  color: #ffffff;
+//  font-size: 18px;
+//  font-weight: 700;
+//}
 
 .ionic_popup .popup-body {
   padding: 0;
@@ -516,21 +522,18 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   font-size: 45px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .display1 {
   font-size: 34px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .headline {
   font-size: 24px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .title {
@@ -575,30 +578,25 @@ p small {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
 }
 
 .body1 {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .caption {
   font-size: 13px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 2px;
 }
 
 .button {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
 }
-
 
 [md-page-header] {
   padding: 0;

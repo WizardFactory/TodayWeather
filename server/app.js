@@ -44,6 +44,20 @@ mongoose.connect(config.db.path, options, function(err) {
 
 var app = express();
 var session = require('express-session');
+var i18n = require('i18n');
+
+i18n.configure({
+    // setup some locales - other locales default to en silently
+    locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+
+    // sets a custom cookie name to parse locale settings from
+    cookie: 'twcookie',
+
+    // where to store json files - defaults to './locales'
+    directory: __dirname + '/locales',
+
+    register: global
+});
 
 // Use the session middleware
 app.use(session({ secret: 'wizard factory', cookie: { maxAge: 60000 }}));
@@ -60,12 +74,14 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(i18n.init);
+
 app.use('/', require('./routes/v000001'));
 app.use('/v000001', require('./routes/v000001'));
 app.use('/v000705', require('./routes/v000705'));
 app.use('/v000803', require('./routes/v000803'));
-//app.use('/ww', require('./routes/worldweather/routeWeather'));
-//app.use('/req', require('./routes/worldweather/routeRequester'));
+app.use('/ww', require('./routes/worldweather/routeWeather'));
+app.use('/req', require('./routes/worldweather/routeRequester'));
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
@@ -124,11 +140,12 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res) {
-  res.status(err.status || 500);
-  res.render('error', {
-    message: err.message,
-    error: {}
-  });
+    log.error(err.message);
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
 });
 
 

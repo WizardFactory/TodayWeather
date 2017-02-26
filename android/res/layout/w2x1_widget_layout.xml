@@ -50,7 +50,7 @@
                     android:layout_gravity="center"
                     android:textSize="10sp"
                     android:textColor="#ffffff"
-                    android:text=""
+                    android:text="@string/loading"
                     android:textAlignment="center"/>
 
                 <!-- current temperature and sky -->

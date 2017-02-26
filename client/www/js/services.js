@@ -21,14 +21,10 @@ angular.module('starter.services', [])
                 city.dayChart = null;
                 city.disable = true; // 현재 위치 off
             } else {
-                city.currentPosition = item.currentPosition;
-                city.address = item.address;
-                city.location = item.location;
-                city.currentWeather = item.currentWeather;
-                city.timeTable = item.timeTable;
-                city.timeChart = item.timeChart;
-                city.dayTable = item.dayTable;
-                city.dayChart = item.dayChart;
+                city = item;
+                if (item.country == undefined) {
+                    city.country = "KR";
+                }
                 city.disable = item.disable === undefined ? false : item.disable;
             }
             city.loadTime = null;
@@ -46,7 +42,14 @@ angular.module('starter.services', [])
                 }
                 else {
                     if (cities[i].address === city.address) {
-                        return i;
+                        if (city.name || cities[i].name) {
+                           if (city.name === cities[i].name)  {
+                               return i;
+                           }
+                        }
+                        else {
+                            return i;
+                        }
                     }
                 }
             }
@@ -186,30 +189,36 @@ angular.module('starter.services', [])
             city.loadTime = null;
         };
 
-        obj.updateCity = function (index, weatherData) {
+        obj.updateCity = function (index, newCityInfo) {
             var that = this;
             var city = cities[index];
 
-            if (weatherData.address) {
-                city.address = weatherData.address;
+            if (newCityInfo.name) {
+                city.name = newCityInfo.name;
             }
-            if (weatherData.location) {
-                city.location = weatherData.location;
+            if (newCityInfo.country) {
+                city.country = newCityInfo.country;
             }
-            if (weatherData.currentWeather) {
-                city.currentWeather = weatherData.currentWeather;
+            if (newCityInfo.address) {
+                city.address = newCityInfo.address;
             }
-            if (weatherData.timeTable) {
-                city.timeTable = weatherData.timeTable;
+            if (newCityInfo.location) {
+                city.location = newCityInfo.location;
             }
-            if (weatherData.timeChart) {
-                city.timeChart = weatherData.timeChart;
+            if (newCityInfo.currentWeather) {
+                city.currentWeather = newCityInfo.currentWeather;
             }
-            if (weatherData.dayTable) {
-                city.dayTable = weatherData.dayTable;
+            if (newCityInfo.timeTable) {
+                city.timeTable = newCityInfo.timeTable;
             }
-            if (weatherData.dayChart) {
-                city.dayChart = weatherData.dayChart;
+            if (newCityInfo.timeChart) {
+                city.timeChart = newCityInfo.timeChart;
+            }
+            if (newCityInfo.dayTable) {
+                city.dayTable = newCityInfo.dayTable;
+            }
+            if (newCityInfo.dayChart) {
+                city.dayChart = newCityInfo.dayChart;
             }
             if (window.push && city.currentPosition == true) {
                 if (window.push.getAlarm(index)) {
@@ -217,6 +226,10 @@ angular.module('starter.services', [])
                 }
             }
             city.loadTime = new Date();
+
+            if (newCityInfo.source) {
+                city.source = newCityInfo.source;
+            }
 
             that.saveCities();
         };
@@ -257,9 +270,13 @@ angular.module('starter.services', [])
             cities.forEach(function (city) {
                 if (!city.disable) {
                     var simpleInfo = {};
+                    if (city.name) {
+                        simpleInfo.name = city.name;
+                    }
                     simpleInfo.currentPosition = city.currentPosition;
                     simpleInfo.address = city.address;
                     simpleInfo.location = city.location;
+                    simpleInfo.country = city.country;
                     pList.cityList.push(simpleInfo);
                 }
             });
@@ -310,7 +327,7 @@ angular.module('starter.services', [])
 
         return obj;
     })
-    .factory('WeatherUtil', function ($q, $http, Util) {
+    .factory('WeatherUtil', function ($q, $http, Util, Units) {
         var obj = {};
 
         //region Function
@@ -376,7 +393,7 @@ angular.module('starter.services', [])
         }
 
         /**
-         *
+         * target에 시간이 가지고 있으면, 값 차이가 발생함.
          * @param {Date} target
          * @param {Date} current
          * @returns {number}
@@ -386,8 +403,9 @@ angular.module('starter.services', [])
                 console.log("target or current is invalid");
                 return 0;
             }
+            var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
             var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
-            return Math.ceil((target - date) / (1000 * 3600 * 24));
+            return Math.ceil((targetDay - date) / (1000 * 3600 * 24));
         }
 
         /**
@@ -401,55 +419,6 @@ angular.module('starter.services', [])
                 d = str.substr(6, 2);
             var data = new Date(y, m, d);
             return (data.getFullYear() == y && data.getMonth() == m && data.getDate() == d) ? data : undefined;
-        }
-
-        /**
-         * day시작 값이 index 0부터 시작하도록, padding value을 맞추어야 함.
-         * @param day
-         * @returns {*}
-         */
-        function getDayString(day) {
-            var dayString = ["엊그제", "그제", "어제", "오늘", "내일", "모레", "글피"];
-            if (-3 <= day && day <= 3) {
-                return dayString[day + 3];
-            }
-            else {
-                if (day < 0) {
-                    return Math.abs(day)+"일 전";
-                }
-                else if (day > 0) {
-                    return Math.abs(day)+"일 후";
-                }
-            }
-            console.error("Fail to get day string day=" + day);
-            return "";
-        }
-
-        function dayToString(day) {
-            switch (day) {
-                case 0:
-                    return "일";
-                    break;
-                case 1:
-                    return "월";
-                    break;
-                case 2:
-                    return "화";
-                    break;
-                case 3:
-                    return "수";
-                    break;
-                case 4:
-                    return "목";
-                    break;
-                case 5:
-                    return "금";
-                    break;
-                case 6:
-                    return "토";
-                    break;
-            }
-            return "";
         }
 
         function convertMidSkyString(skyInfo) {
@@ -565,15 +534,24 @@ angular.module('starter.services', [])
         /**
          *
          * @param {Object[]} results
-         * @returns {string}
+         * @returns {*}
          */
         function findLocationFromGoogleGeoCodeResults(results) {
-            var location = {}; //{"lat": Number, "long": Number};
+            var location; //{"lat": Number, "long": Number};
 
-            results.forEach(function (result) {
-                location.lat = result.geometry.location.lat;
-                location.long = result.geometry.location.lng;
-            });
+            if (results.length == 0) {
+                console.log("result.length = 0");
+                return location;
+            }
+            if (results[0].geometry && results[0].geometry.location) {
+                location = {};
+                location.lat = results[0].geometry.location.lat;
+                location.long = results[0].geometry.location.lng;
+            }
+            else {
+                console.log("fail to parsing results");
+            }
+
             return location;
         }
 
@@ -606,9 +584,34 @@ angular.module('starter.services', [])
                 });
         }
 
+        /**
+         * http://localhost:3000/ww/010000/current/2?gcode=44.0,30.00
+         * @param location
+         * @returns {*}
+         */
+        function getGeoWeatherInfo (location) {
+            var deferred = $q.defer();
+            var url = twClientConfig.serverUrl + '/ww/010000/current/2';
+            url += "?gcode=" + location.lat + ','+location.long;
+
+            console.log(url);
+            $http({method: 'GET', url: url, timeout: 10*1000})
+                .success(function (data) {
+                    deferred.resolve({data : data});
+                })
+                .error(function (error) {
+                    if (!error) {
+                        error = new Error("Fail to get geo weather info");
+                    }
+                    console.log(error);
+                    deferred.reject(error);
+                });
+            return deferred.promise;
+        }
+
         function getTownWeatherInfo (town) {
             var deferred = $q.defer();
-            var url = twClientConfig.serverUrl +'/town';
+            var url = twClientConfig.serverUrl +'/v000803/town';
 
             url += "/" + town.first;
             if (town.second) {
@@ -631,7 +634,6 @@ angular.module('starter.services', [])
         //endregion
 
         //region APIs
-
         /**
          * wsd : 풍속 4~8 약간 강, 9~13 강, 14~ 매우강
          * pm10Value, pm10Grade
@@ -641,7 +643,7 @@ angular.module('starter.services', [])
          * @param {Object} currentTownWeather
          * @returns {{}}
          */
-        obj.parseCurrentTownWeather = function (currentTownWeather) {
+        obj.parseCurrentTownWeather = function (currentTownWeather, units) {
             var currentForecast = {};
             var time;
             var isNight;
@@ -655,8 +657,55 @@ angular.module('starter.services', [])
             //time is used in ngShortChart
             currentForecast.time = time;
 
-            currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
-                currentTownWeather.lgt, isNight);
+            if (currentForecast.skyIcon == undefined) {
+                currentForecast.skyIcon = parseSkyState(currentTownWeather.sky, currentTownWeather.pty,
+                    currentTownWeather.lgt, isNight);
+            }
+
+            if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                currentForecast.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.t1h);
+                currentForecast.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.sensorytem);
+                currentForecast.dpt = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.dpt);
+                currentForecast.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.heatIndex);
+                if (!(currentForecast.yesterday == undefined)) {
+                    currentForecast.yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.t1h);
+                }
+            }
+
+            if (currentForecast.pty == 3 && currentForecast.rn1) {
+                currentForecast.rn1 *= 10;
+            }
+            if (currentForecast.s1d) {
+                currentForecast.s1d *= 10;
+            }
+
+            if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                currentForecast.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rn1);
+                currentForecast.rs1h = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1h);
+                currentForecast.rs1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.rs1d);
+                currentForecast.r1d = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), currentForecast.r1d);
+                if (!(currentForecast.yesterday == undefined)) {
+                    if (currentForecast.yesterday.pty == 3) {
+                        currentForecast.yesterday.rn1 *= 10;
+                    }
+                    if (currentForecast.yesterday.s1d) {
+                       currentForecast.yesterday.s1d *= 10;
+                    }
+                    currentForecast.yesterday.rn1 = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.rn1);
+                }
+            }
+            if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                currentForecast.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), currentForecast.wsd);
+                if (!(currentForecast.yesterday == undefined)) {
+                    currentForecast.yesterday.wsd = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), currentForecast.yesterday.wsd);
+                }
+            }
+            if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                currentForecast.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), currentForecast.hPa);
+            }
+            if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                currentForecast.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), currentForecast.visibility);
+            }
 
             return currentForecast;
         };
@@ -666,7 +715,7 @@ angular.module('starter.services', [])
          * @param {Object} currentForecast
          * @returns {{timeTable: Array, timeChart: Array}}
          */
-        obj.parseShortTownWeather = function (shortForecastList, currentForecast) {
+        obj.parseShortTownWeather = function (shortForecastList, currentForecast, units) {
             var data = [];
 
             if (!shortForecastList || !Array.isArray(shortForecastList)) {
@@ -680,18 +729,16 @@ angular.module('starter.services', [])
                 var tempObject;
                 var time = parseInt(shortForecast.time.slice(0, -2));
                 var diffDays = getDiffDays(convertStringToDate(shortForecast.date), convertStringToDate(currentForecast.date));
-                var day = "";
-                if (index === 0 || (shortForecastList[index-1].date !== shortForecast.date)) {
-                    day = getDayString(diffDays);
-                }
                 var isNight = time < 7 || time > 18;
 
                 tempObject = shortForecast;
 
-                tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
-                tempObject.day = day;
+                if (tempObject.skyIcon == undefined) {
+                    tempObject.skyIcon = parseSkyState(shortForecast.sky, shortForecast.pty, shortForecast.lgt, isNight);
+                }
+
+                tempObject.fromToday = diffDays;
                 tempObject.time = time;
-                tempObject.timeStr = time + "시";
 
                 if (currentForecast.date == tempObject.date && currentForecast.time == tempObject.time) {
                     currentIndex = index;
@@ -706,10 +753,7 @@ angular.module('starter.services', [])
                         var nextTime = parseInt(shortForecastList[index+1].time.slice(0, -2));
                         if (currentForecast.time < nextTime) {
                             currentIndex = index;
-                            /**
-                             * chart는 기준 index부터 뒤로 rect를 그리고, table은 기준값 기준으로 앞으로 데이터를 선정하기 때문에 선택된 index에 한칸으로 가야 함
-                             */
-                            shortForecastList[index+1].currentIndex = true;
+                            shortForecastList[index].currentIndex = true;
                         }
                     }
                 }
@@ -739,6 +783,31 @@ angular.module('starter.services', [])
                     if (tmpDisplayCount > displayItemCount) {
                         displayItemCount = tmpDisplayCount;
                     }
+                }
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    tempObject.t3h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.t3h);
+                    tempObject.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.tmn);
+                    tempObject.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.tmx);
+                    tempObject.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.sensorytem);
+                    tempObject.heatIndex = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.heatIndex);
+                }
+
+                if (tempObject.pty == 3 && tempObject.rn1) {
+                    tempObject.rn1 *= 10;
+                }
+                if (tempObject.s06) {
+                    tempObject.s06 *= 10;
+                }
+
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    tempObject.r06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.r06);
+                    tempObject.s06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.s06);
+                    tempObject.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.rn1);
+                }
+
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    tempObject.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), tempObject.wsd);
                 }
 
                 data.push(tempObject);
@@ -773,37 +842,70 @@ angular.module('starter.services', [])
          * @param currentTime
          * @returns {Array}
          */
-        obj.parseMidTownWeather = function (midData, currentTime) {
+        obj.parseMidTownWeather = function (midData, currentTime, units) {
             var tmpDayTable = [];
             var displayItemCount = 0;
+            var todayInfo;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
                 return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
             }
-            midData.dailyData.forEach(function (dayInfo) {
+            midData.dailyData.forEach(function (dayInfo, index) {
                 var data;
                 data = dayInfo;
 
                 var diffDays = getDiffDays(convertStringToDate(data.date), currentTime);
 
                 data.fromToday = diffDays;
-                data.fromTodayStr = getDayString(diffDays);
-                data.week = dayToString(convertStringToDate(data.date).getDay());
+                data.dayOfWeek = convertStringToDate(data.date).getDay();
 
-                var skyAm = convertMidSkyString(dayInfo.wfAm);
-                var skyPm = convertMidSkyString(dayInfo.wfPm);
-                data.skyIcon = getHighPrioritySky(skyAm, skyPm);
-                data.skyAm = skyAm;
-                data.skyPm = skyPm;
+                data.skyAm = dayInfo.skyAmIcon;
+                data.skyPm = dayInfo.skyPmIcon;
+                if (data.skyAm == undefined) {
+                    data.skyAm = convertMidSkyString(dayInfo.wfAm);
+                }
+                if (data.skyPm == undefined) {
+                    data.skyPm = convertMidSkyString(dayInfo.wfPm);
+                }
+                if (data.skyIcon == undefined) {
+                    data.skyIcon = getHighPrioritySky(skyAm, skyPm);
+                }
 
                 data.tmx = dayInfo.taMax;
                 data.tmn = dayInfo.taMin;
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    data.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmx);
+                    data.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmn);
+                }
+
+                if (data.pty == 3 && data.rn1) {
+                    //convert cm to mm of snow
+                    data.rn1 *= 10;
+                }
+                if (data.s06) {
+                    data.s06 *= 10;
+                }
+
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    data.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.rn1);
+                    data.r06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.r06);
+                    data.s06 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.s06);
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    data.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), data.wsd);
+                }
 
                 if (data.reh !== undefined) {
                     data.humidityIcon = decideHumidityIcon(data.reh);
                 }
                 else {
                     data.humidityIcon = "Humidity-00";
+                }
+
+                if (diffDays == 0) {
+                    todayInfo = data;
+                    todayInfo.index = index;
                 }
 
                 tmpDayTable.push(data);
@@ -827,10 +929,22 @@ angular.module('starter.services', [])
                 if (tmpDisplayCount > displayItemCount) {
                     displayItemCount = tmpDisplayCount;
                 }
+
+                if (!(data.dustForecast == undefined)) {
+                    if (!(data.dustForecast.PM10Grade == undefined)) {
+                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
+                    }
+                    if (!(data.dustForecast.PM25Grade == undefined)) {
+                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
+                    }
+                    if (!(data.dustForecast.O3Grade == undefined)) {
+                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
+                    }
+                }
             });
 
             //console.log(tmpDayTable);
-            return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable, today: todayInfo};
         };
 
         /**
@@ -838,11 +952,11 @@ angular.module('starter.services', [])
          * @param date
          * @returns {string}
          */
-        obj.convertTimeString = function (date) {
-            return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
-                    " " + (date.getHours()<10?"0":"") + date.getHours() +
-                    ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
-        };
+        //obj.convertTimeString = function (date) {
+        //    return (date.getMonth()+1)+"월 "+date.getDate()+ "일" + "("+dayToString(date.getDay()) +") " +
+        //            " " + (date.getHours()<10?"0":"") + date.getHours() +
+        //            ":" + (date.getMinutes()<10?"0":"") + date.getMinutes();
+        //};
 
         /**
          *
@@ -1006,17 +1120,33 @@ angular.module('starter.services', [])
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
+            console.log(url);
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === 'OK') {
-                    var location = findLocationFromGoogleGeoCodeResults(data.results);
-                    console.log(location);
-                    deferred.resolve(location);
+                    try {
+                        var location = findLocationFromGoogleGeoCodeResults(data.results) ;
+
+                        var country;
+                        for (var i=0; i< data.results[0].address_components.length; i++) {
+                            if (data.results[0].address_components[i].types[0] == "country") {
+                                country =  data.results[0].address_components[i].short_name;
+                                break;
+                            }
+                        }
+                        console.log(location);
+                        deferred.resolve({location: location, country: country, address: address});
+                    }
+                    catch(e) {
+                        console.log(e);
+                        deferred.reject(e);
+                    }
                 }
                 else {
                     //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
                     deferred.reject(new Error(data.status));
                 }
             }).error(function (err) {
+                console.log(err);
                 deferred.reject(err);
             });
 
@@ -1024,31 +1154,52 @@ angular.module('starter.services', [])
         }
 
         /**
-         *
+         * 한국어가 아닌 주소 일수 있음.
+         * address가 국내이면, daum에서 주소를 새로 갱신해서 geoInfo에 추가함.
+         * controllers.js에서는 geoInfo.name값을 사용하지 않고 다른 값을
+         * 사용하지만 코드 통일성 및 추후 사용때문에 name값을 넣기는 함.
          * @param {String} address
          */
-        obj.getAddressToGeolocation = function (address) {
+        obj.getGeoInfoFromAddress = function (address) {
             var deferred = $q.defer();
 
-            getGeoCodeFromDaum(address).then(function(location) {
-
-                console.log(location);
-                deferred.resolve(location);
+            getGeoCodeFromGoogle(address).then(function (geoInfo) {
+                console.log(geoInfo);
+                if (geoInfo.country == "KR") {
+                    getAddressFromDaum(geoInfo.location.lat, geoInfo.location.long).then(function (data) {
+                        geoInfo.address = data.address;
+                        if (Util.language.indexOf("ko") != -1 && data.name) {
+                                geoInfo.name = data.name;
+                        }
+                        console.log(geoInfo);
+                        deferred.resolve(geoInfo);
+                    }, function (error) {
+                        console.log(error);
+                        deferred.reject(error);
+                    });
+                }
+                else {
+                    geoInfo.location = obj.geolocationNormalize(geoInfo.location);
+                    console.log(geoInfo);
+                    deferred.resolve(geoInfo);
+                }
             }, function (err) {
-
+                if (err == undefined) {
+                    err = new Error("Fail to get geo code from google");
+                }
                 console.log(err);
-                getGeoCodeFromGoogle(address).then(function (location) {
-                    console.log(location);
-                    deferred.resolve(location);
-                }, function (err) {
-                    console.log(err);
-                    deferred.reject(err);
-                });
+                deferred.reject(err);
             });
 
             return deferred.promise;
         };
 
+        /**
+         *
+         * @param lat
+         * @param lng
+         * @returns {*|promise}
+         */
         function getAddressFromDaum(lat, lng) {
             var deferred = $q.defer();
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
@@ -1058,13 +1209,15 @@ angular.module('starter.services', [])
                 '&inputCoordSystem=WGS84'+
                 '&output=json';
 
+            console.log(url);
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data, status, headers, config, statusText) {
                     if (data.fullName) {
                         var address = data.fullName;
+                        var name = data.name;
 
                         address = '대한민국 ' + address;
-                        deferred.resolve(address);
+                        deferred.resolve({address: address, name: name});
                     }
                     else {
                         deferred.reject(new Error('Fail to get address name'));
@@ -1079,83 +1232,173 @@ angular.module('starter.services', [])
             return deferred.promise;
         }
 
-        function getAddressFromGoogle(lat, lng) {
+        /**
+         * address에서 왼쪽에 국가가 나오거나, 오른쪽에 국가가 나옴 반대쪽 지명을 name으로 사용.
+         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
+         * @param lat
+         * @param lng
+         * @returns {*}
+         */
+        function getGeoInfoFromGoogle(lat, lng) {
             var deferred = $q.defer();
-            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng +
-                "&sensor=true&language=ko";
+            var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
 
-            $http({method: 'GET', url: url, timeout: 3000})
-                .success(function (data, status, headers, config, statusText) {
-                    if (data.status === "OK") {
-                        var address = findDongAddressFromGoogleGeoCodeResults(data.results);
-                        if (!address || address.length === 0) {
-                            deferred.reject(new Error("Fail to find dong address from " + data.results[0].formatted_address));
-                            return;
+            console.log(url);
+            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
+                if (data.status === "OK") {
+                    // var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+                    var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+                    var local_types = [ "locality", "political" ];
+                    var country_types = ["country"];
+                    // var sub_level2_name;
+                    var sub_level1_name;
+                    var local_name;
+                    var country_name;
+
+                    for (var i=0; i < data.results.length; i++) {
+                        var result = data.results[i];
+                        for (var j=0; j < result.address_components.length; j++) {
+                            var address_component = result.address_components[j];
+                            // if ( address_component.types[0] == sub_level2_types[0]
+                            //     && address_component.types[1] == sub_level2_types[1]
+                            //     && address_component.types[2] == sub_level2_types[2] ) {
+                            //    sub_level2_name = address_component.short_name;
+                            // }
+
+                            if ( address_component.types[0] == sub_level1_types[0]
+                                && address_component.types[1] == sub_level1_types[1]
+                                && address_component.types[2] == sub_level1_types[2] ) {
+                               sub_level1_name = address_component.short_name;
+                            }
+
+                            if ( address_component.types[0] == local_types[0]
+                                && address_component.types[1] == local_types[1] ) {
+                               local_name = address_component.short_name;
+                            }
+
+                            if ( address_component.types[0] == country_types[0] ) {
+                               country_name = address_component.short_name;
+                            }
+
+                            // if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                            if (sub_level1_name && local_name && country_name) {
+                                break;
+                            }
                         }
-                        deferred.resolve(address);
+
+                        // if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                        if (sub_level1_name && local_name && country_name) {
+                            break;
+                        }
                     }
-                    else {
-                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                        deferred.reject(new Error(data.status));
+
+                    var name;
+                    var address = "";
+                    // if (sub_level2_name) {
+                    //     address += sub_level2_name;
+                    //     name = sub_level2_name
+                    // }
+                    if (sub_level1_name) {
+                        address += " " + sub_level1_name;
+                        if (name == undefined) {
+                            name = sub_level1_name;
+                        }
                     }
-                })
-                .error(function (data, status, headers, config, statusText) {
-                    var error = new Error(data);
-                    error.code = status;
-                    deferred.reject(error);
-                });
+                    if (local_name) {
+                        address += " " + local_name;
+                        if (name == undefined) {
+                            name = local_name;
+                        }
+                    }
+                    if (country_name) {
+                        address += " " + country_name;
+                        if (name == undefined) {
+                            name = country_name;
+                        }
+                    }
+
+                    if (name == undefined || name == country_name) {
+                        console.log("Fail to find location address");
+                    }
+
+                    var geoInfo =  {country: country_name, address: address};
+                    geoInfo.location = {lat:lat, long: lng};
+                    geoInfo.name = name;
+                    deferred.resolve(geoInfo);
+                }
+                else {
+                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                    deferred.reject(new Error(data.status));
+                }
+            }).error(function (err) {
+                deferred.reject(err);
+            });
 
             return deferred.promise;
         }
 
         /**
-         * related to #380
-         * @param {Number} lat
-         * @param {Number} long
+         * 찾은 주소가 한국이면, daum에서 주소 갱신함.
+         * @param lat
+         * @param long
+         * @returns {*}
          */
-        obj.getAddressFromGeolocation = function (lat, long) {
+        obj.getGeoInfoFromGeolocation = function (lat, long) {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
             var endTime;
 
-            getAddressFromDaum(lat, long).then(function(address) {
-                console.log(address);
+            getGeoInfoFromGoogle(lat, long).then(function (geoInfo) {
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
-                Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
+                Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
+                Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
 
-                deferred.resolve(address);
+                console.log(geoInfo);
+                //todo: if (geoInfo.country == "KR" && source == "KMA")
+                if (geoInfo.country == "KR") {
+                    startTime = new Date().getTime();
+                    getAddressFromDaum(lat, long).then(function (data) {
+                        endTime = new Date().getTime();
+                        Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
+                        Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
+
+                        geoInfo.address = data.address;
+                        if (Util.language.indexOf("ko") != -1 && data.name) {
+                            geoInfo.name = data.name;
+                        }
+                        console.log(geoInfo);
+                        deferred.resolve(geoInfo);
+                    }, function (err) {
+                        endTime = new Date().getTime();
+                        Util.ga.trackTiming('address', endTime - startTime, 'error', 'daum');
+                        if (err instanceof Error) {
+                            Util.ga.trackEvent('address', 'error', 'daum(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                        } else {
+                            Util.ga.trackEvent('address', 'error', 'daum(' + err + ')', endTime - startTime);
+                        }
+
+                        console.log(err);
+                        deferred.reject(err);
+                    });
+                }
+                else {
+                    getGeoCodeFromGoogle(geoInfo.address).then(function (info) {
+                        geoInfo.location = obj.geolocationNormalize(info.location);
+                        deferred.resolve(geoInfo);
+                    });
+                }
             }, function (err) {
-                console.log(err);
                 endTime = new Date().getTime();
-                Util.ga.trackTiming('address', endTime - startTime, 'error', 'daum');
+                Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
                 if (err instanceof Error) {
-                    Util.ga.trackEvent('address', 'error', 'daum(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('address', 'error', 'daum(' + err + ')', endTime - startTime);
+                    Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
                 }
 
-                startTime = new Date().getTime();
-                getAddressFromGoogle(lat, long).then(function (address) {
-                    console.log(address);
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
-                    Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
-
-                    deferred.resolve(address);
-                }, function (err) {
-                    endTime = new Date().getTime();
-                    Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
-                    if (err instanceof Error) {
-                        Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
-                    } else {
-                        Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
-                    }
-
-                    deferred.reject(err);
-                });
+                console.log(err);
+                deferred.reject(err);
             });
-
             return deferred.promise;
         };
 
@@ -1171,6 +1414,19 @@ angular.module('starter.services', [])
                 //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
                 //경기 수원시 영통구 광교1동
                 //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+
+                // Tokyo 35.6894875,139.6917064
+                // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+                // Shanghai 31.227797,121.475194
+                //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
+                // NY 40.663527,-73.960852
+                //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
+                // Berlin 52.516407,13.403322
+                //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
+                // Hochinminh 10.779001,106.662796
+                //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
+                //경상북도/영천시/대전동
+                //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
 
                 console.log('navigator geolocation');
                 console.log(position);
@@ -1259,61 +1515,652 @@ angular.module('starter.services', [])
 
         /**
          *
-         * @param address
-         * @param towns
-         * @returns {*}
+         * @param geoInfo
+         * @returns {Promise}
          */
-        obj.getWeatherInfo = function (address, towns) {
-            var that = this;
-            var addressArray = that.convertAddressArray(address);
-            var townAddress = that.getTownFromFullAddress(addressArray);
+        obj.getWorldWeatherInfo = function (geoInfo) {
             var promises = [];
-            promises.push(getTownWeatherInfo(townAddress));
+            var that = this;
+
+            if (geoInfo.country === "KR") {
+                var addressArray = that.convertAddressArray(geoInfo.address);
+                var town = that.getTownFromFullAddress(addressArray);
+                promises.push(getTownWeatherInfo(town));
+            }
+            else {
+                promises.push(getGeoWeatherInfo(geoInfo.location));
+            }
 
             return $q.all(promises);
         };
 
-        /**
-         *
-         * @param weatherDatas
-         * @returns {{}}
-         */
-        obj.convertWeatherData = function (weatherDatas) {
-            var that = this;
-            var data = {};
-            var currentTime = new Date();
-            var weatherData = {};
-            weatherDatas.forEach(function (data) {
-                if (data.hasOwnProperty("data")) {
-                    weatherData = data.data;
-                }
-            });
 
-            var currentForecast = that.parseCurrentTownWeather(weatherData.current);
+        function _parseKmaWeather(that, weatherData) {
+            var data = {};
+            var currentTime;
+            var todayInfo;
+
+            if (weatherData.units == undefined) {
+                weatherData.units = Units.getDefaultUnits();
+            }
+
+            if (weatherData.current && weatherData.current.stnDateTime) {
+                //iOS Safari에서 parsing 못함.
+                var dateStr = weatherData.current.stnDateTime.split(".");
+                var timeStr = dateStr[dateStr.length-1].split(":");
+                currentTime = new Date(dateStr[0], parseInt(dateStr[1])-1, dateStr[2], timeStr[0], timeStr[1]);
+            }
+            else if (weatherData.current.date && !(weatherData.current.time == undefined)) {
+                currentTime = convertStringToDate(weatherData.current.date);
+                currentTime.setHours(parseInt(weatherData.current.time.substr(0, 2)))
+            }
+
+            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime, weatherData.units);
+            todayInfo = midTownWeather.today;
+
+            var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.units);
+            currentForecast.today = todayInfo;
+
+            //console.log(midTownWeather);
 
             /**
              * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
              */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast);
+            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, weatherData.units);
             //console.log(shortTownWeather);
 
             /**
              * @type {Array}
              */
-            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime);
-            //console.log(midTownWeather);
 
             data.currentWeather = currentForecast;
             data.timeTable = shortTownWeather.timeTable;
             data.timeChart = shortTownWeather.timeChart;
-            data.dayTable = midTownWeather.dayTable;
             data.dayChart = [{
                 values: midTownWeather.dayTable,
                 temp: currentForecast.t1h,
                 displayItemCount: midTownWeather.displayItemCount
             }];
+            data.source = "KMA";
 
             return data;
+        }
+
+        /**
+         *
+         * @param windDir
+         * @returns {*}
+         * @private
+         */
+        function _convertWindDirToWdd(windDir) {
+            switch(windDir) {
+                case 0: return "N";
+                case 22.5: return "NEN";
+                case 45: return "NE";
+                case 67.5: return "ENE";
+                case 90: return "E";
+                case 112.5: return "ESE";
+                case 135: return "ES";
+                case 157.5: return "SES";
+                case 180: return "S";
+                case 202.5: return "SWS";
+                case 225: return "SW";
+                case 247.5: return "WSW";
+                case 270: return "W";
+                case 292.5: return "WNW";
+                case 315: return "WN";
+                case 337.5: return "NWN";
+                case 360: return "N";
+            }
+        }
+
+        function _parseWorldSkyState(precType, cloud, isNight) {
+            var skyIconName = "";
+
+            if (isNight) {
+                skyIconName = "Moon";
+            }
+            else {
+                skyIconName = "Sun";
+            }
+
+            if (!(cloud == undefined)) {
+                if (cloud <= 20) {
+                    skyIconName += "";
+                }
+                else if (cloud <= 50) {
+                    skyIconName += "SmallCloud";
+                }
+                else if (cloud <= 80) {
+                    skyIconName += "BigCloud";
+                }
+                else {
+                    skyIconName = "Cloud";
+                }
+            }
+            else {
+               if (precType > 0)  {
+                   skyIconName = "Cloud";
+               }
+            }
+
+            switch (precType) {
+                case 0:
+                    skyIconName += "";
+                    break;
+                case 1:
+                    skyIconName += "Rain";
+                    break;
+                case 2:
+                    skyIconName += "Snow";
+                    break;
+                case 3:
+                    skyIconName += "RainSnow";
+                    break;
+                case 4: //우박
+                    skyIconName += "RainSnow";
+                    break;
+                default:
+                    console.log('Fail to parse precType='+precType);
+                    break;
+            }
+
+            //if (lgt === 1) {
+            //    skyIconName += "Lightning";
+            //}
+
+            return skyIconName;
+        }
+
+        function _parseWorldCurrentWeather(thisTime, todayInfo, currentTime, units) {
+            var sunrise = 7;
+            var sunset = 18;
+            var isNight = false;
+            var yesterday = thisTime[0];
+            var current = thisTime[1];
+
+            if (todayInfo.sunrise) {
+                sunrise = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunrise);
+            }
+            if (todayInfo.sunset) {
+                sunset = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunset);
+            }
+
+            isNight = currentTime < sunrise.getHours() || currentTime> sunset.getHours();
+
+            if (current.temp_c == undefined) {
+                console.log("Error temp_c of current is undefined");
+            }
+
+            if (current.precType == undefined) {
+               console.log("Error precType of current is undefined");
+                current.precType = 0;
+            }
+
+            if (current.cloud == undefined) {
+                console.log("Error cloud of current is undefined");
+            }
+
+            if (yesterday) {
+                if (yesterday.temp_c == undefined) {
+                    console.log("yesterday temp_c is undefined!!");
+                }
+                yesterday.t1h = yesterday.temp_c;
+                yesterday.summary = yesterday.desc;
+            }
+
+            if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                current.temp_c = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), current.temp_c);
+                current.ftemp_c = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), current.ftemp_c);
+                yesterday.t1h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), yesterday.t1h);
+            }
+
+            if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                current.windSpd_ms = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), current.windSpd_ms);
+            }
+            if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                current.press = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), current.press);
+            }
+            if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                current.vis = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), current.vis);
+            }
+            if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                current.precip = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), current.precip);
+            }
+
+            var skyIcon = current.skyIcon;
+            if (skyIcon == undefined) {
+                skyIcon = _parseWorldSkyState(current.precType, current.cloud, isNight);
+            }
+            return {
+                date: _convertDateToYYYYMMDD(new Date(current.date)),
+                stnDateTime: current.date,
+                summary: current.desc,
+                weatherType: current.weatherType,
+                t1h: current.temp_c,
+                sensorytem: current.ftemp_c,
+                reh: current.humid,
+                wsd: current.windSpd_ms,
+                wdd: _convertWindDirToWdd(current.windDir),
+                skyIcon: skyIcon,
+                visibility: current.vis,
+                hPa: current.press,
+                rn1: current.precip,
+                today: todayInfo,
+                yesterday: yesterday
+            }
+        }
+
+        function _convertDateToYYYYMMDD(date) {
+            //I don't know why one more create Date object by aleckim
+            var d = new Date(date);
+            var month = '' + (d.getMonth() + 1);
+            var day = '' + d.getDate();
+            var year = d.getFullYear();
+
+            if (month.length < 2) { month = '0' + month; }
+            if (day.length < 2) { day = '0' + day; }
+
+            return year+month+day;
+        }
+
+        function _convertYYYYoMMoDD_HH8MMtoDate(str) {
+            //iOS Safari에서 parsing 못함.
+            var dateStr = str.split(" ");
+            var dateArray = dateStr[0].split(".");
+            var timeArray = dateStr[1].split(":");
+            return new Date(dateArray[0], parseInt(dateArray[1])-1, dateArray[2], timeArray[0], timeArray[1]);
+        }
+
+        function _parseWorldHourlyWeather(hourly, currentTime, todayInfo, units) {
+            var data = [];
+
+            if (!hourly || !Array.isArray(hourly)) {
+                console.log('hourly is not array');
+                return {timeTable: [], timeChart: []};
+            }
+
+            var currentIndex;
+            var displayItemCount = 0;
+            var todayIndex;
+            var yesterday = new Date(currentTime);
+            yesterday.setDate(yesterday.getDate()-1);
+
+            hourly.forEach(function (hourlyObj, index) {
+                var tempObject = {};
+                //var date = new Date(hourlyObj.date);
+                var date = _convertYYYYoMMoDD_HH8MMtoDate(hourlyObj.date);
+                var time = date.getHours();
+                var diffDays = getDiffDays(date, todayInfo.dateObj);
+                var sunrise = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunrise);
+                var sunset = _convertYYYYoMMoDD_HH8MMtoDate(todayInfo.sunset);
+                var isNight = time < sunrise.getHours() || time > sunset.getHours();
+
+                tempObject.date = _convertDateToYYYYMMDD(date);
+                tempObject.time = date.getHours();
+                tempObject.fromToday = diffDays;
+                if (hourlyObj.temp_c == undefined) {
+                    console.log("Error temp_c of hourly is undefined " + JSON.stringify(hourlyObj));
+                    tempObject.t3h = data[data.length-1].t3h;
+                }
+                else {
+                    tempObject.t3h = hourlyObj.temp_c;
+                }
+                tempObject.sensorytem = hourlyObj.ftemp_c;
+
+                tempObject.wsd = hourlyObj.windSpd_ms;
+                tempObject.reh = hourlyObj.humid;
+                if (hourlyObj.precType) {
+                    tempObject.pty = hourlyObj.precType;
+                }
+                else {
+                    tempObject.pty = 0;
+                }
+                if (hourlyObj.cloud == undefined) {
+                    console.log("Warning cloud of hourly is undefined " + JSON.stringify(hourlyObj));
+                    tempObject.cloud = 0;
+                }
+                else {
+                    tempObject.cloud = hourlyObj.cloud;
+                }
+                tempObject.skyIcon = hourlyObj.skyIcon;
+                if (tempObject.skyIcon == undefined) {
+                    tempObject.skyIcon = _parseWorldSkyState(tempObject.pty, tempObject.cloud, isNight);
+                }
+
+                if (hourlyObj.precProb == undefined) {
+                    //console.log("preProb of hourly " + JSON.stringify(hourlyObj));
+                    tempObject.pop = 0;
+                }
+                else {
+                    tempObject.pop = hourlyObj.precProb;
+                }
+
+                if (hourlyObj.precip) {
+                    tempObject.rn1 = +(hourlyObj.precip.toFixed(1));
+                    tempObject.r06 = 0;
+                }
+                else {
+                    tempObject.rn1 = 0;
+                    tempObject.r06 = 0;
+                }
+
+                tempObject.hPa = hourlyObj.press;
+                tempObject.visibility = hourlyObj.vis;
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    tempObject.t3h = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.t3h);
+                    tempObject.sensorytem = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), tempObject.sensorytem);
+                    //dewpoint
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    tempObject.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), tempObject.wsd);
+                }
+                if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                    tempObject.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), tempObject.hPa);
+                }
+                if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                    tempObject.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), tempObject.visibility);
+                }
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    tempObject.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), tempObject.rn1);
+                }
+
+                if (currentIndex == undefined) {
+                    if (currentTime.getDate() == date.getDate()) {
+                        todayIndex = index;
+                        var currentHours = currentTime.getHours();
+                        if (currentHours == time) {
+                            currentIndex = index;
+                            //hourly[index].currentIndex = true;
+                            tempObject.currentIndex = true;
+                        }
+                        else if (currentHours < time) {
+                            if (index == 0)  {
+                                console.log("Error current index is -1");
+                                currentIndex = -1;
+                            }
+                            else {
+                                currentIndex = index-1;
+                                //hourly[index-1].currentIndex = true;
+                                data[index-1].currentIndex = true;
+                            }
+                        }
+                        else if (currentHours > time) {
+                            //24시가 다음날 0으로 오는 경우
+                            if (time >= 21) {
+                                if (currentHours >= 21) {
+                                    currentIndex = index;
+                                    tempObject.currentIndex = true;
+                                }
+                                else {
+                                    console.log("Fail to find current "+currentHours);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                var tmpDisplayCount = 0;
+                //data on chart from yesterday
+                if (diffDays > -2) {
+                    if (tempObject.skyIcon != undefined) {
+                        tmpDisplayCount++;
+                    }
+                    if (tempObject.pop && tempObject.pop > 0) {
+                        tmpDisplayCount++;
+                    }
+                    if (displayItemCount == 2) {
+                        if ((tempObject.rn1 && tempObject.rn1 > 0)
+                            || (tempObject.r06 && tempObject.r06 > 0)
+                            || (tempObject.s06 && tempObject.s06 > 0)) {
+                            tmpDisplayCount++;
+                        }
+                    }
+                    if (tmpDisplayCount > displayItemCount) {
+                        displayItemCount = tmpDisplayCount;
+                    }
+                }
+
+                data.push(tempObject);
+            });
+
+            console.log(JSON.stringify(data));
+
+            if (currentIndex == undefined) {
+                console.log("Fail to find current index");
+                currentIndex = hourly.length-1;
+            }
+
+            var timeTable = data.slice(8);
+            var timeChart = [
+                {
+                    name: "yesterday",
+                    values: data.slice(0, data.length - 8).map(function (d) {
+                        return {name: "yesterday", value: d};
+                    })
+                },
+                {
+                    name: "today",
+                    values: data.slice(8).map(function (d) {
+                        return {name: "today", value: d};
+                    }),
+                    currentIndex: currentIndex - 8,
+                    displayItemCount: displayItemCount
+                }
+            ];
+
+            return {timeTable: timeTable, timeChart: timeChart};
+
+        }
+
+
+        function _parseWorldDailyWeather(daily, currentTime, units) {
+
+            var tmpDayTable = [];
+            var displayItemCount = 0;
+            var todayInfo;
+
+            daily.forEach(function (dayInfo, index) {
+                var data;
+                data = JSON.parse(JSON.stringify(dayInfo));
+                //var date = new Date(dayInfo.date);
+                var date = _convertYYYYoMMoDD_HH8MMtoDate(dayInfo.date);
+
+                var diffDays = getDiffDays(date, currentTime);
+
+                data.date = _convertDateToYYYYMMDD(date);
+                data.dateObj = date;
+                data.fromToday = diffDays;
+                data.dayOfWeek = date.getDay();
+
+                if (dayInfo.tempMax_c == undefined) {
+                    console.log('Fail to get tempMax_c from '+JSON.stringify(dayInfo));
+                }
+                else {
+                    data.tmx = dayInfo.tempMax_c;
+                }
+                if (dayInfo.tempMin_c == undefined) {
+                    console.log('Fail to get tempMin_c from '+JSON.stringify(dayInfo));
+                }
+                else {
+                    data.tmn = dayInfo.tempMin_c;
+                }
+                if (dayInfo.precProb == undefined) {
+                    data.pop = 0;
+                }
+                else {
+                    data.pop = dayInfo.precProb;
+                }
+                if (dayInfo.precType == undefined) {
+                    console.log('Fail to get precType from '+JSON.stringify(dayInfo));
+                    data.pty = 0;
+                }
+                else {
+                    data.pty = dayInfo.precType;
+                }
+
+                var sky = dayInfo.skyIcon;
+                if (sky == undefined) {
+                    sky = _parseWorldSkyState(data.pty, data.cloud, false);
+                }
+                data.skyIcon = sky;
+                data.skyAm = sky;
+                data.skyPm = sky;
+
+                if (!(dayInfo.humid == undefined)) {
+                    data.reh = dayInfo.humid;
+                    if (data.reh !== undefined) {
+                        data.humidityIcon = decideHumidityIcon(data.reh);
+                    }
+                    else {
+                        data.humidityIcon = "Humidity-00";
+                    }
+                }
+
+                if (!(dayInfo.windSpd_ms == undefined)) {
+                    data.wsd = dayInfo.windSpd_ms;
+                }
+                if (!(dayInfo.press == undefined)) {
+                    data.hPa = dayInfo.press;
+                }
+                if (!(dayInfo.vis == undefined)) {
+                   data.visibility = dayInfo.vis;
+                }
+                if (!(dayInfo.precip == undefined)) {
+                    data.rn1 = +dayInfo.precip.toFixed(1);
+                }
+
+                if (units.temperatureUnit != Units.getUnit('temperatureUnit')) {
+                    data.tmx = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmx);
+                    data.tmn = Units.convertUnits(units.temperatureUnit, Units.getUnit('temperatureUnit'), data.tmn);
+                }
+                if (units.windSpeedUnit != Units.getUnit('windSpeedUnit')) {
+                    data.wsd = Units.convertUnits(units.windSpeedUnit, Units.getUnit('windSpeedUnit'), data.wsd);
+                }
+                if (units.pressureUnit != Units.getUnit('pressureUnit')) {
+                    data.hPa = Units.convertUnits(units.pressureUnit, Units.getUnit('pressureUnit'), data.hPa);
+                }
+                if (units.distanceUnit != Units.getUnit('distanceUnit')) {
+                    data.visibility = Units.convertUnits(units.distanceUnit, Units.getUnit('distanceUnit'), data.visibility);
+                }
+                if (units.precipitationUnit != Units.getUnit('precipitationUnit')) {
+                    data.rn1 = Units.convertUnits(units.precipitationUnit, Units.getUnit('precipitationUnit'), data.rn1);
+                }
+
+                tmpDayTable.push(data);
+
+                if (data.fromToday == 0) {
+                    todayInfo = data;
+                    todayInfo.index = index;
+                }
+
+                var tmpDisplayCount = 0;
+
+                if (data.skyAm != undefined || data.skyPm != undefined) {
+                    if (data.skyAm != data.skyPm && data.skyAm && data.skyPm) {
+                        tmpDisplayCount = tmpDisplayCount | 4;
+                    }
+                }
+
+                if (data.pop && data.pop > 0 && data.fromToday >= 0) {
+                    tmpDisplayCount = tmpDisplayCount | 2;
+                }
+                if ((data.rn1 && data.rn1 > 0)
+                    || (data.r06 && data.r06 > 0)
+                    || (data.s06 && data.s06 > 0)) {
+                    tmpDisplayCount = tmpDisplayCount | 1;
+                }
+                if (tmpDisplayCount > displayItemCount) {
+                    displayItemCount = tmpDisplayCount;
+                }
+
+                if (!(data.dustForecast == undefined)) {
+                    if (!(data.dustForecast.PM10Grade == undefined)) {
+                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
+                    }
+                    if (!(data.dustForecast.PM25Grade == undefined)) {
+                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
+                    }
+                    if (!(data.dustForecast.O3Grade == undefined)) {
+                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
+                    }
+                }
+            });
+            console.log(JSON.stringify(tmpDayTable));
+            return {displayItemCount: displayItemCount, dayTable: tmpDayTable, today: todayInfo};
+        }
+
+        function _parseWorldWeather(weatherData) {
+            var data = {};
+            var currentTime;
+            var todayInfo;
+            var midTownWeather;
+            var shortTownWeather;
+
+            if (weatherData.units == undefined) {
+                weatherData.units = Units.getDefaultUnits();
+            }
+
+            try {
+
+                if (weatherData.thisTime && weatherData.thisTime[1].date) {
+                    currentTime = _convertYYYYoMMoDD_HH8MMtoDate(weatherData.thisTime[1].date);
+                }
+                else {
+                    console.log("Error fail to get current date !!");
+                    currentTime = new Date();
+                }
+
+                console.log("current time="+currentTime.toString());
+
+                midTownWeather =_parseWorldDailyWeather(weatherData.daily, currentTime, weatherData.units);
+                todayInfo = midTownWeather.today;
+                shortTownWeather = _parseWorldHourlyWeather(weatherData.hourly, currentTime, todayInfo, weatherData.units);
+                data.currentWeather = _parseWorldCurrentWeather(weatherData.thisTime, todayInfo, currentTime.getHours(), weatherData.units);
+                data.timeTable = shortTownWeather.timeTable;
+                data.timeChart = shortTownWeather.timeChart;
+                data.dayChart = [{
+                    values: midTownWeather.dayTable,
+                    temp: data.currentWeather.t1h,
+                    displayItemCount: midTownWeather.displayItemCount
+                }];
+
+                if (weatherData.hasOwnProperty('pubDate')) {
+                    if (weatherData.pubDate.hasOwnProperty('DSF')) {
+                       data.source = "DSF";
+                    }
+                }
+            }
+            catch (e) {
+                console.log(e);
+                alert(e.message);
+                return null;
+            }
+
+            return data;
+        }
+
+        /**
+         *
+         * @param weatherDataList
+         * @returns {{}}
+         */
+        obj.convertWeatherData = function (weatherDataList) {
+            var that = this;
+            var weatherData = {};
+            weatherDataList.forEach(function (weatherObject) {
+                if (weatherObject.hasOwnProperty("data")) {
+                    weatherData = weatherObject.data;
+                }
+            });
+
+            if (weatherData.hasOwnProperty('regionName')) {
+                return _parseKmaWeather(that, weatherData);
+            }
+            else {
+                return _parseWorldWeather(weatherData);
+            }
         };
 
         obj.getWeatherEmoji = function (skyIcon) {
@@ -1345,6 +2192,24 @@ angular.module('starter.services', [])
             return '';
         };
         //endregion
+
+        /**
+         * hochimin의 경우 106.6296638 가 두자리로 떨어지지 않음.
+         * @param coords
+         * @returns {{lat: number, long: number}}
+         */
+        obj.geolocationNormalize = function (coords) {
+            //var baseLength = 0.02;
+            //var lat = coords.lat;
+            //var lon = coords.long;
+            //console.log (lat + " " + lon);
+            //
+            //var normal_lat = lat - (lat%baseLength) + baseLength/2;
+            //var normal_lon = lon - (lon%baseLength) + baseLength/2;
+            //return {lat: normal_lat, long: normal_lon};
+
+            return {lat: parseFloat(coords.lat.toFixed(2)), long: parseFloat(coords.long.toFixed(2))}
+        };
 
         return obj;
     })
@@ -1535,11 +2400,13 @@ angular.module('starter.services', [])
         obj.version = '';
         obj.guideVersion = 1.0;
         obj.suiteName = "group.net.wizardfactory.todayweather";
+        obj.language;
+        obj.region;
 
-        //obj.url = "/v000705";
-        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000705";
-        //obj.url = "https://tw-wzdfac.rhcloud.com/v000705";
-        //obj.url = "https://todayweather.wizardfactory.net/v000705";
+        //obj.url = "/v000803";
+        //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000803";
+        //obj.url = "https://tw-wzdfac.rhcloud.com/v000803";
+        //obj.url = "https://todayweather.wizardfactory.net/v000803";
         //obj.url = window.twClientConfig.serverUrl;
 
         // android는 diagnostic.locationMode, ios는 diagnostic.permissionStatus를 나타냄
@@ -1548,19 +2415,24 @@ angular.module('starter.services', [])
         obj.isLocationEnabled = function() {
             var that = this;
 
-            if (ionic.Platform.isIOS()) {
-                if (that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED
-                    || that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
-                    return true;
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                if (ionic.Platform.isIOS()) {
+                    if (that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED
+                        || that.locationStatus === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
+                        return true;
+                    }
+                } else if (ionic.Platform.isAndroid()) {
+                    if (that.locationStatus === cordova.plugins.diagnostic.locationMode.HIGH_ACCURACY
+                        || that.locationStatus === cordova.plugins.diagnostic.locationMode.BATTERY_SAVING
+                        || that.locationStatus === cordova.plugins.diagnostic.locationMode.DEVICE_ONLY) {
+                        return true;
+                    }
                 }
-            } else if (ionic.Platform.isAndroid()) {
-                if (that.locationStatus === cordova.plugins.diagnostic.locationMode.HIGH_ACCURACY
-                    || that.locationStatus === cordova.plugins.diagnostic.locationMode.BATTERY_SAVING
-                    || that.locationStatus === cordova.plugins.diagnostic.locationMode.DEVICE_ONLY) {
-                    return true;
-                }
+                return false;
             }
-            return false;
+            else {
+                return true;
+            }
         };
 
         return obj;
@@ -1575,11 +2447,13 @@ angular.module('starter.services', [])
             Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
 
             // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
-            cordova.plugins.diagnostic.isLocationEnabled(function(enabled) {
-                console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
-            }, function(error) {
-                console.error("Error getting for location enabled status: " + error);
-            });
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                }, function (error) {
+                    console.error("Error getting for location enabled status: " + error);
+                });
+            }
         } else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
 
@@ -1589,14 +2463,29 @@ angular.module('starter.services', [])
             Util.suiteName = "net.wizardfactory.todayweather_preferences";
 
             // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
-            cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
-                Util.locationStatus = locationMode;
-            }, function(error) {
-                console.error("Error getting for location mode: " + error);
-            });
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                    Util.locationStatus = locationMode;
+                }, function(error) {
+                    console.error("Error getting for location mode: " + error);
+                });
+            }
         }
         else {
             console.log("Error : Unknown platform");
+        }
+
+        Util.language = navigator.userLanguage || navigator.language;
+        if (navigator.globalization) {
+            navigator.globalization.getLocaleName(
+                function (locale) {
+                    Util.region = locale.value.split('-')[1];
+                    console.log('region: ' + Util.region + '\n');
+                },
+                function () {
+                    console.log('Error getting locale\n');
+                }
+            );
         }
 
         Util.ga.platformReady();
@@ -1658,17 +2547,19 @@ angular.module('starter.services', [])
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
 
-        // ios는 실행 시 registerLocationStateChangeHandler 호출되어 locationStatus가 설정됨
-        cordova.plugins.diagnostic.registerLocationStateChangeHandler(function (state) {
-            var oldLocationEnabled = Util.isLocationEnabled();
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+            // ios는 실행 시 registerLocationStateChangeHandler 호출되어 locationStatus가 설정됨
+            cordova.plugins.diagnostic.registerLocationStateChangeHandler(function (state) {
+                var oldLocationEnabled = Util.isLocationEnabled();
 
-            console.log("Location state changed to: " + state);
-            Util.locationStatus = state;
+                console.log("Location state changed to: " + state);
+                Util.locationStatus = state;
 
-            if (oldLocationEnabled === false && Util.isLocationEnabled()) {
-                $rootScope.$broadcast('reloadEvent', 'locationOn');
-            }
-        }, function (error) {
-            console.error("Error registering for location state changes: " + error);
-        });
+                if (oldLocationEnabled === false && Util.isLocationEnabled()) {
+                    $rootScope.$broadcast('reloadEvent', 'locationOn');
+                }
+            }, function (error) {
+                console.error("Error registering for location state changes: " + error);
+            });
+        }
     });

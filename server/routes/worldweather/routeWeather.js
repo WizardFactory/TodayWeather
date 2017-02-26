@@ -6,9 +6,7 @@ var router = express.Router();
 var worldWeather = new (require('../../controllers/worldWeather/controllerWorldWeather'))();
 
 router.use(function timestamp(req, res, next){
-    var printTime = new Date();
-    log.info('+ weather > request | Time[', printTime.toISOString(), ']');
-
+    log.info('## + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
     next();
 });
 
@@ -25,6 +23,7 @@ router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.qu
 // temporary
 router.get('/:version/:category/:days', worldWeather.checkApiVersion,
     worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
-    worldWeather.mergeDsfCurrentData, worldWeather.mergeDsfDailyData, worldWeather.mergeDsfHourlyData,
+    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData, worldWeather.mergeDsfHourlyData,
     worldWeather.dataSort, worldWeather.sendResult);
+
 module.exports = router;

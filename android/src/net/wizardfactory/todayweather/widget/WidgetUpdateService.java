@@ -35,9 +35,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -90,12 +94,8 @@ public class WidgetUpdateService extends Service {
         final Context context = getApplicationContext();
         String jsonCityInfoStr = WidgetProviderConfigureActivity.loadCityInfoPref(context, widgetId);
         boolean currentPosition = true;
-        String address = null;
-        String country = null;
         JSONObject location = null;
-        double lat = 0;
-        double lng = 0;
-        String locationName = null;
+        GeoInfo geoInfo = new GeoInfo();
 
         if (jsonCityInfoStr == null) {
             Log.i("Service", "cityInfo is null, so this widget is zombi");
@@ -112,20 +112,20 @@ public class WidgetUpdateService extends Service {
         try {
             JSONObject jsonCityInfo = new JSONObject(jsonCityInfoStr);
             currentPosition = jsonCityInfo.getBoolean("currentPosition");
-            address = jsonCityInfo.get("address").toString();
-            if (jsonCityInfo.has(country)) {
-                country = jsonCityInfo.get("country").toString();
+            geoInfo.setAddress(jsonCityInfo.get("address").toString());
+            if (jsonCityInfo.has("country")) {
+                geoInfo.setCountry(jsonCityInfo.get("country").toString());
             }
             else {
-                country = "KR";
+                geoInfo.setCountry("KR");
             }
-            if (jsonCityInfo.has("location")) {
+            if (jsonCityInfo.has("location") && !jsonCityInfo.isNull("location")) {
                 location = jsonCityInfo.getJSONObject("location");
-                lat = location.getDouble("lat");
-                lng = location.getDouble("long");
+                geoInfo.setLat(geoInfo.toNormalize(location.getDouble("lat")));
+                geoInfo.setLng(geoInfo.toNormalize(location.getDouble("long")));
             }
-            if (jsonCityInfo.has("name")) {
-                locationName = jsonCityInfo.get("name").toString();
+            if (jsonCityInfo.has("name") && !jsonCityInfo.isNull("name")) {
+                geoInfo.setName(jsonCityInfo.getString("name"));
             }
 
             if (jsonUnitsStr != null) {
@@ -140,7 +140,7 @@ public class WidgetUpdateService extends Service {
         }
 
         if (currentPosition) {
-            Log.i("Service", "Update current postion app widget id=" + widgetId);
+            Log.i("Service", "Update current position app widget id=" + widgetId);
             registerLocationUpdates(widgetId);
 
             // if location do not found in LOCATION_TIMEOUT, this service is stop.
@@ -163,21 +163,21 @@ public class WidgetUpdateService extends Service {
             Handler myHandler = new Handler();
             myHandler.postDelayed(myRunnable, LOCATION_TIMEOUT);
         } else {
-            Log.i("Service", "Update address=" + address + " app widget id=" + widgetId);
+            Log.i("Service", "Update address=" + geoInfo.getAddress() + " app widget id=" + widgetId);
             //check country
-            if (country != null && country.equals("KR")) {
-                String addr = AddressesElement.makeUrlAddress(address);
+            if (geoInfo.getCountry() == null || geoInfo.getCountry().equals("KR")) {
+                String addr = AddressesElement.makeUrlAddress(geoInfo.getAddress());
                 if (addr != null) {
                     addr = mUrl + kmaApiUrl + addr;
                     String jsonData = getWeatherDataFromServer(addr);
-                    updateWidget(widgetId, jsonData, locationName);
+                    updateWidget(widgetId, jsonData, geoInfo.getName());
                 }
             }
             else {
-                String addr = mUrl + worldWeatherApiUrl + lat + "," + lng;
+                String addr = mUrl + worldWeatherApiUrl + geoInfo.getLat() + "," + geoInfo.getLng();
                 Log.i("Service", "url="+addr);
                 String jsonData = getWeatherDataFromServer(addr);
-                updateWorldWeatherWidget(widgetId, jsonData, locationName);
+                updateWorldWeatherWidget(widgetId, jsonData, geoInfo.getName());
                 //make world weather url
             }
         }
@@ -264,8 +264,10 @@ public class WidgetUpdateService extends Service {
             return;
         }
 
+        //if ( geoInfo.getCountry().equals("KR") && geoInfo.getSource().equals("KMA") )
         if (geoInfo.getCountry().equals("KR")) {
             //convert address to korean and url
+            //use pure lat, lon for finding correct address
             url = location2Address(lat, lon);
             if (url != null) {
                 jsonData = getWeatherDataFromServer(url);
@@ -273,92 +275,223 @@ public class WidgetUpdateService extends Service {
             }
         }
         else {
-            url = mUrl + worldWeatherApiUrl + lat + "," + lon;
-            Log.i("Service", "url="+url);
+            //device loaction을 사용할 경우 아래 url사용
+            //url = mUrl + worldWeatherApiUrl + geoInfo.getLat() + "," + geoInfo.getLng();
+
+            GeoInfo address2geoInfo = address2GeoInfo(geoInfo.getAddress());
+            if (address2geoInfo != null) {
+                url = mUrl + worldWeatherApiUrl + address2geoInfo.getLat() + "," + address2geoInfo.getLng();
+            }
+            else {
+                Log.e("Service", "Fail to get geoinfo from address");
+                Toast.makeText(getApplicationContext(), R.string.fail_to_get_geoinfo, Toast.LENGTH_LONG).show();
+                return;
+            }
             jsonData = getWeatherDataFromServer(url);
             updateWorldWeatherWidget(widgetId, jsonData, geoInfo.getName());
         }
     }
 
+    private GeoInfo address2GeoInfo(String address) {
+        GeoInfo geoInfo = null;
+
+        try {
+            String url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + URLEncoder.encode(address, "utf-8");
+            String retJson = new GetHttpsServerAysncTask(url).execute().get();
+            JSONObject reader = new JSONObject(retJson);
+
+            if (reader == null) {
+                Log.e("Service", "Fail to get geo info from address="+address);
+                return geoInfo;
+            }
+
+            String status = reader.getString("status");
+            if (!status.equals("OK")) {
+                Log.e("Service", "status=" + status);
+                return geoInfo;
+            }
+
+            JSONArray results = reader.getJSONArray("results");
+            if (results.length() == 0) {
+                Log.e("Service", "results length=0");
+                return geoInfo;
+            }
+
+            JSONObject result = results.getJSONObject(0);
+            if (!result.has("geometry")) {
+                Log.e("Service", "Fail to get geometry in result");
+                return geoInfo;
+            }
+            JSONObject geometry = result.getJSONObject("geometry");
+            if (!geometry.has("location")) {
+                Log.e("Service", "Fail to get location in result");
+                return geoInfo;
+            }
+            JSONObject location = geometry.getJSONObject("location");
+            geoInfo = new GeoInfo();
+            geoInfo.setLat(geoInfo.toNormalize(location.getDouble("lat")));
+            geoInfo.setLng(geoInfo.toNormalize(location.getDouble("lng")));
+
+            String country_name = null;
+            JSONArray addressComponents = result.getJSONArray("address_components");
+
+            for (int j=0; j<addressComponents.length(); j++) {
+                JSONObject addressComponent = addressComponents.getJSONObject(j);
+                JSONArray types = addressComponent.getJSONArray("types");
+                if (types.getString(0).equals("country")) {
+                    country_name = addressComponent.getString("short_name");
+                    break;
+                }
+            }
+
+            geoInfo.setCountry(country_name);
+            geoInfo.setAddress(address);
+
+            Log.i("Service", "lat="+geoInfo.getLat()+" lng="+geoInfo.getLng());
+
+        } catch (InterruptedException e) {
+            Log.e("Service", e.toString());
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            Log.e("Service", e.toString());
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        return geoInfo;
+    }
+
+    /**
+     *
+     // Tokyo 35.6894875,139.6917064
+     // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+     // Shanghai 31.227797,121.475194
+     //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
+     // NY 40.663527,-73.960852
+     //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
+     // Berlin 52.516407,13.403322
+     //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
+     // Hochinminh 10.779001,106.662796
+     //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
+     * @param lat
+     * @param lon
+     * @return
+     */
     private GeoInfo location2GeoInfo(double lat, double lon) {
         GeoInfo geoInfo = null;
 
-        Log.i("Service", "lat : " + lat + ", lon " + lon);
+        //Log.i("Service", "lat : " + lat + ", lon " + lon);
         try {
             String lang = Locale.getDefault().getLanguage();
             String geourl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" +
                     lat + "," + lon + "&language="+lang;
+
+            //Log.i("Service", "url="+geourl);
             String retJson = new GetHttpsServerAysncTask(geourl).execute().get();
 
             JSONObject reader = new JSONObject(retJson);
             if (reader != null) {
                 String status = reader.getString("status");
                 if (!status.equals("OK")) {
-                    Log.e("AddressesElement", "status=" + status);
+                    Log.e("Service", "status=" + status);
                     return geoInfo;
                 }
+
+                String sub_level2_types[] = { "political", "sublocality", "sublocality_level_2" };
+                String sub_level1_types[] = { "political", "sublocality", "sublocality_level_1" };
+                String local_types[] = { "locality", "political" };
+                String country_types[] = { "country" };
+                String sub_level2_name = null;
+                String sub_level1_name = null;
+                String local_name = null;
+                String country_name = null;
+
                 JSONArray results = reader.getJSONArray("results");
                 JSONObject result  = null;
 
                 int i;
                 for (i=0; i<results.length(); i++) {
                     result = results.getJSONObject(i);
-                    JSONArray types = result.getJSONArray("types");
-                    String type = types.getString(0);
-                    if (type.equals("postal_code")) {
-                       break;
+                    JSONArray addressComponents = result.getJSONArray("address_components");
+                    for (int j=0; j<addressComponents.length(); j++) {
+                        JSONObject addressComponent = addressComponents.getJSONObject(j);
+                        JSONArray types = addressComponent.getJSONArray("types");
+                        if (types.getString(0).equals(sub_level2_types[0])
+                                && types.getString(1).equals(sub_level2_types[1])
+                                && types.getString(2).equals(sub_level2_types[2]) ) {
+                           sub_level2_name = addressComponent.getString("short_name");
+                        }
+
+                        if (types.getString(0).equals(sub_level1_types[0])
+                                && types.getString(1).equals(sub_level1_types[1])
+                                && types.getString(2).equals(sub_level1_types[2]) ) {
+                           sub_level1_name = addressComponent.getString("short_name");
+                        }
+
+                        if (types.getString(0).equals(local_types[0])
+                                && types.getString(1).equals(local_types[1]) ) {
+                            local_name = addressComponent.getString("short_name");
+                        }
+
+                        if (types.getString(0).equals(country_types[0]) ) {
+                            country_name = addressComponent.getString("short_name");
+                        }
+
+                        if (sub_level2_name != null && sub_level1_name != null
+                                && local_name != null && country_name != null) {
+                            break;
+                        }
                     }
-                }
-                if (i == results.length()) {
-                    Log.e("service", "Fail to find address");
-                    return geoInfo;
-                }
-                String address = result.getString("formatted_address");
-                if (address == null || address.length() == 0) {
-                    Log.e("service", "Fail to find address");
-                    return geoInfo;
-                }
 
-                geoInfo = new GeoInfo();
-                geoInfo.setLat(lat);
-                geoInfo.setLng(lon);
-                geoInfo.setAddress(address);
-
-                JSONArray addressComponents = result.getJSONArray("address_components");
-                JSONObject addressComponent = null;
-                for (i=0; i<addressComponents.length(); i++) {
-                    addressComponent = addressComponents.getJSONObject(i);
-                    JSONArray types = addressComponent.getJSONArray("types");
-                    String type = types.getString(0);
-                    if (type.equals("country")) {
+                    if (sub_level2_name != null && sub_level1_name != null
+                            && local_name != null && country_name != null) {
                         break;
                     }
                 }
-                if (i == results.length() || addressComponent == null) {
-                    Log.e("service", "Fail to find country");
-                    return geoInfo;
+
+                String name = null;
+                String address = "";
+                //국내는 동단위까지 표기해야 함.
+                if (country_name != null && country_name.equals("KR")) {
+                    if (sub_level2_name != null) {
+                        address += sub_level2_name;
+                        name = sub_level2_name;
+                    }
+                }
+                if (sub_level1_name != null) {
+                    address += " " + sub_level1_name;
+                    if (name == null) {
+                        name = sub_level1_name;
+                    }
+                }
+                if (local_name != null) {
+                    address += " " + local_name;
+                    if (name == null) {
+                        name = local_name;
+                    }
+                }
+                if (country_name != null) {
+                    address += " " + country_name;
+                    if (name == null) {
+                        name = country_name;
+                    }
                 }
 
-                geoInfo.setCountry(addressComponent.getString("short_name"));
-
-                String countryLongName = addressComponent.getString("long_name");
-
-                String name;
-                //"Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
-                String[] addr = address.split(",");
-                if (addr.length == 1) {
-                    //"대한민국 서울 송파구 잠실본동"
-                    addr = address.split(" ");
-                }
-                if (addr[0].equals(countryLongName)) {
-                    name = addr[addr.length-1];
-                }
-                else {
-                    name = addr[0];
+                if (name == null || name.equals(country_name)) {
+                    Log.e("service", "Fail to find location address");
                 }
 
+                geoInfo = new GeoInfo();
+                geoInfo.setLat(geoInfo.toNormalize(lat));
+                geoInfo.setLng(geoInfo.toNormalize(lon));
+                geoInfo.setAddress(address);
                 geoInfo.setName(name);
-                Log.e("Service", geoInfo.getAddress());
+                geoInfo.setCountry(country_name);
+
+                Log.i("Service", geoInfo.getAddress());
             }
             else {
                 Log.e("Service", "Fail to get address info");
@@ -657,9 +790,28 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime()+offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(pubDate));
+        }
+        if (Build.VERSION.SDK_INT >= 17) {
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                String zoneIds[] = TimeZone.getAvailableIDs(currentData.getTimeZoneOffsetMS());
+                if (zoneIds.length > 0) {
+                    views.setString(R.id.time, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.date, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.am_pm, "setTimeZone", zoneIds[0]);
+                } else {
+                    Log.e("UpdateWidgetService", "Fail to find time zone ids");
+                }
+            }
         }
 
         int[] labelIds = {R.id.label_yesterday, R.id.label_today, R.id.label_tomorrow};
@@ -727,9 +879,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         views.setTextViewText(R.id.label_yesterday, context.getString(R.string.yesterday));
@@ -861,9 +1020,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
@@ -954,9 +1120,28 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime()+offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(pubDate));
+        }
+        if (Build.VERSION.SDK_INT >= 17) {
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                String zoneIds[] = TimeZone.getAvailableIDs(currentData.getTimeZoneOffsetMS());
+                if (zoneIds.length > 0) {
+                    views.setString(R.id.time, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.date, "setTimeZone", zoneIds[0]);
+                    views.setString(R.id.am_pm, "setTimeZone", zoneIds[0]);
+                } else {
+                    Log.e("UpdateWidgetService", "Fail to find time zone ids");
+                }
+            }
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
@@ -1076,9 +1261,16 @@ public class WidgetUpdateService extends Service {
             Log.e("UpdateWidgetService", "currentElement is NULL");
             return;
         }
+
         if (currentData.getPubDate() != null) {
+            Date pubDate = currentData.getPubDate();
             SimpleDateFormat transFormat = new SimpleDateFormat("HH:mm");
-            views.setTextViewText(R.id.pubdate, context.getString(R.string.update)+" "+transFormat.format(currentData.getPubDate()));
+            if (currentData.getTimeZoneOffsetMS() != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+                TimeZone tz = TimeZone.getDefault();
+                int offset = tz.getRawOffset() - currentData.getTimeZoneOffsetMS();
+                pubDate.setTime(pubDate.getTime() + offset);
+            }
+            views.setTextViewText(R.id.pubdate, context.getString(R.string.update) + " " + transFormat.format(pubDate));
         }
 
         String tempStr = mLocalUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());

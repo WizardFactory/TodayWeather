@@ -25,7 +25,7 @@ function controllerKmaStnWeather() {
  */
 controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
     if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
-       return;
+       return -1;
     }
 
     switch (weatherStr) {
@@ -89,6 +89,7 @@ controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
         case '번개': return 55;
         case '마른뇌전': return 56;
         case '뇌전끝': return 57;
+        case '얼음싸라기': return 58;
         default :
             log.error("Fail weatherStr="+weatherStr);
     }
@@ -220,7 +221,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
                 //log.info(dateTime);
                 //log.info(stnWeatherList[0].pubDate);
                 if ((new Date(stnWeatherList[0].pubDate)).getTime() < limitTime) {
-                    log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
+                    log.warn('It(Minute) was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
                     return mCallback();
                 }
 
@@ -233,7 +234,10 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
 
                 var minuteData = minuteList[minuteList.length-1];
                 if (minuteData == undefined) {
-                    log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
+                    /**
+                     * 몇몇 STN은 hourly 데이터만 제공하는 경우도 있음.
+                     */
+                    log.warn('It(Minute) does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
                     return mCallback();
                 }
 
@@ -320,12 +324,13 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
                return mCallback();
            }
 
-           if ((new Date(stnWeatherList[0].pubDate)).getTime()+3600000 < (new Date(dateTime)).getTime()) {
+           var T_2HOURS = 7200000;
+           if ((new Date(stnWeatherList[0].pubDate)).getTime()+T_2HOURS < (new Date(dateTime)).getTime()) {
                log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
                return mCallback();
            }
 
-           var hourlyData = stnWeatherList[0].hourlyData[0];
+           var hourlyData = stnWeatherList[0].hourlyData[stnWeatherList[0].hourlyData.length-1];
 
            for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
                if (stnWeatherList[0].hourlyData[i].date === dateTime) {
@@ -333,12 +338,14 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
                    break;
                }
            }
+           if (i < 0) {
+               log.warn("Use previous data dateTime="+hourlyData.date);
+           }
 
            if (hourlyData == undefined) {
                log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
                return mCallback();
            }
-
 
            for (var key in hourlyData) {
                stnInfo[key] = hourlyData[key];
@@ -525,8 +532,8 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
 /**
  * stnHourly와 stnMinute의 합치면서, hourly가 동네예보와 1도 이상 차이는 측정소의 온도는 skip함.
  * @param townInfo
- * @param dateTime
- * @param t1h
+ * @param dateTime system time (now)
+ * @param current req.current
  * @param callback
  */
 controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, current, callback) {

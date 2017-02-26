@@ -10,27 +10,27 @@ navigation history that also transitions its views in and out.
                 <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(1)+')'}">
                     <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
-                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">어제보다 오늘은</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">그래프로 한눈에 어제와 비교하세요</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">어제,오늘,내일,모레까지 비교해보세요</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_TODAY_THAN_YESTERDAY?"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_THE_GRAPH_WITH_YESTERDAY_AT_A_GLANCE"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_YESTERDAY_TODAY_TOMORROW"></p>
                 </div>
             </ion-slide>
             <ion-slide>
                 <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(2)+')'}">
                     <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
-                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">지난주부터 다음 주까지</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">한 주의 변화를 확인하세요</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">지난 주말과 이번 주말도 비교해보세요</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_FROM_LAST_WEEK_TO_NEXT_WEEK"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_CHECK_THE_CHANGES_IN_ONE_WEEK"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_COMPARE_LAST_WEEKEND_WITH_THIS_WEEKEND"></p>
                 </div>
             </ion-slide>
             <ion-slide>
                 <div class="guide-content" ng-style="::{'background-image':'url('+getGuideImg(4)+')'}">
                     <a class="icon ion-ios-close-outline guide-close" ng-click="onClose()"></a>
                     <p ng-style="{'font-size': bigFont+'px'}">&nbsp;</p>
-                    <p ng-style="{'font-size': bigFont+'px'}" class="guide-content-text">알람설정</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">즐겨찾는 지역에 알람을 설정하고,</p>
-                    <p ng-style="{'font-size': smallFont+'px'}" class="guide-content-text">설정한 시간에 날씨정보를 받으세요.</p>
+                    <p ng-style="{'font-size': bigFont-6+'px'}" class="guide-content-head" translate="LOC_WEATHER_ALARM"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_SET_ALARM_IN_YOUR_FAVORITE_LOCATION"></p>
+                    <p ng-style="{'font-size': smallFont-2+'px'}" class="guide-content-text" translate="LOC_GET_WEATHER_INFO_AT_THE_TIME_YOU_SET"></p>
                 </div>
             </ion-slide>
         </ion-slide-box>

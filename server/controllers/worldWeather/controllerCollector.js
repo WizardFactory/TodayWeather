@@ -974,6 +974,7 @@ ConCollector.prototype._parseDSForecast = function(src){
         result.current.cloud = self._getFloatItem(src.currently.cloudCover);
         result.current.pres = self._getFloatItem(src.currently.pressure);
         result.current.oz = self._getFloatItem(src.currently.ozone);
+        result.current.icon = src.currently.icon;
     }
 
     // hourly data
@@ -1001,6 +1002,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             hourlyData.cloud = self._getFloatItem(item.cloudCover);
             hourlyData.pres = self._getFloatItem(item.pressure);
             hourlyData.oz = self._getFloatItem(item.ozone);
+            hourlyData.icon = item.icon;
 
             result.hourly.data.push(hourlyData);
         });
@@ -1014,24 +1016,24 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.dateObj = self._getUtcTime(item.time + '000');
             dailyData.date = parseInt(self._convertTimeToDate(item.time + '000'));
             dailyData.summary = item.summary;
-            dailyData.sunrise = parseInt(self._convertTimeToDate(item.sunriseTime + '000'));
-            dailyData.sunset = parseInt(self._convertTimeToDate(item.sunsetTime + '000'));
+            dailyData.sunrise = self._getUtcTime(item.sunriseTime + '000');
+            dailyData.sunset = self._getUtcTime(item.sunsetTime + '000');
             dailyData.moonphase = self._getFloatItem(item.moonPhase);
             dailyData.pre_int = self._getFloatItem(item.precipIntensity);
             dailyData.pre_intmax = self._getFloatItem(item.precipIntensityMax);
-            dailyData.pre_intmaxt = parseInt(self._convertTimeToDate(item.precipIntensityMaxTime + '000'));
+            dailyData.pre_intmaxt = self._getUtcTime(item.precipIntensityMaxTime + '000');
             dailyData.pre_pro = self._getFloatItem(item.precipProbability);
             if(item.precipType){
                 dailyData.pre_type = item.precipType;
             }
             dailyData.temp_min = self._getFloatItem(item.temperatureMin);
-            dailyData.temp_mint = parseInt(self._convertTimeToDate(item.temperatureMinTime + '000'));
+            dailyData.temp_mint = self._getUtcTime(item.temperatureMinTime + '000');
             dailyData.temp_max = self._getFloatItem(item.temperatureMax);
-            dailyData.temp_maxt = parseInt(self._convertTimeToDate(item.temperatureMaxTime + '000'));
+            dailyData.temp_maxt = self._getUtcTime(item.temperatureMaxTime + '000');
             dailyData.ftemp_min = self._getFloatItem(item.apparentTemperatureMin);
-            dailyData.ftemp_mint = parseInt(self._convertTimeToDate(item.apparentTemperatureMinTime + '000'));
+            dailyData.ftemp_mint = self._getUtcTime(item.apparentTemperatureMinTime + '000');
             dailyData.ftemp_max = self._getFloatItem(item.apparentTemperatureMax);
-            dailyData.ftemp_maxt = parseInt(self._convertTimeToDate(item.apparentTemperatureMaxTime + '000'));
+            dailyData.ftemp_maxt = self._getUtcTime(item.apparentTemperatureMaxTime + '000');
             dailyData.humid = self._getFloatItem(item.humidity);
             dailyData.windspd = self._getFloatItem(item.windSpeed);
             dailyData.winddir = self._getFloatItem(item.windBearing);
@@ -1039,6 +1041,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.cloud = self._getFloatItem(item.cloudCover);
             dailyData.pres = self._getFloatItem(item.pressure);
             dailyData.oz = self._getFloatItem(item.ozone);
+            dailyData.icon = item.icon;
 
             result.daily.data.push(dailyData);
         });
@@ -1101,12 +1104,16 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         log.error('Dsf> fail to add the new data to DB :', geocode, err);
                         print.error('Dsf> fail to add the new data to DB :', geocode);
                     }
+                    else {
+                        log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
+                    }
                     if (callback) {
                         callback(err, newData);
                     }
                 });
-            }else {
-                //print.info('WuF> add new Item : ', newData);
+            }
+            else {
+                //print.info('Dsf> add new Item : ', newData);
                 list.forEach(function(data, index){
                     var isExist = false;
                     if(data.date < date){
@@ -1118,7 +1125,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     }
 
                     data.data.forEach(function(dbItem){
-                        log.info('DB Item', dbItem.current.dateObj.toString());
+                        //log.info('DB Item', dbItem.current.dateObj.toString());
                         if(dbItem.current.dateObj.getTime() === newData.current.dateObj.getTime()){
                             dbItem.current = newData.current;
                             dbItem.hourly = newData.hourly;
@@ -1152,7 +1159,10 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     //log.info(data);
                     data.save(function(err){
                         if(err){
-                            log.error('Dsf> fail to save to DB :', geocode);
+                            log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
+                        }
+                        else {
+                            log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                         }
 
                         if(callback){
@@ -1303,6 +1313,34 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
     });
 };
 
+ConCollector.prototype._getLocalLast0H = function (timeOffset) {
+    var utcTime = new Date();
+    var localTime = new Date();
+    localTime.setUTCMinutes(localTime.getUTCMinutes()+timeOffset);
+
+    if (utcTime.getUTCDate() == localTime.getUTCDate()) {
+        //same day
+        log.info('same day');
+    }
+    else if (utcTime.getUTCDate() < localTime.getUTCDate()) {
+       //next day
+        log.info('next day');
+        utcTime.setUTCDate(utcTime.getUTCDate()+1);
+    }
+    else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
+       //previous day
+        log.info('previous day');
+        utcTime.setUTCDate(utcTime.getUTCDate()-1);
+    }
+    utcTime.setUTCHours(0);
+    utcTime.setUTCMinutes(0);
+    utcTime.setUTCSeconds(0);
+    utcTime.setUTCMilliseconds(0);
+    utcTime.setUTCMinutes(-timeOffset);
+
+    return utcTime;
+};
+
 /**
  *
  * @param geocode
@@ -1314,15 +1352,18 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     var dataList = [];
     var requester = new dsfRequester;
 
-    if(timeOffset > 24 || timeOffset < -24){
+    if(timeOffset > 14 || timeOffset < -11){
         timeOffset = 0;
     }
 
+    var reqTime = self._getLocalLast0H(timeOffset*60);
     for(var i=From ; i<To ; i++){
-        var dateString = self._getTimeString(0 - (24 * i) + timeOffset).slice(0,10) + '00';
-        var now = self._getDateObj(dateString).getTime() / 1000;
-        dataList.push(now);
+        reqTime.setUTCDate(reqTime.getUTCDate()-i);
+        //log.info("reqTime="+reqTime.toISOString());
+        var nTime = reqTime.getTime()/1000;
+        dataList.push(nTime);
     }
+
     dataList.push('cur');
 
     self.removeAllDsfDb(geocode, function(err){
@@ -1333,19 +1374,21 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
         async.mapSeries(dataList,
             function(date, cb){
                 // get forecast
-                log.info('date : ', date);
                 if(date === 'cur'){
                     date = undefined;
                 }
+                else {
+                    log.info('date : ', (new Date(date*1000)).toISOString());
+                }
                 requester.getForecast(geocode, date, key, function(err, result){
                     if(err){
-                        print.error('Req Dsf> get fail', geocode);
-                        log.error('Req Dsf> get fail', geocode);
+                        print.error('Req Dsf> get fail', geocode, date);
+                        log.error('Req Dsf> get fail', geocode, date);
                         cb(null);
                         return;
                     }
 
-                    log.info(result);
+                    //log.info(result);
                     if(date === undefined){
                         var dateString = self._getTimeString(0 + timeOffset).slice(0,10) + '00';
                         date = self._getDateObj(dateString).getTime() / 1000;

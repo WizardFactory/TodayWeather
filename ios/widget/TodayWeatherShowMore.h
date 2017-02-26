@@ -38,6 +38,8 @@
 - (void) transitView:(UIView *)curView
           transition:(UIViewAnimationTransition)transiton
             duration:(NSTimeInterval)duration;
+- (void) showDailyWeatherAsWidth;
+
 @end
 
 #endif /* TodayWeatherShowMore_h */

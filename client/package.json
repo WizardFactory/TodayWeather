@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.24",
+  "version": "0.9.27",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "bower": "^1.3.3",
     "clean-css": "=2.2.2",
     "cordova-config-utils": "^1.0.3",
-    "cordova-uglify": "^0.2.5",
+    "cordova-uglify": "=0.2.5",
     "gulp-shell": "^0.5.2",
     "gulp-util": "^2.2.14",
     "imagemin": "=3.2.0",
@@ -38,14 +38,14 @@
     "cordova-plugin-statusbar",
     "cordova-plugin-inappbrowser",
     "cordova-plugin-x-socialsharing",
-    "cordova-plugin-inapppurchase",
+    "cordova-plugin-inapppurchase@1.0.0",
     "cordova-plugin-whitelist",
-    "cordova-plugin-google-analytics",
+    "cordova-plugin-google-analytics@1.7.1",
     {
       "variables": {
-        "SENDER_ID": ""
+        "SENDER_ID": "11111111111"
       },
-      "locator": "phonegap-plugin-push",
+      "locator": "phonegap-plugin-push@1.8.4",
       "id": "phonegap-plugin-push"
     },
     "cordova-plugin-app-preferences",
@@ -72,7 +72,8 @@
         "ANDROID_PATH_PREFIX": "/"
       }
     },
-    "cordova.plugins.diagnostic"
+    "cordova-plugin-globalization",
+    "cordova.plugins.diagnostic@3.3.3"
   ],
   "cordovaPlatforms": [
     "ios",

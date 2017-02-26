@@ -43,6 +43,18 @@ function ControllerTown() {
     this.dbTownList = [];
 
     var self = this;
+    this.checkParamValidation = function(req, res, next) {
+        var regionName = req.params.region;
+        if (regionName == '중국' || regionName == '일본' || regionName == '미국' || regionName == '하늘시') {
+            log.info('We did not support this region '+regionName);
+            res.status(400).send("We didn't support this region");
+        }
+        else {
+            next();
+        }
+        return this;
+    };
+
     /**
      *
      * @param req
@@ -383,11 +395,10 @@ function ControllerTown() {
                         break;
                     }
                 }
-                // 미래의 데이터만 사용한다.
-                if(parseInt('' + rssList[i].date) === parseInt('' + requestTime.date + requestTime.time)) {
-                    i = i+1;
-                }
-
+                
+                //동일한 경우뿐만 아니라 동일한 경우 없이 바로 적은 경우에도 해당하는 인덱스 다음부터 사용해야 함.
+                i = i+1;
+                
                 var j;
                 var found;
                 var overwrite = false;
@@ -454,35 +465,6 @@ function ControllerTown() {
                             }
                             break;
                         }
-                    }
-                    if(found === 0) {
-                        var item = {};
-                        item.date = rssList[i].date.slice(0, 8);
-                        item.time = rssList[i].date.slice(8, 12);
-                        item.pop = rssList[i].pop;
-                        item.pty = rssList[i].pty;
-                        item.r06 = +(rssList[i].r06).toFixed(1);
-                        item.reh = rssList[i].reh;
-                        item.s06 = +(rssList[i].s06).toFixed(1);
-                        item.sky = rssList[i].sky;
-                        item.t3h = +(rssList[i].temp).toFixed(1);
-                        if(item.time === '0600' && rssList[i].tmn != -999){
-                            item.tmn = rssList[i].tmn;
-                        } else{
-                            item.tmn = -50;
-                        }
-                        if(item.time === '1500' && rssList[i].tmx != -999){
-                            item.tmx = rssList[i].tmx;
-                        }else{
-                            item.tmx = -50;
-                        }
-                        item.wsd = rssList[i].wsd;
-                        item.vec = rssList[i].vec;
-                        item.wav = rssList[i].wav;
-                        item.uuu = rssList[i].uuu;
-                        item.vvv = rssList[i].vvv;
-
-                        req.short.push(item);
                     }
                 }
                 next();
@@ -891,13 +873,19 @@ function ControllerTown() {
         if (weather == undefined) {
             return 0;
         }
-        if (weather.indexOf("비") >= 0) {
+        if (weather.indexOf("끝") >= 0) {
+            return 0;
+        }
+        else if (weather.indexOf("비") >= 0) {
             return 1;
         }
         else if (weather.indexOf("진눈깨비") >= 0) {
             return 2;
         }
         else if (weather.indexOf("눈") >= 0) {
+            return 3;
+        }
+        else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
             return 3;
         }
         else if (rns == true) {
@@ -1330,7 +1318,9 @@ function ControllerTown() {
                     }
 
                     /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
-                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함. */
+                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함.
+                        current -> 도시별 날씨 -> AWS 분단위 -> 초단기 */
+
                     var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
                     var stnFirst = true;
                     if (!(req.currentPubDate == undefined)) {
@@ -1353,18 +1343,30 @@ function ControllerTown() {
                         }
                     }
 
+                    if (stnFirst) {
+                        req.current.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
+                        req.current.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
+                    }
 
-                    if (req.current.rn1 == undefined) {
-                        req.current.rn1 = stnWeatherInfo.rs1h;
+                    if (req.current.rn1 == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.rs1h == undefined)) {
+                            req.current.rn1 = stnWeatherInfo.rs1h;
+                        }
                     }
-                    if (req.current.sky == undefined) {
-                        req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                    if (req.current.sky == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.cloud == undefined)) {
+                            req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                        }
                     }
-                    if (req.current.pty == undefined) {
-                        req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                    if (req.current.pty == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.weather == undefined) && !(stnWeatherInfo.rns == undefined)) {
+                            req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                        }
                     }
-                    if (req.current.lgt == undefined) {
-                        req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                    if (req.current.lgt == undefined || stnFirst) {
+                        if (!(stnWeatherInfo.weather == undefined)) {
+                            req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                        }
                     }
 
                     if (stnFirst) {
@@ -1392,12 +1394,14 @@ function ControllerTown() {
                                     req.current.sky = 2;
                                 }
                             }
-                            req.current.rn1 = req.current.rs1h;
-                            if (req.current.rn1 > 10) {
-                                req.current.rn1 = Math.round(req.current.rn1);
-                            }
-                            else {
-                                req.current.rn1 = +(req.current.rn1).toFixed(1);
+                            if (req.current.rs1h > 0) {
+                                req.current.rn1 = req.current.rs1h;
+                                if (req.current.rn1 > 10) {
+                                    req.current.rn1 = Math.round(req.current.rn1);
+                                }
+                                else {
+                                    req.current.rn1 = +(req.current.rn1).toFixed(1);
+                                }
                             }
                         }
                         else if (req.current.rns === false) {
@@ -1453,7 +1457,16 @@ function ControllerTown() {
 
         req.midData.dailyData.forEach(function (dailyData) {
             var skyInfoAm = self._convertKorStrToSky(dailyData.wfAm);
+            if (skyInfoAm == undefined) {
+                log.warn(JSON.stringify(dailyData), meta);
+                skyInfoAm = {sky: 1, pty: 0, lgt: 0};
+            }
             var skyInfoPm = self._convertKorStrToSky(dailyData.wfPm);
+            if (skyInfoPm == undefined) {
+                log.warn(JSON.stringify(dailyData), meta);
+                skyInfoPm = {sky: 1, pty: 0, lgt: 0};
+            }
+
             dailyData.skyAm = skyInfoAm.sky;
             dailyData.ptyAm = skyInfoAm.pty;
             dailyData.lgtAm = skyInfoAm.lgt;
@@ -2380,35 +2393,21 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     }
 
     if (current.arpltn) {
-
-        if (current.arpltn.pm10Grade && current.arpltn.pm10Str) {
-            tmpGrade = current.arpltn.pm10Grade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-           item = {str: "미세먼지"+" "+ current.arpltn.pm10Str, grade: tmpGrade};
-            itemList.push(item);
-        }
-        if (current.arpltn.pm25Grade && current.arpltn.pm25Str) {
+        str = "통합대기" + " " + current.arpltn.khaiStr;
+        tmpGrade = current.arpltn.khaiGrade;
+        if (tmpGrade < current.arpltn.pm25Grade) {
+            str = "초미세먼지"+" "+ current.arpltn.pm25Str;
             tmpGrade = current.arpltn.pm25Grade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-            item = {str: "초미세먼지"+" "+ current.arpltn.pm25Str, grade: tmpGrade};
-            itemList.push(item);
         }
-        if (current.arpltn.khaiGrade && current.arpltn.khaiStr) {
-            tmpGrade = current.arpltn.khaiGrade;
-            if (tmpGrade == 1) {
-                //좋은 보통보다 높고, 나쁨보다 낮음.
-                tmpGrade = 2.5
-            }
-            item = {str: "통합대기" + " " + current.arpltn.khaiStr, grade: tmpGrade};
-            itemList.push(item);
+        if (tmpGrade < current.arpltn.pm10Grade) {
+            str = "미세먼지" + " " + current.arpltn.pm10Str;
+            tmpGrade = current.arpltn.pm10Grade;
         }
+
+        item = {str: str, grade: tmpGrade};
+        itemList.push(item);
     }
+
     if (current.rn1 && current.rn1Str && current.ptyStr) {
         item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
         itemList.push(item);
@@ -2416,10 +2415,6 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
         tmpGrade = current.dsplsGrade;
-        if (tmpGrade == 1) {
-            //좋은 보통보다 높고, 나쁨보다 낮음.
-            tmpGrade = 2.5
-        }
         item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
         itemList.push(item);
     }
@@ -2432,17 +2427,13 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     if (current.ultrv && Number(current.time) < 1800) {
         tmpGrade = current.ultrvGrade;
-        if (tmpGrade == 0) {
-            //좋은 보통보다 높고, 나쁨보다 낮음.
-            tmpGrade = 1.5
-        }
         item = {str:"자외선"+" "+current.ultrvStr, grade: tmpGrade+1};
         itemList.push(item);
     }
 
     if (current.wsdGrade && current.wsdStr) {
         //약함(1)을 보통으로 보고 보정 1함.
-        item = {str:"바람이"+" "+ current.wsdStr, grade: current.wsdGrade+1};
+        item = {str: current.wsdStr, grade: current.wsdGrade+1};
         itemList.push(item);
     }
 
@@ -2536,18 +2527,21 @@ ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, 
  * @param pty
  * @returns {*}
  */
-ControllerTown.prototype._convertKmaPtyToStr = function(pty) {
+ControllerTown.prototype._convertKmaPtyToStr = function(pty, translate) {
+    var ret = "";
+    var ts = translate == undefined ? global : translate;
     if (pty === 1) {
-        return "강수량";
+        ret = ts.__("LOC_PRECIPITATION");
     }
     else if (pty === 2) {
-        return "강수/적설량"
+        //return "강수/적설량"
+        ret = ts.__("LOC_PRECIPITATION");
     }
     else if (pty === 3) {
-        return "적설량";
+        ret = ts.__("LOC_SNOWFALL");
     }
 
-    return "";
+    return ret;
 };
 
 /**
@@ -2608,25 +2602,25 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 ControllerTown.prototype._makeArpltnStr = function (data) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.parsePm10Info(data.pm10Grade);
+        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10");
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.parsePm25Info(data.pm25Grade);
+        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25");
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.parseO3Info(data.o3Grade);
+        data.o3Str = KecoController.grade2str(data.o3Grade, "o3");
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.parseNo2Info(data.no2Grade);
+        data.no2Str = KecoController.grade2str(data.no2Grade, "no2");
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.parseCoInfo(data.coGrade);
+        data.coStr = KecoController.grade2str(data.coGrade, "co");
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.parseSo2Info(data.so2Grade);
+        data.so2Str = KecoController.grade2str(data.so2Grade, "so2");
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.parseKhaiInfo(data.khaiGrade);
+        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai");
     }
     return this;
 };
@@ -2713,10 +2707,10 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
 ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
     switch (wsdGrade) {
         case 0: return "";
-        case 1: return "약함";
-        case 2: return "약간강함";
-        case 3: return "강함";
-        case 4: return "매우강함";
+        case 1: return __("LOC_LIGHT_WIND");
+        case 2: return __("LOC_MODERATE_WIND");
+        case 3: return __("LOC_STRONG_WIND");
+        case 4: return __("LOC_VERY_STRONG_WIND");
     }
     return "";
 };
@@ -4100,16 +4094,16 @@ ControllerTown.prototype._parseSensoryTem = function(sensoryTem) {
         return "";
     }
     else if ( -10 < sensoryTem && sensoryTem < 0) {
-        return "관심";
+        return __("LOC_ATTENTION");
     }
     else if ( -25 < sensoryTem && sensoryTem <= -10) {
-        return "주의";
+        return __("LOC_CAUTION");
     }
     else if ( -45 < sensoryTem && sensoryTem <= -25) {
-        return "경고";
+        return __("LOC_WARNING");
     }
     else if (sensoryTem <= -45) {
-        return "위험";
+        return __("LOC_HAZARD");
     }
     return "";
 };
@@ -4276,7 +4270,7 @@ ControllerTown.prototype._convertSkyToKorStr = function(sky, pty) {
  * @private
  */
 ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
-    var sky = 0;
+    var sky = 1;
     var pty = 0;
     var lgt = 0;
 
@@ -4340,8 +4334,7 @@ ControllerTown.prototype._convertKorStrToSky = function (skyKorStr) {
             break;
         default :
             log.error("Fail to convert skystring="+skyKorStr);
-            break;
-
+            return undefined;
     }
     return  {sky: sky, pty: pty, lgt: lgt};
 };
