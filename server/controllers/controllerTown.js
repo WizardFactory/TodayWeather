@@ -395,11 +395,10 @@ function ControllerTown() {
                         break;
                     }
                 }
-                // 미래의 데이터만 사용한다.
-                if(parseInt('' + rssList[i].date) === parseInt('' + requestTime.date + requestTime.time)) {
-                    i = i+1;
-                }
-
+                
+                //동일한 경우뿐만 아니라 동일한 경우 없이 바로 적은 경우에도 해당하는 인덱스 다음부터 사용해야 함.
+                i = i+1;
+                
                 var j;
                 var found;
                 var overwrite = false;
@@ -466,35 +465,6 @@ function ControllerTown() {
                             }
                             break;
                         }
-                    }
-                    if(found === 0) {
-                        var item = {};
-                        item.date = rssList[i].date.slice(0, 8);
-                        item.time = rssList[i].date.slice(8, 12);
-                        item.pop = rssList[i].pop;
-                        item.pty = rssList[i].pty;
-                        item.r06 = +(rssList[i].r06).toFixed(1);
-                        item.reh = rssList[i].reh;
-                        item.s06 = +(rssList[i].s06).toFixed(1);
-                        item.sky = rssList[i].sky;
-                        item.t3h = +(rssList[i].temp).toFixed(1);
-                        if(item.time === '0600' && rssList[i].tmn != -999){
-                            item.tmn = rssList[i].tmn;
-                        } else{
-                            item.tmn = -50;
-                        }
-                        if(item.time === '1500' && rssList[i].tmx != -999){
-                            item.tmx = rssList[i].tmx;
-                        }else{
-                            item.tmx = -50;
-                        }
-                        item.wsd = rssList[i].wsd;
-                        item.vec = rssList[i].vec;
-                        item.wav = rssList[i].wav;
-                        item.uuu = rssList[i].uuu;
-                        item.vvv = rssList[i].vvv;
-
-                        req.short.push(item);
                     }
                 }
                 next();
