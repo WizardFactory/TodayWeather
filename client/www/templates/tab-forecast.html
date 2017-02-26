@@ -101,7 +101,7 @@
                                     <img src="img/wind-and-cloud.svg" style="height: 20px; margin: 0 2px">
                                     <p class="detail-item-p">{{'LOC_WIND'|translate}} {{currentWeather.wdd}} {{currentWeather.wsd}}<small>{{getWindSpdUnit()}}</small></p>
                                 </div>
-                                <div class="row subheading">
+                                <div class="row subheading" ng-if="currentWeather.visibility>0">
                                     <img src="img/ic_visibility_white_24px.svg" style="height: 24px">
                                     <p class="detail-item-p">{{'LOC_VISIBILITY'|translate}} {{currentWeather.visibility}}<small>{{getDistanceUnit()}}</small></p>
                                 </div>
