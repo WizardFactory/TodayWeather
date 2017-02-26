@@ -12,72 +12,78 @@ angular.module('controller.units', [])
         obj.precipitationUnit;
 
         function _getDefaultUnits() {
-            var obj = {};
-            obj.temperatureUnit = "C";
-            obj.windSpeedUnit = "m/s";
-            obj.pressureUnit = "hPa";
-            obj.distanceUnit = "km";
-            obj.precipitationUnit = "mm";
-            return obj;
+            var units = {};
+            units.temperatureUnit = "C";
+            units.windSpeedUnit = "m/s";
+            units.pressureUnit = "hPa";
+            units.distanceUnit = "km";
+            units.precipitationUnit = "mm";
+            return units;
         }
 
-        function _initUnits() {
-            obj = _getDefaultUnits();
+        obj._initUnits = function() {
+            var self = this;
+            var units = _getDefaultUnits();
+            var key;
+            for (key in units) {
+                self[key] = units[key];
+            }
 
             if (Util.region == 'KR') {
                 //skip
             }
             else if (Util.region == 'JP') {
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "m/s";
-                obj.pressureUnit = "mmHg";
-                obj.distanceUnit = "km";
-                obj.precipitationUnit = "mm";
+                self.temperatureUnit = "C";
+                self.windSpeedUnit = "m/s";
+                self.pressureUnit = "mmHg";
+                self.distanceUnit = "km";
+                self.precipitationUnit = "mm";
             }
             else if (Util.region == 'US') {
-                obj.temperatureUnit = "F";
-                obj.windSpeedUnit = "mph";
-                obj.pressureUnit = "inHg";
-                obj.distanceUnit = "mi";
-                obj.precipitationUnit = "in";
+                self.temperatureUnit = "F";
+                self.windSpeedUnit = "mph";
+                self.pressureUnit = "inHg";
+                self.distanceUnit = "mi";
+                self.precipitationUnit = "in";
             }
             else if (Util.region == 'DE') {
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "km/h";
-                obj.pressureUnit = "mb";
-                obj.distanceUnit = "km";
-                obj.precipitationUnit = "mm";
+                self.temperatureUnit = "C";
+                self.windSpeedUnit = "km/h";
+                self.pressureUnit = "mb";
+                self.distanceUnit = "km";
+                self.precipitationUnit = "mm";
             }
             else if (Util.region == 'CN') {
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "km/h";
-                obj.pressureUnit = "hPa";
-                obj.distanceUnit = "km";
-                obj.precipitationUnit = "mm";
+                self.temperatureUnit = "C";
+                self.windSpeedUnit = "km/h";
+                self.pressureUnit = "hPa";
+                self.distanceUnit = "km";
+                self.precipitationUnit = "mm";
             }
             else if (Util.region == 'TW') {
-                obj.temperatureUnit = "C";
-                obj.windSpeedUnit = "km/h";
-                obj.pressureUnit = "mmHg";
-                obj.distanceUnit = "km";
-                obj.precipitationUnit = "mm";
+                self.temperatureUnit = "C";
+                self.windSpeedUnit = "km/h";
+                self.pressureUnit = "mmHg";
+                self.distanceUnit = "km";
+                self.precipitationUnit = "mm";
             }
             else {
                //set default
             }
-        }
+        };
 
         obj.getDefaultUnits = function () {
             return _getDefaultUnits();
         };
 
         obj.getAllUnits = function () {
+            var self = this;
             return {
-                "temperatureUnit": obj.temperatureUnit,
-                "windSpeedUnit": obj.windSpeedUnit,
-                "pressureUnit": obj.pressureUnit,
-                "distanceUnit": obj.distanceUnit,
-                "precipitationUnit": obj.precipitationUnit
+                "temperatureUnit": self.temperatureUnit,
+                "windSpeedUnit": self.windSpeedUnit,
+                "pressureUnit": self.pressureUnit,
+                "distanceUnit": self.distanceUnit,
+                "precipitationUnit": self.precipitationUnit
             };
         };
 
@@ -89,12 +95,12 @@ angular.module('controller.units', [])
                 console.log('appPreferences is undefined, so load local st');
                 units = JSON.parse(localStorage.getItem("units"));
                 if (units == undefined) {
-                    _initUnits();
+                    self._initUnits();
                     self.saveUnits();
                 }
                 else {
                     for (key in units) {
-                        obj[key] = units[key];
+                        self[key] = units[key];
                     }
                 }
                 return;
@@ -106,12 +112,12 @@ angular.module('controller.units', [])
                 //callback(undefined, value);
                 units = JSON.parse(value);
                 if (units == undefined) {
-                    _initUnits();
+                    self._initUnits();
                     self.saveUnits();
                 }
                 else {
                     for (key in units) {
-                        obj[key] = units[key];
+                        self[key] = units[key];
                     }
                 }
             }, function (error) {
@@ -123,9 +129,11 @@ angular.module('controller.units', [])
 
         //saveUnits
         obj.saveUnits = function () {
+            var self = this;
+
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
                 console.log('appPreferences is undefined, so save local st');
-                localStorage.setItem("units", JSON.stringify(obj));
+                localStorage.setItem("units", JSON.stringify(self));
                 return;
             }
             var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
@@ -133,21 +141,23 @@ angular.module('controller.units', [])
                 console.log("save preference Success: " + value);
             }, function (error) {
                 console.log("save preference Error: " + error);
-            }, 'units', JSON.stringify(obj));
+            }, 'units', JSON.stringify(self));
         };
 
         obj.setUnit = function (unit, value) {
+            var self = this;
             console.log('set unit='+unit+' val='+value);
-            if (obj[unit] != value) {
-                obj[unit] = value;
+            if (self[unit] != value) {
+                self[unit] = value;
                 return true;
             }
             return false
         };
 
         obj.getUnit = function (unit) {
-            //console.log('get unit='+unit+' val='+obj[unit]);
-            return obj[unit];
+            var self = this;
+            //console.log('get unit='+unit+' val='+self[unit]);
+            return self[unit];
         };
 
         //setUnits
