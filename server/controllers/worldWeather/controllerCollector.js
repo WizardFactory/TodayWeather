@@ -974,6 +974,7 @@ ConCollector.prototype._parseDSForecast = function(src){
         result.current.cloud = self._getFloatItem(src.currently.cloudCover);
         result.current.pres = self._getFloatItem(src.currently.pressure);
         result.current.oz = self._getFloatItem(src.currently.ozone);
+        result.current.icon = src.currently.icon;
     }
 
     // hourly data
@@ -1001,6 +1002,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             hourlyData.cloud = self._getFloatItem(item.cloudCover);
             hourlyData.pres = self._getFloatItem(item.pressure);
             hourlyData.oz = self._getFloatItem(item.ozone);
+            hourlyData.icon = item.icon;
 
             result.hourly.data.push(hourlyData);
         });
@@ -1039,6 +1041,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.cloud = self._getFloatItem(item.cloudCover);
             dailyData.pres = self._getFloatItem(item.pressure);
             dailyData.oz = self._getFloatItem(item.ozone);
+            dailyData.icon = item.icon;
 
             result.daily.data.push(dailyData);
         });
