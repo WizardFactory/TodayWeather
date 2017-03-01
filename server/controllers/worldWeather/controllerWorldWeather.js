@@ -428,9 +428,13 @@ function controllerWorldWeather(){
                             return;
                         }
 
+                        //수정후 1시간 간격 업데이트라서 논의후 결정.
+                        callback('err_exit_notValid');
+                        return;
+
                         log.info('cDate : ', cDate.toString());
                         log.info('DB Date : ', req.DSF.dateObj.toString());
-                        //validation을 통과했는데, yesterday 못 만드는 경우 있음.
+
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data', meta);
                             log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
@@ -2329,7 +2333,7 @@ function controllerWorldWeather(){
          */
         weatherStr = weatherStr.toLowerCase();
         if (weatherStr.indexOf('and')) {
-            log.info('weatherStr='+weatherStr);
+            //log.info('weatherStr='+weatherStr);
             weatherStr = weatherStr.split(' and ')[0];
         }
 
