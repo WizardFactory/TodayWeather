@@ -73,20 +73,20 @@ describe('unit test - requester of kma index service class', function() {
 
     var fsn;
     it('parse fsn life data', function() {
-        var data1 = {"Response":{"Header":{"SuccessYN":"Y","ReturnCode":"00","ErrMsg":""},"Body":{"@xsi.type":"idxBody",
-                    "IndexModel":{"code":"A01_2","areaNo":1100000000,"date":2015102018,"today":48,"tomorrow":51,
+        var data1 = {"Response":{"header":{"successYN":"Y","returnCode":"00","errMsg":""},"body":{"@xsi.type":"idxBody",
+                    "indexModel":{"code":"A01_2","areaNo":1100000000,"date":2015102018,"today":48,"tomorrow":51,
                         "theDayAfterTomorrow":51}}}};
         var result1 = reqLifeIndex.parseLifeIndex('fsn', data1);
 
         //console.log(result1.data.fsn);
-        assert.equal(result1.data.fsn.data[0].value, data1.Response.Body.IndexModel.today, 'compare parsed data1 of fsn');
+        assert.equal(result1.data.fsn.data[0].value, data1.Response.body.indexModel.today, 'compare parsed data1 of fsn');
 
-        var data2 = {"Response":{"Header":{"SuccessYN":"Y","ReturnCode":"00","ErrMsg":""},"Body":{"@xsi.type":"idxBody",
-                    "IndexModel":{"code":"A01_2","areaNo":2700000000,"date":2015102018,"today":"","tomorrow":50,
+        var data2 = {"Response":{"header":{"successYN":"Y","returnCode":"00","errMsg":""},"body":{"@xsi.type":"idxBody",
+                    "indexModel":{"code":"A01_2","areaNo":2700000000,"date":2015102018,"today":"","tomorrow":50,
                         "theDayAfterTomorrow":48}}}};
         var result2 = reqLifeIndex.parseLifeIndex('fsn', data2);
         fsn = result2.data.fsn;
-        assert.equal(result2.data.fsn.data[0].value, data2.Response.Body.IndexModel.tomorrow, 'compare parsed data2 of fsn');
+        assert.equal(result2.data.fsn.data[0].value, data2.Response.body.indexModel.tomorrow, 'compare parsed data2 of fsn');
     });
 
     it('make new life index kma', function () {
@@ -135,23 +135,23 @@ describe('unit test - requester of kma index service class', function() {
 
     //it ('get fsn life index', function (done) {
     //    co.getLifeIndex('fsn', '1100000000', function (err, body) {
-    //        assert.equal(body.Response.Header.SuccessYN, 'Y', '');
+    //        assert.equal(body.Response.header.successYN, 'Y', '');
     //        done();
     //    });
     //});
     //
     //it ('get ultrv life index', function (done) {
     //    co.getLifeIndex('ultrv', '1100000000', function (err, body) {
-    //        assert.equal(body.Response.Header.SuccessYN, 'Y', '');
+    //        assert.equal(body.Response.header.successYN, 'Y', '');
     //        done();
     //    });
     //});
 
     it ('parse hourly life index', function () {
-        var data = {"Response":{"Header":{"SuccessYN":"Y","ReturnCode":"00","ErrMsg":""},"Body":{"@xsi.type":"idxBody",
-            "IndexModel":{"code":"A02","areaNo":5013062000,"date":2015103018,
+        var data = {"Response":{"header":{"successYN":"Y","returnCode":"00","errMsg":""},"body":{"@xsi.type":"idxBody",
+            "indexModel":{"code":"A02","areaNo":5013062000,"date":2015103018,
             "h3":0,"h6":0,"h9":0,"h12":0,"h15":0,"h18":0,"h21":0,"h24":0,"h27":0,"h30":0,"h33":0,"h36":0,"h39":0,"h42":0,
-            "h45":0,"h48":1,"h51":3,"h54":3,"h57":"","h60":"","h63":"","h66":""}}}}
+            "h45":0,"h48":1,"h51":3,"h54":3,"h57":"","h60":"","h63":"","h66":""}}}};
 
         var result = reqLifeIndex.parseLifeIndex('rot', data);
 
@@ -159,9 +159,9 @@ describe('unit test - requester of kma index service class', function() {
     });
 
     it ('parse daily life index', function () {
-        var data = {"Response":{"Header":{"SuccessYN":"Y","ReturnCode":"00",
-                    "ErrMsg":""},"Body":{"@xsi.type":"idxBody",
-                    "IndexModel":{"code":"A07","areaNo":1100000000,"date":2015102819,
+        var data = {"Response":{"header":{"successYN":"Y","returnCode":"00",
+                    "errMsg":""},"body":{"@xsi.type":"idxBody",
+                    "indexModel":{"code":"A07","areaNo":1100000000,"date":2015102819,
                         "today":"","tomorrow":2,"theDayAfterTomorrow":3}}}};
         var result = reqLifeIndex.parseLifeIndex('ultrv', data);
 
