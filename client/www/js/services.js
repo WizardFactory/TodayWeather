@@ -1246,11 +1246,11 @@ angular.module('starter.services', [])
             console.log(url);
             $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
                 if (data.status === "OK") {
-                    // var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+                    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
                     var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
                     var local_types = [ "locality", "political" ];
                     var country_types = ["country"];
-                    // var sub_level2_name;
+                    var sub_level2_name;
                     var sub_level1_name;
                     var local_name;
                     var country_name;
@@ -1259,11 +1259,11 @@ angular.module('starter.services', [])
                         var result = data.results[i];
                         for (var j=0; j < result.address_components.length; j++) {
                             var address_component = result.address_components[j];
-                            // if ( address_component.types[0] == sub_level2_types[0]
-                            //     && address_component.types[1] == sub_level2_types[1]
-                            //     && address_component.types[2] == sub_level2_types[2] ) {
-                            //    sub_level2_name = address_component.short_name;
-                            // }
+                            if ( address_component.types[0] == sub_level2_types[0]
+                                && address_component.types[1] == sub_level2_types[1]
+                                && address_component.types[2] == sub_level2_types[2] ) {
+                                sub_level2_name = address_component.short_name;
+                            }
 
                             if ( address_component.types[0] == sub_level1_types[0]
                                 && address_component.types[1] == sub_level1_types[1]
@@ -1280,24 +1280,25 @@ angular.module('starter.services', [])
                                country_name = address_component.short_name;
                             }
 
-                            // if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                            if (sub_level1_name && local_name && country_name) {
+                            if (sub_level2_name && sub_level1_name && local_name && country_name) {
                                 break;
                             }
                         }
 
-                        // if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                        if (sub_level1_name && local_name && country_name) {
+                        if (sub_level2_name && sub_level1_name && local_name && country_name) {
                             break;
                         }
                     }
 
                     var name;
                     var address = "";
-                    // if (sub_level2_name) {
-                    //     address += sub_level2_name;
-                    //     name = sub_level2_name
-                    // }
+                    //국내는 동단위까지 표기해야 함.
+                    if (country_name == "KR") {
+                        if (sub_level2_name) {
+                            address += sub_level2_name;
+                            name = sub_level2_name
+                        }
+                    }
                     if (sub_level1_name) {
                         address += " " + sub_level1_name;
                         if (name == undefined) {
