@@ -1995,6 +1995,15 @@ angular.module('starter.controllers', [])
             return Purchase.hasInAppPurchase || Purchase.paidAppUrl.length > 0;
         };
 
+        $scope.showAbout = function () {
+            if (Util.language.indexOf("ko") != -1) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+
         init();
     })
 

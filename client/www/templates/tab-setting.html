@@ -90,7 +90,7 @@
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                         <!--<img src="img/setting-review.png" style="width: 30px">-->
                     </li>
-                    <li class="item item-icon-right setting-title-light"  ng-click="openInfo()">
+                    <li class="item item-icon-right setting-title-light" ng-if="showAbout()" ng-click="openInfo()">
                         {{'LOC_ABOUT'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </li>
