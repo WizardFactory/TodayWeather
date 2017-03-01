@@ -37,7 +37,7 @@ function KmaIndexService() {
 
     this.fsn = {
         nextTime: null,
-        offerMonth: {start: 2, end: 10}, //3~11
+        offerMonth: {start: 0, end: 11}, //1~12
         updateTimeTable: [9, 21],   //kr 06, 18
         urlPath: 'getFsnLifeList'
     };
