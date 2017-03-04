@@ -8,8 +8,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-10"></div>
-            <div class="col">
+            <div style="margin: 0 auto; min-width: 80%">
                 <ul class="list">
                     <!--<label class="item item-input item-select"  style="background-color: inherit; color: inherit">-->
                     <!--<div class="input-label" style="color: inherit">-->
@@ -91,13 +90,12 @@
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                         <!--<img src="img/setting-review.png" style="width: 30px">-->
                     </li>
-                    <li class="item item-icon-right setting-title-light"  ng-click="openInfo()">
+                    <li class="item item-icon-right setting-title-light" ng-if="showAbout()" ng-click="openInfo()">
                         {{'LOC_ABOUT'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </li>
                 </ul>
             </div>
-            <div class="col-10"></div>
         </div>
     </ion-content>
 </ion-view>

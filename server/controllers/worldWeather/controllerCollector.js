@@ -1314,22 +1314,56 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
     });
 };
 
+ConCollector.prototype._getDiffDate = function (utcTime, localTime) {
+    if (utcTime.getUTCFullYear() < localTime.getUTCFullYear()) {
+        return 1;
+    }
+    else if (utcTime.getUTCFullYear() > localTime.getUTCFullYear()) {
+        return -1;
+    }
+    else if (utcTime.getUTCFullYear() == localTime.getUTCFullYear()) {
+        if (utcTime.getUTCMonth() < localTime.getUTCMonth()) {
+            return 1;
+        }
+        else if (utcTime.getUTCMonth() > localTime.getUTCMonth()) {
+            return -1;
+        }
+        else if (utcTime.getUTCMonth() == localTime.getUTCMonth()) {
+            if (utcTime.getUTCDate() < localTime.getUTCDate()) {
+                return 1;
+            }
+            else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
+                return -1;
+            }
+            else if (utcTime.getUTCDate() == localTime.getUTCDate()) {
+                return 0;
+            }
+        }
+    }
+    log.error("Invalid time");
+    return 0;
+};
+
+/**
+ *
+ * @param timeOffset
+ * @returns {Date|global.Date}
+ * @private
+ */
 ConCollector.prototype._getLocalLast0H = function (timeOffset) {
     var utcTime = new Date();
     var localTime = new Date();
     localTime.setUTCMinutes(localTime.getUTCMinutes()+timeOffset);
 
-    if (utcTime.getUTCDate() == localTime.getUTCDate()) {
-        //same day
+    var diffDate = this._getDiffDate(utcTime, localTime);
+    if (diffDate == 0) {
         log.info('same day');
     }
-    else if (utcTime.getUTCDate() < localTime.getUTCDate()) {
-       //next day
+    else if (diffDate == 1) {
         log.info('next day');
         utcTime.setUTCDate(utcTime.getUTCDate()+1);
     }
-    else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
-       //previous day
+    else if (diffDate == -1) {
         log.info('previous day');
         utcTime.setUTCDate(utcTime.getUTCDate()-1);
     }

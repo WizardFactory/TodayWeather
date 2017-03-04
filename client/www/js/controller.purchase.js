@@ -413,7 +413,6 @@ angular.module('controller.purchase', [])
             else {
                 TwAds.setShowAds(true);
             }
-            TwAds.setShowAds(true);
         });
 
         $scope.$on('$ionicView.enter', function() {
