@@ -1815,9 +1815,9 @@ function controllerWorldWeather(){
         hourly.precProb = Math.round(self._max(list) * 100);
 
         list = [];
-        list.push(summary.pre_int);
-        list.push(summary2.pre_int);
-        list.push(summary1.pre_int);
+        list.push(summary.pre_int>=0?summary.pre_int:undefined);
+        list.push(summary2.pre_int>=0?summary2.pre_int:undefined);
+        list.push(summary1.pre_int>=0?summary1.pre_int:undefined);
         hourly.precip = parseFloat((self._sum(list)*25.4).toFixed(2));
 
         /**
