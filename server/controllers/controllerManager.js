@@ -1956,15 +1956,15 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
     
-    if (time === 10) {
+    if (time === 10 || putAll) {
         log.info('push health day');
         
         var hour = (new Date()).getUTCHours()+9;
         
-        if(hour === 6 || hour === 18) {
-            self.asyncTasks.push(function (callback) {
-                self._requestApi('healthday', callback);
-            });
+        if(hour === 6 || hour === 18 || putAll) {
+    //        self.asyncTasks.push(function (callback) {
+     //           self._requestApi('healthday', callback);
+      //      });
         }
     }
 

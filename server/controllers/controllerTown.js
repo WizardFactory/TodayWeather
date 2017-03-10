@@ -15,6 +15,7 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidTemp = require('../models/modelMidTemp');
 var modelMidLand = require('../models/modelMidLand');
 var modelShortRss = require('../models/modelShortRss');
+var modelHealthDay = require('../models/modelHealthDay');
 
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -27,6 +28,7 @@ var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
     {db:modelShortest, name:'modelShortest'},
+    {db:modelShortRss, name:'modelShortRss'}
 ];
 
 var midArray = [
@@ -164,7 +166,7 @@ function ControllerTown() {
                                 },
                                 function (err) {
                                     if (err) {
-                                        log.error(new Error('Gad> something is wrong on the Mid'));
+                                        log.error(new Error('Gad> something is wrong on the Mid : ' + err.message));
                                         return callback(err);
                                     }
                                     callback(null);
@@ -188,7 +190,7 @@ function ControllerTown() {
                     ],
                     function(err){
                         if(err){
-                            log.error(new Error('Gad> something is wrong to get weather data'));
+                            log.error(new Error('Gad> something is wrong to get weather data : ' + err.message));
                         }
                         log.info('>sID=',req.sessionID, 'go next');
                         next();
@@ -1771,6 +1773,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
+                req.params.areaNo = townInfo.areaNo;
                 LifeIndexKmaController.appendData(townInfo, req.short, req.midData.dailyData, function (err) {
                     if (err) {
                         log.error(err);
@@ -1892,6 +1895,37 @@ function ControllerTown() {
             next();
         }
 
+        return this;
+    };
+
+    /**
+     * @brief Daily 데이터에 보건지수를 추가한다
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown}
+     */
+    this.getHealthDay = function (req, res, next) {
+        console.log("getHealthDay");
+
+        req.midData.dailyData.forEach(function(day) {
+            modelHealthDay.find({areaNo:req.params.areaNo, date:day.date}).exec(function(err, result) {
+                if(err) {
+                    log.error(err);
+                    return;
+                }
+                log.info(day.date);
+                if(result.length && result.length > 0) {
+                    result.forEach(function(data) {
+                       day[data._doc.indexType] = data._doc.index;
+                    });
+                }
+            });
+
+            console.log(day.date);
+        });
+
+        next();
         return this;
     };
 
@@ -2457,7 +2491,11 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     log.debug(JSON.stringify(itemList));
 
-    return itemList[0].str+", "+itemList[1].str;
+    if(itemList.length > 1) {
+        return itemList[0].str+", "+itemList[1].str;
+    } else {
+        return itemList[0].str;
+    }
 };
 
 ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {
