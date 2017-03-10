@@ -428,13 +428,10 @@ function controllerWorldWeather(){
                             return;
                         }
 
-                        //수정후 1시간 간격 업데이트라서 논의후 결정.
-                        callback('err_exit_notValid');
-                        return;
-
                         log.info('cDate : ', cDate.toString());
                         log.info('DB Date : ', req.DSF.dateObj.toString());
 
+                        //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data', meta);
                             log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
