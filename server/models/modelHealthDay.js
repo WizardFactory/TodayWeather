@@ -8,12 +8,14 @@
 var mongoose = require('mongoose');
 
 var healthDaySchema = new mongoose.Schema({
-    areaNo: String,             ///< 지역 코드
-    date: String,               ///< 날짜
+    areaNo: Number,             ///< 지역 코드
+    date: Date,               ///< 날짜
     indexType: String,          ///< 지수 종류
     index: Number               ///< 지수
 });
 
-healthDaySchema.index({areaNo: 'text'});
+healthDaySchema.index({areaNo: 1});
+healthDaySchema.index({Date: 1});
+healthDaySchema.index({indexType: 'text'});
 
 module.exports = mongoose.model('healthDayKma', healthDaySchema);

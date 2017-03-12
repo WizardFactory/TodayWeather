@@ -1960,11 +1960,11 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.info('push health day');
         
         var hour = (new Date()).getUTCHours()+9;
-        
+
         if(hour === 6 || hour === 18 || putAll) {
-    //        self.asyncTasks.push(function (callback) {
-     //           self._requestApi('healthday', callback);
-      //      });
+            self.asyncTasks.push(function (callback) {
+                self._requestApi('healthday', callback);
+            });
         }
     }
 
