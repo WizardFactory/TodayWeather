@@ -1101,6 +1101,61 @@ angular.module('starter', [
             };
         });
 
+        $compileProvider.directive('tabsShrink', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    var tabs = $document[0].body.querySelector('.tab-nav');
+                    var tabsHeight = 50;
+                    var prevTop = 0;
+                    var request = null;
+
+                    function shrinkTabs(y, amount) {
+                        if ($scope.$root === null) {
+                            return;
+                        }
+
+                        var top = y + amount;
+                        tabs.style[ionic.CSS.TRANSFORM] = 'translate3d(0, ' + top + 'px, 0)';
+                        for(var i = 0, j = tabs.children.length; i < j; i++) {
+                            tabs.children[i].style.opacity = 1 - (top / tabsHeight);
+                        }
+
+                        $scope.$root.tabsTop = top;
+                        $scope.$root.$apply();
+
+                        if (top !== 0 && top !== tabsHeight) {
+                            request = ionic.requestAnimationFrame(function() {
+                                shrinkTabs(top, amount);
+                            });
+                        }
+                    }
+
+                    function onScroll(e) {
+                        var scrollTop = e.target.scrollTop;
+
+                        if (request === null) {
+                            if(scrollTop > prevTop && $scope.$root.tabsTop === 0) {
+                                request = ionic.requestAnimationFrame(function() {
+                                    shrinkTabs(0, 5);
+                                });
+                            } else if(scrollTop < prevTop && $scope.$root.tabsTop === tabsHeight) {
+                                request = ionic.requestAnimationFrame(function() {
+                                    shrinkTabs(tabsHeight, -5);
+                                });
+                            }
+                        } else {
+                            if($scope.$root.tabsTop === 0 || $scope.$root.tabsTop === tabsHeight) {
+                                request = null;
+                            }
+                        }
+                        prevTop = scrollTop;
+                    }
+                    $element.bind('scroll', onScroll);
+                }
+            }
+        });
+
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.

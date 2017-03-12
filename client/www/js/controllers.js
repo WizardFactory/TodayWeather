@@ -2148,6 +2148,16 @@ angular.module('starter.controllers', [])
             });
         };
 
+        $scope.contentHeight = function() {
+            if ($rootScope.contentBottom === undefined) {
+                $rootScope.contentBottom = 0;
+            }
+            if ($rootScope.tabsTop === undefined) {
+                $rootScope.tabsTop = 0;
+            }
+            return $rootScope.contentBottom - $rootScope.tabsTop;
+        };
+
         init();
     })
 
