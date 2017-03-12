@@ -36,13 +36,14 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
-LifeIndexKmaController.ultrvStr = function (grade) {
+LifeIndexKmaController.ultrvStr = function (grade, translate) {
+    var ts = translate == undefined?global:translate;
     switch(grade) {
-        case 0: return __("LOC_LOW");
-        case 1: return __("LOC_NORMAL");
-        case 2: return __("LOC_HIGH");
-        case 3: return __("LOC_VERY_HIGH");
-        case 4: return __("LOC_HAZARD");
+        case 0: return ts.__("LOC_LOW");
+        case 1: return ts.__("LOC_NORMAL");
+        case 2: return ts.__("LOC_HIGH");
+        case 3: return ts.__("LOC_VERY_HIGH");
+        case 4: return ts.__("LOC_HAZARD");
         default: return "";
     }
 };

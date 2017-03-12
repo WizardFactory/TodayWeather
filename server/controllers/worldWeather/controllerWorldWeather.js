@@ -428,13 +428,10 @@ function controllerWorldWeather(){
                             return;
                         }
 
-                        //수정후 1시간 간격 업데이트라서 논의후 결정.
-                        callback('err_exit_notValid');
-                        return;
-
                         log.info('cDate : ', cDate.toString());
                         log.info('DB Date : ', req.DSF.dateObj.toString());
 
+                        //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.error('TWW> Invaild DSF data', meta);
                             log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
@@ -1815,9 +1812,9 @@ function controllerWorldWeather(){
         hourly.precProb = Math.round(self._max(list) * 100);
 
         list = [];
-        list.push(summary.pre_int);
-        list.push(summary2.pre_int);
-        list.push(summary1.pre_int);
+        list.push(summary.pre_int>=0?summary.pre_int:undefined);
+        list.push(summary2.pre_int>=0?summary2.pre_int:undefined);
+        list.push(summary1.pre_int>=0?summary1.pre_int:undefined);
         hourly.precip = parseFloat((self._sum(list)*25.4).toFixed(2));
 
         /**

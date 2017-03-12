@@ -21,11 +21,11 @@ function HealthDayController() {
  */
 HealthDayController.makeRequestString = function (operationNumber, areaNumber) {
     var returnURL = hostURL;
-    var operationString = "getAsthmaWhoList";   // 천식가능지수
+    var operationString = "getAsthmaWhoList";   // 천식, 폐질환가능지수
 
     switch(operationNumber) {
     case 1: // 폐질환가능지수
-        operationString = "getLuntWhoList";
+        operationString = "getAsthmaWhoList";
         break;
     case 2: // 뇌졸중가능지수
         operationString = "getBrainWhoList";
@@ -67,7 +67,7 @@ var getCodeString = function(code) {
 
     switch (code) {
         case '1':
-            retStr = 'lunt';
+            retStr = 'asthma-lunt';
             break;
         case '2':
             retStr = 'brain';
@@ -106,7 +106,7 @@ var getNextDay = function(today, days) {
 
     day.setDate(day.getDate()+days);
 
-    stringDate = day.getFullYear();
+    stringDate = ""+day.getFullYear();
     var temp = day.getMonth()+1;
     if(temp < 10) {
         stringDate += '0';
@@ -144,7 +144,7 @@ var insertDB = function(result, callback)  {
         healthData['areaNo'] = data.areaNo[0];
         healthData['indexType'] = indexType;
 
-        if(typeof(data.today[0]) === Number) {
+        if(data.today[0] !== "") {
             healthData['index'] = data.today[0];
             healthData['date'] = data.date[0].slice(0, 8);
 
@@ -160,7 +160,9 @@ var insertDB = function(result, callback)  {
             );
         }
 
-        if(typeof(data.tomorrow[0]) === Number) {
+        if((data.tomorrow[0] !== "")
+            && (data.tomorrow[0] !== '*'))
+        {
             healthData['index'] = data.tomorrow[0];
             healthData['date'] = getNextDay(data.date[0].slice(0,8), 1);
             healthDayKmaDB.update({
@@ -172,14 +174,16 @@ var insertDB = function(result, callback)  {
                     if(err) {
                         console.error(err.message + "in insertDB(healthData), tomorrow");
                         console.log(raw);
-                        
+
                         callback(err);
                     }
                 }
             );
         }
 
-        if(typeof(data.theDayAfterTomorrow) === Number) {
+        if((data.theDayAfterTomorrow[0] !== "")
+            && (data.theDayAfterTomorrow[0] !== '*'))
+        {
             healthData['index'] = data.theDayAfterTomorrow[0];
             healthData['date'] = getNextDay(data.date[0].slice(0, 8), 2);
             healthDayKmaDB.update({
@@ -208,12 +212,12 @@ var insertDB = function(result, callback)  {
  */
 HealthDayController.getData = function(url, callback) {
     var timeout = 1000*10*60;//1000*60*60*24;
-   
+
     req(url, {timeout: timeout}, function(err, response, body) {
         if (err) {
             callback(err);
         } else if ( response.statusCode >= 400) {
-            var err1 = new Error("response.statusCode="+response.statusCode); 
+            var err1 = new Error('response.statusCode(' + url + ')='+response.statusCode);
             
             callback(err1);
         } else {

@@ -268,7 +268,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
         dailyArray.push(trans.__("LOC_PM10") + " " + KecoController.grade2str(theDay.pmGrade+1, 'PM', trans));
     }
     if (theDay.ultrvGrade) {
-        dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
+        dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
     }
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
     if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
@@ -543,7 +543,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     //}
 
     //if (theDay.ultrvGrade && theDay.ultrvGrade >= 2) {
-    //    dailyArray.push(trans.__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade));
+    //    dailyArray.push(trans.__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
     //}
 
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
