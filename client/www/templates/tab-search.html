@@ -8,7 +8,7 @@
         <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
     </ion-header-bar>
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
-                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentBottom+'px'}">
+                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentHeight()+'px'}" tabs-shrink>
         <div style="height:16px;"></div>
         <div class="list list-inset" ng-if="searchWord!==undefined">
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
@@ -65,5 +65,6 @@
                 </div>
             </div>
         </div>
+        <div style="height:16px;"></div>
     </ion-content>
 </ion-view>
