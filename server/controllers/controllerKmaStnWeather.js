@@ -555,7 +555,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                         return pCallback(err, kmaStnList);
                     });
                 }, function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(3).lean().exec(function (err, kmaStnList) {
                         if (err) {
                             return pCallback(err);
                         }
