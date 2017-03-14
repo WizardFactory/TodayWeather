@@ -1906,26 +1906,19 @@ function ControllerTown() {
      * @returns {ControllerTown}
      */
     this.getHealthDay = function (req, res, next) {
-        console.log("getHealthDay");
+        log.info("getHealthDay");
 
-        req.midData.dailyData.forEach(function(day) {
-            modelHealthDay.find({areaNo:req.params.areaNo, date:day.date}).exec(function(err, result) {
-                if(err) {
-                    log.error(err);
-                    return;
-                }
-                log.info(day.date);
-                if(result.length && result.length > 0) {
-                    result.forEach(function(data) {
-                       day[data._doc.indexType] = data._doc.index;
-                    });
+        modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, results) {
+            req.midData.dailyData.forEach(function(day) {
+                var date = kmaTimeLib.convertStringToDate(day.date);
+                for(var i=0; i<results.length; i++) {
+                    if(results[i].date.getTime() == date.getTime()) {
+                        day[results[i].indexType] = results[i].index;
+                    }
                 }
             });
-
-            console.log(day.date);
+            next();
         });
-
-        next();
         return this;
     };
 
