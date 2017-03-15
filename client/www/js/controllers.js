@@ -708,6 +708,8 @@ angular.module('starter.controllers', [])
             isLoadingIndicator = false;
         }
 
+        var gIsLocationAuthorized;
+
         /**
          * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
          * 그래서 init와 reloadevent가 둘다 오게 되는데 retry confirm이 두개 뜨지 않게 한개 있는 경우 닫았다가 새롭게 열게 함.
@@ -720,6 +722,12 @@ angular.module('starter.controllers', [])
                 confirmPopup.close();
             }
 
+            var strBtn = strRetry;
+            if (gIsLocationAuthorized == false) {
+                template += '<br>';
+                template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
+                strBtn = $translate.instant("LOC_SETTING");
+            }
             confirmPopup = $ionicPopup.show({
                 title: title,
                 template: template,
@@ -729,7 +737,7 @@ angular.module('starter.controllers', [])
                             return false;
                         }
                     },
-                    { text: strRetry,
+                    { text: strBtn,
                         type: 'button-positive',
                         onTap: function () {
                             return true;
@@ -740,10 +748,22 @@ angular.module('starter.controllers', [])
             confirmPopup
                 .then(function (res) {
                     if (res) {
-                        console.log("Retry");
-                        setTimeout(function () {
-                            $scope.$broadcast('reloadEvent');
-                        }, 0);
+                        if (gIsLocationAuthorized == false) {
+                            console.log("Opens settings page for this app.");
+                            setTimeout(function () {
+                                cordova.plugins.diagnostic.switchToSettings(function () {
+                                    console.log("Successfully switched to Settings app");
+                                }, function (error) {
+                                    console.log("The following error occurred: "+error);
+                                });
+                            }, 0);
+                        }
+                        else {
+                            console.log("Retry");
+                            setTimeout(function () {
+                                $scope.$broadcast('reloadEvent');
+                            }, 0);
+                        }
                     } else {
                         console.log("Close");
                     }
@@ -825,6 +845,7 @@ angular.module('starter.controllers', [])
 
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
+            gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (coords) {
@@ -849,12 +870,8 @@ angular.module('starter.controllers', [])
                         deferred.reject(msg);
                     });
                 } else if (isLocationAuthorized === false) {
-                    if (cityData.address === null && cityData.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
-                        msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
-                        deferred.reject(msg);
-                    } else { // 위치 서비스가 꺼져있으면 저장된 위치로 날씨 업데이트
-                        deferred.resolve();
-                    }
+                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                    deferred.reject(msg);
                 } else if (isLocationAuthorized === undefined) {
                     hideLoadingIndicator();
                     if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -1260,7 +1277,7 @@ angular.module('starter.controllers', [])
 
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
-                                        $translate, $ocLazyLoad) {
+                                        $translate, $ocLazyLoad, $ionicPopup) {
         $scope.searchWord = undefined;
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -1394,6 +1411,8 @@ angular.module('starter.controllers', [])
             }
         };
 
+        var gIsLocationAuthorized;
+
         $scope.OnSearchCurrentPosition = function() {
             $scope.isEditing = false;
 
@@ -1410,7 +1429,33 @@ angular.module('starter.controllers', [])
             }, function(msg) {
                 hideLoadingIndicator();
                 if (msg !== null) {
-                    $scope.showAlert(strError, msg);
+                    if (gIsLocationAuthorized == false) {
+                        msg += '<br>';
+                        msg += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
+                        var confirmPopup = $ionicPopup.confirm({
+                            title: strError,
+                            template: msg,
+                            okText: $translate.instant("LOC_SETTING"),
+                            cancelText: $translate.instant("LOC_CLOSE")
+                        });
+                        confirmPopup.then(function (res) {
+                            if (res) {
+                                console.log("Opens settings page for this app.");
+                                setTimeout(function () {
+                                    cordova.plugins.diagnostic.switchToSettings(function () {
+                                        console.log("Successfully switched to Settings app");
+                                    }, function (error) {
+                                        console.log("The following error occurred: "+error);
+                                    });
+                                }, 0);
+                            } else {
+                                console.log("Close");
+                            }
+                        });
+                    }
+                    else {
+                        $scope.showAlert(strError, msg);
+                    }
                 }
             });
         };
@@ -1723,6 +1768,7 @@ angular.module('starter.controllers', [])
 
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
+            gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (coords) {
