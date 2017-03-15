@@ -1392,6 +1392,8 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     }
 
     var reqTime = self._getLocalLast0H(timeOffset*60);
+    //day light saving위해 1시간 margin을 둠.
+    reqTime.setUTCHours(reqTime.getUTCHours()+1);
     for(var i=From ; i<To ; i++){
         reqTime.setUTCDate(reqTime.getUTCDate()-i);
         //log.info("reqTime="+reqTime.toISOString());
