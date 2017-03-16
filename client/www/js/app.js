@@ -1117,9 +1117,6 @@ angular.module('starter', [
 
                         var top = y + amount;
                         tabs.style[ionic.CSS.TRANSFORM] = 'translate3d(0, ' + top + 'px, 0)';
-                        for(var i = 0, j = tabs.children.length; i < j; i++) {
-                            tabs.children[i].style.opacity = 1 - (top / tabsHeight);
-                        }
 
                         $scope.$root.tabsTop = top;
                         $scope.$root.$apply();
