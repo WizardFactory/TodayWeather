@@ -244,5 +244,6 @@
   "LOC_ICE_PELLETS" : "氷萩機",
   "LOC_BREEZY": "軽風",
   "LOC_WINDY": "風",
-  "LOC_HUMID": "湿気の多い"
+  "LOC_HUMID": "湿気の多い",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Allow permission"
 }

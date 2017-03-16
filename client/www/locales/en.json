@@ -244,5 +244,6 @@
   "LOC_ICE_PELLETS" : "ice pellets",
   "LOC_BREEZY": "Breezy",
   "LOC_WINDY": "Windy",
-  "LOC_HUMID": "Humid"
+  "LOC_HUMID": "Humid",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Allow permission"
 }
