@@ -244,5 +244,7 @@
   "LOC_ICE_PELLETS" : "Eisstücke",
   "LOC_BREEZY": "Luftigen",
   "LOC_WINDY": "Windiger",
-  "LOC_HUMID": "Feuchten"
+  "LOC_HUMID": "Feuchten",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Allow permission",
+  "LOC_DRY": "Trocken"
 }
