@@ -24,9 +24,9 @@
             </div>
         </div>
     </ion-header-bar>
-    <ion-content id="ionContentBody" delegate-handle="body" direction="y" ng-style="{'bottom':contentBottom+'px'}"
+    <ion-content id="ionContentBody" delegate-handle="body" direction="y" ng-style="{'bottom':contentHeight()+'px'}"
                  overflow-scroll="true" on-scroll="headerScroll()" zooming="false" scrollbar-y="false"
-                 scrollbar-x="false" has-bouncing="false" style="top: 0">
+                 scrollbar-x="false" has-bouncing="false" style="top: 0" tabs-shrink>
         <div id="contentBody">
             <div md-header-picture ng-style="{'height':headerHeight+'px'}"></div>
             <div class="main-content mid-forecast">

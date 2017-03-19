@@ -244,5 +244,7 @@
   "LOC_ICE_PELLETS" : "얼음싸라기",
   "LOC_BREEZY": "산들바람",
   "LOC_WINDY": "바람이붐",
-  "LOC_HUMID": "습함"
+  "LOC_HUMID": "습함",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[설정]>[앱]>[오늘날씨]에서 권한을 허용해주세요.",
+  "LOC_DRY": "건조함"
 }
