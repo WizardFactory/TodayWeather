@@ -199,6 +199,11 @@ angular.module('starter.controllers', [])
             return awGradeStr[grade];
         };
 
+        /**
+         * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
+         * @param current
+         * @returns {*}
+         */
         $scope.getWeatherStr = function (current) {
             if (current.weatherType == undefined) {
                 if (!(current.weather == undefined)) {
@@ -227,7 +232,8 @@ angular.module('starter.controllers', [])
                 'LOC_SNOW_STORM', 'LOC_HEAVY_SNOW_STORM', 'LOC_POWDER_SNOW', 'LOC_WATER_SPOUT', 'LOC_HAIL',
 
                 'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
-                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY', 'LOC_HUMID', 'LOC_WINDY'];
+                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY',
+                'LOC_HUMID', 'LOC_WINDY', 'LOC_DRY', 'LOC_VERY_STRONG_WIND', 'LOC_SLEET'];
             return weatherTypeStr[current.weatherType];
         };
 

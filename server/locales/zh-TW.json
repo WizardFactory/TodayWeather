@@ -244,6 +244,8 @@
   "LOC_ICE_PELLETS" : "冰粒",
   "LOC_BREEZY": "光風",
   "LOC_WINDY": "風",
-  "LOC_HUMID": "潮濕"
+  "LOC_HUMID": "潮濕",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Allow permission",
+  "LOC_DRY": "乾燥"
 }
 

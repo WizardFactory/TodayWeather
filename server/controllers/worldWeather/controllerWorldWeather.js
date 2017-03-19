@@ -2320,6 +2320,12 @@ function controllerWorldWeather(){
         }
     };
 
+    /**
+     * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
+     * @param weatherStr
+     * @returns {number}
+     * @private
+     */
     self._description2weatherType = function (weatherStr) {
         if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
             return;
@@ -2401,6 +2407,9 @@ function controllerWorldWeather(){
             case 'breezy': return 59;
             case 'humid': return 60;
             case 'windy': return 61;
+            case 'dry': return 62;
+            case 'dangerously windy': return 63; //LOC_VERY_STRONG_WIND
+            case 'sleet': return 64;
             default :
                 log.error("Fail weatherStr="+weatherStr);
         }
