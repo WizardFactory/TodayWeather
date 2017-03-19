@@ -1167,30 +1167,17 @@ function controllerWorldWeather(){
             log.info('DSF current> SDate : ', startDate, meta);
             log.info('DSF current> CDdate : ', curDate, meta);
 
-            dsf.data.forEach(function (item) {
-                var isExist = false;
-                if(self._compareDateString(curDate, item.current.dateObj)){
-                    req.result.thisTime.forEach(function(thisTime, index) {
-                        if (thisTime.date != undefined &&
-                                self._compareDateString(curDate, thisTime.date)) {
-
-                            var current = self._makeCurrentDataFromDSFCurrent(item.current);
-                            var isNight = self._isNight(curDate, item.daily.data);
-                            current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                            req.result.thisTime[index] = current;
-                            isExist = true;
-                        }
-                    });
-
-                    if(!isExist){
-                        log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
-                        var current = self._makeCurrentDataFromDSFCurrent(item.current);
-                        var isNight = self._isNight(curDate, item.daily.data);
-                        current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                        req.result.thisTime.push(current);
-                    }
-                }
-            });
+            /**
+             * timeoff이 30분이 경우가 있으며, new delhi, dsf.data의 마지막이 최신 현재날씨라고 전제하고 사용함.
+             */
+            if (dsf.data.length > 0) {
+                var item = dsf.data[dsf.data.length-1];
+                log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
+                var current = self._makeCurrentDataFromDSFCurrent(item.current);
+                var isNight = self._isNight(curDate, item.daily.data);
+                current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
+                req.result.thisTime.push(current);
+            }
         }
 
         next();
