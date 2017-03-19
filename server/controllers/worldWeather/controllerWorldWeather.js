@@ -77,18 +77,19 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
-        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         if(req.error){
             res.json(req.error);
-            return;
         }
-
-        if(req.result){
+        else if(req.result){
+            if (req.result.thisTime.length != 2) {
+               log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
+            }
             res.json(req.result);
-            return;
         }
-
-        res.json({result: 'Unknow result'});
+        else {
+            res.json({result: 'Unknow result'});
+        }
+        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         return;
     };
 
