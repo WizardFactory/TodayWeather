@@ -3,19 +3,26 @@
 // angular.module is a global place for creating, registering and retrieving Angular modules
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
-// 'starter.services' is found in services.js
-// 'starter.controllers' is found in controllers.js
+// 'starter.services' is found in service.run.js
+// 'starter.controllers' is found in controller.forecastctrl.js
 angular.module('starter', [
     'ionic',
     'pascalprecht.translate',
-    'starter.controllers',
-    'starter.services',
-    'controller.purchase',
+    'oc.lazyLoad',
+    'ionic-timepicker',
+    'service.weatherinfo',
+    'service.weatherutil',
+    'service.util',
     'service.twads',
     'service.push',
-    'ionic-timepicker',
+    'controller.forecastctrl',
+    'controller.searchctrl',
+    'controller.settingctrl',
+    'controller.guidectrl',
+    'controller.purchase',
     'controller.units',
-    'oc.lazyLoad'
+    'controller.tabctrl',
+    'service.run'
 ])
     .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
         //$translate.use('ja');
@@ -1156,7 +1163,7 @@ angular.module('starter', [
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.
-        // Each state's controller can be found in controllers.js
+        // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
             .state('guide', {
                 url: '/guide',
