@@ -434,9 +434,9 @@ function controllerWorldWeather(){
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
-                            log.error('TWW> Invaild DSF data', meta);
-                            log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
-                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
+                            log.info('TWW> Invaild DSF data', meta);
+                            log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
                             callback('err_exit_notValid');
                             return;
                         }
