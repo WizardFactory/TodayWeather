@@ -12,6 +12,7 @@ function dsfRequester(){
     var self = this;
     //self.base_url = 'https://api.forecast.io/forecast/';
     self.base_url = 'https://api.darksky.net/forecast/';
+    self.defRetryCount = 5;
     return this;
 }
 
@@ -29,7 +30,7 @@ dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
     }
 
     log.info(url);
-    self.getData(url, function(err, res){
+    self.getData(url, self.defRetryCount, function(err, res){
         if(err){
             callback(err, {isSuccess: false});
             return;
@@ -56,7 +57,7 @@ dsfRequester.prototype.collect = function(list, date, key, callback){
                 url += ',' + date;
             }
 
-            self.getData(url, function(err, res){
+            self.getData(url, self.defRetryCount, function(err, res){
                 if(err){
                     cb(err, {isSuccess: false, lat: item.lat, lon: item.lon});
                     return;
@@ -80,13 +81,26 @@ dsfRequester.prototype.collect = function(list, date, key, callback){
     return this;
 };
 
-dsfRequester.prototype.getData = function(url, callback){
+
+dsfRequester.prototype.get = function(url, option, callback){
+    return req.get(url, option, callback);
+};
+
+dsfRequester.prototype.getData = function(url, retryCount, callback){
     var self = this;
+    var agentOptions = {
+        ciphers: 'ALL',
+        secureProtocol: 'TLSv1_method',
+    };
 
     log.silly('DFS> get data : ', url);
-    req.get(url, {timeout: 1000 * 5}, function(err, response, body){
+    self.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
         if(err) {
             log.warn(err);
+            if(err.code === "ECONNRESET" && retryCount > 0){
+                log.warn('DFS> Retry to get caused by ECONNRESET : ', retryCount);
+                return self.getData(url, retryCount-- , callback);
+            }
             if(callback){
                 callback(err);
             }
