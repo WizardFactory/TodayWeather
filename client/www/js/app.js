@@ -24,6 +24,21 @@ angular.module('starter', [
     'controller.tabctrl',
     'service.run'
 ])
+    .factory('$exceptionHandler', function (Util) {
+       return function (execption, cause) {
+           console.log(execption, cause);
+           if (Util && Util.ga) {
+               Util.ga.trackEvent('angular', 'error', execption);
+               Util.ga.trackException(execption, true);
+           }
+           else {
+               console.log('util or util.ga is undefined');
+           }
+           if (twClientConfig && twClientConfig.debug) {
+               alert("ERROR in " + execption);
+           }
+       }
+    })
     .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
         //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리

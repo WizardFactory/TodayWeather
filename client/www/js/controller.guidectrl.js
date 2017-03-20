@@ -23,6 +23,15 @@ angular.module('controller.guidectrl', [])
         }
 
         function init() {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("guidectrl location setting is " + (enabled ? "enabled" : "disabled"));
+                    $scope.data.autoSearch = enabled;
+                }, function (error) {
+                    console.log("The following error occurred: "+error);
+                });
+            }
+
             //for fast close ads when first loading
             _setShowAds(false);
 
