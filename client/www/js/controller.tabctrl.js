@@ -94,18 +94,18 @@ angular.module('controller.tabctrl', [])
 
             var message = '';
 
-            $translate(['LOC_CURRENT', 'LOC_HIGH', 'LOC_LOW', 'LOC_TODAYWEATHER']).then(function (translations) {
+            $translate(['LOC_CURRENT', 'LOC_HIGHEST', 'LOC_LOWEST', 'LOC_TODAYWEATHER']).then(function (translations) {
                 message += address+'\n';
                 message += translations.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
-                message += translations.LOC_HIGH+' '+tmx+'˚, '+translations.LOC_LOW+' '+tmn+'˚\n';
+                message += translations.LOC_HIGHEST+' '+tmx+'˚, '+translations.LOC_LOWEST+' '+tmn+'˚\n';
                 message += summary+'\n\n';
                 message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
             }, function (translationIds) {
                 message += address+'\n';
                 message += translationIds.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
-                message += translationIds.LOC_HIGH+' '+tmx+'˚, '+translationIds.LOC_LOW+' '+tmn+'˚\n';
+                message += translationIds.LOC_HIGHEST+' '+tmx+'˚, '+translationIds.LOC_LOWEST+' '+tmn+'˚\n';
                 message += summary+'\n\n';
                 message += translationIds.LOC_TODAYWEATHER + ' ' + shareUrl;
             }).finally(function () {
