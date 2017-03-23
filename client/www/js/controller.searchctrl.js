@@ -172,7 +172,7 @@ angular.module('controller.searchctrl', [])
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
                 $scope.searchWord = geoInfo.name;
-                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
+                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
                 $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
                 searchIndex = -1;
             }, function(msg) {
