@@ -80,7 +80,13 @@ angular.module('controller.tabctrl', [])
                 return;
             }
 
-            var address = WeatherUtil.getShortenAddress(cityData.address);
+            var cityName;
+            if (cityData.name) {
+                cityName = cityData.name;
+            }
+            else {
+                cityName = WeatherUtil.getShortenAddress(cityData.address);
+            }
             var t1h = cityData.currentWeather.t1h;
             var emoji = WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon);
             var tmx;
@@ -95,14 +101,14 @@ angular.module('controller.tabctrl', [])
             var message = '';
 
             $translate(['LOC_CURRENT', 'LOC_HIGH', 'LOC_LOW', 'LOC_TODAYWEATHER']).then(function (translations) {
-                message += address+'\n';
+                message += cityName+'\n';
                 message += translations.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
                 message += translations.LOC_HIGH+' '+tmx+'˚, '+translations.LOC_LOW+' '+tmn+'˚\n';
                 message += summary+'\n\n';
                 message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
             }, function (translationIds) {
-                message += address+'\n';
+                message += cityName+'\n';
                 message += translationIds.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
                 message += translationIds.LOC_HIGH+' '+tmx+'˚, '+translationIds.LOC_LOW+' '+tmn+'˚\n';
