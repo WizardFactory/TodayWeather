@@ -298,7 +298,7 @@ angular.module('controller.searchctrl', [])
                     address += " " + result.third;
                 }
 
-                var geoInfo = {address: address, location: result.location, country: "KR", name: name};
+                var geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
                 var startTime = new Date().getTime();
 
                 WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
