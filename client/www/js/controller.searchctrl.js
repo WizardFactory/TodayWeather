@@ -108,6 +108,17 @@ angular.module('controller.searchctrl', [])
                 $scope.cityList.push(data);
                 loadWeatherData(i);
             }
+
+            window.addEventListener('native.keyboardshow', function () {
+                // Describe your logic which will be run each time when keyboard is about to be shown.
+                console.log('keyboard will show');
+                Util.ga.trackEvent('action', 'keyboard', 'show');
+            });
+            window.addEventListener('native.keyboardhide', function () {
+                // Describe your logic which will be run each time when keyboard is about to be closed.
+                console.log('keyboard will hide');
+                Util.ga.trackEvent('action', 'keyboard', 'hide');
+            });
         }
 
         $scope.OnChangeSearchWord = function() {
@@ -138,6 +149,7 @@ angular.module('controller.searchctrl', [])
         var gIsLocationAuthorized;
 
         $scope.OnSearchCurrentPosition = function() {
+            Util.ga.trackEvent('action', 'click', 'search current position');
             $scope.isEditing = false;
 
             showLoadingIndicator();
