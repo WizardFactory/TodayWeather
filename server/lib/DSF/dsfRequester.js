@@ -97,8 +97,8 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
     self.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
         if(err) {
             log.warn(err);
-            if(err.code === "ECONNRESET" && retryCount > 0){
-                log.warn('DFS> Retry to get caused by ECONNRESET : ', retryCount);
+            if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
+                log.warn('DFS> Retry to get caused by' + err.code + ' : ', retryCount);
                 return self.getData(url, retryCount-- , callback);
             }
             if(callback){
