@@ -1035,6 +1035,8 @@ angular.module('service.weatherutil', [])
                         Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
                         Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
 
+                        //search에서 임시적으로 사용함
+                        geoInfo.googleAddress = geoInfo.address;
                         geoInfo.address = data.address;
                         if (Util.language.indexOf("ko") != -1 && data.name) {
                             geoInfo.name = data.name;

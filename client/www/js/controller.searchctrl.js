@@ -1,5 +1,5 @@
 angular.module('controller.searchctrl', [])
-    .controller('SearchCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
+    .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
                                         $translate, $ocLazyLoad, $ionicPopup) {
         $scope.searchWord = undefined;
@@ -40,6 +40,7 @@ angular.module('controller.searchctrl', [])
         var service;
         if (window.google == undefined) {
             $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
+                console.log('googleapis loaded');
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 console.log(e);
@@ -60,7 +61,7 @@ angular.module('controller.searchctrl', [])
                 return;
             }
             else {
-                console.log(predictions.length);
+                console.log("predictions="+predictions.length);
             }
             $scope.searchResults2 = predictions;
         };
@@ -108,6 +109,29 @@ angular.module('controller.searchctrl', [])
                 $scope.cityList.push(data);
                 loadWeatherData(i);
             }
+          
+            window.addEventListener('native.keyboardshow', function () {
+                // Describe your logic which will be run each time when keyboard is about to be shown.
+                console.log('keyboard will show');
+                Util.ga.trackEvent('action', 'keyboard', 'show');
+            });
+            window.addEventListener('native.keyboardhide', function () {
+                // Describe your logic which will be run each time when keyboard is about to be closed.
+                console.log('keyboard will hide');
+                Util.ga.trackEvent('action', 'keyboard', 'hide');
+            });
+          
+            if (ionic.Platform.isIOS() == false) {
+                if (WeatherInfo.getEnabledCityCount() == 0) {
+                    setTimeout(function () {
+                        console.log('set focus on search input');
+                        document.getElementById('searchInput').focus();
+                    }, 100);
+                }
+            }
+            else {
+                console.log("focus doesn't work on ios");
+            }
         }
 
         $scope.OnChangeSearchWord = function() {
@@ -138,6 +162,7 @@ angular.module('controller.searchctrl', [])
         var gIsLocationAuthorized;
 
         $scope.OnSearchCurrentPosition = function() {
+            Util.ga.trackEvent('action', 'click', 'search current position');
             $scope.isEditing = false;
 
             showLoadingIndicator();
@@ -147,7 +172,7 @@ angular.module('controller.searchctrl', [])
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
                 $scope.searchWord = geoInfo.name;
-                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
+                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
                 $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
                 searchIndex = -1;
             }, function(msg) {
@@ -273,7 +298,7 @@ angular.module('controller.searchctrl', [])
                     address += " " + result.third;
                 }
 
-                var geoInfo = {address: address, location: result.location, country: "KR", name: name};
+                var geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
                 var startTime = new Date().getTime();
 
                 WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
