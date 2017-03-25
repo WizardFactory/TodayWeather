@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, $ionicPlatform, Util) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -284,6 +284,7 @@ angular.module('service.weatherinfo', [])
 
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
                 console.log('appPreferences is undefined');
+                Util.ga.trackEvent('appPreferences', 'error', 'loadPlugin');
                 return;
             }
 
@@ -292,12 +293,14 @@ angular.module('service.weatherinfo', [])
                 console.log("save preference Success: " + value);
             }, function (error) {
                 console.log("save preference Error: " + error);
+                Util.ga.trackEvent('savePreferences', 'error', error);
             }, 'cityList', JSON.stringify(pList));
         };
 
         obj._loadCitiesPreference = function (callback) {
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
                 console.log('appPreferences is undefined');
+                Util.ga.trackEvent('appPreferences', 'error', 'loadPlugin');
                 return;
             }
 
@@ -307,6 +310,7 @@ angular.module('service.weatherinfo', [])
                 callback(undefined, value);
             }, function (error) {
                 console.log("fetch preference Error: " + error);
+                Util.ga.trackEvent('fetchPreferences', 'error', error);
                 callback(error);
             }, 'cityList');
         };

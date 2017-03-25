@@ -233,10 +233,10 @@ angular.module('service.weatherutil', [])
                 if (retryCount > 0) {
                     _retryGetHttp(retryCount, url, callback);
                 }
-            }, 2*1000);
+            }, 2000);
 
             console.log("retry="+retryCount+" get http");
-            $http({method: 'GET', url: url, timeout: 10*1000})
+            $http({method: 'GET', url: url, timeout: 10000})
                 .success(function (data, status, headers, config, statusText) {
                     console.log("status="+status);
                     clearTimeout(retryTimeId);
@@ -1160,7 +1160,7 @@ angular.module('service.weatherutil', [])
                     endTime = new Date().getTime();
                     if (error) {
                         Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
-                        Util.ga.trackEvent('position', 'error', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                        Util.ga.trackEvent('position', 'warn', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                         return deferred.reject();
                     }
 
@@ -1174,7 +1174,7 @@ angular.module('service.weatherutil', [])
                         endTime = new Date().getTime();
                         if (error) {
                             Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
-                            Util.ga.trackEvent('position', 'error', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                            Util.ga.trackEvent('position', 'warn', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                             return deferred.reject();
                         }
 
@@ -1219,44 +1219,53 @@ angular.module('service.weatherutil', [])
                 weatherData.units = Units.getDefaultUnits();
             }
 
-            if (weatherData.current && weatherData.current.stnDateTime) {
-                //iOS Safari에서 parsing 못함.
-                var dateStr = weatherData.current.stnDateTime.split(".");
-                var timeStr = dateStr[dateStr.length-1].split(":");
-                currentTime = new Date(dateStr[0], parseInt(dateStr[1])-1, dateStr[2], timeStr[0], timeStr[1]);
+            try {
+                if (weatherData.current && weatherData.current.stnDateTime) {
+                    //iOS Safari에서 parsing 못함.
+                    var dateStr = weatherData.current.stnDateTime.split(".");
+                    var timeStr = dateStr[dateStr.length-1].split(":");
+                    currentTime = new Date(dateStr[0], parseInt(dateStr[1])-1, dateStr[2], timeStr[0], timeStr[1]);
+                }
+                else if (weatherData.current.date && !(weatherData.current.time == undefined)) {
+                    currentTime = convertStringToDate(weatherData.current.date);
+                    currentTime.setHours(parseInt(weatherData.current.time.substr(0, 2)))
+                }
+
+                var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime, weatherData.units);
+                todayInfo = midTownWeather.today;
+
+                var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.units);
+                currentForecast.today = todayInfo;
+
+                //console.log(midTownWeather);
+
+                /**
+                 * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
+                 */
+                var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, weatherData.units);
+                //console.log(shortTownWeather);
+
+                /**
+                 * @type {Array}
+                 */
+
+                data.currentWeather = currentForecast;
+                data.timeTable = shortTownWeather.timeTable;
+                data.timeChart = shortTownWeather.timeChart;
+                data.dayChart = [{
+                    values: midTownWeather.dayTable,
+                    temp: currentForecast.t1h,
+                    displayItemCount: midTownWeather.displayItemCount
+                }];
+                data.source = "KMA";
             }
-            else if (weatherData.current.date && !(weatherData.current.time == undefined)) {
-                currentTime = convertStringToDate(weatherData.current.date);
-                currentTime.setHours(parseInt(weatherData.current.time.substr(0, 2)))
+            catch(e) {
+                console.log(e);
+                Util.ga.trackEvent('parseKmaWeather', 'error', e);
+                Util.ga.trackException(e, false);
+                alert(e.message);
+                return null;
             }
-
-            var midTownWeather = that.parseMidTownWeather(weatherData.midData, currentTime, weatherData.units);
-            todayInfo = midTownWeather.today;
-
-            var currentForecast = that.parseCurrentTownWeather(weatherData.current, weatherData.units);
-            currentForecast.today = todayInfo;
-
-            //console.log(midTownWeather);
-
-            /**
-             * @type {{name, value}|{timeTable, timeChart}|{timeTable: Array, timeChart: Array}}
-             */
-            var shortTownWeather = that.parseShortTownWeather(weatherData.short, currentForecast, weatherData.units);
-            //console.log(shortTownWeather);
-
-            /**
-             * @type {Array}
-             */
-
-            data.currentWeather = currentForecast;
-            data.timeTable = shortTownWeather.timeTable;
-            data.timeChart = shortTownWeather.timeChart;
-            data.dayChart = [{
-                values: midTownWeather.dayTable,
-                temp: currentForecast.t1h,
-                displayItemCount: midTownWeather.displayItemCount
-            }];
-            data.source = "KMA";
 
             return data;
         }
@@ -1778,7 +1787,6 @@ angular.module('service.weatherutil', [])
             }
 
             try {
-
                 if (weatherData.thisTime && weatherData.thisTime[1].date) {
                     currentTime = _convertYYYYoMMoDD_HH8MMtoDate(weatherData.thisTime[1].date);
                 }
@@ -1809,6 +1817,8 @@ angular.module('service.weatherutil', [])
             }
             catch (e) {
                 console.log(e);
+                Util.ga.trackEvent('parseWorldWeather', 'error', e);
+                Util.ga.trackException(e, false);
                 alert(e.message);
                 return null;
             }

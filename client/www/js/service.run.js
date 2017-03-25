@@ -36,6 +36,10 @@ angular.module('service.run', [])
         else {
             console.log("Error : Unknown platform");
         }
+        Util.ga.platformReady();
+
+        Util.ga.enableUncaughtExceptionReporting(true);
+        Util.ga.setAllowIDFACollection(true);
 
         Util.language = navigator.userLanguage || navigator.language;
         if (navigator.globalization) {
@@ -50,10 +54,7 @@ angular.module('service.run', [])
             );
         }
 
-        Util.ga.platformReady();
-
-        Util.ga.enableUncaughtExceptionReporting(true);
-        Util.ga.setAllowIDFACollection(true);
+        Util.ga.trackEvent('app', 'language', Util.language);
 
         if (window.hasOwnProperty("device")) {
             console.log("UUID:"+window.device.uuid);
@@ -117,11 +118,14 @@ angular.module('service.run', [])
                 console.log("Location state changed to: " + state);
                 Util.locationStatus = state;
 
+                Util.ga.trackEvent('location', 'change', state);
+
                 if (oldLocationEnabled === false && Util.isLocationEnabled()) {
                     $rootScope.$broadcast('reloadEvent', 'locationOn');
                 }
             }, function (error) {
                 console.error("Error registering for location state changes: " + error);
+                Util.ga.trackEvent('location', 'error', error);
             });
         }
     });

@@ -194,11 +194,13 @@ angular.module('service.push', [])
                     }
                     console.log('clicked: ' + data.additionalData.cityIndex + ' url='+url);
                     $location.url(url);
+                    Util.ga.trackEvent('push', 'click', url);
                 }
             });
 
             window.push.on('error', function(e) {
                 console.log('notification error='+JSON.stringify(e));
+                Util.ga.trackEvent('push', 'error', JSON.stringify(e));
                 // e.message
             });
 
@@ -336,11 +338,12 @@ angular.module('service.push', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, Push) {
+    .run(function(Push, Util) {
             Push.loadPushInfo();
 
             if (!window.PushNotification) {
                 console.log("push notification plugin is not set");
+                Util.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
 

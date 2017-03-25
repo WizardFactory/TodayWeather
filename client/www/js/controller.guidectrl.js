@@ -29,6 +29,7 @@ angular.module('controller.guidectrl', [])
                     $scope.data.autoSearch = enabled;
                 }, function (error) {
                     console.log("The following error occurred: "+error);
+                    Util.ga.trackEvent('location', 'error', error);
                 });
             }
 
@@ -98,6 +99,7 @@ angular.module('controller.guidectrl', [])
         }
 
         function showPopup() {
+            Util.ga.trackEvent('action', 'show', 'popup');
             var popup = $ionicPopup.show({
                 template: '<ion-list>' +
                     '<ion-radio ng-model="data.autoSearch" ng-value="true">'+strUseYourCurrentLocation+'</ion-radio>' +
@@ -122,6 +124,7 @@ angular.module('controller.guidectrl', [])
 
             popup.then(function(res) {
                 if (res === undefined) { // cancel button
+                    Util.ga.trackEvent('action', 'click', 'cancel');
                     return;
                 }
 
