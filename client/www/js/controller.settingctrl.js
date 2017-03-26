@@ -10,7 +10,7 @@ angular.module('controller.settingctrl', [])
 
                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
-                    Util.trackEvent("appPreferences", "error", "loadPlugin");
+                    Util.trackEvent("plugin", "error", "loadAppPreferences");
                     return;
                 }
 

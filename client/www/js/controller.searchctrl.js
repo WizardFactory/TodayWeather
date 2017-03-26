@@ -44,7 +44,7 @@ angular.module('controller.searchctrl', [])
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 console.log(e);
-                Util.ga.trackEvent('load', 'error', e);
+                Util.ga.trackEvent('window', 'error', 'lazyLoad');
                 Util.ga.trackException(e, true);
                 window.alert(e);
             });
@@ -56,11 +56,11 @@ angular.module('controller.searchctrl', [])
         var callbackAutocomplete = function(predictions, status) {
             if (google == undefined) {
                 console.log('Fail to load google maps places');
-                Util.ga.trackEvent('autocomplete', 'error', 'google', 0);
+                Util.ga.trackEvent('address', 'error', 'autoCompleteGoogleUndefined');
                 return;
             }
             if (status != google.maps.places.PlacesServiceStatus.OK) {
-                Util.ga.trackEvent('autocomplete', 'error', status);
+                Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
                 console.log(status);
                 return;
             }
@@ -117,12 +117,12 @@ angular.module('controller.searchctrl', [])
             window.addEventListener('native.keyboardshow', function () {
                 // Describe your logic which will be run each time when keyboard is about to be shown.
                 console.log('keyboard will show');
-                Util.ga.trackEvent('keyboard', 'show');
+                Util.ga.trackEvent('window', 'show', 'keyboard');
             });
             window.addEventListener('native.keyboardhide', function () {
                 // Describe your logic which will be run each time when keyboard is about to be closed.
                 console.log('keyboard will hide');
-                Util.ga.trackEvent('keyboard', 'hide');
+                Util.ga.trackEvent('window', 'hide', 'keyboard');
             });
           
             if (ionic.Platform.isIOS() == false) {
@@ -166,7 +166,7 @@ angular.module('controller.searchctrl', [])
         var gIsLocationAuthorized;
 
         $scope.OnSearchCurrentPosition = function() {
-            Util.ga.trackEvent('currentPosition', 'search');
+            Util.ga.trackEvent('position', 'get', 'OnSearch');
             $scope.isEditing = false;
 
             showLoadingIndicator();
@@ -184,7 +184,7 @@ angular.module('controller.searchctrl', [])
                 if (msg !== null) {
                     if (gIsLocationAuthorized == false) {
 
-                        Util.ga.trackEvent('position', 'show', 'authorized', 0);
+                        Util.ga.trackEvent('window', 'show', 'authorizedPopup');
 
                         msg += '<br>';
                         msg += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
@@ -197,7 +197,7 @@ angular.module('controller.searchctrl', [])
                         confirmPopup.then(function (res) {
                             if (res) {
                                 console.log("Opens settings page for this app.");
-                                Util.ga.trackEvent('position', 'open', 'settings');
+                                Util.ga.trackEvent('action', 'click', 'settings');
                                 setTimeout(function () {
                                     cordova.plugins.diagnostic.switchToSettings(function () {
                                         console.log("Successfully switched to Settings app");
@@ -207,12 +207,12 @@ angular.module('controller.searchctrl', [])
                                 }, 0);
                             } else {
                                 console.log("Close");
-                                Util.ga.trackEvent('position', 'close', 'popup');
+                                Util.ga.trackEvent('action', 'click', 'close');
                             }
                         });
                     }
                     else {
-                        Util.ga.trackEvent('position', 'show', msg);
+                        Util.ga.trackEvent('window', 'show', 'retryPopup');
                         $scope.showAlert(strError, msg);
                     }
                 }
@@ -367,13 +367,13 @@ angular.module('controller.searchctrl', [])
                         }
                         $ionicLoading.hide();
                     }, function () {
-                        Util.ga.trackEvent('getWorldWeatherInfo', 'error', strFailToGetWeatherInfo);
+                        Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
                         $scope.showAlert(strError, strFailToGetWeatherInfo);
                         $ionicLoading.hide();
                     });
                 }, function (err) {
                     console.log(err);
-                    Util.ga.trackEvent('getGeoInfo', 'error', err);
+                    Util.ga.trackEvent('weather', 'error', err);
                     $ionicLoading.hide();
                 });
             }
@@ -531,8 +531,8 @@ angular.module('controller.searchctrl', [])
 
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
-            Util.ga.trackEvent('location', 'is', 'enable', isLocationEnabled?1:0);
-            Util.ga.trackEvent('location', 'is', 'authorized', isLocationAuthorized?1:0);
+            Util.ga.trackEvent('position', 'status', 'enabled', isLocationEnabled?1:0);
+            Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
             gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {

@@ -123,11 +123,11 @@ angular.module('starter', [
                 }
             }, function(match) {
                 console.log(match.$route.parent + ', ' + match.$args.fav);
-                Util.trackEvent('deeplink', 'route', 'match '+match.$args.fav);
+                Util.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
                 $state.transitionTo(match.$route.parent, match.$args, { reload: true });
             }, function(nomatch) {
                 console.log('No match', nomatch);
-                Util.trackEvent('deeplink', 'route', 'nomatch');
+                Util.trackEvent('plugin', 'info', 'deepLinkNoMatch');
             });
         }
         else {

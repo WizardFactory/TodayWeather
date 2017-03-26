@@ -284,7 +284,7 @@ angular.module('service.weatherinfo', [])
 
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
                 console.log('appPreferences is undefined');
-                Util.ga.trackEvent('appPreferences', 'error', 'loadPlugin');
+                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
                 return;
             }
 
@@ -293,14 +293,15 @@ angular.module('service.weatherinfo', [])
                 console.log("save preference Success: " + value);
             }, function (error) {
                 console.log("save preference Error: " + error);
-                Util.ga.trackEvent('savePreferences', 'error', error);
+                Util.ga.trackEvent('plugin', 'error', 'saveAppPreferences');
+                Util.ga.trackException(error, false);
             }, 'cityList', JSON.stringify(pList));
         };
 
         obj._loadCitiesPreference = function (callback) {
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
                 console.log('appPreferences is undefined');
-                Util.ga.trackEvent('appPreferences', 'error', 'loadPlugin');
+                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
                 return;
             }
 
@@ -310,7 +311,8 @@ angular.module('service.weatherinfo', [])
                 callback(undefined, value);
             }, function (error) {
                 console.log("fetch preference Error: " + error);
-                Util.ga.trackEvent('fetchPreferences', 'error', error);
+                Util.ga.trackEvent('plugin', 'error', 'fetchAppPreferences');
+                Util.ga.trackException(error, false);
                 callback(error);
             }, 'cityList');
         };

@@ -118,14 +118,17 @@ angular.module('service.run', [])
                 console.log("Location state changed to: " + state);
                 Util.locationStatus = state;
 
-                Util.ga.trackEvent('location', 'change', state);
+                Util.ga.trackEvent('position', 'status', state);
 
                 if (oldLocationEnabled === false && Util.isLocationEnabled()) {
                     $rootScope.$broadcast('reloadEvent', 'locationOn');
                 }
             }, function (error) {
                 console.error("Error registering for location state changes: " + error);
-                Util.ga.trackEvent('location', 'error', error);
+                Util.ga.trackEvent('position', 'error', 'registerLocationStateChange');
             });
+        }
+        else {
+            Util.ga.trackEvent('plugin', 'error', 'loadDiagnostic')
         }
     });

@@ -194,13 +194,13 @@ angular.module('service.push', [])
                     }
                     console.log('clicked: ' + data.additionalData.cityIndex + ' url='+url);
                     $location.url(url);
-                    Util.ga.trackEvent('push', 'click', url);
+                    Util.ga.trackEvent('action', 'click', 'push url='+url);
                 }
             });
 
             window.push.on('error', function(e) {
                 console.log('notification error='+JSON.stringify(e));
-                Util.ga.trackEvent('push', 'error', JSON.stringify(e));
+                Util.ga.trackEvent('plugin', 'error', 'push '+JSON.stringify(e));
                 // e.message
             });
 

@@ -54,7 +54,7 @@ angular.module('controller.purchase', [])
                     callback(undefined, result.data);
                 },
                 function (err) {
-                    Util.ga.trackEvent('receiptValidation', 'error', err);
+                    Util.ga.trackEvent('plugin', 'error', 'checkReceiptValidation');
                     Util.ga.trackException(err, false);
                     callback(err);
                 });
@@ -78,7 +78,7 @@ angular.module('controller.purchase', [])
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
-                    Util.ga.trackEvent('account', 'expire', purchaseInfo.expirationDate);
+                    Util.ga.trackEvent('plugin', 'info', 'purchaseExpired '+purchaseInfo.expirationDate);
                     purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
                 }
                 obj.setAccountLevel(purchaseInfo.accountLevel);
@@ -240,7 +240,7 @@ angular.module('controller.purchase', [])
                 .catch(function (err) {
                     //again to check purchase info
                     console.log('fail to check purchase info err='+err.message);
-                    Util.ga.trackEvent('purchaseInfo', 'error', err);
+                    Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
                     Util.ga.trackException(err, false);
                 });
         }

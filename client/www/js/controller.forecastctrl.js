@@ -733,10 +733,10 @@ angular.module('controller.forecastctrl', [])
                 template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
                 strBtn = $translate.instant("LOC_SETTING");
 
-                Util.ga.trackEvent('retryConfirm', 'show', 'authorized', 0);
+                Util.ga.trackEvent('window', 'show', 'authorizedPopup');
             }
             else {
-                Util.ga.trackEvent('retryConfirm', 'show', 'retry');
+                Util.ga.trackEvent('window', 'show', 'retryPopup');
             }
 
             confirmPopup = $ionicPopup.show({
@@ -761,7 +761,7 @@ angular.module('controller.forecastctrl', [])
                     if (res) {
                         if (gIsLocationAuthorized == false) {
                             console.log("Opens settings page for this app.");
-                            Util.ga.trackEvent('retryConfirm', 'open', 'settings');
+                            Util.ga.trackEvent('action', 'click', 'settings');
                             setTimeout(function () {
                                 cordova.plugins.diagnostic.switchToSettings(function () {
                                     console.log("Successfully switched to Settings app");
@@ -772,13 +772,13 @@ angular.module('controller.forecastctrl', [])
                         }
                         else {
                             console.log("Retry");
-                            Util.ga.trackEvent('retryConfirm', 'retry', 'reloadEvent');
+                            Util.ga.trackEvent('action', 'click', 'reloadEvent');
                             setTimeout(function () {
                                 $scope.$broadcast('reloadEvent');
                             }, 0);
                         }
                     } else {
-                        Util.ga.trackEvent('retryConfirm', 'close');
+                        Util.ga.trackEvent('action', 'click', 'close');
                         console.log("Close");
                     }
                 })
@@ -863,8 +863,8 @@ angular.module('controller.forecastctrl', [])
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
 
-            Util.ga.trackEvent('location', 'is', 'enable', isLocationEnabled?1:0);
-            Util.ga.trackEvent('location', 'is', 'authorized', isLocationAuthorized?1:0);
+            Util.ga.trackEvent('position', 'status', 'enabled', isLocationEnabled?1:0);
+            Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
             gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
