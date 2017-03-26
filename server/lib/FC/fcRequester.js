@@ -25,7 +25,6 @@ faRequester.prototype.getForecast = function(geocode, key, callback){
     }
 
     // ex. http://apitest.foreca.net/?lon=24.934&lat=60.1755&key={keys}&format=json
-    //     http://apitest.foreca.net/?lon=39.66&lat=116.4&key=ur5zUllH1EHKMxr63Nh36Txjc&format=json
     var url = self.base_url + '?lon=' + geocode.lat + '&lat=' + geocode.lon + '&key=' + key + '&format=json';
 
     log.info(url);
