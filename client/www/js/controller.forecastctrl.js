@@ -135,7 +135,7 @@ angular.module('controller.forecastctrl', [])
         $scope.openUrl = function (src) {
             if (window.cordova && cordova.InAppBrowser) {
                 cordova.InAppBrowser.open(src, "_system");
-                Util.ga.trackEvent('action', 'click', 'open market');
+                Util.ga.trackEvent('action', 'click', 'open weather source');
             }
             else {
                 var options = {
@@ -713,7 +713,7 @@ angular.module('controller.forecastctrl', [])
             isLoadingIndicator = false;
         }
 
-        var gIsLocationAuthorized;
+        var gLocationAuthorizationStatus;
 
         /**
          * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
@@ -727,48 +727,87 @@ angular.module('controller.forecastctrl', [])
                 confirmPopup.close();
             }
 
-            var strBtn = strRetry;
-            if (gIsLocationAuthorized == false) {
+            var buttons = [];
+            buttons.push({
+                text: strClose,
+                onTap: function () {
+                    return 'close';
+                }
+            });
+
+            if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                 template += '<br>';
                 template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
-                strBtn = $translate.instant("LOC_SETTING");
+
+                buttons.push({
+                    text: $translate.instant("LOC_SEARCH"),
+                    onTap: function () {
+                        return 'search';
+                    }
+                });
+
+                buttons.push({
+                    text: $translate.instant("LOC_SETTING"),
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'settings';
+                    }
+                });
             }
+            else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                buttons.push({
+                    text: $translate.instant("LOC_SEARCH"),
+                    onTap: function () {
+                        return 'search';
+                    }
+                });
+
+                buttons.push({
+                    text: strRetry,
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'retry';
+                    }
+                });
+            }
+            else {
+                buttons.push({
+                    text: strRetry,
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'retry';
+                    }
+                });
+            }
+
             confirmPopup = $ionicPopup.show({
                 title: title,
                 template: template,
-                buttons: [
-                    { text: strClose,
-                        onTap: function () {
-                            return false;
-                        }
-                    },
-                    { text: strBtn,
-                        type: 'button-positive',
-                        onTap: function () {
-                            return true;
-                        }
-                    }
-                ]
+                buttons: buttons
             });
+
             confirmPopup
                 .then(function (res) {
-                    if (res) {
-                        if (gIsLocationAuthorized == false) {
-                            console.log("Opens settings page for this app.");
-                            setTimeout(function () {
-                                cordova.plugins.diagnostic.switchToSettings(function () {
-                                    console.log("Successfully switched to Settings app");
-                                }, function (error) {
-                                    console.log("The following error occurred: "+error);
-                                });
-                            }, 0);
-                        }
-                        else {
-                            console.log("Retry");
-                            setTimeout(function () {
-                                $scope.$broadcast('reloadEvent');
-                            }, 0);
-                        }
+                    if (res == 'retry') {
+                        console.log('retry');
+                        setTimeout(function () {
+                            $scope.$broadcast('reloadEvent');
+                        }, 0);
+                    }
+                    else if (res == 'search') {
+                        console.log('go search');
+                        WeatherInfo.disableCity(true);
+                        $location.path('/tab/search');
+                    }
+                    else if (res == 'settings') {
+                        console.log("Opens settings page for this app.");
+                        setTimeout(function () {
+                            cordova.plugins.diagnostic.switchToSettings(function () {
+                                console.log("Successfully switched to Settings app");
+                            }, function (error) {
+                                console.log("The following error occurred: "+error);
+                            });
+                        }, 0);
                     } else {
                         console.log("Close");
                     }
@@ -825,6 +864,8 @@ angular.module('controller.forecastctrl', [])
                 else if (ionic.Platform.isAndroid()) {
                     if (Util.isLocationEnabled()) {
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
+                            console.log('status='+status);
+                            gLocationAuthorizationStatus = status;
                             if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
                                 _getCurrentPosition(deferred, true, true);
                             } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
@@ -850,7 +891,6 @@ angular.module('controller.forecastctrl', [])
 
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
-            gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (coords) {
@@ -877,19 +917,41 @@ angular.module('controller.forecastctrl', [])
                 } else if (isLocationAuthorized === false) {
                     msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                     deferred.reject(msg);
-                } else if (isLocationAuthorized === undefined) {
+                }
+                else if (isLocationAuthorized === undefined) {
                     hideLoadingIndicator();
                     if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
                         // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
                         // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
                         cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
                             // ios에서는 registerLocationStateChangeHandler에서 locationStatus가 변경되고 reload 이벤트가 발생함
-                            if (ionic.Platform.isAndroid() && status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
-                                $scope.$broadcast('reloadEvent');
+                            if (ionic.Platform.isAndroid()) {
+                                gLocationAuthorizationStatus = status;
+                                if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                                    $scope.$broadcast('reloadEvent');
+                                    deferred.reject(null);
+                                }
+                                else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                    // denied 후에 resume 시 reload를 하지 않도록 loadTime을 업데이트 함
+                                    WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
+                                    msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
+                                    deferred.reject(msg);
+                                    // popup으로 사용자에게 가이드 추가 필요
+                                }
+                                else {
+                                    deferred.reject(null);
+                                }
                             }
-                        }, null, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
+                            else {
+                                deferred.reject(null);
+                            }
+                        }, function () {
+                            deferred.reject(null);
+                        }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
-                    deferred.reject(null);
+                    else {
+                        deferred.reject(null);
+                    }
                 }
             }
             else if (isLocationEnabled === false) {
