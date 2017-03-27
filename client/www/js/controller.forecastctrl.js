@@ -1280,6 +1280,11 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
             }
+            else {
+                if (cityData == null) {
+                   applyWeatherData();
+                }
+            }
 
             console.log('called by update weather event');
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
