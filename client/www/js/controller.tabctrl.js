@@ -15,7 +15,18 @@ angular.module('controller.tabctrl', [])
             console.log("Fail to translate : "+JSON.stringify(translationIds));
         });
 
+        $scope.data = { 'autoSearch': false };
+
         function init() {
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("TabCtrl location setting is " + (enabled ? "enabled" : "disabled"));
+                    $scope.data.autoSearch = enabled;
+                }, function (error) {
+                    console.log("The following error occurred: "+error);
+                });
+            }
+
             currentTime = new Date();
             //$scope.currentTimeString = WeatherUtil.convertTimeString(currentTime); // 10월 8일(수) 12:23 AM
             //$interval(function() {
@@ -30,9 +41,17 @@ angular.module('controller.tabctrl', [])
             TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
 
+        $scope.doTabSetting = function() {
+            if (WeatherInfo.getEnabledCityCount() === 0) {
+                $scope.startPopup();
+                return;
+            }
+            $location.path('/tab/setting');
+        };
+
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert(strError, strAddLocation);
+                $scope.startPopup();
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
@@ -76,7 +95,7 @@ angular.module('controller.tabctrl', [])
             var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData == undefined || cityData.location == undefined) {
                 console.log('Fail to load city');
-                $scope.showAlert(strError, strAddLocation);
+                $scope.startPopup();
                 return;
             }
 
@@ -162,6 +181,64 @@ angular.module('controller.tabctrl', [])
                 $rootScope.tabsTop = 0;
             }
             return $rootScope.contentBottom - $rootScope.tabsTop;
+        };
+
+        $scope.startPopup = function startPopup() {
+            var strOkay;
+            var strTodayWeather;
+            var strUseYourCurrentLocation;
+            var strFindLocationByName;
+
+            $translate(['LOC_TODAYWEATHER', 'LOC_OK',
+                'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
+                strTodayWeather = translations.LOC_TODAYWEATHER;
+                strOkay = translations.LOC_OK;
+                strUseYourCurrentLocation = translations.LOC_USE_YOUR_CURRENT_LOCATION;
+                strFindLocationByName = translations.LOC_FIND_LOCATION_BY_NAME;
+            }, function (translationIds) {
+                console.log("Fail to translate : " + JSON.stringify(translationIds));
+            }).finally(function () {
+                var popup = $ionicPopup.show({
+                    template: '<ion-list>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="true">'+strUseYourCurrentLocation+'</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="false">'+strFindLocationByName+'</ion-radio>' +
+                    '</ion-list>',
+                    title: strTodayWeather,
+                    scope: $scope,
+                    cssClass: 'ionic_popup',
+                    buttons: [
+                        {
+                            text: strOkay,
+                            type: 'button-positive',
+                            onTap: function() {
+                                return $scope.data.autoSearch;
+                            }
+                        }
+                    ]
+                });
+
+                popup.then(function(res) {
+                    if (res === true) { // autoSearch
+                        Util.ga.trackEvent('action', 'click', 'auto search');
+                        WeatherInfo.disableCity(false);
+                        if ($location.path() === '/tab/forecast') {
+                            $scope.$broadcast('reloadEvent');
+                        }
+                        else {
+                            $location.path('/tab/forecast');
+                        }
+                    } else {
+                        Util.ga.trackEvent('action', 'click', 'city search');
+
+                        if ($location.path() === '/tab/search') {
+                            $scope.$broadcast('setInputFocus');
+                        }
+                        else {
+                            $location.path('/tab/search');
+                        }
+                    }
+                });
+            });
         };
 
         init();

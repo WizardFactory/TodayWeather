@@ -421,9 +421,7 @@ angular.module('controller.forecastctrl', [])
                 }
             }
             if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.showAlert(strError, strAddLocation, function() {
-                    $location.path('/tab/search');
-                });
+                $scope.startPopup();
                 return;
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
@@ -1346,9 +1344,15 @@ angular.module('controller.forecastctrl', [])
         };
 
         /**
-         * @returns {number}
+         *
+         * @param temp
+         * @returns {*}
          */
         $scope.getTemp = function (temp) {
+            if (temp == undefined) {
+                return '';
+            }
+
             if (Units.getUnit('temperatureUnit') == 'F') {
                 return Math.round(temp);
             }
