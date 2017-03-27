@@ -120,17 +120,9 @@ angular.module('controller.searchctrl', [])
                 console.log('keyboard will hide');
                 Util.ga.trackEvent('action', 'keyboard', 'hide');
             });
-          
-            if (ionic.Platform.isIOS() == false) {
-                if (WeatherInfo.getEnabledCityCount() == 0) {
-                    setTimeout(function () {
-                        console.log('set focus on search input');
-                        document.getElementById('searchInput').focus();
-                    }, 100);
-                }
-            }
-            else {
-                console.log("focus doesn't work on ios");
+
+            if (WeatherInfo.getEnabledCityCount() == 0) {
+                $scope.$broadcast('setInputFocus');
             }
         }
 
@@ -630,6 +622,20 @@ angular.module('controller.searchctrl', [])
 
             return deferred.promise;
         }
+
+        $scope.$on('setInputFocus', function(event) {
+            console.log("set input focus");
+
+            if (ionic.Platform.isIOS() == false) {
+                console.log('set focus on search input');
+                setTimeout(function () {
+                    document.getElementById('searchInput').focus();
+                }, 100);
+            }
+            else {
+                console.log("focus doesn't work on ios");
+            }
+        });
 
         init();
     });
