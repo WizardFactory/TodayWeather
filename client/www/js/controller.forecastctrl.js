@@ -1265,7 +1265,7 @@ angular.module('controller.forecastctrl', [])
         }
 
         $scope.$on('reloadEvent', function(event, sender) {
-            console.log("reloadEvent");
+            console.log("reloadEvent.");
             if (sender === 'resume') {
                 if (confirmPopup) {
                     console.log('skip event when retry load popup is shown');
