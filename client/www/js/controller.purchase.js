@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds) {
+    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -48,12 +48,14 @@ angular.module('controller.purchase', [])
                 headers: {'Content-Type': 'application/json'},
                 url: url,
                 data: storeReceipt,
-                timeout: 10*1000
+                timeout: 10000
             })
                 .then(function (result) {
                     callback(undefined, result.data);
                 },
                 function (err) {
+                    Util.ga.trackEvent('plugin', 'error', 'checkReceiptValidation');
+                    Util.ga.trackException(err, false);
                     callback(err);
                 });
         };
@@ -76,6 +78,7 @@ angular.module('controller.purchase', [])
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
+                    Util.ga.trackEvent('plugin', 'info', 'purchaseExpired '+purchaseInfo.expirationDate);
                     purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
                 }
                 obj.setAccountLevel(purchaseInfo.accountLevel);
@@ -150,9 +153,39 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope, $location, $translate) {
+    .run(function($ionicPopup, $q, Purchase, $rootScope, $location, $translate, Util) {
 
         if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
+            return;
+        }
+
+        if (ionic.Platform.isIOS()) {
+            Purchase.paidAppUrl = twClientConfig.iOSPaidAppUrl;
+        }
+        else if (ionic.Platform.isAndroid()) {
+            Purchase.paidAppUrl = twClientConfig.androidPaidAppUrl;
+        }
+
+        if (!window.inAppPurchase) {
+            console.log('in app purchase is unused');
+            if (Purchase.paidAppUrl.length > 0) {
+                $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+                    $rootScope.adsBannerMessage = bannerMessage;
+                }, function (translationId) {
+                    $rootScope.adsBannerMessage = translationId;
+                });
+                $rootScope.clickAdsBanner = function() {
+                    $location.path('/purchase');
+                };
+            }
+            else {
+                $translate('LOC_TODAYWEATHER').then(function (bannerMessage) {
+                    $rootScope.adsBannerMessage = bannerMessage;
+                }, function (translationId) {
+                    $rootScope.adsBannerMessage = translationId;
+                });
+                $rootScope.clickAdsBanner = function() {};
+            }
             return;
         }
 
@@ -183,7 +216,7 @@ angular.module('controller.purchase', [])
                 };
             }
             else {
-               updatePurchaseInfo = Purchase.updatePurchaseInfo;
+                updatePurchaseInfo = Purchase.updatePurchaseInfo;
             }
 
             updatePurchaseInfo()
@@ -207,89 +240,61 @@ angular.module('controller.purchase', [])
                 .catch(function (err) {
                     //again to check purchase info
                     console.log('fail to check purchase info err='+err.message);
+                    Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
+                    Util.ga.trackException(err, false);
                 });
         }
 
-        $ionicPlatform.ready(function() {
-            if (ionic.Platform.isIOS()) {
-                Purchase.paidAppUrl = twClientConfig.iOSPaidAppUrl;
-            }
-            else if (ionic.Platform.isAndroid()) {
-                Purchase.paidAppUrl = twClientConfig.androidPaidAppUrl;
-            }
+        Purchase.loadPurchaseInfo();
 
-            Purchase.loadPurchaseInfo();
+        //check purchase state is canceled or refund
+        if (Purchase.loaded) {
+            console.log('already check purchase info');
+            return;
+        }
 
-            //check purchase state is canceled or refund
-            if (Purchase.loaded) {
-                console.log('already check purchase info');
-                return;
-            }
+        Purchase.productId = 'tw1year';
+        console.log('productId='+Purchase.productId);
 
-            Purchase.productId = 'tw1year';
-            console.log('productId='+Purchase.productId);
-
-            if (!window.inAppPurchase) {
-                console.log('in app purchase is not ready');
-                if (Purchase.paidAppUrl.length > 0) {
-                    $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
-                        $rootScope.adsBannerMessage = bannerMessage;
-                    }, function (translationId) {
-                        $rootScope.adsBannerMessage = translationId;
-                    });
-                    $rootScope.clickAdsBanner = function() {
-                        $location.path('/purchase');
-                    };
-                }
-                else {
-                    $translate('LOC_TODAYWEATHER').then(function (bannerMessage) {
-                        $rootScope.adsBannerMessage = bannerMessage;
-                    }, function (translationId) {
-                        $rootScope.adsBannerMessage = translationId;
-                    });
-                    $rootScope.clickAdsBanner = function() {};
-                }
-                return;
-            }
-
-            Purchase.hasInAppPurchase = true;
-            $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
-                $rootScope.adsBannerMessage = bannerMessage;
-            }, function (translationId) {
-                $rootScope.adsBannerMessage = translationId;
-            });
-            $rootScope.clickAdsBanner = function() {
-                $location.path('/purchase');
-            };
-
-            inAppPurchase
-                .getProducts([Purchase.productId])
-                .then(function (products) {
-                    console.log(JSON.stringify(products));
-                    Purchase.products =  products;
-                    if (Purchase.loaded === false) {
-                        //It seems fail to check purchase info
-                        //retry check purchase info
-                        checkPurchase();
-                    }
-                })
-                .catch(function (err) {
-                    console.log('Fail to get products of id='+Purchase.productId);
-                    console.log(JSON.stringify(err));
-                });
-
-            //if saved accountLevel skip checkPurchase but, have to get products
-            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
-                console.log('account Level is '+Purchase.accountLevel);
-                Purchase.loaded = true;
-                return;
-            }
-
-            //some times fail to get restorePurchases because inAppPurchase is not ready
-            checkPurchase();
+        Purchase.hasInAppPurchase = true;
+        $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+            $rootScope.adsBannerMessage = bannerMessage;
+        }, function (translationId) {
+            $rootScope.adsBannerMessage = translationId;
         });
+        $rootScope.clickAdsBanner = function() {
+            $location.path('/purchase');
+        };
+
+        inAppPurchase
+            .getProducts([Purchase.productId])
+            .then(function (products) {
+                console.log(JSON.stringify(products));
+                Purchase.products =  products;
+                if (Purchase.loaded === false) {
+                    //It seems fail to check purchase info
+                    //retry check purchase info
+                    checkPurchase();
+                }
+            })
+            .catch(function (err) {
+                console.log('Fail to get products of id='+Purchase.productId);
+                console.log(JSON.stringify(err));
+                Util.ga.trackException(err, false);
+            });
+
+        //if saved accountLevel skip checkPurchase but, have to get products
+        if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
+            console.log('account Level is '+Purchase.accountLevel);
+            Purchase.loaded = true;
+            return;
+        }
+
+        //some times fail to get restorePurchases because inAppPurchase is not ready
+        checkPurchase();
     })
-    .controller('PurchaseCtrl', function($scope, $ionicPlatform, $ionicLoading, $http, $ionicHistory, $ionicPopup, Purchase, TwAds, $translate) {
+    .controller('PurchaseCtrl', function($scope, $ionicLoading, $http, $ionicHistory, $ionicPopup,
+                                         Purchase, TwAds, $translate, Util) {
 
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
 
@@ -359,6 +364,7 @@ angular.module('controller.purchase', [])
                     $ionicLoading.hide();
                     console.log(strPurchaseError);
                     console.log(JSON.stringify(err));
+                    Util.ga.trackException(err, false);
                     $ionicPopup.alert({
                         title: strPurchaseError,
                         template: err.message
@@ -389,6 +395,7 @@ angular.module('controller.purchase', [])
                 .catch(function (err) {
                     $ionicLoading.hide();
                     console.log(JSON.stringify(err));
+                    Util.ga.trackException(err, false);
                     $ionicPopup.alert({
                         title: strRestoreError,
                         template: err.message

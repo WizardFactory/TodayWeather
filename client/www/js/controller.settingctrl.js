@@ -10,6 +10,7 @@ angular.module('controller.settingctrl', [])
 
                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
+                    Util.trackEvent("plugin", "error", "loadAppPreferences");
                     return;
                 }
 
@@ -72,11 +73,14 @@ angular.module('controller.settingctrl', [])
                 src = twClientConfig.etcUrl;
             }
 
+            console.log('market='+src);
+
             if (window.cordova && cordova.InAppBrowser) {
                 cordova.InAppBrowser.open(src, "_system");
                 Util.ga.trackEvent('action', 'click', 'open market');
             }
             else {
+                Util.trackEvent("inappbrowser", "error", "loadPlugin");
                 var options = {
                     location: "yes",
                     clearcache: "yes",

@@ -1,5 +1,5 @@
 angular.module('controller.tabctrl', [])
-    .controller('TabCtrl', function($scope, $ionicPlatform, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
+    .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
                                      $location, TwAds, $rootScope, Util, $translate) {
         var currentTime;
         var strError = "Error";

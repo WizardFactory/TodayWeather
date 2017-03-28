@@ -1,5 +1,5 @@
 angular.module('controller.forecastctrl', [])
-    .controller('ForecastCtrl', function ($scope, $rootScope, $ionicPlatform, $ionicScrollDelegate,
+    .controller('ForecastCtrl', function ($scope, $rootScope, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
                                           $ionicPopup, $translate, Units) {
@@ -694,7 +694,7 @@ angular.module('controller.forecastctrl', [])
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
                     }
                 }
-            });
+            }, 0);
         }
 
         function showLoadingIndicator() {
@@ -732,7 +732,13 @@ angular.module('controller.forecastctrl', [])
                 template += '<br>';
                 template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
                 strBtn = $translate.instant("LOC_SETTING");
+
+                Util.ga.trackEvent('window', 'show', 'authorizedPopup');
             }
+            else {
+                Util.ga.trackEvent('window', 'show', 'retryPopup');
+            }
+
             confirmPopup = $ionicPopup.show({
                 title: title,
                 template: template,
@@ -755,6 +761,7 @@ angular.module('controller.forecastctrl', [])
                     if (res) {
                         if (gIsLocationAuthorized == false) {
                             console.log("Opens settings page for this app.");
+                            Util.ga.trackEvent('action', 'click', 'settings');
                             setTimeout(function () {
                                 cordova.plugins.diagnostic.switchToSettings(function () {
                                     console.log("Successfully switched to Settings app");
@@ -765,11 +772,13 @@ angular.module('controller.forecastctrl', [])
                         }
                         else {
                             console.log("Retry");
+                            Util.ga.trackEvent('action', 'click', 'reloadEvent');
                             setTimeout(function () {
                                 $scope.$broadcast('reloadEvent');
                             }, 0);
                         }
                     } else {
+                        Util.ga.trackEvent('action', 'click', 'close');
                         console.log("Close");
                     }
                 })
@@ -794,6 +803,9 @@ angular.module('controller.forecastctrl', [])
                     hideLoadingIndicator();
                     if (msg !== null) {
                         showRetryConfirm(strError, msg);
+                    }
+                    else {
+                        Util.ga.trackEvent('position', 'error', 'msg null');
                     }
                 });
                 return;
@@ -850,6 +862,9 @@ angular.module('controller.forecastctrl', [])
 
         function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
             var msg;
+
+            Util.ga.trackEvent('position', 'status', 'enabled', isLocationEnabled?1:0);
+            Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
             gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
@@ -1206,17 +1221,23 @@ angular.module('controller.forecastctrl', [])
 
         $scope.$on('reloadEvent', function(event, sender) {
             console.log("reloadEvent");
+            Util.ga.trackEvent('reload', 'sender', sender);
+
+            if (confirmPopup) {
+                console.log('skip event when retry load popup is shown');
+                Util.ga.trackEvent('reload', 'skip', 'popup', 1);
+                return;
+            }
+
             if (sender === 'resume') {
-                if (confirmPopup) {
-                    console.log('skip event when retry load popup is shown');
-                    return;
-                }
                 if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === false) {
+                    Util.ga.trackEvent('reload', 'warn', 'load city', 0);
                     return;
                 }
             } else if (sender === 'locationOn') {
                 // currentPosition이고 confirmPopup이 없는 경우에만 reload
-                if (cityData.currentPosition === false || confirmPopup) {
+                if (cityData.currentPosition === false) {
+                    Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;
                 }
             }
