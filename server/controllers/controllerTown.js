@@ -2710,7 +2710,12 @@ ControllerTown.prototype._makeStrForKma = function(data) {
     return this;
 };
 
-
+/**
+ * if wsd is null, return -1
+ * @param wsd
+ * @returns {number}
+ * @private
+ */
 ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
     if (wsd < 0) {
         return 0;
@@ -2724,8 +2729,11 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
     else if(wsd < 14) {
         return 3;
     }
-    else {
+    else if(wsd >= 14) {
         return 4;
+    }
+    else {
+        return -1;
     }
 };
 
