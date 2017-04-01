@@ -8,7 +8,24 @@
 
 #import "TodayWeatherUtil.h"
 
+TEMP_UNIT    gTemperatureUnit;
+
 @implementation TodayWeatherUtil
+@synthesize twuCountry;
+//@synthesize temperatureUnit;
+
+/********************************************************************
+ *
+ * Name			: WFLOG
+ * Description	: Wizard Factory LOG
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 02. 13
+ * Author		: SeanKim
+ * History		: 20170213 SeanKim Create function
+ *
+ ********************************************************************/
+
 
 /********************************************************************
  *
@@ -124,8 +141,8 @@
 
 /********************************************************************
  *
- * Name			: getDaysArray
- * Description	: get days array
+ * Name			: getDaysArray type
+ * Description	: get days array 
  * Returns		: NSMutableArray *
  * Side effects :
  * Date			: 2016. 12. 29
@@ -133,7 +150,7 @@
  * History		: 20161229 SeanKim Create function
  *
  ********************************************************************/
-+ (NSMutableArray *) getDaysArray:(NSDictionary *)jsonDict
++ (NSArray *) getDaysArray:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType
 {
     NSDictionary    *dictMidData = nil;
     NSArray         *arrDailyData = nil;
@@ -144,24 +161,43 @@
     
     NSMutableArray         *arrDaysData = [[NSMutableArray alloc] init];
     
-    dictMidData     = [jsonDict objectForKey:@"midData"];
-    arrDailyData    = [dictMidData  objectForKey:@"dailyData"];
-    
-    nsdYesteray     = [self getYesterday];
-    yesterdayDate   = [self getYYYYMMDDFromUTCTime:[nsdYesteray timeIntervalSince1970]];
-    cntArrDaily     = (int)[arrDailyData count];
-    
-    NSLog(@"yesterdayDate : %d", yesterdayDate);
-    
-    for(int i = 0; i < cntArrDaily; i++)
+    if(reqType == TYPE_REQUEST_WEATHER_KR)
     {
-        NSDictionary    *nsdDailyData   = [arrDailyData objectAtIndex:i];
-        NSString        *nssDate        = [nsdDailyData objectForKey:@"date"];
-        int date                        = [nssDate intValue];
+        dictMidData     = [jsonDict objectForKey:@"midData"];
+        arrDailyData    = [dictMidData  objectForKey:@"dailyData"];
         
-        if(date >= yesterdayDate)
+        nsdYesteray     = [self getYesterday];
+        yesterdayDate   = [self getYYYYMMDDFromUTCTime:[nsdYesteray timeIntervalSince1970]];
+        cntArrDaily     = (int)[arrDailyData count];
+    
+        NSLog(@"yesterdayDate : %d", yesterdayDate);
+        
+        for(int i = 0; i < cntArrDaily; i++)
         {
-            //NSLog(@"date : %d", date);
+            NSDictionary    *nsdDailyData   = [arrDailyData objectAtIndex:i];
+            NSString        *nssDate        = [nsdDailyData objectForKey:@"date"];
+            int date                        = [nssDate intValue];
+            
+            if(date >= yesterdayDate)
+            {
+                //NSLog(@"date : %d", date);
+                [arrDaysData addObject:nsdDailyData];
+                
+                cntFounded++;
+                
+                if(cntFounded == 6)
+                    break;
+            }
+        }
+    }
+    else
+    {
+        arrDailyData    = [jsonDict  objectForKey:@"daily"];
+        cntArrDaily     = (int)[arrDailyData count];
+
+        for(int i = 0; i < cntArrDaily; i++)
+        {
+            NSDictionary    *nsdDailyData   = [arrDailyData objectAtIndex:i];
             [arrDaysData addObject:nsdDailyData];
             
             cntFounded++;
@@ -169,8 +205,9 @@
             if(cntFounded == 6)
                 break;
         }
+
     }
-    
+
     //NSLog(@"arrDaysData : %@", arrDaysData);
     
     return arrDaysData;
@@ -187,36 +224,112 @@
  * History		: 20161229 SeanKim Create function
  *
  ********************************************************************/
-+ (NSMutableArray *) getByTimeArray:(NSDictionary *)jsonDict
++ (NSMutableArray *) getByTimeArray:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType
 {
     NSMutableArray *arrByTimeData   = [[NSMutableArray alloc] init];
-    NSDictionary    *currentDict    = [jsonDict objectForKey:@"current"];
-    NSString        *nssDate        = [currentDict objectForKey:@"date"];
-    NSString        *nssTime        = [currentDict objectForKey:@"time"];
-    NSString        *nssDateTime    = [NSString stringWithFormat:@"%@%@", nssDate, nssTime];
     
-    long long currentDateTime            = [nssDateTime longLongValue];
-    NSMutableArray  *arrShortData = [jsonDict objectForKey:@"short"];
-    int             cntFounded = 0;
+    NSDictionary    *currentDict    = nil;
+    NSString        *nssDate        = nil;
+    NSString        *nssTime        = nil;
+    NSString        *nssDateTime    = nil;
+    long long currentDateTime       = 0;
+    NSMutableArray  *arrHourlyData   = nil;
+    int             cntFounded      = 0;
     
-    //NSLog(@"getByTimeArray dict : %@", jsonDict);
-    
-    for(int i = 0; i < [arrShortData count]; i++)
+    if(reqType == TYPE_REQUEST_WEATHER_KR)
     {
-        NSMutableDictionary *dictShort = [arrShortData objectAtIndex:i];
-        NSString *nssDate = [dictShort objectForKey:@"date"];
-        NSString *nssTime = [dictShort objectForKey:@"time"];
-        long long shortDateTime = [self makeIntTimeWithDate:nssDate time:nssTime];
+        currentDict    = [jsonDict objectForKey:@"current"];
+        nssDate        = [currentDict objectForKey:@"date"];
+        nssTime        = [currentDict objectForKey:@"time"];
+        nssDateTime    = [NSString stringWithFormat:@"%@%@", nssDate, nssTime];
         
-        if(currentDateTime <= shortDateTime)
+        currentDateTime            = [nssDateTime longLongValue];
+        arrHourlyData = [jsonDict objectForKey:@"short"];
+        
+        //NSLog(@"getByTimeArray jsonDict : %@", jsonDict);
+        //NSLog(@"getByTimeArray arrHourlyData : %@", arrHourlyData);
+    
+        for(int i = 0; i < [arrHourlyData count]; i++)
         {
-            NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, shortDateTime);
-            [arrByTimeData addObject:dictShort];
+            NSMutableDictionary *dictShort = [arrHourlyData objectAtIndex:i];
+            NSString *nssDate = [dictShort objectForKey:@"date"];
+            NSString *nssTime = [dictShort objectForKey:@"time"];
+            long long hourlyDateTime = [self makeIntTimeWithDate:nssDate time:nssTime];
             
-            cntFounded++;
+            if(currentDateTime <= hourlyDateTime)
+            {
+                NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
+                [arrByTimeData addObject:dictShort];
+                
+                cntFounded++;
+                
+                if(cntFounded == 6)
+                    break;
+            }
+        }
+    }
+    else
+    {
+        NSArray *arrThisTime        = [jsonDict objectForKey:@"thisTime"];
+        if([arrThisTime count] == 2)
+            currentDict         = [arrThisTime objectAtIndex:1];        // Use second index; That is current weahter.
+        else
+            currentDict         = [arrThisTime objectAtIndex:0];        // process about thisTime
+        
+        NSString    *nssTmpDate     = [currentDict objectForKey:@"date"];                   // 2017.02.25 00:00
+        
+        NSArray *arrDate            = [nssTmpDate componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
+        NSString *nssSeparatedDate  = [arrDate objectAtIndex:0];                            // "2017.02.25"
+        NSArray *arrSeparatedDate   = [nssSeparatedDate componentsSeparatedByString:@"."];  // "2017", "02" ,"25"
+        nssDate                     = [NSString stringWithFormat:@"%@%@%@",
+                                       [arrSeparatedDate objectAtIndex:0],
+                                       [arrSeparatedDate objectAtIndex:1],
+                                       [arrSeparatedDate objectAtIndex:2]];                 // "20170205"
+        
+        NSString *nssSeparatedTime  = [arrDate objectAtIndex:1];                            // "00:00"
+        NSArray  *arrSeparatedTime  = [nssSeparatedTime componentsSeparatedByString:@":"];  // "00", "00"
+        nssTime                     = [NSString stringWithFormat:@"%@%@",
+                                       [arrSeparatedTime objectAtIndex:0],
+                                       [arrSeparatedTime objectAtIndex:1]];
+        
+        currentDateTime             = [self makeIntTimeWithDate:nssDate time:nssTime];
+        
+        arrHourlyData               = [jsonDict objectForKey:@"hourly"];
+        
+        //NSLog(@"[getByTimeArray] arrHourlyData : %@", arrHourlyData);
+        
+        for(int i = 0; i < [arrHourlyData count]; i++)
+        {
+            NSMutableDictionary *dictShort = [arrHourlyData objectAtIndex:i];
             
-            if(cntFounded == 6)
-                break;
+            NSString *nssDateTmpHourly = [dictShort objectForKey:@"date"];
+            
+            NSArray  *arrDateHourly             = [nssDateTmpHourly componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
+            NSString *nssSeparatedDateHourly    = [arrDateHourly objectAtIndex:0];                            // "2017.02.25"
+            NSArray  *arrSeparatedDateHourly    = [nssSeparatedDateHourly componentsSeparatedByString:@"."];  // "2017", "02" ,"25"
+            NSString *nssDateHourly             = [NSString stringWithFormat:@"%@%@%@",
+                                           [arrSeparatedDateHourly objectAtIndex:0],
+                                           [arrSeparatedDateHourly objectAtIndex:1],
+                                           [arrSeparatedDateHourly objectAtIndex:2]];                 // "20170205"
+            
+            NSString *nssSeparatedTimeHourly  = [arrDateHourly objectAtIndex:1];                            // "00:00"
+            NSArray  *arrSeparatedTimeHourly  = [nssSeparatedTimeHourly componentsSeparatedByString:@":"];  // "00", "00"
+            NSString *nssTimeHourly                     = [NSString stringWithFormat:@"%@%@",
+                                           [arrSeparatedTimeHourly objectAtIndex:0],
+                                           [arrSeparatedTimeHourly objectAtIndex:1]];
+
+            long long hourlyDateTime = [self makeIntTimeWithDate:nssDateHourly time:nssTimeHourly];
+                        
+            if(currentDateTime <= hourlyDateTime)
+            {
+                NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
+                [arrByTimeData addObject:dictShort];
+                
+                cntFounded++;
+                
+                if(cntFounded == 6)
+                    break;
+            }
         }
     }
     
@@ -225,7 +338,7 @@
 
 /********************************************************************
  *
- * Name			: getByTimeArray
+ * Name			: getTodayDictionary
  * Description	: get today dictionary
  * Returns		: NSMutableDictionary *
  * Side effects :
@@ -252,7 +365,7 @@
         
         if([nssCurrentDate isEqualToString:nssDailyDate])
         {
-            NSLog(@"nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            //NSLog(@"nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
             todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
             
             break;
@@ -262,6 +375,162 @@
     //NSLog(@"todayDict: %@", todayDict);
     
     return todayDict;
+}
+
+/********************************************************************
+ *
+ * Name			: getTodayDictionaryInGlobal
+ * Description	: get today dictionary in global weather data
+ * Returns		: NSMutableDictionary *
+ * Side effects :
+ * Date			: 2017. 02. 18
+ * Author		: SeanKim
+ * History		: 20161229 SeanKim Create function
+ *
+ ********************************************************************/
++ (NSMutableDictionary *) getTodayDictionaryInGlobal:(NSDictionary *)jsonDict time:(NSString *)nssTime
+{
+    NSString        *nssCurrentDate        = [nssTime substringToIndex:10];
+    
+    NSMutableArray  *dailyDataArr         = [jsonDict objectForKey:@"daily"];
+    NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
+    
+    //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@", nssCurrentDate);
+    
+    for(int i = 0; i < [dailyDataArr count]; i++)
+    {
+        NSDictionary *dailyDataDict = [dailyDataArr objectAtIndex:i];
+        NSString *nssDate       = [dailyDataDict objectForKey:@"date"];
+        NSString *nssDailyDate  = [nssDate substringToIndex:10];
+        
+        //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+        if([nssCurrentDate isEqualToString:nssDailyDate])
+        {
+            //NSLog(@"[getTodayDictionaryInGlobal] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
+            
+            break;
+        }
+    }
+    
+    //NSLog(@"todayDict: %@", todayDict);
+    
+    return todayDict;
+}
+
+/********************************************************************
+ *
+ * Name			: setTemperatureUnit
+ * Description	: set temperature unit by NSDefaults
+ * Returns		: TEMP_UNIT
+ * Side effects :
+ * Date			: 2017. 3. 27
+ * Author		: SeanKim
+ * History		: 20170327 SeanKim Create function
+ *
+ ********************************************************************/
++ (void) setTemperatureUnit:(NSString *)nssUnits
+{
+    if(nssUnits == nil)
+    {
+        NSLog(@"nssUnits is null!!!");
+        return;
+    }
+    
+    NSError *error;
+    NSData *tmpUnitData = [nssUnits dataUsingEncoding:NSUTF8StringEncoding];
+    NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
+    NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
+    NSLog(@"nsdTempUnit : %@", nsdTempUnit);
+    
+    if([nsdTempUnit isEqualToString:@"F"])
+    {
+        gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+    }
+    else
+    {
+        gTemperatureUnit = TEMP_UNIT_CELSIUS;
+    }
+    
+    //FIXME
+    //gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+    
+    return;
+}
+
+
+
+/********************************************************************
+ *
+ * Name			: getTemperatureUnit
+ * Description	: get temperature unit by country
+ * Returns		: TEMP_UNIT
+ * Side effects :
+ * Date			: 2017. 2. 19
+ * Author		: SeanKim
+ * History		: 20170219 SeanKim Create function
+ *
+ ********************************************************************/
++ (TEMP_UNIT) getTemperatureUnit
+{
+    NSLog(@"gTemperatureUnit : %d", gTemperatureUnit);
+    return gTemperatureUnit;
+}
+
+/********************************************************************
+ *
+ * Name			: convertFromCelsToFahr
+ * Description	: convert From Celsius To Fahrenheit
+ * Returns		: float
+ * Side effects :
+ * Date			: 2017. 3. 27
+ * Author		: SeanKim
+ * History		: 20170327 SeanKim Create function
+ *
+ ********************************************************************/
+//섭씨 => 화씨	°F = °C × 1.8 + 32
+//화씨 => 섭씨	°C = (°F − 32) / 1.8
++ (float) convertFromCelsToFahr:(float)cels
+{
+    float fahr = cels * 1.8 + 32;
+    
+    return fahr;
+}
+
+/********************************************************************
+ *
+ * Name			: processLocationStr
+ * Description	: processed locations 2 decimal places.
+ * Returns		: NSString *
+ * Side effects :
+ * Date			: 2017. 2. 23
+ * Author		: SeanKim
+ * History		: 20170219 SeanKim Create function
+ *
+ ********************************************************************/
++ (NSString *) processLocationStr:(NSString *)nssSrcStr
+{
+    NSString *nssDstStr = nil;
+    
+    if(nssSrcStr == nil)
+    {
+        NSLog(@"[processLocationStr] nssSrcStr is nil!!!");
+        return nil;
+    }
+
+    //NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
+    
+    NSArray *arrSrc     = [nssSrcStr componentsSeparatedByString:@"."];
+    NSString *nssFirst  = [arrSrc objectAtIndex:0];
+    //NSLog(@"[processLocationStr] nssFirst : %@", nssFirst);
+    NSString *nssTmp    = [arrSrc objectAtIndex:1];
+    NSString *nssSecond = [nssTmp substringToIndex:2];
+    
+    nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssSecond];
+    
+    //NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
+    
+    return nssDstStr;
 }
 
 

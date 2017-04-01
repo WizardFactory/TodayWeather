@@ -9,7 +9,9 @@
 #import <Foundation/Foundation.h>
 #import "TodayWeatherShowMore.h"
 #import "TodayWeatherUtil.h"
-#import "TodayViewController.h"
+//#import "TodayViewController.h"
+
+#import "LocalizationDefine.h"
 
 #define FIVE_DAILY_WT_WMARGIN   2           // Sum of LR Margin 4
 #define FIVE_DAILY_WT_WIDTH     60
@@ -19,6 +21,7 @@
 #define FIVE_DAILY_IMG_HEIGHT    36
 
 @implementation TodayWeatherShowMore
+@synthesize curCountry;
 
 /********************************************************************
  *
@@ -31,7 +34,7 @@
  * History		: 20161229 SeanKim Create function
  *
  ********************************************************************/
-- (void) processDailyData:(NSDictionary *)jsonDict
+- (void) processDailyData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
 {
     NSArray         *arrDaysData = nil;
     int             taMax = 0;
@@ -43,20 +46,51 @@
     NSString        *nssDate = nil;
     
     NSString        *nssSkyIcon = nil;
+    TEMP_UNIT       tempUnit = TEMP_UNIT_CELSIUS;
+    NSString        *nssCountry = nil;
     
     TodayViewController *TVC = [TodayViewController sharedInstance];
 
-    arrDaysData         = [TodayWeatherUtil getDaysArray:jsonDict];
+    arrDaysData         = [TodayWeatherUtil getDaysArray:jsonDict type:reqType];
+    
+    nssCountry          = [self getCurCountry];
+    tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     
     for(int i = 0 ; i < [arrDaysData count]; i++)
     {
         nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
         
-        nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-        nssDay              = [nssDate substringFromIndex:6];
+        if(reqType == TYPE_REQUEST_WEATHER_KR)
+        {
+            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
+            nssDay              = [nssDate substringFromIndex:6];
+            
+            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMin"] intValue];
+            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMax"] intValue];
+            
+            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
+            {
+                taMin = [TodayWeatherUtil convertFromCelsToFahr:taMin];
+                taMax = [TodayWeatherUtil convertFromCelsToFahr:taMax];
+            }
+        }
+        else
+        {
+            nssMonth            = [nssDate substringWithRange:NSMakeRange(5, 2)];
+            nssDay              = [nssDate substringWithRange:NSMakeRange(8, 2)];
+            
+            if(tempUnit == TEMP_UNIT_CELSIUS)
+            {
+                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_c"] intValue];
+                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_c"] intValue];
+            }
+            else
+            {
+                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_f"] intValue];
+                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_f"] intValue];
+            }
+        }
         
-        taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMin"] intValue];
-        taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMax"] intValue];
         nssTempMaxMin       = [NSString stringWithFormat:@"%d˚/%d˚", taMin, taMax];
         
         nssSkyIcon          = [[arrDaysData objectAtIndex:i] objectForKey:@"skyIcon"];
@@ -65,17 +99,18 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
                 case 0:
-                    TVC->time1Label.text = @"어제";//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
+                    TVC->time1Label.text = LSTR_YESTERDAY;//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp1Label.text = nssTempMaxMin;
                     TVC->showMore1IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 1:
-                    TVC->time2Label.text = @"오늘";//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
+                    TVC->time2Label.text = LSTR_TODAY;//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp2Label.text = nssTempMaxMin;
                     TVC->showMore2IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 2:
-                    TVC->time3Label.text = @"내일";[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
+                    TVC->time3Label.text = LSTR_TOMORROW;
+                    
                     TVC->temp3Label.text = nssTempMaxMin;
                     TVC->showMore3IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
@@ -113,22 +148,55 @@
  * History		: 20161229 SeanKim Create function
  *
  ********************************************************************/
-- (void) processByTimeData:(NSMutableDictionary *)dict
+- (void) processByTimeData:(NSMutableDictionary *)dict type:(TYPE_REQUEST)reqType;
 {
     NSArray     *arrTimeData = nil;
-    NSString        *nssSkyIcon = nil;
+    NSString    *nssSkyIcon = nil;
+    NSString    *nssTime = nil;
+    NSString    *nssHour = nil;
     
+    NSString    *nssTempByTime = nil;
+    TEMP_UNIT tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     TodayViewController *TVC = [TodayViewController sharedInstance];
     
-    arrTimeData = [TodayWeatherUtil getByTimeArray:dict];
+    NSLog(@"reqType : %d", reqType);
+    //NSLog(@"[processByTimeData] dict : %@", dict);
+    arrTimeData = [TodayWeatherUtil getByTimeArray:dict type:reqType];
+    NSLog(@"[processByTimeData] arrTimeData count : %ld", [arrTimeData count]);
     
     for(int i = 0 ; i < [arrTimeData count]; i++)
     {
-        NSString  *nssTime           = [[arrTimeData objectAtIndex:i] objectForKey:@"time"];
-        NSString *nssHour            = [nssTime substringToIndex:2];
-        
-        int t3h               = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
-        NSString *nssTempByTime       = [NSString stringWithFormat:@"%d˚", t3h];
+        //NSLog(@"[processByTimeData] i : %d", i);
+        if(reqType == TYPE_REQUEST_WEATHER_KR)
+        {
+            int       temperature     = 0;
+            nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"time"];
+            nssHour             = [NSString stringWithFormat:@"%@시", [nssTime substringToIndex:2]];
+            temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
+            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
+            {
+                temperature = [TodayWeatherUtil convertFromCelsToFahr:temperature];
+            }
+            
+            nssTempByTime       = [NSString stringWithFormat:@"%d˚", temperature];
+        }
+        else
+        {
+            float       temperature     = 0;
+            nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"date"];
+            nssHour         = [nssTime substringWithRange:NSMakeRange(11, 5)];
+            
+            if(tempUnit == TEMP_UNIT_CELSIUS)
+            {
+                temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"temp_c"] floatValue];
+                nssTempByTime       = [NSString stringWithFormat:@"%.01f˚", temperature];
+            }
+            else
+            {
+                temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"temp_f"] floatValue];
+                nssTempByTime       = [NSString stringWithFormat:@"%d˚", (int)temperature];
+            }
+        }
         
         nssSkyIcon          = [[arrTimeData objectAtIndex:i] objectForKey:@"skyIcon"];
         
@@ -137,32 +205,32 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
                 case 0:
-                    TVC->time1Label.text    = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time1Label.text    = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp1Label.text    = nssTempByTime;
                     TVC->showMore1IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 1:
-                    TVC->time2Label.text = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time2Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp2Label.text = nssTempByTime;
                     TVC->showMore2IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 2:
-                    TVC->time3Label.text = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time3Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp3Label.text = nssTempByTime;
                     TVC->showMore3IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 3:
-                    TVC->time4Label.text = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time4Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp4Label.text = nssTempByTime;
                     TVC->showMore4IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 4:
-                    TVC->time5Label.text = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time5Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp5Label.text = nssTempByTime;
                     TVC->showMore5IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
                 case 5:
-                    TVC->time6Label.text = [NSString stringWithFormat:@"%@시", nssHour];
+                    TVC->time6Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp6Label.text = nssTempByTime;
                     TVC->showMore6IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
                     break;
@@ -195,61 +263,80 @@
     NSString *nssPm10Str          = [currentArpltnDict objectForKey:@"pm10Str"];  // 미세먼지
     NSString *nssPm25Str          = [currentArpltnDict objectForKey:@"pm25Str"];  // 초미세먼지
     
+    NSString *nssResults        = nil;
+    
     NSLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
+    
 
     // Grade가 동일하면 통합대기 값을 전달, 동일할때 우선순위 통합대기 > 미세먼지 > 초미세먼지
     if( (khaiGrade == pm10Grade) && (pm10Grade == pm25Grade) )
     {
-        return [NSString stringWithFormat:@"통합대기 %@", nssKhaiStr];
+        if( (khaiGrade == 0) && (pm10Grade == 0) && (pm25Grade == 0) )
+        {
+            NSLog(@"All air state is zero !!!");
+        }
+        else
+        {
+            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+        }
     }
     else
     {
         if( (khaiGrade > pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"통합대기 %@", nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
         }
         else if ( (khaiGrade == pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"통합대기 %@", nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"미세먼지 %@", nssPm10Str];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
         }
         else if ( (khaiGrade > pm10Grade) && (khaiGrade == pm25Grade) )
         {
-            return [NSString stringWithFormat:@"통합대기 %@", nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade == pm25Grade) )
         {
-            return [NSString stringWithFormat:@"미세먼지 %@", nssPm10Str];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
         }
         else if ( (khaiGrade > pm10Grade) && (khaiGrade < pm25Grade) )
         {
-            return [NSString stringWithFormat:@"초미세먼지 %@", nssPm25Str];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
         }
         else if ( (khaiGrade == pm10Grade) && (khaiGrade < pm25Grade) )
         {
-            return [NSString stringWithFormat:@"초미세먼지 %@", nssPm25Str];
+            return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade < pm25Grade) )
         {
             if ( pm10Grade > pm25Grade)
             {
-                return [NSString stringWithFormat:@"미세먼지 %@", nssPm10Str];
+                return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
             }
             else if ( pm10Grade == pm25Grade)
             {
-                return [NSString stringWithFormat:@"미세먼지 %@", nssPm10Str];
+                return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
             }
             else if ( pm10Grade < pm25Grade)
             {
-                return [NSString stringWithFormat:@"초미세먼지 %@", nssPm25Str];
+                return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
             }
         }
     }
+
+    if( (nssKhaiStr == nil)|| [nssKhaiStr isEqualToString:@"(null)"])
+    {
+        nssResults = @"";
+    }
+    else
+    {
+        nssResults = [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+    }
     
-    return [NSString stringWithFormat:@"통합대기 %@", nssKhaiStr];
+    return nssResults;
 }
 
 /********************************************************************
@@ -344,6 +431,38 @@
         });
     }
 
+}
+                           
+/********************************************************************
+ *
+ * Name			: getCurCountry
+ * Description	: get current country
+ * Returns		: NSString *
+ * Side effects :
+ * Date			: 2017. 2. 19
+ * Author		: SeanKim
+ * History		: 20170219 SeanKim Create function
+ *
+ ********************************************************************/
+- (NSString *) getCurCountry
+{
+    return curCountry;
+}
+
+/********************************************************************
+ *
+ * Name			: setCurCountry
+ * Description	: set current country
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 3. 1
+ * Author		: SeanKim
+ * History		: 20170301 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) setCurCountry:(NSString *)nssCountry
+{
+    curCountry = [NSString stringWithFormat:@"%@", nssCountry];
 }
 
 @end
