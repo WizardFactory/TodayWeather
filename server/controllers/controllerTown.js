@@ -1906,17 +1906,33 @@ function ControllerTown() {
      * @returns {ControllerTown}
      */
     this.getHealthDay = function (req, res, next) {
-        log.info("getHealthDay");
+        var meta = {};
+        meta.method = 'getHealthDay';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
+
+        if (req.params.areaNo == undefined) {
+            log.error("areaNo is undefined", meta);
+            next();
+            return this;
+        }
 
         modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, results) {
-            req.midData.dailyData.forEach(function(day) {
-                var date = kmaTimeLib.convertStringToDate(day.date);
-                for(var i=0; i<results.length; i++) {
-                    if(results[i].date.getTime() == date.getTime()) {
-                        day[results[i].indexType] = results[i].index;
+            if (results && results.length > 0) {
+                req.midData.dailyData.forEach(function(day) {
+                    var date = kmaTimeLib.convertStringToDate(day.date);
+                    for(var i=0; i<results.length; i++) {
+                        if(results[i].date.getTime() == date.getTime()) {
+                            day[results[i].indexType] = results[i].index;
+                        }
                     }
-                }
-            });
+                });
+            }
+            else {
+                log.error("Fail to find area no=" + req.params.areaNo, meta);
+            }
             next();
         });
         return this;
