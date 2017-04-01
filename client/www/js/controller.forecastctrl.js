@@ -840,7 +840,7 @@ angular.module('controller.forecastctrl', [])
                         showRetryConfirm(strError, msg);
                     }
                     else {
-                        Util.ga.trackEvent('position', 'error', 'msg null');
+                        //pass for reload
                     }
                 });
                 return;
@@ -924,7 +924,8 @@ angular.module('controller.forecastctrl', [])
                         }
                         deferred.reject(msg);
                     });
-                } else if (isLocationAuthorized === false) {
+                }
+                else if (isLocationAuthorized === false) {
                     msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                     deferred.reject(msg);
                 }
@@ -937,11 +938,7 @@ angular.module('controller.forecastctrl', [])
                             // ios에서는 registerLocationStateChangeHandler에서 locationStatus가 변경되고 reload 이벤트가 발생함
                             if (ionic.Platform.isAndroid()) {
                                 gLocationAuthorizationStatus = status;
-                                if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
-                                    $scope.$broadcast('reloadEvent');
-                                    deferred.reject(null);
-                                }
-                                else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
                                     // denied 후에 resume 시 reload를 하지 않도록 loadTime을 업데이트 함
                                     WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                                     msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
@@ -949,17 +946,25 @@ angular.module('controller.forecastctrl', [])
                                     // popup으로 사용자에게 가이드 추가 필요
                                 }
                                 else {
+                                    console.log('status='+status+ ' by request location authorization and reload by resume');
                                     deferred.reject(null);
                                 }
                             }
                             else {
+                                //메세지 없이 통과시키고, reload by locationOn.
                                 deferred.reject(null);
                             }
-                        }, function () {
+                        }, function (error) {
+                            Util.ga.trackEvent('position', 'error', 'request location authorization');
+                            Util.ga.trackException(error, false);
                             deferred.reject(null);
                         }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
                     else {
+                        /**
+                         * 이미 체크하고 함수에 들어오기 때문에 발생할 수 없음.
+                         */
+                        Util.ga.trackEvent('plugin', 'error', 'loadDiagnostic');
                         deferred.reject(null);
                     }
                 }
@@ -1277,7 +1282,7 @@ angular.module('controller.forecastctrl', [])
         }
 
         $scope.$on('reloadEvent', function(event, sender) {
-            console.log("reloadEvent");
+            console.log("reloadEvent sender="+sender);
             Util.ga.trackEvent('reload', 'sender', sender);
 
             if (confirmPopup) {
