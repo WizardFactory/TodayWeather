@@ -10,7 +10,7 @@ angular.module('controller.settingctrl', [])
 
                 if (window.plugins == undefined || plugins.appPreferences == undefined) {
                     console.log('appPreferences is undefined');
-                    Util.trackEvent("plugin", "error", "loadAppPreferences");
+                    Util.ga.trackEvent("plugin", "error", "loadAppPreferences");
                     return;
                 }
 
@@ -80,7 +80,7 @@ angular.module('controller.settingctrl', [])
                 Util.ga.trackEvent('action', 'click', 'open market');
             }
             else {
-                Util.trackEvent("inappbrowser", "error", "loadPlugin");
+                Util.ga.trackEvent("inappbrowser", "error", "loadPlugin");
                 var options = {
                     location: "yes",
                     clearcache: "yes",
