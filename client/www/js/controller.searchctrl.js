@@ -155,7 +155,112 @@ angular.module('controller.searchctrl', [])
             }
         };
 
-        var gIsLocationAuthorized;
+        var gLocationAuthorizationStatus;
+
+        function showRetryConfirm(title, template) {
+            var confirmPopup;
+            //if (confirmPopup) {
+            //    confirmPopup.close();
+            //}
+
+            var buttons = [];
+            buttons.push({
+                text: $translate.instant("LOC_CLOSE"),
+                onTap: function () {
+                    return 'close';
+                }
+            });
+
+            if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                template += '<br>';
+                template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
+
+                //buttons.push({
+                //    text: $translate.instant("LOC_SEARCH"),
+                //    onTap: function () {
+                //        return 'search';
+                //    }
+                //});
+
+                buttons.push({
+                    text: $translate.instant("LOC_SETTING"),
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'settings';
+                    }
+                });
+                Util.ga.trackEvent('window', 'show', 'deniedAlwaysPopup');
+            }
+            else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                //buttons.push({
+                //    text: $translate.instant("LOC_SEARCH"),
+                //    onTap: function () {
+                //        return 'search';
+                //    }
+                //});
+
+                buttons.push({
+                    text: $translate.instant("LOC_RETRY"),
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'retry';
+                    }
+                });
+                Util.ga.trackEvent('window', 'show', 'deniedPopup');
+            }
+            else {
+                buttons.push({
+                    text: $translate.instant("LOC_RETRY"),
+                    type: 'button-positive',
+                    onTap: function () {
+                        return 'retry';
+                    }
+                });
+                Util.ga.trackEvent('window', 'show', 'retryPopup');
+            }
+
+            confirmPopup = $ionicPopup.show({
+                title: title,
+                template: template,
+                buttons: buttons
+            });
+
+            confirmPopup
+                .then(function (res) {
+                    if (res == 'retry') {
+                        console.log('retry');
+                        Util.ga.trackEvent('action', 'click', 'reloadEvent');
+                        setTimeout(function () {
+                            $scope.OnSearchCurrentPosition();
+                            //$scope.$broadcast('reloadEvent');
+                        }, 0);
+                    }
+                    //else if (res == 'search') {
+                    //    console.log('go search');
+                    //    Util.ga.trackEvent('action', 'click', 'moveSearch');
+                    //    WeatherInfo.disableCity(true);
+                    //    $location.path('/tab/search');
+                    //}
+                    else if (res == 'settings') {
+                        console.log("Opens settings page for this app.");
+                        Util.ga.trackEvent('action', 'click', 'settings');
+                        setTimeout(function () {
+                            cordova.plugins.diagnostic.switchToSettings(function () {
+                                console.log("Successfully switched to Settings app");
+                            }, function (error) {
+                                console.log("The following error occurred: "+error);
+                            });
+                        }, 0);
+                    } else {
+                        Util.ga.trackEvent('action', 'click', 'close');
+                        console.log("Close");
+                    }
+                })
+                .finally(function () {
+                    console.log('called finally');
+                    confirmPopup = undefined;
+                });
+        }
 
         $scope.OnSearchCurrentPosition = function() {
             Util.ga.trackEvent('position', 'get', 'OnSearch');
@@ -174,39 +279,12 @@ angular.module('controller.searchctrl', [])
             }, function(msg) {
                 hideLoadingIndicator();
                 if (msg !== null) {
-                    if (gIsLocationAuthorized == false) {
-
-                        Util.ga.trackEvent('window', 'show', 'authorizedPopup');
-
-                        msg += '<br>';
-                        msg += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
-                        var confirmPopup = $ionicPopup.confirm({
-                            title: strError,
-                            template: msg,
-                            okText: $translate.instant("LOC_SETTING"),
-                            cancelText: $translate.instant("LOC_CLOSE")
-                        });
-                        confirmPopup.then(function (res) {
-                            if (res) {
-                                console.log("Opens settings page for this app.");
-                                Util.ga.trackEvent('action', 'click', 'settings');
-                                setTimeout(function () {
-                                    cordova.plugins.diagnostic.switchToSettings(function () {
-                                        console.log("Successfully switched to Settings app");
-                                    }, function (error) {
-                                        console.log("The following error occurred: "+error);
-                                    });
-                                }, 0);
-                            } else {
-                                console.log("Close");
-                                Util.ga.trackEvent('action', 'click', 'close');
-                            }
-                        });
-                    }
-                    else {
-                        Util.ga.trackEvent('window', 'show', 'retryPopup');
-                        $scope.showAlert(strError, msg);
-                    }
+                    showRetryConfirm(strError, msg);
+                }
+                else {
+                    setTimeout(function () {
+                        $scope.OnSearchCurrentPosition();
+                    }, 0);
                 }
             });
         };
@@ -525,7 +603,6 @@ angular.module('controller.searchctrl', [])
             var msg;
             Util.ga.trackEvent('position', 'status', 'enabled', isLocationEnabled?1:0);
             Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
-            gIsLocationAuthorized = isLocationAuthorized;
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (coords) {
@@ -550,10 +627,34 @@ angular.module('controller.searchctrl', [])
                     if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
                         // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
                         // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
-                        cordova.plugins.diagnostic.requestLocationAuthorization(function () {
-                        }, null, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
+                        cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
+                            if (ionic.Platform.isAndroid()) {
+                                gLocationAuthorizationStatus = status;
+                                if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                    // denied 후에 resume 시 reload를 하지 않도록 loadTime을 업데이트 함
+                                    // WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
+                                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                    deferred.reject(msg);
+                                    // popup으로 사용자에게 가이드 추가 필요
+                                }
+                                else {
+                                    console.log('status='+status+ ' by request location authorization and reload by resume');
+                                    deferred.reject(null);
+                                }
+                            }
+                            else {
+                                //메세지 없이 통과시키고, reload by locationOn.
+                                deferred.reject(null);
+                            }
+                        }, function (error) {
+                            Util.ga.trackEvent('position', 'error', 'request location authorization');
+                            Util.ga.trackException(error, false);
+                            deferred.reject(null);
+                        }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
-                    deferred.reject(null);
+                    else {
+                        deferred.reject(null);
+                    }
                 }
             } else if (isLocationEnabled === false) {
                 msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
