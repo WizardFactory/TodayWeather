@@ -25,17 +25,22 @@ angular.module('starter', [
     'service.run'
 ])
     .factory('$exceptionHandler', function (Util) {
-       return function (execption, cause) {
-           console.log(execption, cause);
+       return function (exception, cause) {
+           console.log(exception, cause);
            if (Util && Util.ga) {
-               Util.ga.trackEvent('angular', 'error', execption);
-               Util.ga.trackException(execption, true);
+               if (exception) {
+                   Util.ga.trackEvent('angular', 'error', exception.message);
+                   Util.ga.trackException(exception.stack, true);
+               }
+               else {
+                   Util.ga.trackEvent('angular', 'error', 'execption is null');
+               }
            }
            else {
                console.log('util or util.ga is undefined');
            }
            if (twClientConfig && twClientConfig.debug) {
-               alert("ERROR in " + execption);
+               alert("ERROR in " + exception);
            }
        }
     })
@@ -123,16 +128,16 @@ angular.module('starter', [
                 }
             }, function(match) {
                 console.log(match.$route.parent + ', ' + match.$args.fav);
-                Util.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
+                Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
                 $state.transitionTo(match.$route.parent, match.$args, { reload: true });
             }, function(nomatch) {
                 console.log('No match', nomatch);
-                Util.trackEvent('plugin', 'info', 'deepLinkNoMatch');
+                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
             });
         }
         else {
             console.log('Fail to find ionic deep link plugin');
-            Util.trackException('Fail to find ionic deep link plugin', false);
+            Util.ga.trackException('Fail to find ionic deep link plugin', false);
         }
     })
 

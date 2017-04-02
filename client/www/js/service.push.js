@@ -199,8 +199,8 @@ angular.module('service.push', [])
             });
 
             window.push.on('error', function(e) {
-                console.log('notification error='+JSON.stringify(e));
-                Util.ga.trackEvent('plugin', 'error', 'push '+JSON.stringify(e));
+                console.log('notification error='+e.message);
+                Util.ga.trackEvent('plugin', 'error', 'push '+ e.message);
                 // e.message
             });
 
@@ -343,7 +343,7 @@ angular.module('service.push', [])
 
             if (!window.PushNotification) {
                 console.log("push notification plugin is not set");
-                Util.trackEvent('push', 'error', 'loadPlugin');
+                Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
 
