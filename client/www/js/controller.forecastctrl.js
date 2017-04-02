@@ -258,7 +258,6 @@ angular.module('controller.forecastctrl', [])
         var imgBigSkyStateSize;
 
         // retry popup이 없는 경우 항상 undefined여야 함.
-        var confirmPopup;
         var isLoadingIndicator = false;
         var strError = "Error";
         var strAddLocation = "Add locations";
@@ -711,119 +710,6 @@ angular.module('controller.forecastctrl', [])
             isLoadingIndicator = false;
         }
 
-        var gLocationAuthorizationStatus;
-
-        /**
-         * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
-         * 그래서 init와 reloadevent가 둘다 오게 되는데 retry confirm이 두개 뜨지 않게 한개 있는 경우 닫았다가 새롭게 열게 함.
-         * @param title
-         * @param template
-         * @param callback
-         */
-        function showRetryConfirm(title, template) {
-            if (confirmPopup) {
-                confirmPopup.close();
-            }
-
-            var buttons = [];
-            buttons.push({
-                text: strClose,
-                onTap: function () {
-                    return 'close';
-                }
-            });
-
-            if (window.cordova && cordova.plugins.diagnostic &&
-                gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
-                template += '<br>';
-                template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
-
-                buttons.push({
-                    text: $translate.instant("LOC_SEARCH"),
-                    onTap: function () {
-                        return 'search';
-                    }
-                });
-
-                buttons.push({
-                    text: $translate.instant("LOC_SETTING"),
-                    type: 'button-positive',
-                    onTap: function () {
-                        return 'settings';
-                    }
-                });
-                Util.ga.trackEvent('window', 'show', 'deniedAlwaysPopup');
-            }
-            else if (window.cordova && cordova.plugins.diagnostic &&
-                gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                buttons.push({
-                    text: $translate.instant("LOC_SEARCH"),
-                    onTap: function () {
-                        return 'search';
-                    }
-                });
-
-                buttons.push({
-                    text: strRetry,
-                    type: 'button-positive',
-                    onTap: function () {
-                        return 'retry';
-                    }
-                });
-                Util.ga.trackEvent('window', 'show', 'deniedPopup');
-            }
-            else {
-                buttons.push({
-                    text: strRetry,
-                    type: 'button-positive',
-                    onTap: function () {
-                        return 'retry';
-                    }
-                });
-                Util.ga.trackEvent('window', 'show', 'retryPopup');
-            }
-
-            confirmPopup = $ionicPopup.show({
-                title: title,
-                template: template,
-                buttons: buttons
-            });
-
-            confirmPopup
-                .then(function (res) {
-                    if (res == 'retry') {
-                        console.log('retry');
-                        Util.ga.trackEvent('action', 'click', 'reloadEvent');
-                        setTimeout(function () {
-                            $scope.$broadcast('reloadEvent');
-                        }, 0);
-                    }
-                    else if (res == 'search') {
-                        console.log('go search');
-                        Util.ga.trackEvent('action', 'click', 'moveSearch');
-                        WeatherInfo.disableCity(true);
-                        $location.path('/tab/search');
-                    }
-                    else if (res == 'settings') {
-                        console.log("Opens settings page for this app.");
-                        Util.ga.trackEvent('action', 'click', 'settings');
-                        setTimeout(function () {
-                            cordova.plugins.diagnostic.switchToSettings(function () {
-                                console.log("Successfully switched to Settings app");
-                            }, function (error) {
-                                console.log("The following error occurred: "+error);
-                            });
-                        }, 0);
-                    } else {
-                        Util.ga.trackEvent('action', 'click', 'close');
-                        console.log("Close");
-                    }
-                })
-                .finally(function () {
-                    console.log('called finally');
-                    confirmPopup = undefined;
-                });
-        }
 
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
@@ -834,12 +720,12 @@ angular.module('controller.forecastctrl', [])
                         hideLoadingIndicator();
                     }, function (msg) {
                         hideLoadingIndicator();
-                        showRetryConfirm(strError, msg);
+                        $scope.showRetryConfirm(strError, msg, 'forecast');
                     });
                 }, function(msg) {
                     hideLoadingIndicator();
                     if (msg !== null) {
-                        showRetryConfirm(strError, msg);
+                        $scope.showRetryConfirm(strError, msg, 'forecast');
                     }
                     else {
                         //pass for reload
@@ -875,7 +761,7 @@ angular.module('controller.forecastctrl', [])
                     if (Util.isLocationEnabled()) {
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
                             console.log('status='+status);
-                            gLocationAuthorizationStatus = status;
+                            $scope.setLocationAuthorizationStatus(status);
                             if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
                                 _getCurrentPosition(deferred, true, true);
                             } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
@@ -939,10 +825,8 @@ angular.module('controller.forecastctrl', [])
                         cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
                             // ios에서는 registerLocationStateChangeHandler에서 locationStatus가 변경되고 reload 이벤트가 발생함
                             if (ionic.Platform.isAndroid()) {
-                                gLocationAuthorizationStatus = status;
+                                $scope.setLocationAuthorizationStatus(status);
                                 if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                    // denied 후에 resume 시 reload를 하지 않도록 loadTime을 업데이트 함
-                                    WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                                     msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
                                     deferred.reject(msg);
                                     // popup으로 사용자에게 가이드 추가 필요
@@ -973,8 +857,25 @@ angular.module('controller.forecastctrl', [])
             }
             else if (isLocationEnabled === false) {
                 if (cityData.address === null && cityData.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
-                    msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
-                    deferred.reject(msg);
+                    if (window.cordova && cordova.plugins.locationAccuracy) {
+                        cordova.plugins.locationAccuracy.request(
+                            function (success) {
+                                Util.ga.trackEvent("position", "status", "successUserAgreed");
+                                //메세지 없이 통과시키고, reload by locationOn.
+                                deferred.reject(null);
+                            },
+                            function (error) {
+                                Util.ga.trackEvent("position", "error", error.message);
+                                msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                                deferred.reject(msg);
+                            },
+                            cordova.plugins.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+                    }
+                    else {
+                        Util.ga.trackEvent("plugin", "error", "loadLocationAccuracy");
+                        msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                        deferred.reject(msg);
+                    }
                 }
                 else { // 위치 서비스가 꺼져있으면 저장된 위치로 날씨 업데이트
                     deferred.resolve();
@@ -1284,11 +1185,10 @@ angular.module('controller.forecastctrl', [])
         }
 
         $scope.$on('reloadEvent', function(event, sender) {
-            console.log("reloadEvent sender="+sender);
             Util.ga.trackEvent('reload', 'sender', sender);
 
-            if (confirmPopup) {
-                console.log('skip event when retry load popup is shown');
+            if ($scope.getConfirmPopup()) {
+                //console.log('skip event when retry load popup is shown');
                 Util.ga.trackEvent('reload', 'skip', 'popup', 1);
                 return;
             }

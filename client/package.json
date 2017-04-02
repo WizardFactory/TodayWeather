@@ -73,7 +73,8 @@
       }
     },
     "cordova-plugin-globalization",
-    "cordova.plugins.diagnostic@3.3.3"
+    "cordova.plugins.diagnostic@3.3.3",
+    "cordova-plugin-request-location-accuracy"
   ],
   "cordovaPlatforms": [
     "ios",
