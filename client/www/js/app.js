@@ -25,82 +25,58 @@ angular.module('starter', [
     'service.run'
 ])
     .factory('$exceptionHandler', function (Util) {
-       return function (execption, cause) {
-           console.log(execption, cause);
+       return function (exception, cause) {
+           console.log(exception, cause);
            if (Util && Util.ga) {
-               Util.ga.trackEvent('angular', 'error', execption);
-               Util.ga.trackException(execption, true);
+               if (exception) {
+                   Util.ga.trackEvent('angular', 'error', exception.message);
+                   Util.ga.trackException(exception.stack, true);
+               }
+               else {
+                   Util.ga.trackEvent('angular', 'error', 'execption is null');
+               }
            }
            else {
                console.log('util or util.ga is undefined');
            }
            if (twClientConfig && twClientConfig.debug) {
-               alert("ERROR in " + execption);
+               alert("ERROR in " + exception);
            }
        }
     })
-    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo, $state, Units) {
+    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units) {
         //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
-        document.addEventListener("deviceready", function () {
-            if (navigator.splashscreen) {
-                console.log('splash screen hide!!!');
-                navigator.splashscreen.hide();
+        if (navigator.splashscreen) {
+            console.log('splash screen hide!!!');
+            navigator.splashscreen.hide();
+        }
+
+        if (!twClientConfig.debug && window.AirBridgePlugin) {
+            window.airbridgeCustomOnboarding = function (__json) {
+                console.log('Resulted Json String: ' + __json);
+            };
+            AirBridgePlugin.initInstance(twClientConfig.airBridgeToken, twClientConfig.airBridgeAppId);
+        }
+
+        if (ionic.Platform.isIOS()) {
+           //
+        } else if (ionic.Platform.isAndroid()) {
+            if(window.MobileAccessibility){
+                console.log("set usePreferredTextZoom to false");
+                window.MobileAccessibility.usePreferredTextZoom(false);
             }
+        }
 
-            if (window.IonicDeeplink) {
-                IonicDeeplink.route({
-                    '/:fav': {
-                        target: 'tab.forecast',
-                        parent: 'tab.forecast'
-                    }
-                }, function(match) {
-                    console.log(match.$route.parent + ', ' + match.$args.fav);
-                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
-                }, function(nomatch) {
-                    console.log('No match', nomatch);
-                });
-            }
-            else {
-                console.log('Fail to find ionic deep link plugin');
-            }
+        // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+        // for form inputs)
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+            cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+            cordova.plugins.Keyboard.disableScroll(true);
+        }
 
-            if (!twClientConfig.debug && window.AirBridgePlugin) {
-                window.airbridgeCustomOnboarding = function (__json) {
-                    console.log('Resulted Json String: ' + __json);
-                };
-
-                AirBridgePlugin.initInstance(twClientConfig.airBridgeToken, twClientConfig.airBridgeAppId);
-            }
-        }, false);
-
-        $ionicPlatform.ready(function() {
-
-            if (ionic.Platform.isIOS()) {
-                if (window.applewatch) {
-                    applewatch.init(function () {
-                        console.log('Succeeded to initialize for apple-watch');
-                    }, function (err) {
-                        console.log('Failed to initialize apple-watch', err);
-                    }, 'group.net.wizardfactory.todayweather');
-                }
-            } else if (ionic.Platform.isAndroid()) {
-                if(window.MobileAccessibility){
-                    console.log("set usePreferredTextZoom to false");
-                    window.MobileAccessibility.usePreferredTextZoom(false);
-                }
-            }
-
-            // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
-            // for form inputs)
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
-                cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
-                cordova.plugins.Keyboard.disableScroll(true);
-            }
-
-            Units.loadUnits();
-        });
+        Units.loadUnits();
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             if (toState.name === 'tab.search') {
@@ -143,6 +119,26 @@ angular.module('starter', [
 
             Util.ga.trackView(toState.name);
         });
+
+        if (window.IonicDeeplink) {
+            IonicDeeplink.route({
+                '/:fav': {
+                    target: 'tab.forecast',
+                    parent: 'tab.forecast'
+                }
+            }, function(match) {
+                console.log(match.$route.parent + ', ' + match.$args.fav);
+                Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
+                $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+            }, function(nomatch) {
+                console.log('No match', nomatch);
+                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
+            });
+        }
+        else {
+            console.log('Fail to find ionic deep link plugin');
+            Util.ga.trackException('Fail to find ionic deep link plugin', false);
+        }
     })
 
     .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider,

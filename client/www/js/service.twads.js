@@ -61,6 +61,8 @@ angular.module('service.twads', [])
                 function (e) {
                     console.log('Fail to create banner view');
                     console.log(e);
+                    Util.ga.trackEvent('plugin', 'error', 'admobCreateBanner');
+                    Util.ga.trackException(e, false);
                 });
         };
 
@@ -85,6 +87,8 @@ angular.module('service.twads', [])
                 }, function (e) {
                     console.log('Fail to destroy banner');
                     console.log(e);
+                    Util.ga.trackEvent('plugin', 'error', 'admobDestroyBanner');
+                    Util.ga.trackException(e, false);
                 });
 
                 obj.enableAds = enable;
@@ -135,6 +139,8 @@ angular.module('service.twads', [])
             }, function (e) {
                 console.log('fail to show about ad mob show='+show);
                 console.log(JSON.stringify(e));
+                Util.ga.trackEvent('plugin', 'error', 'admobShowBanner');
+                Util.ga.trackException(e, false);
             });
         };
 
@@ -147,6 +153,7 @@ angular.module('service.twads', [])
                     obj.setShowAds(obj.requestEnable);
                     obj.setLayout(obj.requestEnable);
                 }
+                Util.ga.trackEvent('plugin', 'error', 'loadAdmob');
                 return;
             }
 
@@ -176,10 +183,13 @@ angular.module('service.twads', [])
             }, function (e) {
                 console.log('Fail to set options of Ad mob');
                 console.log(e);
+                Util.ga.trackException('setAdmobOptions', 'error', e);
+                Util.ga.trackException(e, false);
             });
 
             document.addEventListener(admob.events.onAdFailedToLoad,function(message){
                 console.log('on banner Failed Receive Ad');
+                Util.ga.trackEvent('plugin', 'error', 'admobReceiveAd');
             });
 
             document.addEventListener(admob.events.onAdLoaded,function(message){

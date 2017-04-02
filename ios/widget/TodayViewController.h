@@ -14,12 +14,21 @@
 #import	<CoreLocation/CoreLocation.h>
 #import "TodayWeatherShowMore.h"
 
+/********************************************************************
+ Enumration
+ ********************************************************************/
+
+
+
 @interface CityInfo : NSObject
 @property (nonatomic) id identifier;
 @property (nonatomic) NSString *address;
 @property (nonatomic) BOOL currentPosition;
 @property (nonatomic) int index;
 @property (nonatomic) NSDictionary *weatherData;
+@property (nonatomic) NSString *name;
+@property (nonatomic) NSString *country;
+@property (nonatomic) NSDictionary *location;
 - (void) encodeWithCoder : (NSCoder *)encode ;
 - (id) initWithCoder : (NSCoder *)decode;
 @end
@@ -52,6 +61,9 @@
     IBOutlet UIButton       *noLocEditWidgetBtn;
     
     __weak IBOutlet UIButton *nextCityBtn;
+    __weak IBOutlet UIButton *twAppBtn;
+    __weak IBOutlet UILabel *noLocationLabel;
+    
 
     NSMutableArray          *mCityList;
     NSMutableArray          *mCityDictList;                 // for sealization을 위한 
@@ -60,8 +72,8 @@
     BOOL                    bIsReqComplete;
     
     // current postion
-    double								gMylatitude;
-    double								gMylongitude;
+    float								gMylatitude;
+    float								gMylongitude;
     
     CLLocationManager					*locationManager;
     CLLocation							*startingPoint;
@@ -73,7 +85,7 @@
     __weak IBOutlet UIView *showMoreView;
     
     TodayWeatherShowMore        *todayWSM;
-    NSDictionary                *curJsonDict;
+    NSMutableDictionary                *curJsonDict;
     
 @public
     __weak IBOutlet UILabel *time1Label;
@@ -122,19 +134,25 @@
 - (void) initWidgetDatas;
 - (void) initLocationInfo;
 - (void) refreshDatas;
-- (void) getAddressFromDaum:(double)latitude longitude:(double)longitude;
+- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude;
+- (void) getAddressFromGoogle:(float)latitude longitude:(float)longitude;
 - (void) requestAsyncByURLSession:(NSString *)nssURL reqType:(NSUInteger)type;
 - (void) makeJSONWithData:(NSData *)jsonData reqType:(NSUInteger)type;
-- (void) parseJSONData:(NSDictionary *)jsonDict;
+- (void) parseKRAddress:(NSDictionary *)jsonDict;
+- (void) parseGlobalAddress:(NSDictionary *)jsonDict;
 - (void) processWeatherResultsWithShowMore:(NSDictionary *)jsonDict;
-- (NSString *) makeRequestURL:(NSString *)nssAddr1 addr2:(NSString*)nssAddr2 addr3:(NSString *)nssAddr3;
+- (void) processWeatherResultsAboutGlobal:(NSDictionary *)jsonDict;
+- (NSString *) makeRequestURL:(NSString *)nssAddr1 addr2:(NSString*)nssAddr2 addr3:(NSString *)nssAddr3 country:(NSString *)nssCountry;
+- (void) processKRAddress:(NSString *)nssAddress;
 - (BOOL) setCityInfo:(CityInfo *)nextCity;
 
 - (void) processPrevData:(int)idx;
 - (void) processRequestIndicator:(BOOL)isComplete;
 - (void) processShowMore;
 
-- (NSDictionary *) getCurJsonDict;
+- (NSMutableDictionary *) getCurJsonDict;
 - (void) setCurJsonDict:(NSDictionary *)dict;
+- (void) updateCurCityInfo:nssName address:nssAddress country:nssCountryName;
+- (void) updateCurLocation:(NSDictionary *)nsdLocation;
 
 @end

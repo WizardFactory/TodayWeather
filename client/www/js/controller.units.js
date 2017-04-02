@@ -109,20 +109,25 @@ angular.module('controller.units', [])
             var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
             suitePrefs.fetch(function (value) {
                 console.log("fetch preference Success: " + value);
-                //callback(undefined, value);
+                if (value == undefined || value == '') {
+                    self._initUnits();
+                    self.saveUnits();
+                    return;
+                }
+
                 units = JSON.parse(value);
                 if (units == undefined) {
                     self._initUnits();
                     self.saveUnits();
+                    return;
                 }
-                else {
-                    for (key in units) {
-                        self[key] = units[key];
-                    }
+
+                for (key in units) {
+                    self[key] = units[key];
                 }
             }, function (error) {
                 console.log("fetch preference Error: " + error);
-                _initUnits();
+                self._initUnits();
                 self.saveUnits();
             }, 'units');
         };

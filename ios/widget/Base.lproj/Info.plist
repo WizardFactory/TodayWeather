@@ -2,10 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>ko_KR</string>
 	<key>CFBundleDisplayName</key>
-	<string>오늘날씨</string>
+	<string>TodayWeather</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -36,5 +34,7 @@
 	</dict>
 	<key>CFBundleAllowMixedLocalizations</key>
 	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string></string>
 </dict>
 </plist>

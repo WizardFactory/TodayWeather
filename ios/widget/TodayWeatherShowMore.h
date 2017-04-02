@@ -13,6 +13,7 @@
  Declare include files
  ********************************************************************/
 #import "TodayViewController.h"
+#import "WidgetConfig.h"
 
 @class TodayViewController;
 
@@ -21,24 +22,27 @@
  ********************************************************************/
 @interface TodayWeatherShowMore : NSObject
 {
-    
+    NSString *curCountry;
 }
 
 /********************************************************************
  Declare Class properties
  ********************************************************************/
-
+@property (retain, nonatomic) NSString *curCountry;
 
 /********************************************************************
  Declare Class functions
  ********************************************************************/
-- (void) processDailyData:(NSDictionary *)jsonDict;
-- (void) processByTimeData:(NSDictionary *)jsonDict;
+- (void) processDailyData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
+- (void) processByTimeData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
 - (NSString *) getAirState:(NSDictionary *)currentArpltnDict;
 - (void) transitView:(UIView *)curView
           transition:(UIViewAnimationTransition)transiton
             duration:(NSTimeInterval)duration;
 - (void) showDailyWeatherAsWidth;
+
+- (NSString *) getCurCountry;
+- (void) setCurCountry:(NSString *)nssCountry;
 
 @end
 
