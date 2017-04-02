@@ -1151,39 +1151,36 @@ angular.module('service.weatherutil', [])
 
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
+            var startTime = new Date().getTime();
+            var endTime;
 
-            ionic.Platform.ready(function() {
-                var startTime = new Date().getTime();
-                var endTime;
+            _navigatorRetryGetCurrentPosition(2, function (error, position, retryCount) {
+                endTime = new Date().getTime();
+                if (error) {
+                    Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
+                    Util.ga.trackEvent('position', 'warn', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                    return deferred.reject();
+                }
 
-                _navigatorRetryGetCurrentPosition(2, function (error, position, retryCount) {
+                Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
+                Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
+                deferred.resolve(position.coords);
+            });
+
+            if (ionic.Platform.isAndroid() && window.cordova) {
+                _nativeRetryGetCurrentPosition(2, function (error, position, retryCount) {
                     endTime = new Date().getTime();
                     if (error) {
-                        Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
-                        Util.ga.trackEvent('position', 'warn', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                        Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
+                        Util.ga.trackEvent('position', 'warn', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                         return deferred.reject();
                     }
 
-                    Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
-                    Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
+                    Util.ga.trackTiming('position', endTime - startTime, 'get', 'native');
+                    Util.ga.trackEvent('position', 'get', 'native(retry:' + retryCount + ')', endTime - startTime);
                     deferred.resolve(position.coords);
                 });
-
-                if (ionic.Platform.isAndroid() && window.cordova) {
-                    _nativeRetryGetCurrentPosition(2, function (error, position, retryCount) {
-                        endTime = new Date().getTime();
-                        if (error) {
-                            Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
-                            Util.ga.trackEvent('position', 'warn', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                            return deferred.reject();
-                        }
-
-                        Util.ga.trackTiming('position', endTime - startTime, 'get', 'native');
-                        Util.ga.trackEvent('position', 'get', 'native(retry:' + retryCount + ')', endTime - startTime);
-                        deferred.resolve(position.coords);
-                    });
-                }
-            });
+            }
 
             return deferred.promise;
         };
