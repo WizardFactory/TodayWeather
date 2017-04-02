@@ -733,7 +733,8 @@ angular.module('controller.forecastctrl', [])
                 }
             });
 
-            if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+            if (window.cordova && cordova.plugins.diagnostic &&
+                gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                 template += '<br>';
                 template += $translate.instant("LOC_OPENS_THE_APP_INFO_PAGE");
 
@@ -753,7 +754,8 @@ angular.module('controller.forecastctrl', [])
                 });
                 Util.ga.trackEvent('window', 'show', 'deniedAlwaysPopup');
             }
-            else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
+            else if (window.cordova && cordova.plugins.diagnostic &&
+                gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
                 buttons.push({
                     text: $translate.instant("LOC_SEARCH"),
                     onTap: function () {
