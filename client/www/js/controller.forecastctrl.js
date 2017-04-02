@@ -829,7 +829,6 @@ angular.module('controller.forecastctrl', [])
                                 if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
                                     msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
                                     deferred.reject(msg);
-                                    // popup으로 사용자에게 가이드 추가 필요
                                 }
                                 else {
                                     console.log('status='+status+ ' by request location authorization and reload by resume');
@@ -1188,7 +1187,6 @@ angular.module('controller.forecastctrl', [])
             Util.ga.trackEvent('reload', 'sender', sender);
 
             if ($scope.getConfirmPopup()) {
-                //console.log('skip event when retry load popup is shown');
                 Util.ga.trackEvent('reload', 'skip', 'popup', 1);
                 return;
             }
@@ -1199,7 +1197,6 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
             } else if (sender === 'locationOn') {
-                // currentPosition이고 confirmPopup이 없는 경우에만 reload
                 if (cityData.currentPosition === false) {
                     Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;

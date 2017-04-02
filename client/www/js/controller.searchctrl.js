@@ -527,7 +527,6 @@ angular.module('controller.searchctrl', [])
                                 if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
                                     msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                                     deferred.reject(msg);
-                                    // popup으로 사용자에게 가이드 추가 필요
                                 }
                                 else {
                                     console.log('status='+status+ ' by request location authorization and reload by resume');
