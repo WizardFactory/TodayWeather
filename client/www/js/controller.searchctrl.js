@@ -497,7 +497,9 @@ angular.module('controller.searchctrl', [])
             Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
             if (isLocationEnabled === true) {
                 if (isLocationAuthorized === true) {
-                    WeatherUtil.getCurrentPosition().then(function (coords) {
+                    WeatherUtil.getCurrentPosition().then(function (data) {
+                        Util.ga.trackEvent('position', 'done', data.provider);
+                        var coords = data.coords;
                         WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
                             deferred.resolve(geoInfo);
                         }, function () {

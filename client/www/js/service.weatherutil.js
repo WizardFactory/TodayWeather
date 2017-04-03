@@ -1010,6 +1010,7 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         }
 
+        var cachedGeoInfo;
         /**
          * 찾은 주소가 한국이면, daum에서 주소 갱신함.
          * @param lat
@@ -1020,6 +1021,14 @@ angular.module('service.weatherutil', [])
             var deferred = $q.defer();
             var startTime = new Date().getTime();
             var endTime;
+            lat = parseFloat(lat.toFixed(3));
+            long = parseFloat(long.toFixed(3));
+            if (cachedGeoInfo && lat == cachedGeoInfo.location.lat && long == cachedGeoInfo.location.long) {
+                endTime = new Date().getTime();
+                Util.ga.trackEvent('address', 'get', 'cache', endTime - startTime);
+                deferred.resolve(cachedGeoInfo);
+                return deferred.promise;
+            }
 
             getGeoInfoFromGoogle(lat, long).then(function (geoInfo) {
                 endTime = new Date().getTime();
@@ -1042,6 +1051,7 @@ angular.module('service.weatherutil', [])
                             geoInfo.name = data.name;
                         }
                         console.log(geoInfo);
+                        cachedGeoInfo = geoInfo;
                         deferred.resolve(geoInfo);
                     }, function (err) {
                         endTime = new Date().getTime();
@@ -1059,6 +1069,7 @@ angular.module('service.weatherutil', [])
                 else {
                     getGeoCodeFromGoogle(geoInfo.address).then(function (info) {
                         geoInfo.location = obj.geolocationNormalize(info.location);
+                        cachedGeoInfo = geoInfo;
                         deferred.resolve(geoInfo);
                     });
                 }
@@ -1078,6 +1089,25 @@ angular.module('service.weatherutil', [])
         };
 
         function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
+            var maximumAge;
+            var timeout;
+            var enableHighAccuracy;
+            if (retryCount == 3) {
+                maximumAge = 3000;
+                timeout = 5000;
+                enableHighAccuracy = false;
+            }
+            else if (retryCount == 2) {
+                maximumAge = 30000;
+                timeout = 5000;
+                enableHighAccuracy = true;
+            }
+            else if (retryCount == 1) {
+                maximumAge = 300000;
+                timeout = 5000;
+                enableHighAccuracy = false;
+            }
+
             navigator.geolocation.getCurrentPosition(function (position) {
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
@@ -1121,32 +1151,7 @@ angular.module('service.weatherutil', [])
                         _navigatorRetryGetCurrentPosition(retryCount, callback);
                     }, 500);
                 }
-            }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
-        }
-
-        function _nativeRetryGetCurrentPosition(retryCount, callback) {
-            var orgGeo = cordova.require('cordova/modulemapper').getOriginalSymbol(window, 'navigator.geolocation');
-
-            orgGeo.getCurrentPosition(function (position) {
-                    console.log('native geolocation');
-                    console.log(position);
-
-                    callback(undefined, position, retryCount);
-                },
-                function (error) {
-                    console.log("Fail to get current position from native");
-                    console.log("code:"+error.code+" message:"+error.message);
-
-                    retryCount--;
-                    if (retryCount <= 0) {
-                        return callback(error, undefined, retryCount);
-                    }
-                    else {
-                        setTimeout(function () {
-                            _nativeRetryGetCurrentPosition(retryCount, callback);
-                        }, 500);
-                    }
-                }, { maximumAge: 3000, timeout: 5000, enableHighAccuracy: retryCount%2!=0 });
+            }, { maximumAge: maximumAge, timeout: timeout, enableHighAccuracy: enableHighAccuracy });
         }
 
         obj.getCurrentPosition = function () {
@@ -1154,7 +1159,19 @@ angular.module('service.weatherutil', [])
             var startTime = new Date().getTime();
             var endTime;
 
-            _navigatorRetryGetCurrentPosition(2, function (error, position, retryCount) {
+            var watchID = navigator.geolocation.watchPosition(function (position) {
+                endTime = new Date().getTime();
+                Util.ga.trackTiming('position', endTime - startTime, 'get', 'watch');
+                Util.ga.trackEvent('position', 'get', 'watch', endTime - startTime);
+                navigator.geolocation.clearWatch(watchID);
+                deferred.resolve({coords: position.coords, provider: 'watchPosition'});
+            }, function (error) {
+                Util.ga.trackEvent('position', 'warn', 'watch(message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
+                return deferred.reject();
+            }, { timeout: 30000 });
+
+            _navigatorRetryGetCurrentPosition(3, function (error, position, retryCount) {
+                //navigator.geolocation.clearWatch(watchID);
                 endTime = new Date().getTime();
                 if (error) {
                     Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
@@ -1164,23 +1181,8 @@ angular.module('service.weatherutil', [])
 
                 Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
                 Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
-                deferred.resolve(position.coords);
+                deferred.resolve({coords: position.coords, provider: 'getCurrentPosition'});
             });
-
-            if (ionic.Platform.isAndroid() && window.cordova) {
-                _nativeRetryGetCurrentPosition(2, function (error, position, retryCount) {
-                    endTime = new Date().getTime();
-                    if (error) {
-                        Util.ga.trackTiming('position', endTime - startTime, 'error', 'native');
-                        Util.ga.trackEvent('position', 'warn', 'native(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                        return deferred.reject();
-                    }
-
-                    Util.ga.trackTiming('position', endTime - startTime, 'get', 'native');
-                    Util.ga.trackEvent('position', 'get', 'native(retry:' + retryCount + ')', endTime - startTime);
-                    deferred.resolve(position.coords);
-                });
-            }
 
             return deferred.promise;
         };
