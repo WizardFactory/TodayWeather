@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, Util) {
+    .factory('TwAds', function($rootScope, Util, TwStorage) {
         var obj = {};
         obj.enableAds;
         obj.showAds;
@@ -16,28 +16,38 @@ angular.module('service.twads', [])
         $rootScope.viewAdsBanner = true;
 
         obj.loadTwAdsInfo = function () {
-            var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
-            console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
-                        ' request enable='+obj.requestEnable+' show='+obj.requestShow);
+            TwStorage.get(function (val) {
+                var twAdsInfo = JSON.parse(val);
+                console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
+                    ' request enable='+obj.requestEnable+' show='+obj.requestShow);
 
-            obj.ready = true;
+                obj.ready = true;
 
-            if (obj.requestEnable != undefined) {
-                obj.setEnableAds(obj.requestEnable);
-            }
-            else {
-                if (twAdsInfo == undefined || twAdsInfo.enable == undefined) {
-                    obj.setEnableAds(true);
+                if (obj.requestEnable != undefined) {
+                    obj.setEnableAds(obj.requestEnable);
                 }
                 else {
-                    obj.setEnableAds(twAdsInfo.enable);
+                    if (twAdsInfo == undefined || twAdsInfo.enable == undefined) {
+                        obj.setEnableAds(true);
+                    }
+                    else {
+                        obj.setEnableAds(twAdsInfo.enable);
+                    }
                 }
-            }
+            }, function (err) {
+                Util.ga.trackEvent('storage', 'error', "getTwAdsInfo");
+                Util.ga.trackException(err, false);
+            }, "twAdsInfo");
         };
 
         obj.saveTwAdsInfo = function (enable) {
             var twAdsInfo = {enable: enable};
-            localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
+            TwStorage.set(function (result) {
+                console.log(result);
+            }, function (err) {
+                Util.ga.trackEvent('storage', 'error', "setTwAdsInfo");
+                Util.ga.trackException(err, false);
+            }, "twAdsInfo", twAdsInfo);
         };
 
         obj.setLayout = function (enable) {

@@ -15,6 +15,7 @@ angular.module('starter', [
     'service.util',
     'service.twads',
     'service.push',
+    'service.storage',
     'controller.forecastctrl',
     'controller.searchctrl',
     'controller.settingctrl',
@@ -44,7 +45,7 @@ angular.module('starter', [
            }
        }
     })
-    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units) {
+    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units, TwStorage) {
         //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
@@ -77,6 +78,7 @@ angular.module('starter', [
         }
 
         Units.loadUnits();
+        TwStorage.init();
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             if (toState.name === 'tab.search') {
@@ -86,16 +88,20 @@ angular.module('starter', [
                 }
             } else if (toState.name === 'tab.forecast') {
                 if (fromState.name === '') {
-                    var guideVersion = localStorage.getItem('guideVersion');
-                    if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
-                        $location.path('/guide');
-                        return;
-                    }
-                }
-
-                $rootScope.viewColor = '#03A9F4';
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0288D1');
+                    TwStorage.get(function (guideVersion) {
+                        //var guideVersion = localStorage.getItem('guideVersion');
+                        if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
+                            $location.path('/guide');
+                            return;
+                        }
+                        $rootScope.viewColor = '#03A9F4';
+                        if (window.StatusBar) {
+                            StatusBar.backgroundColorByHexString('#0288D1');
+                        }
+                    }, function (err) {
+                        Util.ga.trackEvent('storage', 'error', 'guideVersion');
+                        Util.ga.trackException(err, false);
+                    }, 'guideVersion');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';

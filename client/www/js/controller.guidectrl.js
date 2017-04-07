@@ -1,6 +1,6 @@
 angular.module('controller.guidectrl', [])
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
-                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
+                                      $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase, TwStorage) {
         var guideVersion = null;
 
         $scope.data = { 'autoSearch': true };
@@ -12,6 +12,7 @@ angular.module('controller.guidectrl', [])
         var strUseYourCurrentLocation = "Use your current location";
         var strFindLocationByName = "Find location by name";
         var strTodayWeather = "TodayWeather";
+        var strStoreKey = 'guideVersion';
 
         function _setShowAds(show) {
             if (show == true && Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
@@ -56,7 +57,12 @@ angular.module('controller.guidectrl', [])
             $scope.bigFont = (bodyHeight - 56) * 0.0512;
             $scope.smallFont = (bodyHeight - 56) * 0.0299;
 
-            guideVersion = localStorage.getItem("guideVersion");
+            TwStorage.get(function (val) {
+                guideVersion = val;
+            }, function (err) {
+                Util.ga.trackEvent('storage', 'error', 'get'+strStoreKey);
+                Util.ga.trackException(err, false);
+            }, strStoreKey) ;
 
             $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK',
                 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
@@ -82,7 +88,13 @@ angular.module('controller.guidectrl', [])
                     _setShowAds(true);
                     $location.path('/tab/setting');
                 } else {
-                    localStorage.setItem("guideVersion", Util.guideVersion.toString());
+                    TwStorage.set(function (result) {
+                       console.log(strStoreKey+' save '+result);
+                    }, function (err) {
+                        Util.ga.trackEvent('storage', 'error', 'set'+strStoreKey);
+                        Util.ga.trackException(err, false);
+                    }, strStoreKey, Util.guideVersion.toString());
+
                     _setShowAds(true);
                     $location.path('/tab/forecast');
                 }
@@ -129,7 +141,13 @@ angular.module('controller.guidectrl', [])
                     return;
                 }
 
-                localStorage.setItem("guideVersion", Util.guideVersion.toString());
+                TwStorage.set(function (result) {
+                    console.log(strStoreKey+" save "+result);
+                }, function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'set'+strStoreKey);
+                    Util.ga.trackException(err, false);
+                }, strStoreKey, Util.guideVersion.toString());
+
                 _setShowAds(true);
                 if (res === true) { // autoSearch
                     Util.ga.trackEvent('action', 'click', 'auto search');

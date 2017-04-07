@@ -1,5 +1,5 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate, twStorage) {
         function init() {
             $ionicHistory.clearHistory();
 
@@ -8,36 +8,33 @@ angular.module('controller.settingctrl', [])
                 $scope.updateInterval = "0";
                 $scope.widgetOpacity = "69";
 
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    Util.ga.trackEvent("plugin", "error", "loadAppPreferences");
-                    return;
-                }
-
-                var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-                suitePrefs.fetch(
+                twStorage.get(
                     function (value) {
-                        if (value == null) {
+                        if (value == null || value == '') {
                             value = "0"
                         }
                         $scope.updateInterval = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'updateInterval'
-                );
+                        console.log("get update interval Success: " + value);
+                    },
+                    function (err) {
+                        Util.ga.trackEvent('storage', 'error', 'getUpdateInterval');
+                        Util.ga.trackException(err, false);
+                    },
+                    'updateInterval');
 
-                suitePrefs.fetch(
+                twStorage.get(
                     function (value) {
-                        if (value == null) {
+                        if (value == null || value == '') {
                             value = "69"
                         }
                         $scope.widgetOpacity = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'widgetOpacity'
-                );
+                        console.log("get widget opacity Success: " + value);
+                    },
+                    function (err) {
+                        Util.ga.trackEvent('storage', 'error', 'getWidgetOpacity');
+                        Util.ga.trackException(err, false);
+                    },
+                    'widgetOpacity');
             }
         }
 
@@ -121,38 +118,30 @@ angular.module('controller.settingctrl', [])
 
         $scope.changeWidgetOpacity = function (val) {
             console.log("widget opacity ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
 
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
+            twStorage.set(
+                function (result) {
+                    console.log("widget opacity save " + result);
                 },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'widgetOpacity', +val
-            );
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'setWidgetOpacity');
+                    Util.ga.trackException(err, false);
+                },
+                'widgetOpacity', +val);
         };
 
         $scope.changeUpdateInterval = function (val) {
             console.log("update interval ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
 
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
+            twStorage.set(
+                function (result) {
+                    console.log("update interval save " + result);
                 },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'updateInterval', +val
-            );
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'setUpdateInterval');
+                    Util.ga.trackException(err, false);
+                },
+                'updateInterval', +val);
         };
 
         $scope.hasInAppPurchase = function () {
