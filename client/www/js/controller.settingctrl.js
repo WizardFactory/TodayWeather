@@ -1,5 +1,5 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate, twStorage) {
+    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate, TwStorage) {
         function init() {
             $ionicHistory.clearHistory();
 
@@ -8,7 +8,7 @@ angular.module('controller.settingctrl', [])
                 $scope.updateInterval = "0";
                 $scope.widgetOpacity = "69";
 
-                twStorage.get(
+                TwStorage.get(
                     function (value) {
                         if (value == null || value == '') {
                             value = "0"
@@ -22,7 +22,7 @@ angular.module('controller.settingctrl', [])
                     },
                     'updateInterval');
 
-                twStorage.get(
+                TwStorage.get(
                     function (value) {
                         if (value == null || value == '') {
                             value = "69"
@@ -119,7 +119,7 @@ angular.module('controller.settingctrl', [])
         $scope.changeWidgetOpacity = function (val) {
             console.log("widget opacity ="+ val);
 
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("widget opacity save " + result);
                 },
@@ -133,7 +133,7 @@ angular.module('controller.settingctrl', [])
         $scope.changeUpdateInterval = function (val) {
             console.log("update interval ="+ val);
 
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("update interval save " + result);
                 },

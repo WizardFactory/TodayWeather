@@ -3,7 +3,7 @@
  */
 
 angular.module('controller.units', [])
-    .factory('Units', function(Util, twStorage) {
+    .factory('Units', function(Util, TwStorage) {
         var obj = {};
         obj.temperatureUnit;
         obj.windSpeedUnit;
@@ -92,7 +92,7 @@ angular.module('controller.units', [])
             var units;
             var key;
 
-            twStorage.get(
+            TwStorage.get(
                 function (value) {
                     console.log("units get " + value);
                     if (value == undefined || value == '') {
@@ -125,7 +125,7 @@ angular.module('controller.units', [])
         obj.saveUnits = function () {
             var self = this;
 
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("units save " + result);
                 },

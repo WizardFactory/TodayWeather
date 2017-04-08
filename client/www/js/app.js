@@ -10,12 +10,12 @@ angular.module('starter', [
     'pascalprecht.translate',
     'oc.lazyLoad',
     'ionic-timepicker',
+    'service.storage',
     'service.weatherinfo',
     'service.weatherutil',
     'service.util',
     'service.twads',
     'service.push',
-    'service.storage',
     'controller.forecastctrl',
     'controller.searchctrl',
     'controller.settingctrl',
@@ -101,7 +101,18 @@ angular.module('starter', [
                     }, function (err) {
                         Util.ga.trackEvent('storage', 'error', 'guideVersion');
                         Util.ga.trackException(err, false);
+
+                        $rootScope.viewColor = '#03A9F4';
+                        if (window.StatusBar) {
+                            StatusBar.backgroundColorByHexString('#0288D1');
+                        }
                     }, 'guideVersion');
+                }
+                else {
+                    $rootScope.viewColor = '#03A9F4';
+                    if (window.StatusBar) {
+                        StatusBar.backgroundColorByHexString('#0288D1');
+                    }
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';

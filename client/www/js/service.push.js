@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units, twStorage) {
+    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units, TwStorage) {
         var obj = {};
         obj.config = {
             "android": {
@@ -36,7 +36,7 @@ angular.module('service.push', [])
 
         obj.loadPushInfo = function () {
             var self = this;
-            twStorage.get(
+            TwStorage.get(
                 function (val) {
                     var pushData = JSON.parse(val);
                     if (pushData != null) {
@@ -68,7 +68,7 @@ angular.module('service.push', [])
 
         obj.savePushInfo = function (callback) {
             var self = this;
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("push data save " + result) ;
                     callback();

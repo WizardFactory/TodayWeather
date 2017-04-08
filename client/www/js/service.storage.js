@@ -5,9 +5,22 @@
 angular.module('service.storage', [])
     .factory('TwStorage', function(Util) {
         var obj = {};
-        var suitePrefs;
+
+        function _getSuiteName() {
+            return ionic.Platform.isAndroid()?
+                "net.wizardfactory.todayweather_preferences":
+                "group.net.wizardfactory.todayweather";
+        }
+
+        function _hasAppPreferences() {
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+               return false ;
+            }
+            return true;
+        }
 
         function _localStorage2appPref() {
+            var suitePrefs = plugins.appPreferences.suite(_getSuiteName());
             var legacyKey = ['guideVersion', 'purchaseInfo', 'storeReceipt', 'pushData', 'twAdsInfo',
                 'cities', 'cityIndex'];
 
@@ -39,44 +52,33 @@ angular.module('service.storage', [])
             });
         }
 
-        obj.init = function () {
-            var suiteName;
-            var self = this;
-
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                self.set = function (successCallback, errorCallback, name, value) {
-                    localStorage.setItem(name, value);
-                    successCallback(value);
-                    return;
-                };
-
-                self.get = function (successCallback, errorCallback, name) {
-                    var value = localStorage.getItem(name);
-                    successCallback(value);
-                    return;
-                };
+        obj.get = function (successCallback, errorCallback, name) {
+            if (_hasAppPreferences()) {
+                var value = localStorage.getItem(name);
+                successCallback(value);
+                return;
             }
             else {
-                if (ionic.Platform.isAndroid()) {
-                    suiteName = "net.wizardfactory.todayweather_preferences";
-                }
-                else {
-                    suiteName = "group.net.wizardfactory.todayweather";
-                }
-
-                suitePrefs = plugins.appPreferences.suite(suiteName);
-
-                self.set = function (successCallback, errorCallback, name, val) {
-                    return suitePrefs.store(successCallback, errorCallback, name, val);
-                };
-
-                self.get = function (successCallback, errorCallback, name) {
-                    return suitePrefs.fetch(successCallback, errorCallback, name);
-                };
-
-                //for compatible version
-                _localStorage2appPref();
+                var suitePrefs = plugins.appPreferences.suite(_getSuiteName());
+                return suitePrefs.fetch(successCallback, errorCallback, name);
             }
+        };
+
+        obj.set = function (successCallback, errorCallback, name, value) {
+            if (_hasAppPreferences()) {
+                localStorage.setItem(name, value);
+                successCallback("ok");
+                return;
+            }
+            else {
+                var suitePrefs = plugins.appPreferences.suite(_getSuiteName());
+                return suitePrefs.store(successCallback, errorCallback, name, val);
+            }
+        };
+
+        obj.init = function () {
+            //for compatible version
+            _localStorage2appPref();
         };
 
         return obj;

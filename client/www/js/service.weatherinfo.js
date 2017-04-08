@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util, twStorage) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util, TwStorage) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -84,7 +84,7 @@ angular.module('service.weatherinfo', [])
         obj.setCityIndex = function (index) {
             if (index >= -1 && index < cities.length) {
                 cityIndex = index;
-                twStorage.set(
+                TwStorage.set(
                     function (result) {
                         console.log("city index save " + result);
                     },
@@ -243,7 +243,7 @@ angular.module('service.weatherinfo', [])
 
         obj._loadCities = function () {
             var that = this;
-            twStorage.get(
+            TwStorage.get(
                 function (value) {
                     var items = JSON.parse(value);
                     if (items === null) {
@@ -271,7 +271,7 @@ angular.module('service.weatherinfo', [])
 
         obj._loadCityIndex = function () {
             var that = this;
-            twStorage.get(
+            TwStorage.get(
                 function (value) {
                     // load last cityIndex
                     cityIndex = JSON.parse(value);
@@ -312,7 +312,7 @@ angular.module('service.weatherinfo', [])
                 }
             });
 
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("city list save " + result);
                 },
@@ -324,7 +324,7 @@ angular.module('service.weatherinfo', [])
         };
 
         obj._loadCitiesPreference = function (callback) {
-            twStorage.get(
+            TwStorage.get(
                 function (value) {
                     callback(undefined, value);
                 },
@@ -337,7 +337,7 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.saveCities = function() {
-            twStorage.set(
+            TwStorage.set(
                 function (result) {
                     console.log("cities save " + result);
                 },
