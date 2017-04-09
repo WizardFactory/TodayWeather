@@ -22,7 +22,7 @@
   "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS": "Ungesund für empfindliche Gruppen",
   "LOC_UNHEALTHY": "Ungesund",
   "LOC_VERY_UNHEALTHY": "Sehr ungesund",
-  "LOC_HAZARDOUS": "Gefährlich",
+  "LOC_HAZARDOUS": "Gefahr",
   "LOC_STATION": "Messungsort",
   "LOC_DETAIL_WEATHER": "Genaues Wetter",
   "LOC_HUMIDITY": "Feuchtigkeit",
@@ -105,7 +105,7 @@
   "LOC_FOOD_POISONING_INDEX": "Lebensmittelvergiftung Index",
   "LOC_FOOD_POISONING": "Lebensmittelvergiftung",
   "LOC_COMPARE_THE_GRAPH_WITH_YESTERDAY_AT_A_GLANCE": "Vergleichen Sie auf einen Blick mit Gestern",
-  "LOC_COMPARE_YESTERDAY_TODAY_TOMORROW": "Gestern, Heute, Morgen und Übermorgen vergleichen",
+  "LOC_COMPARE_YESTERDAY_TODAY_TOMORROW": "Gestern, Heute, Morgen vergleichen",
   "LOC_FROM_LAST_WEEK_TO_NEXT_WEEK": "Von letzter Woche bis nächste Woche",
   "LOC_CHECK_THE_CHANGES_IN_ONE_WEEK": "die Änderungen dieser Woche ansehen",
   "LOC_COMPARE_LAST_WEEKEND_WITH_THIS_WEEKEND": "Vergleichen Sie letztes Wochenende mit diesem Wochenende",
@@ -184,7 +184,7 @@
   "LOC_WEATHER": "Wetter",
   "LOC_PUBLIC": "Ansage",
   "LOC_LOCATION": "Standort",
-  "LOC_ATTENTION": "Achtung",
+  "LOC_ATTENTION": "Interesse",
   "LOC_CAUTION": "Vorsicht",
   "LOC_WARNING": "Warnung",
   "LOC_HAZARD": "Gefahr",
@@ -244,5 +244,8 @@
   "LOC_ICE_PELLETS" : "Eisstücke",
   "LOC_BREEZY": "Luftigen",
   "LOC_WINDY": "Windiger",
-  "LOC_HUMID": "Feuchten"
+  "LOC_HUMID": "Feuchten",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Please allow permission",
+  "LOC_DRY": "Trocken",
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Permission request denied. Please search by location name or retry."
 }

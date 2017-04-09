@@ -3,7 +3,7 @@ Create tabs with an icon and label, using the tabs-positive style.
 Each tab's child <ion-nav-view> directive will have its own
 navigation history that also transitions its views in and out.
 -->
-<ion-tabs class="tabs-icon-top">
+<ion-tabs class="tabs-icon-only">
 
     <!-- Search Tab -->
     <ion-tab title="{{'LOC_SAVED_LOCATIONS'|translate}}" icon-off="ion-android-star" icon-on="ion-android-star" href="#/tab/search">
@@ -25,7 +25,7 @@ navigation history that also transitions its views in and out.
     </ion-tab>
 
     <!-- Setting Tab -->
-    <ion-tab title="{{'LOC_SETTING'|translate}}" icon-off="ion-android-more-vertical" icon-on="ion-android-more-vertical" href="#/tab/setting">
+    <ion-tab title="{{'LOC_SETTING'|translate}}" icon-off="ion-android-more-vertical" icon-on="ion-android-more-vertical" ng-click="doTabSetting()">
         <ion-nav-view name="tab-setting"></ion-nav-view>
     </ion-tab>
 

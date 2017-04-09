@@ -15,6 +15,7 @@ var modelMidForecast = require('../models/modelMidForecast');
 var modelMidTemp = require('../models/modelMidTemp');
 var modelMidLand = require('../models/modelMidLand');
 var modelShortRss = require('../models/modelShortRss');
+var modelHealthDay = require('../models/modelHealthDay');
 
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -27,6 +28,7 @@ var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
     {db:modelShortest, name:'modelShortest'},
+    {db:modelShortRss, name:'modelShortRss'}
 ];
 
 var midArray = [
@@ -164,7 +166,7 @@ function ControllerTown() {
                                 },
                                 function (err) {
                                     if (err) {
-                                        log.error(new Error('Gad> something is wrong on the Mid'));
+                                        log.error(new Error('Gad> something is wrong on the Mid : ' + err.message));
                                         return callback(err);
                                     }
                                     callback(null);
@@ -188,7 +190,7 @@ function ControllerTown() {
                     ],
                     function(err){
                         if(err){
-                            log.error(new Error('Gad> something is wrong to get weather data'));
+                            log.error(new Error('Gad> something is wrong to get weather data : ' + err.message));
                         }
                         log.info('>sID=',req.sessionID, 'go next');
                         next();
@@ -395,11 +397,10 @@ function ControllerTown() {
                         break;
                     }
                 }
-                // 미래의 데이터만 사용한다.
-                if(parseInt('' + rssList[i].date) === parseInt('' + requestTime.date + requestTime.time)) {
-                    i = i+1;
-                }
-
+                
+                //동일한 경우뿐만 아니라 동일한 경우 없이 바로 적은 경우에도 해당하는 인덱스 다음부터 사용해야 함.
+                i = i+1;
+                
                 var j;
                 var found;
                 var overwrite = false;
@@ -466,35 +467,6 @@ function ControllerTown() {
                             }
                             break;
                         }
-                    }
-                    if(found === 0) {
-                        var item = {};
-                        item.date = rssList[i].date.slice(0, 8);
-                        item.time = rssList[i].date.slice(8, 12);
-                        item.pop = rssList[i].pop;
-                        item.pty = rssList[i].pty;
-                        item.r06 = +(rssList[i].r06).toFixed(1);
-                        item.reh = rssList[i].reh;
-                        item.s06 = +(rssList[i].s06).toFixed(1);
-                        item.sky = rssList[i].sky;
-                        item.t3h = +(rssList[i].temp).toFixed(1);
-                        if(item.time === '0600' && rssList[i].tmn != -999){
-                            item.tmn = rssList[i].tmn;
-                        } else{
-                            item.tmn = -50;
-                        }
-                        if(item.time === '1500' && rssList[i].tmx != -999){
-                            item.tmx = rssList[i].tmx;
-                        }else{
-                            item.tmx = -50;
-                        }
-                        item.wsd = rssList[i].wsd;
-                        item.vec = rssList[i].vec;
-                        item.wav = rssList[i].wav;
-                        item.uuu = rssList[i].uuu;
-                        item.vvv = rssList[i].vvv;
-
-                        req.short.push(item);
                     }
                 }
                 next();
@@ -1801,6 +1773,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
+                req.params.areaNo = townInfo.areaNo;
                 LifeIndexKmaController.appendData(townInfo, req.short, req.midData.dailyData, function (err) {
                     if (err) {
                         log.error(err);
@@ -1922,6 +1895,46 @@ function ControllerTown() {
             next();
         }
 
+        return this;
+    };
+
+    /**
+     * @brief Daily 데이터에 보건지수를 추가한다
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown}
+     */
+    this.getHealthDay = function (req, res, next) {
+        var meta = {};
+        meta.method = 'getHealthDay';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
+
+        if (req.params.areaNo == undefined) {
+            log.error("areaNo is undefined", meta);
+            next();
+            return this;
+        }
+
+        modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, results) {
+            if (results && results.length > 0) {
+                req.midData.dailyData.forEach(function(day) {
+                    var date = kmaTimeLib.convertStringToDate(day.date);
+                    for(var i=0; i<results.length; i++) {
+                        if(results[i].date.getTime() == date.getTime()) {
+                            day[results[i].indexType] = results[i].index;
+                        }
+                    }
+                });
+            }
+            else {
+                log.error("Fail to find area no=" + req.params.areaNo, meta);
+            }
+            next();
+        });
         return this;
     };
 
@@ -2487,7 +2500,11 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
 
     log.debug(JSON.stringify(itemList));
 
-    return itemList[0].str+", "+itemList[1].str;
+    if(itemList.length > 1) {
+        return itemList[0].str+", "+itemList[1].str;
+    } else {
+        return itemList[0].str;
+    }
 };
 
 ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {
@@ -2709,7 +2726,12 @@ ControllerTown.prototype._makeStrForKma = function(data) {
     return this;
 };
 
-
+/**
+ * if wsd is null, return -1
+ * @param wsd
+ * @returns {number}
+ * @private
+ */
 ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
     if (wsd < 0) {
         return 0;
@@ -2723,8 +2745,11 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
     else if(wsd < 14) {
         return 3;
     }
-    else {
+    else if(wsd >= 14) {
         return 4;
+    }
+    else {
+        return -1;
     }
 };
 

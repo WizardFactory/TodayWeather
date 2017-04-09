@@ -184,20 +184,19 @@ router.get('/lifeindex', function (req, res) {
 router.get('/healthday', function(req, res) {
     var ctrlHealthDay = require('../../controllers/controllerHealthDay');
     var requestUrl;
+    var urlList = [];
     
     for(var i=1;i<=7;i++) {
         requestUrl = ctrlHealthDay.makeRequestString(i, 0);
-
-        log.info('[healthday] get :' + requestUrl);
-
-        ctrlHealthDay.getData(requestUrl, function(err) {
-            if(err) {
-                log.error(err);
-            }
-        });
+        urlList.push(requestUrl);
     }
-    
-    res.send();
+
+    ctrlHealthDay.getData(urlList, function(err) {
+        if(err) {
+            log.error(err);
+        }
+        res.send();
+    });
 });
 
 router.get('/kmaStnHourly', function (req, res) {

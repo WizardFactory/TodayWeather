@@ -974,6 +974,7 @@ ConCollector.prototype._parseDSForecast = function(src){
         result.current.cloud = self._getFloatItem(src.currently.cloudCover);
         result.current.pres = self._getFloatItem(src.currently.pressure);
         result.current.oz = self._getFloatItem(src.currently.ozone);
+        result.current.icon = src.currently.icon;
     }
 
     // hourly data
@@ -1001,6 +1002,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             hourlyData.cloud = self._getFloatItem(item.cloudCover);
             hourlyData.pres = self._getFloatItem(item.pressure);
             hourlyData.oz = self._getFloatItem(item.ozone);
+            hourlyData.icon = item.icon;
 
             result.hourly.data.push(hourlyData);
         });
@@ -1039,6 +1041,7 @@ ConCollector.prototype._parseDSForecast = function(src){
             dailyData.cloud = self._getFloatItem(item.cloudCover);
             dailyData.pres = self._getFloatItem(item.pressure);
             dailyData.oz = self._getFloatItem(item.ozone);
+            dailyData.icon = item.icon;
 
             result.daily.data.push(dailyData);
         });
@@ -1087,7 +1090,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 timeOffset = parseInt(data.offset);
             }
             if(list.length === 0) {
-                print.info('Dsf> First time');
+                print.info('Dsf> First time : ', self._getUtcTime('' + date + '000').toString());
                 var newItem = new modelDSForecast({
                     geocode: geocode,
                     address: {},
@@ -1117,6 +1120,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         data.date = date;
                     }
                     var pubDate = self._getUtcTime('' + date +'000');
+                    //log.info('dateOBJ : ', pubDate.toString());
                     if(data.dateObj.getTime() < pubDate.getTime()){
                         data.dateObj = pubDate;
                     }
@@ -1310,22 +1314,56 @@ ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
     });
 };
 
+ConCollector.prototype._getDiffDate = function (utcTime, localTime) {
+    if (utcTime.getUTCFullYear() < localTime.getUTCFullYear()) {
+        return 1;
+    }
+    else if (utcTime.getUTCFullYear() > localTime.getUTCFullYear()) {
+        return -1;
+    }
+    else if (utcTime.getUTCFullYear() == localTime.getUTCFullYear()) {
+        if (utcTime.getUTCMonth() < localTime.getUTCMonth()) {
+            return 1;
+        }
+        else if (utcTime.getUTCMonth() > localTime.getUTCMonth()) {
+            return -1;
+        }
+        else if (utcTime.getUTCMonth() == localTime.getUTCMonth()) {
+            if (utcTime.getUTCDate() < localTime.getUTCDate()) {
+                return 1;
+            }
+            else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
+                return -1;
+            }
+            else if (utcTime.getUTCDate() == localTime.getUTCDate()) {
+                return 0;
+            }
+        }
+    }
+    log.error("Invalid time");
+    return 0;
+};
+
+/**
+ *
+ * @param timeOffset
+ * @returns {Date|global.Date}
+ * @private
+ */
 ConCollector.prototype._getLocalLast0H = function (timeOffset) {
     var utcTime = new Date();
     var localTime = new Date();
     localTime.setUTCMinutes(localTime.getUTCMinutes()+timeOffset);
 
-    if (utcTime.getUTCDate() == localTime.getUTCDate()) {
-        //same day
+    var diffDate = this._getDiffDate(utcTime, localTime);
+    if (diffDate == 0) {
         log.info('same day');
     }
-    else if (utcTime.getUTCDate() < localTime.getUTCDate()) {
-       //next day
+    else if (diffDate == 1) {
         log.info('next day');
         utcTime.setUTCDate(utcTime.getUTCDate()+1);
     }
-    else if (utcTime.getUTCDate() > localTime.getUTCDate()) {
-       //previous day
+    else if (diffDate == -1) {
         log.info('previous day');
         utcTime.setUTCDate(utcTime.getUTCDate()-1);
     }
@@ -1354,10 +1392,12 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
     }
 
     var reqTime = self._getLocalLast0H(timeOffset*60);
+    //day light saving위해 1시간 margin을 둠.
+    reqTime.setUTCHours(reqTime.getUTCHours()+1);
     for(var i=From ; i<To ; i++){
         reqTime.setUTCDate(reqTime.getUTCDate()-i);
         //log.info("reqTime="+reqTime.toISOString());
-        var nTime = reqTime.getTime()/1000;
+        var nTime = parseInt(reqTime.getTime()/1000);
         dataList.push(nTime);
     }
 
@@ -1387,8 +1427,9 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
 
                     //log.info(result);
                     if(date === undefined){
-                        var dateString = self._getTimeString(0 + timeOffset).slice(0,10) + '00';
-                        date = self._getDateObj(dateString).getTime() / 1000;
+                        var curTime = new Date();
+                        date = parseInt(curTime.getTime() / 1000);
+                        //log.info('Req Dsf> cur : ', date.toString());
                     }
                     self.saveDSForecast(geocode, date, result, function(err){
                         cb(null, result);

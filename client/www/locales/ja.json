@@ -1,8 +1,8 @@
 {
   "LOC_WIZARDFACTORY": "ウィザードファクトリー",
   "LOC_TODAYWEATHER" : "今日天気",
-  "LOC_TODAY_THAN_YESTERDAY？": "今日は昨日より？",
-  "LOC_TODAYWEATHER-TODAY_THAN_YESTERDAY？": "今日天気 - 今日は昨日より？",
+  "LOC_TODAY_THAN_YESTERDAY?": "今日は昨日より？",
+  "LOC_TODAYWEATHER-TODAY_THAN_YESTERDAY?": "今日天気 - 今日は昨日より？",
   "LOC_USE_PREMIUM_WITHOUT_ADS": "広告のないプレミアムを使用してみてください",
   "LOC_THAN_YESTERDAY": "昨日より %s˚",
   "LOC_SAME_AS_YESTERDAY": "昨日と同じ",
@@ -105,7 +105,7 @@
   "LOC_FOOD_POISONING_INDEX": "食中毒指数",
   "LOC_FOOD_POISONING": "食中毒",
   "LOC_COMPARE_THE_GRAPH_WITH_YESTERDAY_AT_A_GLANCE": "グラフで一目で昨日と比較してください",
-  "LOC_COMPARE_YESTERDAY_TODAY_TOMORROW": "昨日、今日、明日、明後日までを 比較してください",
+  "LOC_COMPARE_YESTERDAY_TODAY_TOMORROW": "昨日、今日、明日までを 比較してください",
   "LOC_FROM_LAST_WEEK_TO_NEXT_WEEK": "先週から来週まで",
   "LOC_CHECK_THE_CHANGES_IN_ONE_WEEK": "一週間の変化を確認してください",
   "LOC_COMPARE_LAST_WEEKEND_WITH_THIS_WEEKEND": "先週末と今週末も比較してください",
@@ -244,5 +244,8 @@
   "LOC_ICE_PELLETS" : "氷萩機",
   "LOC_BREEZY": "軽風",
   "LOC_WINDY": "風",
-  "LOC_HUMID": "湿気の多い"
+  "LOC_HUMID": "湿気の多い",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Please allow permission",
+  "LOC_DRY": "乾燥",
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Permission request denied. Please search by location name or retry."
 }

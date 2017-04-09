@@ -38,9 +38,9 @@
                             <div class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
                                 <div id="shortTable" class="col table-content" ng-if="timeTable">
                                     <div class="row row-no-padding day-title-list">
-                                        <!--마지막 0시에 대한 날짜는 표기 하지 않음.-->
+                                        <!--마지막 0시에 대한 날짜는 표기 하지 않음, 오른쪽에 최소 120px(날짜정보 2칸)이 있을 경우 표시.-->
                                         <div class="col day-title" ng-style="{'left': getDayPosition(value, $index)+'px'}"
-                                             ng-if="$index < timeTable.length-1 && isNextDay(value, $index)"
+                                             ng-if="$index < timeTable.length-2 && isNextDay(value, $index)"
                                              ng-repeat="value in timeTable">
                                             <p class="caption" style="margin: 0;">{{getDayString(value.fromToday)|translate}} {{value.date.substr(4,2) + '.' + value.date.substr(6,2)}}</p>
                                         </div>
@@ -209,7 +209,7 @@
                     </div>
                 </div>
             </div>
-            <div ng-if="source == 'DSF'" style="width: 100%; text-align: center; background-color: rgba(0,0,0,0.05);">
+            <div ng-if="showDetailWeather && source == 'DSF'" style="width: 100%; text-align: center; background-color: rgba(0,0,0,0.05);">
                 <img src="img/poweredby_darksky_darkbackground.png" width="160px" ng-click="openUrl('https://darksky.net/poweredby')">
             </div>
         </div>

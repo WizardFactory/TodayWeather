@@ -226,7 +226,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .day-title {
   position: absolute;
   top: 0;
-  width: 300px;
+  width: 120px;
 }
 
 /* day chart style */
@@ -350,6 +350,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .pane, .view {
   background-color: transparent;
+}
+
+.tab-item.tab-item-active {
+  line-height: 14px;
 }
 
 .purchase-content {

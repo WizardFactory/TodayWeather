@@ -3,6 +3,7 @@
  */
 "use strict";
 
+var req = require('request');
 var dsfRequester = require('../../lib/DSF/dsfRequester');
 var assert  = require('assert');
 var config = require('../../config/config');
@@ -58,10 +59,10 @@ describe('unit test - DSF', function(){
         }
 
     ];
-/*
+
     it('get current weather by DSF', function(done){
         var dsf = new dsfRequester();
-        dsf.collect(list, undefined, keybox.dsf_key, function(err, result){
+        dsf.collect(list, undefined, keybox.dsf_keys[0].key, function(err, result){
             if(err){
                 log.error('!!! failed to get current weather data');
                 log.error(err);
@@ -80,7 +81,7 @@ describe('unit test - DSF', function(){
         var dsf = new dsfRequester();
         var date = '2016-08-11T12:00:00-0900';
 
-        dsf.collect(list, date, keybox.dsf_key, function(err, result){
+        dsf.collect(list, date, keybox.dsf_keys[0].key, function(err, result){
             if(err){
                 log.error('!!! failed to get previous weather data');
                 log.error(err);
@@ -97,7 +98,7 @@ describe('unit test - DSF', function(){
 
     it('get one current item by DSF', function(done){
         var dsf = new dsfRequester();
-        dsf.getForecast({lat:39.66, lon:116.40}, undefined, keybox.dsf_key, function(err, result){
+        dsf.getForecast({lat:39.66, lon:116.40}, undefined, keybox.dsf_keys[0].key, function(err, result){
             if(err){
                 log.error('!!! failed to get current weather data');
                 log.error(err);
@@ -113,13 +114,12 @@ describe('unit test - DSF', function(){
 
         });
     });
-*/
-/*
+
     it('get one previous item by DSF', function(done){
         var dsf = new dsfRequester();
         var date = '2016-08-11T12:00:00-0900';
 
-        dsf.getForecast({lat:39.66, lon:116.40}, date, keybox.dsf_key, function(err, result){
+        dsf.getForecast({lat:39.66, lon:116.40}, date, keybox.dsf_keys[0].key, function(err, result){
             if(err){
                 log.error('!!! failed to get previous weather data');
                 log.error(err);
@@ -133,8 +133,66 @@ describe('unit test - DSF', function(){
 
         });
     });
-*/
 
+    it('test error case : ECONNRESET', function(done){
+        var dsf = new dsfRequester();
+        var date = '2016-08-11T12:00:00-0900';
+
+        var count = 1;
+
+        dsf.get = function(url, option, callback){
+            if(count-- > 0) {
+                return callback({code:"ECONNRESET"});
+            }else{
+                return req.get(url, option, callback);
+            }
+        };
+
+        dsf.getForecast({lat:39.66, lon:116.40}, date, keybox.dsf_keys[0].key, function(err, result){
+            if(err){
+                log.error('!!! failed to get previous weather data');
+                log.error(err);
+                done();
+                return;
+            }
+
+            log.info('!!! Successed to get previous weather data');
+            log.info(result);
+            done();
+
+        });
+    });
+
+    it('test error case : ETIMEDOUT', function(done){
+        var dsf = new dsfRequester();
+        var date = '2016-08-11T12:00:00-0900';
+
+        var count = 1;
+
+        dsf.get = function(url, option, callback){
+            if(count-- > 0) {
+                return callback({code:"ETIMEDOUT"});
+            }else{
+                return req.get(url, option, callback);
+            }
+        };
+
+        dsf.getForecast({lat:39.66, lon:116.40}, date, keybox.dsf_keys[0].key, function(err, result){
+            if(err){
+                log.error('!!! failed to get previous weather data');
+                log.error(err);
+                done();
+                return;
+            }
+
+            log.info('!!! Successed to get previous weather data');
+            log.info(result);
+            done();
+
+        });
+    });
+
+/*
     var leadingZeros = function(n, digits) {
         var zero = '';
         n = n.toString();
@@ -150,6 +208,7 @@ describe('unit test - DSF', function(){
         var date = new Date();
         date.setTime(1470841200000);
 
+        log.info(date.getTimezoneOffset());
         log.info('year:', date.getFullYear());
         log.info('month:', date.getMonth()+1);
         log.info('days:', date.getDate());
@@ -163,7 +222,8 @@ describe('unit test - DSF', function(){
 
         log.info('Date String : ', result);
 
+        log.info('Format : ', date.getTime());
         done();
     });
-
+*/
 });

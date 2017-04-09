@@ -1,0 +1,26 @@
+/*
+ Localizable.strings .strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 1. 30..
+ 
+ */
+// Chinese Traditional
+
+// "Key"					= "Value"
+
+// Widget
+"LOC_UPDATE"						= "更新";
+
+"LOC_YESTERDAY"                     = "昨天";
+"LOC_TODAY"                         = "今天";
+"LOC_TOMORROW"                      = "明天";
+
+"LOC_AQI"                           = "空氣指數";
+"LOC_PM10"                          = "細塵";
+"LOC_PM25"                          = "超小細塵";
+
+"LOC_PROBABILITY_OF_PRECIPITATION"  = "降雨可能性";
+"LOC_TODAYWEATHER"                  = "今日天氣";
+
+"LOC_PLEASE_EXECUTE_MAIN_APP"       = "今天天氣運行應用程序並創建城市列表";

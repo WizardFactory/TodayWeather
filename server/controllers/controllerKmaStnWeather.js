@@ -19,7 +19,7 @@ function controllerKmaStnWeather() {
 }
 
 /**
- *
+ * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
  * @param weatherStr
  * @private
  */
@@ -90,6 +90,12 @@ controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
         case '마른뇌전': return 56;
         case '뇌전끝': return 57;
         case '얼음싸라기': return 58;
+        case 'breezy': return 59;
+        case 'humid': return 60;
+        case 'windy': return 61;
+        case 'dry': return 62;
+        case 'dangerously windy': return 63;
+        case '진눈깨비': return 64;
         default :
             log.error("Fail weatherStr="+weatherStr);
     }
@@ -555,7 +561,7 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
                         return pCallback(err, kmaStnList);
                     });
                 }, function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(3).lean().exec(function (err, kmaStnList) {
                         if (err) {
                             return pCallback(err);
                         }
