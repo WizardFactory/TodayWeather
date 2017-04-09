@@ -15,13 +15,14 @@ angular.module('starter', [
     'service.util',
     'service.twads',
     'service.push',
+    'controller.tabctrl',
     'controller.forecastctrl',
     'controller.searchctrl',
     'controller.settingctrl',
     'controller.guidectrl',
     'controller.purchase',
     'controller.units',
-    'controller.tabctrl',
+    'controller.start',
     'service.run'
 ])
     .factory('$exceptionHandler', function (Util) {
@@ -78,6 +79,14 @@ angular.module('starter', [
 
         Units.loadUnits();
 
+        //For backward compatibility
+        console.log(localStorage.getItem('startVersion'));
+        if (localStorage.getItem('startVersion') == null) {
+            if (localStorage.getItem('guideVersion') != null) {
+             localStorage.setItem('startVersion', localStorage.getItem('guideVersion'));
+            }
+        }
+
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#ec72a8';
@@ -86,9 +95,9 @@ angular.module('starter', [
                 }
             } else if (toState.name === 'tab.forecast') {
                 if (fromState.name === '') {
-                    var guideVersion = localStorage.getItem('guideVersion');
-                    if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
-                        $location.path('/guide');
+                    var startVersion = localStorage.getItem('startVersion');
+                    if (startVersion === null || Util.startVersion > Number(startVersion)) {
+                        $location.path('/start');
                         return;
                     }
                 }
@@ -1176,6 +1185,12 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('start', {
+                url: '/start',
+                cache: false,
+                templateUrl: 'templates/start.html',
+                controller: 'StartCtrl'
+            })
             .state('guide', {
                 url: '/guide',
                 cache: false,

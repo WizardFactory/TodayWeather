@@ -2,7 +2,7 @@ angular.module('controller.searchctrl', [])
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
                                         $translate, $ocLazyLoad, $ionicPopup) {
-        $scope.searchWord = undefined;
+        $scope.search = {};
         $scope.searchResults = [];
         $scope.searchResults2 = [];
         $scope.cityList = [];
@@ -65,7 +65,10 @@ angular.module('controller.searchctrl', [])
             else {
                 console.log("predictions="+predictions.length);
             }
-            $scope.searchResults2 = predictions;
+
+            $scope.$apply(function () {
+                $scope.searchResults2 = predictions;
+            });
         };
 
         function init() {
@@ -129,10 +132,15 @@ angular.module('controller.searchctrl', [])
         $scope.OnChangeSearchWord = function() {
             $scope.isEditing = false;
 
-            if ($scope.searchWord === "") {
-                $scope.searchWord = undefined;
+            if ($scope.search.word === "") {
+                $scope.search.word = undefined;
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
+                return;
+            }
+
+            if ($scope.search.word == undefined) {
+                console.error("search word is undefined");
                 return;
             }
 
@@ -141,10 +149,10 @@ angular.module('controller.searchctrl', [])
             searchIndex = 0;
             $scope.OnScrollResults();
 
-            console.log($scope.searchWord);
+            console.log($scope.search.word);
             if (!(service == undefined)) {
                 service.getPlacePredictions({
-                    input: $scope.searchWord,
+                    input: $scope.search.word,
                     types: ['(regions)'],
                     componentRestrictions: {}
                 }, callbackAutocomplete);
@@ -165,7 +173,7 @@ angular.module('controller.searchctrl', [])
                 hideLoadingIndicator();
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
-                $scope.searchWord = geoInfo.name;
+                $scope.search.word = geoInfo.name;
                 $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
                 $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
                 searchIndex = -1;
@@ -183,18 +191,18 @@ angular.module('controller.searchctrl', [])
         $scope.OnEdit = function() {
             $scope.isEditing = !$scope.isEditing;
             if ($scope.isEditing) {
-                $scope.searchWord = undefined;
+                $scope.search.word = undefined;
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
             }
         };
 
         $scope.OnScrollResults = function() {
-            if ($scope.searchWord !== undefined && searchIndex !== -1) {
+            if ($scope.search.word !== undefined && searchIndex !== -1) {
                 for (var i = searchIndex; i < towns.length; i++) {
                     var town = towns[i];
-                    if (town.first.indexOf($scope.searchWord) >= 0 || town.second.indexOf($scope.searchWord) >= 0
-                        || town.third.indexOf($scope.searchWord) >= 0) {
+                    if (town.first.indexOf($scope.search.word) >= 0 || town.second.indexOf($scope.search.word) >= 0
+                        || town.third.indexOf($scope.search.word) >= 0) {
                         $scope.searchResults.push(town);
                         if ($scope.searchResults.length % 10 === 0) {
                             searchIndex = i + 1;
@@ -235,8 +243,8 @@ angular.module('controller.searchctrl', [])
                 }
             }
 
-            result.name = $scope.searchWord;
-            $scope.searchWord = undefined;
+            result.name = $scope.search.word;
+            $scope.search.word = undefined;
             $scope.searchResults = [];
             $scope.searchResults2 = [];
 
