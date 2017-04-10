@@ -710,7 +710,6 @@ angular.module('controller.forecastctrl', [])
             isLoadingIndicator = false;
         }
 
-
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 showLoadingIndicator();
@@ -720,7 +719,7 @@ angular.module('controller.forecastctrl', [])
                         hideLoadingIndicator();
                     }, function (msg) {
                         hideLoadingIndicator();
-                        $scope.showRetryConfirm(strError, msg, 'forecast');
+                        $scope.showRetryConfirm(strError, msg, 'weather');
                     });
                 }, function(msg) {
                     hideLoadingIndicator();
