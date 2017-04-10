@@ -77,18 +77,19 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
-        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         if(req.error){
             res.json(req.error);
-            return;
         }
-
-        if(req.result){
+        else if(req.result){
+            if (req.result.thisTime.length != 2) {
+               log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
+            }
             res.json(req.result);
-            return;
         }
-
-        res.json({result: 'Unknow result'});
+        else {
+            res.json({result: 'Unknow result'});
+        }
+        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         return;
     };
 
@@ -433,9 +434,9 @@ function controllerWorldWeather(){
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
-                            log.error('TWW> Invaild DSF data', meta);
-                            log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
-                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
+                            log.info('TWW> Invaild DSF data', meta);
+                            log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
                             callback('err_exit_notValid');
                             return;
                         }
@@ -1167,30 +1168,17 @@ function controllerWorldWeather(){
             log.info('DSF current> SDate : ', startDate, meta);
             log.info('DSF current> CDdate : ', curDate, meta);
 
-            dsf.data.forEach(function (item) {
-                var isExist = false;
-                if(self._compareDateString(curDate, item.current.dateObj)){
-                    req.result.thisTime.forEach(function(thisTime, index) {
-                        if (thisTime.date != undefined &&
-                                self._compareDateString(curDate, thisTime.date)) {
-
-                            var current = self._makeCurrentDataFromDSFCurrent(item.current);
-                            var isNight = self._isNight(curDate, item.daily.data);
-                            current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                            req.result.thisTime[index] = current;
-                            isExist = true;
-                        }
-                    });
-
-                    if(!isExist){
-                        log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
-                        var current = self._makeCurrentDataFromDSFCurrent(item.current);
-                        var isNight = self._isNight(curDate, item.daily.data);
-                        current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                        req.result.thisTime.push(current);
-                    }
-                }
-            });
+            /**
+             * timeoff이 30분이 경우가 있으며, new delhi, dsf.data의 마지막이 최신 현재날씨라고 전제하고 사용함.
+             */
+            if (dsf.data.length > 0) {
+                var item = dsf.data[dsf.data.length-1];
+                log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
+                var current = self._makeCurrentDataFromDSFCurrent(item.current);
+                var isNight = self._isNight(curDate, item.daily.data);
+                current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
+                req.result.thisTime.push(current);
+            }
         }
 
         next();
