@@ -1166,7 +1166,10 @@ angular.module('starter', [
                         }
                         prevTop = scrollTop;
                     }
-                    $element.bind('scroll', onScroll);
+
+                    if (ionic.Platform.isAndroid()) {
+                        $element.bind('scroll', onScroll);
+                    }
                 }
             }
         });

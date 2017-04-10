@@ -174,6 +174,10 @@ angular.module('controller.tabctrl', [])
         };
 
         $scope.contentHeight = function() {
+            if (ionic.Platform.isAndroid() == false) {
+                return $rootScope.contentBottom;
+            }
+
             if ($rootScope.contentBottom === undefined) {
                 $rootScope.contentBottom = 0;
             }
