@@ -167,19 +167,19 @@ angular.module('controller.forecastctrl', [])
         $scope.getSentimentIcon = function (grade) {
            switch (grade) {
                case 1:
-                   return 'ic_sentiment_satisfied_white_24px.svg';
+                   return 'sentiment_satisfied';
                case 2:
-                   return 'ic_sentiment_neutral_white_24px.svg';
+                   return 'sentiment_neutral';
                case 3:
-                   return 'ic_sentiment_dissatisfied_white_24px.svg';
+                   return 'sentiment_dissatisfied';
                case 4:
-                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+                   return 'sentiment_very_dissatisfied';
                case 5:
-                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+                   return 'sentiment_very_dissatisfied';
                default:
                    console.log('Fail to find grade='+grade);
            }
-            return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+            return 'sentiment_very_dissatisfied';
         };
 
         $scope.getSentimentStr = function(grade) {
@@ -1273,6 +1273,22 @@ angular.module('controller.forecastctrl', [])
             }
             else {
                 return temp;
+            }
+        };
+
+        $scope.isLocationEnabled = function () {
+            return Util.isLocationEnabled();
+        };
+
+        $scope.switchToLocationSettings = function () {
+            Util.ga.trackEvent('action', 'click', 'toggleLocationEnable');
+            if (Util.isLocationEnabled() == false && cordova && cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.switchToLocationSettings(function () {
+                    console.log("Successfully switched to location settings app");
+                    WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
+                }, function (error) {
+                    console.log("The following error occurred: " + error);
+                });
             }
         };
 
