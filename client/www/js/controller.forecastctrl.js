@@ -73,27 +73,29 @@ angular.module('controller.forecastctrl', [])
             }
 
             $scope.hasPropertyInThreeDays = function(propertyNameList) {
-                var todayIndex = $scope.currentWeather.today.index;
-                if (todayIndex == undefined) {
-                    console.log("today index is undefined, daily list has not today data");
-                    return false;
-                }
-
-                var dayTable = $scope.dayChart[0].values;
-                if (dayTable) {
-                    if (_hasProperty(dayTable[todayIndex], propertyNameList)) {
-                        return true;
+                if ($scope.currentWeather && $scope.currentWeather.today) {
+                    var todayIndex = $scope.currentWeather.today.index;
+                    if (todayIndex == undefined) {
+                        console.log("today index is undefined, daily list has not today data");
+                        return false;
                     }
-                    if (todayIndex > 0) {
-                        var yesterday = dayTable[todayIndex-1];
-                        if (_hasProperty(yesterday, propertyNameList)) {
+
+                    var dayTable = $scope.dayChart[0].values;
+                    if (dayTable) {
+                        if (_hasProperty(dayTable[todayIndex], propertyNameList)) {
                             return true;
                         }
-                    }
-                    if (todayIndex < dayTable.length-1) {
-                        var tomorrow = dayTable[todayIndex+1];
-                        if (_hasProperty(tomorrow, propertyNameList)) {
-                            return true;
+                        if (todayIndex > 0) {
+                            var yesterday = dayTable[todayIndex-1];
+                            if (_hasProperty(yesterday, propertyNameList)) {
+                                return true;
+                            }
+                        }
+                        if (todayIndex < dayTable.length-1) {
+                            var tomorrow = dayTable[todayIndex+1];
+                            if (_hasProperty(tomorrow, propertyNameList)) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -1002,7 +1004,10 @@ angular.module('controller.forecastctrl', [])
         };
 
         $scope.convertMMDD = function (value) {
-            return value.substr(4,2)+'/'+value.substr(6,2);
+            if (typeof value == 'string') {
+                return value.substr(4,2)+'/'+value.substr(6,2);
+            }
+            return value;
         };
 
         function _diffTodayYesterday(current, yesterday) {
@@ -1198,7 +1203,7 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
             } else if (sender === 'locationOn') {
-                if (cityData.currentPosition === false) {
+                if (cityData && cityData.currentPosition === false) {
                     Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;
                 }
