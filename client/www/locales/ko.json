@@ -157,7 +157,7 @@
   "LOC_CURRENT" : "현재",
   "LOC_OK" : "확인",
   "LOC_CANCEL": "취소",
-  "LOC_USE_YOUR_CURRENT_LOCATION" : "위치정보로 시작",
+  "LOC_USE_YOUR_CURRENT_LOCATION" : "현재위치 날씨보기",
   "LOC_FIND_LOCATION_BY_NAME" : "지역 검색으로 시작",
   "LOC_A_COUPLE_OF_DAYS_AGO" : "엊그제",
   "LOC_THE_DAY_BEFORE_YESTERDAY" : "그제",
@@ -247,5 +247,6 @@
   "LOC_HUMID": "습함",
   "LOC_OPENS_THE_APP_INFO_PAGE" : "[설정]>[앱]>[오늘날씨]에서 권한을 허용해주세요.",
   "LOC_DRY": "건조함",
-  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "권한 요청이 거부되었습니다. 지역검색으로 이동하거나, 재시도해주세요."
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "권한 요청이 거부되었습니다. 지역검색으로 이동하거나, 재시도해주세요.",
+  "LOC_FIND_BY_LOCATION": "현재위치로 지역찾기"
 }
