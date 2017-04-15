@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
+    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util, TwStorage) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -60,12 +60,34 @@ angular.module('controller.purchase', [])
                 });
         };
 
+        /**
+         * promise필요
+         * @param storeReceipt
+         */
         obj.saveStoreReceipt = function (storeReceipt) {
-            localStorage.setItem("storeReceipt", JSON.stringify(storeReceipt));
+            TwStorage.set(
+                function (result) {
+                    console.log('storeReceipt save '+result);
+                },
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'setStoreReceipt');
+                    Util.ga.trackException(err, false);
+                },
+                "storeReceipt", JSON.stringify(storeReceipt));
         };
 
-        obj.loadStoreReceipt = function () {
-            return JSON.parse(localStorage.getItem("storeReceipt"));
+        obj.loadStoreReceipt = function (callback) {
+            TwStorage.get(
+                function (val) {
+                    callback(JSON.parse(val));
+                },
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'getStoreReceipt');
+                    Util.ga.trackException(err, false);
+                    callback();
+                },
+                "storeReceipt");
+            return;
         };
 
         obj.loadPurchaseInfo = function () {
@@ -193,56 +215,49 @@ angular.module('controller.purchase', [])
          * check validation receipt by saved data in local storage
          */
         function checkPurchase() {
-            var storeReceipt;
-            var updatePurchaseInfo;
+            Purchase.loadStoreReceipt(function (storeReceipt) {
+                var updatePurchaseInfo;
+                if (storeReceipt == undefined || storeReceipt == "") {
+                    updatePurchaseInfo = Purchase.updatePurchaseInfo;
+                }
+                else {
+                    console.log('Purchases INFO!!!');
+                    console.log(JSON.stringify(storeReceipt));
 
-            storeReceipt = Purchase.loadStoreReceipt();
-            if (storeReceipt) {
+                    updatePurchaseInfo = function () {
+                        var deferred = $q.defer();
+                        Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                            if (err) {
+                                deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
+                                return;
+                            }
 
-                console.log('Purchases INFO!!!');
-                console.log(JSON.stringify(storeReceipt));
+                            deferred.resolve(receiptInfo);
+                        });
+                        return deferred.promise;
+                    };
+                }
 
-                updatePurchaseInfo = function () {
-                    var deferred = $q.defer();
-                    Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
-                        if (err) {
-                            deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
-                            return;
+                updatePurchaseInfo()
+                    .then(function (receiptInfo) {
+                        Purchase.loaded = true;
+                        if (!receiptInfo.ok) {
+                            //downgrade by canceled, refund ..
+                            console.log(JSON.stringify(receiptInfo.data));
+                            Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
+                            Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
                         }
-
-                        deferred.resolve(receiptInfo);
+                        else {
+                            console.log('welcome premium user');
+                        }
+                    })
+                    .catch(function (err) {
+                        //again to check purchase info
+                        console.log('fail to check purchase info err='+err.message);
+                        Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
+                        Util.ga.trackException(err, false);
                     });
-                    return deferred.promise;
-                };
-            }
-            else {
-                updatePurchaseInfo = Purchase.updatePurchaseInfo;
-            }
-
-            updatePurchaseInfo()
-                .then(function (receiptInfo) {
-                    Purchase.loaded = true;
-                    if (!receiptInfo.ok) {
-                        //downgrade by canceled, refund ..
-                        console.log(JSON.stringify(receiptInfo.data));
-                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
-                        Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
-
-                        //$ionicPopup.alert({
-                        //    title: 'check purchase',
-                        //    template: receiptInfo.data.message
-                        //});
-                    }
-                    else {
-                        console.log('welcome premium user');
-                    }
-                })
-                .catch(function (err) {
-                    //again to check purchase info
-                    console.log('fail to check purchase info err='+err.message);
-                    Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
-                    Util.ga.trackException(err, false);
-                });
+            });
         }
 
         Purchase.loadPurchaseInfo();

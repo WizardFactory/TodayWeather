@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units) {
+    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units, TwStorage) {
         var obj = {};
         obj.config = {
             "android": {
@@ -36,32 +36,49 @@ angular.module('service.push', [])
 
         obj.loadPushInfo = function () {
             var self = this;
-            var pushData = JSON.parse(localStorage.getItem("pushData"));
-            if (pushData != null) {
-                self.pushData.registrationId = pushData.registrationId;
-                self.pushData.type = pushData.type;
-                self.pushData.alarmList = pushData.alarmList;
-                self.pushData.alarmList.forEach(function (alarmInfo) {
-                    alarmInfo.time = new Date(alarmInfo.time);
-                });
-
-                //update alarmInfo to server for sync
-                if (self.pushData.alarmList.length > 0) {
-                    setTimeout(function() {
+            TwStorage.get(
+                function (val) {
+                    var pushData = JSON.parse(val);
+                    if (pushData != null) {
+                        self.pushData.registrationId = pushData.registrationId;
+                        self.pushData.type = pushData.type;
+                        self.pushData.alarmList = pushData.alarmList;
                         self.pushData.alarmList.forEach(function (alarmInfo) {
-                            postPushInfo(alarmInfo);
+                            alarmInfo.time = new Date(alarmInfo.time);
                         });
-                    }, 3000);
-                }
-            }
-            console.log('load push data');
-            console.log(self);
+
+                        //update alarmInfo to server for sync
+                        if (self.pushData.alarmList.length > 0) {
+                            setTimeout(function() {
+                                self.pushData.alarmList.forEach(function (alarmInfo) {
+                                    postPushInfo(alarmInfo);
+                                });
+                            }, 3000);
+                        }
+                    }
+                    console.log('load push data');
+                    console.log(self);
+                },
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'getPushData');
+                    Util.ga.trackException(err, false);
+                },
+                "pushData");
         };
 
-        obj.savePushInfo = function () {
-            console.log('save push data');
+        obj.savePushInfo = function (callback) {
             var self = this;
-            localStorage.setItem("pushData", JSON.stringify(self.pushData));
+            TwStorage.set(
+                function (result) {
+                    console.log("push data save " + result) ;
+                    callback();
+                },
+                function (err) {
+                    Util.ga.trackEvent('storage', 'error', 'setPushData');
+                    Util.ga.trackException(err, false);
+                    callback(err);
+                },
+                'pushData', JSON.stringify(self.pushData));
         };
 
         /**
@@ -290,14 +307,18 @@ angular.module('service.push', [])
             if (!window.push) {
                 self.register(function () {
                     postPushInfo(alarmInfo);
-                    self.savePushInfo();
-                    return callback(undefined, alarmInfo);
+                    self.savePushInfo(function (err) {
+                        callback(err, alarmInfo);
+                    });
+                    return;
                 });
             }
             else {
                 postPushInfo(alarmInfo);
-                self.savePushInfo();
-                return callback(undefined, alarmInfo);
+                self.savePushInfo(function (err) {
+                    callback(err, alarmInfo)
+                });
+                return ;
             }
         };
 
