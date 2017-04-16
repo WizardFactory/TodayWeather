@@ -865,18 +865,19 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
     async.waterfall([
         //skip check pubdate to overwrite new data
         //stn 마다 모두 확인하는 것이 아니기 때문에, 최종으로 check없이 한번더 저장필요.
-        function (cb) {
-            //check update time
-            self._checkPubdate(pubDate, function (err, hasData) {
-                if (err) {
-                    return cb(err);
-                }
-                if (hasData) {
-                    return cb('skip');
-                }
-                cb();
-            });
-        },
+        //update every time
+        //function (cb) {
+        //    //check update time
+        //    self._checkPubdate(pubDate, function (err, hasData) {
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        if (hasData) {
+        //            return cb('skip');
+        //        }
+        //        cb();
+        //    });
+        //},
         function (cb) {
             log.info('get aws weather');
             self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
