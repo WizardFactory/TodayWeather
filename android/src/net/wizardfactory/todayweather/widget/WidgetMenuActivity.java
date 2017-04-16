@@ -12,14 +12,6 @@ import android.widget.LinearLayout;
 
 import net.wizardfactory.todayweather.MainActivity;
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.Provider.AirQualityIndex;
-import net.wizardfactory.todayweather.widget.Provider.ClockAndCurrentWeather;
-import net.wizardfactory.todayweather.widget.Provider.ClockAndThreeDays;
-import net.wizardfactory.todayweather.widget.Provider.CurrentWeatherAndThreeDays;
-import net.wizardfactory.todayweather.widget.Provider.DailyWeather;
-import net.wizardfactory.todayweather.widget.Provider.W1x1CurrentWeather;
-import net.wizardfactory.todayweather.widget.Provider.W2x1CurrentWeather;
-import net.wizardfactory.todayweather.widget.Provider.W2x1WidgetProvider;
 
 import org.apache.cordova.CordovaActivity;
 
@@ -66,6 +58,7 @@ public class WidgetMenuActivity extends CordovaActivity {
         updateBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0) {
                 updateWidget();
+                finish();
             }
         });
 
@@ -79,48 +72,16 @@ public class WidgetMenuActivity extends CordovaActivity {
     }
 
     private void updateWidget() {
-        Class<?> WidgetProvider = null;
-
-        if (mLayoutId == R.layout.w2x1_widget_layout) {
-            WidgetProvider = W2x1WidgetProvider.class;
-        }
-        else if (mLayoutId == R.layout.w1x1_current_weather) {
-            WidgetProvider = W1x1CurrentWeather.class;
-        }
-        else if (mLayoutId == R.layout.w2x1_current_weather) {
-            WidgetProvider = W2x1CurrentWeather.class;
-        }
-        else if (mLayoutId == R.layout.air_quality_index) {
-            WidgetProvider = AirQualityIndex.class;
-        }
-        else if (mLayoutId == R.layout.clock_and_current_weather) {
-            WidgetProvider = ClockAndCurrentWeather.class;
-        }
-        else if (mLayoutId == R.layout.current_weather_and_three_days) {
-            WidgetProvider = CurrentWeatherAndThreeDays.class;
-        }
-        else if (mLayoutId == R.layout.daily_weather) {
-            WidgetProvider = DailyWeather.class;
-        }
-        else if (mLayoutId == R.layout.clock_and_three_days) {
-            WidgetProvider = ClockAndThreeDays.class;
-        }
-
-        Intent intent = new Intent(this, WidgetProvider);
-        intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-        ComponentName thisWidget = new ComponentName(mContxt, WidgetProvider);
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(mContxt);
+        Class<?> widgetProvider = WidgetUpdateService.getWidgetProvider(mLayoutId);
+        ComponentName thisWidget = new ComponentName(mContxt, widgetProvider);
         int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
+
+        Intent intent = new Intent(this, widgetProvider);
+        intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
         intent.putExtra("ManualUpdate", true);
         sendBroadcast(intent);
-
-        // update widget weather data using service
-//        Intent serviceIntent = new Intent(mContxt, WidgetUpdateService.class);
-//        serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
-//        mContxt.startService(serviceIntent);
-
-        finish();
     }
 
     private void moveMain() {
