@@ -174,6 +174,10 @@ angular.module('controller.tabctrl', [])
         };
 
         $scope.contentHeight = function() {
+            if (ionic.Platform.isAndroid() == false) {
+                return $rootScope.contentBottom;
+            }
+
             if ($rootScope.contentBottom === undefined) {
                 $rootScope.contentBottom = 0;
             }
@@ -238,6 +242,214 @@ angular.module('controller.tabctrl', [])
                         }
                     }
                 });
+            });
+        };
+
+        var gLocationAuthorizationStatus;
+        $scope.setLocationAuthorizationStatus = function (status) {
+            gLocationAuthorizationStatus = status;
+        };
+
+        var confirmPopup;
+        $scope.getConfirmPopup = function () {
+           return confirmPopup;
+        };
+
+        /**
+         * android 6.0이상에서 처음 현재위치 사용시에, android 현재위치 접근에 대한 popup때문에 앱 pause->resume이 됨.
+         * 그래서 init와 reloadevent가 둘다 오게 되는데 retry confirm이 두개 뜨지 않게 한개 있는 경우 닫았다가 새롭게 열게 함.
+         * @param title
+         * @param template
+         * @param type forecast, search, weather
+         */
+        $scope.showRetryConfirm = function showRetryConfirm(title, template, type) {
+            if (confirmPopup) {
+                confirmPopup.close();
+            }
+
+            var strClose;
+            var strSearch;
+            var strSetting;
+            var strOpensTheAppInfoPage;
+
+            $translate(['LOC_CLOSE', 'LOC_SEARCH', 'LOC_SETTING',
+                'LOC_OPENS_THE_APP_INFO_PAGE']).then(function (translations) {
+                strClose = translations.LOC_CLOSE;
+                strSearch = translations.LOC_SEARCH;
+                strSetting = translations.LOC_SETTING;
+                strOpensTheAppInfoPage = translations.LOC_OPENS_THE_APP_INFO_PAGE;
+            }, function (translationIds) {
+                console.log("Fail to translate : " + JSON.stringify(translationIds));
+                Util.ga.trackEvent("translate", "error", "showRetryConfirm");
+            }).finally(function () {
+                var buttons = [];
+                if (type == 'search') {
+                    buttons.push({
+                        text: strClose,
+                        onTap: function () {
+                            return 'close';
+                        }
+                    });
+                }
+
+                //fail to get weather data
+                if (type == 'weather') {
+                    buttons.push({
+                        text: strClose,
+                        onTap: function () {
+                            return 'close';
+                        }
+                    });
+
+                    buttons.push({
+                        text: strOkay,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'retry';
+                        }
+                    });
+
+                    Util.ga.trackEvent('window', 'show', 'getWeatherPopup');
+                }
+                else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                    template += '<br>';
+                    template += strOpensTheAppInfoPage;
+
+                    if (type == 'forecast') {
+                        buttons.push({
+                            text: strSearch,
+                            onTap: function () {
+                                return 'search';
+                            }
+                        });
+                    }
+
+                    buttons.push({
+                        text: strSetting,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'settings';
+                        }
+                    });
+                    Util.ga.trackEvent('window', 'show', 'deniedAlwaysPopup');
+                }
+                else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                    if (type == 'forecast') {
+                        buttons.push({
+                            text: strSearch,
+                            onTap: function () {
+                                return 'search';
+                            }
+                        });
+                    }
+
+                    buttons.push({
+                        text: strOkay,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'retry';
+                        }
+                    });
+                    Util.ga.trackEvent('window', 'show', 'deniedPopup');
+                }
+                else if (Util.isLocationEnabled() == false) {
+                    if (type == 'forecast') {
+                        buttons.push({
+                            text: strSearch,
+                            onTap: function () {
+                                return 'search';
+                            }
+                        });
+                    }
+
+                    buttons.push({
+                        text: strSetting,
+                        onTap: function () {
+                            return 'locationSettings';
+                        }
+                    });
+
+                    buttons.push({
+                        text: strOkay,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'retry';
+                        }
+                    });
+
+                    Util.ga.trackEvent('window', 'show', 'locationDisabledPopup');
+                }
+                else {
+                    //fail to get address information
+                    buttons.push({
+                        text: strClose,
+                        onTap: function () {
+                            return 'close';
+                        }
+                    });
+
+                    buttons.push({
+                        text: strOkay,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'retry';
+                        }
+                    });
+
+                    Util.ga.trackEvent('window', 'show', 'getAddressPopup');
+                }
+
+                confirmPopup = $ionicPopup.show({
+                    title: title,
+                    template: template,
+                    buttons: buttons
+                });
+
+                confirmPopup
+                    .then(function (res) {
+                        if (res == 'retry') {
+                            Util.ga.trackEvent('action', 'click', 'reloadEvent');
+                            setTimeout(function () {
+                                if (type == 'search') {
+                                    $scope.$broadcast('searchCurrentPositionEvent');
+                                }
+                                else {
+                                    $scope.$broadcast('reloadEvent');
+                                }
+                            }, 0);
+                        }
+                        else if (res == 'search') {
+                            Util.ga.trackEvent('action', 'click', 'moveSearch');
+                            WeatherInfo.disableCity(true);
+                            $location.path('/tab/search');
+                        }
+                        else if (res == 'settings') {
+                            Util.ga.trackEvent('action', 'click', 'settings');
+                            setTimeout(function () {
+                                cordova.plugins.diagnostic.switchToSettings(function () {
+                                    console.log("Successfully switched to Settings app");
+                                }, function (error) {
+                                    console.log("The following error occurred: " + error);
+                                });
+                            }, 0);
+                        }
+                        else if (res == 'locationSettings') {
+                            setTimeout(function () {
+                                cordova.plugins.diagnostic.switchToLocationSettings(function () {
+                                    console.log("Successfully switched to location settings app");
+                                }, function (error) {
+                                    console.log("The following error occurred: " + error);
+                                });
+                            }, 0);
+                        }
+                        else {
+                            Util.ga.trackEvent('action', 'click', 'close');
+                        }
+                    })
+                    .finally(function () {
+                        console.log('called finally');
+                        confirmPopup = undefined;
+                    });
             });
         };
 

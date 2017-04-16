@@ -1,0 +1,25 @@
+/*
+ Localizable.strings .strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 1. 30..
+ 
+ */
+// Japanese
+
+// "Key"					= "Value"
+
+// Widget
+"LOC_UPDATE"						= "更新";
+
+"LOC_YESTERDAY"                     = "昨日";
+"LOC_TODAY"                         = "今日";
+"LOC_TOMORROW"                      = "明日";
+
+"LOC_AQI"                           = "空気質指数";
+"LOC_PM10"                          = "微細粉塵";
+"LOC_PM25"                          = "PM2.5";
+
+"LOC_PROBABILITY_OF_PRECIPITATION"  = "降水確率";
+"LOC_TODAYWEATHER"                  = "今日天気";
+"LOC_PLEASE_EXECUTE_MAIN_APP"       = "今日の天気アプリを実行して、都市のリストを作成してください";

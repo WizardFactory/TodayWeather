@@ -10,6 +10,7 @@
     "angular-translate": "^2.13.0",
     "angular-translate-loader-static-files": "^2.13.0",
     "sprintf": "^1.0.3",
-    "oclazyload": "^1.1.0"
+    "oclazyload": "^1.1.0",
+    "es6-promise": "^4.0.5"
   }
 }

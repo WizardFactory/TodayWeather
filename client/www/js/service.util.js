@@ -105,6 +105,9 @@ angular.module('service.util', [])
                 }
             },
             trackEvent: function (category, action, label, value, newSession) {
+                if (twClientConfig.debug) {
+                   console.log('category='+category+' action='+action+' label='+label+' value='+value);
+                }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackEvent(category, action, label, value, newSession, function(result) {
                         console.log("trackEvent success = " + result);
@@ -118,6 +121,9 @@ angular.module('service.util', [])
                 }
             },
             trackException: function (description, fatal) {
+                if (twClientConfig.debug) {
+                   console.log('description='+description+' fatal='+fatal);
+                }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackException(description, fatal, function(result) {
                         console.log("trackException success = " + result);
@@ -184,7 +190,7 @@ angular.module('service.util', [])
 
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
-        obj.guideVersion = 1.0;
+        obj.startVersion = 1.0;
         obj.suiteName = "group.net.wizardfactory.todayweather";
         obj.language;
         obj.region;
