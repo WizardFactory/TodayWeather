@@ -33,7 +33,8 @@ else {
 //log.info(config.db.path);
 
 var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
-                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
+                mongos: true };
 
 mongoose.connect(config.db.path, options, function(err) {
     if (err) {
