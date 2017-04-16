@@ -162,6 +162,7 @@ var insertDB = function(result, callback)  {
                 function (err) {
                     if(err) {
                         log.error(err.message + "in insert DB(healthData)");
+                        log.info(JSON.stringify(healthData));
                         return mCallback(err);
                     }
                     mCallback();
