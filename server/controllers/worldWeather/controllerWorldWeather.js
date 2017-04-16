@@ -77,18 +77,20 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
-        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         if(req.error){
             res.json(req.error);
-            return;
         }
-
-        if(req.result){
+        else if(req.result){
+            if (req.result.thisTime.length != 2) {
+                log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
+            }
             res.json(req.result);
             return;
         }
-
-        res.json({result: 'Unknow result'});
+        else {
+            res.json({result: 'Unknown result'});
+        }
+        log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
         return;
     };
 
@@ -433,9 +435,9 @@ function controllerWorldWeather(){
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
-                            log.error('TWW> Invaild DSF data', meta);
-                            log.error('TWW> DSF CurDate : ', cDate.toString(), meta);
-                            log.error('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
+                            log.info('TWW> Invaild DSF data', meta);
+                            log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
                             callback('err_exit_notValid');
                             return;
                         }
