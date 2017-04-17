@@ -2,4 +2,29 @@ sudo: required
 language: node_js
 node_js:
   - "0.10"
-script: cd server && npm install && npm test
+script:
+ - cd ..
+ - cd server
+ - npm test
+ - cd ..
+ - cd client
+ - protractor test/e2e/phantomjs.config.js
+
+cache:
+  directories:
+    - node_modules
+
+before_install:
+  - echo "before_install"
+  - npm install -g phantomjs
+  - npm install -g protractor
+  - cd server
+  - npm install
+  - cd ..
+  - cd client
+  - npm install
+
+before_script:
+  - echo "before_script"
+  - webdriver-manager update
+  - nohup bash -c "/home/travis/.nvm/v0.10.40/lib/node_modules/protractor/bin/webdriver-manager start 2>&1 &"
