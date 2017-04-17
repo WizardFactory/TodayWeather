@@ -190,7 +190,7 @@ angular.module('service.util', [])
 
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
-        obj.guideVersion = 1.0;
+        obj.startVersion = 1.0;
         obj.suiteName = "group.net.wizardfactory.todayweather";
         obj.language;
         obj.region;

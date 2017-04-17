@@ -13,7 +13,7 @@ angular.module('service.twads', [])
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
 
-        $rootScope.viewAdsBanner = true;
+        $rootScope.viewAdsBanner = false;
 
         obj.loadTwAdsInfo = function () {
             var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));

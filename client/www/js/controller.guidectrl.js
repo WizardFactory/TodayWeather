@@ -1,7 +1,6 @@
 angular.module('controller.guidectrl', [])
     .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
                                       $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
-        var guideVersion = null;
 
         $scope.data = { 'autoSearch': true };
 
@@ -56,8 +55,6 @@ angular.module('controller.guidectrl', [])
             $scope.bigFont = (bodyHeight - 56) * 0.0512;
             $scope.smallFont = (bodyHeight - 56) * 0.0299;
 
-            guideVersion = localStorage.getItem("guideVersion");
-
             $translate(['LOC_TODAYWEATHER', 'LOC_CLOSE', 'LOC_SKIP', 'LOC_CANCEL', 'LOC_OK',
                 'LOC_USE_YOUR_CURRENT_LOCATION', 'LOC_FIND_LOCATION_BY_NAME']).then(function (translations) {
                 strTodayWeather = translations.LOC_TODAYWEATHER;
@@ -75,18 +72,8 @@ angular.module('controller.guidectrl', [])
         }
 
         function close() {
-            if (guideVersion === null) {
-                showPopup();
-            } else {
-                if (Util.guideVersion == Number(guideVersion)) {
-                    _setShowAds(true);
-                    $location.path('/tab/setting');
-                } else {
-                    localStorage.setItem("guideVersion", Util.guideVersion.toString());
-                    _setShowAds(true);
-                    $location.path('/tab/forecast');
-                }
-            }
+            _setShowAds(true);
+            $location.path('/tab/setting');
         }
 
         function update() {
@@ -129,7 +116,6 @@ angular.module('controller.guidectrl', [])
                     return;
                 }
 
-                localStorage.setItem("guideVersion", Util.guideVersion.toString());
                 _setShowAds(true);
                 if (res === true) { // autoSearch
                     Util.ga.trackEvent('action', 'click', 'auto search');

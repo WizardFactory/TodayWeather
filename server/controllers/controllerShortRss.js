@@ -373,7 +373,8 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
             var item = new shortRssDb({mCoord: newData.mCoord, pubDate: newData.pubDate, shortData: newData.shortData});
             item.save(function(err){
                 if(err){
-                    log.error('fail to save');
+                    log.warn(err);
+                    log.error('short rss fail to save');
                 }
             });
 
@@ -443,7 +444,8 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
 
             dbShortList.save(function(err){
                 if(err){
-                    log.error('fail to save');
+                    log.warn(err);
+                    log.error('short rss fail to save');
                 }
             });
         });

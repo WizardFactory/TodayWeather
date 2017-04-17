@@ -2,7 +2,7 @@
     <ion-header-bar class="search-header">
         <label class="item-input-wrapper">
             <i class="icon ion-ios-search placeholder-icon"></i>
-            <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}" ng-model="searchWord" ng-change="OnChangeSearchWord()">
+            <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}" ng-model="search.word" ng-change="OnChangeSearchWord()">
         </label>
         <a class="icon ion-ios-location-outline" ng-click="OnSearchCurrentPosition()"></a>
         <a ng-class="isEditing?'ion-ios-checkmark-outline':'ion-ios-close-outline'" ng-click="OnEdit()"></a>
@@ -10,7 +10,7 @@
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                  delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentHeight()+'px'}" tabs-shrink>
         <div style="height:16px;"></div>
-        <div class="list list-inset" ng-if="searchWord!==undefined">
+        <div class="list list-inset" ng-if="search.word!==undefined">
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row row-no-padding">
                     <div class="col search-item">
@@ -33,12 +33,13 @@
                 <img src="img/powered_by_google_on_non_white.png" width="144px">
             </div>
         </div>
-        <div class="list list-inset" ng-if="searchWord===undefined">
+        <div class="list list-inset" ng-if="search.word===undefined">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
-                        <p style="color: white; opacity: 0.84; font-size: inherit">{{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
-                            <a class="icon ion-ios-location-outline" ng-if="city.currentPosition"></a>
+                        <p style="color: white; opacity: 0.84; font-size: inherit;">
+                            {{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
+                            <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">location_on</i>
                         </p>
                     </div>
                     <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">

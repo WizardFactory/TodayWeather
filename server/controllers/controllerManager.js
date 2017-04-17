@@ -1072,33 +1072,33 @@ Manager.prototype.getShortQueryTime = function (baseTime) {
     /*
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
-    if(parseInt(time) < 230){
+    if(parseInt(time) < 210){
         var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
-    else if(parseInt(time) < 530) {
+    else if(parseInt(time) < 510) {
         dateString.time = '0200';
     }
-    else if(parseInt(time) < 830){
+    else if(parseInt(time) < 810){
         dateString.time = '0500';
     }
-    else if(parseInt(time) < 1130){
+    else if(parseInt(time) < 1110){
         dateString.time = '0800';
     }
-    else if(parseInt(time) < 1430){
+    else if(parseInt(time) < 1410){
         dateString.time = '1100';
     }
-    else if(parseInt(time) < 1730){
+    else if(parseInt(time) < 1710){
         dateString.time = '1400';
     }
-    else if(parseInt(time) < 2030){
+    else if(parseInt(time) < 2010){
         dateString.time = '1700';
     }
-    else if(parseInt(time) < 2330){
+    else if(parseInt(time) < 2310){
         dateString.time = '2000';
     }
-    else if(parseInt(time) >= 2330){
+    else if(parseInt(time) >= 2310){
         dateString.time = '2300';
     }
     else{
@@ -1887,7 +1887,7 @@ Manager.prototype._requestApi = function (apiName, callback) {
     var timeout = 1000*60*60*24;
     var url = "http://"+config.ipAddress+":"+config.port+"/gather/";
 
-    log.info('Start url='+url+apiName);
+    log.info('Start url='+url+apiName+' '+new Date());
     req(url+apiName, {timeout: timeout}, function(err, response) {
         log.info('Finished '+apiName+' '+new Date());
         if (err) {
@@ -1958,7 +1958,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     
     if (time === 10 || putAll) {
         log.info('push health day');
-        
+
         var hour = (new Date()).getUTCHours()+9;
 
         if(hour === 6 || hour === 18 || putAll) {
@@ -1969,37 +1969,50 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
+        //direct request keco
         log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
+        //self.asyncTasks.push(function (callback) {
+            self._requestApi("keco", function() {
+                log.info('keco done');
+        //        callback();
+            });
+        //});
     }
 
     /**
      * setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
      */
-    if (time === 10 || putAll) {
-        log.info('push life index');
+    //if (time === 10 || putAll) {
+    //    log.info('push life index');
+    //    self.asyncTasks.push(function (callback) {
+    //        self._requestApi("lifeindex", callback);
+    //    });
+    //}
+
+    if (time === 15 || putAll) {
+        log.info('push short');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("lifeindex", callback);
+            self._requestApi("short", callback);
         });
     }
 
     if (time === 35 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
-            self._requestApi("shortest", callback);
+            self._requestApi("shortest", function () {
+                log.info('shortest done');
+                callback();
+            });
         });
 
+        //direct request current
         log.info('push current');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("current", callback);
-        });
-
-        log.info('push short');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("short", callback);
-        });
+        //self.asyncTasks.push(function (callback) {
+            self._requestApi("current", function () {
+                log.info('current done');
+        //        callback();
+            });
+        //});
     }
 
     if(time === 50) {
