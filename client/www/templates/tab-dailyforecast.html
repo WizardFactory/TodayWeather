@@ -6,9 +6,10 @@
             </div>
             <div id="bigInfoBox" class="topMainBox">
                 <p id="cityInfo" class="textFont" ng-style="::{'font-size':regionSize+'px'}" style="margin: 8px 0">
+                    <!--location_on, location_off-->
                     <i ng-if="currentPosition" class="material-icons" style="vertical-align: middle"
                        ng-click="switchToLocationSettings()"
-                       ng-style="::{'font-size':regionSize*1.1+'px'}">{{isLocationEnabled()?'location_on':'location_off'}}</i>
+                       ng-style="::{'font-size':regionSize*1.1+'px'}">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
                     <span style="vertical-align: middle">{{address}}</span>
                 </p>
                 <div class="row row-no-padding"><div id="weatherInfo" style="margin: auto"> <div class="row row-no-padding">
@@ -65,26 +66,34 @@
                                    <p class="body1" style="margin: 0;" translate="LOC_PM10"></p>
                                    <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
                                        <p class="display1" style="margin: 0; opacity: 1">
-                                       <i class="material-icons" style="font-size: 34px;">{{getSentimentIcon(day.dustForecast.pm10Grade)}}</i>
+                                       <i class="material-icons" style="font-size: 32px;"
+                                          ng-bind-html="getSentimentIcon(day.dustForecast.pm10Grade)"></i>
                                        </p>
                                    </div>
                                    <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
-                                       <p class="body2" ng-class="getGradeColor(day.dustForecast.pm10Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm10Grade)|translate}}</p>
+                                       <p class="body2" ng-class="getGradeColor(day.dustForecast.pm10Grade)"
+                                          style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm10Grade)|translate}}</p>
                                    </div>
                                </td>
                                <td style="text-align: center; margin: auto">
                                    <p class="body1" style="margin: 0;" translate="LOC_PM25"></p>
                                    <p class="display1" style="margin: 0; opacity: 1">
-                                       <i class="material-icons" style="font-size: 34px">{{getSentimentIcon(day.dustForecast.pm25Grade)}}</i>
+                                       <i class="material-icons" style="font-size: 32px"
+                                          ng-bind-html="getSentimentIcon(day.dustForecast.pm25Grade)">
+                                       </i>
                                    </p>
-                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.pm25Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm25Grade)|translate}}</p>
+                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.pm25Grade)"
+                                      style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm25Grade)|translate}}</p>
                                </td>
                                <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined">
                                    <p class="body1" style="margin: 0;" translate="LOC_O3"></p>
                                    <p class="display1" style="margin: 0; opacity: 1">
-                                       <i class="material-icons" style="font-size: 34px">{{getSentimentIcon(day.dustForecast.o3Grade)}}</i>
+                                       <i class="material-icons" style="font-size: 32px"
+                                          ng-bind-html="getSentimentIcon(day.dustForecast.o3Grade)">
+                                       </i>
                                    </p>
-                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.o3Grade)" style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.o3Grade)|translate}}</p>
+                                   <p class="body2" ng-class="getGradeColor(day.dustForecast.o3Grade)"
+                                      style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.o3Grade)|translate}}</p>
                                </td>
                            </tr>
                        </table>
