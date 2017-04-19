@@ -37,9 +37,10 @@
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
+                        <!--location_on-->
                         <p style="color: white; opacity: 0.84; font-size: inherit;">
                             {{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
-                            <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">location_on</i>
+                            <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">&#xE0C8;</i>
                         </p>
                     </div>
                     <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">
