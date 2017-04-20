@@ -699,7 +699,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
             }
             if (result.isLatest) {
                 log.info('minu dust forecast is already latest');
-                return cb();
+                return cb('skip');
             }
             cb(undefined, result.dataTime);
         });
