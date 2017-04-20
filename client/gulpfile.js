@@ -94,7 +94,7 @@ gulp.task('release-nonpaid', shell.task([
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_onestore_v'+json.version+'_min19.apk',
 
   'cp ads.ios_playstore.tw.client.config.js www/tw.client.config.js',
-  'cordova plugin add cordova-plugin-inapppurchas',
+  'cordova plugin add cordova-plugin-inapppurchase',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_playstore_v'+json.version+'_min19.apk',
