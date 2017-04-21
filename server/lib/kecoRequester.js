@@ -662,7 +662,7 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
                                             }
                                         }
                                         if (j == shFrcstList[0][name].length) {
-                                            log.warning("_saveFrcst : region is new? name="+informGradeArray[i].region);
+                                            log.warn("_saveFrcst : region is new? name="+informGradeArray[i].region);
                                             shFrcstList[0][name].push(informGradeArray[i]);
                                         }
                                     }
@@ -698,7 +698,8 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                 return cb(err);
             }
             if (result.isLatest) {
-                return cb('minu dust forecast is already latest ');
+                log.info('minu dust forecast is already latest');
+                return cb('skip');
             }
             cb(undefined, result.dataTime);
         });
