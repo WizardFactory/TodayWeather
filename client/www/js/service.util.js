@@ -29,6 +29,9 @@ angular.module('service.util', [])
                 }
             },
             setUserId: function (id) {
+                if (window.fabric && window.fabric.Crashlytics) {
+                    window.fabric.Crashlytics.setUserIdentifier(id);
+                }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setUserId(id, function(result) {
                         console.log("setUserId success = " + result);
@@ -83,6 +86,9 @@ angular.module('service.util', [])
                 }
             },
             trackView: function (screen, campaingUrl, newSession) {
+                if (window.fabric && window.fabric.Answers) {
+                    window.fabric.Answers.sendContentView(screen, campaingUrl);
+                }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackView(screen, campaingUrl, newSession, function(result) {
                         console.log("trackView success = " + result);
