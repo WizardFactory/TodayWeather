@@ -137,9 +137,6 @@ angular.module('controller.tabctrl', [])
             });
 
             Util.ga.trackEvent('action', 'tab', 'share');
-            if (!twClientConfig.debug && window.AirBridgePlugin) {
-                AirBridgePlugin.goal("weathershare");
-            }
         };
 
         $scope.showAlert = function(title, msg, callback) {

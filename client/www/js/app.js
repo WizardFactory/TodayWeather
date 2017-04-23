@@ -54,13 +54,6 @@ angular.module('starter', [
             navigator.splashscreen.hide();
         }
 
-        if (!twClientConfig.debug && window.AirBridgePlugin) {
-            window.airbridgeCustomOnboarding = function (__json) {
-                console.log('Resulted Json String: ' + __json);
-            };
-            AirBridgePlugin.initInstance(twClientConfig.airBridgeToken, twClientConfig.airBridgeAppId);
-        }
-
         if (ionic.Platform.isIOS()) {
            //
         } else if (ionic.Platform.isAndroid()) {

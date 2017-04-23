@@ -254,9 +254,6 @@ angular.module('service.push', [])
 
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
-                if (!twClientConfig.debug && window.AirBridgePlugin) {
-                    AirBridgePlugin.goal("weatheralarm");
-                }
             }
             else {
                 for (var i=0; i<self.pushData.alarmList.length; i++) {
