@@ -369,7 +369,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
 
     var header = data.Response.header;
     if (header.successYN === 'N') {
-        if (header.returnCode === 99) {
+        if (header.returnCode == 99) {
             log.warn("Search result is nothing but continue getting data index="+indexName+" errMsg="+header.errMsg);
             log.debug(data);
             return {};
@@ -414,7 +414,7 @@ KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
 KmaIndexService.prototype.getLifeIndex = function (indexName, areaNo, callback) {
     var url = this.getUrl(indexName, areaNo, this.serviceKey);
 
-    log.info(url);
+    log.debug(url);
     if (this.requestCount[indexName] == undefined) {
         this.requestCount[indexName] = 0;
     }

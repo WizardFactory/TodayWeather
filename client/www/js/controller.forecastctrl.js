@@ -164,22 +164,33 @@ angular.module('controller.forecastctrl', [])
             return "";
         };
 
+        /**
+         * sentiment_satisfied, sentiment_neutral, ...
+         * @param grade
+         * @returns {*}
+         */
         $scope.getSentimentIcon = function (grade) {
-           switch (grade) {
-               case 1:
-                   return 'sentiment_satisfied';
-               case 2:
-                   return 'sentiment_neutral';
-               case 3:
-                   return 'sentiment_dissatisfied';
-               case 4:
-                   return 'sentiment_very_dissatisfied';
-               case 5:
-                   return 'sentiment_very_dissatisfied';
-               default:
-                   console.log('Fail to find grade='+grade);
-           }
-            return 'sentiment_very_dissatisfied';
+            var str = '&#xE814;';
+            switch (grade) {
+                case 1:
+                    str = '&#xE813;';
+                    break;
+                case 2:
+                    str = '&#xE812;';
+                    break;
+                case 3:
+                    str = '&#xE811;';
+                    break;
+                case 4:
+                    str = '&#xE814;';
+                    break;
+                case 5:
+                    str = '&#xE814;';
+                    break;
+                default:
+                    console.log('Fail to find grade='+grade);
+            }
+            return $sce.trustAsHtml(str);
         };
 
         $scope.getSentimentStr = function(grade) {

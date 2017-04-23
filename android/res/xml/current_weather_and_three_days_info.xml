@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:configure="net.wizardfactory.todayweather.widget.WidgetProviderConfigureActivity"
+    android:configure="net.wizardfactory.todayweather.widget.SettingsActivity"
     android:initialKeyguardLayout="@layout/current_weather_and_three_days"
     android:initialLayout="@layout/current_weather_and_three_days"
     android:minHeight="40dp"

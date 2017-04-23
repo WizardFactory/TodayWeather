@@ -33,8 +33,10 @@ else {
 //log.info(config.db.path);
 
 var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
-                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } } };
+                replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
+                mongos: true };
 
+mongoose.Promise = global.Promise;
 mongoose.connect(config.db.path, options, function(err) {
     if (err) {
         log.error('Could not connect to MongoDB! ' + config.db.path);
@@ -60,7 +62,10 @@ i18n.configure({
 });
 
 // Use the session middleware
-app.use(session({ secret: 'wizard factory', cookie: { maxAge: 60000 }}));
+app.use(session({ secret: 'wizard factory',
+                resave: false,
+                saveUninitialized: true,
+                cookie: { maxAge: 60000 }}));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

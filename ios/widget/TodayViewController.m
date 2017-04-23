@@ -1869,9 +1869,7 @@ static TodayViewController *todayVC = nil;
             }
         }
         
-        
-        
-        curDustLabel.hidden         = true;
+//        curDustLabel.hidden         = true;
         //todayMaxMinTempLabel.frame  = CGRectMake(160, 50, 140, 25);
         //todayMaxMinTempLabel.frame  = CGRectMake(160, 50, todayMaxMinTempLabel.frame.size.width, todayMaxMinTempLabel.frame.size.height);
         //todayMaxMinTempLabel.center  = CGPointMake(160, 50);
@@ -1881,13 +1879,18 @@ static TodayViewController *todayVC = nil;
         {
             int todPop = [nssTodPop intValue];
             NSLog(@"todPop : %@ %d", nssTodPop, todPop);
+            
             if(todPop == 0)
             {
+//              curDustLabel.hidden         = false;
+                curDustLabel.font           = [UIFont systemFontOfSize:16.0];
+                curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
+                
                 todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
             }
             else
             {
-                curDustLabel.hidden         = false;
+//                curDustLabel.hidden         = false;
                 //curDustLabel.frame          = CGRectMake(160, 40, 138, 21);
                 //curDustLabel.frame          = CGRectMake(160, 40, todayMaxMinTempLabel.frame.size.width, todayMaxMinTempLabel.frame.size.height);
                 //curDustLabel.center         = CGPointMake(160, 40);
