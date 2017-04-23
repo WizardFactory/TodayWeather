@@ -272,7 +272,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     }
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
     if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
-        dailyArray.push(trans.__("LOC_O3") + " "+ KecoController.grade2str(theDay.dustForecast.O3Str+1, 'O3', trans));
+        dailyArray.push(trans.__("LOC_O3") + " "+ KecoController.grade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
     }
 
     //불쾌지수

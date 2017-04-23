@@ -114,7 +114,7 @@ router.get('/keco', function(req, res) {
 
 router.get('/kecoForecast', function(req, res) {
     manager.keco.getMinuDustFrcstDspth.call(manager.keco, function (err) {
-        if (err) {
+        if (err !== 'skip') {
             log.error(err);
         }
 

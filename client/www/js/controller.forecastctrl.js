@@ -73,27 +73,29 @@ angular.module('controller.forecastctrl', [])
             }
 
             $scope.hasPropertyInThreeDays = function(propertyNameList) {
-                var todayIndex = $scope.currentWeather.today.index;
-                if (todayIndex == undefined) {
-                    console.log("today index is undefined, daily list has not today data");
-                    return false;
-                }
-
-                var dayTable = $scope.dayChart[0].values;
-                if (dayTable) {
-                    if (_hasProperty(dayTable[todayIndex], propertyNameList)) {
-                        return true;
+                if ($scope.currentWeather && $scope.currentWeather.today) {
+                    var todayIndex = $scope.currentWeather.today.index;
+                    if (todayIndex == undefined) {
+                        console.log("today index is undefined, daily list has not today data");
+                        return false;
                     }
-                    if (todayIndex > 0) {
-                        var yesterday = dayTable[todayIndex-1];
-                        if (_hasProperty(yesterday, propertyNameList)) {
+
+                    var dayTable = $scope.dayChart[0].values;
+                    if (dayTable) {
+                        if (_hasProperty(dayTable[todayIndex], propertyNameList)) {
                             return true;
                         }
-                    }
-                    if (todayIndex < dayTable.length-1) {
-                        var tomorrow = dayTable[todayIndex+1];
-                        if (_hasProperty(tomorrow, propertyNameList)) {
-                            return true;
+                        if (todayIndex > 0) {
+                            var yesterday = dayTable[todayIndex-1];
+                            if (_hasProperty(yesterday, propertyNameList)) {
+                                return true;
+                            }
+                        }
+                        if (todayIndex < dayTable.length-1) {
+                            var tomorrow = dayTable[todayIndex+1];
+                            if (_hasProperty(tomorrow, propertyNameList)) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -162,22 +164,33 @@ angular.module('controller.forecastctrl', [])
             return "";
         };
 
+        /**
+         * sentiment_satisfied, sentiment_neutral, ...
+         * @param grade
+         * @returns {*}
+         */
         $scope.getSentimentIcon = function (grade) {
-           switch (grade) {
-               case 1:
-                   return 'ic_sentiment_satisfied_white_24px.svg';
-               case 2:
-                   return 'ic_sentiment_neutral_white_24px.svg';
-               case 3:
-                   return 'ic_sentiment_dissatisfied_white_24px.svg';
-               case 4:
-                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
-               case 5:
-                   return 'ic_sentiment_very_dissatisfied_white_24px.svg';
-               default:
-                   console.log('Fail to find grade='+grade);
-           }
-            return 'ic_sentiment_very_dissatisfied_white_24px.svg';
+            var str = '&#xE814;';
+            switch (grade) {
+                case 1:
+                    str = '&#xE813;';
+                    break;
+                case 2:
+                    str = '&#xE812;';
+                    break;
+                case 3:
+                    str = '&#xE811;';
+                    break;
+                case 4:
+                    str = '&#xE814;';
+                    break;
+                case 5:
+                    str = '&#xE814;';
+                    break;
+                default:
+                    console.log('Fail to find grade='+grade);
+            }
+            return $sce.trustAsHtml(str);
         };
 
         $scope.getSentimentStr = function(grade) {
@@ -710,7 +723,6 @@ angular.module('controller.forecastctrl', [])
             isLoadingIndicator = false;
         }
 
-
         function loadWeatherData() {
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 showLoadingIndicator();
@@ -720,7 +732,7 @@ angular.module('controller.forecastctrl', [])
                         hideLoadingIndicator();
                     }, function (msg) {
                         hideLoadingIndicator();
-                        $scope.showRetryConfirm(strError, msg, 'forecast');
+                        $scope.showRetryConfirm(strError, msg, 'weather');
                     });
                 }, function(msg) {
                     hideLoadingIndicator();
@@ -1003,7 +1015,10 @@ angular.module('controller.forecastctrl', [])
         };
 
         $scope.convertMMDD = function (value) {
-            return value.substr(4,2)+'/'+value.substr(6,2);
+            if (typeof value == 'string') {
+                return value.substr(4,2)+'/'+value.substr(6,2);
+            }
+            return value;
         };
 
         function _diffTodayYesterday(current, yesterday) {
@@ -1199,7 +1214,7 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
             } else if (sender === 'locationOn') {
-                if (cityData.currentPosition === false) {
+                if (cityData && cityData.currentPosition === false) {
                     Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;
                 }
@@ -1269,6 +1284,22 @@ angular.module('controller.forecastctrl', [])
             }
             else {
                 return temp;
+            }
+        };
+
+        $scope.isLocationEnabled = function () {
+            return Util.isLocationEnabled();
+        };
+
+        $scope.switchToLocationSettings = function () {
+            Util.ga.trackEvent('action', 'click', 'toggleLocationEnable');
+            if (Util.isLocationEnabled() == false && cordova && cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.switchToLocationSettings(function () {
+                    console.log("Successfully switched to location settings app");
+                    WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
+                }, function (error) {
+                    console.log("The following error occurred: " + error);
+                });
             }
         };
 
