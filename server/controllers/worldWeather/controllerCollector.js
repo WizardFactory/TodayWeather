@@ -1105,71 +1105,74 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                         print.error('Dsf> fail to add the new data to DB :', geocode);
                     }
                     else {
-                        log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
+                        log.info('Dsf> First time save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
+
                     if (callback) {
-                        callback(err, newData);
+                        return callback(err, newData);
                     }
                 });
             }
             else {
                 //print.info('Dsf> add new Item : ', newData);
-                list.forEach(function(data, index){
-                    var isExist = false;
-                    if(data.date < date){
-                        data.date = date;
-                    }
-                    var pubDate = self._getUtcTime('' + date +'000');
-                    //log.info('dateOBJ : ', pubDate.toString());
-                    if(data.dateObj.getTime() < pubDate.getTime()){
-                        data.dateObj = pubDate;
-                    }
+                if(list.length > 2){
+                    log.error('Dsf> Wrong DB list(geocode) count : ', list.length, geocode);
+                }
+                var dbData = list[0];
+                var isExist = false;
+                if(dbData.date < date){
+                    dbData.date = date;
+                }
+                var pubDate = self._getUtcTime('' + date +'000');
+                //log.info('dateOBJ : ', pubDate.toString());
+                if(dbData.dateObj.getTime() < pubDate.getTime()){
+                    dbData.dateObj = pubDate;
+                }
 
-                    data.data.forEach(function(dbItem){
-                        //log.info('DB Item', dbItem.current.dateObj.toString());
-                        if(dbItem.current.dateObj.getTime() === newData.current.dateObj.getTime()){
-                            dbItem.current = newData.current;
-                            dbItem.hourly = newData.hourly;
-                            dbItem.daily = newData.daily;
-                            isExist = true;
-                        }
+                dbData.data.forEach(function(dbItem){
+                    //log.info('DB Item', dbItem.current.dateObj.toString());
+                    if(dbItem.current.dateObj.getTime() === newData.current.dateObj.getTime()){
+                        dbItem.current = newData.current;
+                        dbItem.hourly = newData.hourly;
+                        dbItem.daily = newData.daily;
+                        isExist = true;
+                    }
+                });
+
+                if(!isExist){
+                    dbData.data.push({
+                        current : newData.current,
+                        hourly : newData.hourly,
+                        daily: newData.daily
                     });
+                }
 
-                    if(!isExist){
-                        data.data.push({
-                            current : newData.current,
-                            hourly : newData.hourly,
-                            daily: newData.daily
-                        });
+                dbData.data.sort(function(a, b){
+                    if(a.current.date > b.current.date){
+                        return 1;
+                    }
+                    if(a.current.date < b.current.date){
+                        return -1;
+                    }
+                    return 0;
+                });
+
+                if(dbData.data.length > self.MAX_DSF_COUNT){
+                    dbData.data.shift();
+                }
+
+                //log.info(data);
+                dbData.save(function(err){
+                    if(err){
+                        log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
+                    }
+                    else {
+                        log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
 
-                    data.data.sort(function(a, b){
-                        if(a.current.date > b.current.date){
-                            return 1;
-                        }
-                        if(a.current.date < b.current.date){
-                            return -1;
-                        }
-                        return 0;
-                    });
-
-                    if(data.data.length > self.MAX_DSF_COUNT){
-                        data.data.shift();
+                    if(callback){
+                        return callback(err, newData);
                     }
-
-                    //log.info(data);
-                    data.save(function(err){
-                        if(err){
-                            log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
-                        }
-                        else {
-                            log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
-                        }
-
-                        if(callback){
-                            callback(err, newData);
-                        }
-                    });
                 });
             }
         });
@@ -1431,8 +1434,8 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                         date = parseInt(curTime.getTime() / 1000);
                         //log.info('Req Dsf> cur : ', date.toString());
                     }
-                    self.saveDSForecast(geocode, date, result, function(err){
-                        cb(null, result);
+                    self.saveDSForecast(geocode, date, result, function(err, savedData){
+                        return cb(null, result);
                     });
                 });
             },
