@@ -75,7 +75,7 @@ angular.module('service.weatherutil', [])
                 console.log("target or current is invalid");
                 return 0;
             }
-            var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+            var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
             var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
             return Math.ceil((targetDay - date) / (1000 * 3600 * 24));
         }
@@ -179,29 +179,29 @@ angular.module('service.weatherutil', [])
          * @param {Object[]} results
          * @returns {string}
          */
-        function findDongAddressFromGoogleGeoCodeResults(results) {
-            var dongAddress = "";
-            var length = 0;
-
-            results.forEach(function (result) {
-                var lastChar = result.formatted_address.slice(-1);
-                if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
-                    var arrayStr = result.formatted_address.split(" ");
-                    var secondLastChar = arrayStr[arrayStr.length-2].slice(-1);
-                    if (secondLastChar === "시" || secondLastChar === "군" || secondLastChar === "구")  {
-                        if(length < result.formatted_address.length) {
-                            dongAddress = result.formatted_address;
-                            length = result.formatted_address.length;
-                        }
-                    }
-                }
-            });
-
-            if (dongAddress.length === 0) {
-                console.log("Fail to find index of dong from="+results[0].formatted_address);
-            }
-            return dongAddress;
-        }
+        //function findDongAddressFromGoogleGeoCodeResults(results) {
+        //    var dongAddress = "";
+        //    var length = 0;
+        //
+        //    results.forEach(function (result) {
+        //        var lastChar = result.formatted_address.slice(-1);
+        //        if (lastChar === "동" || lastChar === "읍" || lastChar === "면")  {
+        //            var arrayStr = result.formatted_address.split(" ");
+        //            var secondLastChar = arrayStr[arrayStr.length-2].slice(-1);
+        //            if (secondLastChar === "시" || secondLastChar === "군" || secondLastChar === "구")  {
+        //                if(length < result.formatted_address.length) {
+        //                    dongAddress = result.formatted_address;
+        //                    length = result.formatted_address.length;
+        //                }
+        //            }
+        //        }
+        //    });
+        //
+        //    if (dongAddress.length === 0) {
+        //        console.log("Fail to find index of dong from="+results[0].formatted_address);
+        //    }
+        //    return dongAddress;
+        //}
 
         /**
          *
@@ -209,7 +209,7 @@ angular.module('service.weatherutil', [])
          * @returns {*}
          */
         function findLocationFromGoogleGeoCodeResults(results) {
-            var location; //{"lat": Number, "long": Number};
+            var location = null; //{"lat": Number, "long": Number};
 
             if (results.length == 0) {
                 console.log("result.length = 0");
@@ -238,21 +238,19 @@ angular.module('service.weatherutil', [])
             console.log("retry="+retryCount+" get http");
             $http({method: 'GET', url: url, timeout: 10000})
                 .success(function (data, status, headers, config, statusText) {
-                    console.log("status="+status);
-                    clearTimeout(retryTimeId);
                     console.log('clear timeout = '+ retryTimeId);
+                    clearTimeout(retryTimeId);
+                    console.log("s="+status+" h="+headers+" c="+config+" sT="+statusText);
                     callback(undefined, data);
                 })
                 .error(function (data, status, headers, config, statusText) {
-                    if (!data) {
-                        data = data | "Fail to get weatherInfo";
-                    }
-                    console.log(status +":"+data);
                     console.log('clear timeout = '+ retryTimeId);
                     clearTimeout(retryTimeId);
-                    var error = new Error(data);
-                    error.code = status;
-                    callback(error);
+                    console.log("d="+data+" s="+status+" h="+headers+" c="+config+" sT="+statusText);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    callback(err);
                 });
         }
 
@@ -271,12 +269,12 @@ angular.module('service.weatherutil', [])
                 .success(function (data) {
                     deferred.resolve({data : data});
                 })
-                .error(function (error) {
-                    if (!error) {
-                        error = new Error("Fail to get geo weather info");
-                    }
-                    console.log(error);
-                    deferred.reject(error);
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    deferred.reject(err);
                 });
             return deferred.promise;
         }
@@ -312,7 +310,8 @@ angular.module('service.weatherutil', [])
          * {date: String, lgt: Number, mx: Number, my: Number, pty: Number, reh: Number, rn1: Number,
          *          sky: Number, t1h: Number, time: String, uuu: Number, vec: Number, vvv: Number,
          *          wsd: Number}
-         * @param {Object} currentTownWeather
+         * @param currentTownWeather
+         * @param units
          * @returns {{}}
          */
         obj.parseCurrentTownWeather = function (currentTownWeather, units) {
@@ -385,6 +384,7 @@ angular.module('service.weatherutil', [])
         /**
          * @param {Object[]} shortForecastList
          * @param {Object} currentForecast
+         * @param units
          * @returns {{timeTable: Array, timeChart: Array}}
          */
         obj.parseShortTownWeather = function (shortForecastList, currentForecast, units) {
@@ -509,15 +509,17 @@ angular.module('service.weatherutil', [])
         };
         
         /**
+         *
          * 식중독, ultra 자외선,
          * @param midData
          * @param currentTime
-         * @returns {Array}
+         * @param units
+         * @returns {*}
          */
         obj.parseMidTownWeather = function (midData, currentTime, units) {
             var tmpDayTable = [];
             var displayItemCount = 0;
-            var todayInfo;
+            var todayInfo = null;
 
             if (!midData || !midData.hasOwnProperty('dailyData') || !Array.isArray(midData.dailyData)) {
                 return {displayItemCount: displayItemCount, dayTable: tmpDayTable};
@@ -769,58 +771,69 @@ angular.module('service.weatherutil', [])
             return town;
         };
 
-        function getGeoCodeFromDaum(address) {
-            var deferred = $q.defer();
-            var url = 'https://apis.daum.net/local/geo/addr2coord'+
-                '?apikey=' + twClientConfig.daumServiceKey +
-                '&q='+ encodeURIComponent(address) +
-                '&output=json';
-
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                var lat = data.channel.item[0].lat;
-                var lng = data.channel.item[0].lng;
-                var location = {"lat":lat, "long":lng};
-                deferred.resolve(location);
-            }).error(function (err) {
-                deferred.reject(err);
-            });
-
-            return deferred.promise;
-        }
+        //function getGeoCodeFromDaum(address) {
+        //    var deferred = $q.defer();
+        //    var url = 'https://apis.daum.net/local/geo/addr2coord'+
+        //        '?apikey=' + twClientConfig.daumServiceKey +
+        //        '&q='+ encodeURIComponent(address) +
+        //        '&output=json';
+        //
+        //    $http({method: 'GET', url: url, timeout: 3000})
+        //        .success(function (data) {
+        //            var lat = data.channel.item[0].lat;
+        //            var lng = data.channel.item[0].lng;
+        //            var location = {"lat":lat, "long":lng};
+        //            deferred.resolve(location);
+        //        })
+        //        .error(function (data, status) {
+        //            console.log(status +":"+data);
+        //            data = data || "Request failed";
+        //            var err = new Error(data);
+        //            err.code = status;
+        //            deferred.reject(err);
+        //        });
+        //
+        //    return deferred.promise;
+        //}
 
         function getGeoCodeFromGoogle(address) {
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.status === 'OK') {
-                    try {
-                        var location = findLocationFromGoogleGeoCodeResults(data.results) ;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    if (data.status === 'OK') {
+                        try {
+                            var location = findLocationFromGoogleGeoCodeResults(data.results) ;
 
-                        var country;
-                        for (var i=0; i< data.results[0].address_components.length; i++) {
-                            if (data.results[0].address_components[i].types[0] == "country") {
-                                country =  data.results[0].address_components[i].short_name;
-                                break;
+                            var country;
+                            for (var i=0; i< data.results[0].address_components.length; i++) {
+                                if (data.results[0].address_components[i].types[0] == "country") {
+                                    country =  data.results[0].address_components[i].short_name;
+                                    break;
+                                }
                             }
+                            console.log(location);
+                            deferred.resolve({location: location, country: country, address: address});
                         }
-                        console.log(location);
-                        deferred.resolve({location: location, country: country, address: address});
+                        catch(e) {
+                            console.log(e);
+                            deferred.reject(e);
+                        }
                     }
-                    catch(e) {
-                        console.log(e);
-                        deferred.reject(e);
+                    else {
+                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                        deferred.reject(new Error(data.status));
                     }
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                console.log(err);
-                deferred.reject(err);
-            });
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    deferred.reject(err);
+                });
 
             return deferred.promise;
         }
@@ -884,6 +897,7 @@ angular.module('service.weatherutil', [])
             console.log(url);
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data, status, headers, config, statusText) {
+                    console.log("s="+status+" h="+headers+" c="+config+" sT="+statusText);
                     if (data.fullName) {
                         var address = data.fullName;
                         var name = data.name;
@@ -896,9 +910,11 @@ angular.module('service.weatherutil', [])
                     }
                 })
                 .error(function (data, status, headers, config, statusText) {
-                    var error = new Error(data);
-                    error.code = status;
-                    deferred.reject(error);
+                    console.error("d="+data+" s="+status+" h="+headers+" c="+config+" sT="+statusText);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    deferred.reject(err);
                 });
 
             return deferred.promise;
@@ -916,40 +932,46 @@ angular.module('service.weatherutil', [])
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 3000}).success(function (data) {
-                if (data.status === "OK") {
-                    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
-                    var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
-                    var local_types = [ "locality", "political" ];
-                    var country_types = ["country"];
-                    var sub_level2_name;
-                    var sub_level1_name;
-                    var local_name;
-                    var country_name;
+            $http({method: 'GET', url: url, timeout: 3000})
+                .success(function (data) {
+                    if (data.status === "OK") {
+                        var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+                        var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+                        var local_types = [ "locality", "political" ];
+                        var country_types = ["country"];
+                        var sub_level2_name;
+                        var sub_level1_name;
+                        var local_name;
+                        var country_name;
 
-                    for (var i=0; i < data.results.length; i++) {
-                        var result = data.results[i];
-                        for (var j=0; j < result.address_components.length; j++) {
-                            var address_component = result.address_components[j];
-                            if ( address_component.types[0] == sub_level2_types[0]
-                                && address_component.types[1] == sub_level2_types[1]
-                                && address_component.types[2] == sub_level2_types[2] ) {
-                                sub_level2_name = address_component.short_name;
-                            }
+                        for (var i=0; i < data.results.length; i++) {
+                            var result = data.results[i];
+                            for (var j=0; j < result.address_components.length; j++) {
+                                var address_component = result.address_components[j];
+                                if ( address_component.types[0] == sub_level2_types[0]
+                                    && address_component.types[1] == sub_level2_types[1]
+                                    && address_component.types[2] == sub_level2_types[2] ) {
+                                    sub_level2_name = address_component.short_name;
+                                }
 
-                            if ( address_component.types[0] == sub_level1_types[0]
-                                && address_component.types[1] == sub_level1_types[1]
-                                && address_component.types[2] == sub_level1_types[2] ) {
-                               sub_level1_name = address_component.short_name;
-                            }
+                                if ( address_component.types[0] == sub_level1_types[0]
+                                    && address_component.types[1] == sub_level1_types[1]
+                                    && address_component.types[2] == sub_level1_types[2] ) {
+                                    sub_level1_name = address_component.short_name;
+                                }
 
-                            if ( address_component.types[0] == local_types[0]
-                                && address_component.types[1] == local_types[1] ) {
-                               local_name = address_component.short_name;
-                            }
+                                if ( address_component.types[0] == local_types[0]
+                                    && address_component.types[1] == local_types[1] ) {
+                                    local_name = address_component.short_name;
+                                }
 
-                            if ( address_component.types[0] == country_types[0] ) {
-                               country_name = address_component.short_name;
+                                if ( address_component.types[0] == country_types[0] ) {
+                                    country_name = address_component.short_name;
+                                }
+
+                                if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                                    break;
+                                }
                             }
 
                             if (sub_level2_name && sub_level1_name && local_name && country_name) {
@@ -957,55 +979,55 @@ angular.module('service.weatherutil', [])
                             }
                         }
 
-                        if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                            break;
+                        var name;
+                        var address = "";
+                        //국내는 동단위까지 표기해야 함.
+                        if (country_name == "KR") {
+                            if (sub_level2_name) {
+                                address += sub_level2_name;
+                                name = sub_level2_name
+                            }
                         }
-                    }
+                        if (sub_level1_name) {
+                            address += " " + sub_level1_name;
+                            if (name == undefined) {
+                                name = sub_level1_name;
+                            }
+                        }
+                        if (local_name) {
+                            address += " " + local_name;
+                            if (name == undefined) {
+                                name = local_name;
+                            }
+                        }
+                        if (country_name) {
+                            address += " " + country_name;
+                            if (name == undefined) {
+                                name = country_name;
+                            }
+                        }
 
-                    var name;
-                    var address = "";
-                    //국내는 동단위까지 표기해야 함.
-                    if (country_name == "KR") {
-                        if (sub_level2_name) {
-                            address += sub_level2_name;
-                            name = sub_level2_name
+                        if (name == undefined || name == country_name) {
+                            console.log("Fail to find location address");
                         }
-                    }
-                    if (sub_level1_name) {
-                        address += " " + sub_level1_name;
-                        if (name == undefined) {
-                            name = sub_level1_name;
-                        }
-                    }
-                    if (local_name) {
-                        address += " " + local_name;
-                        if (name == undefined) {
-                            name = local_name;
-                        }
-                    }
-                    if (country_name) {
-                        address += " " + country_name;
-                        if (name == undefined) {
-                            name = country_name;
-                        }
-                    }
 
-                    if (name == undefined || name == country_name) {
-                        console.log("Fail to find location address");
+                        var geoInfo =  {country: country_name, address: address};
+                        geoInfo.location = {lat:lat, long: lng};
+                        geoInfo.name = name;
+                        deferred.resolve(geoInfo);
                     }
-
-                    var geoInfo =  {country: country_name, address: address};
-                    geoInfo.location = {lat:lat, long: lng};
-                    geoInfo.name = name;
-                    deferred.resolve(geoInfo);
-                }
-                else {
-                    //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                    deferred.reject(new Error(data.status));
-                }
-            }).error(function (err) {
-                deferred.reject(err);
-            });
+                    else {
+                        //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
+                        deferred.reject(new Error(data.status));
+                    }
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+                    deferred.reject(err);
+                });
 
             return deferred.promise;
         }
@@ -1358,7 +1380,7 @@ angular.module('service.weatherutil', [])
         function _parseWorldCurrentWeather(thisTime, todayInfo, currentTime, units) {
             var sunrise = 7;
             var sunset = 18;
-            var isNight = false;
+            var isNight;
             var yesterday = thisTime[0];
             var current = thisTime[1];
 
@@ -1642,7 +1664,7 @@ angular.module('service.weatherutil', [])
 
             var tmpDayTable = [];
             var displayItemCount = 0;
-            var todayInfo;
+            var todayInfo = null;
 
             daily.forEach(function (dayInfo, index) {
                 var data;

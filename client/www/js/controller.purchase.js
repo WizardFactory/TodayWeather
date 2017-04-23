@@ -10,11 +10,11 @@ angular.module('controller.purchase', [])
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
         //for paid app without ads, in app purchase
         obj.ACCOUNT_LEVEL_PAID = 'paid';
-        obj.accountLevel;
-        obj.productId;
-        obj.expirationDate;
+        obj.accountLevel = null;
+        obj.productId = null;
+        obj.expirationDate = null;
         obj.loaded = false;
-        obj.products;
+        obj.products = null;
         //for only ads app without in app purchase
         obj.hasInAppPurchase = false;
         obj.paidAppUrl='';
@@ -50,10 +50,15 @@ angular.module('controller.purchase', [])
                 data: storeReceipt,
                 timeout: 10000
             })
-                .then(function (result) {
+                .success(function (result) {
                     callback(undefined, result.data);
-                },
-                function (err) {
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+
                     Util.ga.trackEvent('plugin', 'error', 'checkReceiptValidation');
                     Util.ga.trackException(err, false);
                     callback(err);
@@ -78,7 +83,7 @@ angular.module('controller.purchase', [])
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
-                    Util.ga.trackEvent('plugin', 'info', 'purchaseExpired '+purchaseInfo.expirationDate);
+                    Util.ga.trackEvent('purchase', 'expired', 'subscribeExpired '+purchaseInfo.expirationDate);
                     purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
                 }
                 obj.setAccountLevel(purchaseInfo.accountLevel);
@@ -228,6 +233,8 @@ angular.module('controller.purchase', [])
                         Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
 
+                        Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 2);
+
                         //$ionicPopup.alert({
                         //    title: 'check purchase',
                         //    template: receiptInfo.data.message
@@ -293,7 +300,7 @@ angular.module('controller.purchase', [])
         //some times fail to get restorePurchases because inAppPurchase is not ready
         checkPurchase();
     })
-    .controller('PurchaseCtrl', function($scope, $ionicLoading, $http, $ionicHistory, $ionicPopup,
+    .controller('PurchaseCtrl', function($scope, $ionicLoading, $ionicHistory, $ionicPopup,
                                          Purchase, TwAds, $translate, Util) {
 
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
@@ -334,6 +341,7 @@ angular.module('controller.purchase', [])
                     else if (ionic.Platform.isAndroid()) {
                        return {type: 'android', id: Purchase.productId, receipt: [data]}
                     }
+                    Util.ga.trackEvent('purchase', 'order', 'subscribe');
                 })
                 .then(function (storeReceipt) {
                     //$ionicLoading.hide();
@@ -348,6 +356,7 @@ angular.module('controller.purchase', [])
                         }
                         console.log(JSON.stringify(receiptInfo));
                         if (!receiptInfo.ok) {
+                            Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 0);
                             console.log(JSON.stringify(receiptInfo.data));
                             throw new Error(receiptInfo.data.message);
                         }
@@ -364,11 +373,22 @@ angular.module('controller.purchase', [])
                     $ionicLoading.hide();
                     console.log(strPurchaseError);
                     console.log(JSON.stringify(err));
-                    Util.ga.trackException(err, false);
                     $ionicPopup.alert({
                         title: strPurchaseError,
                         template: err.message
                     });
+                    if (err instanceof Error) {
+                        if (err.code == -5) {
+                            Util.ga.trackEvent('purchase', 'cancel', 'subscribe');
+                        }
+                        else {
+                            Util.ga.trackEvent('purchase', 'error', 'subscribe');
+                            Util.ga.trackException(err, false);
+                        }
+                    }
+                    else {
+                        Util.ga.trackException(err, false);
+                    }
                 });
         };
 
@@ -381,6 +401,7 @@ angular.module('controller.purchase', [])
 
                     if (!receiptInfo.ok) {
                         console.log(JSON.stringify(receiptInfo.data));
+                        Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 1);
                         throw new Error(receiptInfo.data.message);
                     }
                     else {
@@ -390,11 +411,13 @@ angular.module('controller.purchase', [])
                         $scope.expirationDate = (new Date(Purchase.expirationDate)).toLocaleDateString();
                         console.log('set accountLevel=' + $scope.accountLevel);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+                        Util.ga.trackEvent('purchase', 'restore', 'subscribe');
                     }
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
                     console.log(JSON.stringify(err));
+                    Util.ga.trackEvent('purchase', 'error', 'subscribe');
                     Util.ga.trackException(err, false);
                     $ionicPopup.alert({
                         title: strRestoreError,
@@ -441,12 +464,7 @@ angular.module('controller.purchase', [])
             //Todo: check expire date for ios, check autoRenewing and expire date for android
             showRenewDate.setMonth(showRenewDate.getMonth()+3);
 
-            if (expirationDate.getTime() <= showRenewDate.getTime()) {
-                $scope.showRenew = true;
-            }
-            else {
-                $scope.showRenew = false;
-            }
+            $scope.showRenew = expirationDate.getTime() <= showRenewDate.getTime();
 
             if (!window.inAppPurchase) {
                 //for develop mode
