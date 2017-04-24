@@ -1,7 +1,7 @@
 angular.module('controller.searchctrl', [])
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
-                                        $translate, $ocLazyLoad, $ionicPopup) {
+                                        $translate, $ocLazyLoad) {
         $scope.search = {};
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -58,8 +58,10 @@ angular.module('controller.searchctrl', [])
                 return;
             }
             if (status != google.maps.places.PlacesServiceStatus.OK) {
-                Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
-                console.log(status);
+                if (status != google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                    Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
+                    console.log(status);
+                }
                 return;
             }
             else {
@@ -160,6 +162,7 @@ angular.module('controller.searchctrl', [])
         };
 
         $scope.$on('searchCurrentPositionEvent', function(event) {
+            console.log(event);
             $scope.OnSearchCurrentPosition();
         });
 
@@ -233,7 +236,7 @@ angular.module('controller.searchctrl', [])
                 Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(geoInfo.address), WeatherInfo.getCityCount() - 1);
                 return true;
             }
-            return false;
+            //return false;
         }
 
         $scope.OnSelectResult = function(result) {
@@ -363,6 +366,11 @@ angular.module('controller.searchctrl', [])
             $location.path('/tab/forecast');
         };
 
+        /**
+         *
+         * @returns {boolean}
+         * @constructor
+         */
         $scope.OnDisableCity = function() {
             Util.ga.trackEvent('city', 'disable', $scope.cityList[0].disable, 0);
 
@@ -371,6 +379,12 @@ angular.module('controller.searchctrl', [])
             return false; //OnDisableCity가 호출되지 않도록 이벤트 막음
         };
 
+        /**
+         *
+         * @param index
+         * @returns {boolean}
+         * @constructor
+         */
         $scope.OnDeleteCity = function(index) {
             Util.ga.trackEvent('city', 'delete', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
 
@@ -562,6 +576,7 @@ angular.module('controller.searchctrl', [])
                 if (window.cordova && cordova.plugins.locationAccuracy) {
                     cordova.plugins.locationAccuracy.request (
                         function (success) {
+                            console.log(success);
                             Util.ga.trackEvent("position", "status", "successUserAgreed");
                             //메세지 없이 통과시키고, reload by locationOn.
                             deferred.reject(null);
@@ -660,7 +675,7 @@ angular.module('controller.searchctrl', [])
         }
 
         $scope.$on('setInputFocus', function(event) {
-            console.log("set input focus");
+            console.log("set input focus event="+event);
 
             if (ionic.Platform.isIOS() == false) {
                 console.log('set focus on search input');
