@@ -943,6 +943,7 @@ angular.module('service.weatherutil', [])
                         var sub_level1_name;
                         var local_name;
                         var country_name;
+                        var err;
 
                         for (var i=0; i < data.results.length; i++) {
                             var result = data.results[i];
@@ -983,7 +984,7 @@ angular.module('service.weatherutil', [])
 
                         if (country_name == undefined) {
                             Util.ga.trackEvent('address', 'error', 'country_name');
-                            var err = new Error('country_name null latlng='+lat+","+lng);
+                            err = new Error('country_name null latlng='+lat+","+lng);
                             deferred.reject(err);
                             return;
                         }
@@ -1018,7 +1019,7 @@ angular.module('service.weatherutil', [])
 
                         if (name == undefined || name == country_name) {
                             Util.ga.trackEvent('address', 'error', 'failToFindLocation');
-                            var err = new Error('failToFindLocation latlng='+lat+","+lng);
+                            err = new Error('failToFindLocation latlng='+lat+","+lng);
                             deferred.reject(err);
                             return;
                         }
