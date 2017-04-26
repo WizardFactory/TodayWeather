@@ -943,6 +943,7 @@ angular.module('service.weatherutil', [])
                         var sub_level1_name;
                         var local_name;
                         var country_name;
+                        var err;
 
                         for (var i=0; i < data.results.length; i++) {
                             var result = data.results[i];
@@ -966,7 +967,9 @@ angular.module('service.weatherutil', [])
                                 }
 
                                 if ( address_component.types[0] == country_types[0] ) {
-                                    country_name = address_component.short_name;
+                                    if (address_component.short_name.length <= 2) {
+                                        country_name = address_component.short_name;
+                                    }
                                 }
 
                                 if (sub_level2_name && sub_level1_name && local_name && country_name) {
@@ -977,6 +980,13 @@ angular.module('service.weatherutil', [])
                             if (sub_level2_name && sub_level1_name && local_name && country_name) {
                                 break;
                             }
+                        }
+
+                        if (country_name == undefined) {
+                            Util.ga.trackEvent('address', 'error', 'country_name');
+                            err = new Error('country_name null latlng='+lat+","+lng);
+                            deferred.reject(err);
+                            return;
                         }
 
                         var name;
@@ -1008,7 +1018,10 @@ angular.module('service.weatherutil', [])
                         }
 
                         if (name == undefined || name == country_name) {
-                            console.log("Fail to find location address");
+                            Util.ga.trackEvent('address', 'error', 'failToFindLocation');
+                            err = new Error('failToFindLocation latlng='+lat+","+lng);
+                            deferred.reject(err);
+                            return;
                         }
 
                         var geoInfo =  {country: country_name, address: address};
