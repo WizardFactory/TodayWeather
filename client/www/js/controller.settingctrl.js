@@ -1,5 +1,5 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, $http, Util, Purchase, $ionicHistory, $translate) {
+    .controller('SettingCtrl', function($scope, Util, Purchase, $ionicHistory, $translate) {
         function init() {
             $ionicHistory.clearHistory();
 
@@ -160,12 +160,7 @@ angular.module('controller.settingctrl', [])
         };
 
         $scope.showAbout = function () {
-            if (Util.language.indexOf("ko") != -1) {
-                return true;
-            }
-            else {
-                return false;
-            }
+            return Util.language.indexOf("ko") != -1;
         };
 
         init();

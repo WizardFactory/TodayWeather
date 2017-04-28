@@ -1,6 +1,6 @@
 angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicScrollDelegate,
-                                          $ionicNavBarDelegate, $q, $http, $timeout, WeatherInfo, WeatherUtil, Util,
+                                          $ionicNavBarDelegate, $q, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
                                           $ionicPopup, $translate, Units) {
         var TABLET_WIDTH = 720;
@@ -41,20 +41,16 @@ angular.module('controller.forecastctrl', [])
                 for (var i=$scope.dayChart[0].values.length-1; i>=0; i--) {
                     var day = $scope.dayChart[0].values[i];
                     if (day.fromToday == 0) {
-                        if (day.hasOwnProperty('dustForecast')) {
-                            return true;
-                        }
-                        return false;
+                        return !!day.hasOwnProperty('dustForecast');
+
                     }
                 }
                 return false;
             };
 
             $scope.checkDailyDetailWeather = function (day) {
-               if (day.fromToday == -1 || day.fromToday == 0 || day.fromToday == 1)  {
-                   return true;
-               }
-                return false;
+               return !!(day.fromToday == -1 || day.fromToday == 0 || day.fromToday == 1);
+
             };
 
             /**
@@ -123,6 +119,7 @@ angular.module('controller.forecastctrl', [])
             /**
              * 위치가 정확하지는 않지만, 모레와 과거에 대한 데이터가 가변일때 제대로 표시됨.
              * 24시 표기에서는 index를 한칸 당김.
+             * @param value
              * @param index
              * @returns {number}
              */
@@ -160,8 +157,9 @@ angular.module('controller.forecastctrl', [])
                 //이 케이스 아직 없음.
                 return dayFromTodayStr[dayFromTodayStr.length-1];
             }
-            console.error("Fail to get day string day=" + day);
-            return "";
+
+            //console.error("Fail to get day string day=" + day);
+            //return "";
         };
 
         /**
@@ -267,8 +265,6 @@ angular.module('controller.forecastctrl', [])
         var headerE;
         var picture;
         var alphaBar;
-        var pBigDigit;
-        var imgBigSkyStateSize;
 
         // retry popup이 없는 경우 항상 undefined여야 함.
         var isLoadingIndicator = false;
@@ -457,6 +453,8 @@ angular.module('controller.forecastctrl', [])
             var frcst = 0;
             var rsf = 0;
 
+            console.log("pty="+pty+" rn1="+rn1+" r06="+r06+" s06="+s06+" all="+all);
+
             if (rn1 != undefined && rn1 > 0) {
                 rsf = rn1>=10?Math.round(rn1):rn1;
                 return rsf;
@@ -549,6 +547,7 @@ angular.module('controller.forecastctrl', [])
 
         /**
          * display item을 count하여 table pixel을 구함.
+         * todo: 연산결과를 사용하는 것은 맞는 것으로 보이나, 수정필요.
          * @param displayItemCount
          * @returns {number}
          */
@@ -560,17 +559,20 @@ angular.module('controller.forecastctrl', [])
             //최소한 한개의 이미지는 존재함.
             val += $scope.smallImageSize;
 
-            if (displayItemCount & 4) {
+            var res = displayItemCount & 4;
+            if (res) {
                 val += $scope.smallImageSize;
             }
             else {
                 val += $scope.smallImageSize/2;
             }
-            if (displayItemCount & 2) {
+            res = displayItemCount & 2;
+            if (res) {
                 //pop - body1
                 val += 15;
             }
-            if (displayItemCount & 1) {
+            res = displayItemCount & 1;
+            if (res) {
                 //rns - caption
                 val += 13;
             }
@@ -873,6 +875,7 @@ angular.module('controller.forecastctrl', [])
                     if (window.cordova && cordova.plugins.locationAccuracy) {
                         cordova.plugins.locationAccuracy.request(
                             function (success) {
+                                console.log(success);
                                 Util.ga.trackEvent("position", "status", "successUserAgreed");
                                 //메세지 없이 통과시키고, reload by locationOn.
                                 deferred.reject(null);
@@ -1168,7 +1171,7 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 if (current.fsnGrade) {
-                    var tmpGrade = current.fsnGrade;
+                    tmpGrade = current.fsnGrade;
                     str = translations.LOC_FOOD_POISONING + " ";
                     str += $translate.instant($scope.getAttentionWarningGradeStr(tmpGrade));
                     item = {str: str, grade: tmpGrade+1};
@@ -1256,16 +1259,7 @@ angular.module('controller.forecastctrl', [])
             return Units.getUnit('distanceUnit');
         };
 
-        $scope.getPrecipUnit = function (data) {
-            //var val = Units.getUnit('precipitationUnit');
-            //if (val == 'mm') {
-            //    if (data.pty == 3) {
-            //       return 'cm';
-            //    }
-            //    else {
-            //        return 'mm';
-            //    }
-            //}
+        $scope.getPrecipUnit = function () {
             return Units.getUnit('precipitationUnit');
         };
 

@@ -75,8 +75,8 @@
       "id": "cordova-fabric-plugin",
       "locator": "cordova-fabric-plugin",
       "variables": {
-        "FABRIC_API_KEY": "32d4f068cd7e32d375ac7785009d2b6d3a3e08ac",
-        "FABRIC_API_SECRET": "f259a27985079204530b3558e9f6b0b5a68e8b47fdf83e745728718d1af3cbb6"
+        "FABRIC_API_KEY": "XXXXXXXXX",
+        "FABRIC_API_SECRET": "xxxxxxxxxxxxxxxxxxx"
       }
     }
   ],

@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory android:title="@string/general">
+        <ListPreference
+            android:key="location"
+            android:title="@string/location" />
+        <ListPreference
+            android:key="refreshInterval"
+            android:entries="@array/refreshInterval"
+            android:entryValues="@array/refreshIntervalValues"
+            android:title="@string/refresh_interval" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/style">
+        <ListPreference
+            android:key="transparency"
+            android:entries="@array/transparency"
+            android:entryValues="@array/transparencyValues"
+            android:title="@string/transparency" />
+        <com.kizitonwose.colorpreference.ColorPreference
+            android:key="backgroundColor"
+            android:title="@string/background_color"
+            app:colorChoices="@array/colors"
+            app:colorShape="square" />
+        <com.kizitonwose.colorpreference.ColorPreference
+            android:defaultValue="@android:color/white"
+            android:key="fontColor"
+            android:summary="#ffffff"
+            android:title="@string/font_color"
+            app:colorChoices="@array/colors"
+            app:colorShape="square" />
+    </PreferenceCategory>
+</PreferenceScreen>
