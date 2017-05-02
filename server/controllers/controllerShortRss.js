@@ -374,7 +374,7 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
             item.save(function(err){
                 if(err){
                     log.warn(err);
-                    log.error('short rss fail to save');
+                    log.error('short rss fail to save, there is no data from DB');
                 }
             });
 
@@ -385,71 +385,74 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
             return;
         }
 
-        list.forEach(function(dbShortList, index){
-            //log.info(index + ' :XY> ' + dbShortList.mCoord);
-            //log.info(index + ' :D> ' + dbShortList.shortData);
-            newData.shortData.forEach(function(newItem){
-                var isNew = 1;
-                dbShortList.pubDate = newData.pubDate;
-                for(var i in dbShortList.shortData){
-                    if(dbShortList.shortData[i].date === newItem.date){
-                        if(dbShortList.shortData[i].ftm < newItem.ftm){
-                            //dbShortList.shortData[i] = newItem;
+        if(list.length > 1){
+            log.error('Wrong list count : ', list.length);
+        }
 
-                            dbShortList.shortData[i].ftm = newItem.ftm;
-                            dbShortList.shortData[i].date = newItem.date;
-                            dbShortList.shortData[i].temp = newItem.temp;
-                            dbShortList.shortData[i].tmx = newItem.tmx;
-                            dbShortList.shortData[i].tmn = newItem.tmn;
-                            dbShortList.shortData[i].sky = newItem.sky;
-                            dbShortList.shortData[i].pty = newItem.pty;
-                            dbShortList.shortData[i].wfKor = newItem.wfKor;
-                            dbShortList.shortData[i].wfEn = newItem.wfEn;
-                            dbShortList.shortData[i].pop = newItem.pop;
-                            dbShortList.shortData[i].r12 = newItem.r12;
-                            dbShortList.shortData[i].s12 = newItem.s12;
-                            dbShortList.shortData[i].ws = newItem.ws;
-                            dbShortList.shortData[i].wd = newItem.wd;
-                            dbShortList.shortData[i].wdKor = newItem.wdKor;
-                            dbShortList.shortData[i].wdEn = newItem.wdEn;
-                            dbShortList.shortData[i].reh = newItem.reh;
-                            dbShortList.shortData[i].r06 = newItem.r06;
-                            dbShortList.shortData[i].s06 = newItem.s06;
-                        }
-                        isNew = 0;
-                        break;
+        var dbShortList = list[0];
+        //log.info(index + ' :XY> ' + dbShortList.mCoord);
+        //log.info(index + ' :D> ' + dbShortList.shortData);
+        newData.shortData.forEach(function(newItem){
+            var isNew = 1;
+            dbShortList.pubDate = newData.pubDate;
+            for(var i in dbShortList.shortData){
+                if(dbShortList.shortData[i].date === newItem.date){
+                    if(dbShortList.shortData[i].ftm < newItem.ftm){
+                        //dbShortList.shortData[i] = newItem;
+
+                        dbShortList.shortData[i].ftm = newItem.ftm;
+                        dbShortList.shortData[i].date = newItem.date;
+                        dbShortList.shortData[i].temp = newItem.temp;
+                        dbShortList.shortData[i].tmx = newItem.tmx;
+                        dbShortList.shortData[i].tmn = newItem.tmn;
+                        dbShortList.shortData[i].sky = newItem.sky;
+                        dbShortList.shortData[i].pty = newItem.pty;
+                        dbShortList.shortData[i].wfKor = newItem.wfKor;
+                        dbShortList.shortData[i].wfEn = newItem.wfEn;
+                        dbShortList.shortData[i].pop = newItem.pop;
+                        dbShortList.shortData[i].r12 = newItem.r12;
+                        dbShortList.shortData[i].s12 = newItem.s12;
+                        dbShortList.shortData[i].ws = newItem.ws;
+                        dbShortList.shortData[i].wd = newItem.wd;
+                        dbShortList.shortData[i].wdKor = newItem.wdKor;
+                        dbShortList.shortData[i].wdEn = newItem.wdEn;
+                        dbShortList.shortData[i].reh = newItem.reh;
+                        dbShortList.shortData[i].r06 = newItem.r06;
+                        dbShortList.shortData[i].s06 = newItem.s06;
                     }
+                    isNew = 0;
+                    break;
                 }
-
-                if(isNew){
-                    dbShortList.shortData.push(newItem);
-                }
-            });
-
-            dbShortList.shortData.sort(function(a, b) {
-                var nRet = 0;
-
-                if(a.date > b.date){
-                    nRet = 1;
-                } else if(a.date < b.date) {
-                    nRet = -1;
-                }
-
-                return nRet;
-            });
-
-            if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
             }
 
-            dbShortList.save(function(err){
-                if(err){
-                    log.warn(err);
-                    log.error('short rss fail to save');
-                }
-            });
+            if(isNew){
+                dbShortList.shortData.push(newItem);
+            }
         });
 
+        dbShortList.shortData.sort(function(a, b) {
+            var nRet = 0;
+
+            if(a.date > b.date){
+                nRet = 1;
+            } else if(a.date < b.date) {
+                nRet = -1;
+            }
+
+            return nRet;
+        });
+
+        if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+            dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+        }
+
+        dbShortList.save(function(err){
+            if(err){
+                log.warn(err);
+                log.error('short rss fail to save' + '[' + index + '] :', newData.mCoord, dbShortList.shortData.length);
+            }
+            //log.info('saved : ', dbShortList.shortData.length);
+        });
         if(cb) {
             cb();
         }
@@ -557,6 +560,20 @@ TownRss.prototype.mainTask = function(completionCallback){
         var lastestPubDate = self.lastestPubDate();
 
         var index = 0;
+
+        for(var i=0 ; i<gridList.length ; i++){
+            var src = gridList[i].mCoord;
+            //log.info('mCoord : ', src);
+            for(var j=i+1 ; j<gridList.length-1 ; j++){
+                var des = gridList[j].mCoord;
+                if(src.mx == des.mx && src.my == des.my){
+                    log.info('found same coord> ' + '[' + i + ':' + j + '] : ', des);
+                    gridList.splice(j, 1);
+                }
+            }
+        }
+
+        log.info('ShortRss> Adjusted List Count : ', gridList.length);
 
         async.map(gridList,
             function(item, callback) {
