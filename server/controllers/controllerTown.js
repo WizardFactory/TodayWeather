@@ -3224,8 +3224,8 @@ ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
                         lon: result.lon
                     },
                     mCoord: {
-                        mx: result.mx,
-                        my: result.my
+                        my: result.my,
+                        mx: result.mx
                     },
                     town:{
                         first: region,

@@ -560,7 +560,7 @@ TownRss.prototype.mainTask = function(completionCallback){
         var lastestPubDate = self.lastestPubDate();
 
         var index = 0;
-
+/*
         for(var i=0 ; i<gridList.length ; i++){
             var src = gridList[i].mCoord;
             //log.info('mCoord : ', src);
@@ -572,7 +572,7 @@ TownRss.prototype.mainTask = function(completionCallback){
                 }
             }
         }
-
+*/
         log.info('ShortRss> Adjusted List Count : ', gridList.length);
 
         async.map(gridList,
