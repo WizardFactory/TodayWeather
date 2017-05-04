@@ -67,7 +67,6 @@ gulp.task('rm-prepare-app-pre', function () {
 gulp.task('build', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
@@ -79,7 +78,6 @@ gulp.task('build', shell.task([
 
 gulp.task('build_android', shell.task([
   'ionic state reset',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
@@ -92,7 +90,6 @@ gulp.task('build_android', shell.task([
 gulp.task('release', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
@@ -107,7 +104,6 @@ gulp.task('release-nonpaid', shell.task([
   'cp ads.package.json package.json',
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
