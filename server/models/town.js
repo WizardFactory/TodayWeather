@@ -38,6 +38,17 @@ tSchema.index({"town.first": 'text', "town.second": 'text', "town.third": 'text'
 tSchema.statics = {
     getCoord : function(cb) {
         this.distinct("mCoord").exec(function(err, result){
+            // find&remove same coordinate
+            for(var i=0 ; i<result.length ; i++){
+                var srcItem = result[i];
+                for(var j=i+1 ; j<result.length ; j++){
+                    var desItem = result[j];
+                    if(srcItem.mx == desItem.mx && srcItem.my == desItem.my){
+                        result.splice(j, 1);
+                    }
+                }
+            }
+
             cb(err, result);
         });
     },
