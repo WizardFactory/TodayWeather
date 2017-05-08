@@ -80,11 +80,14 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             return;
         }
         if (status != google.maps.places.PlacesServiceStatus.OK) {
-            Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
+            if (status != google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus=' + status);
+            }
             return;
         }
         else {
             console.log("predictions="+predictions.length);
+            Util.ga.trackEvent('address', 'predictions', $scope.search.word, predictions.length);
         }
 
         $scope.$apply(function () {
@@ -192,6 +195,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnSelectResult = function(result) {
+        Util.ga.trackEvent('action', 'click', 'OnSelectResult '+ $scope.search.word);
+
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
             if (cordova.plugins.Keyboard.isVisible) {
                 return cordova.plugins.Keyboard.close();
@@ -443,11 +448,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         }
     }
 
-    $scope.$on('searchCurrentPositionEvent', function(event) {
-        $scope.OnSearchCurrentPosition();
-    });
-
-    $scope.OnSearchCurrentPosition = function() {
+    function _onSearchCurrentPosition() {
         Util.ga.trackEvent('position', 'get', 'OnSearch');
         //$scope.isEditing = false;
 
@@ -470,6 +471,15 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 $scope.$broadcast('searchCurrentPositionEvent');
             }
         });
+    }
+
+    $scope.$on('searchCurrentPositionEvent', function(event) {
+        _onSearchCurrentPosition();
+    });
+
+    $scope.OnSearchCurrentPosition = function() {
+        Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPostion');
+        _onSearchCurrentPosition();
     };
 
     function saveCity(weatherData, geoInfo, currentPosition) {
@@ -503,7 +513,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnGetWeather = function (index) {
-        console.log('index='+index);
+        Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
         if (index == 0) {
             $scope.OnSearchCurrentPosition();
             //get location
@@ -528,12 +538,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         }
     };
 
-
-    $scope.$on('useLocationService', function(event) {
-        $scope.OnUseLocationService();
-    });
-
-    $scope.OnUseLocationService = function() {
+    function _onUseLocationService() {
         showLoadingIndicator();
 
         updateCurrentPosition().then(function(geoInfo) {
@@ -563,6 +568,15 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 $scope.$broadcast('useLocationService');
             }
         });
+    }
+
+    $scope.$on('useLocationService', function(event) {
+        _onUseLocationService();
+    });
+
+    $scope.OnUseLocationService = function() {
+        Util.ga.trackEvent('action', 'click', 'OnUseLocationService');
+        _onUseLocationService();
     };
 
     //from tabCtrl
