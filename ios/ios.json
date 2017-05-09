@@ -11,7 +11,17 @@
                     "NSLocationWhenInUseUsageDescription": [],
                     "UIBackgroundModes": [],
                     "GCM_SENDER_ID": [],
-                    "IS_GCM_ENABLED": []
+                    "IS_GCM_ENABLED": [],
+                    "CFBundleURLTypes": [],
+                    "NSLocationAlwaysUsageDescription": [],
+                    "NSCalendarsUsageDescription": [],
+                    "NSPhotoLibraryUsageDescription": [],
+                    "NSBluetoothPeripheralUsageDescription": [],
+                    "NSMicrophoneUsageDescription": [],
+                    "NSCameraUsageDescription": [],
+                    "NSMotionUsageDescription": [],
+                    "NSContactsUsageDescription": [],
+                    "NSRemindersUsageDescription": []
                 }
             },
             "config.xml": {
