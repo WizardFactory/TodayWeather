@@ -10,6 +10,8 @@ var fs = require('fs');
 
 var shell = require('gulp-shell');
 
+var deleteLines = require('gulp-delete-lines');
+
 var json = JSON.parse(fs.readFileSync('./package.json'));
 
 var paths = {
@@ -43,38 +45,57 @@ gulp.task('install', ['git-check'], function() {
     });
 });
 
+gulp.task('rm-prepare-app-pre', function () {
+  gulp.src('./plugins/cordova-plugin-app-preferences/plugin.xml')
+      .pipe(deleteLines({
+        'filters': [
+          /after_prepare/i
+        ]
+      }))
+      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences'));
+
+  gulp.src('./plugins/cordova-plugin-app-preferences/bin/lib/android.js')
+      .pipe(deleteLines({
+        'filters': [
+          /fs.unlink\('platforms/i
+        ]
+      }))
+      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences/bin/lib'));
+
+});
+
 gulp.task('build', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
+  'gulp rm-prepare-app-pre',
   'ionic build'
 ]));
 
 gulp.task('build_android', shell.task([
   'ionic state reset',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
+  'gulp rm-prepare-app-pre',
   'ionic build android'
 ]));
 
 gulp.task('release', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
+  'gulp rm-prepare-app-pre',
   'ionic build --release'
 ]));
 
@@ -83,13 +104,12 @@ gulp.task('release-nonpaid', shell.task([
   'cp ads.package.json package.json',
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
-  'cp -a ../android platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'cp resources/PushHandlerActivity.java plugins/phonegap-plugin-push/src/android/com/adobe/phonegap/push/',
+  'gulp rm-prepare-app-pre',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_onestore_v'+json.version+'_min19.apk',
@@ -107,7 +127,7 @@ gulp.task('release-nonpaid', shell.task([
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
 
   'cp -a ../ios platforms/',
-  'ionic build ios --release',
+  'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
   //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''
   //'/Applications/Xcode.app/Contents/Applications/Application\ Loader.app/Contents/Frameworks/ITunesSoftwareService.framework/Versions/A/Support/altool --validate-app -f TodayWeather.ipa -u kimalec7@gmail.com'
