@@ -1599,7 +1599,7 @@ static TodayViewController *todayVC = nil;
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
     
     // Test
-    nssAirState = [NSString stringWithFormat:@"통합대기 78 나쁨"];
+    //nssAirState = [NSString stringWithFormat:@"통합대기 78 나쁨"];
 
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
     NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
