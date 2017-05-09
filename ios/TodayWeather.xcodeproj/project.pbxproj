@@ -9,17 +9,10 @@
 /* Begin PBXBuildFile section */
 		0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0207DA571B56EA530066E2B4 /* Images.xcassets */; };
 		026A7EE285CE41FDB35A4964 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7F6957E8E04039A4E46E82 /* Contacts.framework */; };
-		04FBFDDF6E704F57B0C6D7EC /* UniversalAnalyticsPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 6A85E48420534FC5AC37201D /* UniversalAnalyticsPlugin.m */; };
-		08F4CD615CC043CFA5E7EB05 /* CDVConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = 81064E5AFCDD45E1BC5877CD /* CDVConnection.m */; };
-		0A38F2A9E2E04499A896095D /* libGIP_Reachability.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B84427DEC23F4E1EA4868DB5 /* libGIP_Reachability.a */; };
-		135E3C7C94BC468EABD29DE0 /* IonicKeyboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 719E94DCEE884C9789AD6825 /* IonicKeyboard.m */; };
 		1BE102EEF2CD4E558EA0D62B /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 174E5634FBD540F7843CF999 /* CoreMotion.framework */; };
-		1BEC48BF5E01496E8494106B /* libGTM_KVO.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FF70B1E1BE5C429F93073E74 /* libGTM_KVO.a */; };
 		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
 		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
-		2067674EA22B4212AB91CFC4 /* libGGLCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 31ADBE64344E4885B9B28373 /* libGGLCore.a */; };
 		252464DCD558415FBDDB2815 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EC07BC28D6F4B33BB76EFCC /* UserNotifications.framework */; };
-		25EADF220FF34DC9B6ABF774 /* libGTM_NSStringHTML.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F23C2957F014E7E9EE9563D /* libGTM_NSStringHTML.a */; };
 		2B269D87862D47508C4B016D /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80838C7CDEF643BA8BE88C4B /* CoreFoundation.framework */; };
 		2EE0E3F500394654941950EE /* PushPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = A04630A6F3214610AF1B5D54 /* PushPlugin.m */; };
 		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
@@ -56,20 +49,21 @@
 		5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614B81E2D080200840986 /* MainInterface.storyboard */; };
 		5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614C01E2D087900840986 /* InfoPlist.strings */; };
 		5A8DC0C21DE1754D0057FE1A /* TodayWeatherUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A8DC0C11DE1754D0057FE1A /* TodayWeatherUtil.m */; };
+		5AC0080B1EC0A4F9004D7F24 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC0080A1EC0A4F9004D7F24 /* CoreText.framework */; };
+		5ADEED0B1E9FC0B400CE17C7 /* Interface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5ADEED091E9FC0B400CE17C7 /* Interface.storyboard */; };
+		5ADEED0D1E9FC0B400CE17C7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5ADEED0C1E9FC0B400CE17C7 /* Assets.xcassets */; };
+		5ADEED141E9FC0B500CE17C7 /* watch Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5ADEED131E9FC0B500CE17C7 /* watch Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5ADEED191E9FC0B500CE17C7 /* InterfaceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADEED181E9FC0B500CE17C7 /* InterfaceController.swift */; };
+		5ADEED1B1E9FC0B500CE17C7 /* ExtensionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADEED1A1E9FC0B500CE17C7 /* ExtensionDelegate.swift */; };
+		5ADEED1D1E9FC0B500CE17C7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5ADEED1C1E9FC0B500CE17C7 /* Assets.xcassets */; };
+		5ADEED211E9FC0B500CE17C7 /* watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 5ADEED071E9FC0B400CE17C7 /* watch.app */; };
 		5AED42281D26A9EA00028FBC /* Wind.png in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42271D26A9EA00028FBC /* Wind.png */; };
 		5AED42291D26A9EA00028FBC /* Wind.png in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42271D26A9EA00028FBC /* Wind.png */; };
 		5AED42C91D26AA6B00028FBC /* weatherIcon2-color in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42601D26AA6B00028FBC /* weatherIcon2-color */; };
 		5AED42CA1D26AA6B00028FBC /* weatherIcon2-color in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42601D26AA6B00028FBC /* weatherIcon2-color */; };
 		5AEE0BCE1E3EF55A0049BBB1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */; };
 		5D484DC2001A435887ACA005 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AFAC92BC8234D5EBE4C2061 /* StoreKit.framework */; };
-		60F1DAD7FB144C80A53729CA /* CDVLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = D21D1DFDF94349B2A8E7530C /* CDVLogger.m */; };
-		63208358FDD34A94BB118B4A /* libGTM_SystemVersion.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CCBAC11A7BBE44D288075297 /* libGTM_SystemVersion.a */; };
-		68CCACECD8D94B2F91FEC997 /* CDVSplashScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 44AA3E99E4FD49F594213879 /* CDVSplashScreen.m */; };
-		68D3B998C7A246BB9AA74318 /* CDVViewController+SplashScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 7BCF4D52FB13447D936DF201 /* CDVViewController+SplashScreen.m */; };
 		6A1A01126EC7413096E0081E /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65C2B848E46742FA9D93D548 /* Photos.framework */; };
-		6EA7CDE6E72F4CD2AE7B83BE /* AppDelegate+IonicDeeplink.m in Sources */ = {isa = PBXBuildFile; fileRef = 6DF495EEEE9E474C8EB9E81A /* AppDelegate+IonicDeeplink.m */; };
-		70A6640299DB491893D43655 /* RMStore.m in Sources */ = {isa = PBXBuildFile; fileRef = A446DBD194FC4DF1A94D1E21 /* RMStore.m */; };
-		7531E95D884549CAB78DDA5F /* CDVDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = D341ABADCFD24091B5267E13 /* CDVDevice.m */; };
 		75A5B85368984A88A3290331 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CA8FAE7A0B141AA8C4026D0 /* CoreLocation.framework */; };
 		75CEF92E61C944988D79A6E0 /* AppVersion.m in Sources */ = {isa = PBXBuildFile; fileRef = 265BCE7D07784CC6915B1A73 /* AppVersion.m */; };
 		7728EA991400460798133A96 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 482B1191CBDA4526B34114F4 /* AVFoundation.framework */; };
@@ -86,15 +80,6 @@
 		A3EE80F3B787416BBBCD6CBF /* GoogleMobileAds.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9FA2B107F1374F31A611B151 /* GoogleMobileAds.framework */; };
 		A6ACE0688D8E4D8D987BD10A /* libGTM_iPhone.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BBED8111089B4E88AB736FE8 /* libGTM_iPhone.a */; };
 		A9BC495DBE6B4F108A79EFE2 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AE62787C25C94CEAB232A4A0 /* libz.dylib */; };
-		AADAFE59506F4DE79FEA9802 /* libGTM_NSScannerJSON.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AE738EFD0B484787A1E652A8 /* libGTM_NSScannerJSON.a */; };
-		B0673C23B2604C198C44C277 /* libGTM_core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5FC465B13EBC406AA3DA62EB /* libGTM_core.a */; };
-		B0F65E04B7EF430997AC10A6 /* libGGLInstanceIDLib.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 703A959104F447E3A0DD9F02 /* libGGLInstanceIDLib.a */; };
-		B5FD48A8DC134E7ABF60AD90 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = E2079045FAD14DA99A8F6E25 /* Settings.bundle */; };
-		B6D752E0F5A84906876406AC /* AirBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C84767CFEBD4C579A536867 /* AirBridge.framework */; };
-		BCCD05D3563A48999E4424DA /* libGTM_UIFont+LineHeight.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1CEE56F5B72A47EE9DFE487D /* libGTM_UIFont+LineHeight.a */; };
-		BDFF934F5B2948368B0A32F4 /* libAdIdAccess.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3567FD06959C4BECAF7FA429 /* libAdIdAccess.a */; };
-		BF73F77C750A411999FC77DD /* libGoogleAnalyticsServices.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 53A68E1BB7F64E3C85372721 /* libGoogleAnalyticsServices.a */; };
-		BF96321523024004B45E79FF /* libGTMStackTrace.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C1D0033BD18641138BA6B24E /* libGTMStackTrace.a */; };
 		C6751E6DA73B40439B0779FA /* SafariServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B99256DA61D14E12AFBBC40E /* SafariServices.framework */; };
 		C856B4A6465742F680EE36E8 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1204F8BD4B4C4298B9DD6DE2 /* libsqlite3.dylib */; };
 		C87A8F55B46C44E1B033B1CE /* CDVAdMobAds.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B5C07DC6BBE4E5895AABED8 /* CDVAdMobAds.m */; };
@@ -146,6 +131,20 @@
 			remoteGlobalIDString = 5A08DE221D2618DF009A83E1;
 			remoteInfo = widget;
 		};
+		5ADEED151E9FC0B500CE17C7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5ADEED121E9FC0B500CE17C7;
+			remoteInfo = "watch Extension";
+		};
+		5ADEED1F1E9FC0B500CE17C7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5ADEED061E9FC0B400CE17C7;
+			remoteInfo = watch;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -160,6 +159,28 @@
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5ADEED271E9FC0B500CE17C7 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5ADEED141E9FC0B500CE17C7 /* watch Extension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5ADEED291E9FC0B500CE17C7 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				5ADEED211E9FC0B500CE17C7 /* watch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -171,13 +192,7 @@
 		0F23C2957F014E7E9EE9563D /* libGTM_NSStringHTML.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTM_NSStringHTML.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_NSStringHTML.a"; sourceTree = "<group>"; };
 		117B528367A74A42BB89922F /* CFNetwork.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		1204F8BD4B4C4298B9DD6DE2 /* libsqlite3.dylib */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = usr/lib/libsqlite3.dylib; sourceTree = SDKROOT; };
-		13B8D3332C964A03A11F4D2E /* libGTMSessionFetcher_core.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTMSessionFetcher_core.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTMSessionFetcher_core.a"; sourceTree = "<group>"; };
-		1566FE368DD047CAB1F9EE3C /* libGTM_AddressBook.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTM_AddressBook.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_AddressBook.a"; sourceTree = "<group>"; };
-		1660E01BC9594EF7BBE6326B /* GAIEcommerceProductAction.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = GAIEcommerceProductAction.h; path = "cordova-plugin-google-analytics/GAIEcommerceProductAction.h"; sourceTree = "<group>"; };
 		174E5634FBD540F7843CF999 /* CoreMotion.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
-		17BB88C77DEE42088C589249 /* IonicKeyboard.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = IonicKeyboard.h; path = "ionic-plugin-keyboard/IonicKeyboard.h"; sourceTree = "<group>"; };
-		1CB7B6FF5E6144809D386B96 /* UniversalAnalyticsPlugin.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = UniversalAnalyticsPlugin.h; path = "cordova-plugin-google-analytics/UniversalAnalyticsPlugin.h"; sourceTree = "<group>"; };
-		1CEE56F5B72A47EE9DFE487D /* libGTM_UIFont+LineHeight.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = "libGTM_UIFont+LineHeight.a"; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_UIFont+LineHeight.a"; sourceTree = "<group>"; };
 		1D3623240D0F684500981E51 /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		1D3623250D0F684500981E51 /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		1D3661C998334E9D98B5FDD1 /* CDVStatusBar.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; name = CDVStatusBar.m; path = "cordova-plugin-statusbar/CDVStatusBar.m"; sourceTree = "<group>"; };
@@ -186,7 +201,6 @@
 		265BCE7D07784CC6915B1A73 /* AppVersion.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; name = AppVersion.m; path = "cordova-plugin-app-version/AppVersion.m"; sourceTree = "<group>"; };
 		270D1736CB9B4F16A3C7C2EA /* GGLContext+CloudMessaging.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "GGLContext+CloudMessaging.h"; path = "phonegap-plugin-push/GCM/Headers/GGLContext+CloudMessaging.h"; sourceTree = "<group>"; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		2D14CF8245034EAF8DA29A81 /* libGSDK_Overload.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGSDK_Overload.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGSDK_Overload.a"; sourceTree = "<group>"; };
 		2EC07BC28D6F4B33BB76EFCC /* UserNotifications.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CordovaLib.xcodeproj; path = CordovaLib/CordovaLib.xcodeproj; sourceTree = "<group>"; };
 		301BF56E109A69640062928A /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; path = www; sourceTree = SOURCE_ROOT; };
@@ -223,7 +237,6 @@
 		5A08DE281D2618E0009A83E1 /* TodayViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TodayViewController.m; sourceTree = "<group>"; };
 		5A08DE351D261B40009A83E1 /* widget.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = widget.entitlements; sourceTree = "<group>"; };
 		5A08DE361D261B40009A83E1 /* WidgetConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WidgetConfig.h; sourceTree = "<group>"; };
-		5A1F55C40BCF4E96A0980D51 /* AppVersion.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = AppVersion.h; path = "cordova-plugin-app-version/AppVersion.h"; sourceTree = "<group>"; };
 		5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherShowMore.m; sourceTree = "<group>"; };
 		5A6678B71DEAB013001FAA44 /* TodayWeatherShowMore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherShowMore.h; sourceTree = "<group>"; };
 		5A8614B71E2D080200840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
@@ -236,7 +249,16 @@
 		5A8614CF1E2FBC8300840986 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5A8DC0C11DE1754D0057FE1A /* TodayWeatherUtil.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherUtil.m; sourceTree = "<group>"; };
 		5A8DC0C31DE175630057FE1A /* TodayWeatherUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherUtil.h; sourceTree = "<group>"; };
-		5ABCA4943E354AF6A40F9509 /* libProtocolBuffers.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libProtocolBuffers.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libProtocolBuffers.a"; sourceTree = "<group>"; };
+		5AC0080A1EC0A4F9004D7F24 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		5ADEED071E9FC0B400CE17C7 /* watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5ADEED0A1E9FC0B400CE17C7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Interface.storyboard; sourceTree = "<group>"; };
+		5ADEED0C1E9FC0B400CE17C7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5ADEED0E1E9FC0B400CE17C7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5ADEED131E9FC0B500CE17C7 /* watch Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "watch Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5ADEED181E9FC0B500CE17C7 /* InterfaceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterfaceController.swift; sourceTree = "<group>"; };
+		5ADEED1A1E9FC0B500CE17C7 /* ExtensionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionDelegate.swift; sourceTree = "<group>"; };
+		5ADEED1C1E9FC0B500CE17C7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5ADEED1E1E9FC0B500CE17C7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5AED42271D26A9EA00028FBC /* Wind.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Wind.png; path = ../../../www/img/Wind.png; sourceTree = "<group>"; };
 		5AED42601D26AA6B00028FBC /* weatherIcon2-color */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "weatherIcon2-color"; path = "../../www/img/weatherIcon2-color"; sourceTree = "<group>"; };
 		5AEE0BBA1E3EE4930049BBB1 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ko; path = ko.lproj/Info.plist; sourceTree = "<group>"; };
@@ -252,8 +274,6 @@
 		5AEE0BD41E3EF5670049BBB1 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		5AEE0BD51E3EF5690049BBB1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5CA8FAE7A0B141AA8C4026D0 /* CoreLocation.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
-		5FC465B13EBC406AA3DA62EB /* libGTM_core.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTM_core.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_core.a"; sourceTree = "<group>"; };
-		6124EDBAF909459F9CE4D128 /* libGTM_RoundedRectPath.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTM_RoundedRectPath.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_RoundedRectPath.a"; sourceTree = "<group>"; };
 		65C2B848E46742FA9D93D548 /* Photos.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
 		69E41382548E41CDAE0EA8FA /* MessageUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
 		6A85E48420534FC5AC37201D /* UniversalAnalyticsPlugin.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; name = UniversalAnalyticsPlugin.m; path = "cordova-plugin-google-analytics/UniversalAnalyticsPlugin.m"; sourceTree = "<group>"; };
@@ -311,13 +331,7 @@
 		B84427DEC23F4E1EA4868DB5 /* libGIP_Reachability.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGIP_Reachability.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGIP_Reachability.a"; sourceTree = "<group>"; };
 		B99256DA61D14E12AFBBC40E /* SafariServices.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SafariServices.framework; path = System/Library/Frameworks/SafariServices.framework; sourceTree = SDKROOT; };
 		BA38BE75CCBB42479805FE4C /* EventKitUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = EventKitUI.framework; path = System/Library/Frameworks/EventKitUI.framework; sourceTree = SDKROOT; };
-		BAD548ACB50A4A84A31F49CA /* Diagnostic.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = Diagnostic.h; path = cordova.plugins.diagnostic/Diagnostic.h; sourceTree = "<group>"; };
-		BBED8111089B4E88AB736FE8 /* libGTM_iPhone.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTM_iPhone.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTM_iPhone.a"; sourceTree = "<group>"; };
-		BCE2752EB4934258A2DF9E9F /* SocialSharing.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = SocialSharing.h; path = "cordova-plugin-x-socialsharing/SocialSharing.h"; sourceTree = "<group>"; };
 		BF7F6957E8E04039A4E46E82 /* Contacts.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
-		C00261ED655C447F8C774107 /* CDVAdMobAdsAdListener.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = CDVAdMobAdsAdListener.h; path = "cordova-admob/CDVAdMobAdsAdListener.h"; sourceTree = "<group>"; };
-		C1D0033BD18641138BA6B24E /* libGTMStackTrace.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGTMStackTrace.a; path = "TodayWeather/Plugins/phonegap-plugin-push/GCM/Libraries/libGTMStackTrace.a"; sourceTree = "<group>"; };
-		C325AA1E90394AB58B7E479E /* Diagnostic.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; name = Diagnostic.m; path = cordova.plugins.diagnostic/Diagnostic.m; sourceTree = "<group>"; };
 		C3CE4D051D2252EC00F707B7 /* TodayWeather.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = TodayWeather.entitlements; path = TodayWeather/TodayWeather.entitlements; sourceTree = "<group>"; };
 		C5CA4A77116D420681DC4A46 /* GCMPubSub.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = GCMPubSub.h; path = "phonegap-plugin-push/GCM/Headers/GCMPubSub.h"; sourceTree = "<group>"; };
 		C877C7F566FE4B05B09F0E62 /* Social.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Social.framework; path = System/Library/Frameworks/Social.framework; sourceTree = SDKROOT; };
@@ -393,36 +407,6 @@
 				EFE7A497431D4871838CA5F7 /* MediaAccessibility.framework in Frameworks */,
 				2B269D87862D47508C4B016D /* CoreFoundation.framework in Frameworks */,
 				F367B36F47E74EDDB5A75900 /* CoreMedia.framework in Frameworks */,
-				BF73F77C750A411999FC77DD /* libGoogleAnalyticsServices.a in Frameworks */,
-				BDFF934F5B2948368B0A32F4 /* libAdIdAccess.a in Frameworks */,
-				48EE678EFFBE46B5B3EEE904 /* libGGLCloudMessaging.a in Frameworks */,
-				2067674EA22B4212AB91CFC4 /* libGGLCore.a in Frameworks */,
-				B0F65E04B7EF430997AC10A6 /* libGGLInstanceIDLib.a in Frameworks */,
-				0A38F2A9E2E04499A896095D /* libGIP_Reachability.a in Frameworks */,
-				4EAE3F5DE9CD4A3983F831FB /* libGSDK_Overload.a in Frameworks */,
-				F4470BB7D7B446E19A36A1FF /* libGTMSessionFetcher_core.a in Frameworks */,
-				E922A017C9AC46F3990B48F4 /* libGTMSessionFetcher_full.a in Frameworks */,
-				BF96321523024004B45E79FF /* libGTMStackTrace.a in Frameworks */,
-				FEFCCB515A3D4166A6F471EF /* libGTM_AddressBook.a in Frameworks */,
-				5851A9BE3A6646149844AB4A /* libGTM_DebugUtils.a in Frameworks */,
-				D200E08351B64236BA47BB3D /* libGTM_GTMURLBuilder.a in Frameworks */,
-				1BEC48BF5E01496E8494106B /* libGTM_KVO.a in Frameworks */,
-				577C0818C1C64C049F809ADE /* libGTM_NSData+zlib.a in Frameworks */,
-				923DF34312424387A73705F1 /* libGTM_NSDictionary+URLArguments.a in Frameworks */,
-				AADAFE59506F4DE79FEA9802 /* libGTM_NSScannerJSON.a in Frameworks */,
-				25EADF220FF34DC9B6ABF774 /* libGTM_NSStringHTML.a in Frameworks */,
-				42B21BAC3E8A4E5DA760254E /* libGTM_NSStringXML.a in Frameworks */,
-				DEDC6EC0D38140A39CA91209 /* libGTM_Regex.a in Frameworks */,
-				824DD8894A9848349B9976EA /* libGTM_RoundedRectPath.a in Frameworks */,
-				577547E211784FC3A612C666 /* libGTM_StringEncoding.a in Frameworks */,
-				63208358FDD34A94BB118B4A /* libGTM_SystemVersion.a in Frameworks */,
-				BCCD05D3563A48999E4424DA /* libGTM_UIFont+LineHeight.a in Frameworks */,
-				B0673C23B2604C198C44C277 /* libGTM_core.a in Frameworks */,
-				A6ACE0688D8E4D8D987BD10A /* libGTM_iPhone.a in Frameworks */,
-				7BD4B81A6F934D0482952A09 /* libGcmLib.a in Frameworks */,
-				5230683A3BC04213A9336DCF /* libProtocolBuffers.a in Frameworks */,
-				A3EE80F3B787416BBBCD6CBF /* GoogleMobileAds.framework in Frameworks */,
-				B6D752E0F5A84906876406AC /* AirBridge.framework in Frameworks */,
 				1BE102EEF2CD4E558EA0D62B /* CoreMotion.framework in Frameworks */,
 				6A1A01126EC7413096E0081E /* Photos.framework in Frameworks */,
 				026A7EE285CE41FDB35A4964 /* Contacts.framework in Frameworks */,
@@ -434,7 +418,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5AC0080B1EC0A4F9004D7F24 /* CoreText.framework in Frameworks */,
 				5A08DE251D2618E0009A83E1 /* NotificationCenter.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5ADEED101E9FC0B500CE17C7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -459,6 +451,8 @@
 			children = (
 				1D6058910D05DD3D006BFB54 /* TodayWeather.app */,
 				5A08DE231D2618DF009A83E1 /* widget.appex */,
+				5ADEED071E9FC0B400CE17C7 /* watch.app */,
+				5ADEED131E9FC0B500CE17C7 /* watch Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -477,6 +471,8 @@
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				5A08DE261D2618E0009A83E1 /* widget */,
+				5ADEED081E9FC0B400CE17C7 /* watch */,
+				5ADEED171E9FC0B500CE17C7 /* watch Extension */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 			);
@@ -511,6 +507,7 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5AC0080A1EC0A4F9004D7F24 /* CoreText.framework */,
 				117B528367A74A42BB89922F /* CFNetwork.framework */,
 				B7DAD785782B4EDA87BA15B1 /* AdSupport.framework */,
 				84D6D4B6CEAA4AC5B191C8B0 /* AudioToolbox.framework */,
@@ -541,36 +538,6 @@
 				DACAA39F232941A0813446D6 /* MediaAccessibility.framework */,
 				80838C7CDEF643BA8BE88C4B /* CoreFoundation.framework */,
 				58E4FE1865A0455AB0F2ED91 /* CoreMedia.framework */,
-				53A68E1BB7F64E3C85372721 /* libGoogleAnalyticsServices.a */,
-				3567FD06959C4BECAF7FA429 /* libAdIdAccess.a */,
-				B14520D5339849329AE6BA17 /* libGGLCloudMessaging.a */,
-				31ADBE64344E4885B9B28373 /* libGGLCore.a */,
-				703A959104F447E3A0DD9F02 /* libGGLInstanceIDLib.a */,
-				B84427DEC23F4E1EA4868DB5 /* libGIP_Reachability.a */,
-				2D14CF8245034EAF8DA29A81 /* libGSDK_Overload.a */,
-				13B8D3332C964A03A11F4D2E /* libGTMSessionFetcher_core.a */,
-				DB38C3E2CAAC4758948753CD /* libGTMSessionFetcher_full.a */,
-				C1D0033BD18641138BA6B24E /* libGTMStackTrace.a */,
-				1566FE368DD047CAB1F9EE3C /* libGTM_AddressBook.a */,
-				434A5FEBD35D46D0AC4AE98A /* libGTM_DebugUtils.a */,
-				CE360C35FFBC41D886BD3B1A /* libGTM_GTMURLBuilder.a */,
-				FF70B1E1BE5C429F93073E74 /* libGTM_KVO.a */,
-				56A50A87B7B84828B4E8815D /* libGTM_NSData+zlib.a */,
-				95646B3EFCB94079B9DF8245 /* libGTM_NSDictionary+URLArguments.a */,
-				AE738EFD0B484787A1E652A8 /* libGTM_NSScannerJSON.a */,
-				0F23C2957F014E7E9EE9563D /* libGTM_NSStringHTML.a */,
-				70AF3F8BF6F14C94BF46E05C /* libGTM_NSStringXML.a */,
-				40BF329430ED482FBDCECD69 /* libGTM_Regex.a */,
-				6124EDBAF909459F9CE4D128 /* libGTM_RoundedRectPath.a */,
-				4957C25901B84373AF914744 /* libGTM_StringEncoding.a */,
-				CCBAC11A7BBE44D288075297 /* libGTM_SystemVersion.a */,
-				1CEE56F5B72A47EE9DFE487D /* libGTM_UIFont+LineHeight.a */,
-				5FC465B13EBC406AA3DA62EB /* libGTM_core.a */,
-				BBED8111089B4E88AB736FE8 /* libGTM_iPhone.a */,
-				7A3E91790DEE4293831FCB6A /* libGcmLib.a */,
-				5ABCA4943E354AF6A40F9509 /* libProtocolBuffers.a */,
-				9FA2B107F1374F31A611B151 /* GoogleMobileAds.framework */,
-				4C84767CFEBD4C579A536867 /* AirBridge.framework */,
 				174E5634FBD540F7843CF999 /* CoreMotion.framework */,
 				65C2B848E46742FA9D93D548 /* Photos.framework */,
 				BF7F6957E8E04039A4E46E82 /* Contacts.framework */,
@@ -701,6 +668,27 @@
 			path = widget;
 			sourceTree = "<group>";
 		};
+		5ADEED081E9FC0B400CE17C7 /* watch */ = {
+			isa = PBXGroup;
+			children = (
+				5ADEED091E9FC0B400CE17C7 /* Interface.storyboard */,
+				5ADEED0C1E9FC0B400CE17C7 /* Assets.xcassets */,
+				5ADEED0E1E9FC0B400CE17C7 /* Info.plist */,
+			);
+			path = watch;
+			sourceTree = "<group>";
+		};
+		5ADEED171E9FC0B500CE17C7 /* watch Extension */ = {
+			isa = PBXGroup;
+			children = (
+				5ADEED181E9FC0B500CE17C7 /* InterfaceController.swift */,
+				5ADEED1A1E9FC0B500CE17C7 /* ExtensionDelegate.swift */,
+				5ADEED1C1E9FC0B500CE17C7 /* Assets.xcassets */,
+				5ADEED1E1E9FC0B500CE17C7 /* Info.plist */,
+			);
+			path = "watch Extension";
+			sourceTree = "<group>";
+		};
 		EB87FDF11871DA420020F90C /* Staging */ = {
 			isa = PBXGroup;
 			children = (
@@ -722,12 +710,14 @@
 				1D60588E0D05DD3D006BFB54 /* Sources */,
 				1D60588F0D05DD3D006BFB54 /* Frameworks */,
 				5A08DE341D2618E0009A83E1 /* Embed App Extensions */,
+				5ADEED291E9FC0B500CE17C7 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				301BF551109A68C00062928A /* PBXTargetDependency */,
 				5A08DE2F1D2618E0009A83E1 /* PBXTargetDependency */,
+				5ADEED201E9FC0B500CE17C7 /* PBXTargetDependency */,
 			);
 			name = TodayWeather;
 			productName = TodayWeather;
@@ -751,12 +741,47 @@
 			productReference = 5A08DE231D2618DF009A83E1 /* widget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		5ADEED061E9FC0B400CE17C7 /* watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5ADEED281E9FC0B500CE17C7 /* Build configuration list for PBXNativeTarget "watch" */;
+			buildPhases = (
+				5ADEED051E9FC0B400CE17C7 /* Resources */,
+				5ADEED271E9FC0B500CE17C7 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5ADEED161E9FC0B500CE17C7 /* PBXTargetDependency */,
+			);
+			name = watch;
+			productName = watch;
+			productReference = 5ADEED071E9FC0B400CE17C7 /* watch.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
+		5ADEED121E9FC0B500CE17C7 /* watch Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5ADEED261E9FC0B500CE17C7 /* Build configuration list for PBXNativeTarget "watch Extension" */;
+			buildPhases = (
+				5ADEED0F1E9FC0B500CE17C7 /* Sources */,
+				5ADEED101E9FC0B500CE17C7 /* Frameworks */,
+				5ADEED111E9FC0B500CE17C7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "watch Extension";
+			productName = "watch Extension";
+			productReference = 5ADEED131E9FC0B500CE17C7 /* watch Extension.appex */;
+			productType = "com.apple.product-type.watchkit2-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 820;
 				LastUpgradeCheck = 510;
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
@@ -781,6 +806,16 @@
 								enabled = 1;
 							};
 						};
+					};
+					5ADEED061E9FC0B400CE17C7 = {
+						CreatedOnToolsVersion = 8.2.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
+					};
+					5ADEED121E9FC0B500CE17C7 = {
+						CreatedOnToolsVersion = 8.2.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -809,6 +844,8 @@
 			targets = (
 				1D6058900D05DD3D006BFB54 /* TodayWeather */,
 				5A08DE221D2618DF009A83E1 /* widget */,
+				5ADEED061E9FC0B400CE17C7 /* watch */,
+				5ADEED121E9FC0B500CE17C7 /* watch Extension */,
 			);
 		};
 /* End PBXProject section */
@@ -851,6 +888,23 @@
 				5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */,
 				5A1350081E342513009555FA /* Info.plist in Resources */,
 				5A08DE371D261B40009A83E1 /* widget.entitlements in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5ADEED051E9FC0B400CE17C7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5ADEED0D1E9FC0B400CE17C7 /* Assets.xcassets in Resources */,
+				5ADEED0B1E9FC0B400CE17C7 /* Interface.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5ADEED111E9FC0B500CE17C7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5ADEED1D1E9FC0B500CE17C7 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -922,6 +976,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5ADEED0F1E9FC0B500CE17C7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5ADEED1B1E9FC0B500CE17C7 /* ExtensionDelegate.swift in Sources */,
+				5ADEED191E9FC0B500CE17C7 /* InterfaceController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -934,6 +997,16 @@
 			isa = PBXTargetDependency;
 			target = 5A08DE221D2618DF009A83E1 /* widget */;
 			targetProxy = 5A08DE2E1D2618E0009A83E1 /* PBXContainerItemProxy */;
+		};
+		5ADEED161E9FC0B500CE17C7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5ADEED121E9FC0B500CE17C7 /* watch Extension */;
+			targetProxy = 5ADEED151E9FC0B500CE17C7 /* PBXContainerItemProxy */;
+		};
+		5ADEED201E9FC0B500CE17C7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5ADEED061E9FC0B400CE17C7 /* watch */;
+			targetProxy = 5ADEED1F1E9FC0B500CE17C7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -970,6 +1043,14 @@
 				5A8614CF1E2FBC8300840986 /* de */,
 			);
 			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		5ADEED091E9FC0B400CE17C7 /* Interface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5ADEED0A1E9FC0B400CE17C7 /* Base */,
+			);
+			name = Interface.storyboard;
 			sourceTree = "<group>";
 		};
 		5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */ = {
@@ -1190,6 +1271,182 @@
 			};
 			name = Release;
 		};
+		5ADEED221E9FC0B500CE17C7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = watch_Extension;
+				INFOPLIST_FILE = watch/Info.plist;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/$(PROJECT_NAME)/Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 3.1;
+			};
+			name = Debug;
+		};
+		5ADEED231E9FC0B500CE17C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = watch_Extension;
+				INFOPLIST_FILE = watch/Info.plist;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/$(PROJECT_NAME)/Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 3.1;
+			};
+			name = Release;
+		};
+		5ADEED241E9FC0B500CE17C7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "watch Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 3.1;
+			};
+			name = Debug;
+		};
+		5ADEED251E9FC0B500CE17C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "watch Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 3.1;
+			};
+			name = Release;
+		};
 		C01FCF4F08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
@@ -1262,6 +1519,24 @@
 			buildConfigurations = (
 				5A08DE311D2618E0009A83E1 /* Debug */,
 				5A08DE321D2618E0009A83E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5ADEED261E9FC0B500CE17C7 /* Build configuration list for PBXNativeTarget "watch Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5ADEED241E9FC0B500CE17C7 /* Debug */,
+				5ADEED251E9FC0B500CE17C7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5ADEED281E9FC0B500CE17C7 /* Build configuration list for PBXNativeTarget "watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5ADEED221E9FC0B500CE17C7 /* Debug */,
+				5ADEED231E9FC0B500CE17C7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
