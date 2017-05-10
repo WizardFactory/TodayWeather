@@ -16,11 +16,6 @@
 #define DAUM_SERVICE_KEY            @"6d0116e2c49361cb75eaf12f665e6360"
 #define TODAYWEATHER_URL            @"https://todayweather.wizardfactory.net"
 
-#define UIColorFromRGB(rgbValue) [UIColor \
-                                    colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 \
-                                    green:((float)((rgbValue & 0xFF00) >> 8))/255.0 \
-                                    blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
-
 typedef enum _TYPE_REQUEST_
 {
     TYPE_REQUEST_NONE,
