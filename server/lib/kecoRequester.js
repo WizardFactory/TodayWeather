@@ -221,20 +221,31 @@ Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
     var arpltn = {};
     arpltn.stationName = stationName?stationName:'';
     arpltn.dataTime = dataTime?dataTime:'';
-    arpltn.so2Value = so2Value?so2Value==='-'?-1:so2Value:-1;
-    arpltn.coValue = coValue?coValue==='-'?-1:coValue:-1;
-    arpltn.o3Value = o3Value?o3Value==='-'?-1:o3Value:-1;
-    arpltn.no2Value = no2Value?no2Value==='-'?-1:no2Value:-1;
-    arpltn.pm10Value = pm10Value?pm10Value==='-'?-1:pm10Value:-1;
-    arpltn.pm25Value = pm25Value?pm25Value==='-'?-1:pm25Value:-1;
-    arpltn.khaiValue = khaiValue?khaiValue==='-'?-1:khaiValue:-1;
-    arpltn.khaiGrade = khaiGrade?khaiGrade:-1;
-    arpltn.so2Grade = so2Grade?so2Grade:-1;
-    arpltn.coGrade = coGrade?coGrade:-1;
-    arpltn.o3Grade = o3Grade?o3Grade:-1;
-    arpltn.no2Grade = no2Grade?no2Grade:-1;
-    arpltn.pm10Grade = pm10Grade?pm10Grade:-1;
-    arpltn.pm25Grade = pm25Grade?pm25Grade:-1;
+    arpltn.so2Value = parseFloat(so2Value);
+    arpltn.coValue = parseFloat(coValue);
+    arpltn.o3Value = parseFloat(o3Value);
+    arpltn.no2Value = parseFloat(no2Value);
+    arpltn.pm10Value = parseInt(pm10Value);
+    arpltn.pm25Value = parseInt(pm25Value);
+    arpltn.khaiValue = parseInt(khaiValue);
+    arpltn.khaiGrade = parseInt(khaiGrade);
+    arpltn.so2Grade = parseInt(so2Grade);
+    arpltn.coGrade = parseInt(coGrade);
+    arpltn.o3Grade = parseInt(o3Grade);
+    arpltn.no2Grade = parseInt(no2Grade);
+    arpltn.pm10Grade = parseInt(pm10Grade);
+    arpltn.pm25Grade = parseInt(pm25Grade);
+    for (var name in arpltn) {
+        if (name == 'stationName' || name == 'dataTime') {
+            continue;
+        }
+
+        if (isNaN(arpltn[name])) {
+            log.info('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
+            arpltn[name] = -1;
+        }
+    }
+
     return arpltn;
 };
 
@@ -651,7 +662,7 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
                                             }
                                         }
                                         if (j == shFrcstList[0][name].length) {
-                                            log.warning("_saveFrcst : region is new? name="+informGradeArray[i].region);
+                                            log.warn("_saveFrcst : region is new? name="+informGradeArray[i].region);
                                             shFrcstList[0][name].push(informGradeArray[i]);
                                         }
                                     }
@@ -687,7 +698,8 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                 return cb(err);
             }
             if (result.isLatest) {
-                return cb('minu dust forecast is already latest ');
+                log.info('minu dust forecast is already latest');
+                return cb('skip');
             }
             cb(undefined, result.dataTime);
         });

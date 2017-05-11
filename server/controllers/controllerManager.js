@@ -957,8 +957,9 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 }
                 else {
                     log.silly(item);
-                    log.verbose(dataTypeName, " request retry mx:",item.mCoord.mx,' my:',item.mCoord.my);
-                    failedList.push(item.mCoord);
+                    log.verbose(dataTypeName, " request retry date:",item.options.date,' time:',item.options.time);
+                    var baseTime = {date: item.options.date, time: item.options.time};
+                    failedList.push(baseTime);
                     //this index was not rcvData
                     cb(undefined, item);
                 }
@@ -968,8 +969,9 @@ Manager.prototype._recursiveRequestDataByBaseTimList = function(dataType, key, m
                 if (err) {
                     log.error(err);
                 }
+                log.info(dataTypeName + ' failedList='+failedList.length);
                 if (failedList.length) {
-                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, baseTimeList, --retryCount, callback);
+                    return self._recursiveRequestDataByBaseTimList(dataType, key, mCoord, failedList, --retryCount, callback);
                 }
                 log.info('received All ', dataTypeName, ' of baseTimes=', baseTimeList.length);
                 if (callback) {
@@ -1058,62 +1060,105 @@ Manager.prototype._checkPubDate = function(model, srcList, dateString, callback)
     return this;
 };
 
-Manager.prototype.getTownShortData = function(baseTime, key, callback){
+Manager.prototype.getShortQueryTime = function (baseTime) {
     var self = this;
-    //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
-
-    if(baseTime === undefined){
-        baseTime = 9;
-    }
-
     var currentDate = self.getWorldTime(baseTime);
     var dateString = {
         date: currentDate.slice(0, 8),
         time: ''
     };
     var time = currentDate.slice(8, 12);
-    var meta = {};
-    meta.fName = 'getTownShortData';
-
-    //log.info(currentDate);
-    //log.info(time);
 
     /*
      * The server is only responsed with there hours 2, 5, 8, 11, 14, 17, 20, 23
      */
-    if(parseInt(time) < 230){
+    if(parseInt(time) < 210){
         var temp = self.getWorldTime(baseTime - 24);
         dateString.date = temp.slice(0,8);
         dateString.time = '2300';
     }
-    else if(parseInt(time) < 530) {
+    else if(parseInt(time) < 510) {
         dateString.time = '0200';
     }
-    else if(parseInt(time) < 830){
+    else if(parseInt(time) < 810){
         dateString.time = '0500';
     }
-    else if(parseInt(time) < 1130){
+    else if(parseInt(time) < 1110){
         dateString.time = '0800';
     }
-    else if(parseInt(time) < 1430){
+    else if(parseInt(time) < 1410){
         dateString.time = '1100';
     }
-    else if(parseInt(time) < 1730){
+    else if(parseInt(time) < 1710){
         dateString.time = '1400';
     }
-    else if(parseInt(time) < 2030){
+    else if(parseInt(time) < 2010){
         dateString.time = '1700';
     }
-    else if(parseInt(time) < 2330){
+    else if(parseInt(time) < 2310){
         dateString.time = '2000';
     }
-    else if(parseInt(time) >= 2330){
+    else if(parseInt(time) >= 2310){
         dateString.time = '2300';
     }
     else{
         log.error('unknown TimeString');
-        return this;
     }
+
+    return dateString;
+};
+
+Manager.prototype.getShortestQueryTime = function (baseTime) {
+    var self = this;
+    var currentDate = self.getWorldTime(baseTime);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: ''
+    };
+
+    var hour = currentDate.slice(8,10);
+    var minute = currentDate.slice(10,12);
+
+    //log.info(currentDate);
+    //log.info(hour, minute);
+
+    if(parseInt(minute) < 30){
+        currentDate = self.getWorldTime(+8);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = currentDate.slice(8,10) + '30';
+    }
+    else{
+        dateString.time = hour + '30';
+    }
+
+    return dateString;
+};
+
+Manager.prototype.getCurrentQueryTime = function (baseTime) {
+    var self = this;
+    var currentDate = self.getWorldTime(baseTime);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    // 아직 발표 전 시간 대라면 1시간을 뺀 시간을 가져온다.
+    if(parseInt(currentDate.slice(10,12)) < 35){
+        currentDate = self.getWorldTime(baseTime - 1);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = currentDate.slice(8,10) + '00'
+    }
+
+    return dateString;
+};
+
+Manager.prototype.getTownShortData = function(baseTime, key, callback){
+    var self = this;
+    var meta = {};
+    meta.fName = 'getTownShortData';
+    //var testListTownDb = [{x:91, y:131}, {x:91, y:132}, {x:94, y:131}];
+
+    var dateString = self.getShortQueryTime(baseTime);
 
     log.info('S> +++ GET SHORT INFO : ', dateString);
 
@@ -1168,26 +1213,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
 Manager.prototype.getTownShortestData = function(baseTime, key, callback){
     var self = this;
 
-    var currentDate = self.getWorldTime(baseTime);
-    var dateString = {
-        date: currentDate.slice(0, 8),
-        time: ''
-    };
-
-    var hour = currentDate.slice(8,10);
-    var minute = currentDate.slice(10,12);
-
-    //log.info(currentDate);
-    //log.info(hour, minute);
-
-    if(parseInt(minute) < 30){
-        currentDate = self.getWorldTime(+8);
-        dateString.date = currentDate.slice(0, 8);
-        dateString.time = currentDate.slice(8,10) + '30';
-    }
-    else{
-        dateString.time = hour + '30';
-    }
+    var dateString = self.getShortestQueryTime(baseTime);
 
     log.info('ST> +++ GET SHORTEST INFO : ', dateString);
 
@@ -1241,22 +1267,10 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
     return this;
 };
 
-Manager.prototype.getTownCurrentData = function(gmt, key, callback){
+Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
     var self = this;
 
-    var currentDate = self.getWorldTime(gmt);
-    var dateString = {
-        date: currentDate.slice(0, 8),
-        time: currentDate.slice(8,10) + '00'
-    };
-
-    // 아직 발표 전 시간 대라면 1시간을 뺀 시간을 가져온다.
-    if(parseInt(currentDate.slice(10,12)) < 35){
-        currentDate = self.getWorldTime(gmt - 1);
-        dateString.date = currentDate.slice(0, 8);
-        dateString.time = currentDate.slice(8,10) + '00'
-    }
-
+    var dateString = self.getCurrentQueryTime(baseTime);
     //log.info(currentDate);
     //log.info(hour, minute);
 
@@ -1559,6 +1573,63 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
     return this;
 };
 
+Manager.prototype.getKmaData = function (typeStr, mCoord, serviceKey, callback) {
+    var self = this;
+    var collectInfo = new collectTown();
+
+    var dateString;
+    var dataType = collectInfo.DATA_TYPE.TOWN_CURRENT;
+
+    if (typeStr == 'current') {
+        dataType = collectInfo.DATA_TYPE.TOWN_CURRENT;
+        dateString= self.getCurrentQueryTime(9);
+    }
+    else if (typeStr == 'shortest') {
+        dataType = collectInfo.DATA_TYPE.TOWN_SHORTEST;
+        dateString = self.getShortestQueryTime(9);
+    }
+    else if (typeStr == 'short') {
+        dataType = collectInfo.DATA_TYPE.TOWN_SHORT;
+        dateString = self.getShortQueryTime(9);
+    }
+
+    collectInfo.srcList = [mCoord];
+    collectInfo.listCount = 1;
+    collectInfo.resetResult();
+    var url = collectInfo.getUrl(dataType, serviceKey, dateString.date, dateString.time, mCoord);
+
+    collectInfo.getData(0, dataType, url, undefined, function (err) {
+        if (err)  {
+            callback(err);
+            return;
+        }
+
+        if (collectInfo.resultList && collectInfo.resultList[0].data) {
+            log.info(collectInfo.resultList[0].data);
+            var data = collectInfo.resultList[0].data[0];
+            if (data == undefined) {
+               return callback("Fail to get "+typeStr+" mCoord="+JSON.stringify(mCoord));
+            }
+            var modelObj = {mCoord: mCoord, pubDate: data.pubDate};
+            //controllerTown에서는 db에서 데이터를 꺼내, ret에 data array를 넣음.
+            modelObj.ret = collectInfo.resultList[0].data;
+
+            self.getSaveFunc(dataType).call(self, collectInfo.resultList[0].data, function (err) {
+                if (err) {
+                    log.error(err.message);
+                    return;
+                }
+                log.info("save new "+typeStr+" mCoord="+JSON.stringify(mCoord));
+            });
+
+            callback(err, modelObj);
+        }
+        else {
+            callback(new Error("Fail to get current mCoord"+JSON.stringify(mCoord)));
+        }
+    });
+};
+
 /**
  * it needs to sync with collectTownForecast DATA_TYPE
  * @type {Object}
@@ -1816,7 +1887,7 @@ Manager.prototype._requestApi = function (apiName, callback) {
     var timeout = 1000*60*60*24;
     var url = "http://"+config.ipAddress+":"+config.port+"/gather/";
 
-    log.info('Start url='+url+apiName);
+    log.info('Start url='+url+apiName+' '+new Date());
     req(url+apiName, {timeout: timeout}, function(err, response) {
         log.info('Finished '+apiName+' '+new Date());
         if (err) {
@@ -1885,12 +1956,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
     
-    if (time === 10) {
+    if (time === 10 || putAll) {
         log.info('push health day');
-        
+
         var hour = (new Date()).getUTCHours()+9;
-        
-        if(hour === 6 || hour === 18) {
+
+        if(hour === 6 || hour === 18 || putAll) {
             self.asyncTasks.push(function (callback) {
                 self._requestApi('healthday', callback);
             });
@@ -1898,10 +1969,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     }
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
+        //direct request keco
         log.info('push keco');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("keco", callback);
-        });
+        //self.asyncTasks.push(function (callback) {
+            self._requestApi("keco", function() {
+                log.info('keco done');
+        //        callback();
+            });
+        //});
     }
 
     /**
@@ -1914,21 +1989,30 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 35 || putAll) {
-        log.info('push shortest');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("shortest", callback);
-        });
-
-        log.info('push current');
-        self.asyncTasks.push(function (callback) {
-            self._requestApi("current", callback);
-        });
-
+    if (time === 15 || putAll) {
         log.info('push short');
         self.asyncTasks.push(function (callback) {
             self._requestApi("short", callback);
         });
+    }
+
+    if (time === 35 || putAll) {
+        log.info('push shortest');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("shortest", function () {
+                log.info('shortest done');
+                callback();
+            });
+        });
+
+        //direct request current
+        log.info('push current');
+        //self.asyncTasks.push(function (callback) {
+            self._requestApi("current", function () {
+                log.info('current done');
+        //        callback();
+            });
+        //});
     }
 
     if(time === 50) {
@@ -1990,12 +2074,6 @@ Manager.prototype.startManager = function(){
             });
         },
         function (callback) {
-            townRss.loadList(function(){
-                log.info('Rss> complete loadList for Rss.');
-                callback();
-            });
-        },
-        function (callback) {
             taskKmaIndexService.loadAreaList(function () {
                 log.info('KmaIndex> complete loadAreaList for KMA Index.');
                 callback();
@@ -2011,6 +2089,15 @@ Manager.prototype.startManager = function(){
             });
         }
     ], function () {
+
+        /**
+         * currents를  과거 8일까지 복원하지 못하는 경우에 사용한다
+         * 단독으로 돌리는 경우에는 testKmaScraper를 사용하는 용이함.
+         */
+        //self.asyncTasks.push(function (callback) {
+        //    self._requestApi("kmaStnPastHourly", callback);
+        //});
+
         //self.checkTimeAndPushTask(true);
         self.checkTimeAndRequestTask(true);
         self.task();

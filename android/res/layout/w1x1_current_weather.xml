@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text=""
+        android:text="@string/loading"
         android:textSize="12dp"
         android:layout_marginLeft="4dp"
         android:layout_alignParentTop="true"

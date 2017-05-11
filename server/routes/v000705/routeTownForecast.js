@@ -40,35 +40,35 @@ router.get('/', [cTown.getSummary], function(req, res) {
     res.json(result);
 });
 
-router.get('/:region', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
-                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+                                    cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
-                                    cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
-                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+router.get('/:region/:city', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+                                    cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
-                                    cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 /**
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
  */
-router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.getShort, cTown.getShortRss, cTown.getShortest,
-                                    cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
-                                    cTown.convert0Hto24H, cTown.mergeCurrentByShortest, cTown.mergeShortWithCurrentList,
+router.get('/:region/:city/:town', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort, cTown.getShortRss, cTown.getShortest,
+                                    cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
+                                    cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
-                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
+                                    cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.getKecoDustForecast,
-                                    cTown.insertIndex, cTown.insertStrForData,
+                                    cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 /**
@@ -76,19 +76,19 @@ router.get('/:region/:city/:town', [cTown.getAllDataFromDb, cTown.getShort, cTow
  */
 router.get('/:region/:city/:town/mid', [cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid,
                                     cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getKeco,
-                                    cTown.getKecoDustForecast, cTown.insertIndex,
+                                    cTown.getKecoDustForecast, cTown.insertIndex, cTown.insertSkyIcon,
                                     cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city/:town/short', [cTown.getShort, cTown.getShortRss, cTown.getShortest,
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList, cTown.adjustShort,
                                     cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
-                                    cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.insertStrForData, cTown.insertSkyIcon, cTown.dataToFixed, cTown.sendResult]);
 
 router.get('/:region/:city/:town/shortest', [cTown.getShortest, cTown.convert0Hto24H, cTown.insertIndex,
-                                    cTown.insertStrForData, cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.insertStrForData, cTown.insertSkyIcon, cTown.dataToFixed, cTown.sendResult]);
 
-router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.getKmaStnHourlyWeather, cTown.getKmaStnMinuteWeather,
+router.get('/:region/:city/:town/current', [cTown.getCurrent, cTown.updateCurrentListForValidation, cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather,
                                     cTown.convert0Hto24H, cTown.getLifeIndexKma, cTown.getKeco, cTown.insertIndex,
-                                    cTown.insertStrForData, cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
+                                    cTown.insertStrForData, cTown.insertSkyIcon, cTown.getSummary, cTown.dataToFixed, cTown.sendResult]);
 
 module.exports = router;

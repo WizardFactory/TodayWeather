@@ -37,7 +37,7 @@ function KmaIndexService() {
 
     this.fsn = {
         nextTime: null,
-        offerMonth: {start: 2, end: 10}, //3~11
+        offerMonth: {start: 0, end: 11}, //1~12
         updateTimeTable: [9, 21],   //kr 06, 18
         urlPath: 'getFsnLifeList'
     };
@@ -284,7 +284,7 @@ KmaIndexService.prototype.getUrl = function (indexName, areaNo, svcKey) {
 };
 
 /**
- "IndexModel": {
+ "indexModel": {
     "code": "A01_2", "areaNo": 5013062000, "date": 2015101818, "today": "", "tomorrow": 55,"theDayAfterTomorrow": 55
   }
  * @param parsedData
@@ -312,7 +312,7 @@ KmaIndexService.prototype._parseDailyLifeIndex = function (parsedData, indexMode
 };
 
 /**
- "IndexModel":{"code":"A02","areaNo":5013062000,"date":2015103018,
+ "indexModel":{"code":"A02","areaNo":5013062000,"date":2015103018,
     "h3":0,"h6":0,"h9":0,"h12":0,"h15":0,"h18":0,"h21":0,"h24":0,"h27":0,"h30":0,"h33":0,"h36":0,"h39":0,"h42":0,
     "h45":0,"h48":1,"h51":3,"h54":3,"h57":"","h60":"","h63":"","h66":""}
  * @param parsedData
@@ -346,11 +346,11 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
 /**
  *
      "Response": {
-        "Header": {
-            "SuccessYN": "Y", "ReturnCode": "00","ErrMsg": "" },
-        "Body": {
+        "header": {
+            "successYN": "Y", "returnCode": "00","errMsg": "" },
+        "body": {
             "@xsi.type": "idxBody",
-            "IndexModel": {}}}
+            "indexModel": {}}}
     return - {*|{error: Error, data: {areaNo: String, $indexName: {}}}
 
  * @param indexName
@@ -361,33 +361,33 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
 KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var err;
 
-    if (!data.Response || !data.Response.Header || !data.Response.Header.SuccessYN) {
+    if (!data.Response || !data.Response.header || !data.Response.header.successYN) {
         err = new Error("Fail to parse LifeList of " + indexName);
         log.error(err);
         return {error: err};
     }
 
-    var header = data.Response.Header;
-    if (header.SuccessYN === 'N') {
-        if (header.ReturnCode === 99) {
-            log.warn("Search result is nothing but continue getting data index="+indexName+" ErrMsg="+header.ErrMsg);
+    var header = data.Response.header;
+    if (header.successYN === 'N') {
+        if (header.returnCode == 99) {
+            log.warn("Search result is nothing but continue getting data index="+indexName+" errMsg="+header.errMsg);
             log.debug(data);
             return {};
         }
         else {
-            err = new Error("ReturnCode="+header.ReturnCode+" ErrMsg="+header.ErrMsg);
-            err.ReturnCode = header.ReturnCode;
+            err = new Error("ReturnCode="+header.returnCode+" errMsg="+header.errMsg);
+            err.returnCode = header.returnCode;
             return {error: err};
         }
     }
 
-    if (!data.Response.Body || !data.Response.Body.IndexModel) {
+    if (!data.Response.body || !data.Response.body.indexModel) {
         err = new Error("We get success but, Fail to parse LifeList of " + indexName);
         log.error(err);
         return {error: err};
     }
 
-    var indexModel = data.Response.Body.IndexModel;
+    var indexModel = data.Response.body.indexModel;
 
     var areaNo = ''+indexModel.areaNo;
     var lastUpdateDate = ''+indexModel.date;
@@ -597,11 +597,11 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
                     var errStr = 'Can not retry get life index of '+indexName;
                     err.message += ' indexName=' +indexName +' area'+ JSON.stringify(area);
 
-                    if (err.ReturnCode && err.ReturnCode == 99) {
+                    if (err.returnCode && err.returnCode == 99) {
                         log.silly(errStr+': There is no result');
                         log.error(err);
                     }
-                    else if (err.ReturnCode && err.ReturnCode == 1) {
+                    else if (err.returnCode && err.returnCode == 1) {
                         log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
                         log.warn(err.message);
                         needChangeServiceKey = true;

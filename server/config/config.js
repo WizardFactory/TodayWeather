@@ -6,7 +6,7 @@
 module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
-    mode: (process.env.SERVER_MODE || 'local'), //local, gather, service
+    mode: (process.env.SERVER_MODE || 'service'), //local, gather, service, push
     db: {
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/todayweather')
     },
@@ -18,7 +18,17 @@ module.exports = {
         daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net'),
         newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),
         aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
-        aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS')
+        aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS'),
+        owm_keys : [{
+            key: (process.env.OWM_SECRET_KEY || 'You have to set key of Open weather map')
+        }],
+        wu_keys : [{
+            id: (process.env.WU_SECRET_ID || 'You have to set id of weather unlock'),
+            key: (process.env.WU_SECRET_KEY || 'You have to set key of weather unlock')
+        }],
+        dsf_keys : [{
+            key: (process.env.DSF_SECRET_KEY || 'You have to set key of Dark Sky')
+        }],
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),
@@ -34,6 +44,11 @@ module.exports = {
         googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key')
     },
     push: {
+        pushServer : (process.env.PUSH_SERVER || 'http://localhost:3000'),
         gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
+    },
+    url: {
+        requester: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/'),
+        weather: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/')
     }
 };

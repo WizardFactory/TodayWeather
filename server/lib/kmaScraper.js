@@ -27,7 +27,7 @@ var convert = require('../utils/coordinate2xy');
  * @constructor
  */
 function KmaScraper() {
-
+    this.MAX_HOURLY_COUNT = 192; //8days * 24hours
 }
 
 /**
@@ -150,6 +150,7 @@ KmaScraper.prototype._parseStnDayInfo = function (pubDate, $, callback) {
 };
 
 /**
+ * KMA에서 parameter format 변경되었음.
  * get aws weather data
  * @param type
  * @param dateTime
@@ -159,14 +160,17 @@ KmaScraper.prototype._parseStnDayInfo = function (pubDate, $, callback) {
 KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
     var self = this;
     var url = 'http://www.kma.go.kr/cgi-bin/aws';
+    var pubDateTime;
     if (type == 'min') {
         url += '/nph-aws_txt_min';
     }
     else if (type == 'hourly') {
-        url += '/nph-aws_txt_min' + '?'+ dateTime + '&0&MINDB_60M&0&a';
+        pubDateTime = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM(dateTime);
+        url += '/nph-aws_txt_min' + '?'+ pubDateTime + '&0&MINDB_60M&0&m';
     }
     else if (type == 'daily') {
-        url += '/nph-aws_txt_day' + '?'+ dateTime +'&0&DAYDB&0&a';
+        pubDateTime = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM(dateTime);
+        url += '/nph-aws_txt_day' + '?'+ pubDateTime +'&0&DAYDB&0&m';
     }
 
     log.info(url);
@@ -219,12 +223,18 @@ KmaScraper.prototype._convertKrToEng = function (str) {
 };
 
 /**
- * parsing city weather
+ *
+ * @param pubDate
  * @param callback
+ * @param date
  */
 KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     var self = this;
     var url = 'http://www.kma.go.kr/weather/observation/currentweather.jsp';
+    if (pubDate) {
+        url += '?tm='+pubDate;
+    }
+    log.info(url);
     req(url, {encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
@@ -393,7 +403,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
  * @private
  */
 KmaScraper.prototype._checkPubdate = function(date, callback)  {
-    KmaStnHourly.find({}).lean().exec(function (err, stnHourlyList) {
+    KmaStnHourly.find({}).limit(1).lean().exec(function (err, stnHourlyList) {
         if (err) {
             return callback(err);
         }
@@ -402,14 +412,18 @@ KmaScraper.prototype._checkPubdate = function(date, callback)  {
         }
 
         for (var i=0; i<stnHourlyList.length; i++) {
-            if (stnHourlyList[i].pubDate != date) {
-                log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
-                return  callback(err, false);
+            var hourlyData = stnHourlyList[i].hourlyData;
+            for (var j=0; j<hourlyData.length; j++) {
+                var hourlyObj = hourlyData[j];
+                if (date == hourlyObj.date) {
+                    log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
+                    return  callback(err, true);
+                }
             }
         }
 
-        log.debug('check pub date : kma stn weather already updated');
-        return callback(err, true);
+        //log.debug('check pub date : kma stn weather already updated');
+        return callback(err, false);
     });
 
     return this;
@@ -664,10 +678,38 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
         //    }
         //}
 
-        stnHourlyList[0].pubDate = pubDate;
-        //reset array for memory
-        stnHourlyList[0].hourlyData = [];
-        stnHourlyList[0].hourlyData.push(self._makeDailyData(pubDate, stnWeatherInfo));
+        if (pubDate > stnHourlyList[0].pubDate) {
+            stnHourlyList[0].pubDate = pubDate;
+        }
+
+        var newHourlyData = self._makeDailyData(pubDate, stnWeatherInfo);
+
+        for (var i=stnHourlyList[0].hourlyData.length-1; i>=0; i--) {
+            var hourlyData =  stnHourlyList[0].hourlyData[i];
+            if (newHourlyData.date == hourlyData.date) {
+                break;
+            }
+        }
+        if (i >= 0) {
+            stnHourlyList[0].hourlyData[i] = newHourlyData;
+        }
+        else {
+            stnHourlyList[0].hourlyData.push(newHourlyData);
+            stnHourlyList[0].hourlyData.sort(function(a, b){
+                if(a.date > b.date){
+                    return 1;
+                }
+                if(a.date < b.date){
+                    return -1;
+                }
+                return 0;
+            });
+        }
+
+        if(stnHourlyList[0].hourlyData.length > self.MAX_HOURLY_COUNT){
+            stnHourlyList[0].hourlyData = stnHourlyList[0].hourlyData.slice((stnHourlyList[0].hourlyData.length - self.MAX_HOURLY_COUNT));
+        }
+
         stnHourlyList[0].save(function (err) {
             if (err) {
                 return callback(err);
@@ -782,29 +824,60 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
     });
 };
 
+KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
+    var self = this;
+    var pubDateCount = days*24;
+    var pubDateList = [];
+    var date = kmaTimeLib.toTimeZone(9);
+
+    for (var i=0; i<pubDateCount; i++) {
+        date.setHours(date.getHours()-1);
+        pubDateList.push(new Date(date));
+    }
+    //log.info(pubDateList);
+    async.mapSeries(pubDateList, function (pubDate, aCallback) {
+       self.getStnHourlyWeather(pubDate, function (err, results) {
+           if (err == 'skip') {
+              return aCallback(undefined, results);
+           }
+           aCallback(err, results);
+       });
+    }, function (err, results) {
+       if (err)  {
+           return callback(err);
+       }
+       callback(err, results);
+    });
+
+    return this;
+};
+
 /**
  *
  * @param callback
  */
-KmaScraper.prototype.getStnHourlyWeather = function (callback) {
+KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
     var self = this;
-    var pubDate = kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ();
+    var pubDate = kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ(day);
 
-    log.info('get stn hourly weather');
+    log.info('get stn hourly weather pubdate='+pubDate);
 
     async.waterfall([
         //skip check pubdate to overwrite new data
+        //stn 마다 모두 확인하는 것이 아니기 때문에, 최종으로 check없이 한번더 저장필요.
+        //update every time
         //function (cb) {
         //    //check update time
-        //    self._checkPubdate(pubDate, function (err, isLatest) {
+        //    self._checkPubdate(pubDate, function (err, hasData) {
         //        if (err) {
         //            return cb(err);
         //        }
-        //        if (isLatest) {
+        //        if (hasData) {
         //            return cb('skip');
         //        }
         //        cb();
-        //    });},
+        //    });
+        //},
         function (cb) {
             log.info('get aws weather');
             self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
@@ -830,7 +903,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (callback) {
                 cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
             })},
         function (weatherList, cb) {
-            log.info('wl stnlist='+weatherList.stnList.length);
+            log.info('wl stnlist='+weatherList.stnList.length+" pubdate="+weatherList.pubDate);
             self._saveKmaStnHourlyList(weatherList, function (err, results) {
                 if (err) {
                     return cb(err);

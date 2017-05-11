@@ -6,9 +6,7 @@ var router = express.Router();
 var worldWeather = new (require('../../controllers/worldWeather/controllerWorldWeather'))();
 
 router.use(function timestamp(req, res, next){
-    var printTime = new Date();
-    log.info('+ weather > request | Time[', printTime.toISOString(), ']');
-
+    log.info('## + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
     next();
 });
 
@@ -19,7 +17,13 @@ router.get('/', function(req, res) {
 
 router.get('/:version', [worldWeather.checkApiVersion, worldWeather.checkCommand, worldWeather.showUsage, worldWeather.sendResult]);
 router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.queryWeather,
-            worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentData, worldWeather.mergeDsfData, worldWeather.sendResult]);
+    worldWeather.mergeWuForecastData, worldWeather.mergeWuCurrentDataToHourly, worldWeather.mergeWuCurrentData,
+    worldWeather.mergeDsfData, worldWeather.sendResult]);
 
+// temporary
+router.get('/:version/:category/:days', worldWeather.checkApiVersion,
+    worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
+    worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData, worldWeather.mergeDsfHourlyData,
+    worldWeather.dataSort, worldWeather.sendResult);
 
 module.exports = router;

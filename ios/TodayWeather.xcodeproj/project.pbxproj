@@ -7,8 +7,12 @@
 	objects = {
 /* Begin PBXBuildFile section */
 		0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0207DA571B56EA530066E2B4 /* Images.xcassets */; };
+		026A7EE285CE41FDB35A4964 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7F6957E8E04039A4E46E82 /* Contacts.framework */; };
+		1BE102EEF2CD4E558EA0D62B /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 174E5634FBD540F7843CF999 /* CoreMotion.framework */; };
 		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
 		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
+		252464DCD558415FBDDB2815 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EC07BC28D6F4B33BB76EFCC /* UserNotifications.framework */; };
+		2B269D87862D47508C4B016D /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80838C7CDEF643BA8BE88C4B /* CoreFoundation.framework */; };
 		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
 		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
 		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
@@ -23,30 +27,36 @@
 		5A08DE291D2618E0009A83E1 /* TodayViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A08DE281D2618E0009A83E1 /* TodayViewController.m */; };
 		5A08DE301D2618E0009A83E1 /* widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5A08DE231D2618DF009A83E1 /* widget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5A08DE371D261B40009A83E1 /* widget.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 5A08DE351D261B40009A83E1 /* widget.entitlements */; };
-		5A08DE391D261B59009A83E1 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A08DE381D261B59009A83E1 /* MainInterface.storyboard */; };
+		5A1350081E342513009555FA /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614BC1E2D082500840986 /* Info.plist */; };
+		5A1350091E342547009555FA /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614BC1E2D082500840986 /* Info.plist */; };
+		5A6678B51DEAAF9C001FAA44 /* TodayWeatherShowMore.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */; };
+		5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614B81E2D080200840986 /* MainInterface.storyboard */; };
+		5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614C01E2D087900840986 /* InfoPlist.strings */; };
+		5A8DC0C21DE1754D0057FE1A /* TodayWeatherUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A8DC0C11DE1754D0057FE1A /* TodayWeatherUtil.m */; };
 		5AED42281D26A9EA00028FBC /* Wind.png in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42271D26A9EA00028FBC /* Wind.png */; };
 		5AED42291D26A9EA00028FBC /* Wind.png in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42271D26A9EA00028FBC /* Wind.png */; };
 		5AED42C91D26AA6B00028FBC /* weatherIcon2-color in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42601D26AA6B00028FBC /* weatherIcon2-color */; };
 		5AED42CA1D26AA6B00028FBC /* weatherIcon2-color in Resources */ = {isa = PBXBuildFile; fileRef = 5AED42601D26AA6B00028FBC /* weatherIcon2-color */; };
+		5AEE0BCE1E3EF55A0049BBB1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */; };
 		5D484DC2001A435887ACA005 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AFAC92BC8234D5EBE4C2061 /* StoreKit.framework */; };
+		6A1A01126EC7413096E0081E /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65C2B848E46742FA9D93D548 /* Photos.framework */; };
 		75A5B85368984A88A3290331 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CA8FAE7A0B141AA8C4026D0 /* CoreLocation.framework */; };
 		7728EA991400460798133A96 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 482B1191CBDA4526B34114F4 /* AVFoundation.framework */; };
+		7EF26664999240A7AABFF83C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = AD5B52567B6944CDBB089576 /* libz.tbd */; };
 		95C128584B3F406E8BC37598 /* AdSupport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B7DAD785782B4EDA87BA15B1 /* AdSupport.framework */; };
-		9B4899A240B442B989339FB0 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 7F7973EE89B341EB85A64D09 /* libsqlite3.tbd */; };
 		9F3F3534DFB54B0AB416D979 /* Social.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C877C7F566FE4B05B09F0E62 /* Social.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		A1E76EAEFEB24D228C8C213C /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCEACEC918034AC5AA128D6F /* AddressBook.framework */; };
-		A9BC495DBE6B4F108A79EFE2 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AE62787C25C94CEAB232A4A0 /* libz.dylib */; };
-		C3C1BAB81D1FD67A000BFA84 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C3C1BAB71D1FD67A000BFA84 /* InfoPlist.strings */; };
 		C6751E6DA73B40439B0779FA /* SafariServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B99256DA61D14E12AFBBC40E /* SafariServices.framework */; };
-		C856B4A6465742F680EE36E8 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1204F8BD4B4C4298B9DD6DE2 /* libsqlite3.dylib */; };
 		C9B0807012C34232B9257057 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3855A53012384B2894390E0B /* CoreBluetooth.framework */; };
 		D06ABFF31B184C1EB0C4627D /* EventKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA38BE75CCBB42479805FE4C /* EventKitUI.framework */; };
-		D72D7973DCF8494AA79A53B3 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A85FDA6315F94AF3981A5F62 /* libz.tbd */; };
 		DB97818B6C0D448F81F1D167 /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EAC0B4CE37A341DD97E366CC /* CoreData.framework */; };
 		E04EB853292448C7B0D476CC /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F75E5CA860FF4762BBC3ACAA /* UIKit.framework */; };
 		E8D4CE25F72342ACABFAD3D9 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5798502ADAB04A1BAF3D25B8 /* QuartzCore.framework */; };
 		EC978D8466284E4DA91F6BCF /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 117B528367A74A42BB89922F /* CFNetwork.framework */; };
 		EE1B9B5126634DE7B5A3CBF5 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 69E41382548E41CDAE0EA8FA /* MessageUI.framework */; };
+		EFE7A497431D4871838CA5F7 /* MediaAccessibility.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DACAA39F232941A0813446D6 /* MediaAccessibility.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		F367B36F47E74EDDB5A75900 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58E4FE1865A0455AB0F2ED91 /* CoreMedia.framework */; };
+		F3690D0D31A14B698FC7282F /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FF01B0C63533429D9E5064F9 /* libsqlite3.tbd */; };
 		F6242FA0282E4CE994EE2DB9 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AD46A2D94274B06BD2B1F76 /* SystemConfiguration.framework */; };
 		FAC22F4B344949A687B5E8A3 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84D6D4B6CEAA4AC5B191C8B0 /* AudioToolbox.framework */; };
 /* End PBXBuildFile section */
@@ -92,11 +102,12 @@
 /* Begin PBXFileReference section */
 		0207DA571B56EA530066E2B4 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = TodayWeather/Images.xcassets; sourceTree = SOURCE_ROOT; };
 		117B528367A74A42BB89922F /* CFNetwork.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
-		1204F8BD4B4C4298B9DD6DE2 /* libsqlite3.dylib */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = usr/lib/libsqlite3.dylib; sourceTree = SDKROOT; };
+		174E5634FBD540F7843CF999 /* CoreMotion.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
 		1D3623240D0F684500981E51 /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		1D3623250D0F684500981E51 /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		1D6058910D05DD3D006BFB54 /* TodayWeather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodayWeather.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		2EC07BC28D6F4B33BB76EFCC /* UserNotifications.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CordovaLib.xcodeproj; path = CordovaLib/CordovaLib.xcodeproj; sourceTree = "<group>"; };
 		301BF56E109A69640062928A /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; path = www; sourceTree = SOURCE_ROOT; };
 		302D95EE14D2391D003F00A1 /* MainViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
@@ -110,34 +121,58 @@
 		3AD46A2D94274B06BD2B1F76 /* SystemConfiguration.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		482B1191CBDA4526B34114F4 /* AVFoundation.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		5798502ADAB04A1BAF3D25B8 /* QuartzCore.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		58E4FE1865A0455AB0F2ED91 /* CoreMedia.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		5A08DE231D2618DF009A83E1 /* widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = widget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A08DE241D2618DF009A83E1 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
 		5A08DE271D2618E0009A83E1 /* TodayViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TodayViewController.h; sourceTree = "<group>"; };
 		5A08DE281D2618E0009A83E1 /* TodayViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TodayViewController.m; sourceTree = "<group>"; };
-		5A08DE2D1D2618E0009A83E1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A08DE351D261B40009A83E1 /* widget.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = widget.entitlements; sourceTree = "<group>"; };
 		5A08DE361D261B40009A83E1 /* WidgetConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WidgetConfig.h; sourceTree = "<group>"; };
-		5A08DE381D261B59009A83E1 /* MainInterface.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = MainInterface.storyboard; sourceTree = "<group>"; };
+		5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherShowMore.m; sourceTree = "<group>"; };
+		5A6678B71DEAB013001FAA44 /* TodayWeatherShowMore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherShowMore.h; sourceTree = "<group>"; };
+		5A8614B71E2D080200840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
+		5A8614BB1E2D082500840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Base; path = Base.lproj/Info.plist; sourceTree = "<group>"; };
+		5A8614BF1E2D087900840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A8614C31E2D099600840986 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A8614C61E2E5C9500840986 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A8614C91E2E5CAB00840986 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		5A8614CC1E2E5CB100840986 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		5A8614CF1E2FBC8300840986 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A8DC0C11DE1754D0057FE1A /* TodayWeatherUtil.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherUtil.m; sourceTree = "<group>"; };
+		5A8DC0C31DE175630057FE1A /* TodayWeatherUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherUtil.h; sourceTree = "<group>"; };
 		5AED42271D26A9EA00028FBC /* Wind.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Wind.png; path = ../../../www/img/Wind.png; sourceTree = "<group>"; };
 		5AED42601D26AA6B00028FBC /* weatherIcon2-color */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "weatherIcon2-color"; path = "../../www/img/weatherIcon2-color"; sourceTree = "<group>"; };
+		5AEE0BBA1E3EE4930049BBB1 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ko; path = ko.lproj/Info.plist; sourceTree = "<group>"; };
+		5AEE0BBB1E3EE4960049BBB1 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = ja; path = ja.lproj/Info.plist; sourceTree = "<group>"; };
+		5AEE0BBC1E3EE4990049BBB1 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "zh-Hans"; path = "zh-Hans.lproj/Info.plist"; sourceTree = "<group>"; };
+		5AEE0BBD1E3EE49B0049BBB1 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "zh-Hant"; path = "zh-Hant.lproj/Info.plist"; sourceTree = "<group>"; };
+		5AEE0BBE1E3EE49E0049BBB1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = de; path = de.lproj/Info.plist; sourceTree = "<group>"; };
+		5AEE0BCB1E3EE9EB0049BBB1 /* LocalizationDefine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocalizationDefine.h; sourceTree = "<group>"; };
+		5AEE0BCF1E3EF55A0049BBB1 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AEE0BD11E3EF55D0049BBB1 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AEE0BD21E3EF5630049BBB1 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AEE0BD31E3EF5650049BBB1 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		5AEE0BD41E3EF5670049BBB1 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		5AEE0BD51E3EF5690049BBB1 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5CA8FAE7A0B141AA8C4026D0 /* CoreLocation.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		65C2B848E46742FA9D93D548 /* Photos.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
 		69E41382548E41CDAE0EA8FA /* MessageUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
 		74F3C838F71C4525874F08C1 /* Foundation.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		7F7973EE89B341EB85A64D09 /* libsqlite3.tbd */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = libsqlite3.tbd; sourceTree = "<group>"; };
+		80838C7CDEF643BA8BE88C4B /* CoreFoundation.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		84D6D4B6CEAA4AC5B191C8B0 /* AudioToolbox.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		8AFAC92BC8234D5EBE4C2061 /* StoreKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		8D1107310486CEB800E47090 /* TodayWeather-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "TodayWeather-Info.plist"; path = "TodayWeather/TodayWeather-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = SOURCE_ROOT; };
-		A85FDA6315F94AF3981A5F62 /* libz.tbd */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = libz.tbd; sourceTree = "<group>"; };
-		AE62787C25C94CEAB232A4A0 /* libz.dylib */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		AD5B52567B6944CDBB089576 /* libz.tbd */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		B64E89D91E4E4B2490CD9B4A /* MediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		B7DAD785782B4EDA87BA15B1 /* AdSupport.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = AdSupport.framework; path = System/Library/Frameworks/AdSupport.framework; sourceTree = SDKROOT; };
 		B99256DA61D14E12AFBBC40E /* SafariServices.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SafariServices.framework; path = System/Library/Frameworks/SafariServices.framework; sourceTree = SDKROOT; };
 		BA38BE75CCBB42479805FE4C /* EventKitUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = EventKitUI.framework; path = System/Library/Frameworks/EventKitUI.framework; sourceTree = SDKROOT; };
-		C3C1BAB71D1FD67A000BFA84 /* InfoPlist.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; path = InfoPlist.strings; sourceTree = "<group>"; };
+		BF7F6957E8E04039A4E46E82 /* Contacts.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Contacts.framework; path = System/Library/Frameworks/Contacts.framework; sourceTree = SDKROOT; };
 		C3CE4D051D2252EC00F707B7 /* TodayWeather.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = TodayWeather.entitlements; path = TodayWeather/TodayWeather.entitlements; sourceTree = "<group>"; };
 		C877C7F566FE4B05B09F0E62 /* Social.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = Social.framework; path = System/Library/Frameworks/Social.framework; sourceTree = SDKROOT; };
 		CCEACEC918034AC5AA128D6F /* AddressBook.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = System/Library/Frameworks/AddressBook.framework; sourceTree = SDKROOT; };
 		D08BFEC4DA3E438CB6496CB7 /* EventKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
+		DACAA39F232941A0813446D6 /* MediaAccessibility.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = MediaAccessibility.framework; path = System/Library/Frameworks/MediaAccessibility.framework; sourceTree = SDKROOT; };
 		E441AFEE8B984029B0B91542 /* CoreTelephony.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
 		EAC0B4CE37A341DD97E366CC /* CoreData.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		EB87FDF31871DA8E0020F90C /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; name = www; path = ../../www; sourceTree = "<group>"; };
@@ -145,6 +180,7 @@
 		ED33DF2A687741AEAF9F8254 /* Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
 		F75E5CA860FF4762BBC3ACAA /* UIKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		F840E1F0165FE0F500CFE078 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = TodayWeather/config.xml; sourceTree = "<group>"; };
+		FF01B0C63533429D9E5064F9 /* libsqlite3.tbd */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,12 +207,17 @@
 				F6242FA0282E4CE994EE2DB9 /* SystemConfiguration.framework in Frameworks */,
 				E04EB853292448C7B0D476CC /* UIKit.framework in Frameworks */,
 				DB97818B6C0D448F81F1D167 /* CoreData.framework in Frameworks */,
-				A9BC495DBE6B4F108A79EFE2 /* libz.dylib in Frameworks */,
-				C856B4A6465742F680EE36E8 /* libsqlite3.dylib in Frameworks */,
 				9F3F3534DFB54B0AB416D979 /* Social.framework in Frameworks */,
 				A1E76EAEFEB24D228C8C213C /* AddressBook.framework in Frameworks */,
-				9B4899A240B442B989339FB0 /* libsqlite3.tbd in Frameworks */,
-				D72D7973DCF8494AA79A53B3 /* libz.tbd in Frameworks */,
+				F3690D0D31A14B698FC7282F /* libsqlite3.tbd in Frameworks */,
+				7EF26664999240A7AABFF83C /* libz.tbd in Frameworks */,
+				EFE7A497431D4871838CA5F7 /* MediaAccessibility.framework in Frameworks */,
+				2B269D87862D47508C4B016D /* CoreFoundation.framework in Frameworks */,
+				F367B36F47E74EDDB5A75900 /* CoreMedia.framework in Frameworks */,
+				1BE102EEF2CD4E558EA0D62B /* CoreMotion.framework in Frameworks */,
+				6A1A01126EC7413096E0081E /* Photos.framework in Frameworks */,
+				026A7EE285CE41FDB35A4964 /* Contacts.framework in Frameworks */,
+				252464DCD558415FBDDB2815 /* UserNotifications.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,7 +258,7 @@
 			isa = PBXGroup;
 			children = (
 				C3CE4D051D2252EC00F707B7 /* TodayWeather.entitlements */,
-				C3C1BAB71D1FD67A000BFA84 /* InfoPlist.strings */,
+				5A8614C01E2D087900840986 /* InfoPlist.strings */,
 				EB87FDF41871DAF40020F90C /* config.xml */,
 				EB87FDF31871DA8E0020F90C /* www */,
 				EB87FDF11871DA420020F90C /* Staging */,
@@ -278,13 +319,18 @@
 				3AD46A2D94274B06BD2B1F76 /* SystemConfiguration.framework */,
 				F75E5CA860FF4762BBC3ACAA /* UIKit.framework */,
 				EAC0B4CE37A341DD97E366CC /* CoreData.framework */,
-				AE62787C25C94CEAB232A4A0 /* libz.dylib */,
-				1204F8BD4B4C4298B9DD6DE2 /* libsqlite3.dylib */,
 				C877C7F566FE4B05B09F0E62 /* Social.framework */,
 				CCEACEC918034AC5AA128D6F /* AddressBook.framework */,
-				7F7973EE89B341EB85A64D09 /* libsqlite3.tbd */,
-				A85FDA6315F94AF3981A5F62 /* libz.tbd */,
 				5A08DE241D2618DF009A83E1 /* NotificationCenter.framework */,
+				FF01B0C63533429D9E5064F9 /* libsqlite3.tbd */,
+				AD5B52567B6944CDBB089576 /* libz.tbd */,
+				DACAA39F232941A0813446D6 /* MediaAccessibility.framework */,
+				80838C7CDEF643BA8BE88C4B /* CoreFoundation.framework */,
+				58E4FE1865A0455AB0F2ED91 /* CoreMedia.framework */,
+				174E5634FBD540F7843CF999 /* CoreMotion.framework */,
+				65C2B848E46742FA9D93D548 /* Photos.framework */,
+				BF7F6957E8E04039A4E46E82 /* Contacts.framework */,
+				2EC07BC28D6F4B33BB76EFCC /* UserNotifications.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -318,12 +364,18 @@
 		5A08DE261D2618E0009A83E1 /* widget */ = {
 			isa = PBXGroup;
 			children = (
-				5A08DE381D261B59009A83E1 /* MainInterface.storyboard */,
+				5A8614B81E2D080200840986 /* MainInterface.storyboard */,
 				5A08DE351D261B40009A83E1 /* widget.entitlements */,
+				5A8614BC1E2D082500840986 /* Info.plist */,
 				5A08DE361D261B40009A83E1 /* WidgetConfig.h */,
 				5A08DE271D2618E0009A83E1 /* TodayViewController.h */,
 				5A08DE281D2618E0009A83E1 /* TodayViewController.m */,
-				5A08DE2D1D2618E0009A83E1 /* Info.plist */,
+				5A8DC0C31DE175630057FE1A /* TodayWeatherUtil.h */,
+				5A8DC0C11DE1754D0057FE1A /* TodayWeatherUtil.m */,
+				5A6678B71DEAB013001FAA44 /* TodayWeatherShowMore.h */,
+				5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */,
+				5AEE0BCB1E3EE9EB0049BBB1 /* LocalizationDefine.h */,
+				5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */,
 			);
 			path = widget;
 			sourceTree = "<group>";
@@ -418,6 +470,11 @@
 			knownRegions = (
 				en,
 				Base,
+				ko,
+				ja,
+				"zh-Hans",
+				"zh-Hant",
+				de,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
 			projectDirPath = "";
@@ -452,7 +509,8 @@
 			files = (
 				5AED42C91D26AA6B00028FBC /* weatherIcon2-color in Resources */,
 				302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */,
-				C3C1BAB81D1FD67A000BFA84 /* InfoPlist.strings in Resources */,
+				5A1350091E342547009555FA /* Info.plist in Resources */,
+				5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */,
 				3047A5131AB8059700498E2A /* build-release.xcconfig in Resources */,
 				3047A5141AB8059700498E2A /* build.xcconfig in Resources */,
 				0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */,
@@ -467,7 +525,9 @@
 			files = (
 				5AED42291D26A9EA00028FBC /* Wind.png in Resources */,
 				5AED42CA1D26AA6B00028FBC /* weatherIcon2-color in Resources */,
-				5A08DE391D261B59009A83E1 /* MainInterface.storyboard in Resources */,
+				5AEE0BCE1E3EF55A0049BBB1 /* Localizable.strings in Resources */,
+				5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */,
+				5A1350081E342513009555FA /* Info.plist in Resources */,
 				5A08DE371D261B40009A83E1 /* widget.entitlements in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -507,6 +567,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A6678B51DEAAF9C001FAA44 /* TodayWeatherShowMore.m in Sources */,
+				5A8DC0C21DE1754D0057FE1A /* TodayWeatherUtil.m in Sources */,
 				5A08DE291D2618E0009A83E1 /* TodayViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -526,6 +588,56 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin PBXVariantGroup section */
+		5A8614B81E2D080200840986 /* MainInterface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A8614B71E2D080200840986 /* Base */,
+			);
+			name = MainInterface.storyboard;
+			sourceTree = "<group>";
+		};
+		5A8614BC1E2D082500840986 /* Info.plist */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A8614BB1E2D082500840986 /* Base */,
+				5AEE0BBA1E3EE4930049BBB1 /* ko */,
+				5AEE0BBB1E3EE4960049BBB1 /* ja */,
+				5AEE0BBC1E3EE4990049BBB1 /* zh-Hans */,
+				5AEE0BBD1E3EE49B0049BBB1 /* zh-Hant */,
+				5AEE0BBE1E3EE49E0049BBB1 /* de */,
+			);
+			name = Info.plist;
+			sourceTree = "<group>";
+		};
+		5A8614C01E2D087900840986 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A8614BF1E2D087900840986 /* Base */,
+				5A8614C31E2D099600840986 /* ko */,
+				5A8614C61E2E5C9500840986 /* ja */,
+				5A8614C91E2E5CAB00840986 /* zh-Hans */,
+				5A8614CC1E2E5CB100840986 /* zh-Hant */,
+				5A8614CF1E2FBC8300840986 /* de */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5AEE0BCF1E3EF55A0049BBB1 /* Base */,
+				5AEE0BD11E3EF55D0049BBB1 /* ko */,
+				5AEE0BD21E3EF5630049BBB1 /* ja */,
+				5AEE0BD31E3EF5650049BBB1 /* zh-Hans */,
+				5AEE0BD41E3EF5670049BBB1 /* zh-Hant */,
+				5AEE0BD51E3EF5690049BBB1 /* de */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		1D6058940D05DD3E006BFB54 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -541,7 +653,6 @@
 				COPY_PHASE_STRIP = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"TodayWeather/Plugins/cordova-plugin-admobpro\"",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -575,7 +686,6 @@
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"TodayWeather/Plugins/cordova-plugin-admobpro\"",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "TodayWeather/TodayWeather-Prefix.pch";
@@ -620,7 +730,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = widget/Info.plist;
+				INFOPLIST_FILE = widget/Base.lproj/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -653,7 +763,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INFOPLIST_FILE = widget/Info.plist;
+				INFOPLIST_FILE = widget/Base.lproj/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -669,6 +779,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -696,6 +807,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;

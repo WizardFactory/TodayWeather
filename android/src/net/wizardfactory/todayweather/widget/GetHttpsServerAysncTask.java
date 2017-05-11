@@ -9,8 +9,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import javax.net.ssl.HttpsURLConnection;
-
 /**
  *  This class http server connect form "GET" Type
  *  Now used for get weather data and location address for geocoder.
@@ -25,6 +23,7 @@ public class GetHttpsServerAysncTask extends AsyncTask<String, String, String> {
     @Override
     protected void onPreExecute() {
         // do nothing
+        super.onPreExecute();
     }
 
     @Override
@@ -46,10 +45,12 @@ public class GetHttpsServerAysncTask extends AsyncTask<String, String, String> {
         try {
             URL url = new URL(strUrl);
             urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setDoOutput(false);
+            urlConnection.setReadTimeout(3000);
+            urlConnection.setConnectTimeout(3000);
             urlConnection.setRequestMethod("GET");
+            urlConnection.setDoInput(true);
 
-            BufferedReader bi2 = new BufferedReader( new InputStreamReader( urlConnection.getInputStream() ) );
+            BufferedReader bi2 = new BufferedReader( new InputStreamReader( urlConnection.getInputStream(), "UTF-8") );
             String s = "";
             while ((s = bi2.readLine()) != null) {
                 retString += s;
@@ -58,7 +59,9 @@ public class GetHttpsServerAysncTask extends AsyncTask<String, String, String> {
             Log.e("AsynTask", e.toString());
             e.printStackTrace();
         } finally {
-            urlConnection.disconnect();
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
         }
 
         Log.e("AsyncTask", "ret: " + retString);

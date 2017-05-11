@@ -1,130 +1,110 @@
 package net.wizardfactory.todayweather.widget.Provider;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.WidgetMenuActivity;
-import net.wizardfactory.todayweather.widget.WidgetProviderConfigureActivity;
-import net.wizardfactory.todayweather.widget.WidgetUpdateService;
+import net.wizardfactory.todayweather.widget.Data.Units;
+import net.wizardfactory.todayweather.widget.Data.WeatherData;
+import net.wizardfactory.todayweather.widget.Data.WidgetData;
+import net.wizardfactory.todayweather.widget.SettingsActivity;
 
-public class W2x1WidgetProvider extends AppWidgetProvider {
+/**
+ * Implementation of App Widget functionality.
+ */
+public class W2x1WidgetProvider extends TwWidgetProvider {
 
-    private static final String TAG = "W2x1Widget";
-    private static PendingIntent mSender;
-    private static AlarmManager mManager;
+    public W2x1WidgetProvider() {
+        TAG = "W2x1WidgetProvider";
+        mLayoutId = R.layout.w2x1_widget_layout;
+    }
 
-    @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        final int N = appWidgetIds.length;
+    static public void setWidgetStyle(Context context, int appWidgetId, RemoteViews views) {
+        TwWidgetProvider.setWidgetStyle(context, appWidgetId, views);
 
-        // Perform this loop procedure for each App Widget that belongs to this provider
-        for (int i=0; i<N; i++) {
-            int appWidgetId = appWidgetIds[i];
+        int fontColor = SettingsActivity.loadFontColorPref(context, appWidgetId);
+        views.setTextColor(R.id.errMsg, fontColor);
+        views.setTextColor(R.id.location, fontColor);
+        views.setTextColor(R.id.yesterday_temperature, fontColor);
+        views.setTextColor(R.id.cmp_yesterday_temperature, fontColor);
+        views.setTextColor(R.id.today_text, fontColor);
+        views.setTextColor(R.id.today_high_temperature, fontColor);
+        views.setTextColor(R.id.today_separator_temperature, fontColor);
+        views.setTextColor(R.id.today_low_temperature, fontColor);
+        views.setTextColor(R.id.yesterday_text, fontColor);
+        views.setTextColor(R.id.yesterday_high_temperature, fontColor);
+        views.setTextColor(R.id.yesterday_separator_temperature, fontColor);
+        views.setTextColor(R.id.yesterday_low_temperature, fontColor);
+    }
 
-            Log.i(TAG, "appWidgetId="+appWidgetId);
+    static public void setWidgetData(Context context, RemoteViews views, WidgetData wData, Units localUnits) {
+        if (wData == null) {
+            Log.e(TAG, "weather data is NULL");
+            return;
+        }
 
-            // Create an Intent to launch menu
-            Intent intent = new Intent(context, WidgetMenuActivity.class);
-            intent.putExtra("LAYOUT_ID", R.layout.w2x1_widget_layout);
-//            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, appWidgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        if (wData.getLoc() != null) {
+            views.setTextViewText(R.id.location, wData.getLoc());
+        }
 
-            // Get the layout for the App Widget and attach an on-click listener
-            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.w2x1_widget_layout);
-            views.setOnClickPendingIntent(R.id.bg_layout, pendingIntent);
-
-            int opacity = WidgetProviderConfigureActivity.getWidgetOpacity(context);
-            if (opacity > -1) {
-                int color = (255*opacity/100) << 24 + 0x231f20;
-                views.setInt(R.id.bg_layout, "setBackgroundColor", color);
+        // process current weather data
+        WeatherData currentData = wData.getCurrentWeather();
+        double tempMax;
+        double tempMin;
+        if (currentData != null) {
+            String tempStr = localUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+            tempMax = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMaxTemperature());
+            tempMin = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getMinTemperature());
+            views.setTextViewText(R.id.yesterday_temperature, tempStr);
+            views.setTextViewText(R.id.today_high_temperature, String.valueOf(Math.round(tempMax)));
+            views.setTextViewText(R.id.today_low_temperature, String.valueOf(Math.round(tempMin)));
+//                views.setTextViewText(R.id.cmp_yesterday_temperature, currentData.getSummary());
+            int skyResourceId = context.getResources().getIdentifier(currentData.getSkyImageName(), "drawable", context.getPackageName());
+            if (skyResourceId == -1) {
+                skyResourceId = R.drawable.sun;
             }
-
-            // Tell the AppWidgetManager to perform an update on the current app widget
-            appWidgetManager.updateAppWidget(appWidgetId, views);
-
-            // update widget weather data using service
-            Intent serviceIntent = new Intent(context, WidgetUpdateService.class);
-            serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-            context.startService(serviceIntent);
+            views.setImageViewResource(R.id.current_sky, skyResourceId);
+        } else {
+            Log.e(TAG, "todayElement is NULL");
         }
-    }
 
-    @Override
-    public void onDeleted(Context context, int[] appWidgetIds) {
-        Log.i(TAG, "on deleted");
-        // When the user deletes the widget, delete the preference associated with it.
-        for (int appWidgetId : appWidgetIds) {
-            WidgetProviderConfigureActivity.deleteCityInfoPref(context, appWidgetId);
+        // process yesterday that same as current time, weather data
+        WeatherData yesterdayData = wData.getBefore24hWeather();
+        if (yesterdayData != null) {
+            tempMax = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getMaxTemperature());
+            tempMin = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getMinTemperature());
+            views.setTextViewText(R.id.yesterday_high_temperature, String.valueOf(Math.round(tempMax)));
+            views.setTextViewText(R.id.yesterday_low_temperature, String.valueOf(Math.round(tempMin)));
+        } else {
+            Log.e(TAG, "yesterdayElement is NULL");
         }
-    }
 
-    @Override
-    public void onEnabled(Context context) {
-        Log.i(TAG, "Enabled");
-    }
-
-    @Override
-    public void onDisabled(Context context) {
-        Log.i(TAG, "Disabled");
-    }
-
-    public void removePreviousAlarm()
-    {
-        if(mManager != null && mSender != null)
-        {
-            mSender.cancel();
-            mManager.cancel(mSender);
-        }
-    }
-
-    public void onReceive(Context context, Intent intent) {
-        Log.i(TAG, "on receive");
-        super.onReceive(context, intent);
-
-        String action = intent.getAction();
-        // 위젯 업데이트 인텐트를 수신했을 때
-        if(action.equals("android.appwidget.action.APPWIDGET_UPDATE"))
-        {
-            Log.w(TAG, "android.appwidget.action.APPWIDGET_UPDATE");
-            removePreviousAlarm();
-
-            long updateInterval = WidgetProviderConfigureActivity.getWidgetUpdateInterval(context);
-            if (updateInterval > 0) {
-                Log.i(TAG, "set alarm");
-
-                Intent alarmIntent = new Intent(context, getClass());
-                alarmIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-                ComponentName thisWidget = new ComponentName(context, getClass());
-                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-                int[] widgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
-                alarmIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds);
-
-                long updateTime = System.currentTimeMillis() + updateInterval;
-                mSender = PendingIntent.getBroadcast(context, 0, alarmIntent, 0);
-                mManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-                mManager.set(AlarmManager.RTC, updateTime, mSender);
+        int cmpTemp = 0;
+        String cmpYesterdayTemperatureStr = "";
+        if (currentData != null && yesterdayData != null) {
+            double currentTemp = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+            double before24hTemp = localUnits.convertUnits(wData.getUnits().getTemperatureUnit(), yesterdayData.getTemperature());
+            cmpTemp = (int)Math.round(currentTemp - before24hTemp);
+            if (cmpTemp == 0) {
+                cmpYesterdayTemperatureStr = context.getString(R.string.same_yesterday);
             }
+            else {
+                String strTemp;
+                if (cmpTemp > 0) {
+                    strTemp = "+"+String.valueOf(cmpTemp);
+                }
+                else {
+                    strTemp = String.valueOf(cmpTemp);
+                }
+                cmpYesterdayTemperatureStr = String.format(context.getString(R.string.cmp_yesterday), strTemp);
+            }
+            views.setTextViewText(R.id.cmp_yesterday_temperature, cmpYesterdayTemperatureStr);
         }
-        // 위젯 제거 인텐트를 수신했을 때
-        else if(action.equals("android.appwidget.action.APPWIDGET_DISABLED"))
-        {
-            Log.w(TAG, "android.appwidget.action.APPWIDGET_DISABLED");
-            removePreviousAlarm();
-        }
-    }
 
-    /**
-     * 예약되어있는 알람을 취소합니다.
-     */
+        // weather content is visible
+        views.setViewVisibility(R.id.msg_layout, View.GONE);
+        views.setViewVisibility(R.id.weather_layout, View.VISIBLE);
+    }
 }
-
-

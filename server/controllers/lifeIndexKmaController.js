@@ -13,10 +13,10 @@ function LifeIndexKmaController() {
 
 LifeIndexKmaController.fsnStr = function (grade) {
     switch(grade) {
-        case 0: return "관심";
-        case 1: return "주의";
-        case 2: return "경고";
-        case 3: return "위험";
+        case 0: return __("LOC_ATTENTION");
+        case 1: return __("LOC_CAUTION");
+        case 2: return __("LOC_WARNING");
+        case 3: return __("LOC_HAZARD");
         default: return "";
     }
 };
@@ -36,13 +36,14 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
-LifeIndexKmaController.ultrvStr = function (grade) {
+LifeIndexKmaController.ultrvStr = function (grade, translate) {
+    var ts = translate == undefined?global:translate;
     switch(grade) {
-        case 0: return "낮음";
-        case 1: return "보통";
-        case 2: return "높음";
-        case 3: return "매우높음";
-        case 4: return "위험";
+        case 0: return ts.__("LOC_LOW");
+        case 1: return ts.__("LOC_NORMAL");
+        case 2: return ts.__("LOC_HIGH");
+        case 3: return ts.__("LOC_VERY_HIGH");
+        case 4: return ts.__("LOC_HAZARD");
         default: return "";
     }
 };
@@ -161,6 +162,7 @@ LifeIndexKmaController._appendFromDb = function(town, callback) {
                         return cb(err, indexDataList[i]);
                     }
                 }
+                return cb(new Error("Fail to find life index town="+JSON.stringify(town)));
             });
         }
     ], function(err, result) {
@@ -263,7 +265,7 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DiscomfortIndex > invalid parameter.');
+        log.debug('DiscomfortIndex > invalid parameter.');
         return -1;
     }
 
@@ -278,7 +280,7 @@ LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortInde
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.warn('DiscomfortString > invalid parameter');
+        log.debug('DiscomfortString > invalid parameter');
         return discomfortGrade;
     }
 
@@ -304,20 +306,20 @@ LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortInd
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
-        log.warn('DiscomfortString > invalid parameter');
+        log.debug('DiscomfortString > invalid parameter');
         return "";
     }
 
     var discomfortString;
 
     if(discomfortIndex < 68) {
-        discomfortString = '낮음';
+        discomfortString = __("LOC_LOW");
     } else if(discomfortIndex < 75) {
-        discomfortString = '보통';
+        discomfortString = __("LOC_NORMAL");
     } else if(discomfortIndex < 80) {
-        discomfortString = '높음';
+        discomfortString = __("LOC_HIGH");
     } else {
-        discomfortString = '매우높음';
+        discomfortString = __("LOC_VERY_HIGH");
     }
 
     return discomfortString;
@@ -335,7 +337,7 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DecompositionIndex > invalid parameter.');
+        log.debug('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -357,18 +359,18 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
     if(DecompositionIndex === undefined
         || DecompositionIndex < 0)
     {
-        log.warn('DecompositionString > invalid parameter');
+        log.debug('DecompositionString > invalid parameter');
         return "";
     }
 
     var decompositionString;
 
     if(DecompositionIndex > 7) {
-        decompositionString = '높음';
+        decompositionString = __("LOC_HIGH");
     } else if(DecompositionIndex > 3) {
-        decompositionString = '보통';
+        decompositionString = __("LOC_NORMAL");
     } else {
-        decompositionString = '낮음';
+        decompositionString = __("LOC_LOW");
     }
 
     return decompositionString;
@@ -386,7 +388,7 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
         || temperature < -50
         || humidity < 0)
     {
-        log.warn('DecompositionIndex > invalid parameter.');
+        log.debug('DecompositionIndex > invalid parameter.');
         return -1;
     }
 
@@ -425,20 +427,20 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
     if(heatIndex === undefined
         || heatIndex < 0) 
     {
-        log.warn('HeatIndexString > invalid parameter');
+        log.debug('HeatIndexString > invalid parameter');
         return "";
     }
         
     var heatIndexString;
     
     if(heatIndex >= 54) {
-        heatIndexString = '매우높음';
+        heatIndexString = __("LOC_VERY_HIGH");
     } else if(heatIndex >= 41 && heatIndex < 54) {
-        heatIndexString = '높음';
+        heatIndexString = __("LOC_HIGH");
     } else if(heatIndex >= 32 && heatIndex < 41) {
-        heatIndexString = '보통';
+        heatIndexString = __("LOC_NORMAL");
     } else {
-        heatIndexString = '낮음';
+        heatIndexString = __("LOC_LOW");
     }
     
     return heatIndexString;
@@ -453,18 +455,18 @@ LifeIndexKmaController.getFrostString = function(temperature) {
     if(temperature === undefined
         || temperature < -50)
     {
-        log.warn('FrostString > invalid parameter.');
+        log.debug('FrostString > invalid parameter.');
         return -1;
     }
 
     var frostString;
 
     if(temperature < -5) {
-        frostString = '높음';
+        frostString = __("LOC_HIGH");
     } else if(temperature < -1.5) {
-        frostString = '보통';
+        frostString = __("LOC_NORMAL");
     } else {
-        frostString = '낮음';
+        frostString = __("LOC_LOW");
     }
 
     return frostString;
@@ -480,24 +482,24 @@ LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperat
     if(temperature === undefined
         || temperature < -50)
     {
-        log.warn('FrostString > invalid parameter.');
+        log.debug('FrostString > invalid parameter.');
         return -1;
     }
 
     var freezeString;
 
     if(temperature <= -10) {
-        freezeString = '매우높음';
+        freezeString = __("LOC_VERY_HIGH");
     } else if((temperature <= -5)
                 && (yesterMinTemperature < -5))
     {
-        freezeString = '높음';
+        freezeString = __("LOC_HIGH");
     } else if((temperature <= -5)
                 && (yesterMinTemperature >= -5))
     {
-        freezeString = '보통';
+        freezeString = __("LOC_NORMAL");
     } else {
-        freezeString = '낮음';
+        freezeString = __("LOC_LOW");
     }
 
     return freezeString;

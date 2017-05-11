@@ -15,6 +15,22 @@ router.use(function timestamp(req, res, next){
     next();
 });
 
+router.get('/current/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("current", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
+    });
+});
+
 router.get('/current', function(req, res) {
     manager.getTownCurrentData(9, server_key, function (err) {
         if (err) {
@@ -98,11 +114,27 @@ router.get('/keco', function(req, res) {
 
 router.get('/kecoForecast', function(req, res) {
     manager.keco.getMinuDustFrcstDspth.call(manager.keco, function (err) {
-        if (err) {
+        if (err !== 'skip') {
             log.error(err);
         }
 
         res.send();
+    });
+});
+
+router.get('/short/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("short", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
     });
 });
 
@@ -112,6 +144,22 @@ router.get('/short', function(req, res) {
             log.error(err);
         }
         res.send();
+    });
+});
+
+router.get('/shortest/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("shortest", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
     });
 });
 
@@ -136,25 +184,42 @@ router.get('/lifeindex', function (req, res) {
 router.get('/healthday', function(req, res) {
     var ctrlHealthDay = require('../../controllers/controllerHealthDay');
     var requestUrl;
+    var urlList = [];
     
     for(var i=1;i<=7;i++) {
         requestUrl = ctrlHealthDay.makeRequestString(i, 0);
-
-        log.info('[healthday] get :' + requestUrl);
-
-        ctrlHealthDay.getData(requestUrl, function(err) {
-            if(err) {
-                log.error(err);
-            }
-        });
+        urlList.push(requestUrl);
     }
-    
-    res.send();
+
+    ctrlHealthDay.getData(urlList, function(err) {
+        if(err) {
+            log.error(err);
+        }
+        res.send();
+    });
 });
 
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
-    scrape.getStnHourlyWeather(function (err, results) {
+    scrape.getStnHourlyWeather(undefined, function (err, results) {
+        if (err) {
+            if (err === 'skip') {
+                log.info('stn hourly weather info is already updated');
+            }
+            else {
+                log.error(err);
+            }
+        }
+        else {
+            log.silly(results);
+        }
+        res.send();
+    });
+});
+
+router.get('/kmaStnPastHourly', function (req, res) {
+    var scrape = new Scrape();
+    scrape.getStnPastHourlyWeather(8, function (err, results) {
         if (err) {
             if (err === 'skip') {
                 log.info('stn hourly weather info is already updated');

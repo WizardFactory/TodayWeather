@@ -1,86 +1,113 @@
 package net.wizardfactory.todayweather.widget.Provider;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Build;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 import net.wizardfactory.todayweather.R;
-import net.wizardfactory.todayweather.widget.WidgetProviderConfigureActivity;
+import net.wizardfactory.todayweather.widget.Data.Units;
+import net.wizardfactory.todayweather.widget.Data.WeatherData;
+import net.wizardfactory.todayweather.widget.Data.WidgetData;
+import net.wizardfactory.todayweather.widget.JsonElement.WeatherElement;
+import net.wizardfactory.todayweather.widget.SettingsActivity;
 
 /**
  * Implementation of App Widget functionality.
- * App Widget Configuration implemented in {@link WidgetProviderConfigureActivity WidgetProviderConfigureActivity}
  */
 public class W1x1CurrentWeather extends TwWidgetProvider {
-   private static PendingIntent mSender;
-   private static AlarmManager mManager;
 
-   public W1x1CurrentWeather() {
-      mLayoutId = R.layout.w1x1_current_weather;
-      TAG = "W1x1 CurrentWeather";
-   }
+    public W1x1CurrentWeather() {
+        TAG = "W1x1 CurrentWeather";
+        mLayoutId = R.layout.w1x1_current_weather;
+    }
 
     @Override
-    void resizeWidgetObjects(AppWidgetManager appWidgetManager, int appWidgetId, RemoteViews views) {
-        super.resizeWidgetObjects(appWidgetManager, appWidgetId, views);
+    protected void setWidgetStyle(AppWidgetManager appWidgetManager, int appWidgetId, RemoteViews views) {
+        super.setWidgetStyle(appWidgetManager, appWidgetId, views);
 
         if (Build.MANUFACTURER.equals("samsung")) {
-            views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
-            views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
-            views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
+                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            }
         }
     }
 
-    public void removePreviousAlarm()
-    {
-        if(mManager != null && mSender != null)
-        {
-            Log.i(TAG, "cancel alarm");
-            mSender.cancel();
-            mManager.cancel(mSender);
+    static public void setWidgetStyle(Context context, int appWidgetId, RemoteViews views) {
+        TwWidgetProvider.setWidgetStyle(context, appWidgetId, views);
+
+        if (Build.MANUFACTURER.equals("samsung")) {
+            if (Build.VERSION.SDK_INT >= 16) {
+                views.setTextViewTextSize(R.id.location, TypedValue.COMPLEX_UNIT_DIP, 14);
+                views.setTextViewTextSize(R.id.current_pm, TypedValue.COMPLEX_UNIT_DIP, 20);
+                views.setTextViewTextSize(R.id.current_temperature, TypedValue.COMPLEX_UNIT_DIP, 20);
+            }
+        }
+
+        int fontColor = SettingsActivity.loadFontColorPref(context, appWidgetId);
+        views.setTextColor(R.id.location, fontColor);
+        views.setTextColor(R.id.current_temperature, fontColor);
+    }
+
+    static public void setWidgetData(Context context, RemoteViews views, WidgetData wData, Units localUnits) {
+        if (wData == null) {
+            Log.e(TAG, "weather data is NULL");
+            return;
+        }
+
+        if (wData.getLoc() != null) {
+            views.setTextViewText(R.id.location, wData.getLoc());
+        }
+
+        WeatherData currentData = wData.getCurrentWeather();
+        if (currentData == null) {
+            Log.e(TAG, "currentElement is NULL");
+            return;
+        }
+
+        String tempStr = localUnits.convertUnitsStr(wData.getUnits().getTemperatureUnit(), currentData.getTemperature());
+        views.setTextViewText(R.id.current_temperature, tempStr+"°");
+
+        int skyResourceId = context.getResources().getIdentifier(currentData.getSkyImageName(), "drawable", context.getPackageName());
+        if (skyResourceId == -1) {
+            skyResourceId = R.drawable.sun;
+        }
+        views.setImageViewResource(R.id.current_sky, skyResourceId);
+
+        int pm10Grade = currentData.getPm10Grade();
+        int pm25Grade = currentData.getPm25Grade();
+        if (pm10Grade != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.current_pm, ":::");
+            if (pm25Grade != WeatherElement.DEFAULT_WEATHER_INT_VAL && pm25Grade > pm10Grade) {
+                views.setTextColor(R.id.current_pm, getColorAqiGrade(context, pm25Grade));
+            }
+            else {
+                views.setTextColor(R.id.current_pm, getColorAqiGrade(context, pm10Grade));
+            }
+        }
+        else if (pm25Grade != WeatherElement.DEFAULT_WEATHER_INT_VAL) {
+            views.setTextViewText(R.id.current_pm, ":::");
+            views.setTextColor(R.id.current_pm, getColorAqiGrade(context, pm25Grade));
         }
     }
 
-    /**
-     * alarm용 intent에는 widgets를 새로 뽑아서 전달해야 함.
-     * @param context
-     * @param appWidgetManager
-     * @param appWidgetIds
-     */
-    @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds);
-
-        removePreviousAlarm();
-
-        long updateInterval = WidgetProviderConfigureActivity.getWidgetUpdateInterval(context);
-        if (updateInterval > 0) {
-            Log.i(TAG, "set alarm");
-
-            Intent intent = new Intent(context, getClass());
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            ComponentName thisWidget = new ComponentName(context, getClass());
-            int[] widgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds);
-
-            long updateTime = System.currentTimeMillis() + updateInterval;
-            mSender = PendingIntent.getBroadcast(context, 0, intent, 0);
-            mManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            mManager.set(AlarmManager.RTC, updateTime, mSender);
+    static private int getColorAqiGrade(Context context, int grade) {
+        switch (grade) {
+            case 1:
+                return ContextCompat.getColor(context, android.R.color.holo_blue_dark);
+            case 2:
+                return ContextCompat.getColor(context, android.R.color.holo_green_dark);
+            case 3:
+                return ContextCompat.getColor(context, android.R.color.holo_orange_dark);
+            case 4:
+                return ContextCompat.getColor(context, android.R.color.holo_red_dark);
         }
-    }
-
-    @Override
-    public void onDisabled(Context context) {
-        super.onDisabled(context);
-        removePreviousAlarm();
+        return ContextCompat.getColor(context, android.R.color.primary_text_dark);
     }
 }
 

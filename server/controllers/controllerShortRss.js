@@ -40,7 +40,7 @@ function TownRss(){
     self.on('recvFail', function(index, item){
         setTimeout(function(){
             self.getData(index, item);
-        }, 3 * 1000);
+        }, 500);
     });
 
     self.on('recvSuccess', function(index){
@@ -63,15 +63,15 @@ TownRss.prototype.loadList = function(completionCallback){
 
      town.getCoord(function(err, coordList){
          if(err){
-             log.error('RSS> failed to get coord');
+             log.error('ShortRSS> failed to get coord');
          } else {
-             log.silly('RSS> coord: ', coordList);
+             log.silly('ShortRSS> coord: ', coordList);
              coordList.forEach(function (coord) {
                  var item = {mCoord: coord};
                  self.coordDb.push(item);
              });
 
-             log.info('RSS> coord count : ', self.coordDb.length);
+             log.info('ShortRSS> coord count : ', self.coordDb.length);
          }
 
          if(completionCallback) {
@@ -94,7 +94,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
     meta.method = 'getShortRss';
     meta.url = url;
 
-    log.verbose('get rss URL : ', url);
+    log.verbose('get short rss URL : ', url);
     req.get(url, {json:true}, function(err, response, body){
         if(err){
             log.warn('failed to req (%d)', index);
@@ -178,7 +178,7 @@ TownRss.prototype.calculateTime = function(cur, offset){
  *   @param string
  *   @return Number
  */
-TownRss.prototype.convertWeaterString = function(string){
+TownRss.prototype.convertWeatherString = function(string){
     /* 날씨 요약 : 1.맑음 2.구름조금 3. 구름많음 4.흐림 5.비 6.눈비 7.눈 */
     /* 날씨 요약eng : 1.clear 2.Partly Cloudy 3.Mostly Cloudy 4.Cloudy 5.Rain 6.Snow/Rain 7.Snow */
     /* ① 동(E) ② 북(N) ③ 북동(NE) ④ 북서(NW) ⑤ 남(S) ⑥ 남동(SE) ⑦ 남서(SW) ⑧ 서(W) */
@@ -285,8 +285,8 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
             template.tmn = parseFloat(item.tmn[0]);
             template.sky = parseFloat(item.sky[0]);
             template.pty = parseFloat(item.pty[0]);
-            template.wfKor = self.convertWeaterString(item.wfKor[0]);
-            template.wfEn = self.convertWeaterString(item.wfEn[0]);
+            template.wfKor = self.convertWeatherString(item.wfKor[0]);
+            template.wfEn = self.convertWeatherString(item.wfEn[0]);
             template.pop = parseFloat(item.pop[0]);
             template.r12 = parseFloat(item.r12[0]);
             template.s12 = parseFloat(item.s12[0]);
@@ -295,8 +295,8 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
                 template.ws = +template.ws.toFixed(1);
             }
             template.wd = parseFloat(item.wd[0]);
-            template.wdKor = self.convertWeaterString(item.wdKor[0]);
-            template.wfEn = self.convertWeaterString(item.wfEn[0]);
+            template.wdKor = self.convertWeatherString(item.wdKor[0]);
+            template.wfEn = self.convertWeatherString(item.wfEn[0]);
             template.reh = parseFloat(item.reh[0]);
             template.r06 = parseFloat(item.r06[0]);
             template.s06 = parseFloat(item.s06[0]);
@@ -351,7 +351,7 @@ TownRss.prototype.lastestPubDate = function() {
         self.leadingZeros(now.getDate(), 2) + resultTime;
 
     return result;
-}
+};
 
 /*
  *   @param index
@@ -373,7 +373,8 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
             var item = new shortRssDb({mCoord: newData.mCoord, pubDate: newData.pubDate, shortData: newData.shortData});
             item.save(function(err){
                 if(err){
-                    log.error('fail to save');
+                    log.warn(err);
+                    log.error('short rss fail to save, there is no data from DB');
                 }
             });
 
@@ -384,70 +385,74 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
             return;
         }
 
-        list.forEach(function(dbShortList, index){
-            //log.info(index + ' :XY> ' + dbShortList.mCoord);
-            //log.info(index + ' :D> ' + dbShortList.shortData);
-            newData.shortData.forEach(function(newItem){
-                var isNew = 1;
-                dbShortList.pubDate = newData.pubDate;
-                for(var i in dbShortList.shortData){
-                    if(dbShortList.shortData[i].date === newItem.date){
-                        if(dbShortList.shortData[i].ftm < newItem.ftm){
-                            //dbShortList.shortData[i] = newItem;
+        if(list.length > 1){
+            log.error('Wrong list count : ', list.length);
+        }
 
-                            dbShortList.shortData[i].ftm = newItem.ftm;
-                            dbShortList.shortData[i].date = newItem.date;
-                            dbShortList.shortData[i].temp = newItem.temp;
-                            dbShortList.shortData[i].tmx = newItem.tmx;
-                            dbShortList.shortData[i].tmn = newItem.tmn;
-                            dbShortList.shortData[i].sky = newItem.sky;
-                            dbShortList.shortData[i].pty = newItem.pty;
-                            dbShortList.shortData[i].wfKor = newItem.wfKor;
-                            dbShortList.shortData[i].wfEn = newItem.wfEn;
-                            dbShortList.shortData[i].pop = newItem.pop;
-                            dbShortList.shortData[i].r12 = newItem.r12;
-                            dbShortList.shortData[i].s12 = newItem.s12;
-                            dbShortList.shortData[i].ws = newItem.ws;
-                            dbShortList.shortData[i].wd = newItem.wd;
-                            dbShortList.shortData[i].wdKor = newItem.wdKor;
-                            dbShortList.shortData[i].wdEn = newItem.wdEn;
-                            dbShortList.shortData[i].reh = newItem.reh;
-                            dbShortList.shortData[i].r06 = newItem.r06;
-                            dbShortList.shortData[i].s06 = newItem.s06;
-                        }
-                        isNew = 0;
-                        break;
+        var dbShortList = list[0];
+        //log.info(index + ' :XY> ' + dbShortList.mCoord);
+        //log.info(index + ' :D> ' + dbShortList.shortData);
+        newData.shortData.forEach(function(newItem){
+            var isNew = 1;
+            dbShortList.pubDate = newData.pubDate;
+            for(var i in dbShortList.shortData){
+                if(dbShortList.shortData[i].date === newItem.date){
+                    if(dbShortList.shortData[i].ftm < newItem.ftm){
+                        //dbShortList.shortData[i] = newItem;
+
+                        dbShortList.shortData[i].ftm = newItem.ftm;
+                        dbShortList.shortData[i].date = newItem.date;
+                        dbShortList.shortData[i].temp = newItem.temp;
+                        dbShortList.shortData[i].tmx = newItem.tmx;
+                        dbShortList.shortData[i].tmn = newItem.tmn;
+                        dbShortList.shortData[i].sky = newItem.sky;
+                        dbShortList.shortData[i].pty = newItem.pty;
+                        dbShortList.shortData[i].wfKor = newItem.wfKor;
+                        dbShortList.shortData[i].wfEn = newItem.wfEn;
+                        dbShortList.shortData[i].pop = newItem.pop;
+                        dbShortList.shortData[i].r12 = newItem.r12;
+                        dbShortList.shortData[i].s12 = newItem.s12;
+                        dbShortList.shortData[i].ws = newItem.ws;
+                        dbShortList.shortData[i].wd = newItem.wd;
+                        dbShortList.shortData[i].wdKor = newItem.wdKor;
+                        dbShortList.shortData[i].wdEn = newItem.wdEn;
+                        dbShortList.shortData[i].reh = newItem.reh;
+                        dbShortList.shortData[i].r06 = newItem.r06;
+                        dbShortList.shortData[i].s06 = newItem.s06;
                     }
+                    isNew = 0;
+                    break;
                 }
-
-                if(isNew){
-                    dbShortList.shortData.push(newItem);
-                }
-            });
-
-            dbShortList.shortData.sort(function(a, b) {
-                var nRet = 0;
-
-                if(a.date > b.date){
-                    nRet = 1;
-                } else if(a.date < b.date) {
-                    nRet = -1;
-                }
-
-                return nRet;
-            });
-
-            if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
-                dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
             }
 
-            dbShortList.save(function(err){
-                if(err){
-                    log.error('fail to save');
-                }
-            });
+            if(isNew){
+                dbShortList.shortData.push(newItem);
+            }
         });
 
+        dbShortList.shortData.sort(function(a, b) {
+            var nRet = 0;
+
+            if(a.date > b.date){
+                nRet = 1;
+            } else if(a.date < b.date) {
+                nRet = -1;
+            }
+
+            return nRet;
+        });
+
+        if(dbShortList.shortData.length > self.MAX_SHORT_COUNT){
+            dbShortList.shortData = dbShortList.shortData.slice((dbShortList.shortData.length - self.MAX_SHORT_COUNT));
+        }
+
+        dbShortList.save(function(err){
+            if(err){
+                log.warn(err);
+                log.error('short rss fail to save' + '[' + index + '] :', newData.mCoord, dbShortList.shortData.length);
+            }
+            //log.info('saved : ', dbShortList.shortData.length);
+        });
         if(cb) {
             cb();
         }
@@ -492,7 +497,7 @@ TownRss.prototype.getData = function(index, item, cb){
     var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
     self.getShortRss(index, url, function(err, RssData){
         if(err){
-            log.error('failed to get rss (%d)', index);
+            log.error('failed to get short rss (%d)', index);
             if(err == self.RETRY){
                 self.emit('recvFail', index, item);
             }
@@ -537,69 +542,88 @@ TownRss.prototype.mainTask = function(completionCallback){
     var self = this;
     var gridList;
 
-    log.info('RSS> start rss!1');
+    log.info('RSS> start rss!');
 
-    gridList = self.coordDb;
+    self.loadList(function (err) {
+        if (err) {
+            return completionCallback(err);
+        }
 
-    self.receivedCount = 0;
-    if(gridList.length == 0){
-        log.info('RSS> there are no town list');
-        return;
-    }
+        gridList = self.coordDb;
 
-    var lastestPubDate = self.lastestPubDate();
+        self.receivedCount = 0;
+        if(gridList.length == 0){
+            log.info('RSS> there are no town list');
+            return;
+        }
 
-    var index = 0;
+        var lastestPubDate = self.lastestPubDate();
 
-    async.map(gridList,
-        function(item, callback) {
-            async.waterfall([
-                function(cb) {
-                    shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
-                        index++;
-                        if(err
-                            || (list.length === 0)
-                            || (list[0].pubDate === undefined)) {
-                            log.info('rss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                            cb(err, item);
-                        } else {
-                            if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                                log.debug('rss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                                cb(err, item);
+        var index = 0;
+/*
+        for(var i=0 ; i<gridList.length ; i++){
+            var src = gridList[i].mCoord;
+            //log.info('mCoord : ', src);
+            for(var j=i+1 ; j<gridList.length-1 ; j++){
+                var des = gridList[j].mCoord;
+                if(src.mx == des.mx && src.my == des.my){
+                    log.info('found same coord> ' + '[' + i + ':' + j + '] : ', des);
+                    gridList.splice(j, 1);
+                }
+            }
+        }
+*/
+        log.info('ShortRss> Adjusted List Count : ', gridList.length);
+
+        async.map(gridList,
+            function(item, callback) {
+                async.waterfall([
+                        function(cb) {
+                            shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
+                                index++;
+                                if(err
+                                    || (list.length === 0)
+                                    || (list[0].pubDate === undefined)) {
+                                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                                    cb(err, item);
+                                } else {
+                                    if (Number(list[0].pubDate) < Number(lastestPubDate)) {
+                                        log.debug('shortRss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                                        cb(err, item);
+                                    } else {
+                                        log.debug('shortRss : already latest data');
+                                        cb(err, undefined);
+                                    }
+                                }
+                            })
+                        },
+                        function(item, cb) {
+                            if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)
+                            {
+                                self.getData(index, item, cb);
                             } else {
-                                log.debug('rss : already latest data');
-                                cb(err, undefined);
+                                //already updated
+                                //log.info('rss : invalid item value.');
+                                cb();
                             }
+                        }],
+                    function(err) {
+                        if(callback) {
+                            callback();
                         }
                     })
-                },
-                function(item, cb) {
-                    if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)
-                    {
-                        self.getData(index, item, cb);
-                    } else {
-                        //already updated
-                        //log.info('rss : invalid item value.');
-                        cb();
-                    }
-                }],
-                function(err) {
-                    if(callback) {
-                        callback();
-                    }
-                })
-         }, function(err, result) {
-            log.info('rss: finished !!' + index);
-            if(completionCallback) {
-                completionCallback();
-            }
-        });
+            }, function(err, result) {
+                log.info('shortRss: finished !!' + index);
+                if(completionCallback) {
+                    completionCallback(err);
+                }
+            });
+    });
 };
 
 TownRss.prototype.StartShortRss = function(){
     var self = this;
 
-    self.loadList();
     self.mainTask();
 
     self.loopTownRssID = setInterval(function() {

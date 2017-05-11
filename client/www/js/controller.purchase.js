@@ -10,13 +10,14 @@ angular.module('controller.purchase', [])
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
         //for paid app without ads, in app purchase
         obj.ACCOUNT_LEVEL_PAID = 'paid';
-        obj.accountLevel;
-        obj.productId;
-        obj.expirationDate;
+        obj.accountLevel = null;
+        obj.productId = null;
+        obj.expirationDate = null;
         obj.loaded = false;
-        obj.products;
+        obj.products = null;
         //for only ads app without in app purchase
         obj.hasInAppPurchase = false;
+        obj.paidAppUrl='';
 
         if (twClientConfig.isPaidApp) {
             obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
@@ -24,14 +25,15 @@ angular.module('controller.purchase', [])
         }
 
         obj.setAccountLevel = function (accountLevel) {
-            if (obj.accountLevel != accountLevel) {
+            var self = this;
+            if (self.accountLevel != accountLevel) {
                 console.log('set account level ='+accountLevel);
                 //update accountLevel
-                obj.accountLevel = accountLevel;
-                if (accountLevel === obj.ACCOUNT_LEVEL_FREE) {
+                self.accountLevel = accountLevel;
+                if (accountLevel === self.ACCOUNT_LEVEL_FREE) {
                     TwAds.setEnableAds(true);
                 }
-                else if (accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
+                else if (accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
                     TwAds.setEnableAds(false);
                 }
             }
@@ -41,18 +43,25 @@ angular.module('controller.purchase', [])
         };
 
         obj.checkReceiptValidation = function(storeReceipt, callback) {
-            var url = twClientConfig.serverUrl  + '/check-purchase';
+            var url = twClientConfig.serverUrl  + '/v000705' + '/check-purchase';
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 url: url,
                 data: storeReceipt,
-                timeout: 10*1000
+                timeout: 10000
             })
-                .then(function (result) {
-                    callback(undefined, result.data);
-                },
-                function (err) {
+                .success(function (data) {
+                    callback(undefined, data);
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
+
+                    Util.ga.trackEvent('plugin', 'error', 'checkReceiptValidation');
+                    Util.ga.trackException(err, false);
                     callback(err);
                 });
         };
@@ -66,29 +75,32 @@ angular.module('controller.purchase', [])
         };
 
         obj.loadPurchaseInfo = function () {
+            var self = this;
             console.log('load purchase info');
             var purchaseInfo = JSON.parse(localStorage.getItem("purchaseInfo"));
 
             if (purchaseInfo != undefined) {
                 console.log('load purchaseInfo='+JSON.stringify(purchaseInfo));
-                obj.expirationDate = purchaseInfo.expirationDate;
+                self.expirationDate = purchaseInfo.expirationDate;
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
-                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
+                    Util.ga.trackEvent('purchase', 'expired', 'subscribeExpired '+purchaseInfo.expirationDate);
+                    purchaseInfo.accountLevel = self.ACCOUNT_LEVEL_FREE;
                 }
-                obj.setAccountLevel(purchaseInfo.accountLevel);
+                self.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
-                obj.setAccountLevel(obj.ACCOUNT_LEVEL_FREE);
+                self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
             }
         };
 
         obj.savePurchaseInfo = function (accountLevel, expirationDate) {
+            var self = this;
             var purchaseInfo = {accountLevel: accountLevel, expirationDate: expirationDate};
             localStorage.setItem("purchaseInfo", JSON.stringify(purchaseInfo));
 
-            if (purchaseInfo.accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
+            if (purchaseInfo.accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
                 TwAds.saveTwAdsInfo(false);
             }
             else {
@@ -97,13 +109,14 @@ angular.module('controller.purchase', [])
         };
 
         obj.updatePurchaseInfo = function () {
+            var self = this;
             var restoreFunc = function () {
                 if (ionic.Platform.isIOS()) {
                     return inAppPurchase.getReceipt().then(function (receipt) {
                         if (receipt == undefined) {
                             return undefined;
                         }
-                        return  {type: 'ios', id: obj.productId, receipt: receipt};
+                        return  {type: 'ios', id: self.productId, receipt: receipt};
                     });
                 }
                 else if (ionic.Platform.isAndroid()) {
@@ -120,7 +133,7 @@ angular.module('controller.purchase', [])
                             return undefined;
                         }
                         //if you have many product find by product id
-                        return {type: 'android', id: obj.productId, receipt: data};
+                        return {type: 'android', id: self.productId, receipt: data};
                     });
                 }
                 else {
@@ -133,9 +146,9 @@ angular.module('controller.purchase', [])
                     if (storeReceipt == undefined)  {
                         throw new Error("Can not find any purchase");
                     }
-                    obj.saveStoreReceipt(storeReceipt);
+                    self.saveStoreReceipt(storeReceipt);
                     var deferred = $q.defer();
-                    obj.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                    self.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
                         if (err) {
                             deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
                             return;
@@ -149,9 +162,40 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function($ionicPlatform, $ionicPopup, $q, Purchase, $rootScope) {
+    .run(function($ionicPopup, $q, Purchase, $rootScope, $location, $translate, Util) {
 
         if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
+            return;
+        }
+
+        if (ionic.Platform.isIOS()) {
+            Purchase.paidAppUrl = twClientConfig.iOSPaidAppUrl;
+        }
+        else if (ionic.Platform.isAndroid()) {
+            Purchase.paidAppUrl = twClientConfig.androidPaidAppUrl;
+        }
+
+        if (!window.inAppPurchase) {
+            Util.ga.trackEvent('purchase', 'unused');
+            if (Purchase.paidAppUrl.length > 0) {
+                $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+                    $rootScope.adsBannerMessage = bannerMessage;
+                }, function (translationId) {
+                    $rootScope.adsBannerMessage = translationId;
+                });
+                $rootScope.clickAdsBanner = function() {
+                    $location.path('/purchase');
+                };
+            }
+            else {
+                $translate('LOC_TODAYWEATHER').then(function (bannerMessage) {
+                    $rootScope.adsBannerMessage = bannerMessage;
+                }, function (translationId) {
+                    $rootScope.adsBannerMessage = translationId;
+                });
+                $rootScope.clickAdsBanner = function() {};
+            }
+            Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
             return;
         }
 
@@ -182,7 +226,7 @@ angular.module('controller.purchase', [])
                 };
             }
             else {
-               updatePurchaseInfo = Purchase.updatePurchaseInfo;
+                updatePurchaseInfo = Purchase.updatePurchaseInfo;
             }
 
             updatePurchaseInfo()
@@ -193,6 +237,8 @@ angular.module('controller.purchase', [])
                         console.log(JSON.stringify(receiptInfo.data));
                         Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+
+                        Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 2);
 
                         //$ionicPopup.alert({
                         //    title: 'check purchase',
@@ -206,64 +252,84 @@ angular.module('controller.purchase', [])
                 .catch(function (err) {
                     //again to check purchase info
                     console.log('fail to check purchase info err='+err.message);
+                    Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
+                    Util.ga.trackException(err, false);
                 });
         }
 
-        $ionicPlatform.ready(function() {
+        Purchase.loadPurchaseInfo();
 
-            Purchase.loadPurchaseInfo();
+        //check purchase state is canceled or refund
+        if (Purchase.loaded) {
+            console.log('already check purchase info');
+            return;
+        }
 
-            //check purchase state is canceled or refund
-            if (Purchase.loaded) {
-                console.log('already check purchase info');
-                return;
-            }
+        Purchase.productId = 'tw1year';
+        console.log('productId='+Purchase.productId);
 
-            Purchase.productId = 'tw1year';
-            console.log('productId='+Purchase.productId);
-
-            if (!window.inAppPurchase) {
-                console.log('in app purchase is not ready');
-                $rootScope.bottomMessage = "오늘날씨 - 어제보다 오늘은?";
-                return;
-            }
-
-            Purchase.hasInAppPurchase = true;
-            $rootScope.bottomMessage = "광고없는 프리미엄을 사용해보세요";
-
-            inAppPurchase
-                .getProducts([Purchase.productId])
-                .then(function (products) {
-                    console.log(JSON.stringify(products));
-                    Purchase.products =  products;
-                    if (Purchase.loaded === false) {
-                        //It seems fail to check purchase info
-                        //retry check purchase info
-                        checkPurchase();
-                    }
-                })
-                .catch(function (err) {
-                    console.log('Fail to get products of id='+Purchase.productId);
-                    console.log(JSON.stringify(err));
-                });
-
-            //if saved accountLevel skip checkPurchase but, have to get products
-            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
-                console.log('account Level is '+Purchase.accountLevel);
-                Purchase.loaded = true;
-                return;
-            }
-
-            //some times fail to get restorePurchases because inAppPurchase is not ready
-            checkPurchase();
+        Purchase.hasInAppPurchase = true;
+        $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+            $rootScope.adsBannerMessage = bannerMessage;
+        }, function (translationId) {
+            $rootScope.adsBannerMessage = translationId;
         });
+        $rootScope.clickAdsBanner = function() {
+            $location.path('/purchase');
+        };
+
+        inAppPurchase
+            .getProducts([Purchase.productId])
+            .then(function (products) {
+                console.log(JSON.stringify(products));
+                Purchase.products =  products;
+                if (Purchase.loaded === false) {
+                    //It seems fail to check purchase info
+                    //retry check purchase info
+                    checkPurchase();
+                }
+            })
+            .catch(function (err) {
+                console.log('Fail to get products of id='+Purchase.productId);
+                console.log(JSON.stringify(err));
+                Util.ga.trackException(err, false);
+            });
+
+        //if saved accountLevel skip checkPurchase but, have to get products
+        if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
+            console.log('account Level is '+Purchase.accountLevel);
+            Purchase.loaded = true;
+            return;
+        }
+
+        //some times fail to get restorePurchases because inAppPurchase is not ready
+        checkPurchase();
     })
-    .controller('PurchaseCtrl', function($scope, $ionicPlatform, $ionicLoading, $http, $ionicHistory, $ionicPopup, Purchase, TwAds) {
+    .controller('PurchaseCtrl', function($scope, $ionicLoading, $ionicHistory, $ionicPopup,
+                                         Purchase, TwAds, $translate, Util) {
 
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
 
+        var strPurchaseError = "Purchase error";
+        var strFailToConnectServer = "Fail to connect validation server.";
+        var strPleaseRestoreAfter = "Please restore after 1~2 minutes";
+        var strRestoringPurchases = "Restoring Purchases...";
+        var strRestoreError = "Restore error";
+        var strPurchasing = "Purchasing...";
+        $translate(['LOC_PURCHASE_ERROR', 'LOC_FAIL_TO_CONNECT_VALIDATION_SERVER', 'LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES',
+            'LOC_RESTORING_PURCHASES', 'LOC_RESTORE_ERROR', 'LOC_PURCHASING']).then(function (translations) {
+            strPurchaseError = translations.LOC_PURCHASE_ERROR;
+            strFailToConnectServer = translations.LOC_FAIL_TO_CONNECT_VALIDATION_SERVER;
+            strPleaseRestoreAfter = translations.LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES;
+            strRestoringPurchases = translations.LOC_RESTORING_PURCHASES;
+            strRestoreError = translations.LOC_RESTORE_ERROR;
+            strPurchasing = translations.LOC_PURCHASING;
+        }, function (translationIds) {
+           console.log("Fail to translations "+JSON.stringify(translationIds));
+        });
+
         $scope.order = function () {
-            $ionicLoading.show({ template: spinner + 'Purchasing...' });
+            $ionicLoading.show({ template: spinner + strPurchasing });
             console.log('subscribe product='+Purchase.productId);
             inAppPurchase
                 .subscribe(Purchase.productId)
@@ -280,6 +346,7 @@ angular.module('controller.purchase', [])
                     else if (ionic.Platform.isAndroid()) {
                        return {type: 'android', id: Purchase.productId, receipt: [data]}
                     }
+                    Util.ga.trackEvent('purchase', 'order', 'subscribe');
                 })
                 .then(function (storeReceipt) {
                     //$ionicLoading.hide();
@@ -289,11 +356,12 @@ angular.module('controller.purchase', [])
                         $ionicLoading.hide();
                         if (err) {
                             console.log(JSON.stringify(err));
-                            //throw new Error('Fail to connect validation server. Please restore after 1~2 minutes');
-                            throw new Error('구매확인 서버에 연결되지 않습니다. 1~2분후에 구매 복원하기 해주세요.');
+                            var msg =  strFailToConnectServer + " " + strPleaseRestoreAfter;
+                            throw new Error(msg);
                         }
                         console.log(JSON.stringify(receiptInfo));
                         if (!receiptInfo.ok) {
+                            Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 0);
                             console.log(JSON.stringify(receiptInfo.data));
                             throw new Error(receiptInfo.data.message);
                         }
@@ -308,17 +376,29 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
-                    console.log('subscribe error');
+                    console.log(strPurchaseError);
                     console.log(JSON.stringify(err));
                     $ionicPopup.alert({
-                        title: '구매 오류',
+                        title: strPurchaseError,
                         template: err.message
                     });
+                    if (err instanceof Error) {
+                        if (err.code == -5) {
+                            Util.ga.trackEvent('purchase', 'cancel', 'subscribe');
+                        }
+                        else {
+                            Util.ga.trackEvent('purchase', 'error', 'subscribe');
+                            Util.ga.trackException(err, false);
+                        }
+                    }
+                    else {
+                        Util.ga.trackException(err, false);
+                    }
                 });
         };
 
         $scope.restore = function () {
-            $ionicLoading.show({ template: spinner + 'Restoring Purchases...' });
+            $ionicLoading.show({ template: spinner + strRestoringPurchases });
 
             Purchase.updatePurchaseInfo()
                 .then(function (receiptInfo) {
@@ -326,6 +406,7 @@ angular.module('controller.purchase', [])
 
                     if (!receiptInfo.ok) {
                         console.log(JSON.stringify(receiptInfo.data));
+                        Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 1);
                         throw new Error(receiptInfo.data.message);
                     }
                     else {
@@ -335,26 +416,38 @@ angular.module('controller.purchase', [])
                         $scope.expirationDate = (new Date(Purchase.expirationDate)).toLocaleDateString();
                         console.log('set accountLevel=' + $scope.accountLevel);
                         Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+                        Util.ga.trackEvent('purchase', 'restore', 'subscribe');
                     }
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
                     console.log(JSON.stringify(err));
+                    Util.ga.trackEvent('purchase', 'error', 'subscribe');
+                    Util.ga.trackException(err, false);
                     $ionicPopup.alert({
-                        //title: 'restore error',
-                        title: '복원오류',
+                        title: strRestoreError,
                         template: err.message
                     });
                 });
         };
 
         $scope.goBack = function() {
-            TwAds.setShowAds(true);
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
             $ionicHistory.goBack();
         };
 
         $scope.$on('$ionicView.leave', function() {
-            TwAds.setShowAds(true);
+            if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
+                TwAds.setShowAds(false);
+            }
+            else {
+                TwAds.setShowAds(true);
+            }
         });
 
         $scope.$on('$ionicView.enter', function() {
@@ -364,7 +457,7 @@ angular.module('controller.purchase', [])
             }
         });
 
-        $ionicPlatform.ready(function() {
+        function init() {
             var expirationDate = new Date(Purchase.expirationDate);
             var showRenewDate = new Date();
 
@@ -376,16 +469,20 @@ angular.module('controller.purchase', [])
             //Todo: check expire date for ios, check autoRenewing and expire date for android
             showRenewDate.setMonth(showRenewDate.getMonth()+3);
 
-            if (expirationDate.getTime() <= showRenewDate.getTime()) {
-                $scope.showRenew = true;
-            }
-            else {
-                $scope.showRenew = false;
-            }
+            $scope.showRenew = expirationDate.getTime() <= showRenewDate.getTime();
 
             if (!window.inAppPurchase) {
                 //for develop mode
-                $scope.product = {title:'프리미엄',  price: '$1.09', description: '지금 바로 프리미엄 서비스를 신청하시고, 1년간 광고 없이 사용하세요.'};
+                var title = "Premium";
+                var description = "Subscribe to premium and use without Ads for 1 year";
+                $translate(['LOC_PREMIUM', 'LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR']).then(function (translations) {
+                    title = translations.LOC_PREMIUM;
+                    description = translations.LOC_SUBSCRIBE_TO_PREMIUM_AND_USE_WITHOUT_ADS_FOR_1_YEAR;
+                }, function (translationIds) {
+                    console.log("Fail to translations "+JSON.stringify(translationIds));
+                }).finally(function () {
+                    $scope.product = {title: title,  price: '$1.09', description: description};
+                });
             }
             else {
                 if (Purchase.products && Purchase.products.length) {
@@ -397,5 +494,7 @@ angular.module('controller.purchase', [])
             }
 
             $scope.listWidth = window.innerWidth;
-        });
+        }
+
+        init();
     });

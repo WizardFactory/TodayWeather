@@ -9,7 +9,7 @@ var dsForecastSchema = new mongoose.Schema({
     address: {country:String, city:String, zipcode:Number, postcode:Number},
     date:    {type: Number, default: 0},   // GMT time YYYYMMDDHHMM
     dateObj: {type: Object, default: Date},// UTC time
-    timeoffset: {type: Number, default: 0},
+    timeOffset: {type: Number, default: 0},
     data: [{
         current:{
             dateObj:    {type: Object, default: Date},  // UTC time
@@ -17,6 +17,7 @@ var dsForecastSchema = new mongoose.Schema({
             summary:    {type: String, default: ''},
             pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
             pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
+            pre_type:   {type: String, default:''}, // rain, snow, sleet 이값으로는 icon선정할수 없음.
             temp:       {type: Number, default:0},
             ftemp:      {type: Number, default:0},  // 체감온도
             humid:      {type: Number, default:0},  // 습도 percentage (0 ~ 1)
@@ -25,7 +26,8 @@ var dsForecastSchema = new mongoose.Schema({
             vis:        {type: Number, default:0},  // in miles
             cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
             pres:       {type: Number, default:0},  // millibar
-            oz:         {type: Number, default:0}   // dobson unit
+            oz:         {type: Number, default:0},   // dobson unit
+            icon:       {type: String, default: ''} //icon이 강수 1순위(과거는 pre_pro가 낮아도 icon이 rain인 경우 있음), pre_pro 2순위
         },
         hourly:{
             summary:        {type:String, default:''},
@@ -35,6 +37,7 @@ var dsForecastSchema = new mongoose.Schema({
                 summary:    {type: String, default: ''},
                 pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
                 pre_pro:    {type: Number, default:0},  // 강수 유/무 (0 or 1)
+                pre_type:   {type: String, default:''}, // rain, snow, sleet
                 temp:       {type: Number, default:0},
                 ftemp:      {type: Number, default:0},  // 체감온도
                 humid:      {type: Number, default:0},  // 습도 percentage (0 ~ 1)
@@ -43,7 +46,8 @@ var dsForecastSchema = new mongoose.Schema({
                 vis:        {type: Number, default:0},  // in miles
                 cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:       {type: Number, default:0},  // millibar
-                oz:         {type: Number, default:0}   // dobson unit
+                oz:         {type: Number, default:0},   // dobson unit
+                icon:       {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]
 
         },
@@ -53,29 +57,30 @@ var dsForecastSchema = new mongoose.Schema({
                 dateObj:        {type: Object, default: Date},  // UTC time
                 date:           {type: Number, default:0},  // GMT time
                 summary:        {type: String, default: ''},
-                sunrise:        {type: Number, default:0},  // time
-                sunset:         {type: Number, default:0},  // time
+                sunrise:        {type: Object, default: Date},  // UTC time
+                sunset:         {type: Object, default: Date},  // UTC time
                 moonphase:      {type: Number, default:0},  // fractional part(0:new moon, 0.25:first quarter moon, 0.5:full moon, 0.75:last quarter moon)
-                pre_int:        {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)
+                pre_int:        {type: Number, default:0},  // 강수 강도 inches per hour (0, 0.002, 0.017, 0.1, 0.4)
                 pre_intmax:     {type: Number, default:0},  // 시간당 최대 강수량 inches
-                pre_intmaxt:    {type: Number, default:0},  // 최대 강수 시간
+                pre_intmaxt:    {type: Object, default: Date},  // 최대 강수 시간
                 pre_pro:        {type: Number, default:0},  // 강수 유/무 (0 or 1)
                 pre_type:       {type: String, default:''}, // rain, snow, sleet
                 temp_min:       {type: Number, default:0},
-                temp_mint:      {type: Number, default:0},
+                temp_mint:      {type: Object, default: Date},
                 temp_max:       {type: Number, default:0},
-                temp_maxt:      {type: Number, default:0},
+                temp_maxt:      {type: Object, default: Date},
                 ftemp_min:      {type: Number, default:0},  // 체감온도,
-                ftemp_mint:     {type: Number, default:0},
+                ftemp_mint:     {type: Object, default: Date},
                 ftemp_max:      {type: Number, default:0},
-                ftemp_maxt:     {type: Number, default:0},
+                ftemp_maxt:     {type: Object, default: Date},
                 humid:          {type: Number, default:0},  // 습도 percentage (0 ~ 1)
                 windspd:        {type: Number, default:0},  // miles per hour
                 winddir:        {type: Number, default:0},  // degrees
                 vis:            {type: Number, default:0},  // in miles
                 cloud:          {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:           {type: Number, default:0},  // millibar
-                oz:             {type: Number, default:0}   // dobson unit
+                oz:             {type: Number, default:0},   // dobson unit
+                icon:           {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]
         }
     }]

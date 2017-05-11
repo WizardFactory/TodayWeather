@@ -13,6 +13,16 @@ var pushSchema = new mongoose.Schema({
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
         index: '2d'         // create the geospatial index
+    },
+    lang: String,       //ko, ja, zh-CN, zh-TW, ...
+    name: String,       //name of location
+    source: String,     //KMA, DSF
+    units: {
+        temperatureUnit: String, //C, F
+        windSpeedUnit: String,  //m/s mph ..
+        pressureUnit: String,   //hPa, mbar, ..
+        distanceUnit: String,   //km, miles
+        precipitationUnit: String //mm, inches
     }
 });
 

@@ -25,7 +25,7 @@ var defaultData = {
         land: -1000,
         temp: -1000
     },
-    current:{
+    thisTime:[{
         date:-1000,
         desc: '',
         temp_c: -1000,
@@ -33,7 +33,7 @@ var defaultData = {
         ftemp_c: -1000,
         ftemp_f: -1000,
         cloud: -1000,
-        windSpd_mh: -1000,
+        windSpd_mh: -1000,      //miles per hour
         windSpd_ms: -1000,
         windDir: -1000,
         humid: -1000,
@@ -43,8 +43,8 @@ var defaultData = {
         vis: -1000,
         press: -1000,
         oz: -1000,
-    },
-    timely:[{
+    }],
+    hourly:[{
         date: -1000,
         desc: '',
         temp_c: -1000,
@@ -58,7 +58,7 @@ var defaultData = {
         humid: -1000,
         precType: -1000,   // 0: 없음 1:비 2:눈 3:비+눈 4:우박
         precProb: -1000,
-        precip: -1000,
+        precip: -1000,      //mm per hour
         vis: -1000,
         press: -1000,
         oz: -1000,
