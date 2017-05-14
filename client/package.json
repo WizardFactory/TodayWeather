@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.42",
+  "version": "0.9.45",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -47,7 +47,7 @@
         "SENDER_ID": "11111111111"
       },
       "locator": "phonegap-plugin-push",
-      "id": "phonegap-plugin-push"
+      "id": "phonegap-plugin-push@1.10.2"
     },
     "cordova-plugin-app-preferences",
     "cordova-plugin-app-version",
