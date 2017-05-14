@@ -2,43 +2,6 @@ angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, Util, Purchase, $ionicHistory, $translate) {
         function init() {
             $ionicHistory.clearHistory();
-
-            if (ionic.Platform.isAndroid()) {
-                //get interval time;
-                $scope.updateInterval = "0";
-                $scope.widgetOpacity = "69";
-
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    Util.ga.trackEvent("plugin", "error", "loadAppPreferences");
-                    return;
-                }
-
-                var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-                suitePrefs.fetch(
-                    function (value) {
-                        if (value == null) {
-                            value = "0"
-                        }
-                        $scope.updateInterval = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'updateInterval'
-                );
-
-                suitePrefs.fetch(
-                    function (value) {
-                        if (value == null) {
-                            value = "69"
-                        }
-                        $scope.widgetOpacity = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'widgetOpacity'
-                );
-            }
         }
 
         $scope.version = Util.version;
@@ -117,42 +80,6 @@ angular.module('controller.settingctrl', [])
 
         $scope.isAndroid = function () {
             return ionic.Platform.isAndroid();
-        };
-
-        $scope.changeWidgetOpacity = function (val) {
-            console.log("widget opacity ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
-                },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'widgetOpacity', +val
-            );
-        };
-
-        $scope.changeUpdateInterval = function (val) {
-            console.log("update interval ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
-                },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'updateInterval', +val
-            );
         };
 
         $scope.hasInAppPurchase = function () {
