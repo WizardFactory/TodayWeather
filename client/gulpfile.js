@@ -84,7 +84,6 @@ gulp.task('build_ios', shell.task([
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'gulp rm-prepare-app-pre',
   'ionic build ios'
 ]));
 
@@ -116,6 +115,11 @@ gulp.task('release-nonpaid', shell.task([
   'cp ads.package.json package.json',
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
+  'ionic platform remove android',
+  'ionic platform add android@5.1.1',
+  'ionic platform remove ios',
+  'ionic platform add ios@4.1.1',
+  'cp -a ../ios platforms/',
   'ionic state restore --plugins',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
@@ -126,7 +130,7 @@ gulp.task('release-nonpaid', shell.task([
   'cp platforms/android/build/outputs/apk/android-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_onestore_v'+json.version+'_min19.apk',
 
-  'cp ads.ios_playstore.tw.client.config.js www/tw.client.config.js',
+  'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
   'cordova plugin add cordova-plugin-inapppurchase',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./',
@@ -138,7 +142,7 @@ gulp.task('release-nonpaid', shell.task([
   'cp platforms/android/build/outputs/apk/android-armv7-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
 
-  'cp -a ../ios platforms/',
+  'cp ads.ios.tw.client.config.js www/tw.client.config.js',
   'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
   //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''
