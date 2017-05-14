@@ -46,13 +46,13 @@ gulp.task('install', ['git-check'], function() {
 });
 
 gulp.task('rm-prepare-app-pre', function () {
-  gulp.src('./plugins/cordova-plugin-app-preferences/plugin.xml')
+  gulp.src('./plugins/cordova-plugin-app-preferences/bin/after_prepare.js')
       .pipe(deleteLines({
         'filters': [
-          /after_prepare/i
+          /platforms\.android/i
         ]
       }))
-      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences'));
+      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences/bin'));
 
   gulp.src('./plugins/cordova-plugin-app-preferences/bin/lib/android.js')
       .pipe(deleteLines({
@@ -74,6 +74,18 @@ gulp.task('build', shell.task([
   'gulp sass',
   'gulp rm-prepare-app-pre',
   'ionic build'
+]));
+
+gulp.task('build_ios', shell.task([
+  'ionic state reset',
+  'cp -a ../ios platforms/',
+  'ionic state restore --plugins',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+  'gulp rm-prepare-app-pre',
+  'ionic build ios'
 ]));
 
 gulp.task('build_android', shell.task([
