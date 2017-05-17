@@ -794,7 +794,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
             if(err) {
                 log.error(err);
                 self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
-                log.info('next index='+self._currentSidoIndex);
+                log.info('KECO: next index='+self._currentSidoIndex);
                 return callback(err);
             }
 
@@ -912,6 +912,23 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     });
 };
 
+Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
+    if (count <= 0)  {
+        return callback(new Error("KECO: Fail to get all ctpvrn it's stoped index="+self._currentSidoIndex));
+    }
+    count--;
+
+    self.getAllCtprvn(function (err) {
+        if (err) {
+            log.warn('KECO: Stopped index='+self._currentSidoIndex);
+            return self.retryGetAllCtprvn(self, count, callback);
+        }
+        callback(err);
+    });
+
+    return this;
+};
+
 /**
  * 20분에도 데이터가 갱신되지 않은 경우가 있어서, 2분 가장 마지막, 35분 초기에도 시도함.
  * @param self
@@ -922,9 +939,9 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
 
     callback = callback || function(){};
 
-    self.getAllCtprvn(function (err) {
+    self.retryGetAllCtprvn(self, 3, function (err) {
         if (err) {
-            log.warn('Stopped index='+self._currentSidoIndex);
+            log.warn('KECO: Stopped index='+self._currentSidoIndex);
             return callback(err);
         }
         callback(err);
