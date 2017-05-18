@@ -116,12 +116,10 @@ gulp.task('release-nonpaid', shell.task([
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
   'gulp rm-prepare-app-pre',
-  'ionic platform remove android',
-  'ionic platform add android@5.1.1',
-  'ionic platform remove ios',
-  'ionic platform add ios@4.1.1',
   'cp -a ../ios platforms/',
   'ionic state restore --plugins',
+  'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="111"',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
   'gulp rm-prepare-app-pre',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
@@ -144,6 +142,8 @@ gulp.task('release-nonpaid', shell.task([
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
 
   'cp ads.ios.tw.client.config.js www/tw.client.config.js',
+  'cordova plugin remove phonegap-plugin-push',
+  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
   'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
   //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''

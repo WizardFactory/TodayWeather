@@ -42,13 +42,6 @@
     "cordova-plugin-inapppurchase",
     "cordova-plugin-whitelist",
     "cordova-plugin-google-analytics@1.7.1",
-    {
-      "variables": {
-        "SENDER_ID": "11111111111"
-      },
-      "locator": "https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1",
-      "id": "phonegap-plugin-push"
-    },
     "cordova-plugin-app-preferences",
     "cordova-plugin-app-version",
     {
@@ -73,14 +66,6 @@
     "cordova.plugins.diagnostic@3.3.3",
     "cordova-plugin-request-location-accuracy",
     {
-      "id": "cordova-fabric-plugin",
-      "locator": "cordova-fabric-plugin",
-      "variables": {
-        "FABRIC_API_KEY": "XXXXXXXXX",
-        "FABRIC_API_SECRET": "xxxxxxxxxxxxxxxxxxx"
-      }
-    },
-    {
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-android-widget.git",
       "id": "cordova-plugin-todayweather-android-widget"
     }
@@ -94,7 +79,7 @@
     {
       "platform": "ios",
       "version": "",
-      "locator": "ios@4.1.1"
+      "locator": "ios@4.3.1"
     }
   ]
 }
