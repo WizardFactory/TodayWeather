@@ -233,5 +233,37 @@ angular.module('service.util', [])
             }
         };
 
+        obj.saveServiceKeys = function () {
+            var self = this;
+            if (window.plugins == undefined || plugins.appPreferences == undefined) {
+                console.error('appPreferences is undefined, so load local st');
+            }
+            else {
+                var suitePrefs = plugins.appPreferences.suite(self.suiteName);
+                suitePrefs.fetch(
+                    function (value) {
+                        if (value == undefined || value == '') {
+                            suitePrefs.store(
+                                function (value) {
+                                    console.log("save preference Success: " + value);
+                                },
+                                function (error) {
+                                    self.ga.trackEvent('plugin', 'error', 'storeAppPreferences');
+                                    console.error("save preference Error: " + error);
+                                },
+                                'daumServiceKeys',
+                                JSON.stringify(twClientConfig.daumServiceKeys));
+                        }
+                        else {
+                            console.log("fetch preference Success: " + value);
+                        }
+                    },
+                    function (error) {
+                        self.ga.trackEvent('plugin', 'error', 'fetchAppPreferences');
+                    },
+                    'daumServiceKeys');
+            }
+        };
+
         return obj;
     });
