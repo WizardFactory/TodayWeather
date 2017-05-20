@@ -308,7 +308,8 @@ angular.module('controller.tabctrl', [])
 
                     Util.ga.trackEvent('window', 'show', 'getWeatherPopup');
                 }
-                else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                else if (ionic.Platform.isAndroid() &&
+                    gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                     template += '<br>';
                     template += strOpensTheAppInfoPage;
 
