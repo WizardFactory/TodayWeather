@@ -774,7 +774,7 @@ angular.module('service.weatherutil', [])
         //function getGeoCodeFromDaum(address) {
         //    var deferred = $q.defer();
         //    var url = 'https://apis.daum.net/local/geo/addr2coord'+
-        //        '?apikey=' + twClientConfig.daumServiceKey +
+        //        '?apikey=' + twClientConfig.daumServiceKeys +
         //        '&q='+ encodeURIComponent(address) +
         //        '&output=json';
         //
@@ -879,16 +879,27 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         };
 
-        /**
-         *
-         * @param lat
-         * @param lng
-         * @returns {*|promise}
-         */
-        function getAddressFromDaum(lat, lng) {
+        function _shuffle(a) {
+            var j, x, i;
+            for (i = a.length; i; i--) {
+                j = Math.floor(Math.random() * i);
+                x = a[i - 1];
+                a[i - 1] = a[j];
+                a[j] = x;
+            }
+            return a;
+        }
+
+        function _requestGetAddressFromDaum(lat, lng, keyList, index, callback) {
             var deferred = $q.defer();
+            if (isNaN(index) || index < 0) {
+                var err = new Error('All daum service keys were used');
+                err.code = 429;
+                return callback(err);
+            }
+
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
-                '?apikey=' + twClientConfig.daumServiceKey +
+                '?apikey=' + keyList[index] +
                 '&longitude='+ lng +
                 '&latitude='+lat+
                 '&inputCoordSystem=WGS84'+
@@ -903,20 +914,47 @@ angular.module('service.weatherutil', [])
                         var name = data.name;
 
                         address = '대한민국 ' + address;
-                        deferred.resolve({address: address, name: name});
+                        callback(null, {address: address, name: name});
                     }
                     else {
-                        deferred.reject(new Error('Fail to get address name'));
+                        callback(new Error('Fail to get address name'));
                     }
                 })
                 .error(function (data, status, headers, config, statusText) {
                     console.error("d="+data+" s="+status+" h="+headers+" c="+config+" sT="+statusText);
-                    data = data || "Request failed";
-                    var err = new Error(data);
-                    err.code = status;
-                    deferred.reject(err);
+                    if (status == 429) {
+                        Util.ga.trackEvent('ServiceKey', 'warning', 'requestDaumTooManyRequests');
+                        return _requestGetAddressFromDaum(lat, lng, keyList, --index, callback);
+                    }
+                    else {
+                        Util.ga.trackEvent('ServiceKey', 'error', 'requestDaum');
+                        if (typeof data == 'object') {
+                            data = JSON.stringify(data);
+                        }
+                        data = data || "Request failed";
+                        var err = new Error(data);
+                        err.code = status;
+                        return callback(err);
+                    }
                 });
+        }
+        /**
+         *
+         * @param lat
+         * @param lng
+         * @returns {*|promise}
+         */
+        function getAddressFromDaum(lat, lng) {
+            var svcKeyList = _shuffle(twClientConfig.daumServiceKeys);
+            var deferred = $q.defer();
+            _requestGetAddressFromDaum(lat, lng, svcKeyList, svcKeyList.length-1, function (err, result) {
+                if (err)  {
+                    Util.ga.trackException(err, false);
+                    return deferred.reject(err);
+                }
 
+                return deferred.resolve(result);
+            });
             return deferred.promise;
         }
 
