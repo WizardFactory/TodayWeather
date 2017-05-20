@@ -22,5 +22,12 @@
     "Social.framework": 1,
     "AddressBook.framework": 1,
     "libsqlite3.tbd": 1,
-    "libz.tbd": 1
+    "libz.tbd": 1,
+    "CoreFoundation.framework": 1,
+    "CoreMedia.framework": 1,
+    "MediaAccessibility.framework": 1,
+    "CoreMotion.framework": 1,
+    "Photos.framework": 1,
+    "Contacts.framework": 1,
+    "UserNotifications.framework": 1
 }

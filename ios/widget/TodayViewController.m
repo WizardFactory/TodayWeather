@@ -170,7 +170,7 @@ static TodayViewController *todayVC = nil;
     //self.articleTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     
     NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
-    NSLog(@"version : %ld.%ld.%ld", nsOSVer.majorVersion, nsOSVer.minorVersion, nsOSVer.patchVersion);
+    NSLog(@"version : %ld.%ld.%ld", (long)nsOSVer.majorVersion, (long)nsOSVer.minorVersion, (long)nsOSVer.patchVersion);
     
     if(nsOSVer.majorVersion >= 10)
     {
@@ -1009,8 +1009,8 @@ static TodayViewController *todayVC = nil;
 {
     NSURL *url = [NSURL URLWithString:nssURL];
     
-    NSLog(@"[requestAsyncByURLSession] url : %@, type : %ld", url, type);
-  
+    NSLog(@"[requestAsyncByURLSession] url : %@, type : %lu", url, (unsigned long)type);
+#if 0
     NSURLSessionTask *task = [[NSURLSession sharedSession] dataTaskWithURL:url
                                                          completionHandler:
                               ^(NSData *data, NSURLResponse *response, NSError *error) {
@@ -1024,6 +1024,31 @@ static TodayViewController *todayVC = nil;
                               }];
     
     [task resume];
+#else
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
+    
+    if(type == TYPE_REQUEST_WEATHER_KR)
+    {
+        //[request setValue:@"ko-kr,ko;q=0.8,en-us;q=0.5,en;q=0.3" forHTTPHeaderField:@"Accept-Language"];
+        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
+        
+        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
+    }
+
+    NSURLSessionTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request
+                                                          completionHandler:
+                               ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                   if (data) {
+                                       // Do stuff with the data
+                                       //NSLog(@"data : %@", data);
+                                       [self makeJSONWithData:data reqType:type];
+                                   } else {
+                                       NSLog(@"Failed to fetch %@: %@", url, error);
+                                   }
+                               }];
+     
+     [task resume];
+#endif
 }
 
 /********************************************************************
@@ -1432,7 +1457,8 @@ static TodayViewController *todayVC = nil;
     
     if(nsdLocation == nil)
     {
-        NSLog(@"nsdLocation is nil!!!");
+        NSLog(@"[makeGlobalRequestURL] nsdLocation is nil!!!");
+        
         return nil;
     }
     
@@ -1515,6 +1541,7 @@ static TodayViewController *todayVC = nil;
     
     // Dust
     NSString    *nssAirState = nil;
+    NSMutableAttributedString   *nsmasAirState = nil;
     
     // Address
     NSString    *nssCityName = nil;
@@ -1524,6 +1551,7 @@ static TodayViewController *todayVC = nil;
     
     // Pop
     NSString    *nssTodPop = nil;
+    
     
     //NSLog(@"processWeatherResultsWithShowMore : %@", jsonDict);
     if(jsonDict == nil)
@@ -1576,8 +1604,15 @@ static TodayViewController *todayVC = nil;
     currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
     
+    // Test
+    //nssAirState = [NSString stringWithFormat:@"통합대기 78 나쁨"];
+
+    nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
+    NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
+    
     id idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];
     NSLog(@"[processWeatherResultsWithShowMore] idT1h : %@",idT1h);
+    
     if(idT1h)
     {
         currentTemp     = [idT1h floatValue];
@@ -1655,8 +1690,9 @@ static TodayViewController *todayVC = nil;
             }
         }
         
-        if(nssAirState)
-            curDustLabel.text       = nssAirState;
+        if(nsmasAirState)
+            //curDustLabel.text       = nssAirState;
+            [curDustLabel setAttributedText:nsmasAirState];
         
         if(nssTodPop)
         {
@@ -1701,7 +1737,7 @@ static TodayViewController *todayVC = nil;
     NSString        *nssTime = nil;
     NSString        *nssHourMin = nil;
     
-    // Image
+    // Image∂
     NSString *nssCurIcon = nil;
     NSString *nssCurImgName = nil;
     NSString *nssTodIcon = nil;
@@ -1728,7 +1764,7 @@ static TodayViewController *todayVC = nil;
     // Temperature Unit
     TEMP_UNIT   tempUnit = TEMP_UNIT_CELSIUS;
     
-    //NSLog(@"processWeatherResultsWithShowMore : %@", jsonDict);
+    //NSLog(@"processWeatherResultsAboutGlobal : %@", jsonDict);
     if(jsonDict == nil)
     {
         NSLog(@"jsonDict is nil!!!");
@@ -1763,7 +1799,6 @@ static TodayViewController *todayVC = nil;
     nssCurIcon          = [currentDict objectForKey:@"skyIcon"];
     nssCurImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
 
-    
     if(nssTime != nil)
     {
         nssHourMin       = [nssTime substringFromIndex:11];
@@ -1869,10 +1904,6 @@ static TodayViewController *todayVC = nil;
             }
         }
         
-//        curDustLabel.hidden         = true;
-        //todayMaxMinTempLabel.frame  = CGRectMake(160, 50, 140, 25);
-        //todayMaxMinTempLabel.frame  = CGRectMake(160, 50, todayMaxMinTempLabel.frame.size.width, todayMaxMinTempLabel.frame.size.height);
-        //todayMaxMinTempLabel.center  = CGPointMake(160, 50);
         todayMaxMinTempLabel.font   = [UIFont systemFontOfSize:18.0];
         
         if(nssTodPop)
@@ -1882,7 +1913,6 @@ static TodayViewController *todayVC = nil;
             
             if(todPop == 0)
             {
-//              curDustLabel.hidden         = false;
                 curDustLabel.font           = [UIFont systemFontOfSize:16.0];
                 curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
                 
@@ -1890,22 +1920,20 @@ static TodayViewController *todayVC = nil;
             }
             else
             {
-//                curDustLabel.hidden         = false;
-                //curDustLabel.frame          = CGRectMake(160, 40, 138, 21);
-                //curDustLabel.frame          = CGRectMake(160, 40, todayMaxMinTempLabel.frame.size.width, todayMaxMinTempLabel.frame.size.height);
-                //curDustLabel.center         = CGPointMake(160, 40);
                 curDustLabel.font           = [UIFont systemFontOfSize:16.0];
                 curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
                 
-                //todayMaxMinTempLabel.frame  = CGRectMake(160, 65, 138, 21);
-                //todayMaxMinTempLabel.frame  = CGRectMake(160, 65, todayMaxMinTempLabel.frame.size.width, todayMaxMinTempLabel.frame.size.height);
-                //todayMaxMinTempLabel.center  = CGPointMake(160, 65);
                 todayMaxMinTempLabel.font   = [UIFont systemFontOfSize:16.0];
                 todayMaxMinTempLabel.text   = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
             }
         }
         else
         {
+            int todPop = 0;
+            
+            curDustLabel.font           = [UIFont systemFontOfSize:16.0];
+            curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
+
             todayMaxMinTempLabel.text = [NSString stringWithFormat:@"%d˚/%d˚", todayMinTemp, todayMaxTemp];
         }
         
@@ -2165,8 +2193,8 @@ static TodayViewController *todayVC = nil;
     bIsReqComplete = FALSE;
 
     locationView.hidden = true;
-    NSLog(@"set city : current position %@, address %@ index %d, name : %@, country : %@",
-          nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.index, nextCity.name, nextCity.country);
+    NSLog(@"[setCityInfo] : index %d, current position %@, address %@ , name : %@, country : %@",
+        nextCity.index, nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.name, nextCity.country);
     
     mCurrentCity = nextCity;
     mCurrentCityIdx = nextCity.index;
@@ -2181,7 +2209,10 @@ static TodayViewController *todayVC = nil;
     }
     else
     {
-        if([nextCity.country isEqualToString:@"KR"])
+        if([nextCity.country isEqualToString:@"KR"] ||
+           [nextCity.country isEqualToString:@"(null)"] ||
+           (nextCity.country == nil)
+           )
         {
             [self processKRAddress:nextCity.address];
         }

@@ -17,11 +17,11 @@
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.9.12</string>
+	<string>0.9.45</string>
 	<key>CFBundleSignature</key>
-	<string>????</string>
+	<string>BNDL</string>
 	<key>CFBundleVersion</key>
-	<string>0.9.12</string>
+	<string>0.9.45</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
