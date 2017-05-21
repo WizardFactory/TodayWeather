@@ -71,6 +71,7 @@ angular.module('starter', [
         }
 
         Units.loadUnits();
+        Util.saveServiceKeys();
 
         //For backward compatibility
         console.log(localStorage.getItem('startVersion'));

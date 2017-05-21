@@ -91,9 +91,9 @@ angular.module('service.push', [])
                 data: pushInfo,
                 timeout: 10*1000
             })
-                .success(function (result) {
+                .success(function (data) {
                     //callback(undefined, result.data);
-                    console.log(result);
+                    console.log(data);
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -119,9 +119,9 @@ angular.module('service.push', [])
                 data: pushInfo,
                 timeout: 10*1000
             })
-                .success(function (result) {
+                .success(function (data) {
                     //callback(undefined, result.data);
-                    console.log(result);
+                    console.log(data);
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -143,9 +143,9 @@ angular.module('service.push', [])
                 data: {newRegId: registrationId, oldRegId: self.pushData.registrationId},
                 timeout: 10*1000
             })
-                .success(function (result) {
+                .success(function (data) {
                     //callback(undefined, result.data);
-                    console.log(result);
+                    console.log(data);
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);

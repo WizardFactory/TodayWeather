@@ -25,14 +25,15 @@ angular.module('controller.purchase', [])
         }
 
         obj.setAccountLevel = function (accountLevel) {
-            if (obj.accountLevel != accountLevel) {
+            var self = this;
+            if (self.accountLevel != accountLevel) {
                 console.log('set account level ='+accountLevel);
                 //update accountLevel
-                obj.accountLevel = accountLevel;
-                if (accountLevel === obj.ACCOUNT_LEVEL_FREE) {
+                self.accountLevel = accountLevel;
+                if (accountLevel === self.ACCOUNT_LEVEL_FREE) {
                     TwAds.setEnableAds(true);
                 }
-                else if (accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
+                else if (accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
                     TwAds.setEnableAds(false);
                 }
             }
@@ -50,8 +51,8 @@ angular.module('controller.purchase', [])
                 data: storeReceipt,
                 timeout: 10000
             })
-                .success(function (result) {
-                    callback(undefined, result.data);
+                .success(function (data) {
+                    callback(undefined, data);
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -74,30 +75,32 @@ angular.module('controller.purchase', [])
         };
 
         obj.loadPurchaseInfo = function () {
+            var self = this;
             console.log('load purchase info');
             var purchaseInfo = JSON.parse(localStorage.getItem("purchaseInfo"));
 
             if (purchaseInfo != undefined) {
                 console.log('load purchaseInfo='+JSON.stringify(purchaseInfo));
-                obj.expirationDate = purchaseInfo.expirationDate;
+                self.expirationDate = purchaseInfo.expirationDate;
                 //check account date
                 if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
                     console.log('account expired, please renewal or restore');
                     Util.ga.trackEvent('purchase', 'expired', 'subscribeExpired '+purchaseInfo.expirationDate);
-                    purchaseInfo.accountLevel = obj.ACCOUNT_LEVEL_FREE;
+                    purchaseInfo.accountLevel = self.ACCOUNT_LEVEL_FREE;
                 }
-                obj.setAccountLevel(purchaseInfo.accountLevel);
+                self.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
-                obj.setAccountLevel(obj.ACCOUNT_LEVEL_FREE);
+                self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
             }
         };
 
         obj.savePurchaseInfo = function (accountLevel, expirationDate) {
+            var self = this;
             var purchaseInfo = {accountLevel: accountLevel, expirationDate: expirationDate};
             localStorage.setItem("purchaseInfo", JSON.stringify(purchaseInfo));
 
-            if (purchaseInfo.accountLevel === obj.ACCOUNT_LEVEL_PREMIUM) {
+            if (purchaseInfo.accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
                 TwAds.saveTwAdsInfo(false);
             }
             else {
@@ -106,13 +109,14 @@ angular.module('controller.purchase', [])
         };
 
         obj.updatePurchaseInfo = function () {
+            var self = this;
             var restoreFunc = function () {
                 if (ionic.Platform.isIOS()) {
                     return inAppPurchase.getReceipt().then(function (receipt) {
                         if (receipt == undefined) {
                             return undefined;
                         }
-                        return  {type: 'ios', id: obj.productId, receipt: receipt};
+                        return  {type: 'ios', id: self.productId, receipt: receipt};
                     });
                 }
                 else if (ionic.Platform.isAndroid()) {
@@ -129,7 +133,7 @@ angular.module('controller.purchase', [])
                             return undefined;
                         }
                         //if you have many product find by product id
-                        return {type: 'android', id: obj.productId, receipt: data};
+                        return {type: 'android', id: self.productId, receipt: data};
                     });
                 }
                 else {
@@ -142,9 +146,9 @@ angular.module('controller.purchase', [])
                     if (storeReceipt == undefined)  {
                         throw new Error("Can not find any purchase");
                     }
-                    obj.saveStoreReceipt(storeReceipt);
+                    self.saveStoreReceipt(storeReceipt);
                     var deferred = $q.defer();
-                    obj.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                    self.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
                         if (err) {
                             deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
                             return;
@@ -172,7 +176,7 @@ angular.module('controller.purchase', [])
         }
 
         if (!window.inAppPurchase) {
-            console.log('in app purchase is unused');
+            Util.ga.trackEvent('purchase', 'unused');
             if (Purchase.paidAppUrl.length > 0) {
                 $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
                     $rootScope.adsBannerMessage = bannerMessage;
@@ -191,6 +195,7 @@ angular.module('controller.purchase', [])
                 });
                 $rootScope.clickAdsBanner = function() {};
             }
+            Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
             return;
         }
 

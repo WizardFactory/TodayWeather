@@ -35,44 +35,6 @@
                         {{'LOC_UNITS'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
                     </a>
-                    <div ng-if="isAndroid()" class="item setting-title-light" style="padding-bottom: 8px">
-                        <div class="setting-title-light" translate="LOC_WIDGET"></div>
-                        <div style="font-size:10px; padding-top: 4px" translate="LOC_AFTER_YOU_MAKE_A_CHANGE_YOU_NEED_TO_UPDATE_THE_WIDGET_TO_APPLY_THE_CHANGES">
-                        </div>
-                        <label class="item-input item-select setting-subheading-light" style="padding: 0">
-                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter" translate="LOC_REFRESH_INTERVAL">
-                            </div>
-                            <select ng-model="updateInterval" ng-change="changeUpdateInterval(updateInterval)"
-                                    style="font-weight: lighter; background-color: inherit; color: inherit; font-size: 17px;opacity: 0.87;">
-                                <option value="0" translate="LOC_MANUAL"></option>
-                                <option value="30" translate="LOC_30_MINUTES"></option>
-                                <option value="60" translate="LOC_1_HOUR"></option>
-                                <option value="180" translate="LOC_3_HOURS"></option>
-                                <option value="360" translate="LOC_6_HOURS"></option>
-                                <option value="720" translate="LOC_12_HOURS"></option>
-                            </select>
-                        </label>
-                        <hr style="margin: 0; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                        <label class="item-input item-select setting-subheading-light" style="padding: 0">
-                            <div class="input-label setting-subheading-light" style="opacity: 1; font-weight: lighter" translate="LOC_TRANSPARENCY">
-                            </div>
-                            <select ng-model="widgetOpacity" ng-change="changeWidgetOpacity(widgetOpacity)"
-                                    style="font-weight: lighter; background-color: inherit; color: inherit; font-size: 17px;opacity: 0.87;">
-                                <option value="69" translate="LOC_DEFAULT"></option>
-                                <option value="100">0%</option>
-                                <option value="90">10%</option>
-                                <option value="80">20%</option>
-                                <option value="70">30%</option>
-                                <option value="60">40%</option>
-                                <option value="50">50%</option>
-                                <option value="40">60%</option>
-                                <option value="30">70%</option>
-                                <option value="20">80%</option>
-                                <option value="10">90%</option>
-                                <option value="0">100%</option>
-                            </select>
-                        </label>
-                    </div>
                     <a class="item item-icon-right setting-title-light" href="#/guide">
                        {{'LOC_GUIDE'|translate}}
                         <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="font-size: 20px"></i>
