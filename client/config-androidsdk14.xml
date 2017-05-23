@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<widget id="net.wizardfactory.todayweather" version="0.9.46" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+<widget id="net.wizardfactory.todayweather" version="0.9.46" xmlns="http://www.w3.org/ns/widgets">
   <name>TodayWeather</name>
   <description>
         Inform how warm or cold it is today than yesterday.
@@ -42,21 +42,6 @@
     <icon src="resources/android/icon/drawable-xxxhdpi-icon.png" density="xxxhdpi"/>
   </platform>
   <platform name="ios">
-    <config-file parent="NSAppTransportSecurity" platform="ios" target="*-Info.plist">
-      <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-      </dict>
-    </config-file>
-    <config-file parent="CFBundleDevelopmentRegion" platform="ios" target="*-Info.plist">
-      <string>ko_KR</string>
-    </config-file>
-    <config-file parent="CFBundleLocalizations" platform="ios" target="*-Info.plist">
-      <array>
-        <string>en</string>
-        <string>ko</string>
-      </array>
-    </config-file>
     <splash src="resources/ios/splash/Default-568h@2x~iphone.png" width="640" height="1136"/>
     <splash src="resources/ios/splash/Default-667h.png" width="750" height="1334"/>
     <splash src="resources/ios/splash/Default-736h.png" width="1242" height="2208"/>
