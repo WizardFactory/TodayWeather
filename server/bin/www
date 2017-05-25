@@ -6,6 +6,8 @@
 
 'use strict';
 
+var WhatapAgent = require('whatap').NodeAgent;
+
 var app = require('../app');
 var debug = require('debug')('server:server');
 var http = require('http');

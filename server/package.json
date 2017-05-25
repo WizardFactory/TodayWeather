@@ -41,6 +41,7 @@
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
     "tracer": "^0.8.3",
+    "whatap": "^0.1.9",
     "winston": "^1.0.1",
     "winston-logentries": "^2.0.0",
     "xml2js": "^0.4.9"
