@@ -2264,23 +2264,23 @@ function ControllerTown() {
     this.insertStrForData = function (req, res, next) {
         if(req.short){
             req.short.forEach(function (data) {
-               self._makeStrForKma(data);
+               self._makeStrForKma(data, res);
             });
         }
         if(req.shortest){
             req.shortest.forEach(function (data) {
-                self._makeStrForKma(data);
+                self._makeStrForKma(data, res);
             });
         }
         if(req.current){
-            self._makeStrForKma(req.current);
+            self._makeStrForKma(req.current, res);
             if (req.current.arpltn) {
-                self._makeArpltnStr(req.current.arpltn);
+                self._makeArpltnStr(req.current.arpltn, res);
             }
         }
         if(req.midData){
             req.midData.dailyData.forEach(function (data) {
-                self._makeStrForKma(data);
+                self._makeStrForKma(data, res);
             });
         }
 
@@ -2646,51 +2646,51 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
  * @returns {ControllerTown}
  * @private
  */
-ControllerTown.prototype._makeArpltnStr = function (data) {
+ControllerTown.prototype._makeArpltnStr = function (data, res) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10");
+        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10", res);
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25");
+        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25", res);
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.grade2str(data.o3Grade, "o3");
+        data.o3Str = KecoController.grade2str(data.o3Grade, "o3", res);
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.grade2str(data.no2Grade, "no2");
+        data.no2Str = KecoController.grade2str(data.no2Grade, "no2", res);
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.grade2str(data.coGrade, "co");
+        data.coStr = KecoController.grade2str(data.coGrade, "co", res);
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.grade2str(data.so2Grade, "so2");
+        data.so2Str = KecoController.grade2str(data.so2Grade, "so2", res);
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai");
+        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai", res);
     }
     return this;
 };
 
-ControllerTown.prototype._makeStrForKma = function(data) {
+ControllerTown.prototype._makeStrForKma = function(data, res) {
 
     var self = this;
 
     if (data.hasOwnProperty('sensorytem') && data.sensorytem < 0) {
-        data.sensorytemStr = self._parseSensoryTem(data.sensorytem);
+        data.sensorytemStr = self._parseSensoryTem(data.sensorytem, res);
     }
 
     if (data.hasOwnProperty('ultrvGrade')) {
-        data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade);
+        data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade, res);
     }
 
     if (data.hasOwnProperty('fsnGrade')) {
-        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade);
+        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade, res);
     }
 
     if (data.hasOwnProperty('wsd')) {
         data.wsdGrade = self._convertKmaWsdToGrade(data.wsd);
-        data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade);
+        data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade, res);
     }
 
     /**
@@ -2699,7 +2699,7 @@ ControllerTown.prototype._makeStrForKma = function(data) {
      * 차후 업데이트 필요할 수 있음.
      */
     if (data.hasOwnProperty('pty') && data.pty > 0) {
-        data.ptyStr = self._convertKmaPtyToStr(data.pty);
+        data.ptyStr = self._convertKmaPtyToStr(data.pty, res);
         if (data.pty == 1) {
             if (data.hasOwnProperty('r06')) {
                 data.r06Str = self._convertKmaRxxToStr(data.pty, data.r06);
@@ -2759,13 +2759,14 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
  * @returns {*}
  * @private
  */
-ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
+ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade, translate) {
+    var ts = translate == undefined?global:translate;
     switch (wsdGrade) {
         case 0: return "";
-        case 1: return __("LOC_LIGHT_WIND");
-        case 2: return __("LOC_MODERATE_WIND");
-        case 3: return __("LOC_STRONG_WIND");
-        case 4: return __("LOC_VERY_STRONG_WIND");
+        case 1: return ts.__("LOC_LIGHT_WIND");
+        case 2: return ts.__("LOC_MODERATE_WIND");
+        case 3: return ts.__("LOC_STRONG_WIND");
+        case 4: return ts.__("LOC_VERY_STRONG_WIND");
     }
     return "";
 };
@@ -4144,21 +4145,22 @@ ControllerTown.prototype._getNewWCT = function(Tdum,Wdum) {
     return result;
 };
 
-ControllerTown.prototype._parseSensoryTem = function(sensoryTem) {
+ControllerTown.prototype._parseSensoryTem = function(sensoryTem, translate) {
+    var ts = translate == undefined?global:translate;
     if (sensoryTem >= 0 ) {
         return "";
     }
     else if ( -10 < sensoryTem && sensoryTem < 0) {
-        return __("LOC_ATTENTION");
+        return ts.__("LOC_ATTENTION");
     }
     else if ( -25 < sensoryTem && sensoryTem <= -10) {
-        return __("LOC_CAUTION");
+        return ts.__("LOC_CAUTION");
     }
     else if ( -45 < sensoryTem && sensoryTem <= -25) {
-        return __("LOC_WARNING");
+        return ts.__("LOC_WARNING");
     }
     else if (sensoryTem <= -45) {
-        return __("LOC_HAZARD");
+        return ts.__("LOC_HAZARD");
     }
     return "";
 };

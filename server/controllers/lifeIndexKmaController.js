@@ -11,12 +11,13 @@ function LifeIndexKmaController() {
 
 }
 
-LifeIndexKmaController.fsnStr = function (grade) {
+LifeIndexKmaController.fsnStr = function (grade, translate) {
+    var ts = translate == undefined?global:translate;
     switch(grade) {
-        case 0: return __("LOC_ATTENTION");
-        case 1: return __("LOC_CAUTION");
-        case 2: return __("LOC_WARNING");
-        case 3: return __("LOC_HAZARD");
+        case 0: return ts.__("LOC_ATTENTION");
+        case 1: return ts.__("LOC_CAUTION");
+        case 2: return ts.__("LOC_WARNING");
+        case 3: return ts.__("LOC_HAZARD");
         default: return "";
     }
 };
