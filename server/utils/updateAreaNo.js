@@ -9,7 +9,8 @@ var mongoose = require('mongoose');
 var config = require('../config/config');
 var convert = require('./coordinate2xy');
 var sourceFile = './utils/data/20160704_AreaNo';
-var resultFile = './utils/data/20160704_AreaNoResutl';
+var resultFile = './utils/data/20160704_AreaNoResult';
+var updatedFile = './utils/data/20160704_AreaNoResult_updated';
 var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -23,7 +24,8 @@ mongoose.connect(config.db.path, config.db.options, function(err){
 var fs = require('fs');
 var areaDoc = require('../models/modelAreaNo');
 var lineList = fs.readFileSync(sourceFile).toString().split('\n');
-var result = [];
+var confirmResult = [];
+var updatedResult = [];
 lineList.shift();
 
 log.info('Source of Area Number File : ' + sourceFile);
@@ -55,8 +57,18 @@ function createAreaNumberStruct (err) {
 
     if (lineList.length) {
         var line = lineList.shift();
-        var document = new areaDoc();
-        var savedData = {}; // for Debugging
+        var savedData = {
+            areaNo: 1,
+            town:{
+                first: '',
+                second: '',
+                third: ''
+            },
+            geo: {
+                type: [],
+                index: '2d'
+            }
+        }; // for Debugging
 
         line = line.replace(/\r/g, "");
         //line = line.replace(/' '/g, ',');
@@ -64,51 +76,66 @@ function createAreaNumberStruct (err) {
 
         line.split(' ').forEach(function (entry, i) {
             if(i === 0){
-                document.areaNo = parseInt(entry);
                 savedData.areaNo = parseInt(entry);
             } else if(i === 1){
-                document.town.first = entry;
-                savedData.town = {};
                 savedData.town.first = entry;
             } else if(i === 2){
-                document.town.second = entry;
                 savedData.town.second = entry;
             } else if(i === 3) {
-                document.town.third = entry;
                 savedData.town.third = entry;
             }
 
         });
 
-        var addr = document.town.first + ',' + document.town.second + ',' + document.town.third;
-        getGeoCodeFromDaum(addr, function(err, body){
+        areaDoc.find({town: savedData.town}, function(err, result){
             if(err){
-                log.error('Fail to get geocode : ', addr);
+                log.error('Fail to find town list from DB :', err);
                 return;
             }
-            try{
-                if(body.channel.item.length > 0){
-                    document.geocode.lat = body.channel.item[0].lat.toFixed(7);
-                    document.geocode.lon = body.channel.item[0].lng.toFixed(7);
-                    savedData.geocode = {
-                        lat: document.geocode.lat,
-                        lon: document.geocode.lon
-                    };
+
+            if(result.length === 0){
+                var addr = savedData.town.first + ',' + savedData.town.second + ',' + savedData.town.third;
+                getGeoCodeFromDaum(addr, function(err, body){
+                    if(err){
+                        log.error('Fail to get geocode : ', addr);
+                        return;
+                    }
+                    try{
+                        if(body.channel.item.length > 0){
+                            savedData.geo = [parseFloat(body.channel.item[0].lng.toFixed(7)), parseFloat(body.channel.item[0].lat.toFixed(7))];
+                        }else{
+                            savedData.geo = [1,1];
+                        }
+
+                        log.info('AreaNo. : ', JSON.stringify(savedData));
+                        confirmResult.push(JSON.stringify(savedData));
+
+                        areaDoc.update({town:savedData.town}, savedData, {upsert:true}, createAreaNumberStruct);
+                    }
+                    catch(e){
+                        log.error(e);
+                        areaDoc.update({town:savedData.town}, savedData, {upsert:true}, createAreaNumberStruct);
+                    }
+                });
+            }else{
+                var item = result[0];
+
+                savedData.geo = item.geo;
+
+                confirmResult.push(JSON.stringify(savedData));
+                if(savedData.areaNo != item.areaNo){
+                    log.info('updated areaNo : ', savedData.areaNo, item.areaNo);
+                    log.info('updated data : ', savedData);
+                    updatedResult.push(JSON.stringify(savedData));
                 }
-
-                log.info('AreaNo. : ', JSON.stringify(savedData));
-                result.push(JSON.stringify(savedData));
-
-                document.save(createAreaNumberStruct);
-            }
-            catch(e){
-                log.error(e);
-                document.save(createAreaNumberStruct);
+                areaDoc.update({town:savedData.town}, savedData, {upsert:true}, createAreaNumberStruct);
             }
         });
+
     } else {
         log.info('Finish');
-        fs.writeFileSync(resultFile, result.join('\n'), 'utf8');
+        fs.writeFileSync(resultFile, confirmResult.join('\n'), 'utf8');
+        fs.writeFileSync(updatedFile, updatedResult.join('\n'), 'utf8');
         areaDoc.find({},function(err,docs){
             if (err) {throw err;}
             log.info('total count : ', docs.length);

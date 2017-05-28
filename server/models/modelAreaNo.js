@@ -10,9 +10,9 @@ var areaNoSchema = new mongoose.Schema({
         second: String,
         third: String
     },
-    geocode: {
-        lat: Number,
-        lon: Number
+    geo: {
+        type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
+        index: '2d'         // create the geospatial index
     }
 });
 
