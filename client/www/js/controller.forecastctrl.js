@@ -384,6 +384,9 @@ angular.module('controller.forecastctrl', [])
             }
 
             var mainHeight = bodyHeight - 100;
+            if (bodyHeight / bodyWidth > 1.8) {
+                mainHeight *= 0.95
+            }
 
             //var topTimeSize = mainHeight * 0.026;
             //$scope.topTimeSize = topTimeSize<16.8?topTimeSize:16.8;
@@ -643,6 +646,13 @@ angular.module('controller.forecastctrl', [])
                 padding += 36;
             }
 
+            //16:9 이상의 부분은 padding으로 넘겨 여유 공간으로 사용함
+            if (bodyHeight>0 && bodyWidth>0) {
+                if (bodyHeight / bodyWidth >= 2) {
+                    padding += parseInt((bodyHeight - (bodyWidth*1.77))/2);
+                }
+            }
+
             if (bodyHeight === 480) {
                 //iphone4
                 padding -= 32;
@@ -656,18 +666,15 @@ angular.module('controller.forecastctrl', [])
                 }
             }
 
+            if (showAqi) {
+                padding += 36;
+            }
+
             if($scope.forecastType == 'short') {
-                if (showAqi) {
-                    padding += 36;
-                }
                 var chartShortHeight = mainHeight - (143 + padding);
                 $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
             }
             else {
-                //오전 오후를 상하에서 좌우로 변경시에 적용 가능
-                //if (showAqi && dayTable.length >= 8 && dayTable[cityData.currentWeather.today.index].dustForecast) {
-                //    padding+=36;
-                //}
                 var chartMidHeight = mainHeight - (136+padding);
                 $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
             }
