@@ -1631,6 +1631,9 @@ function ControllerTown() {
                             }
                             var tempList = tempInfo.ret;
                             //log.info(tempList);
+                            if (landInfo.pubDate != tempInfo.pubDate) {
+                                log.error('RM> publishing date of land and temp are different');
+                            }
                             self._mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
                                     log.error('RM> failed to merge land and temp');
@@ -3977,53 +3980,81 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         var i;
         var currentDate;
         var item;
+        var index;
 
         //log.info(todayLand);
-        //log.info(todayTemp);
-        for(i=0 ; i<8 ; i++){
-            currentDate = self._getCurrentTimeValue(9+ 72 + (i * 24));
-            item = {
-                date: currentDate.date
-            };
-            var index = i+3;
+        var startDate = kmaTimeLib.convertStringToDate(todayLand.date);
+        startDate.setDate(startDate.getDate()+3);
 
-            if(i<5){
+        for(i=0 ; i<8 ; i++){
+            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
+            item = {
+                date: currentDate
+            };
+            index = i+3;
+
+            if(todayLand.hasOwnProperty('wf' + index + 'Am')) {
                 item.wfAm = todayLand['wf' + index + 'Am'];
                 item.wfPm = todayLand['wf' + index + 'Pm'];
-            } else{
+            }
+            else {
                 item.wfAm = item.wfPm = todayLand['wf' + index];
             }
-            item.taMin = todayTemp['taMin' + index];
-            item.taMax = todayTemp['taMax' + index];
 
             result.push(item);
+            startDate.setDate(startDate.getDate()+1);
+        }
+
+        //log.info(todayTemp);
+        startDate = kmaTimeLib.convertStringToDate(todayTemp.date);
+        startDate.setDate(startDate.getDate()+3);
+        for(i=0 ; i<8 ; i++) {
+            var isNew = false;
+            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
+            item = result.find(function (obj) {
+                return obj.date === currentDate;
+            });
+            if (item == null) {
+                item = {date: currentDate};
+                isNew = true;
+            }
+
+            index = i+3;
+            item.taMin = todayTemp['taMin' + index];
+            item.taMax = todayTemp['taMax' + index];
+            if (isNew) {
+                result.push(item);
+            }
+            startDate.setDate(startDate.getDate()+1);
         }
 
         //log.info('res', result);
         // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
-        for(i = 10 ; i > 0 ; i--){
-            currentDate = self._getCurrentTimeValue(9 - (i * 24));
-            var targetDate = self._getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
-            item = {
-                date: targetDate.date
-            };
-            var j;
-            //log.info(currentDate, targetDate);
-            for(j in landList){
-                if(currentDate.date === landList[j].date && landList[j].time === '1800'){
-                    item.wfAm = landList[j].wf3Am;
-                    item.wfPm = landList[j].wf3Pm;
-                    break;
+        if (landList > 1) {
+            for(i = 10 ; i > 0 ; i--){
+                currentDate = self._getCurrentTimeValue(9 - (i * 24));
+                var targetDate = self._getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
+                item = {
+                    date: targetDate.date
+                };
+                var j;
+                //log.info(currentDate, targetDate);
+                for(j in landList){
+                    if(currentDate.date === landList[j].date && landList[j].time === '1800'){
+                        item.wfAm = landList[j].wf3Am;
+                        item.wfPm = landList[j].wf3Pm;
+                        break;
+                    }
                 }
-            }
 
-            for(j in tempList){
-                if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
-                    item.taMin = tempList[j].taMin3;
-                    item.taMax = tempList[j].taMax3;
-                    result.push(item);
-                    //log.info('> prev data', item);
-                    break;
+                for(j in tempList){
+                    if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
+                        item.taMin = tempList[j].taMin3;
+                        item.taMax = tempList[j].taMax3;
+                        result.push(item);
+                        //log.info('> prev data', item);
+                        break;
+                    }
                 }
             }
         }
