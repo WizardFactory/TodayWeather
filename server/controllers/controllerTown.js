@@ -16,6 +16,7 @@ var modelMidTemp = require('../models/modelMidTemp');
 var modelMidLand = require('../models/modelMidLand');
 var modelShortRss = require('../models/modelShortRss');
 var modelHealthDay = require('../models/modelHealthDay');
+var modelAreaNo = require('../models/modelAreaNo');
 
 var convertGeocode = require('../utils/convertGeocode');
 
@@ -1777,6 +1778,11 @@ function ControllerTown() {
                     return;
                 }
                 req.params.areaNo = townInfo.areaNo;
+                req.geocode = {
+                    lat: townInfo.gCoord.lat,
+                    lon: townInfo.gCoord.lon
+                };
+
                 LifeIndexKmaController.appendData(townInfo, req.short, req.midData.dailyData, function (err) {
                     if (err) {
                         log.error(err);
@@ -1922,6 +1928,106 @@ function ControllerTown() {
             return this;
         }
 
+        var townName = {
+            first: req.params.region? req.params.region:'',
+            second: req.params.city? req.params.city:'',
+            third: req.params.town? req.params.town:''
+        };
+        var townGeocode = [];
+
+        async.waterfall([
+                function(cb){
+                    modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, res) {
+                        if(err || res.length === 0){
+                            log.info('No areaNo from Health DB : ', req.params.areaNo);
+                            cb(null);
+                            return;
+                        }
+                        return cb('success_byAreaNO', res);
+                    });
+                },
+                function(cb){
+                    // find areaNo from areaNo DB
+                    log.info('Try to find areaNo from AreaNoDB', townName);
+
+                    modelAreaNo.find({town:townName}, function(err, areaList){
+                        if(err || areaList.length === 0){
+                            return cb(null);
+                        }
+
+                        var item = areaList[0];
+                        log.info('AreaNo Item : ', item.geo);
+                        townGeocode = item.geo;
+
+                        log.info('Try to find Health data by AreaNo which comes from AreaNoDB');
+
+                        modelHealthDay.find({areaNo:parseInt(item.areaNo)}).lean().exec(function(err, res) {
+                            if(err || res.length === 0){
+                                return cb(null);
+                            }
+                            log.info('success_byAreaNoDB');
+                            return cb('success_byAreaNoDB', res);
+                        });
+                    });
+                },
+                function(cb){
+                    log.info('Try to find near AreaNo by geocode');
+
+                    if(townGeocode.length === 0){
+                        if(req.geocode){
+                            townGeocode = [req.geocode.lon, req.geocode.lat];
+                        }else{
+                            log.error('Health> 1. Cannot find any areaNo data :', townName);
+                            return cb('fail to get AreaNo data', undefined);
+                        }
+                    }
+                    log.info('center geocode : ', townGeocode);
+                    // There is no areaNo in the DB
+                    modelAreaNo.find({geo: {$near:townGeocode, $maxDistance: 0.3}}).limit(3).lean().exec(function (err, areaNoList) {
+                        if(err || areaNoList.length == 0){
+                            log.error('Health> 2. cannot get areaNo near by ', townName, townGeocode, err);
+                            return cb('fail to get areaNo', undefined);
+                        }
+
+                        log.info('Get AreaNo which is near by townName');
+                        async.mapSeries(areaNoList,
+                            function(areaNo, callback){
+                                log.info('AreaNo : ', areaNo.areaNo);
+                                modelHealthDay.find({areaNo:parseInt(areaNo.areaNo)}).lean().exec(function(err, res) {
+                                    if(err || res.length === 0){
+                                        log.error('Health> 3. cannot fild areaNo near by geocode', townGeocode);
+                                        return callback(null);
+                                    }
+                                    log.info('succes HealthDay : ', res.length, areaNo.areaNo);
+                                    cb('find by near AreaNo', res);
+                                    return callback('success_byNearbyGeocode');
+                                });
+                            },
+                            function(err, result){
+                                if(!err){
+                                    return cb('fail to find by near AreaNo', undefined);
+                                }
+                            }
+                        );
+                    });
+                }
+            ],
+            function(err, result){
+                if (result && result.length > 0) {
+                    req.midData.dailyData.forEach(function(day) {
+                        var date = kmaTimeLib.convertStringToDate(day.date);
+                        for(var i=0; i<result.length; i++) {
+                            if(result[i].date.getTime() == date.getTime()) {
+                                day[result[i].indexType] = result[i].index;
+                            }
+                        }
+                    });
+                }
+                next();
+            }
+        );
+
+        /*
         modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, results) {
             if (results && results.length > 0) {
                 req.midData.dailyData.forEach(function(day) {
@@ -1938,6 +2044,7 @@ function ControllerTown() {
             }
             next();
         });
+        */
         return this;
     };
 
