@@ -34,7 +34,7 @@
     "jade": "~1.11.0",
     "jsonwebtoken": "^5.7.0",
     "jwt-simple": "^0.3.0",
-    "mongoose": "=4.6.8",
+    "mongoose": "=4.5.3",
     "morgan": "~1.6.1",
     "newrelic": "^1.24.1",
     "node-gcm": "^0.14.0",

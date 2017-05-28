@@ -356,9 +356,11 @@ function controllerWorldWeather(){
         meta.method = 'queryTwoDaysWeather';
         meta.sID = req.sessionID;
 
+        var errMsg;
         if(!req.validVersion){
-            log.error('TWW> invalid version : ', req.validVersion, meta);
-            return next();
+            errMsg = 'TWW> invalid version : '+ req.validVersion;
+            log.error(errMsg, meta);
+            return res.send(errMsg, meta);
         }
 
         if(!self.isValidCategory(req)){
@@ -370,10 +372,9 @@ function controllerWorldWeather(){
         self.getCity(req);
 
         if(!req.geocode && !req.city){
-            log.error('It is not valid request', meta);
-            req.error = 'It is not valid request';
-            next();
-            return;
+            errMsg = 'It is not valid request';
+            log.error(errMsg, meta);
+            return res.send(errMsg);
         }
 
         log.info('TWW> geocode : ', req.geocode, meta);

@@ -1631,6 +1631,9 @@ function ControllerTown() {
                             }
                             var tempList = tempInfo.ret;
                             //log.info(tempList);
+                            if (landInfo.pubDate != tempInfo.pubDate) {
+                                log.error('RM> publishing date of land and temp are different');
+                            }
                             self._mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
                                     log.error('RM> failed to merge land and temp');
@@ -2264,23 +2267,23 @@ function ControllerTown() {
     this.insertStrForData = function (req, res, next) {
         if(req.short){
             req.short.forEach(function (data) {
-               self._makeStrForKma(data);
+               self._makeStrForKma(data, res);
             });
         }
         if(req.shortest){
             req.shortest.forEach(function (data) {
-                self._makeStrForKma(data);
+                self._makeStrForKma(data, res);
             });
         }
         if(req.current){
-            self._makeStrForKma(req.current);
+            self._makeStrForKma(req.current, res);
             if (req.current.arpltn) {
-                self._makeArpltnStr(req.current.arpltn);
+                self._makeArpltnStr(req.current.arpltn, res);
             }
         }
         if(req.midData){
             req.midData.dailyData.forEach(function (data) {
-                self._makeStrForKma(data);
+                self._makeStrForKma(data, res);
             });
         }
 
@@ -2646,51 +2649,51 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
  * @returns {ControllerTown}
  * @private
  */
-ControllerTown.prototype._makeArpltnStr = function (data) {
+ControllerTown.prototype._makeArpltnStr = function (data, res) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10");
+        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10", res);
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25");
+        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25", res);
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.grade2str(data.o3Grade, "o3");
+        data.o3Str = KecoController.grade2str(data.o3Grade, "o3", res);
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.grade2str(data.no2Grade, "no2");
+        data.no2Str = KecoController.grade2str(data.no2Grade, "no2", res);
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.grade2str(data.coGrade, "co");
+        data.coStr = KecoController.grade2str(data.coGrade, "co", res);
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.grade2str(data.so2Grade, "so2");
+        data.so2Str = KecoController.grade2str(data.so2Grade, "so2", res);
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai");
+        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai", res);
     }
     return this;
 };
 
-ControllerTown.prototype._makeStrForKma = function(data) {
+ControllerTown.prototype._makeStrForKma = function(data, res) {
 
     var self = this;
 
     if (data.hasOwnProperty('sensorytem') && data.sensorytem < 0) {
-        data.sensorytemStr = self._parseSensoryTem(data.sensorytem);
+        data.sensorytemStr = self._parseSensoryTem(data.sensorytem, res);
     }
 
     if (data.hasOwnProperty('ultrvGrade')) {
-        data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade);
+        data.ultrvStr = LifeIndexKmaController.ultrvStr(data.ultrvGrade, res);
     }
 
     if (data.hasOwnProperty('fsnGrade')) {
-        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade);
+        data.fsnStr = LifeIndexKmaController.fsnStr(data.fsnGrade, res);
     }
 
     if (data.hasOwnProperty('wsd')) {
         data.wsdGrade = self._convertKmaWsdToGrade(data.wsd);
-        data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade);
+        data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade, res);
     }
 
     /**
@@ -2699,7 +2702,7 @@ ControllerTown.prototype._makeStrForKma = function(data) {
      * 차후 업데이트 필요할 수 있음.
      */
     if (data.hasOwnProperty('pty') && data.pty > 0) {
-        data.ptyStr = self._convertKmaPtyToStr(data.pty);
+        data.ptyStr = self._convertKmaPtyToStr(data.pty, res);
         if (data.pty == 1) {
             if (data.hasOwnProperty('r06')) {
                 data.r06Str = self._convertKmaRxxToStr(data.pty, data.r06);
@@ -2759,13 +2762,14 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
  * @returns {*}
  * @private
  */
-ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade) {
+ControllerTown.prototype._convertKmaWsdToStr = function (wsdGrade, translate) {
+    var ts = translate == undefined?global:translate;
     switch (wsdGrade) {
         case 0: return "";
-        case 1: return __("LOC_LIGHT_WIND");
-        case 2: return __("LOC_MODERATE_WIND");
-        case 3: return __("LOC_STRONG_WIND");
-        case 4: return __("LOC_VERY_STRONG_WIND");
+        case 1: return ts.__("LOC_LIGHT_WIND");
+        case 2: return ts.__("LOC_MODERATE_WIND");
+        case 3: return ts.__("LOC_STRONG_WIND");
+        case 4: return ts.__("LOC_VERY_STRONG_WIND");
     }
     return "";
 };
@@ -3976,53 +3980,81 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         var i;
         var currentDate;
         var item;
+        var index;
 
         //log.info(todayLand);
-        //log.info(todayTemp);
-        for(i=0 ; i<8 ; i++){
-            currentDate = self._getCurrentTimeValue(9+ 72 + (i * 24));
-            item = {
-                date: currentDate.date
-            };
-            var index = i+3;
+        var startDate = kmaTimeLib.convertStringToDate(todayLand.date);
+        startDate.setDate(startDate.getDate()+3);
 
-            if(i<5){
+        for(i=0 ; i<8 ; i++){
+            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
+            item = {
+                date: currentDate
+            };
+            index = i+3;
+
+            if(todayLand.hasOwnProperty('wf' + index + 'Am')) {
                 item.wfAm = todayLand['wf' + index + 'Am'];
                 item.wfPm = todayLand['wf' + index + 'Pm'];
-            } else{
+            }
+            else {
                 item.wfAm = item.wfPm = todayLand['wf' + index];
             }
-            item.taMin = todayTemp['taMin' + index];
-            item.taMax = todayTemp['taMax' + index];
 
             result.push(item);
+            startDate.setDate(startDate.getDate()+1);
+        }
+
+        //log.info(todayTemp);
+        startDate = kmaTimeLib.convertStringToDate(todayTemp.date);
+        startDate.setDate(startDate.getDate()+3);
+        for(i=0 ; i<8 ; i++) {
+            var isNew = false;
+            currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
+            item = result.find(function (obj) {
+                return obj.date === currentDate;
+            });
+            if (item == null) {
+                item = {date: currentDate};
+                isNew = true;
+            }
+
+            index = i+3;
+            item.taMin = todayTemp['taMin' + index];
+            item.taMax = todayTemp['taMax' + index];
+            if (isNew) {
+                result.push(item);
+            }
+            startDate.setDate(startDate.getDate()+1);
         }
 
         //log.info('res', result);
         // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
-        for(i = 10 ; i > 0 ; i--){
-            currentDate = self._getCurrentTimeValue(9 - (i * 24));
-            var targetDate = self._getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
-            item = {
-                date: targetDate.date
-            };
-            var j;
-            //log.info(currentDate, targetDate);
-            for(j in landList){
-                if(currentDate.date === landList[j].date && landList[j].time === '1800'){
-                    item.wfAm = landList[j].wf3Am;
-                    item.wfPm = landList[j].wf3Pm;
-                    break;
+        if (landList > 1) {
+            for(i = 10 ; i > 0 ; i--){
+                currentDate = self._getCurrentTimeValue(9 - (i * 24));
+                var targetDate = self._getCurrentTimeValue(9 + 72 - (i * 24)); // 찾은 데이터는 3일 후의 날씨를 보여주기때문에 72를 더해야 함
+                item = {
+                    date: targetDate.date
+                };
+                var j;
+                //log.info(currentDate, targetDate);
+                for(j in landList){
+                    if(currentDate.date === landList[j].date && landList[j].time === '1800'){
+                        item.wfAm = landList[j].wf3Am;
+                        item.wfPm = landList[j].wf3Pm;
+                        break;
+                    }
                 }
-            }
 
-            for(j in tempList){
-                if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
-                    item.taMin = tempList[j].taMin3;
-                    item.taMax = tempList[j].taMax3;
-                    result.push(item);
-                    //log.info('> prev data', item);
-                    break;
+                for(j in tempList){
+                    if(currentDate.date === tempList[j].date && tempList[j].time === '1800'){
+                        item.taMin = tempList[j].taMin3;
+                        item.taMax = tempList[j].taMax3;
+                        result.push(item);
+                        //log.info('> prev data', item);
+                        break;
+                    }
                 }
             }
         }
@@ -4144,21 +4176,22 @@ ControllerTown.prototype._getNewWCT = function(Tdum,Wdum) {
     return result;
 };
 
-ControllerTown.prototype._parseSensoryTem = function(sensoryTem) {
+ControllerTown.prototype._parseSensoryTem = function(sensoryTem, translate) {
+    var ts = translate == undefined?global:translate;
     if (sensoryTem >= 0 ) {
         return "";
     }
     else if ( -10 < sensoryTem && sensoryTem < 0) {
-        return __("LOC_ATTENTION");
+        return ts.__("LOC_ATTENTION");
     }
     else if ( -25 < sensoryTem && sensoryTem <= -10) {
-        return __("LOC_CAUTION");
+        return ts.__("LOC_CAUTION");
     }
     else if ( -45 < sensoryTem && sensoryTem <= -25) {
-        return __("LOC_WARNING");
+        return ts.__("LOC_WARNING");
     }
     else if (sensoryTem <= -45) {
-        return __("LOC_HAZARD");
+        return ts.__("LOC_HAZARD");
     }
     return "";
 };

@@ -10,7 +10,7 @@
 #import "TodayWeatherShowMore.h"
 #import "TodayWeatherUtil.h"
 //#import "TodayViewController.h"
-
+#import "CoreText/CoreText.h"
 #import "LocalizationDefine.h"
 
 #define FIVE_DAILY_WT_WMARGIN   2           // Sum of LR Margin 4
@@ -259,6 +259,10 @@
     int pm10Grade          = [[currentArpltnDict objectForKey:@"pm10Grade"] intValue]; // 미세먼지
     int pm25Grade          = [[currentArpltnDict objectForKey:@"pm25Grade"] intValue];  // 초미세먼지
     
+    int khaiValue          = [[currentArpltnDict objectForKey:@"khaiValue"] intValue];  // 통합대기
+    int pm10Value          = [[currentArpltnDict objectForKey:@"pm10Value"] intValue]; // 미세먼지
+    int pm25Value          = [[currentArpltnDict objectForKey:@"pm25Value"] intValue];  // 초미세먼지
+    
     NSString *nssKhaiStr          = [currentArpltnDict objectForKey:@"khaiStr"];  // 통합대기
     NSString *nssPm10Str          = [currentArpltnDict objectForKey:@"pm10Str"];  // 미세먼지
     NSString *nssPm25Str          = [currentArpltnDict objectForKey:@"pm25Str"];  // 초미세먼지
@@ -277,52 +281,52 @@
         }
         else
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_AQI, khaiValue, nssKhaiStr];
         }
     }
     else
     {
         if( (khaiGrade > pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_AQI, khaiValue, nssKhaiStr];
         }
         else if ( (khaiGrade == pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_AQI, khaiValue, nssKhaiStr];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade > pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM10, pm10Value, nssPm10Str];
         }
         else if ( (khaiGrade > pm10Grade) && (khaiGrade == pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_AQI, khaiValue, nssKhaiStr];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade == pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM10, pm10Value, nssPm10Str];
         }
         else if ( (khaiGrade > pm10Grade) && (khaiGrade < pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
         }
         else if ( (khaiGrade == pm10Grade) && (khaiGrade < pm25Grade) )
         {
-            return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
+            return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
         }
         else if ( (khaiGrade < pm10Grade) && (khaiGrade < pm25Grade) )
         {
             if ( pm10Grade > pm25Grade)
             {
-                return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
+                return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM10, pm10Value, nssPm10Str];
             }
             else if ( pm10Grade == pm25Grade)
             {
-                return [NSString stringWithFormat:@"%@ %@", LSTR_PM10, nssPm10Str];
+                return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM10, pm10Value, nssPm10Str];
             }
             else if ( pm10Grade < pm25Grade)
             {
-                return [NSString stringWithFormat:@"%@ %@", LSTR_PM25, nssPm25Str];
+                return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
             }
         }
     }
@@ -333,11 +337,77 @@
     }
     else
     {
-        nssResults = [NSString stringWithFormat:@"%@ %@", LSTR_AQI, nssKhaiStr];
+        nssResults = [NSString stringWithFormat:@"%@ %d %@", LSTR_AQI, khaiValue, nssKhaiStr];
     }
-    
+        
     return nssResults;
 }
+
+/********************************************************************
+ *
+ * Name			: getChangedColorAirState
+ * Description	: get changed color air state string
+ * Returns		: NSMutableAttributedString *
+ * Side effects :
+ * Date			: 2017. 04. 23
+ * Author		: SeanKim
+ * History		: 20170423 SeanKim Create function
+ *
+ ********************************************************************/
+- (NSMutableAttributedString *) getChangedColorAirState:(NSString *)nssAirState
+{
+    NSMutableAttributedString *String = [[NSMutableAttributedString alloc] initWithString:nssAirState];    //AttributeString으로
+    NSRange sRange;
+    UIColor *stateColor = nil;
+    //NSString *boldFontName = [[UIFont boldSystemFontOfSize:17] fontName];
+    //UIFont *font=[UIFont fontWithName:@"Helvetica-Bold" size:17.0f];
+    UIFont *font = [UIFont boldSystemFontOfSize:17.0];
+    
+    if([nssAirState hasSuffix:@"좋음"])
+    {
+        sRange = [nssAirState rangeOfString:@"좋음"];     //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0x32a1ff);
+    }
+    else if([nssAirState hasSuffix:@"보통"])
+    {
+        sRange = [nssAirState rangeOfString:@"보통"];     //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0x7acf16);
+    }
+    else if([nssAirState hasSuffix:@"민감군주의"])
+    {
+        sRange = [nssAirState rangeOfString:@"민감군주의"];      //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0xfd934c);                // 나쁨과 동일
+    }
+    else if([nssAirState hasSuffix:@"매우나쁨"])
+    {
+        sRange = [nssAirState rangeOfString:@"매우나쁨"];     //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0xff7070);
+    }
+    else if([nssAirState hasSuffix:@"나쁨"])
+    {
+        sRange = [nssAirState rangeOfString:@"나쁨"];     //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0xfd934c);
+    }
+    else if([nssAirState hasSuffix:@"위험"])
+    {
+        sRange = [nssAirState rangeOfString:@"위험"];     //원하는 텍스트라는 글자의 위치가져오기
+        stateColor = UIColorFromRGB(0xff7070);           // 매우나쁨과 동일
+    }
+    else
+    {
+        sRange.location = NSNotFound;
+        stateColor = [UIColor blackColor];
+        
+        return String;
+    }
+    
+    [String addAttribute:NSForegroundColorAttributeName value:stateColor range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의
+    [String addAttribute:NSFontAttributeName value:font range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의색상을 변경
+
+    return String;
+}
+
+
 
 /********************************************************************
  *
