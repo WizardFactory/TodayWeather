@@ -1956,8 +1956,8 @@ function ControllerTown() {
                         }
 
                         var item = areaList[0];
-                        log.info('AreaNo Item : ', item);
-                        townGeocode = [item.geocode.lon, item.geocode.lat];
+                        log.info('AreaNo Item : ', item.geo);
+                        townGeocode = item.geo;
 
                         log.info('Try to find Health data by AreaNo which comes from AreaNoDB');
 
@@ -1965,7 +1965,8 @@ function ControllerTown() {
                             if(err || res.length === 0){
                                 return cb(null);
                             }
-                            return cb('success_byAreaNO', res);
+                            log.info('success_byAreaNoDB');
+                            return cb('success_byAreaNoDB', res);
                         });
                     });
                 },
@@ -1980,7 +1981,7 @@ function ControllerTown() {
                             return cb('fail to get AreaNo data', undefined);
                         }
                     }
-
+                    log.info('center geocode : ', townGeocode);
                     // There is no areaNo in the DB
                     modelAreaNo.find({geo: {$near:townGeocode, $maxDistance: 0.3}}).limit(3).lean().exec(function (err, areaNoList) {
                         if(err || areaNoList.length == 0){
