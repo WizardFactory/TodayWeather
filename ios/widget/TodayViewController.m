@@ -83,6 +83,7 @@
 @synthesize startingPoint;
 @synthesize responseData;
 @synthesize loadingIV;
+@synthesize shuffledDaumKeys;
 
 static TodayViewController *todayVC = nil;
 
@@ -279,6 +280,7 @@ static TodayViewController *todayVC = nil;
 - (void) initWidgetDatas
 {
     todayWSM = [[TodayWeatherShowMore alloc] init];
+    todayUtil = [[TodayWeatherUtil alloc] init];
     
     [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, WIDGET_COMPACT_HEIGHT)];
     
@@ -299,8 +301,10 @@ static TodayViewController *todayVC = nil;
     
     NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
     NSString *nssUnits = [sharedUserDefaults objectForKey:@"units"];
+    NSString *nssDaumKeys = [sharedUserDefaults objectForKey:@"daumServiceKeys"];
     
     [TodayWeatherUtil setTemperatureUnit:nssUnits];
+    [todayUtil setDaumServiceKeys:nssDaumKeys];
     
     //NSLog(@"cityList : %@", cityList);
     
@@ -337,8 +341,8 @@ static TodayViewController *todayVC = nil;
         city.name = cityDict[@"name"];
         city.country = cityDict[@"country"];
         city.location = cityDict[@"location"];
-        NSLog(@"current position : %@ address %@, name : %@, country : %@", city.currentPosition?@"true":@"false", city.address, city.name, city.country);
-        NSLog(@"location : %@", city.location);
+        //NSLog(@"current position : %@ address %@, name : %@, country : %@", city.currentPosition?@"true":@"false", city.address, city.name, city.country);
+        //NSLog(@"location : %@", city.location);
         
         //cityData.location = {"lat": coords.latitude, "long": coords.longitude};
         [mCityList addObject:city];
@@ -361,11 +365,11 @@ static TodayViewController *todayVC = nil;
         NSLog(@"load last city info");
     }
     
-    NSLog(@"country : %@", currentCity.country);
+    //NSLog(@"country : %@", currentCity.country);
     //NSLog(@"weatherData : %@", currentCity.weatherData);
-    NSLog(@"location : %@", currentCity.location);
-    NSLog(@"name : %@", currentCity.name);
-    NSLog(@"address : %@", currentCity.address);
+    //NSLog(@"location : %@", currentCity.location);
+    //NSLog(@"name : %@", currentCity.name);
+    //NSLog(@"address : %@", currentCity.address);
     
 
     [self setCityInfo:currentCity];
@@ -916,18 +920,68 @@ static TodayViewController *todayVC = nil;
  * History		: 20160625 SeanKim Create function
  *
  ********************************************************************/
-- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude
+- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude count:(int)tryCount
 {
     //35.281741, 127.292345 <- 곡성군 에러
     // FIXME - for emulator - delete me
     //latitude = 35.281741;
     //longitude = 127.292345;
+    NSString *nssDaumKey = nil;
     
-    NSString *nssURL = [NSString stringWithFormat:@"%@%@%@%@%g%@%g%@%@", STR_DAUM_COORD2ADDR_URL, STR_APIKEY, DAUM_SERVICE_KEY, STR_LONGITUDE, longitude, STR_LATITUDE, latitude, STR_INPUT_COORD, STR_OUTPUT_JSON];
+    if(tryCount == 0)
+    {
+        NSMutableArray *nsmaDaumKeys = [[TodayWeatherUtil alloc] getDaumServiceKeys];
+#if 0
+        nsmaDaumKeys = [[NSMutableArray alloc]  initWithObjects:@"a23e48a514055f7c29bf65268118718b",
+                            //@"a6a019155359447836d9a8288f268b7f",
+                            //@"e5b4639cad24254807eb26ab6cc473b9",
+                            @"123",
+                            @"567",
+                            @"890",
+                            nil];
+#endif
+        
+        if([nsmaDaumKeys count] == 0 || [[nsmaDaumKeys objectAtIndex:0] isEqualToString:@"0"] )         // 0, 1(Default)로 들어올때 처리
+        {
+            NSLog(@"[getAddressFromDaum] Keys of NSDefault is empty!!!");
+            nssDaumKey = [[NSString alloc] initWithFormat:@"%@", DAUM_SERVICE_KEY];
+        }
+        else
+        {
+            
+            shuffledDaumKeys = [[NSMutableArray alloc] init];
+            
+            shuffledDaumKeys = [TodayWeatherUtil shuffleDatas:nsmaDaumKeys];
+            nssDaumKey = [[NSString alloc] initWithFormat:@"%@", [shuffledDaumKeys objectAtIndex:tryCount]];
+            NSLog(@"[getAddressFromDaum] shuffled first nssDaumKey : %@", nssDaumKey);
+            
+        }
+    }
+    else
+    {
+        if(tryCount >= [shuffledDaumKeys count])
+        {
+            NSLog(@"We are used all keys. you have to ask more keys!!!");
+            return;
+        }
+
+        nssDaumKey = [[NSString alloc] initWithFormat:@"%@", [shuffledDaumKeys objectAtIndex:tryCount]];
+        NSLog(@"[getAddressFromDaum] tryCount(%d) shuffled next nssDaumKey : %@", tryCount, nssDaumKey);
+    }
+    
+    tryCount++;
+    
+    NSString *nssURL = [NSString stringWithFormat:@"%@%@%@%@%g%@%g%@%@", STR_DAUM_COORD2ADDR_URL, STR_APIKEY, nssDaumKey, STR_LONGITUDE, longitude, STR_LATITUDE, latitude, STR_INPUT_COORD, STR_OUTPUT_JSON];
     
     //NSLog(@"url : %@", nssURL);
     
-    [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_ADDR_DAUM];
+    NSDictionary *nsdRetryData = [NSDictionary dictionaryWithObjectsAndKeys:
+                                   [NSNumber numberWithFloat:latitude], @"latitude",
+                                   [NSNumber numberWithFloat:longitude], @"longitude",
+                                   [NSNumber numberWithInt:tryCount], @"tryCount",
+                                   nil];
+    
+    [self requestAsyncByURLSessionForRetry:nssURL reqType:TYPE_REQUEST_ADDR_DAUM data:nsdRetryData];
 }
 
 /********************************************************************
@@ -992,8 +1046,6 @@ static TodayViewController *todayVC = nil;
     [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_GEO_GOOGLE];
 }
 
-
-
 /********************************************************************
  *
  * Name			: requestAsyncByURLSession
@@ -1050,6 +1102,65 @@ static TodayViewController *todayVC = nil;
      [task resume];
 #endif
 }
+
+/********************************************************************
+ *
+ * Name			: requestAsyncByURLSessionForRetry
+ * Description	: request Async using URL Sesion for retry
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 05. 27
+ * Author		: SeanKim
+ * History		: 20170527 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) requestAsyncByURLSessionForRetry:(NSString *)nssURL reqType:(NSUInteger)type data:(NSDictionary *)nsdData
+{
+    NSURL *url = [NSURL URLWithString:nssURL];
+    
+    NSLog(@"[requestAsyncByURLSession] url : %@, type : %lu", url, (unsigned long)type);
+
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
+    
+    if(type == TYPE_REQUEST_WEATHER_KR)
+    {
+        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
+        
+        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
+    }
+    
+    NSURLSessionTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request
+                                                             completionHandler:
+                              ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                  if (data) {
+                                      // Do stuff with the data
+                                      //NSLog(@"data : %@", data);
+                                      //NSLog(@"response : %@", response);
+                                      //NSLog(@"error : %@", error);
+                                      NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
+                                      int code = (int)[httpResponse statusCode];
+                                      NSLog(@"response status code: %d", code);
+                                      if( (code == 401) || (code == 429) )
+                                      {
+                                          NSLog(@"key is not authorized or keys is all used. retry!!! nsdData : %@", nsdData);
+                                          [self getAddressFromDaum:[[nsdData objectForKey:@"latitude"] floatValue]
+                                                         longitude:[[nsdData objectForKey:@"longitude"] floatValue]
+                                                             count:[[nsdData objectForKey:@"tryCount"] intValue] ];
+                                      }
+                                      else
+                                      {
+                                          [self makeJSONWithData:data reqType:type];
+                                      }
+                                  }
+                                  else
+                                  {
+                                      NSLog(@"Failed to fetch %@: %@", url, error);
+                                  }
+                              }];
+    
+    [task resume];
+}
+
 
 /********************************************************************
  *
@@ -1317,7 +1428,7 @@ static TodayViewController *todayVC = nil;
 
     if([nssCountryName isEqualToString:@"KR"])
     {
-        [self getAddressFromDaum:gMylatitude longitude:gMylongitude];
+        [self getAddressFromDaum:gMylatitude longitude:gMylongitude count:0];
     }
     else
     {
@@ -1524,6 +1635,7 @@ static TodayViewController *todayVC = nil;
     // Date
     NSString        *nssDateTime = nil;
     NSString        *nssTime = nil;
+    NSString        *nssLiveTime = nil;
     NSString        *nssHour = nil;
     NSString        *nssMinute = nil;
 
@@ -1588,7 +1700,11 @@ static TodayViewController *todayVC = nil;
     nssCurIcon   = [currentDict objectForKey:@"skyIcon"];
     nssCurImgName = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
     
-    nssTime             = [currentDict objectForKey:@"time"];
+    nssLiveTime         = [currentDict objectForKey:@"liveTime"];
+    if(nssLiveTime != nil)
+        nssTime             = [NSString stringWithFormat:@"%@", nssLiveTime];
+    else
+        nssTime             = [currentDict objectForKey:@"time"];
     
     if(nssTime != nil)
     {
@@ -1735,6 +1851,7 @@ static TodayViewController *todayVC = nil;
     // Date
     NSString        *nssDateTime = nil;
     NSString        *nssTime = nil;
+    NSString        *nssLiveTime = nil;
     NSString        *nssHourMin = nil;
     
     // Image∂
