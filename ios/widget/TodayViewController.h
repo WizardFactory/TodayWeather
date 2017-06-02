@@ -35,6 +35,7 @@
 
 @class TodayViewController;
 @class TodayWeatherShowMore;
+@class TodayWeatherUtil;
 
 /********************************************************************
  Declare Class Definitions
@@ -85,7 +86,9 @@
     __weak IBOutlet UIView *showMoreView;
     
     TodayWeatherShowMore        *todayWSM;
+    TodayWeatherUtil            *todayUtil;
     NSMutableDictionary                *curJsonDict;
+    NSMutableArray              *shuffledDaumKeys;
     
 @public
     __weak IBOutlet UILabel *time1Label;
@@ -116,7 +119,9 @@
 @property (retain, nonatomic) CLLocationManager					*locationManager;
 @property (retain, nonatomic) CLLocation						*startingPoint;
 @property (retain, nonatomic) NSMutableData						*responseData;
+@property (retain, nonatomic) NSMutableArray                    *shuffledDaumKeys;
 @property (retain, nonatomic) IBOutlet UIActivityIndicatorView    *loadingIV;
+
 
 /********************************************************************
  Declare Class functions
@@ -134,9 +139,12 @@
 - (void) initWidgetDatas;
 - (void) initLocationInfo;
 - (void) refreshDatas;
-- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude;
+- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude count:(int)tryCount;
 - (void) getAddressFromGoogle:(float)latitude longitude:(float)longitude;
+
 - (void) requestAsyncByURLSession:(NSString *)nssURL reqType:(NSUInteger)type;
+- (void) requestAsyncByURLSessionForRetry:(NSString *)nssURL reqType:(NSUInteger)type data:(NSDictionary *)nsdData;
+
 - (void) makeJSONWithData:(NSData *)jsonData reqType:(NSUInteger)type;
 - (void) parseKRAddress:(NSDictionary *)jsonDict;
 - (void) parseGlobalAddress:(NSDictionary *)jsonDict;

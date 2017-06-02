@@ -27,15 +27,15 @@ extern TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 @interface TodayWeatherUtil : NSObject
 {
-//    NSString *twuCountry;
-
+    NSMutableArray  *nsmaDaumKeys;
 }
 
 /********************************************************************
  Declare Class properties
  ********************************************************************/
 @property (retain, nonatomic) NSString *twuCountry;
-//@property (retain, nonatomic) TEMP_UNIT    temperatureUnit;
+@property (retain, nonatomic) NSMutableArray  *nsmaDaumKeys;
+
 
 /********************************************************************
  Declare Class functions
@@ -52,7 +52,13 @@ extern TEMP_UNIT    gTemperatureUnit;
 + (void) setTemperatureUnit:(NSString *)nssUnits;
 + (NSString *) processLocationStr:(NSString *)nssSrcStr;
 + (float) convertFromCelsToFahr:(float)cels;
-//+ (void) processKRAddress;
++ (NSMutableArray *) shuffleDatas:(NSMutableArray *)nsaDatas;
+
+/********************************************************************
+ Declare Instance functions
+ ********************************************************************/
+- (NSMutableArray *) getDaumServiceKeys;
+- (void) setDaumServiceKeys:(NSString *)nssDaumKeys;
 @end
 
 #endif /* TodayWeatherUtil_h */
