@@ -94,7 +94,7 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
     };
 
     log.silly('DFS> get data : ', url);
-    self.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
+    req.get(url, {timeout: 1000 * 5, agentOptions: agentOptions}, function(err, response, body){
         if(err) {
             log.warn(err);
             if((err.code === "ECONNRESET" || err.code === "ETIMEDOUT") && retryCount > 0){
