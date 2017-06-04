@@ -82,6 +82,15 @@ router.post('/', function(req, res) {
 
         log.info(JSON.stringify(req.body));
 
+        //for j3k0 inapp purchase
+        if (receipt == undefined && req.body.transaction) {
+            if (req.body.transaction.type == 'android-playstore') {
+                type = 'android';
+                receipt = [];
+                receipt.push({receipt:req.body.transaction.receipt, signature:req.body.transaction.signature});
+            }
+        }
+
         if (type === 'ios') {
             iap.validate(
                 iap.APPLE,

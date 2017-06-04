@@ -45,7 +45,7 @@ angular.module('starter', [
            }
        }
     })
-    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units) {
+    .run(function(Util, Purchase, $rootScope, $location, WeatherInfo, $state, Units) {
         //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
@@ -69,6 +69,9 @@ angular.module('starter', [
             cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
             cordova.plugins.Keyboard.disableScroll(true);
         }
+
+        //localStorage2Pre가 끝나면 j3k0랑 기존 inapp같이 진행
+        //Purchase.init();
 
         Units.loadUnits();
         Util.saveServiceKeys();
