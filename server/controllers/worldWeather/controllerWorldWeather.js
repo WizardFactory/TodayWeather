@@ -458,10 +458,12 @@ function controllerWorldWeather(){
                                     if(err){
                                         log.error('TWW> fail to request', meta);
                                         req.error = {res: 'fail', msg:'Fail to request Two days data'};
-                                        cb('err_exit : Fail to requestData()');
-                                        return;
+                                        return cb(null); // try to read data from DB
                                     }
-                                    cb(null);
+                                    req.DSF = result.data;
+
+                                    log.info('TWW> get DSF Response : ', JSON.stringify(req.DSF));
+                                    cb('success to get data', result);
                                 });
                             },
                             /*
@@ -485,14 +487,24 @@ function controllerWorldWeather(){
                                         cb('err_exit_DSF');
                                         return;
                                     }
-                                    log.info('TWW> get DSF data', meta);
+
+                                    var resPrint = {
+                                        geocode: result.geocode,
+                                        address: {},
+                                        date: result.date,
+                                        dateObj: result.dateObj,
+                                        timeOffset: result.timeOffset,
+                                        data: result.data
+                                    };
+                                    log.info('TWW> get DSF data from DB : ', JSON.stringify(resPrint));
+                                    log.info('TWW> meta : ', meta);
                                     cb(null);
                                 });
                             }
                         ],
                         function(err, result){
                             if(err){
-                                log.info('TWW> Error!!!! : ', err, meta);
+                                log.info('TWW> : ', err, meta);
                             }else {
                                 log.info('TWW> Finish to req&get Two days weather data', meta);
                             }
@@ -873,8 +885,8 @@ function controllerWorldWeather(){
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
                     var time = new Date();
-                    log.info('convert DSF LocalTime > current', meta);
-                    time.setTime(dsfItem.current.dateObj.getTime() + req.result.timezone.ms);
+                    log.info('convert DSF LocalTime > current', meta, dsfItem.current.dateObj);
+                    time.setTime(new Date(dsfItem.current.dateObj).getTime() + req.result.timezone.ms);
                     dsfItem.current.dateObj = self._convertTimeString(time);
                 }
 
@@ -882,7 +894,7 @@ function controllerWorldWeather(){
                     log.info('convert DSF LocalTime > hourly', meta);
                     dsfItem.hourly.data.forEach(function(hourlyItem){
                         var time = new Date();
-                        time.setTime(hourlyItem.dateObj.getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(hourlyItem.dateObj).getTime() + req.result.timezone.ms);
                         hourlyItem.dateObj = self._convertTimeString(time);
                     });
                 }
@@ -891,13 +903,13 @@ function controllerWorldWeather(){
                     log.info('convert DSF LocalTime > daily', meta);
                     dsfItem.daily.data.forEach(function(dailyItem){
                         var time = new Date();
-                        time.setTime(dailyItem.dateObj.getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.dateObj).getTime() + req.result.timezone.ms);
                         dailyItem.dateObj = self._convertTimeString(time);
 
-                        time.setTime(dailyItem.sunrise.getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.sunrise).getTime() + req.result.timezone.ms);
                         dailyItem.sunrise = self._convertTimeString(time);
 
-                        time.setTime(dailyItem.sunset.getTime() + req.result.timezone.ms);
+                        time.setTime(new Date(dailyItem.sunset).getTime() + req.result.timezone.ms);
                         dailyItem.sunset = self._convertTimeString(time);
 
                         //mint, maxt, pre_intmaxt
@@ -2308,7 +2320,7 @@ function controllerWorldWeather(){
                 }
 
                 var result = JSON.parse(body);
-                log.info('WW> request success', meta);
+                log.info('WW> request success, meta : ', meta);
                 log.info('WW> '+ JSON.stringify(result), meta);
                 if(result.status == 'OK'){
                     // adding geocode OK
