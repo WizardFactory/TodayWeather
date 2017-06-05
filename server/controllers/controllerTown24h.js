@@ -618,7 +618,7 @@ function ControllerTown24h() {
         }
         if(req.midData) {
             if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
-                || req.midData.dailyData.length < 18) {
+                || req.midData.dailyData.length < 17) {
                 log.error("daily Data is invalid >sID=",req.sessionID, meta)
             }
             result.midData = req.midData;
