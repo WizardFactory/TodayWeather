@@ -81,7 +81,7 @@ function ControllerRequester(){
                 break;
 
             case 'req_two_days':
-                self.reqDataForTwoDays(req, function(err){
+                self.reqDataForTwoDays(req, function(err, response){
                     if(err){
                         log.error('RQ>  fail to run req_two_days', meta);
                         req.result = {status: 'Fail', cmd: req.params.command};
@@ -89,7 +89,7 @@ function ControllerRequester(){
                         return;
                     }
                     log.info('RQ> success adding req_two_days', meta);
-                    req.result = {status: 'OK', cmd: req.params.command};
+                    req.result = {status: 'OK', cmd: req.params.command, data: response};
                     next();
                 });
                 break;
@@ -581,7 +581,7 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                         return;
                     }
 
-                    cb(null);
+                    cb(null, dsfData);
                 });
             }
         ],
@@ -589,7 +589,9 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
             if(err){
                 log.error('RQ> Fail to request weather', meta);
             }
-            callback(err, result);
+            log.info('RQ> dsf : ', result[0]);
+
+            callback(err, result[0]);
         }
     );
 };
