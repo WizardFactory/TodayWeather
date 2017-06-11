@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units) {
+    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units, TwStorage) {
         var obj = {};
         obj.config = {
             "android": {
@@ -34,34 +34,46 @@ angular.module('service.push', [])
         //obj.type; //'ios' or 'android'
         //obj.alarmList = [];
 
-        obj.loadPushInfo = function () {
+        obj.loadPushInfo = function (callback) {
             var self = this;
-            var pushData = JSON.parse(localStorage.getItem("pushData"));
-            if (pushData != null) {
-                self.pushData.registrationId = pushData.registrationId;
-                self.pushData.type = pushData.type;
-                self.pushData.alarmList = pushData.alarmList;
-                self.pushData.alarmList.forEach(function (alarmInfo) {
-                    alarmInfo.time = new Date(alarmInfo.time);
-                });
 
-                //update alarmInfo to server for sync
-                if (self.pushData.alarmList.length > 0) {
-                    setTimeout(function() {
+            TwStorage.get(
+                function (value) {
+                    console.log('load pushData=' + value);
+                    var pushData = value;
+                    if (pushData != undefined) {
+                        self.pushData.registrationId = pushData.registrationId;
+                        self.pushData.type = pushData.type;
+                        self.pushData.alarmList = pushData.alarmList;
                         self.pushData.alarmList.forEach(function (alarmInfo) {
-                            self._postPushInfo(alarmInfo);
+                            alarmInfo.time = new Date(alarmInfo.time);
                         });
-                    }, 3000);
-                }
-            }
-            console.log('load push data');
-            console.log(self);
+
+                        //update alarmInfo to server for sync
+                        if (self.pushData.alarmList.length > 0) {
+                            setTimeout(function() {
+                                self.pushData.alarmList.forEach(function (alarmInfo) {
+                                    self._postPushInfo(alarmInfo);
+                                });
+                            }, 3000);
+                        }
+                    }
+                    if (callback != undefined) {
+                        callback();
+                    }
+                }, "pushData");
         };
 
-        obj.savePushInfo = function () {
+        obj.savePushInfo = function (callback) {
             var self = this;
-            console.log('save push data');
-            localStorage.setItem("pushData", JSON.stringify(self.pushData));
+
+            TwStorage.set(
+                function (result) {
+                    console.log("save pushData=" + result);
+                    if (callback != undefined) {
+                        callback(result);
+                    }
+                }, 'pushData', JSON.stringify(self.pushData));
         };
 
         /**
@@ -304,14 +316,16 @@ angular.module('service.push', [])
             if (!window.push) {
                 self.register(function () {
                     self._postPushInfo(alarmInfo);
-                    self.savePushInfo();
-                    return callback(undefined, alarmInfo);
+                    self.savePushInfo(function (result) {
+                        callback(undefined, alarmInfo);
+                    });
                 });
             }
             else {
                 self._postPushInfo(alarmInfo);
-                self.savePushInfo();
-                return callback(undefined, alarmInfo);
+                self.savePushInfo(function (result) {
+                    callback(undefined, alarmInfo);
+                });
             }
         };
 
@@ -352,8 +366,7 @@ angular.module('service.push', [])
         return obj;
     })
     .run(function(Push, Util) {
-            Push.loadPushInfo();
-
+        Push.loadPushInfo(function () {
             if (!window.PushNotification) {
                 console.log("push notification plugin is not set");
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
@@ -387,5 +400,6 @@ angular.module('service.push', [])
                    console.log('start push registrationId='+registrationId);
                 });
             }
+        });
     });
 

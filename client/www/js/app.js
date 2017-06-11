@@ -10,6 +10,7 @@ angular.module('starter', [
     'pascalprecht.translate',
     'oc.lazyLoad',
     'ionic-timepicker',
+    'service.storage',
     'service.weatherinfo',
     'service.weatherutil',
     'service.util',
@@ -45,14 +46,11 @@ angular.module('starter', [
            }
        }
     })
-    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units) {
+    .run(function(Util, $rootScope, $location, WeatherInfo, $state, Units, TwStorage) {
         //$translate.use('ja');
         //splash screen을 빠르게 닫기 위해 event 분리
         //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
-        if (navigator.splashscreen) {
-            console.log('splash screen hide!!!');
-            navigator.splashscreen.hide();
-        }
+
 
         if (ionic.Platform.isIOS()) {
            //
@@ -72,14 +70,6 @@ angular.module('starter', [
 
         Units.loadUnits();
 
-        //For backward compatibility
-        console.log(localStorage.getItem('startVersion'));
-        if (localStorage.getItem('startVersion') == null) {
-            if (localStorage.getItem('guideVersion') != null) {
-             localStorage.setItem('startVersion', localStorage.getItem('guideVersion'));
-            }
-        }
-
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#ec72a8';
@@ -87,12 +77,18 @@ angular.module('starter', [
                     StatusBar.backgroundColorByHexString('#EC407A');
                 }
             } else if (toState.name === 'tab.forecast') {
-                if (fromState.name === '') {
-                    var startVersion = localStorage.getItem('startVersion');
-                    if (startVersion === null || Util.startVersion > Number(startVersion)) {
-                        $location.path('/start');
-                        return;
+                if ($rootScope.loaded === false) {
+                    event.preventDefault();
+                    return;
+                } else {
+                    if (navigator.splashscreen) {
+                        console.log('splash screen hide!!!');
+                        navigator.splashscreen.hide();
                     }
+                }
+                if (fromState.name === '' && WeatherInfo.getEnabledCityCount() <= 0) {
+                    $location.path('/start');
+                    return;
                 }
 
                 $rootScope.viewColor = '#03A9F4';
@@ -1258,7 +1254,7 @@ angular.module('starter', [
             });
 
         // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('tab/forecast');
+        //$urlRouterProvider.otherwise('tab/forecast');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');

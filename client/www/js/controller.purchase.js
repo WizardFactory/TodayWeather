@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
+    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util, TwStorage) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -66,46 +66,67 @@ angular.module('controller.purchase', [])
                 });
         };
 
-        obj.saveStoreReceipt = function (storeReceipt) {
-            localStorage.setItem("storeReceipt", JSON.stringify(storeReceipt));
+        obj.loadStoreReceipt = function (callback) {
+            TwStorage.get(
+                function (value) {
+                    console.log('load storeReceipt=' + value);
+                    if (callback != undefined) {
+                        callback(value);
+                    }
+                }, "storeReceipt");
         };
 
-        obj.loadStoreReceipt = function () {
-            return JSON.parse(localStorage.getItem("storeReceipt"));
+        obj.saveStoreReceipt = function (storeReceipt, callback) {
+            TwStorage.set(
+                function (result) {
+                    console.log("save storeReceipt=" + result);
+                    if (callback != undefined) {
+                        callback();
+                    }
+                }, 'storeReceipt', JSON.stringify(storeReceipt));
         };
 
-        obj.loadPurchaseInfo = function () {
+        obj.loadPurchaseInfo = function (callback) {
             var self = this;
-            console.log('load purchase info');
-            var purchaseInfo = JSON.parse(localStorage.getItem("purchaseInfo"));
 
-            if (purchaseInfo != undefined) {
-                console.log('load purchaseInfo='+JSON.stringify(purchaseInfo));
-                self.expirationDate = purchaseInfo.expirationDate;
-                //check account date
-                if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
-                    console.log('account expired, please renewal or restore');
-                    Util.ga.trackEvent('purchase', 'expired', 'subscribeExpired '+purchaseInfo.expirationDate);
-                    purchaseInfo.accountLevel = self.ACCOUNT_LEVEL_FREE;
-                }
-                self.setAccountLevel(purchaseInfo.accountLevel);
-            }
-            else {
-                self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
-            }
+            TwStorage.get(
+                function (value) {
+                    console.log('load purchaseInfo=' + value);
+                    if (value != undefined) {
+                        var purchaseInfo = value;
+                        self.expirationDate = purchaseInfo.expirationDate;
+                        //check account date
+                        if ((new Date(purchaseInfo.expirationDate)).getTime() < Date.now()) {
+                            console.log('account expired, please renewal or restore');
+                            Util.ga.trackEvent('purchase', 'expired', 'subscribeExpired '+purchaseInfo.expirationDate);
+                            purchaseInfo.accountLevel = self.ACCOUNT_LEVEL_FREE;
+                        }
+                        self.setAccountLevel(purchaseInfo.accountLevel);
+                    } else {
+                        self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
+                    }
+                    if (callback != undefined) {
+                        callback();
+                    }
+                }, "purchaseInfo");
         };
 
         obj.savePurchaseInfo = function (accountLevel, expirationDate) {
             var self = this;
             var purchaseInfo = {accountLevel: accountLevel, expirationDate: expirationDate};
-            localStorage.setItem("purchaseInfo", JSON.stringify(purchaseInfo));
 
-            if (purchaseInfo.accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
-                TwAds.saveTwAdsInfo(false);
-            }
-            else {
-                TwAds.saveTwAdsInfo(true);
-            }
+            TwStorage.set(
+                function (result) {
+                    console.log("save purchaseInfo=" + result);
+                    if (result === "OK") {
+                        if (purchaseInfo.accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
+                            TwAds.saveTwAdsInfo(false);
+                        }
+                        else {
+                            TwAds.saveTwAdsInfo(true);
+                        }
+                    }
+                }, 'purchaseInfo', JSON.stringify(purchaseInfo));
         };
 
         obj.updatePurchaseInfo = function () {
@@ -146,15 +167,17 @@ angular.module('controller.purchase', [])
                     if (storeReceipt == undefined)  {
                         throw new Error("Can not find any purchase");
                     }
-                    self.saveStoreReceipt(storeReceipt);
-                    var deferred = $q.defer();
-                    self.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
-                        if (err) {
-                            deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
-                            return;
-                        }
 
-                        deferred.resolve(receiptInfo);
+                    var deferred = $q.defer();
+                    self.saveStoreReceipt(storeReceipt, function () {
+                        self.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                            if (err) {
+                                deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
+                                return;
+                            }
+
+                            deferred.resolve(receiptInfo);
+                        });
                     });
                     return deferred.promise;
                 })
@@ -206,104 +229,103 @@ angular.module('controller.purchase', [])
             var storeReceipt;
             var updatePurchaseInfo;
 
-            storeReceipt = Purchase.loadStoreReceipt();
-            if (storeReceipt) {
+            Purchase.loadStoreReceipt(function (value) {
+                if (value != undefined) {
+                    storeReceipt = value;
+                    console.log('Purchases INFO!!!');
 
-                console.log('Purchases INFO!!!');
-                console.log(JSON.stringify(storeReceipt));
+                    updatePurchaseInfo = function () {
+                        var deferred = $q.defer();
+                        Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                            if (err) {
+                                deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
+                                return;
+                            }
 
-                updatePurchaseInfo = function () {
-                    var deferred = $q.defer();
-                    Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
-                        if (err) {
-                            deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
-                            return;
+                            deferred.resolve(receiptInfo);
+                        });
+                        return deferred.promise;
+                    };
+                } else {
+                    updatePurchaseInfo = Purchase.updatePurchaseInfo;
+                }
+
+                updatePurchaseInfo()
+                    .then(function (receiptInfo) {
+                        Purchase.loaded = true;
+                        if (!receiptInfo.ok) {
+                            //downgrade by canceled, refund ..
+                            console.log(JSON.stringify(receiptInfo.data));
+                            Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
+                            Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+
+                            Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 2);
+
+                            //$ionicPopup.alert({
+                            //    title: 'check purchase',
+                            //    template: receiptInfo.data.message
+                            //});
                         }
-
-                        deferred.resolve(receiptInfo);
+                        else {
+                            console.log('welcome premium user');
+                        }
+                    })
+                    .catch(function (err) {
+                        //again to check purchase info
+                        console.log('fail to check purchase info err='+err.message);
+                        Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
+                        Util.ga.trackException(err, false);
                     });
-                    return deferred.promise;
-                };
+            });
+        }
+
+        Purchase.loadPurchaseInfo(function() {
+            //check purchase state is canceled or refund
+            if (Purchase.loaded) {
+                console.log('already check purchase info');
+                return;
             }
-            else {
-                updatePurchaseInfo = Purchase.updatePurchaseInfo;
-            }
 
-            updatePurchaseInfo()
-                .then(function (receiptInfo) {
-                    Purchase.loaded = true;
-                    if (!receiptInfo.ok) {
-                        //downgrade by canceled, refund ..
-                        console.log(JSON.stringify(receiptInfo.data));
-                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
-                        Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+            Purchase.productId = 'tw1year';
+            console.log('productId='+Purchase.productId);
 
-                        Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 2);
+            Purchase.hasInAppPurchase = true;
+            $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
+                $rootScope.adsBannerMessage = bannerMessage;
+            }, function (translationId) {
+                $rootScope.adsBannerMessage = translationId;
+            });
+            $rootScope.clickAdsBanner = function() {
+                $location.path('/purchase');
+            };
 
-                        //$ionicPopup.alert({
-                        //    title: 'check purchase',
-                        //    template: receiptInfo.data.message
-                        //});
-                    }
-                    else {
-                        console.log('welcome premium user');
+            inAppPurchase
+                .getProducts([Purchase.productId])
+                .then(function (products) {
+                    console.log(JSON.stringify(products));
+                    Purchase.products = products;
+                    if (Purchase.loaded === false) {
+                        //It seems fail to check purchase info
+                        //retry check purchase info
+                        checkPurchase();
                     }
                 })
                 .catch(function (err) {
-                    //again to check purchase info
-                    console.log('fail to check purchase info err='+err.message);
-                    Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
+                    console.log('Fail to get products of id='+Purchase.productId);
+                    console.log(JSON.stringify(err));
                     Util.ga.trackException(err, false);
                 });
-        }
 
-        Purchase.loadPurchaseInfo();
+            //if saved accountLevel skip checkPurchase but, have to get products
+            if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
+                console.log('account Level is '+Purchase.accountLevel);
+                Purchase.loaded = true;
+                return;
+            }
 
-        //check purchase state is canceled or refund
-        if (Purchase.loaded) {
-            console.log('already check purchase info');
-            return;
-        }
-
-        Purchase.productId = 'tw1year';
-        console.log('productId='+Purchase.productId);
-
-        Purchase.hasInAppPurchase = true;
-        $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
-            $rootScope.adsBannerMessage = bannerMessage;
-        }, function (translationId) {
-            $rootScope.adsBannerMessage = translationId;
+            //some times fail to get restorePurchases because inAppPurchase is not ready
+            checkPurchase();
         });
-        $rootScope.clickAdsBanner = function() {
-            $location.path('/purchase');
-        };
-
-        inAppPurchase
-            .getProducts([Purchase.productId])
-            .then(function (products) {
-                console.log(JSON.stringify(products));
-                Purchase.products =  products;
-                if (Purchase.loaded === false) {
-                    //It seems fail to check purchase info
-                    //retry check purchase info
-                    checkPurchase();
-                }
-            })
-            .catch(function (err) {
-                console.log('Fail to get products of id='+Purchase.productId);
-                console.log(JSON.stringify(err));
-                Util.ga.trackException(err, false);
-            });
-
-        //if saved accountLevel skip checkPurchase but, have to get products
-        if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
-            console.log('account Level is '+Purchase.accountLevel);
-            Purchase.loaded = true;
-            return;
-        }
-
-        //some times fail to get restorePurchases because inAppPurchase is not ready
-        checkPurchase();
     })
     .controller('PurchaseCtrl', function($scope, $ionicLoading, $ionicHistory, $ionicPopup,
                                          Purchase, TwAds, $translate, Util) {

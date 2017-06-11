@@ -41,8 +41,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         console.log("Fail to translate : " + JSON.stringify(translationIds));
     });
 
-
-    var startVersion = null;
     var service;
 
     if (window.google == undefined) {
@@ -125,7 +123,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     };
 
     function close() {
-        localStorage.setItem("startVersion", Util.startVersion.toString());
         _setShowAds(true);
         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
         $location.path('/tab/forecast');
@@ -191,7 +188,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     function init() {
         _setShowAds(false);
         _makeFavoriteList();
-        startVersion = localStorage.getItem("startVersion");
     }
 
     $scope.OnSelectResult = function(result) {

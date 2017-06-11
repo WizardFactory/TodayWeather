@@ -104,7 +104,7 @@ angular.module('service.run', [])
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
-        WeatherInfo.loadCities();
+        //WeatherInfo.loadCities();
         WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             $rootScope.$broadcast('reloadEvent', 'resume');
