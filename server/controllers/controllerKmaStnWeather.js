@@ -8,7 +8,9 @@ var async = require('async');
 
 var KmaStnDaily = require('../models/modelKmaStnDaily');
 var KmaStnHourly = require('../models/modelKmaStnHourly');
+var KmaStnHourly2 = require('../models/modelKmaStnHourly2');
 var KmaStnMinute = require('../models/modelKmaStnMinute');
+var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -192,6 +194,141 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, opt) {
     return mergedStnWeatherInfo;
 };
 
+controllerKmaStnWeather._getStnMinute2 = function (stnInfo, dateTime, callback) {
+    //20min - data자체가 3분정도 딜레이가 있음.
+    var limitTime = (new Date(dateTime)).getTime()-1200000;
+
+    KmaStnMinute2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            log.error(err);
+            return callback();
+        }
+        if (stnWeatherList.length === 0) {
+            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        //if (stnWeatherList.length > 1) {
+        //    log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
+        //}
+
+        var rns = false;
+        stnWeatherList.forEach(function (weather) {
+            if (weather.rns == true) {
+                rns = true;
+            }
+        });
+
+        //todo: check sort
+        var minuteData = stnWeatherList[stnWeatherList.length-1];
+        for (var key in minuteData) {
+            if (key == 'date') {
+                stnInfo[key] = kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM(minuteData[key]);
+            }
+            else {
+                stnInfo[key] = minuteData[key];
+            }
+        }
+
+        if (rns == true) {
+            stnInfo.rns = rns;
+        }
+
+        callback(err, stnInfo);
+    });
+};
+
+controllerKmaStnWeather._getStnMinute = function (stnInfo, dateTime, callback) {
+    KmaStnMinute.find({stnId: stnInfo.stnId}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            log.error(err);
+            return callback();
+        }
+        if (stnWeatherList.length === 0) {
+            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        if (stnWeatherList.length > 1) {
+            log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
+        }
+
+        if (!stnWeatherList[0].pubDate) {
+            log.warn('It does not have any data stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        //20min - data자체가 3분정도 딜레이가 있음.
+        var limitTime = (new Date(dateTime)).getTime()-1200000;
+
+        //log.info(dateTime);
+        //log.info(stnWeatherList[0].pubDate);
+        if ((new Date(stnWeatherList[0].pubDate)).getTime() < limitTime) {
+            log.warn('It(Minute) was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        var minuteList = stnWeatherList[0].minuteData.filter(function (data) {
+            if ((new Date(data.date)).getTime() > limitTime) {
+                return true;
+            }
+            return false;
+        });
+
+        var minuteData = minuteList[minuteList.length-1];
+        if (minuteData == undefined) {
+            /**
+             * 몇몇 STN은 hourly 데이터만 제공하는 경우도 있음.
+             */
+            log.warn('It(Minute) does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        //if (self._checkRnsWork(stnInfo.stnId) != true) {
+        var rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+
+        if (rnsHitRate < 0.5) {
+            //log.warn("rns is not working stnId="+stnInfo.stnId+" stnName="+
+            //            stnInfo.stnName+" rns hit ratio="+rnsHitRate);
+            minuteData.rns = undefined;
+        }
+
+        //log.info("minuteList length="+minuteList.length);
+        if (minuteData.rns != undefined && minuteList.length >= 5) {
+            //limtTime안에 rain이 하나라도 true이면 rain임.
+            for (var i=0; i < minuteList.length; i++) {
+                if (minuteList[i].rns) {
+                    minuteData.rns = true;
+                    break;
+                }
+            }
+            if (i === minuteList.length) {
+                minuteData.rns = false;
+            }
+        }
+
+        for (var key in minuteData) {
+            stnInfo[key] = minuteData[key];
+        }
+        callback(err, stnInfo);
+        //var stnWeatherInfo = JSON.parse(JSON.stringify(minuteData));
+        //stnWeatherInfo.stnId = stnInfo.stnId;
+        //stnWeatherInfo.stnName = stnInfo.stnName;
+        //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
+        //
+        //mCallback(err, stnWeatherInfo);
+    });
+
+};
+
+/**
+ *
+ * @param stnList
+ * @param {String} dateTime
+ * @param callback
+ * @returns {controllerKmaStnWeather}
+ * @private
+ */
 controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callback) {
     var self = this;
 
@@ -202,84 +339,11 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
 
     async.mapSeries(stnList,
         function (stnInfo, mCallback) {
-            KmaStnMinute.find({stnId: stnInfo.stnId}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+            self._getStnMinute2(stnInfo, dateTime, function (err, stnInfo) {
                 if (err) {
-                    log.error(err);
-                    return mCallback();
-                }
-                if (stnWeatherList.length === 0) {
-                    log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
-                    return mCallback();
-                }
-
-                if (stnWeatherList.length > 1) {
-                    log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
-                }
-
-                if (!stnWeatherList[0].pubDate) {
-                    log.warn('It does not have any data stnName=', stnInfo.stnName);
-                    return mCallback();
-                }
-
-                //20min - data자체가 3분정도 딜레이가 있음.
-                var limitTime = (new Date(dateTime)).getTime()-1200000;
-
-                //log.info(dateTime);
-                //log.info(stnWeatherList[0].pubDate);
-                if ((new Date(stnWeatherList[0].pubDate)).getTime() < limitTime) {
-                    log.warn('It(Minute) was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=',stnInfo.stnId,' stnName=', stnInfo.stnName);
-                    return mCallback();
-                }
-
-                var minuteList = stnWeatherList[0].minuteData.filter(function (data) {
-                    if ((new Date(data.date)).getTime() > limitTime) {
-                        return true;
-                    }
-                    return false;
-                });
-
-                var minuteData = minuteList[minuteList.length-1];
-                if (minuteData == undefined) {
-                    /**
-                     * 몇몇 STN은 hourly 데이터만 제공하는 경우도 있음.
-                     */
-                    log.warn('It(Minute) does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
-                    return mCallback();
-                }
-
-                //if (self._checkRnsWork(stnInfo.stnId) != true) {
-                var rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
-
-                if (rnsHitRate < 0.5) {
-                    //log.warn("rns is not working stnId="+stnInfo.stnId+" stnName="+
-                    //            stnInfo.stnName+" rns hit ratio="+rnsHitRate);
-                    minuteData.rns = undefined;
-                }
-
-                //log.info("minuteList length="+minuteList.length);
-                if (minuteData.rns != undefined && minuteList.length >= 5) {
-                    //limtTime안에 rain이 하나라도 true이면 rain임.
-                    for (var i=0; i < minuteList.length; i++) {
-                        if (minuteList[i].rns) {
-                            minuteData.rns = true;
-                            break;
-                        }
-                    }
-                    if (i === minuteList.length) {
-                        minuteData.rns = false;
-                    }
-                }
-
-                for (var key in minuteData) {
-                    stnInfo[key] = minuteData[key];
+                    return mCallback(err);
                 }
                 mCallback(err, stnInfo);
-                //var stnWeatherInfo = JSON.parse(JSON.stringify(minuteData));
-                //stnWeatherInfo.stnId = stnInfo.stnId;
-                //stnWeatherInfo.stnName = stnInfo.stnName;
-                //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
-                //
-                //mCallback(err, stnWeatherInfo);
             });
         },
         function (err, results) {
@@ -294,6 +358,101 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
     );
 };
 
+
+controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback) {
+    KmaStnHourly2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            log.error(err);
+            return callback();
+        }
+        if (stnWeatherList.length === 0) {
+            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        var hourlyData = stnWeatherList[stnWeatherList.length-1];
+
+        for (var i=stnWeatherList.length-1; i>=0; i--) {
+            if (stnWeatherList.date === dateTime) {
+                hourlyData = stnWeatherList;
+                break;
+            }
+        }
+        if (i < 0) {
+            log.warn("Use previous data dateTime="+hourlyData.date);
+        }
+
+        if (hourlyData == undefined) {
+            log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        for (var key in hourlyData) {
+            stnInfo[key] = hourlyData[key];
+        }
+        stnInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+        callback(err, stnInfo);
+    });
+};
+
+controllerKmaStnWeather._getStnHourly = function(stnInfo, dateTime, callback) {
+    KmaStnHourly.find({stnId: stnInfo.stnId}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            log.error(err);
+            //it will removed
+            return callback();
+        }
+        if (stnWeatherList.length === 0) {
+            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        if (stnWeatherList.length > 1) {
+            log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
+        }
+
+        if (!stnWeatherList[0].pubDate) {
+            log.warn('It does not have any data stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        if ((new Date(stnWeatherList[0].pubDate)).getTime() < (new Date(dateTime)).getTime()) {
+            log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        var hourlyData = stnWeatherList[0].hourlyData[stnWeatherList[0].hourlyData.length-1];
+
+        for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
+            if (stnWeatherList[0].hourlyData[i].date === dateTime) {
+                hourlyData = stnWeatherList[0].hourlyData[i];
+                break;
+            }
+        }
+        if (i < 0) {
+            log.warn("Use previous data dateTime="+hourlyData.date);
+        }
+
+        if (hourlyData == undefined) {
+            log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
+            return callback();
+        }
+
+        for (var key in hourlyData) {
+            stnInfo[key] = hourlyData[key];
+        }
+        stnInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+        callback(err, stnInfo);
+
+        //var stnWeatherInfo = JSON.parse(JSON.stringify(hourlyData));
+        //stnWeatherInfo.stnId = stnInfo.stnId;
+        //stnWeatherInfo.stnName = stnInfo.stnName;
+        //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
+        //stnWeatherInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
+        //mCallback(err, stnWeatherInfo);
+    });
+};
+
 /**
  *
  * @param stnList
@@ -303,78 +462,33 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
  * @private
  */
 controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callback) {
+    var self = this;
     if (!Array.isArray(stnList)) {
         callback(new Error("mstStnList is not array"));
         return this;
     }
 
     //순서를 위해서 mapSeries를 사용
-    async.mapSeries(stnList, function (stnInfo, mCallback) {
-       KmaStnHourly.find({stnId: stnInfo.stnId}).lean().exec(function (err, stnWeatherList) {
-           if (err) {
-               log.error(err);
-               //it will removed
-               return mCallback();
-           }
-           if (stnWeatherList.length === 0) {
-               log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
-               return mCallback();
-           }
-
-           if (stnWeatherList.length > 1) {
-               log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
-           }
-
-           if (!stnWeatherList[0].pubDate) {
-               log.warn('It does not have any data stnName=', stnInfo.stnName);
-               return mCallback();
-           }
-
-           var T_2HOURS = 7200000;
-           if ((new Date(stnWeatherList[0].pubDate)).getTime()+T_2HOURS < (new Date(dateTime)).getTime()) {
-               log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
-               return mCallback();
-           }
-
-           var hourlyData = stnWeatherList[0].hourlyData[stnWeatherList[0].hourlyData.length-1];
-
-           for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
-               if (stnWeatherList[0].hourlyData[i].date === dateTime) {
-                   hourlyData = stnWeatherList[0].hourlyData[i];
-                   break;
-               }
-           }
-           if (i < 0) {
-               log.warn("Use previous data dateTime="+hourlyData.date);
-           }
-
-           if (hourlyData == undefined) {
-               log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
-               return mCallback();
-           }
-
-           for (var key in hourlyData) {
-               stnInfo[key] = hourlyData[key];
-           }
-           stnInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
-           mCallback(err, stnInfo);
-
-           //var stnWeatherInfo = JSON.parse(JSON.stringify(hourlyData));
-           //stnWeatherInfo.stnId = stnInfo.stnId;
-           //stnWeatherInfo.stnName = stnInfo.stnName;
-           //stnWeatherInfo.isCityWeather =  stnInfo.isCityWeather?true:false;
-           //stnWeatherInfo.rnsHitRate = stnInfo.rnsHit/stnInfo.rnsCount;
-           //mCallback(err, stnWeatherInfo);
-       });
-    }, function (err, results) {
-        if (err)  {
-            return callback(err);
-        }
-        results = results.filter(function (data) {
-            return !!data;
+    async.mapSeries(stnList,
+        function (stnInfo, mCallback) {
+            var fromTime = new Date(dateTime);
+            fromTime.setHours(fromTime.getHours()-2);
+            self._getStnHourly(stnInfo, fromTime, function (err, stnInfo) {
+                if (err) {
+                    return mCallback(err);
+                }
+                mCallback(err, stnInfo);
+            });
+        },
+        function (err, results) {
+            if (err)  {
+                return callback(err);
+            }
+            results = results.filter(function (data) {
+                return !!data;
+            });
+            callback(err, results);
         });
-        callback(err, results);
-    });
 
     return this;
 };
@@ -406,14 +520,16 @@ controllerKmaStnWeather.getCityHourlyList = function (townInfo, callback) {
             return callback(new Error("Fail to find kma stn"));
         }
 
-        KmaStnHourly.find({stnId: kmaStnList[0].stnId}).lean().exec(function (err, stnWeatherList) {
+        var fromDate = new Date();
+        fromDate.setDate(fromDate.getDate()-9);
+        KmaStnHourly2.find({stnId: parseInt(kmaStnList[0].stnId), date: {$gt:fromDate}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
             if (err) {
                 return callback(err);
             }
             if (stnWeatherList.length == 0) {
                 return callback(new Error("Fail to find stn weather list stnId="+kmaStnList[0].stnId));
             }
-            callback(undefined, stnWeatherList[0]);
+            callback(undefined, stnWeatherList);
         });
     });
 };

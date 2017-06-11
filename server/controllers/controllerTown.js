@@ -928,7 +928,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
-                var hourlyList = stnWeatherInfo.hourlyData;
+                var hourlyList = stnWeatherInfo;
                 req.currentList.forEach(function (current) {
                     if (current.t1h != -50) {
                        return;
