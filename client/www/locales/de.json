@@ -245,8 +245,8 @@
   "LOC_BREEZY": "Luftigen",
   "LOC_WINDY": "Windiger",
   "LOC_HUMID": "Feuchten",
-  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Please allow permission",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Einstellungen]>[Anwendungen]>[HeuteWetter] Bitte erlauben Sie die Erlaubnis",
   "LOC_DRY": "Trocken",
-  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Permission request denied. Please search by location name or retry.",
-  "LOC_FIND_BY_LOCATION": "Find by location"
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Berechtigungsanforderung verweigert Bitte suchen Sie nach Ortsnamen oder versuchen Sie es erneut",
+  "LOC_FIND_BY_LOCATION": "Suche nach Ort"
 }
