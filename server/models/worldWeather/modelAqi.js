@@ -26,14 +26,13 @@ var aqiSchema = new mongoose.Schema({
     timeOffset: {type: Number, default: 0},
 
     aqi: Number,
-    idx: Number,
+    idx: Number
 });
 
 aqiSchema.index({"geocode.lat" : 1, "geocode.lon" : 1});
-aqiSchema.index({aqi: -100});
-aqiSchema.index({o3: -100});
-aqiSchema.index({no2: -100});
-aqiSchema.index({so3: -100});
-aqiSchema.index({co: -100});
+aqiSchema.index({aqi: 1});
+aqiSchema.index({idx:1});
+
+
 
 module.exports = mongoose.model('aqi', aqiSchema);
