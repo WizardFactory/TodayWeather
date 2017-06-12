@@ -2115,31 +2115,63 @@ Manager.prototype.stopManager = function(){
 };
 
 Manager.prototype.startScrape = function () {
+    var self = this;
     var Scrape = require('../lib/kmaScraper');
     var scrape = new Scrape();
+
+    function _getStnMinuteWeather(callback) {
+        log.info('request kma stn minute time='+(new Date()));
+        scrape.getStnMinuteWeather(function (err, results) {
+            if (err) {
+                if (err === 'skip') {
+                    log.info('stn minute weather info is already updated');
+                }
+                else {
+                    log.error(err);
+                }
+            }
+            else {
+                log.silly(results);
+                log.info('kma stn minute done time='+(new Date()));
+            }
+            callback();
+        });
+    }
+
+    self.asyncTasks.push(function (callback) {
+        _getStnMinuteWeather(function () {
+            callback();
+        });
+    });
 
     setInterval(function () {
         var time = (new Date()).getUTCMinutes();
         if(time % 2 == 0) {
-            log.info('request kma stn minute time='+(new Date()));
-            scrape.getStnMinuteWeather(function (err, results) {
-                if (err) {
-                    if (err === 'skip') {
-                        log.info('stn minute weather info is already updated');
-                    }
-                    else {
-                        log.error(err);
-                    }
-                }
-                else {
-                    log.silly(results);
-                    log.info('kma stn minute done time='+(new Date()));
-                }
+            self.asyncTasks.push(function (callback) {
+                _getStnMinuteWeather(function () {
+                    callback();
+                });
             });
         }
-
+        //else {
+        //    var KmaStnMinute = require('../models/modelKmaStnMinute');
+        //    var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
+        //    log.info('load1 wl time='+new Date());
+        //    KmaStnMinute.find({stnId: "419"}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        //        log.info('lone1 wl time='+new Date());
+        //    });
+        //    var loadDate = new Date();
+        //    log.info('load2 wl time='+loadDate);
+        //    loadDate.setMinutes(loadDate.getMinutes()-30);
+        //    KmaStnMinute2.find({stnId: 419, "date": {$gt:loadDate}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        //        log.info('lone2 wl time='+new Date());
+        //    });
+        //}
         //gc(true);
     }, 1000*60);
+
+
+    self.task();
 };
 
 module.exports = Manager;
