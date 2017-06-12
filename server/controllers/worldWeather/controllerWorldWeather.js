@@ -360,7 +360,7 @@ function controllerWorldWeather(){
         if(!req.validVersion){
             errMsg = 'TWW> invalid version : '+ req.validVersion;
             log.error(errMsg, meta);
-            return res.send(errMsg, meta);
+            return res.status(400).send(errMsg);
         }
 
         if(!self.isValidCategory(req)){
@@ -374,7 +374,7 @@ function controllerWorldWeather(){
         if(!req.geocode && !req.city){
             errMsg = 'It is not valid request';
             log.error(errMsg, meta);
-            return res.send(errMsg);
+            return res.status(400).send(errMsg);
         }
 
         log.info('TWW> geocode : ', req.geocode, meta);
