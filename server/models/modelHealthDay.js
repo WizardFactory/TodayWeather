@@ -15,7 +15,7 @@ var healthDaySchema = new mongoose.Schema({
 });
 
 healthDaySchema.index({areaNo: 1});
-healthDaySchema.index({Date: 1});
+healthDaySchema.index({date: 1});
 healthDaySchema.index({indexType: 'text'});
 
 module.exports = mongoose.model('healthDayKma', healthDaySchema);

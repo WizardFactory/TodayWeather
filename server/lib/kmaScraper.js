@@ -13,7 +13,9 @@ var Buffer = require('buffer').Buffer;
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var KmaStnDaily = require('../models/modelKmaStnDaily');
 var KmaStnHourly = require('../models/modelKmaStnHourly');
+var KmaStnHourly2 = require('../models/modelKmaStnHourly2');
 var KmaStnMinute = require('../models/modelKmaStnMinute');
+var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
 
 var Current = require('../models/modelCurrent');
@@ -67,6 +69,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
         }
 
         var stnMinInfo = {};
+        stnMinInfo.date = new Date(stnWeatherList.pubDate);
         var pIndex = 0;
         td.each(function() {
             var tdText = $(this).text().replace(/\s+/, "");
@@ -627,6 +630,42 @@ KmaScraper.prototype._saveKmaStnMinuteList = function (weatherList, callback) {
     return this;
 };
 
+KmaScraper.prototype._saveKmaStnMinute2List = function (weatherList, callback) {
+    var self = this;
+
+    async.map(weatherList.stnList,
+        function (stnWeatherInfo, mapCallback) {
+            self._saveStnMinute2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+                if (err) {
+                    return mapCallback(err);
+                }
+                mapCallback(err, savedList);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+
+            callback(err, results);
+        });
+
+    return this;
+};
+
+KmaScraper.prototype._saveStnHourly2 = function (stnWeatherInfo, pubDate, callback) {
+    KmaStnHourly2.update({stnId:stnWeatherInfo.stnId, date:stnWeatherInfo.date}, stnWeatherInfo, {upsert:true},
+        function (err) {
+            if (err) {
+                log.error(err.message + "in insert DB(KmaStnHourly)");
+                log.warn(JSON.stringify(stnWeatherInfo));
+            }
+            return callback(err);
+        });
+
+    return this;
+};
+
 /**
  *
  * @param stnWeatherInfo
@@ -721,6 +760,40 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
     return this;
 };
 
+KmaScraper.prototype._saveKmaStnHourly2List = function (weatherList, callback) {
+    var self = this;
+    async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
+
+        async.waterfall([function (wfCallback) {
+            self._saveStnInfo(stnWeatherInfo, function (err) {
+                if (err) {
+                    return wfCallback(err);
+                }
+                wfCallback(err);
+            });
+        }, function (wfCallback) {
+            self._saveStnHourly2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+                if (err) {
+                    return wfCallback(err);
+                }
+                wfCallback(err, savedList);
+            });
+        }], function (err, savedList) {
+            if (err) {
+                return mapCallback(err);
+            }
+            mapCallback(err, savedList);
+        });
+
+    }, function (err, results) {
+        if (err) {
+            return callback(err);
+        }
+
+        callback(err, results);
+    });
+};
+
 /**
  * stnInfo를 먼저 저장하고, stnHourly 저장한다.
  * @param weatherList
@@ -808,8 +881,19 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
             });
         },
         function (weatherList, cb) {
-            log.info('wl stnlist='+weatherList.stnList.length);
+            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
             self._saveKmaStnMinuteList(weatherList, function (err, results) {
+                log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+                if (err) {
+                    return cb(err);
+                }
+                return cb(err, weatherList);
+            });
+        },
+        function (weatherList, cb) {
+            log.info('save2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+            self._saveKmaStnMinute2List(weatherList, function (err, results) {
+                log.info('done2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
                 if (err) {
                     return cb(err);
                 }
@@ -903,8 +987,18 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
             })},
         function (weatherList, cb) {
-            log.info('wl stnlist='+weatherList.stnList.length+" pubdate="+weatherList.pubDate);
+            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
             self._saveKmaStnHourlyList(weatherList, function (err, results) {
+                log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+                if (err) {
+                    return cb(err);
+                }
+                return cb(err, weatherList);
+            });},
+        function (weatherList, cb) {
+            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+            self._saveKmaStnHourly2List(weatherList, function (err, results) {
+                log.info('done2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
                 if (err) {
                     return cb(err);
                 }
@@ -1269,6 +1363,20 @@ KmaScraper.prototype.resetMoutainInfo = function(callback) {
                 callback(err, results) ;
             });
     });
+};
+
+KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callback) {
+
+    KmaStnMinute2.update({stnId:stnWeatherInfo.stnId, date:stnWeatherInfo.date}, stnWeatherInfo, {upsert:true},
+        function (err) {
+            if (err) {
+                log.error(err.message + "in insert DB(KmaStnMinute)");
+                log.warn(JSON.stringify(stnWeatherInfo));
+            }
+            return callback(err);
+        });
+
+    return this;
 };
 
 module.exports = KmaScraper;
