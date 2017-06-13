@@ -1947,15 +1947,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 3 || time === 6 || time === 9 || time === 15 || putAll) {
-        //related issue #754 aws is not updated at correct time
-        //overwrite
-        log.info('request kma stn hourly');
-        self._requestApi('kmaStnHourly', function () {
-            log.info('kma stn hourly done');
-        });
-    }
-    
     if (time === 10 || putAll) {
         log.info('push health day');
 
@@ -2119,6 +2110,25 @@ Manager.prototype.startScrape = function () {
     var Scrape = require('../lib/kmaScraper');
     var scrape = new Scrape();
 
+    function _getStnHourlyWeather(callback) {
+        log.info('request kma stn hourly time='+(new Date()));
+        scrape.getStnHourlyWeather(undefined, function (err, results) {
+            if (err) {
+                if (err === 'skip') {
+                    log.info('stn hourly weather info is already updated');
+                }
+                else {
+                    log.error(err);
+                }
+            }
+            else {
+                log.silly(results);
+                log.info('kma stn hourly done time='+(new Date()));
+            }
+            callback();
+        });
+    }
+
     function _getStnMinuteWeather(callback) {
         log.info('request kma stn minute time='+(new Date()));
         scrape.getStnMinuteWeather(function (err, results) {
@@ -2144,6 +2154,12 @@ Manager.prototype.startScrape = function () {
         });
     });
 
+    self.asyncTasks.push(function (callback) {
+        _getStnHourlyWeather(function () {
+            callback();
+        });
+    });
+
     setInterval(function () {
         var time = (new Date()).getUTCMinutes();
         if(time % 2 == 0) {
@@ -2153,23 +2169,14 @@ Manager.prototype.startScrape = function () {
                 });
             });
         }
-        //else {
-        //    var KmaStnMinute = require('../models/modelKmaStnMinute');
-        //    var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
-        //    log.info('load1 wl time='+new Date());
-        //    KmaStnMinute.find({stnId: "419"}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
-        //        log.info('lone1 wl time='+new Date());
-        //    });
-        //    var loadDate = new Date();
-        //    log.info('load2 wl time='+loadDate);
-        //    loadDate.setMinutes(loadDate.getMinutes()-30);
-        //    KmaStnMinute2.find({stnId: 419, "date": {$gt:loadDate}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
-        //        log.info('lone2 wl time='+new Date());
-        //    });
-        //}
-        //gc(true);
+        if (time === 3 || time === 6 || time === 9 || time === 15) {
+            self.asyncTasks.push(function (callback) {
+                _getStnHourlyWeather(function () {
+                    callback();
+                });
+            });
+        }
     }, 1000*60);
-
 
     self.task();
 };

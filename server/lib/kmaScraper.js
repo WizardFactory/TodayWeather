@@ -596,7 +596,7 @@ KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callbac
             kmaStnMinute.minuteData = kmaStnMinute.minuteData.slice(index, kmaStnMinute.minuteData.length);
         }
 
-        kmaStnMinute.save(function () {
+        kmaStnMinute.save(function (err) {
             if (err) {
                 return callback(err);
             }
