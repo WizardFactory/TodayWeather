@@ -13,11 +13,11 @@ function aqiRequester(){
     var self = this;
     //example : https://api.waqi.info/feed/geo:10.3;20.7/?token=demo
     self.base_url = 'https://api.waqi.info/feed/';
-    self.defRetryCount = 5;
+    self.aqiRetryCount = 5;
     return this;
 }
 
-aqiRequester.prototype.getAqiData = function(geocode, key, callback){
+    aqiRequester.prototype.getAqiData = function(geocode, key, callback){
     var self = this;
 
     if(!geocode.lat || !geocode.lon){
@@ -27,9 +27,9 @@ aqiRequester.prototype.getAqiData = function(geocode, key, callback){
 
     var url = self.base_url + 'geo:' + geocode.lat + ';' + geocode.lon + '/?token=' + key;
 
-    log.info('QUI> url : ', url);
+    log.info('AQI> url : ', url);
 
-    self.getData(url, self.defRetryCount, function(err, res){
+    self.getData(url, self.aqiRetryCount, function(err, res){
         if(err){
             callback(err, {isSuccess: false});
             return;
@@ -73,8 +73,11 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
         }
 
         var result = JSON.parse(body);
-        //log.info(result);
-        if(callback){
+        log.info(result);
+
+        if(result.status != 'ok'){
+            callback(2);
+        }else{
             callback(err, result);
         }
     });

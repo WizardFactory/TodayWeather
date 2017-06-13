@@ -31,6 +31,13 @@ function ControllerKeys() {
         date: new Date(),
         keys: []
     };
+    self.aqi_keys = {
+        limitCount: 10000,
+        usedCount: 0,
+        curIndex: 0,
+        date: new Date(),
+        keys: []
+    };
 
     log.info('loging keys.....');
     log.info('------------------------------------');
@@ -54,6 +61,13 @@ function ControllerKeys() {
         });
         log.info('DarkSkyForecast : key count(%d)', self.dsf_keys.keys.length);
     }
+
+    if(keyBox.aqi_keys){
+        keyBox.aqi_keys.forEach(function(item){
+            self.aqi_keys.keys.push(item);
+        });
+        log.info('AQI : key count(%d)', self.aqi_keys.keys.length);
+    }
     log.info('------------------------------------');
     log.info('Keys have been loaded');
 }
@@ -73,6 +87,11 @@ ControllerKeys.prototype.addKey = function(type, key){
         case 'dsf':
             self.dsf_keys.keys.push(key);
             break;
+
+        case 'aqi':
+            self.aqi_keys.keys.push(key);
+            break;
+
         default:
             log.error('unknow key type : ', type);
             return false;
@@ -165,6 +184,34 @@ ControllerKeys.prototype.getDsfKey = function(){
     return self.dsf_keys.keys[self.dsf_keys.curIndex];
 };
 
+ControllerKeys.prototype.getAqiKey = function(){
+    var self = this;
+    var curDate = new Date();
+
+    if(curDate.getDay() != self.aqi_keys.date.getDay()){
+        // renew data used count as day has been changed.
+        self.aqi_keys.curIndex = 0;
+        self.aqi_keys.usedCount = 0;
+    }
+
+    // update current date
+    self.aqi_keys.date = curDate;
+
+    if(self.aqi_keys.usedCount >= self.aqi_keys.limitCount) {
+        self.aqi_keys.curIndex += 1;
+
+        if (self.aqi_keys.curIndex >= self.aqi_keys.keys.length) {
+            // no more keys.
+            log.info('AQI key : There is no more available key');
+            return '';
+        }
+        self.aqi_keys.usedCount = 0;
+    }
+    self.aqi_keys.usedCount += 1;
+
+    return self.aqi_keys.keys[self.aqi_keys.curIndex];
+};
+
 ControllerKeys.prototype.setKeyLimit = function(type, count){
     var self = this;
 
@@ -180,6 +227,11 @@ ControllerKeys.prototype.setKeyLimit = function(type, count){
         case 'dsf':
             self.dsf_keys.limitCount = count;
             break;
+
+        case 'aqi':
+            self.aqi_keys.limitCount = count;
+            break;
+
         default:
             log.error('unknow key type : ', type);
             return false;
@@ -204,6 +256,11 @@ ControllerKeys.prototype.setDate = function(type, date){
         case 'dsf':
             self.dsf_keys.date = date;
             break;
+
+        case 'aqi':
+            self.aqi_keys.date = date;
+            break;
+
         default:
             log.error('unknow key type : ', type);
             return false;

@@ -8,6 +8,7 @@ var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
+var controllerAqi = require('./controllerAqi');
 
 var commandCategory = ['all','met','owm','wu', 'dsf'];
 var command = ['get_all','get', 'req_add', 'req_two_days', 'add_key'];
@@ -583,7 +584,22 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
 
                     cb(null, dsfData);
                 });
+            },
+            /*
+            function(cb){
+                var collectorAqi = new controllerAqi;
+
+                collectorAqi.requestAqiData(req.geocode, 0, 0, req.timezone, function(err, aqiData){
+                    if(err){
+                        log.error('RQ> Fail to requestAqiData', meta);
+                        return cb('Fail to requestAqiData');
+                    }
+
+                    log.info(aqiData);
+                    cb(null, aqiData);
+                });
             }
+            */
         ],
         function(err, result){
             if(err){
