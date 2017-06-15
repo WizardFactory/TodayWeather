@@ -194,9 +194,18 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, opt) {
     return mergedStnWeatherInfo;
 };
 
+/**
+ * DB에 string을 그래도 time으로 변환해서 저장하기 때문에, 시간에 대한 고려를 잘 해야 함.
+ * 원칙대로는 GMT 기준으로 DB에 저장하고, code에서 쿼리할때도 GMT 기준으로 변환해야 함. (해외인경우 한국시간과 해외시간오차 계산해야 함)
+ * @param stnInfo
+ * @param dateTime
+ * @param callback
+ * @private
+ */
 controllerKmaStnWeather._getStnMinute2 = function (stnInfo, dateTime, callback) {
     //20min - data자체가 3분정도 딜레이가 있음.
-    var limitTime = (new Date(dateTime)).getTime()-1200000;
+    var limitTime = new Date(dateTime);
+    limitTime.setMinutes(limitTime.getMinutes()-20);
 
     KmaStnMinute2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
         if (err) {
@@ -207,10 +216,6 @@ controllerKmaStnWeather._getStnMinute2 = function (stnInfo, dateTime, callback) 
             log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
             return callback();
         }
-
-        //if (stnWeatherList.length > 1) {
-        //    log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
-        //}
 
         var rns = false;
         stnWeatherList.forEach(function (weather) {
@@ -358,7 +363,13 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
     );
 };
 
-
+/**
+ *
+ * @param stnInfo
+ * @param limitTime 2시간 전 시간으로 들어와야 함
+ * @param callback
+ * @private
+ */
 controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback) {
     KmaStnHourly2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
         if (err) {
@@ -371,16 +382,6 @@ controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback)
         }
 
         var hourlyData = stnWeatherList[stnWeatherList.length-1];
-
-        for (var i=stnWeatherList.length-1; i>=0; i--) {
-            if (stnWeatherList.date === dateTime) {
-                hourlyData = stnWeatherList;
-                break;
-            }
-        }
-        if (i < 0) {
-            log.warn("Use previous data dateTime="+hourlyData.date);
-        }
 
         if (hourlyData == undefined) {
             log.error('It does not have data pubDate=', dateTime, ' stnName=', stnInfo.stnName);
@@ -395,6 +396,13 @@ controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback)
     });
 };
 
+/**
+ *
+ * @param stnInfo
+ * @param dateTime 현재시간이 들어와야 함
+ * @param callback
+ * @private
+ */
 controllerKmaStnWeather._getStnHourly = function(stnInfo, dateTime, callback) {
     KmaStnHourly.find({stnId: stnInfo.stnId}).lean().exec(function (err, stnWeatherList) {
         if (err) {
@@ -416,7 +424,8 @@ controllerKmaStnWeather._getStnHourly = function(stnInfo, dateTime, callback) {
             return callback();
         }
 
-        if ((new Date(stnWeatherList[0].pubDate)).getTime() < (new Date(dateTime)).getTime()) {
+        var T_2HOURS = 7200000;
+        if ((new Date(stnWeatherList[0].pubDate)).getTime()+T_2HOURS < (new Date(dateTime)).getTime()) {
             log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
             return callback();
         }
@@ -473,7 +482,7 @@ controllerKmaStnWeather._getStnHourlyList = function (stnList, dateTime, callbac
         function (stnInfo, mCallback) {
             var fromTime = new Date(dateTime);
             fromTime.setHours(fromTime.getHours()-2);
-            self._getStnHourly(stnInfo, fromTime, function (err, stnInfo) {
+            self._getStnHourly2(stnInfo, fromTime, function (err, stnInfo) {
                 if (err) {
                     return mCallback(err);
                 }
