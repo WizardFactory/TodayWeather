@@ -1,5 +1,6 @@
 /**
  * Created by aleckim on 2016. 4. 4..
+ * code 상태가 엉망임.
  */
 
 'use strict';
@@ -14,14 +15,13 @@ var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
-var Scrape = require('../lib/kmaScraper');
-
 function controllerKmaStnWeather() {
 
 }
 
 /**
  * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
+ * 영어로 적인 값은 해외 api용임
  * @param weatherStr
  * @private
  */
@@ -207,14 +207,13 @@ controllerKmaStnWeather._getStnMinute2 = function (stnInfo, dateTime, callback) 
     var limitTime = new Date(dateTime);
     limitTime.setMinutes(limitTime.getMinutes()-20);
 
-    KmaStnMinute2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+    KmaStnMinute2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).sort({date: 1}).lean().exec(function (err, stnWeatherList) {
         if (err) {
-            log.error(err);
-            return callback();
+            return callback(err);
         }
-        if (stnWeatherList.length === 0) {
-            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
-            return callback();
+        if (stnWeatherList.length == 0) {
+            err = new Error('Fail to find stn Weather info of stnId='+ stnInfo.stnId);
+            return callback(err);
         }
 
         var rns = false;
@@ -243,24 +242,30 @@ controllerKmaStnWeather._getStnMinute2 = function (stnInfo, dateTime, callback) 
     });
 };
 
+/**
+ *
+ * @param stnInfo
+ * @param dateTime
+ * @param callback
+ * @private
+ */
 controllerKmaStnWeather._getStnMinute = function (stnInfo, dateTime, callback) {
     KmaStnMinute.find({stnId: stnInfo.stnId}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
         if (err) {
-            log.error(err);
-            return callback();
+            return callback(err);
         }
-        if (stnWeatherList.length === 0) {
-            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
-            return callback();
-        }
-
-        if (stnWeatherList.length > 1) {
-            log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
+        if (stnWeatherList.length == 0) {
+            err = new Error('Fail to find stn Weather info of stnId=', stnInfo.stnId);
+            return callback(err);
         }
 
         if (!stnWeatherList[0].pubDate) {
-            log.warn('It does not have any data stnName=', stnInfo.stnName);
-            return callback();
+            err = new Error('It does not have any data stnId=', stnInfo.stnId);
+            return callback(err);
+        }
+
+        if (stnWeatherList.length > 1) {
+            log.error('stn weather info is duplicated stnId=', stnInfo.stnId);
         }
 
         //20min - data자체가 3분정도 딜레이가 있음.
@@ -365,19 +370,73 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
 
 /**
  *
+ * @param stnId
+ * @param fromDate
+ * @param callback
+ */
+controllerKmaStnWeather.findHourlies = function (stnId, fromDate, callback) {
+    KmaStnHourly.find({stnId: stnId}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            return callback(err);
+        }
+        if (stnWeatherList == undefined || stnWeatherList.length == 0) {
+            err = new Error('Fail to find stn Weather info of stnId=', stnId);
+            return callback(err);
+        }
+        if (!stnWeatherList[0].pubDate) {
+            err = new Error('It does not have any data stnId=', stnId);
+            return callback(err);
+        }
+        if ((new Date(stnWeatherList[0].pubDate)).getTime() < fromDate.getTime()) {
+            err = new Error('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnId=', stnId);
+            return callback(err);
+        }
+
+        if (stnWeatherList.length > 1) {
+            log.error('stn weather info is duplicated stnId=', stnId);
+        }
+
+        return callback(err, stnWeatherList);
+    });
+};
+
+/**
+ *
+ * @param stnId
+ * @param fromDate
+ * @param callback
+ */
+controllerKmaStnWeather.findHourlies2 = function (stnId, fromDate, callback) {
+    stnId = parseInt(stnId);
+
+    log.debug("find hourlies2 hourlies stnId="+stnId+" fromDate="+fromDate);
+
+    KmaStnHourly2.find({stnId: stnId, date: {$gt:fromDate}}, {_id: 0}).sort({date: 1}).lean().exec(function (err, weatherList) {
+        if (err)  {
+            return callback(err);
+        }
+        if (weatherList == undefined || weatherList.length == 0) {
+            err = new Error("Fail to find hourlies stnId="+stnId+" fromDate="+fromDate);
+            return callback(err);
+        }
+        log.debug(JSON.stringify(weatherList));
+        return callback(err, weatherList);
+    });
+};
+
+/**
+ *
  * @param stnInfo
  * @param limitTime 2시간 전 시간으로 들어와야 함
  * @param callback
  * @private
  */
 controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback) {
-    KmaStnHourly2.find({stnId: parseInt(stnInfo.stnId), date: {$gt:limitTime}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+    var self = this;
+
+    self.findHourlies2(stnInfo.stnId, limitTime, function (err, stnWeatherList) {
         if (err) {
             log.error(err);
-            return callback();
-        }
-        if (stnWeatherList.length === 0) {
-            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
             return callback();
         }
 
@@ -397,41 +456,27 @@ controllerKmaStnWeather._getStnHourly2 = function (stnInfo, limitTime, callback)
 };
 
 /**
- *
+ * 2시간내에 데이터 중에서 현재시간에 맞거나, 바로전 데이터를 사용한다
+ * 사용하지 않음
  * @param stnInfo
  * @param dateTime 현재시간이 들어와야 함
  * @param callback
  * @private
  */
 controllerKmaStnWeather._getStnHourly = function(stnInfo, dateTime, callback) {
-    KmaStnHourly.find({stnId: stnInfo.stnId}).lean().exec(function (err, stnWeatherList) {
+    var self = this;
+    var fromTime = new Date(dateTime);
+    fromTime.setHours(fromTime.getHours()-2);
+
+    self.findHourlies(stnInfo.stnId, fromTime, function(err, stnWeatherList) {
         if (err) {
             log.error(err);
-            //it will removed
-            return callback();
-        }
-        if (stnWeatherList.length === 0) {
-            log.error('Fail to find stn Weather info of stnName=', stnInfo.stnName);
-            return callback();
-        }
-
-        if (stnWeatherList.length > 1) {
-            log.error('stn weather info is duplicated stnName=', stnInfo.stnName);
-        }
-
-        if (!stnWeatherList[0].pubDate) {
-            log.warn('It does not have any data stnName=', stnInfo.stnName);
-            return callback();
-        }
-
-        var T_2HOURS = 7200000;
-        if ((new Date(stnWeatherList[0].pubDate)).getTime()+T_2HOURS < (new Date(dateTime)).getTime()) {
-            log.warn('It was not updated yet pubDate=',stnWeatherList[0].pubDate,' stnName=', stnInfo.stnName);
             return callback();
         }
 
         var hourlyData = stnWeatherList[0].hourlyData[stnWeatherList[0].hourlyData.length-1];
 
+        //dateTime은 현재 시간이며, 현재시간에 해당하는 데이터를 찾음, 못찾으면 마지막 데이터 사용.
         for (var i=stnWeatherList[0].hourlyData.length-1; i>=0; i--) {
             if (stnWeatherList[0].hourlyData[i].date === dateTime) {
                 hourlyData = stnWeatherList[0].hourlyData[i];
@@ -519,24 +564,63 @@ controllerKmaStnWeather._filterStnList = function (stnList) {
     });
 };
 
-controllerKmaStnWeather.getCityHourlyList = function (townInfo, callback) {
-    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(1).lean().exec(function (err, kmaStnList) {
+/**
+ *
+ * @param coords
+ * @param maxDistance
+ * @param isCityWeather
+ * @param limit
+ * @param callback
+ */
+controllerKmaStnWeather.getStnList = function (coords, maxDistance, isCityWeather, limit, callback) {
+    var query = {};
+    if (coords) {
+        if (maxDistance) {
+            query.geo = {"$near":coords, "$maxDistance":maxDistance};
+        }
+        else {
+            query.geo = {"$near":coords};
+        }
+    }
+    if (!(isCityWeather == undefined)) {
+       query.isCityWeather = isCityWeather;
+    }
+
+    log.debug("get stn list query="+JSON.stringify(query));
+
+    KmaStnInfo.find(query, {_id: 0, __v: 0}).limit(limit).lean().exec(function (err, stnList) {
         if (err) {
             return callback(err);
         }
-        if (kmaStnList.length == 0) {
-            return callback(new Error("Fail to find kma stn"));
+        if (stnList == undefined || stnList.length == 0) {
+            err = new Error("Fail to find stn coords="+coords);
+            return callback(err);
+        }
+        return callback(err, stnList);
+    });
+};
+
+/**
+ *
+ * @param townInfo
+ * @param callback
+ */
+controllerKmaStnWeather.getCityHourlyList = function (townInfo, callback) {
+    var self = this;
+    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+    self.getStnList(coords, 1, true, 1, function (err, kmaStnList) {
+        if (err) {
+            return callback(err);
         }
 
+        log.debug(JSON.stringify(kmaStnList));
+
         var fromDate = new Date();
-        fromDate.setDate(fromDate.getDate()-9);
-        KmaStnHourly2.find({stnId: parseInt(kmaStnList[0].stnId), date: {$gt:fromDate}}, {_id: 0}).lean().exec(function (err, stnWeatherList) {
+        fromDate = kmaTimeLib.toTimeZone(9, fromDate);
+        fromDate.setDate(fromDate.getDate()-8);
+        self.findHourlies2(kmaStnList[0].stnId, fromDate, function (err, stnWeatherList) {
             if (err) {
                 return callback(err);
-            }
-            if (stnWeatherList.length == 0) {
-                return callback(new Error("Fail to find stn weather list stnId="+kmaStnList[0].stnId));
             }
             callback(undefined, stnWeatherList);
         });
@@ -803,4 +887,111 @@ controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, curr
 
     return this;
 };
+
+/**
+ * cityWeather의 시간단위와 분단위 날씨를 가지고 오고, 가장 가까운 5지역에서 추가로 rns 정보를 가지고 옴
+ * @param townInfo
+ * @param dateTime
+ * @param current
+ * @param callback
+ * @returns {controllerKmaStnWeather}
+ */
+controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, current, callback) {
+    var self = this;
+    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
+    var stnDateHour = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ(dateTime);
+    var stnWeather = {};
+
+    async.waterfall([
+            function (pCallback) {
+                self.getStnList(coords, 1, true, 1, function(err, kmaStnList) {
+                    if (err) {
+                        return pCallback(err);
+                    }
+                    var stn = kmaStnList[0];
+                    for (var key in stn) {
+                        stnWeather[key] = stn[key];
+                    }
+                    log.debug("stnWeather="+JSON.stringify(stnWeather));
+                    return pCallback(err, stn);
+                });
+            },
+            function (stn, pCallback) {
+                var fromTime = new Date(stnDateHour);
+                fromTime.setHours(fromTime.getHours()-2);
+                self.findHourlies2(stn.stnId, fromTime, function (err, hourlyWeatherList) {
+                    if (err)  {
+                        return pCallback(err);
+                    }
+                    var hourlyWeather = hourlyWeatherList[hourlyWeatherList.length-1];
+                    for (var key in hourlyWeather) {
+                        stnWeather[key] = hourlyWeather[key];
+                    }
+                    log.debug("stnWeather="+JSON.stringify(stnWeather));
+                    return pCallback(err, stn);
+                });
+            },
+            function (stn, pCallback) {
+                self._getStnMinute2(stn, stnDateTime, function (err, minuteWeather) {
+                    if (err)  {
+                        return pCallback(err);
+                    }
+
+                    log.debug("minuWeather="+JSON.stringify(minuteWeather));
+                    for (var key in minuteWeather) {
+                        stnWeather[key] = minuteWeather[key];
+                    }
+                    return pCallback(err);
+                });
+            },
+            function (pCallback) {
+                self.getStnList(coords, 0.2, undefined, 5, function (err, kmaStnList) {
+                    if (err) {
+                        return pCallback(err);
+                    }
+                    return pCallback(err, kmaStnList);
+                });
+            },
+            function (stnList, aCallback) {
+                self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
+                    if (err) {
+                        return aCallback(err);
+                    }
+                    if (results.length == 0) {
+                        err = new Error("Fail to get stn minute, so use hourly");
+                        return aCallback(err);
+                    }
+                    for (var i=0; i<results.length; i++) {
+                        if (results[i].rns == true) {
+                            break;
+                        }
+                    }
+                    if (i != results.length) {
+                       if (stnWeather.rns == false) {
+                           stnWeather.rns = results[i].rns;
+                           stnWeather.rnsStnId = results[i].stnId;
+                           stnWeather.rnsStnName = results[i].stnName;
+                       }
+                    }
+                    aCallback(err);
+                });
+            }
+        ],
+        function (err) {
+            if (err)  {
+                return callback(err);
+            }
+            stnWeather.stnDateTime = stnWeather.date;
+            if (stnWeather.weather) {
+               stnWeather.weatherType =  self._makeWeatherType(stnWeather);
+            }
+
+            log.info("stnWeather="+JSON.stringify(stnWeather));
+            callback(err, stnWeather);
+        });
+
+    return this;
+};
+
 module.exports = controllerKmaStnWeather;
