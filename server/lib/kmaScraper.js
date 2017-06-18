@@ -17,6 +17,7 @@ var KmaStnHourly2 = require('../models/modelKmaStnHourly2');
 var KmaStnMinute = require('../models/modelKmaStnMinute');
 var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
+var KmaSpecialWeatherSituation = require('../models/modelKmaSpecialWeatherSituation');
 
 var Current = require('../models/modelCurrent');
 var Town = require('../models/town');
@@ -209,6 +210,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
             }
         }
         catch(e) {
+            callback(e);
         }
     });
 
@@ -908,6 +910,12 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
     });
 };
 
+/**
+ *
+ * @param days
+ * @param callback
+ * @returns {KmaScraper}
+ */
 KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     var self = this;
     var pubDateCount = days*24;
@@ -938,6 +946,7 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
 
 /**
  *
+ * @param day
  * @param callback
  */
 KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
@@ -1377,6 +1386,171 @@ KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callba
         });
 
     return this;
+};
+
+/**
+ *
+ * @returns {string}
+ * @private
+ */
+KmaScraper.prototype._getKmaDomain = function () {
+ return "http://www.kma.go.kr";
+};
+
+/**
+ *
+ * @returns {string}
+ */
+KmaScraper.prototype.getSpecialWeatherSituationUrl = function () {
+   return this._getKmaDomain()+"/weather/warning/status.jsp";
+};
+
+/**
+ *
+ * @param specialHtml
+ * @returns {{}}
+ * @private
+ */
+KmaScraper.prototype._parseSpecialHtml = function (specialHtml) {
+    var imageUrl = specialHtml.find('img').attr('src');
+    var body = specialHtml.children('dd').text();
+    body = body.replace(/\t/g, '');
+    body = body.replace(/\r\n/g, '');
+    var bodyArray = body.split('<참고사항>');
+    var situationStr = bodyArray[0];
+    var comment = bodyArray[1];
+    situationStr = situationStr.replace(/\s+/g, '');
+    var situationArray = situationStr.split('o');
+
+    var special = {};
+    special.imageUrl = this._getKmaDomain()+imageUrl;
+    special.situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
+    //var comment = comment.replace(/\./g, '.<br>');
+    special.comment = comment;
+    return special;
+};
+
+/**
+ *
+ * @param $
+ * @param callback
+ */
+KmaScraper.prototype.parseSpecialWeatherSituation = function ($, callback) {
+    var self = this;
+    var specialWeatherSituation = {};
+
+    var specialHtml = $('.special_report_list2').eq(0);
+    var preliminarySpecialHtml = $('.special_report_list2').eq(1);
+
+    /**
+     *기상특보 현황 : 2017년 06월 18일 15시 00분 이후 (2017년 06월 18일 15시 00분 발표)
+     */
+    var pubDateStr = specialHtml.children('dt').text();
+    pubDateStr = pubDateStr.slice(pubDateStr.indexOf('(')+1, pubDateStr.indexOf(')'));
+    pubDateStr = pubDateStr.replace(' 발표','');
+    specialWeatherSituation.announcement = kmaTimeLib.convertKoreaStr2Date(pubDateStr);
+    specialWeatherSituation.special = self._parseSpecialHtml(specialHtml);
+    specialWeatherSituation.preliminarySpecial = self._parseSpecialHtml(preliminarySpecialHtml);
+
+    callback(null, specialWeatherSituation);
+};
+
+KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
+    var self = this;
+    var url = self.getSpecialWeatherSituationUrl();
+
+    req(url, {encoding: 'binary'}, function (err, response, body) {
+        if (err) {
+            log.error(err);
+            return callback(err);
+        }
+        try {
+            var strContents = new Buffer(body, 'binary');
+            var iconv = new Iconv('euc-kr', 'UTF8');
+            strContents = iconv.convert(strContents).toString();
+
+            var $ = cheerio.load(strContents);
+            callback(null, $);
+        }
+        catch(err) {
+            callback(err);
+        }
+    });
+};
+
+/**
+ *
+ * @param sws
+ * @param callback
+ */
+KmaScraper.prototype.findSpecialWeatherSituation = function (sws, callback) {
+   KmaSpecialWeatherSituation.find({announcement: sws.announcement}).limit(1).lean().exec(function (err, result) {
+       if (err) {
+           log.error(err.message + "in find DB(KmaSpecialWeatherSituation)");
+           return callback(err);
+       }
+       return callback(null, result);
+   });
+};
+
+/**
+ *
+ * @param sws
+ * @param callback
+ */
+KmaScraper.prototype.updateSpecialWeatherSituation = function (sws, callback) {
+   KmaSpecialWeatherSituation.update({announcement: sws.announcement}, sws, {upsert:true}, function (err) {
+       if (err) {
+           log.error(err.message + "in insert DB(KmaSpecialWeatherSituation)");
+           log.warn(JSON.stringify(sws));
+       }
+       return callback(err);
+   });
+};
+
+/**
+ *
+ * @param callback
+ */
+KmaScraper.prototype.gatherSpecialWeatherSituation = function (callback) {
+    var self = this;
+    async.waterfall([
+            function(cb) {
+                self.requestSpecialWeatherSituation(function (err, result) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    return cb(null, result)
+                });
+            },
+            function ($, cb) {
+                self.parseSpecialWeatherSituation($, function (err, sws) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    cb(err, sws);
+                });
+            },
+            function (sws, cb) {
+                self.findSpecialWeatherSituation(sws, function (err, result) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    if (result && result.length > 0) {
+                        return cb('skip');
+                    }
+                    cb(err, sws);
+                });
+            },
+            function (sws, cb) {
+                self.updateSpecialWeatherSituation(sws, function (err) {
+                   cb(err);
+                });
+            }
+        ],
+        function (err) {
+            return callback(err);
+        });
 };
 
 module.exports = KmaScraper;
