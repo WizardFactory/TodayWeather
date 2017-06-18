@@ -62,11 +62,21 @@
   Templates are in the /templates folder (but you could also
   have templates inline in this html file if you'd like).
 -->
-<ion-nav-view></ion-nav-view>
-<div style="width: 100%; height: 50px; position: absolute; bottom: 0; text-align: center; z-index: 4"
-     ng-style="{'background-color': viewAdsBanner?'#444':'#03A9F4'}"
-     ng-if="viewAdsBanner" ng-click="clickAdsBanner();">
-    <h4 style="color: white; opacity: 0.84" ng-bind="adsBannerMessage"></h4>
-</div>
+<ion-side-menus>
+    <!-- Left menu -->
+    <!--<ion-side-menu side="left"></ion-side-menu>-->
+
+    <ion-side-menu-content>
+        <ion-nav-view></ion-nav-view>
+        <div style="width: 100%; height: 50px; position: absolute; bottom: 0; text-align: center; z-index: 4"
+             ng-style="{'background-color': viewAdsBanner?'#444':'#03A9F4'}"
+             ng-if="viewAdsBanner" ng-click="clickAdsBanner();">
+            <h4 style="color: white; opacity: 0.84" ng-bind="adsBannerMessage"></h4>
+        </div>
+    </ion-side-menu-content>
+
+    <!-- Right menu -->
+    <!--<ion-side-menu side="right"></ion-side-menu>-->
+</ion-side-menus>
 </body>
 </html>

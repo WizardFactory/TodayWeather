@@ -60,6 +60,34 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
+.bar.bar-search {
+  border-color: #EC407A;
+  background-color: #ec72a8;
+  background-image: linear-gradient(0deg, #EC407A, #EC407A 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-forecast {
+  border-color: #0288D1;
+  background-color: #03A9F4;
+  background-image: linear-gradient(0deg, #0288D1, #0288D1 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-dailyforecast {
+  border-color: #0097A7;
+  background-color: #00BCD4;
+  background-image: linear-gradient(0deg, #0097A7, #0097A7 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-setting {
+  border-color: #FB8C00;
+  background-color: #FFA726;
+  background-image: linear-gradient(0deg, #FB8C00, #FB8C00 50%, transparent 50%);
+  color: #fff;
+}
+
 .popup-body {
   line-height: 20px;
 }
@@ -404,7 +432,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 /* search */
 .search-header {
-  padding: 5px 5px 10px 10px;
+  padding: 5px 5px 5px 5px;
   background-color: #EC407A;
   background-image: none;
 }
