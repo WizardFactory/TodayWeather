@@ -984,7 +984,7 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
             }
             stnWeather.stnDateTime = stnWeather.date;
             if (stnWeather.weather) {
-               stnWeather.weatherType =  self._makeWeatherType(stnWeather);
+               stnWeather.weatherType =  self._makeWeatherType(stnWeather.weather);
             }
 
             log.info("stnWeather="+JSON.stringify(stnWeather));
