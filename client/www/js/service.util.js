@@ -233,6 +233,21 @@ angular.module('service.util', [])
             }
         };
 
+        obj._saveServiceKeys = function () {
+            var self = this;
+            var suitePrefs = plugins.appPreferences.suite(self.suiteName);
+            suitePrefs.store(
+                function (value) {
+                    console.log("save preference Success: " + value);
+                },
+                function (error) {
+                    self.ga.trackEvent('plugin', 'error', 'storeAppPreferences');
+                    console.error("save preference Error: " + error);
+                },
+                'daumServiceKeys',
+                JSON.stringify(twClientConfig.daumServiceKeys));
+        };
+
         obj.saveServiceKeys = function () {
             var self = this;
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
@@ -243,19 +258,15 @@ angular.module('service.util', [])
                 suitePrefs.fetch(
                     function (value) {
                         if (value == undefined || value == '') {
-                            suitePrefs.store(
-                                function (value) {
-                                    console.log("save preference Success: " + value);
-                                },
-                                function (error) {
-                                    self.ga.trackEvent('plugin', 'error', 'storeAppPreferences');
-                                    console.error("save preference Error: " + error);
-                                },
-                                'daumServiceKeys',
-                                JSON.stringify(twClientConfig.daumServiceKeys));
+                            self._saveServiceKeys();
                         }
                         else {
-                            console.log("fetch preference Success: " + value);
+                            if (JSON.parse(value).length != twClientConfig.daumServiceKeys.length) {
+                                self._saveServiceKeys();
+                            }
+                            else {
+                                console.log("fetch preference Success: " + value);
+                            }
                         }
                     },
                     function (error) {
