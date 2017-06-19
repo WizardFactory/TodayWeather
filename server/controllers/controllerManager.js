@@ -2193,7 +2193,7 @@ Manager.prototype.startScrape = function () {
                 });
             });
         }
-        if(time % 5 == 0) {
+        if(time % 3 == 0) {
             self.asyncTasks.push(function (callback) {
                 _gatherSpecialWeatherSituation(function () {
                     callback();

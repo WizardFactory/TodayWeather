@@ -1,36 +1,27 @@
 /**
  *
  * Created by aleckim on 2017. 6. 18..
+ * 1 special(기상특보 현황), 2 preliminarySpecial(예비 기상특보 현황), 3 weatherInformation(기상정보)
  */
 
 var mongoose = require("mongoose");
 var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
     announcement: Date, //YYYY.MM.DD.HH.ZZ is the same as pubDate
-    special : {
-        imageUrl: String,
-        situationList: [{
-            weather: Number,
-            weatherStr: String,
-            level: Number,
-            levelStr: String,
-            location: String
-        }],
-        comment: String
-    },
-    preliminarySpecial : {
-        imageUrl: String,
-        situationList: [{
-            weather: Number,
-            weatherStr: String,
-            level: Number,
-            levelStr: String,
-            location: String
-        }],
-        comment: String
-    }
+    type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation
+    imageUrl: String,
+    situationList: [{
+        weather: Number,
+        weatherStr: String,
+        level: Number,
+        levelStr: String,
+        timeStr: String, //6월20일아침
+        location: String
+    }],
+    comment: String, //<, o, *, -, ※ 에서 줄변경해야 함 (<br> or \n)
 });
 
 kmaSpecialWeatherSituationSchema.index({announcement: 1});
+kmaSpecialWeatherSituationSchema.index({type: 1});
 
 function parseSituationType (str) {
     var t;
@@ -93,11 +84,16 @@ kmaSpecialWeatherSituationSchema.statics = {
                 return;
             }
 
+            //폭염주의보:서울
+            //풍량예비특보-0620일아침:제주도남쪽먼바다
             var sArray = str.split(':');
-            var tStr = sArray[0];
             var location  = sArray[1];
 
-            var situation = {weather:0, weatherStr:"", level: 0, levelStr:"", location: location};
+            var extraArray = sArray[0].split('-');
+            var tStr = extraArray[0];
+            var timeStr = extraArray[1];
+
+            var situation = {weather:0, weatherStr:"", level: 0, levelStr:"", timeStr: timeStr, location: location};
             if (tStr.indexOf('주의보') != -1) {
                 situation.level = 1;
                 situation.levelStr = '주의보';
@@ -105,6 +101,10 @@ kmaSpecialWeatherSituationSchema.statics = {
             else if (tStr.indexOf('경보') != -1) {
                 situation.level = 2;
                 situation.levelStr = '경보';
+            }
+            else if (tStr.indexOf('예비특보') != -1) {
+                situation.level = 3;
+                situation.levelStr = '예비특보';
             }
             else if (tStr.indexOf('없음') != -1) {
                 situation.level = 0;
@@ -130,7 +130,22 @@ kmaSpecialWeatherSituationSchema.statics = {
         });
 
         return situationList;
-    }
+    },
+    type2str: function (type) {
+        switch (type) {
+            case 1:
+                return 'special';
+            case 2:
+                return 'preliminarySpecial';
+            case 3:
+                return 'weatherInformation';
+            default:
+                return '';
+        }
+    },
+    TYPE_SPECIAL: 1,
+    TYPE_PRELIMINARY_SPECIAL: 2,
+    TYPE_WEATHER_INFORMATION: 3
 };
 
 module.exports = mongoose.model('KmaSpecial', kmaSpecialWeatherSituationSchema);
