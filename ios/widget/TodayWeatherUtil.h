@@ -59,6 +59,7 @@ extern TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 - (NSMutableArray *) getDaumServiceKeys;
 - (void) setDaumServiceKeys:(NSString *)nssDaumKeys;
++ (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets;
 @end
 
 #endif /* TodayWeatherUtil_h */
