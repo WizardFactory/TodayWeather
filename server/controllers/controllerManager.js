@@ -2148,6 +2148,24 @@ Manager.prototype.startScrape = function () {
         });
     }
 
+    function _gatherSpecialWeatherSituation(callback) {
+        log.info('request kma special weather situation time='+(new Date()));
+        scrape.gatherSpecialWeatherSituation(function (err) {
+            if (err) {
+                if (err === 'skip') {
+                    log.info('special weather situation is already updated');
+                }
+                else {
+                    log.error(err);
+                }
+            }
+            else {
+                log.info('kma special weather situation done time='+(new Date()));
+            }
+            callback();
+        });
+    }
+
     self.asyncTasks.push(function (callback) {
         _getStnMinuteWeather(function () {
             callback();
@@ -2160,11 +2178,24 @@ Manager.prototype.startScrape = function () {
         });
     });
 
+    self.asyncTasks.push(function (callback) {
+        _gatherSpecialWeatherSituation(function () {
+            callback();
+        });
+    });
+
     setInterval(function () {
         var time = (new Date()).getUTCMinutes();
         if(time % 2 == 0) {
             self.asyncTasks.push(function (callback) {
                 _getStnMinuteWeather(function () {
+                    callback();
+                });
+            });
+        }
+        if(time % 3 == 0) {
+            self.asyncTasks.push(function (callback) {
+                _gatherSpecialWeatherSituation(function () {
                     callback();
                 });
             });
