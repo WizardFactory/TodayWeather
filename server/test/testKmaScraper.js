@@ -306,5 +306,17 @@ describe('unit test - kma city weather scraping', function() {
     //        done();
     //    });
     //});
+
+    //it('test special weather situation', function (done) {
+    //    this.timeout(100*1000);
+    //    var scrape = new Scrape();
+    //    scrape.getSpecialWeatherSituation(function (err, result) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        log.info(result);
+    //      done();
+    //    });
+    //});
 });
 

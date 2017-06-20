@@ -199,6 +199,9 @@ router.get('/healthday', function(req, res) {
     });
 });
 
+/**
+ * don't use
+ */
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
     scrape.getStnHourlyWeather(undefined, function (err, results) {

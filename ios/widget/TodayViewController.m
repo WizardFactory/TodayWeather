@@ -325,7 +325,9 @@ static TodayViewController *todayVC = nil;
     }
     
     tmpData = [cityList dataUsingEncoding:NSUTF8StringEncoding];
-    jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
+    
+    if(tmpData)
+        jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
     //NSLog(@"User Default : %@", jsonDict);
 
     int index = 0;
@@ -1175,6 +1177,12 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (void) makeJSONWithData:(NSData *)jsonData reqType:(NSUInteger)type
 {
+    if(jsonData == nil)
+    {
+        NSLog(@"jsonData is nil");
+        return;
+    }
+    
     NSError *error;
     NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
     //NSLog(@"jsonDict : %@", jsonDict);
@@ -1708,9 +1716,16 @@ static TodayViewController *todayVC = nil;
     
     if(nssTime != nil)
     {
-        nssHour             = [nssTime substringToIndex:2];
-        nssMinute           = [nssTime substringFromIndex:2];
-        nssDateTime         = [NSString stringWithFormat:@"%@ %@:%@", LSTR_UPDATE, nssHour, nssMinute];
+        if([nssTime length] >= 2)
+        {
+            nssHour             = [nssTime substringToIndex:2];
+            nssMinute           = [nssTime substringFromIndex:2];
+            nssDateTime         = [NSString stringWithFormat:@"%@ %@:%@", LSTR_UPDATE, nssHour, nssMinute];
+        }
+        else
+        {
+            nssDateTime             = @"";
+        }
     }
     else
     {

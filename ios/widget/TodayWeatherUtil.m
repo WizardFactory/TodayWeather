@@ -390,7 +390,15 @@ TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 + (NSMutableDictionary *) getTodayDictionaryInGlobal:(NSDictionary *)jsonDict time:(NSString *)nssTime
 {
-    NSString        *nssCurrentDate        = [nssTime substringToIndex:10];
+    NSString        *nssCurrentDate = nil;
+    if( ( [nssTime length] >= 10 ) || (nssTime == nil) )
+    {
+        nssCurrentDate        = [nssTime substringToIndex:10];
+    }
+    else
+    {
+        nssCurrentDate        = @"";
+    }
     
     NSMutableArray  *dailyDataArr         = [jsonDict objectForKey:@"daily"];
     NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
@@ -439,21 +447,25 @@ TEMP_UNIT    gTemperatureUnit;
     
     NSError *error;
     NSData *tmpUnitData = [nssUnits dataUsingEncoding:NSUTF8StringEncoding];
-    NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
-    NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
-    NSLog(@"nsdTempUnit : %@", nsdTempUnit);
     
-    if([nsdTempUnit isEqualToString:@"F"])
+    if(tmpUnitData)
     {
-        gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+        NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
+        NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
+        NSLog(@"nsdTempUnit : %@", nsdTempUnit);
+        
+        if([nsdTempUnit isEqualToString:@"F"])
+        {
+            gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+        }
+        else
+        {
+            gTemperatureUnit = TEMP_UNIT_CELSIUS;
+        }
+        
+        //FIXME
+        //gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
     }
-    else
-    {
-        gTemperatureUnit = TEMP_UNIT_CELSIUS;
-    }
-    
-    //FIXME
-    //gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
     
     return;
 }
@@ -516,17 +528,32 @@ TEMP_UNIT    gTemperatureUnit;
         return nil;
     }
 
-    //NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
+    NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
     
     NSArray *arrSrc     = [nssSrcStr componentsSeparatedByString:@"."];
     NSString *nssFirst  = [arrSrc objectAtIndex:0];
     //NSLog(@"[processLocationStr] nssFirst : %@", nssFirst);
     NSString *nssTmp    = [arrSrc objectAtIndex:1];
-    NSString *nssSecond = [nssTmp substringToIndex:2];
     
-    nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssSecond];
+    NSString *nssSecond = nil;
+    if(nssTmp == nil)
+    {
+        nssDstStr   = [NSString stringWithFormat:@"%@.0", nssFirst];
+    }
+    else
+    {
+        if( [nssTmp length] < 2 )
+        {
+            nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssTmp];
+        }
+        else
+        {
+            nssSecond = [nssTmp substringToIndex:2];
+            nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssSecond];
+        }
+    }
     
-    //NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
+    NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
     
     return nssDstStr;
 }
@@ -587,30 +614,41 @@ TEMP_UNIT    gTemperatureUnit;
 {
     NSData *tmpData = nil;
     NSError *error;
+    NSArray *nsaDaumKeys = nil;
+
+    if(nssDaumKeys == nil)
+    {
+        NSLog(@"nssDaumKeys is null!!!");
+        return;
+    }
     
     NSLog(@"nsmaDaumKeys : %@", nssDaumKeys);
     tmpData = [nssDaumKeys dataUsingEncoding:NSUTF8StringEncoding];
-    NSArray *nsaDaumKeys = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
-    //NSArray  *nsaDaumKeys = [[NSArray alloc] initWithObjects:@"0", @"1", @"2", @"3", nil];
     
-#if 0
-    for (int i = 0; i < [nsaDaumKeys count]; i++)
+    if(tmpData)
     {
-        NSLog(@"original %d : %@", i, [nsaDaumKeys objectAtIndex:i]);
-    }
-#endif
+        nsaDaumKeys = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
+        //NSArray  *nsaDaumKeys = [[NSArray alloc] initWithObjects:@"0", @"1", @"2", @"3", nil];
         
-    nsmaDaumKeys = [[NSMutableArray alloc] initWithArray:nsaDaumKeys];
-    
-#if 0
-    // Use this code in requesting url to daum
-    NSMutableArray *nsmaShufflKeys= [TodayWeatherUtil shuffleDatas:nsmaDaumKeys];
-    
-    for (int i = 0; i < [nsmaShufflKeys count]; i++)
-    {
-        NSLog(@"shuffled %d : %@", i, [nsmaShufflKeys objectAtIndex:i]);
+    #if 0
+        for (int i = 0; i < [nsaDaumKeys count]; i++)
+        {
+            NSLog(@"original %d : %@", i, [nsaDaumKeys objectAtIndex:i]);
+        }
+    #endif
+            
+        nsmaDaumKeys = [[NSMutableArray alloc] initWithArray:nsaDaumKeys];
+        
+    #if 0
+        // Use this code in requesting url to daum
+        NSMutableArray *nsmaShufflKeys= [TodayWeatherUtil shuffleDatas:nsmaDaumKeys];
+        
+        for (int i = 0; i < [nsmaShufflKeys count]; i++)
+        {
+            NSLog(@"shuffled %d : %@", i, [nsmaShufflKeys objectAtIndex:i]);
+        }
+    #endif
     }
-#endif
     
     return;
 }

@@ -245,9 +245,9 @@
   "LOC_BREEZY": "光風",
   "LOC_WINDY": "風",
   "LOC_HUMID": "潮濕",
-  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Please allow permission",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[設定]>[應用程序]>[今天天氣] 請允許許可",
   "LOC_DRY": "乾燥",
-  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Permission request denied. Please search by location name or retry.",
-  "LOC_FIND_BY_LOCATION": "Find by location"
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "拒絕請求 請按地點名稱搜索或重試",
+  "LOC_FIND_BY_LOCATION": "按位置查找"
 }
 

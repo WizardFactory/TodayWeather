@@ -750,7 +750,7 @@ ControllerPush.prototype.sendPush = function (time) {
         function (callback) {
             self.getPushByTime(time, function (err, pushList) {
                 if (err) {
-                    self.requestKeepMessage();
+                    //self.requestKeepMessage();
                     return callback(err);
                 }
                 log.info('get push by time : push list='+JSON.stringify(pushList));

@@ -245,8 +245,8 @@
   "LOC_BREEZY": "軽風",
   "LOC_WINDY": "風",
   "LOC_HUMID": "湿気の多い",
-  "LOC_OPENS_THE_APP_INFO_PAGE" : "[Settings]>[App]>[TodayWeather] Please allow permission",
+  "LOC_OPENS_THE_APP_INFO_PAGE" : "[設定]>[アプリケーション]>[今日天気] 許可を受けてください。",
   "LOC_DRY": "乾燥",
-  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "Permission request denied. Please search by location name or retry.",
-  "LOC_FIND_BY_LOCATION": "Find by location"
+  "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "許可要求が拒否されました。 地名で検索したり、再試行してください。",
+  "LOC_FIND_BY_LOCATION": "場所で探す"
 }

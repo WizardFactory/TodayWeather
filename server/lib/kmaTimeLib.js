@@ -199,4 +199,20 @@ kmaTimeLib.compareDateTime = function (objA, objB) {
     return false;
 };
 
+/**
+ * 2017년 06월 18일 15시 00분
+ * @param str
+ */
+kmaTimeLib.convertKoreaStr2Date = function (str) {
+    var strArray = str.split(' ');
+    var y = strArray[0].substr(0, 4);
+    var m = strArray[1].substr(0, 2) - 1;
+    var d = strArray[2].substr(0, 2);
+    var h = strArray[3].substr(0, 2);
+    var min = strArray[4].substr(0, 2);
+
+    var D = new Date(y,m,d,h,min);
+    return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
+};
+
 module.exports = kmaTimeLib;

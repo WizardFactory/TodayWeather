@@ -171,7 +171,15 @@
         {
             int       temperature     = 0;
             nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"time"];
-            nssHour             = [NSString stringWithFormat:@"%@시", [nssTime substringToIndex:2]];
+            if([nssTime length] >= 2)
+            {
+                nssHour             = [NSString stringWithFormat:@"%@시", [nssTime substringToIndex:2]];
+            }
+            else
+            {
+                nssHour             = [NSString stringWithFormat:@"시"];
+            }
+            
             temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
             if(tempUnit == TEMP_UNIT_FAHRENHEIT)
             {
