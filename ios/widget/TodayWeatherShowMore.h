@@ -46,7 +46,6 @@
 - (NSString *) getCurCountry;
 - (void) setCurCountry:(NSString *)nssCountry;
 
-
 @end
 
 #endif /* TodayWeatherShowMore_h */

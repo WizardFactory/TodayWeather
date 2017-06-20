@@ -99,35 +99,58 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
                 case 0:
+                {
                     TVC->time1Label.text = LSTR_YESTERDAY;//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp1Label.text = nssTempMaxMin;
+                    
                     TVC->showMore1IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore1IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore1IV withRect:TVC->showMore1IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
+                    
                 case 1:
+                {
                     TVC->time2Label.text = LSTR_TODAY;//[NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp2Label.text = nssTempMaxMin;
                     TVC->showMore2IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore2IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore2IV withRect:TVC->showMore2IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
-                case 2:
-                    TVC->time3Label.text = LSTR_TOMORROW;
                     
+                case 2:
+                {
+                    TVC->time3Label.text = LSTR_TOMORROW;
                     TVC->temp3Label.text = nssTempMaxMin;
+                    
                     TVC->showMore3IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore3IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore3IV withRect:TVC->showMore3IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 3:
+                {
                     TVC->time4Label.text = [NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp4Label.text = nssTempMaxMin;
+                    
                     TVC->showMore4IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore4IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore4IV withRect:TVC->showMore4IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 4:
+                {
                     TVC->time5Label.text = [NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp5Label.text = nssTempMaxMin;
                     TVC->showMore5IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore5IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore5IV withRect:TVC->showMore5IV.bounds transparentInsets:UIEdgeInsetsZero];
+
+                }
                     break;
                 case 5:
+                {
                     TVC->time6Label.text = [NSString stringWithFormat:@"%@/%@", nssMonth, nssDay];
                     TVC->temp6Label.text = nssTempMaxMin;
                     TVC->showMore6IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore6IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore6IV withRect:TVC->showMore6IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                     
                 default:
@@ -213,34 +236,54 @@
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
                 case 0:
+                {
                     TVC->time1Label.text    = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp1Label.text    = nssTempByTime;
                     TVC->showMore1IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore1IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore1IV withRect:TVC->showMore1IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 1:
+                {
                     TVC->time2Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp2Label.text = nssTempByTime;
                     TVC->showMore2IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore2IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore2IV withRect:TVC->showMore2IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 2:
+                {
                     TVC->time3Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp3Label.text = nssTempByTime;
                     TVC->showMore3IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore3IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore3IV withRect:TVC->showMore3IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 3:
+                {
                     TVC->time4Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp4Label.text = nssTempByTime;
                     TVC->showMore4IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore4IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore4IV withRect:TVC->showMore4IV.bounds transparentInsets:UIEdgeInsetsZero];
+
+                }
                     break;
                 case 4:
+                {
                     TVC->time5Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp5Label.text = nssTempByTime;
                     TVC->showMore5IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore5IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore5IV withRect:TVC->showMore5IV.bounds transparentInsets:UIEdgeInsetsZero];
+                }
                     break;
                 case 5:
+                {
                     TVC->time6Label.text = [NSString stringWithFormat:@"%@", nssHour];
                     TVC->temp6Label.text = nssTempByTime;
                     TVC->showMore6IV.image  = [UIImage imageNamed:[NSString stringWithFormat:@"weatherIcon2-color/%@", nssSkyIcon]];
+                    TVC->showMore6IV.image = [TodayWeatherUtil renderImageFromView:TVC->showMore6IV withRect:TVC->showMore6IV.bounds transparentInsets:UIEdgeInsetsZero];
+
+                }
                     break;
                     
                 default:
@@ -335,6 +378,7 @@
             else if ( pm10Grade < pm25Grade)
             {
                 return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
+
             }
         }
     }
@@ -379,7 +423,8 @@
     else if([nssAirState hasSuffix:@"보통"])
     {
         sRange = [nssAirState rangeOfString:@"보통"];     //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0x7acf16);
+//        stateColor = UIColorFromRGB(0x7acf16);
+        stateColor = UIColorFromRGB(0x339933);
     }
     else if([nssAirState hasSuffix:@"민감군주의"])
     {

@@ -653,5 +653,42 @@ TEMP_UNIT    gTemperatureUnit;
     return;
 }
 
+/********************************************************************
+ *
+ * Name			: renderImageFromView
+ * Description	: render image from view
+ * Returns		: UIImage
+ * Side effects :
+ * Date			: 2017. 6. 20
+ * Author		: SeanKim
+ * History		: 20170620 SeanKim Create function
+ *
+ ********************************************************************/
++ (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets
+{
+    CGSize imageSizeWithBorder = CGSizeMake(frame.size.width + insets.left + insets.right, frame.size.height + insets.top + insets.bottom);
+    // Create a new context of the desired size to render the image
+    UIGraphicsBeginImageContextWithOptions(imageSizeWithBorder, NO, 0);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    // Clip the context to the portion of the view we will draw
+    CGContextClipToRect(context, (CGRect){{insets.left, insets.top}, frame.size});
+    // Translate it, to the desired position
+    CGContextTranslateCTM(context, -frame.origin.x + insets.left, -frame.origin.y + insets.top);
+    
+    CGContextSetAllowsAntialiasing(context, true);
+    CGContextSetShouldAntialias(context, true);
+    
+    // Render the view as image
+    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    
+    // Fetch the image
+    UIImage *renderedImage = UIGraphicsGetImageFromCurrentImageContext();
+    
+    // Cleanup
+    UIGraphicsEndImageContext();
+    
+    return renderedImage;
+}
 
 @end
