@@ -1922,12 +1922,6 @@ function ControllerTown() {
         meta.town = req.params.town;
         log.info('>sID=',req.sessionID, meta);
 
-        if (req.params.areaNo == undefined) {
-            log.error("areaNo is undefined", meta);
-            next();
-            return this;
-        }
-
         var townName = {
             first: req.params.region? req.params.region:'',
             second: req.params.city? req.params.city:'',
@@ -1937,6 +1931,11 @@ function ControllerTown() {
 
         async.waterfall([
                 function(cb){
+                    if (req.params.areaNo == undefined) {
+                        log.warn('Heath> There is no areaNo, goto finding areaNo');
+                        return cb(null);
+                    }
+
                     modelHealthDay.find({areaNo:parseInt(req.params.areaNo)}).lean().exec(function(err, res) {
                         if(err || res.length === 0){
                             log.info('No areaNo from Health DB : ', req.params.areaNo);
@@ -1995,7 +1994,7 @@ function ControllerTown() {
                                 log.info('AreaNo : ', areaNo.areaNo);
                                 modelHealthDay.find({areaNo:parseInt(areaNo.areaNo)}).lean().exec(function(err, res) {
                                     if(err || res.length === 0){
-                                        log.error('Health> 3. cannot fild areaNo near by geocode', townGeocode);
+                                        log.warn('Health> cannot fild areaNo near by geocode, goto next : ', townGeocode, areaNo.areaNo);
                                         return callback(null);
                                     }
                                     log.info('succes HealthDay : ', res.length, areaNo.areaNo);
@@ -2005,6 +2004,7 @@ function ControllerTown() {
                             },
                             function(err, result){
                                 if(!err){
+                                    log.error('Heath> 3. Cannot Find Heath Data');
                                     return cb('fail to find by near AreaNo', undefined);
                                 }
                             }
@@ -2609,7 +2609,7 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     });
 
     log.debug(JSON.stringify(itemList));
-
+    
     if(itemList.length > 1) {
         return itemList[0].str+", "+itemList[1].str;
     } else {
