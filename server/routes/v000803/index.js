@@ -109,6 +109,8 @@ router.use('/daily', require('../v000705/dailySummary'));
 router.use('/check-purchase', require('../v000705/receiptValidation'));
 router.use('/push', require('../v000705/routePushNotification'));
 
+router.use('/nation', require('./route.nation'));
+
 router.post('/', function(req,res) {
     res.render('index', {title:'TodayWeather : post'});
 });
