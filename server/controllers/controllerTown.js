@@ -1206,7 +1206,7 @@ function ControllerTown() {
 
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHZZ(now);
-                log.info(date+time);
+                log.info(date+time, meta);
                 controllerKmaStnWeather.getStnHourly(townInfo, date+time, req.current.t1h, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
@@ -1306,7 +1306,7 @@ function ControllerTown() {
                 var date = kmaTimeLib.convertDateToYYYYMMDD(now);
                 var time = kmaTimeLib.convertDateToHHMM(now);
                 log.debug(date+time, meta);
-                controllerKmaStnWeather.getStnCheckedMinute(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
+                controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
                     if (err) {
                         log.error(err);
                         next();

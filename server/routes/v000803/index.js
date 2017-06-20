@@ -113,4 +113,6 @@ router.post('/', function(req,res) {
     res.render('index', {title:'TodayWeather : post'});
 });
 
+router.use('/test', require('./route.test'));
+
 module.exports = router;
