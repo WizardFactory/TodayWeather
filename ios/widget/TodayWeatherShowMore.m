@@ -364,8 +364,6 @@
         else if ( (khaiGrade == pm10Grade) && (khaiGrade < pm25Grade) )
         {
             return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
-        }
-        else if ( (khaiGrade < pm10Grade) && (khaiGrade < pm25Grade) )
         {
             if ( pm10Grade > pm25Grade)
             {
@@ -378,7 +376,6 @@
             else if ( pm10Grade < pm25Grade)
             {
                 return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
-
             }
         }
     }
