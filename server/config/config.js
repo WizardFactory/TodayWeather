@@ -44,7 +44,7 @@ module.exports = {
         googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key')
     },
     push: {
-        pushServer : (process.env.PUSH_SERVER || 'http://localhost:3000'),
+        serviceServer : (process.env.SERVICE_SERVER || 'http://localhost:3000'),
         gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
     },
     url: {

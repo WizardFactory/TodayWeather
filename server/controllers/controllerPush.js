@@ -313,7 +313,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
     var apiVersion = "v000803";
-    var url = "http://"+config.ipAddress+":"+config.port+"/"+apiVersion+"/daily/town";
+    var url = config.push.serviceServer+"/"+apiVersion+"/daily/town";
     var town = pushInfo.town;
     if (town.first) {
         url += '/'+ encodeURIComponent(town.first);
@@ -600,7 +600,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
  */
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
-    var url = "http://"+config.ipAddress+":"+config.port+"/ww/010000/current/2";
+    var url = config.push.serviceServer+"/ww/010000/current/2";
     url += "?gcode="+pushInfo.geo[1]+","+pushInfo.geo[0];
 
     log.info('request url='+url);
