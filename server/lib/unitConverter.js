@@ -24,7 +24,12 @@ UnitConverter.prototype._convertTemperature = function(from, to, val) {
             return parseFloat(((val - 32) / (9/5)).toFixed(1));
         }
     }
-    log.error('Fail to convert from '+from+" to "+to+" value="+val);
+    if (from == undefined) {
+        log.error('Fail to convert from '+from+" to "+to+" value="+val);
+    }
+    else {
+        log.warn('Fail to convert from '+from+" to "+to+" value="+val);
+    }
     return val;
 };
 
