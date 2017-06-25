@@ -100,7 +100,12 @@ controllerAqi.prototype._getLocalLast0H = function (timeOffset) {
 };
 
 controllerAqi.prototype._removeAllAqiDb = function(geocode, callback){
-    modelAqi.remove({geocode:geocode}).lean().exec(function(err, list){
+    var geo = [];
+
+    geo.push(parseFloat(geocode.lon));
+    geo.push(parseFloat(geocode.lat));
+
+    modelAqi.remove({geo:geo}).lean().exec(function(err, list){
         if(err){
             log.error('Aqi DB> fail to get db data', err);
             return callback(err);
@@ -135,7 +140,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
 
         log.info('AQI> New Data : ', newData);
         var res = {
-            geocode: geocode,
+            geo: [],
             address: {},
             date: date,
             dateObj: self._getUtcTime('' + date + '000'),
@@ -143,10 +148,12 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
             aqi: newData.aqi,
             idx: newData.idx
         };
+        res.geo.push(parseFloat(geocode.lon));
+        res.geo.push(parseFloat(geocode.lat));
 
         log.info('Aqi> res : ', res);
 
-        modelAqi.update({geocode: res.geocode, dateObj: res.dateObj}, res, {upsert:true}, function (err) {
+        modelAqi.update({geo: res.geo, dateObj: res.dateObj}, res, {upsert:true}, function (err) {
             if(err){
                 log.error('Aqi> Fail to update db data: ', geocode);
             }
@@ -224,9 +231,31 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                 if(err){
                     log.error('Req Aqi> Fail to get AQI data');
                 }
+                var res = {
+                    type : 'AQI',
+                    geocode: geocode,
+                    address: {},
+                    date: 0,
+                    dateObj: new Date(0),
+                    timeOffset: timeOffset,
+                    data: []
+                };
+                aqiData.forEach(function(item){
+                    if(res.date === 0 || res.date < item.date){
+                        res.date = item.date;
+                    }
+                    if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
+                        res.dateObj = item.dateObj;
+                    }
+                    if(item.timeOffset){
+                        res.timeOffset = item.timeOffset;
+                    }
+
+                    res.data.push(item);
+                });
 
                 if(callback){
-                    callback(err, aqiData);
+                    callback(err, res);
                 }
             }
         );

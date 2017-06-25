@@ -585,7 +585,6 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                     cb(null, dsfData);
                 });
             },
-            /*
             function(cb){
                 var collectorAqi = new controllerAqi;
 
@@ -595,19 +594,34 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                         return cb('Fail to requestAqiData');
                     }
 
-                    log.info(aqiData);
+                    log.info('RQ> AQI result : ', aqiData);
                     cb(null, aqiData);
                 });
             }
-            */
         ],
         function(err, result){
             if(err){
                 log.error('RQ> Fail to request weather', meta);
             }
-            log.info('RQ> dsf : ', result[0]);
 
-            callback(err, result[0]);
+            var res = {};
+
+            if(result.length > 0){
+                result.forEach(function(item, index){
+                    if(item.type === 'DSF'){
+                        res.DSF = item;
+                    }
+
+                    if(item.type === 'AQI'){
+                        res.AQI = item;
+                    }
+                });
+            }
+
+            log.info('RQ> dsf : ', JSON.stringify(res.DSF));
+            log.info('RQ> aqi : ', JSON.stringify(res.AQI));
+
+            callback(err, res);
         }
     );
 };
