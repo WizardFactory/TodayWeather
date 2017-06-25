@@ -1398,7 +1398,9 @@ KmaScraper.prototype._getKmaDomain = function () {
 };
 
 /**
- *
+ * 기상특보 현황 : 2017년 06월 21일 11시 00분 이후 (2017년 06월 21일 10시 00분 발표)
+ * 예비 기상특보 현황 : 2017년 06월 21일 10시 00분 발표
+ * 기상정보 : 2017년 06월 22일 04시 00분 발표
  * @param html
  * @private
  */
@@ -1407,7 +1409,12 @@ KmaScraper.prototype._getAnnouncement = function (html) {
     var pubDateStr = html.children('dt').text();
     pubDateStr = pubDateStr.replace(/\t/g, '');
     pubDateStr = pubDateStr.replace(/\r\n/g, '');
-    pubDateStr = pubDateStr.slice(pubDateStr.indexOf(':')+2, pubDateStr.indexOf('분')+1);
+    if (pubDateStr.indexOf('(') != -1) {
+        pubDateStr = pubDateStr.slice(pubDateStr.indexOf('(')+1, pubDateStr.indexOf('발표')-1);
+    }
+    else {
+        pubDateStr = pubDateStr.slice(pubDateStr.indexOf(':')+2, pubDateStr.indexOf('발표')-1);
+    }
 
     return kmaTimeLib.convertKoreaStr2Date(pubDateStr);
 };
@@ -1448,8 +1455,15 @@ KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
     else if (type == KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL) {
         var situationArray = situationStr.split('(');
         for (var i=0; i<situationArray.length; i++) {
-            situationArray[i] = situationArray[i].slice(2);
-            situationArray[i] = situationArray[i].replace(/o/, '-');
+            // o없음
+            //(1)풍량예비특보o0620일아침:제주도남쪽먼바다
+            if (situationArray[i].indexOf("없음") >= 0) {
+                situationArray[i] = situationArray[i].slice(1);
+            }
+            else {
+                situationArray[i] = situationArray[i].slice(2);
+                situationArray[i] = situationArray[i].replace(/o/, '-');
+            }
         }
         situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
     }
@@ -1505,9 +1519,11 @@ KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
     specialWeatherSituation = self._parseSpecialHtml(preliminarySpecialHtml, KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL);
     specialWeatherSituationList.push(specialWeatherSituation);
 
-    specialWeatherSituation = {};
-    specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml);
-    specialWeatherSituationList.push(specialWeatherSituation);
+    if (weatherInformationHtml.length > 0) {
+        specialWeatherSituation = {};
+        specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml);
+        specialWeatherSituationList.push(specialWeatherSituation);
+    }
 
 
     callback(null, specialWeatherSituationList);

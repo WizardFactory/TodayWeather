@@ -1734,9 +1734,10 @@ static TodayViewController *todayVC = nil;
     
     currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
+//    nssAirIndices       = [        NSArray *arrDate            = [nssTmpDate componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
     
     // Test
-    //nssAirState = [NSString stringWithFormat:@"통합대기 78 나쁨"];
+    //nssAirState = [NSString stringWithFormat:@"통합대기 78 보통"];
 
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
     NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
@@ -1803,7 +1804,11 @@ static TodayViewController *todayVC = nil;
         }
         
         if(nssCurImgName)
+        {
             curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
+            curWTIconIV.image = [TodayWeatherUtil renderImageFromView:curWTIconIV withRect:curWTIconIV.bounds transparentInsets:UIEdgeInsetsZero];
+
+        }
         
         if( (idT1h == nil) || [idT1h isEqualToString:@"(null)"] )
         {
@@ -1866,7 +1871,6 @@ static TodayViewController *todayVC = nil;
     // Date
     NSString        *nssDateTime = nil;
     NSString        *nssTime = nil;
-    NSString        *nssLiveTime = nil;
     NSString        *nssHourMin = nil;
     
     // Image∂
@@ -2018,7 +2022,11 @@ static TodayViewController *todayVC = nil;
         }
         
         if(nssCurImgName)
+        {
             curWTIconIV.image       = [UIImage imageNamed:nssCurImgName];
+            curWTIconIV.image = [TodayWeatherUtil renderImageFromView:curWTIconIV withRect:curWTIconIV.bounds transparentInsets:UIEdgeInsetsZero];
+
+        }
         
         if( (idT1h == nil) || [idT1h isEqualToString:@"(null)"] )
         {
