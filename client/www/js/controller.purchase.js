@@ -46,7 +46,7 @@ angular.module('controller.purchase', [])
             var url = twClientConfig.serverUrl  + '/v000705' + '/check-purchase';
             $http({
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: url,
                 data: storeReceipt,
                 timeout: 10000

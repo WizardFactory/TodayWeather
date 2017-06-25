@@ -86,7 +86,7 @@ angular.module('service.push', [])
             //name, units
             $http({
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language},
+                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language, 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
@@ -114,7 +114,7 @@ angular.module('service.push', [])
 
             $http({
                 method: 'DELETE',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
@@ -138,7 +138,7 @@ angular.module('service.push', [])
             //update registration id on server
             $http({
                 method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: {newRegId: registrationId, oldRegId: self.pushData.registrationId},
                 timeout: 10*1000
