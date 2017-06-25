@@ -347,7 +347,7 @@ controllerKmaStnWeather._getStnMinuteList = function (stnList, dateTime, callbac
         return this;
     }
 
-    async.mapSeries(stnList,
+    async.map(stnList,
         function (stnInfo, mCallback) {
             self._getStnMinute2(stnInfo, dateTime, function (err, stnInfo) {
                 if (err) {
@@ -690,59 +690,59 @@ controllerKmaStnWeather.getStnHourly = function (townInfo, dateTime, t1h, callba
     return this;
 };
 
-/**
- * 매분 날씨 정보를 가지고 옴.
- * @param townInfo
- * @param dateTime
- * @param t1h
- * @param callback
- * @returns {controllerKmaStnWeather}
- */
-controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callback) {
-    var self = this;
-
-    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
-    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-
-    async.waterfall([
-            function (aCallback) {
-                KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
-                    if (err) {
-                        return aCallback(err);
-                    }
-
-                    var stnList = self._filterStnList(kmaStnList) ;
-                    return aCallback(err, stnList);
-                });
-            },
-            function (stnList, aCallback) {
-               self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
-                   if (err) {
-                       return aCallback(err);
-                   }
-                   aCallback(err, results);
-               })
-            },
-            function (stnMinuteWeatherList, aCallback) {
-                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList);
-                if (mergedStnWeather == undefined) {
-                    return aCallback(new Error('Fail to make stn Minute Weather info town='+JSON.stringify(townInfo)));
-                }
-                else {
-                    mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
-                }
-                aCallback(undefined, mergedStnWeather);
-            }
-        ],
-        function (err, result) {
-            if (err)  {
-                return callback(err);
-            }
-            callback(err, result);
-        });
-
-    return this;
-};
+///**
+// * 매분 날씨 정보를 가지고 옴.
+// * @param townInfo
+// * @param dateTime
+// * @param t1h
+// * @param callback
+// * @returns {controllerKmaStnWeather}
+// */
+//controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callback) {
+//    var self = this;
+//
+//    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
+//    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+//
+//    async.waterfall([
+//            function (aCallback) {
+//                KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
+//                    if (err) {
+//                        return aCallback(err);
+//                    }
+//
+//                    var stnList = self._filterStnList(kmaStnList) ;
+//                    return aCallback(err, stnList);
+//                });
+//            },
+//            function (stnList, aCallback) {
+//               self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
+//                   if (err) {
+//                       return aCallback(err);
+//                   }
+//                   aCallback(err, results);
+//               })
+//            },
+//            function (stnMinuteWeatherList, aCallback) {
+//                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList);
+//                if (mergedStnWeather == undefined) {
+//                    return aCallback(new Error('Fail to make stn Minute Weather info town='+JSON.stringify(townInfo)));
+//                }
+//                else {
+//                    mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
+//                }
+//                aCallback(undefined, mergedStnWeather);
+//            }
+//        ],
+//        function (err, result) {
+//            if (err)  {
+//                return callback(err);
+//            }
+//            callback(err, result);
+//        });
+//
+//    return this;
+//};
 
 /**
  * stnHourly와 stnMinute의 합치면서, hourly가 동네예보와 1도 이상 차이는 측정소의 온도는 skip함.
