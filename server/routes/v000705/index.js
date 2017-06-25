@@ -7,8 +7,8 @@ var router = express.Router();
 
 router.use(function timestamp(req, res, next){
     var deviceId = '';
-    if (req.headers.device-id) {
-       deviceId = req.headers.device-id ;
+    if (req.headers['device-id']) {
+       deviceId = req.headers['device-id'];
     }
 
     log.info('@@ + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' +
