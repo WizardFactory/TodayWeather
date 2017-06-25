@@ -19,7 +19,10 @@ var mongoose = require("mongoose");
  p: "Atmostpheric Pressure"
  */
 var aqiSchema = new mongoose.Schema({
-    geocode: {lat: Number, lon: Number},
+    geo: {
+        type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
+        index: '2d'         // create the geospatial index
+    },
     address: {country:String, city:String, zipcode:Number, postcode:Number},
     date:    {type: Number, default: 0},   // GMT time YYYYMMDDHHMM
     dateObj: {type: Object, default: Date},// UTC time

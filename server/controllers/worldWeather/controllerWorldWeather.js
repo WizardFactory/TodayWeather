@@ -7,6 +7,7 @@ var modelGeocode = require('../../models/worldWeather/modelGeocode.js');
 var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
 var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
 var modelDSForecast = require('../../models/worldWeather/modelDSForecast');
+var modelAQI = require('../../models/worldWeather/modelAqi');
 var config = require('../../config/config');
 
 
@@ -446,6 +447,36 @@ function controllerWorldWeather(){
                         log.info('TWW> get DSF data', meta);
                         callback(null);
                     });
+                },
+                function(callback){
+                    self.getDataFromAQI(req, function(err, result){
+                        if(err){
+                            log.error('TWW> Fail to get AQI data', err, meta);
+                            callback('err_exit_AQI');
+                            return;
+                        }
+
+                        if(req.AQI === undefined){
+                            log.warn('TWW> There is no AQI data', meta);
+                            callback('err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('cDate : ', cDate.toString());
+                        log.info('DB Date : ', req.AQI.dateObj.toString());
+
+                        //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
+                        if(!self.checkValidDate(cDate, req.AQI.dateObj)){
+                            log.info('TWW> Invaild AQI data', meta);
+                            log.info('TWW> AQI CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
+                            callback('err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('TWW> get AQI data', meta);
+                        callback(null);
+                    });
                 }
             ],
             function(err, result){
@@ -460,9 +491,19 @@ function controllerWorldWeather(){
                                         req.error = {res: 'fail', msg:'Fail to request Two days data'};
                                         return cb(null); // try to read data from DB
                                     }
-                                    req.DSF = result.data;
 
-                                    log.info('TWW> get DSF Response : ', JSON.stringify(req.DSF));
+                                    if(result.data != undefined){
+                                        if(result.data.DSF != undefined){
+                                            req.DSF = result.data.DSF;
+                                        }
+
+                                        if(result.data.AQI != undefined){
+                                            req.AQI = result.data.AQI;
+                                        }
+                                    }
+
+                                    log.info('TWW> get DSF response : ', JSON.stringify(req.DSF));
+                                    log.info('TWW> get AQI response : ', JSON.stringify(req.AQI));
                                     cb('success to get data', result);
                                 });
                             },
@@ -1205,6 +1246,33 @@ function controllerWorldWeather(){
                         req.result.thisTime.push(current);
                     }
                 }
+            });
+        }
+
+        next();
+    };
+
+    self.mergeAqi = function(req, res, next) {
+        var meta = {};
+        meta.sID = req.sessionID;
+
+        if (req.AQI && req.AQI.data) {
+            if (req.result.thisTime === undefined) {
+                return next();
+            }
+            var aqi = req.AQI.data;
+
+            req.result.thisTime.forEach(function(thisTime) {
+                aqi.forEach(function(aqiItem){
+                    var time = new Date();
+                    time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
+                    aqiItem.date = self._convertTimeString(time);
+
+                    if (thisTime.date != undefined
+                        && self._compareDateString(thisTime.date, aqiItem.date)){
+                        thisTime.aqi = aqiItem.aqi;
+                    }
+                });
             });
         }
 
@@ -2240,13 +2308,54 @@ function controllerWorldWeather(){
 
             if(list.length === 0){
                 log.warn('gDSF> There is no DSF data for ', geocode, meta);
-                callback(err);
+                callback('No Data');
                 return;
             }
 
             req.DSF = list[0];
 
             callback(err, req.DSF);
+        });
+    };
+
+    self.getDataFromAQI = function(req, callback){
+        var meta = {};
+        meta.sID = req.sessionID;
+
+        var geo = [];
+
+        geo.push(parseFloat(req.geocode.lon));
+        geo.push(parseFloat(req.geocode.lat));
+
+
+        modelAQI.find({geo:geo}).lean().exec(function(err, list){
+            if(err){
+                log.error('gAQI> fail to get AQI data', meta);
+                callback(err);
+                return;
+            }
+
+            if(list.length === 0){
+                log.warn('gAQI> There is no AQI data for ', geo, meta);
+                callback('No Data');
+                return;
+            }
+            var res = {
+                type : 'AQI',
+                geocode: {
+                    lat: list[0].geo[1],
+                    lon: list[0].geo[0]
+                },
+                address: {},
+                date: 0,
+                dateObj: list[0].dateObj,
+                timeOffset: list[0].timeOffset,
+                data: []
+            };
+            res.data = list;
+            req.AQI = res;
+
+            callback(err, req.AQI);
         });
     };
 

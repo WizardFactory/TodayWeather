@@ -1454,6 +1454,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                     log.error(err);
                 }
                 var res = {
+                    type : 'DSF',
                     geocode: geocode,
                     address: {},
                     date: 0,
@@ -1462,7 +1463,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                     data: []
                 };
 
-                log.info('Dsf> dsg count : ', DsfData.length);
+                log.info('Dsf> dsf count : ', DsfData.length);
 
                 // For response /////////////////////////////
                 DsfData.forEach(function(item){
