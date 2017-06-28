@@ -5,6 +5,14 @@
  */
 
 var mongoose = require("mongoose");
+
+/**
+ * o 폭염주의보 : 서울
+ *
+ * (1) 호우 예비특보
+ * o 06월 29일 저녁 : 제주도(제주도산지)
+ * o 06월 29일 밤 : 제주도(제주도남부)
+ */
 var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
     announcement: Date, //YYYY.MM.DD.HH.ZZ is the same as pubDate
     type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation
@@ -14,8 +22,10 @@ var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
         weatherStr: String,
         level: Number,
         levelStr: String,
-        timeStr: String, //6월20일아침
-        location: String
+        info: [{
+            timeStr: String, //6월20일아침
+            location: String //제주도(제주도산지)
+        }]
     }],
     comment: String, //<, o, *, -, ※ 에서 줄변경해야 함 (<br> or \n)
 });
@@ -85,15 +95,24 @@ kmaSpecialWeatherSituationSchema.statics = {
             }
 
             //폭염주의보:서울
-            //풍량예비특보-0620일아침:제주도남쪽먼바다
+            //풍량예비특보:0620일아침-제주도남쪽먼바다
+            //호우예비특보:06월29일저녁-제주도(제주도산지):06월29일밤-제주도(제주도남부)
             var sArray = str.split(':');
-            var location  = sArray[1];
+            var tStr = sArray[0];
 
-            var extraArray = sArray[0].split('-');
-            var tStr = extraArray[0];
-            var timeStr = extraArray[1];
+            var info = [];
+            for (var i=1; i<sArray.length; i++) {
+                //서울 or [06월29일저녁,제주도(제주도산지)]
+                var infoArray = sArray[i].split('-');
+                if (infoArray.length == 1) {
+                    info.push({location: infoArray[0]});
+                }
+                else if (infoArray.length == 2) {
+                    info.push({timeStr:infoArray[0], location: infoArray[1]});
+                }
+            }
 
-            var situation = {weather:0, weatherStr:"", level: 0, levelStr:"", timeStr: timeStr, location: location};
+            var situation = {weather:0, weatherStr:"", level: 0, levelStr:"", info: info};
             if (tStr.indexOf('주의보') != -1) {
                 situation.level = 1;
                 situation.levelStr = '주의보';

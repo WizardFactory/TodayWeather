@@ -48,9 +48,18 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     stnWeatherList.pubDate = strAr[strAr.length-1];
 
+    //actually pubDate is ''
+    if (stnWeatherList.pubDate == undefined || stnWeatherList.pubDate == '' || stnWeatherList.pubDate.length < 12) {
+        var err =  new Error('Fail to get weather pubdate='+stnWeatherList.pubDate);
+        err.state = 'Retry';
+        log.error(err.toString());
+        return callback(err);
+    }
+
     if (pubDate) {
         if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
             var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+            err.state = 'Skip';
             return callback(err);
         }
     }
@@ -973,12 +982,28 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
         //},
         function (cb) {
             log.info('get aws weather');
-            self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
+            //retry
+            async.retry({
+                    times:10,
+                    interval:1000,
+                    errorFilter: function(err) {
+                        return err.state == 'Retry'; // only retry on a specific error
+                    }
+                },
+                function (retryCallback) {
+                self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
+                    if (err)  {
+                        return retryCallback(err);
+                    }
+                    return retryCallback(err, weatherList);
+                });
+            }, function (err, weatherList) {
                 if (err)  {
                     return cb(err);
                 }
                 return cb(err, weatherList);
-            });},
+            });
+        },
         function (awsWeatherList, cb) {
             self.getCityWeather(pubDate, function (err, cityWeatherList) {
                 if (err) {
@@ -1453,7 +1478,9 @@ KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
         situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
     }
     else if (type == KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL) {
-        var situationArray = situationStr.split('(');
+        //(1)호우예비특보o06월29일저녁:제주도(제주도산지)o06월29일밤:제주도(제주도남부)
+        var re = new RegExp(/\([0-9]\)/);
+        var situationArray = situationStr.split(re);
         for (var i=0; i<situationArray.length; i++) {
             // o없음
             //(1)풍량예비특보o0620일아침:제주도남쪽먼바다
@@ -1462,9 +1489,11 @@ KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
             }
             else {
                 situationArray[i] = situationArray[i].slice(2);
-                situationArray[i] = situationArray[i].replace(/o/, '-');
+                situationArray[i] = situationArray[i].replace(/:/g, '-');
+                situationArray[i] = situationArray[i].replace(/o/g, ':');
             }
         }
+        //호우예비특보:06월29일저녁-제주도(제주도산지):06월29일밤-제주도(제주도남부)
         situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
     }
 
