@@ -178,7 +178,7 @@ function ControllerTown() {
                     function (callback) {
                         var dateList = [];
                         dateList.push(self._getCurrentTimeValue(+9).date); //today
-                        dateList.push(self._getCurrentTimeValue(+15).date); //tomorrow
+                        dateList.push(self._getCurrentTimeValue(+33).date); //tomorrow
                         KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
                             if (err) {
                                 return callback(err);
@@ -1886,7 +1886,7 @@ function ControllerTown() {
         try {
             var dateList = [];
             dateList.push(self._getCurrentTimeValue(+9).date); //today
-            dateList.push(self._getCurrentTimeValue(+15).date); //tomorrow
+            dateList.push(self._getCurrentTimeValue(+33).date); //tomorrow
             KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
                 if (err) {
                     log.error(err);
