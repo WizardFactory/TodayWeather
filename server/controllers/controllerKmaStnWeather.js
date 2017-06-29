@@ -332,6 +332,50 @@ controllerKmaStnWeather._getStnMinute = function (stnInfo, dateTime, callback) {
 };
 
 /**
+ * 20min내에 n개의 stn에서 비가 왔는지 확인, 측정된 stnId는 랜덤임.
+ * @param stnList
+ * @param dateTime
+ * @param callback
+ * @returns {controllerKmaStnWeather}
+ * @private
+ */
+controllerKmaStnWeather._checkPrecipFromStnMinuteList = function (stnList, dateTime, callback) {
+    var self = this;
+
+    if (!Array.isArray(stnList)) {
+        callback(new Error("mstStnList is not array"));
+        return this;
+    }
+
+    //20min - data자체가 3분정도 딜레이가 있음.
+    var limitTime = new Date(dateTime);
+    limitTime.setMinutes(limitTime.getMinutes() - 20);
+
+    var query;
+    var array = [];
+    stnList.forEach(function (stnInfo) {
+        var q = {stnId: parseInt(stnInfo.stnId), date: {$gt: limitTime}, rns: true};
+        array.push(q);
+    });
+    query = {$or: array};
+
+    KmaStnMinute2.find(query, {_id: 0}).sort({date: -1}).lean().exec(function (err, stnWeatherList) {
+        if (err) {
+            return callback(err);
+        }
+
+        if (stnWeatherList.length > 0) {
+            var stnWeather = stnWeatherList[0];
+            stnWeather.date = kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM(stnWeather.date);
+            return callback(undefined, stnWeather);
+        }
+        else {
+            return callback(undefined, undefined);
+        }
+    });
+};
+
+/**
  *
  * @param stnList
  * @param {String} dateTime
@@ -744,149 +788,149 @@ controllerKmaStnWeather.getStnMinute = function (townInfo, dateTime, t1h, callba
     return this;
 };
 
-/**
- * stnHourly와 stnMinute의 합치면서, hourly가 동네예보와 1도 이상 차이는 측정소의 온도는 skip함.
- * @param townInfo
- * @param dateTime system time (now)
- * @param current req.current
- * @param callback
- */
-controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, current, callback) {
-    var self = this;
-
-    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
-    var stnDateHour = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ(dateTime);
-    var currentTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
-    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-    var opt = {};
-
-    async.waterfall([
-            function (aCallback) {
-                async.parallel([function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
-                        if (err) {
-                            return pCallback(err);
-                        }
-                        return pCallback(err, kmaStnList);
-                    });
-                }, function (pCallback) {
-                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(3).lean().exec(function (err, kmaStnList) {
-                        if (err) {
-                            return pCallback(err);
-                        }
-                        return pCallback(err, kmaStnList);
-                    });
-                }], function (err, results) {
-                    if (err) {
-                        return aCallback(err);
-                    }
-                    //var stnList = self._filterStnList(results[0].concat(results[1])) ;
-                    var stnList = results[0].concat(results[1]) ;
-                    aCallback(err, stnList);
-                });
-            }, function (stnList, cb) {
-                self._getStnHourlyList(stnList, currentTime, function (err, results) {
-                    if (err) {
-                        return cb(err);
-                    }
-                    cb(err, results);
-                });
-            }, function (stnHourWeatherList, aCallback) {
-                var listFiltered = [];
-                var t1hIndex;
-                var rainIndex;
-                var cityWeatherIndex;
-                var pushedIndex;
-                stnHourWeatherList.forEach(function (stnHourWeather, index) {
-                    if (current.t1h == undefined && stnHourWeather.isCityWeather) {
-                        stnHourWeather.isT1hStn = true;
-                        listFiltered.push(stnHourWeather);
-                        t1hIndex = pushedIndex = index;
-                    }
-                    if (Math.abs(stnHourWeather.t1h - current.t1h) < 1 && t1hIndex == undefined) {
-                        stnHourWeather.isT1hStn = true;
-                        listFiltered.push(stnHourWeather);
-                        t1hIndex = pushedIndex = index;
-                        if (!(current.reh == undefined) && Math.abs(current.reh - stnHourWeather.reh) >= 10) {
-                            opt.skipReh = true;
-                        }
-                        if (!(current.wsd == undefined) && !(stnHourWeather.wsd == undefined) &&
-                            Math.abs(current.wsd - stnHourWeather.wsd) >= 1) {
-                            opt.skipWsd = true;
-                        }
-                    }
-
-                    if (stnHourWeather.rnsHitRate > 0.5 && rainIndex == undefined) {
-                        stnHourWeather.isRainStn = true;
-                        if (pushedIndex != index) {
-                            listFiltered.push(stnHourWeather);
-                            pushedIndex = index;
-                        }
-                        rainIndex =  index;
-                    }
-                    if (stnHourWeather.isCityWeather && cityWeatherIndex == undefined) {
-                        if (pushedIndex != index) {
-                            listFiltered.push(stnHourWeather);
-                            pushedIndex = index;
-                        }
-                        cityWeatherIndex = index;
-                    }
-                });
-
-                if (t1hIndex == undefined) {
-                    opt.skipTemp = true;
-                    opt.skipReh = true;
-                    opt.skipWsd = true;
-                }
-                if (!(current.pty == undefined) && rainIndex == undefined) {
-                    opt.skipRain = true;
-                }
-                aCallback(undefined, listFiltered);
-            }, function (stnList, cb) {
-                if (stnDateHour != currentTime) {
-                    //update to last time
-                    self._getStnHourlyList(stnList, stnDateHour, function (err, results) {
-                        if (err) {
-                            return cb(err);
-                        }
-                        cb(err, results);
-                    });
-                }
-                else {
-                   cb(undefined, stnList);
-                }
-            }, function (stnList, aCallback) {
-                self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
-                    if (err) {
-                        log.error(err);
-                        return aCallback(undefined, stnList);
-                    }
-                    if (results.length == 0) {
-                        log.error("Fail to get stn minute, so use hourly");
-                        return aCallback(undefined, stnList);
-                    }
-                    aCallback(err, results);
-                })
-            }, function (stnMinuteWeatherList, aCallback) {
-                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList, opt);
-                if (mergedStnWeather == undefined) {
-                    return aCallback(new Error('Fail to make stn checked Minute Weather info town='+JSON.stringify(townInfo)));
-                }
-                else {
-                    mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
-                }
-                aCallback(undefined, mergedStnWeather);
-            }
-        ],
-        function (err, result) {
-            if (err)  {
-                return callback(err);
-            }
-            callback(err, result);
-        });
-
-    return this;
-};
+///**
+// * stnHourly와 stnMinute의 합치면서, hourly가 동네예보와 1도 이상 차이는 측정소의 온도는 skip함.
+// * @param townInfo
+// * @param dateTime system time (now)
+// * @param current req.current
+// * @param callback
+// */
+//controllerKmaStnWeather.getStnCheckedMinute = function (townInfo, dateTime, current, callback) {
+//    var self = this;
+//
+//    var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(dateTime);
+//    var stnDateHour = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ(dateTime);
+//    var currentTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(current.date+current.time);
+//    var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
+//    var opt = {};
+//
+//    async.waterfall([
+//            function (aCallback) {
+//                async.parallel([function (pCallback) {
+//                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 0.2}}).limit(5).lean().exec(function (err, kmaStnList) {
+//                        if (err) {
+//                            return pCallback(err);
+//                        }
+//                        return pCallback(err, kmaStnList);
+//                    });
+//                }, function (pCallback) {
+//                    KmaStnInfo.find({geo: {$near:coords, $maxDistance: 1}, isCityWeather: true}).limit(3).lean().exec(function (err, kmaStnList) {
+//                        if (err) {
+//                            return pCallback(err);
+//                        }
+//                        return pCallback(err, kmaStnList);
+//                    });
+//                }], function (err, results) {
+//                    if (err) {
+//                        return aCallback(err);
+//                    }
+//                    //var stnList = self._filterStnList(results[0].concat(results[1])) ;
+//                    var stnList = results[0].concat(results[1]) ;
+//                    aCallback(err, stnList);
+//                });
+//            }, function (stnList, cb) {
+//                self._getStnHourlyList(stnList, currentTime, function (err, results) {
+//                    if (err) {
+//                        return cb(err);
+//                    }
+//                    cb(err, results);
+//                });
+//            }, function (stnHourWeatherList, aCallback) {
+//                var listFiltered = [];
+//                var t1hIndex;
+//                var rainIndex;
+//                var cityWeatherIndex;
+//                var pushedIndex;
+//                stnHourWeatherList.forEach(function (stnHourWeather, index) {
+//                    if (current.t1h == undefined && stnHourWeather.isCityWeather) {
+//                        stnHourWeather.isT1hStn = true;
+//                        listFiltered.push(stnHourWeather);
+//                        t1hIndex = pushedIndex = index;
+//                    }
+//                    if (Math.abs(stnHourWeather.t1h - current.t1h) < 1 && t1hIndex == undefined) {
+//                        stnHourWeather.isT1hStn = true;
+//                        listFiltered.push(stnHourWeather);
+//                        t1hIndex = pushedIndex = index;
+//                        if (!(current.reh == undefined) && Math.abs(current.reh - stnHourWeather.reh) >= 10) {
+//                            opt.skipReh = true;
+//                        }
+//                        if (!(current.wsd == undefined) && !(stnHourWeather.wsd == undefined) &&
+//                            Math.abs(current.wsd - stnHourWeather.wsd) >= 1) {
+//                            opt.skipWsd = true;
+//                        }
+//                    }
+//
+//                    if (stnHourWeather.rnsHitRate > 0.5 && rainIndex == undefined) {
+//                        stnHourWeather.isRainStn = true;
+//                        if (pushedIndex != index) {
+//                            listFiltered.push(stnHourWeather);
+//                            pushedIndex = index;
+//                        }
+//                        rainIndex =  index;
+//                    }
+//                    if (stnHourWeather.isCityWeather && cityWeatherIndex == undefined) {
+//                        if (pushedIndex != index) {
+//                            listFiltered.push(stnHourWeather);
+//                            pushedIndex = index;
+//                        }
+//                        cityWeatherIndex = index;
+//                    }
+//                });
+//
+//                if (t1hIndex == undefined) {
+//                    opt.skipTemp = true;
+//                    opt.skipReh = true;
+//                    opt.skipWsd = true;
+//                }
+//                if (!(current.pty == undefined) && rainIndex == undefined) {
+//                    opt.skipRain = true;
+//                }
+//                aCallback(undefined, listFiltered);
+//            }, function (stnList, cb) {
+//                if (stnDateHour != currentTime) {
+//                    //update to last time
+//                    self._getStnHourlyList(stnList, stnDateHour, function (err, results) {
+//                        if (err) {
+//                            return cb(err);
+//                        }
+//                        cb(err, results);
+//                    });
+//                }
+//                else {
+//                   cb(undefined, stnList);
+//                }
+//            }, function (stnList, aCallback) {
+//                self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
+//                    if (err) {
+//                        log.error(err);
+//                        return aCallback(undefined, stnList);
+//                    }
+//                    if (results.length == 0) {
+//                        log.error("Fail to get stn minute, so use hourly");
+//                        return aCallback(undefined, stnList);
+//                    }
+//                    aCallback(err, results);
+//                })
+//            }, function (stnMinuteWeatherList, aCallback) {
+//                var mergedStnWeather = self._mergeStnWeatherList(stnMinuteWeatherList, opt);
+//                if (mergedStnWeather == undefined) {
+//                    return aCallback(new Error('Fail to make stn checked Minute Weather info town='+JSON.stringify(townInfo)));
+//                }
+//                else {
+//                    mergedStnWeather.stnDateTime = stnMinuteWeatherList[0].date;
+//                }
+//                aCallback(undefined, mergedStnWeather);
+//            }
+//        ],
+//        function (err, result) {
+//            if (err)  {
+//                return callback(err);
+//            }
+//            callback(err, result);
+//        });
+//
+//    return this;
+//};
 
 /**
  * cityWeather의 시간단위와 분단위 날씨를 가지고 오고, 가장 가까운 5지역에서 추가로 rns 정보를 가지고 옴
@@ -954,27 +998,26 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                 });
             },
             function (stnList, aCallback) {
-                self._getStnMinuteList(stnList, stnDateTime, function (err, results) {
+                if (stnWeather.rns == true) {
+                   //skip
+                    return aCallback();
+                }
+
+                self._checkPrecipFromStnMinuteList(stnList, stnDateTime, function (err, result) {
                     if (err) {
                         return aCallback(err);
                     }
-                    if (results.length == 0) {
-                        err = new Error("Fail to get stn minute, so use hourly");
-                        return aCallback(err);
+
+                    if (result == undefined) {
+                        //no precip
+                        return aCallback();
                     }
-                    for (var i=0; i<results.length; i++) {
-                        if (results[i].rns == true) {
-                            break;
-                        }
-                    }
-                    if (i != results.length) {
-                       if (stnWeather.rns == false) {
-                           stnWeather.rns = results[i].rns;
-                           stnWeather.rnsStnId = results[i].stnId;
-                           stnWeather.rnsStnName = results[i].stnName;
-                       }
-                    }
-                    aCallback(err);
+
+                    stnWeather.rns = true;
+                    stnWeather.rnsStnId = result.stnId;
+                    stnWeather.rnsStnName = result.stnName;
+                    stnWeather.rnsDate = result.date;
+                    aCallback();
                 });
             }
         ],
