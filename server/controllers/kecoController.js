@@ -413,57 +413,56 @@ arpltnController._convertDustForecastStrToGrade = function (str) {
 
 arpltnController.getDustFrcst = function (town, dateList, callback) {
     var region = this._convertDustFrcstRegion(town.region, town.city);
-    var informDataList = [];
     var self = this;
 
+    var query;
+    var array = [];
     dateList.forEach(function (date) {
-        informDataList.push(kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date));
+        var q = {informData: kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date)};
+        array.push(q);
     });
-
-    async.map(informDataList, function (informData, cb) {
-        Frcst.find({informData: informData}, {_id:0}).lean().exec(function (err, dustFrcstList) {
-            if (err) {
-                return cb(err)
-            }
-
-            if (dustFrcstList.length === 0) {
-                return cb(err);
-            }
-
-            var result = {};
-            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(informData);
-
-            dustFrcstList.forEach(function (dustFrcst) {
-                for (var i=0; i<dustFrcst.informGrade.length;i++) {
-                    if (dustFrcst.informGrade[i].region === region)  {
-                        if (dustFrcst.informGrade[i].grade != '예보없음') {
-                            if (result.dustForecast === undefined) {
-                                result.dustForecast = {};
-                            }
-                            var keyGradeStr = dustFrcst.informCode+"Grade";
-                            var keyStrStr = dustFrcst.informCode+"Str";
-                            result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
-                            result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
-                        }
-                        return;
-                    }
-                }
-            });
-
-            if (result.dustForecast == undefined) {
-                return cb(err);
-            }
-            result.dustForecast.sido = region;
-            cb(err, result);
-        });
-    }, function (err, results) {
+    query = {$or: array};
+    Frcst.find(query, {_id:0}).lean().exec(function (err, dustFrcstList) {
         if (err) {
             return callback(err);
         }
-        results = results.filter(function (result) {
-            return !!result;
+        if (dustFrcstList.length == 0) {
+            err = new Error("Fail to find dust forecast query="+JSON.stringify(query));
+            return callback(err);
+        }
+
+        var resultList = [];
+
+        dustFrcstList.forEach(function (dustFrcst) {
+            for (var i=0; i<dustFrcst.informGrade.length;i++) {
+                if (dustFrcst.informGrade[i].region === region)  {
+                    if (dustFrcst.informGrade[i].grade != '예보없음') {
+
+                        var result = resultList.filter(function (r) {
+                            if (r.date == kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData)) {
+                                return true;
+                            }
+                            return false;
+                        })[0];
+
+                        if (result == null) {
+                            result = {};
+                            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData);
+                            result.dustForecast = {};
+                            result.dustForecast.sido = region;
+                            resultList.push(result);
+                        }
+
+                        var keyGradeStr = dustFrcst.informCode+"Grade";
+                        var keyStrStr = dustFrcst.informCode+"Str";
+                        result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
+                        result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
+                    }
+                    return;
+                }
+            }
         });
-        return callback(err, results);
+        callback(err, resultList);
     });
 
     return this;
