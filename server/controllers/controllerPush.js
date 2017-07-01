@@ -757,7 +757,7 @@ ControllerPush.prototype.sendPush = function (time) {
                 callback(undefined, pushList);
             });
         }, function(pushList, callback) {
-            async.map(pushList, function (pushInfo, mCallback) {
+            async.mapSeries(pushList, function (pushInfo, mCallback) {
                 self.sendNotification(pushInfo, function (err, result) {
                     if (err) {
                         return mCallback(err);
