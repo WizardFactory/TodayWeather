@@ -62,7 +62,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .bar.bar-search {
   border-color: #EC407A;
-  background-color: #ec72a8;
+  background-color: #EC407A;
   background-image: linear-gradient(0deg, #EC407A, #EC407A 50%, transparent 50%);
   color: #fff;
 }
@@ -86,6 +86,26 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background-color: #FFA726;
   background-image: linear-gradient(0deg, #FB8C00, #FB8C00 50%, transparent 50%);
   color: #fff;
+}
+
+.menu-content {
+  transform: none !important;
+}
+
+.menu-content.menu-open {
+  z-index: -1;
+  opacity: 0.4;
+}
+
+.menu-left {
+  z-index: auto !important;
+  left: -275px;
+  -webkit-transition: left 200ms ease;
+  transition: left 200ms ease;
+}
+
+.menu-left.menu-open {
+  left: 0px;
 }
 
 .popup-body {
@@ -432,9 +452,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 /* search */
 .search-header {
+  margin-left: 40px !important;
   padding: 5px 5px 5px 5px;
   background-color: #EC407A;
   background-image: none;
+  width: 70%;
 }
 
 .search-header label {
@@ -443,6 +465,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .search-header input {
   background-color: transparent;
+  width: 100%;
 }
 
 .search-header a {
@@ -606,10 +629,8 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .title {
-  font-size: 21px;
-  opacity: 0.87;
-  font-weight: 700;
-  //letter-spacing: 5px;
+  left: 0px !important;
+  right: 0px !important;
 }
 
 .setting-title-light {

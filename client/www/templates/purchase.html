@@ -1,4 +1,14 @@
-<ion-view title="Purchase" hide-nav-bar="true">
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title">
+            <span style="vertical-align: middle">{{'LOC_REMOVE_ADS'|translate}}</span>
+        </p>
+    </ion-nav-title>
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
         <div style="margin-top: 72px;">
             <img class="item-center" width="96px" src="img/app-icon.png" style="margin-bottom: 16px">
@@ -36,7 +46,4 @@
             </button>
         </div>
     </ion-content>
-    <a class="button button-clear button-positive" style="position: absolute; top: 24px;" ng-click="goBack()">
-        <i class="icon ion-chevron-left"></i>
-    </a>
 </ion-view>

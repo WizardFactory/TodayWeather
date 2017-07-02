@@ -85,8 +85,15 @@ angular.module('starter', [
         }
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
+            var element = angular.element(document.querySelectorAll('ion-header-bar'));
+            element.removeClass('bar-search');
+            element.removeClass('bar-forecast');
+            element.removeClass('bar-dailyforecast');
+            element.removeClass('bar-dark');
+
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#ec72a8';
+                element.addClass('bar-search');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#EC407A');
                 }
@@ -100,26 +107,21 @@ angular.module('starter', [
                 }
 
                 $rootScope.viewColor = '#03A9F4';
+                element.addClass('bar-forecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';
+                element.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
                 }
-            } else if (toState.name === 'tab.setting') {
-                $rootScope.viewColor = '#FFA726';
+            } else {
+                $rootScope.viewColor = '#444444';
+                element.addClass('bar-dark');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#FB8C00');
-                }
-            } else if (toState.name === 'guide') {
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0288D1');
-                }
-            } else if (toState.name === 'units') {
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#444');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             }
 
@@ -1247,16 +1249,6 @@ angular.module('starter', [
                     'tab-dailyforecast': {
                         templateUrl: 'templates/tab-dailyforecast.html',
                         controller: 'ForecastCtrl'
-                    }
-                }
-            })
-            .state('tab.setting', {
-                url: '/setting',
-                cache: true,
-                views: {
-                    'tab-setting': {
-                        templateUrl: 'templates/tab-setting.html',
-                        controller: 'SettingCtrl'
                     }
                 }
             });

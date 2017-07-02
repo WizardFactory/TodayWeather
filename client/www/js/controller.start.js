@@ -247,7 +247,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
                 if (saveCity(weatherData, geoInfo) == false) {
                     Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-                    $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                 }
                 else {
                     Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
@@ -266,7 +266,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                         '(' + error + ')', endTime - startTime);
                 }
 
-                $scope.showAlert(strError, strFailToGetWeatherInfo);
+                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
 
                 $ionicLoading.hide();
             });
@@ -287,7 +287,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
 
                     if (saveCity(weatherData, geoInfo) == false) {
-                        $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                        $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                     }
                     else {
                         close();
@@ -295,7 +295,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     $ionicLoading.hide();
                 }, function () {
                     Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                    $scope.showAlert(strError, strFailToGetWeatherInfo);
+                    $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                     $ionicLoading.hide();
                 });
             }, function (err) {
@@ -524,7 +524,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
 
                 if (saveCity(weatherData, geoInfo) == false) {
-                    $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                 }
                 else {
                     close();
@@ -532,7 +532,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 $ionicLoading.hide();
             }, function () {
                 Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                $scope.showAlert(strError, strFailToGetWeatherInfo);
+                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                 $ionicLoading.hide();
             });
         }
@@ -548,7 +548,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 WeatherInfo.disableCity(false);
                 if (saveCity(weatherData, geoInfo, true) == false) {
                     WeatherInfo.disableCity(true);
-                    $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                 }
                 else {
                     close();
@@ -556,7 +556,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 $ionicLoading.hide();
             }, function () {
                 Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                $scope.showAlert(strError, strFailToGetWeatherInfo);
+                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                 $ionicLoading.hide();
             });
         }, function(msg) {
@@ -577,21 +577,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     $scope.OnUseLocationService = function() {
         Util.ga.trackEvent('action', 'click', 'OnUseLocationService');
         _onUseLocationService();
-    };
-
-    //from tabCtrl
-    $scope.showAlert = function(title, msg, callback) {
-        var alertPopup = $ionicPopup.alert({
-            title: title,
-            template: msg,
-            okText: strOkay
-        });
-        alertPopup.then(function() {
-            console.log("alertPopup close");
-            if (callback != undefined) {
-                callback();
-            }
-        });
     };
 
     var gLocationAuthorizationStatus;

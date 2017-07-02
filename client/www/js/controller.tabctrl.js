@@ -41,14 +41,6 @@ angular.module('controller.tabctrl', [])
             TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
 
-        $scope.doTabSetting = function() {
-            if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.startPopup();
-                return;
-            }
-            $location.path('/tab/setting');
-        };
-
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 $scope.startPopup();
@@ -137,37 +129,6 @@ angular.module('controller.tabctrl', [])
             });
 
             Util.ga.trackEvent('action', 'tab', 'share');
-        };
-
-        $scope.showAlert = function(title, msg, callback) {
-            var alertPopup = $ionicPopup.alert({
-                title: title,
-                template: msg,
-                okText: strOkay
-            });
-            alertPopup.then(function() {
-                console.log("alertPopup close");
-                if (callback != undefined) {
-                    callback();
-                }
-            });
-        };
-
-        $scope.showConfirm = function(title, template, callback) {
-            var confirmPopup = $ionicPopup.confirm({
-                title: title,
-                template: template,
-                okText: strOkay,
-                cancelText: strCancel
-            });
-            confirmPopup.then(function (res) {
-                if (res) {
-                    console.log("You are sure");
-                } else {
-                    console.log("You are not sure");
-                }
-                callback(res);
-            });
         };
 
         $scope.contentHeight = function() {

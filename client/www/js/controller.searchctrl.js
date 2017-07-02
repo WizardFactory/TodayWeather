@@ -290,7 +290,7 @@ angular.module('controller.searchctrl', [])
 
                     if (saveCity(weatherData, geoInfo) == false) {
                         Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-                        $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                        $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                     }
                     else {
                         Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
@@ -310,7 +310,7 @@ angular.module('controller.searchctrl', [])
                             '(' + error + ')', endTime - startTime);
                     }
 
-                    $scope.showAlert(strError, strFailToGetWeatherInfo);
+                    $rootScope.showAlert(strError, strFailToGetWeatherInfo);
 
                     $ionicLoading.hide();
                 });
@@ -331,7 +331,7 @@ angular.module('controller.searchctrl', [])
                     WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
 
                         if (saveCity(weatherData, geoInfo) == false) {
-                            $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                            $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                         }
                         else {
                             WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
@@ -340,7 +340,7 @@ angular.module('controller.searchctrl', [])
                         $ionicLoading.hide();
                     }, function () {
                         Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                        $scope.showAlert(strError, strFailToGetWeatherInfo);
+                        $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                         $ionicLoading.hide();
                     });
                 }, function (err) {

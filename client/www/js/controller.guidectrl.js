@@ -1,5 +1,5 @@
 angular.module('controller.guidectrl', [])
-    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $ionicHistory,
                                       $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
 
         $scope.data = { 'autoSearch': true };
@@ -73,7 +73,7 @@ angular.module('controller.guidectrl', [])
 
         function close() {
             _setShowAds(true);
-            $location.path('/tab/setting');
+            $ionicHistory.goBack();
         }
 
         function update() {
