@@ -57,8 +57,10 @@ angular.module('service.run', [])
         Util.ga.trackEvent('app', 'language', Util.language);
 
         if (window.hasOwnProperty("device")) {
+            Util.uuid = window.device.uuid;
             console.log("UUID:"+window.device.uuid);
         }
+
         console.log("UA:"+ionic.Platform.ua);
         console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
         console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);

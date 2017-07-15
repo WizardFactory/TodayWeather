@@ -200,6 +200,7 @@ angular.module('service.util', [])
         obj.suiteName = "group.net.wizardfactory.todayweather";
         obj.language;
         obj.region;
+        obj.uuid = '';
 
         //obj.url = "/v000803";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000803";

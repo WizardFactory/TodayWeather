@@ -459,7 +459,12 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             //$scope.searchResults = [];
             $scope.searchResults2 = [];
             $scope.search.word = geoInfo.name;
-            $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
+            if (geoInfo.googleAddress) {
+                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
+            }
+            else {
+                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
+            }
             //$ionicScrollDelegate.$getByHandle('cityList').scrollTop();
             //searchIndex = -1;
         }, function(msg) {
@@ -477,6 +482,10 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         _onSearchCurrentPosition();
     });
 
+    /**
+     * get geoinfo of current postion
+     * @constructor
+     */
     $scope.OnSearchCurrentPosition = function() {
         Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPostion');
         _onSearchCurrentPosition();
@@ -562,7 +571,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         }, function(msg) {
             hideLoadingIndicator();
             if (msg !== null) {
-                $scope.showRetryConfirm(strError, msg, 'search');
+                $scope.showRetryConfirm(strError, msg, 'useLocationService');
             }
             else {
                 $scope.$broadcast('useLocationService');
@@ -611,7 +620,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
      * @param template
      * @param callback
      */
-    $scope.showRetryConfirm = function showRetryConfirm(title, template, ctrl) {
+    $scope.showRetryConfirm = function fShowRetryConfirm(title, template, ctrl) {
         if (confirmPopup) {
             confirmPopup.close();
         }
@@ -629,30 +638,19 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             strOpensTheAppInfoPage = translations.LOC_OPENS_THE_APP_INFO_PAGE;
         }, function (translationIds) {
             console.log("Fail to translate : " + JSON.stringify(translationIds));
-            Util.ga.trackEvent("translate", "error", "showRetryConfirm");
+            Util.ga.trackEvent("translate", "error", "ShowRetryConfirm");
         }).finally(function () {
             var buttons = [];
-            if (ctrl == 'search') {
-                buttons.push({
-                    text: strClose,
-                    onTap: function () {
-                        return 'close';
-                    }
-                });
-            }
+            buttons.push({
+                text: strClose,
+                onTap: function () {
+                    return 'close';
+                }
+            });
 
             if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                 template += '<br>';
                 template += strOpensTheAppInfoPage;
-
-                if (ctrl == 'forecast') {
-                    buttons.push({
-                        text: strSearch,
-                        onTap: function () {
-                            return 'search';
-                        }
-                    });
-                }
 
                 buttons.push({
                     text: strSetting,
@@ -664,34 +662,17 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 Util.ga.trackEvent('window', 'show', 'deniedAlwaysPopup');
             }
             else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                if (ctrl == 'forecast') {
-                    buttons.push({
-                        text: strSearch,
-                        onTap: function () {
-                            return 'search';
-                        }
-                    });
-                }
-
                 buttons.push({
-                    text: strOkay,
+                    text: strSetting,
                     type: 'button-positive',
                     onTap: function () {
-                        return 'retry';
+                        return 'settings';
                     }
                 });
+
                 Util.ga.trackEvent('window', 'show', 'deniedPopup');
             }
             else {
-                if (ctrl == 'forecast') {
-                    buttons.push({
-                        text: strSearch,
-                        onTap: function () {
-                            return 'search';
-                        }
-                    });
-                }
-
                 buttons.push({
                     text: strSetting,
                     onTap: function () {
@@ -699,16 +680,16 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     }
                 });
 
-                buttons.push({
-                    text: strOkay,
-                    type: 'button-positive',
-                    onTap: function () {
-                        return 'retry';
-                    }
-                });
-
                 Util.ga.trackEvent('window', 'show', 'retryPopup');
             }
+
+            buttons.push({
+                text: strOkay,
+                type: 'button-positive',
+                onTap: function () {
+                    return 'retry';
+                }
+            });
 
             confirmPopup = $ionicPopup.show({
                 title: title,
@@ -725,16 +706,12 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                                 $scope.$broadcast('searchCurrentPositionEvent');
                             }
                             else {
-                                $scope.$broadcast('reloadEvent');
+                                $scope.$broadcast('useLocationService');
                             }
                         }, 0);
                     }
-                    else if (res == 'search') {
-                        Util.ga.trackEvent('action', 'click', 'moveSearch');
-                        WeatherInfo.disableCity(true);
-                        $location.path('/tab/search');
-                    }
                     else if (res == 'settings') {
+                        //for get app permission
                         Util.ga.trackEvent('action', 'click', 'settings');
                         setTimeout(function () {
                             cordova.plugins.diagnostic.switchToSettings(function () {
@@ -745,6 +722,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                         }, 0);
                     }
                     else if (res == 'locationSettings') {
+                        //to turn on location service
                         setTimeout(function () {
                             cordova.plugins.diagnostic.switchToLocationSettings(function () {
                                 console.log("Successfully switched to location settings app");

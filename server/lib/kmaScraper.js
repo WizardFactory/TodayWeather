@@ -52,7 +52,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
     if (stnWeatherList.pubDate == undefined || stnWeatherList.pubDate == '' || stnWeatherList.pubDate.length < 12) {
         var err =  new Error('Fail to get weather pubdate='+stnWeatherList.pubDate);
         err.state = 'Retry';
-        log.error(err.toString());
+        log.warn(err.toString());
         return callback(err);
     }
 

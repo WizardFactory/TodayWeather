@@ -7,7 +7,13 @@ var controllerRequester = require('../../controllers/worldWeather/controllerRequ
 var requester = new controllerRequester();
 
 router.use(function timestamp(req, res, next){
-    log.info('@@ + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
+    var deviceId = '';
+    if (req.headers['device-id']) {
+       deviceId = req.headers['device-id'];
+    }
+
+    log.info('@@ + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' +
+        req.sessionID+ ' UUID='+deviceId);
 
     next();
 });

@@ -236,7 +236,12 @@ angular.module('service.weatherutil', [])
             }, 2000);
 
             console.log("retry="+retryCount+" get http");
-            $http({method: 'GET', url: url, timeout: 10000})
+
+            var options = {method: 'GET', url: url,
+                headers: {'Device-Id': Util.uuid},
+                timeout: 10000};
+
+            $http(options)
                 .success(function (data, status, headers, config, statusText) {
                     console.log('clear timeout = '+ retryTimeId);
                     clearTimeout(retryTimeId);
@@ -265,7 +270,11 @@ angular.module('service.weatherutil', [])
             url += "?gcode=" + location.lat + ','+location.long;
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 10*1000})
+            var options = {method: 'GET', url: url,
+                headers: {'Device-Id': Util.uuid},
+                timeout: 10*1000};
+
+            $http(options)
                 .success(function (data) {
                     deferred.resolve({data : data});
                 })
