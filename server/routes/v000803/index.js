@@ -29,6 +29,7 @@ router.use(function checkAuthorization(req, res, next) {
 
     log.info('@@ + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' +
         req.sessionID+ ' UUID='+deviceId);
+    log.info('user-agent='+req.headers['user-agent']+ '  sID=' + req.sessionID+ ' UUID='+deviceId);
 
     var err;
     // post일 경우에만 check 한다.

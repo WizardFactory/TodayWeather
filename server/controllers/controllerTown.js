@@ -48,8 +48,20 @@ function ControllerTown() {
     var self = this;
     this.checkParamValidation = function(req, res, next) {
         var regionName = req.params.region;
+        var townName = req.params.town;
         if (regionName == '중국' || regionName == '일본' || regionName == '미국' || regionName == '하늘시') {
-            log.info('We did not support this region '+regionName);
+            log.error('We did not support this region '+regionName);
+            res.status(400).send("We didn't support this region");
+        }
+        else if (townName == 'KR') {
+            log.error('Invalid params='+JSON.stringify(req.params));
+            req.params.region = req.params.city;
+            req.params.city= regionName;
+            req.params.town = undefined;
+            next();
+        }
+        else if (townName == 'JP') {
+            log.error('Invalid params='+JSON.stringify(req.params));
             res.status(400).send("We didn't support this region");
         }
         else {
