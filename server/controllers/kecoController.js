@@ -462,6 +462,12 @@ arpltnController.getDustFrcst = function (town, dateList, callback) {
                 }
             }
         });
+
+        if (resultList.length == 0) {
+            err = new Error("dust forecast length is zero query="+JSON.stringify(query));
+            return callback(err);
+        }
+
         callback(err, resultList);
     });
 

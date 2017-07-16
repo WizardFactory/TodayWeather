@@ -7,6 +7,9 @@ var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
 
 var Scrape = require('../../lib/kmaScraper');
+var PastConditionGather = require('../../lib/PastConditionGather');
+var ctrlHealthDay = require('../../controllers/controllerHealthDay');
+var KasiRiseSet = require('../../controllers/kasi.riseset.controller');
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
@@ -41,7 +44,6 @@ router.get('/current', function(req, res) {
 });
 
 router.get('/past', function(req, res) {
-    var PastConditionGather = require('../../lib/PastConditionGather');
     var pastGather = new PastConditionGather();
     pastGather.start(1, server_key, function (err) {
         if (err) {
@@ -182,7 +184,6 @@ router.get('/lifeindex', function (req, res) {
 });
 
 router.get('/healthday', function(req, res) {
-    var ctrlHealthDay = require('../../controllers/controllerHealthDay');
     var requestUrl;
     var urlList = [];
     
@@ -290,7 +291,16 @@ router.get('/invalidateCloudFront/:items', function(req, res){
             res.send();
         }
     );
+});
 
+router.get('/gatherKasiRiseSet', function(req, res) {
+    KasiRiseSet.gatherAreaRiseSetFromApi(function (err, result) {
+        if (err) {
+            log.error(err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
 });
 
 module.exports = router;
