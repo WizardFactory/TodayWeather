@@ -1904,6 +1904,7 @@ Manager.prototype._requestApi = function (apiName, callback) {
 Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     var self = this;
     var time = (new Date()).getUTCMinutes();
+    var hours = (new Date()).getUTCHours();
 
     log.verbose('check time and request task');
 
@@ -2019,6 +2020,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //        self._requestApi("invalidateCloudFront/ALL", callback);
     //    })
     //}
+
+    if ((time === 55 && hours === 18)|| putAll) {
+        log.info('push kasi rise set');
+        self.asyncTasks.push(function (callback) {
+            self._requestApi("gatherKasiRiseSet", function () {
+                log.info('kasi rise set done');
+                callback();
+            });
+        });
+    }
 
     if (self.asyncTasks.length <= 17) {
         log.debug('wait '+self.asyncTasks.length+' tasks');

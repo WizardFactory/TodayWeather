@@ -25,6 +25,8 @@ var KecoController = require('../controllers/kecoController');
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var kasiRiseSetController = require('../controllers/kasi.riseset.controller');
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -1878,7 +1880,7 @@ function ControllerTown() {
             });
         }
 
-        if (!req.midData.hasOwnProperty('dustFrcstList') || !Array.isArray(req.dustFrcstList)) {
+        if (req.hasOwnProperty('dustFrcstList') && Array.isArray(req.dustFrcstList)) {
             addDustFrcstList(req.midData.dailyData, req.dustFrcstList);
             next();
             return this;
@@ -2495,6 +2497,79 @@ function ControllerTown() {
 
         return this;
     };
+
+
+    this.getRiseSetInfo = function (req, res, next) {
+        var meta = {};
+        meta.method = 'get rise set info';
+        meta.region = req.params.region;
+        meta.city = req.params.city;
+        meta.town = req.params.town;
+        log.info('>sID=',req.sessionID, meta);
+
+        if(req.midData == undefined || req.midData.dailyData == undefined || !Array.isArray(req.midData.dailyData)) {
+            log.error("daily data is undefined");
+            return next();
+        }
+
+        var dateList = [];
+        req.midData.dailyData.forEach(function (dayInfo) {
+            dateList.push(dayInfo.date);
+        });
+
+        //town: {first: String, second: String, third: String},
+        async.waterfall([
+                function (callback) {
+                    if(req.geocode) {
+                        return callback(null, req.geocode);
+                    }
+                    var town = {"town.first":req.params.region,
+                        "town.second": req.params.city,
+                        "town.third": req.params.town};
+
+                    dbTown.find(town, {_id:0}).limit(1).lean().exec(function (err, tList) {
+                        if(err) {
+                            return callback(err);
+                        }
+                        if(tList.length == 0) {
+                            err = new Error("Fail to get town info town="+JSON.stringify(town));
+                            return callback(err);
+                        }
+
+                        req.geocode = tList[0].gCoord;
+                        callback(null, tList[0].gCoord);
+                    });
+                },
+                function (geocode, callback) {
+                    kasiRiseSetController.getRiseSetList(geocode, dateList, function (err, rsList) {
+                        if(err) {
+                            callback(err);
+                        }
+                        callback(null, rsList);
+                    });
+                },
+                function (rsList, callback) {
+                    rsList.forEach(function (riseSet) {
+                        var dailyData = req.midData.dailyData;
+                        for (var i=0; i<dailyData.length; i++) {
+                            if (dailyData[i].date == riseSet.date)  {
+                                for (var key in riseSet)  {
+                                    dailyData[i][key] = riseSet[key];
+                                }
+                                break;
+                            }
+                        }
+                    });
+                    callback();
+                }
+            ],
+            function (err) {
+                if (err) {
+                    log.error(err);
+                }
+                next();
+            });
+    }
 }
 
 /**
@@ -2609,8 +2684,12 @@ ControllerTown.prototype._makeSummary = function(current, yesterday) {
     });
 
     log.debug(JSON.stringify(itemList));
-    
-    if(itemList.length > 1) {
+
+    if (itemList.length == 0) {
+        log.error("Fail to make summary");
+        return "";
+    }
+    else if(itemList.length > 1) {
         return itemList[0].str+", "+itemList[1].str;
     } else {
         return itemList[0].str;
