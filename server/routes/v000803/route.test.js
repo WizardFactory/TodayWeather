@@ -24,4 +24,29 @@ function divideParams(req, res, next) {
 router.get('/stnWeatherHourly/*', [divideParams, test.stnWeatherHourly]);
 router.get('/stnWeatherMinute/*', [divideParams, test.stnWeatherMinute]);
 
+var Scrape = require('../../lib/kmaScraper');
+
+router.get('/special', function (req, res, next) {
+    var scrape = new Scrape();
+    scrape.gatherSpecialWeatherSituation(function (err, result) {
+        if (err) {
+            log.error(err);
+            return res.send(err);
+        }
+        res.send(result);
+    });
+});
+
+var KasiRiseSet = require('../../controllers/kasi.riseset.controller');
+
+router.get('/gatherKasiRiseSet', function (req, res, next) {
+    KasiRiseSet.gatherAreaRiseSetFromApi(function (err, result) {
+        if (err) {
+            log.error(err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
+});
+
 module.exports = router;

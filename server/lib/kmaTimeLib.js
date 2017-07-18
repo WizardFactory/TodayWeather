@@ -5,8 +5,7 @@
 var kmaTimeLib = {};
 
 /**
- *
- * @param str
+ * @param str YYYYmmDDHHMMSS
  * @returns {*}
  */
 kmaTimeLib.convertStringToDate = function(str) {
@@ -18,7 +17,8 @@ kmaTimeLib.convertStringToDate = function(str) {
         m = str.substr(4,2) - 1,
         d = str.substr(6,2),
         h = str.substr(8,2),
-        min = str.substr(10,2);
+        min = str.substr(10,2),
+        sec = str.substr(12,2);
 
     if (h == '') {
         h = '0';
@@ -26,7 +26,10 @@ kmaTimeLib.convertStringToDate = function(str) {
     if (min == '') {
         min = '0';
     }
-    var D = new Date(y,m,d,h,min);
+    if (sec == '') {
+        sec = '0';
+    }
+    var D = new Date(y,m,d,h,min, sec);
     return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
 };
 
@@ -112,6 +115,14 @@ kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM = function(dateStr) {
     return str;
 };
 
+kmaTimeLib.convertYYYYMMDDHHMMSStoYYYYoMMoDD_HHoMMoSS = function(dateStr) {
+    var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
+    if (dateStr.length > 8) {
+        str += ' ' + dateStr.substr(8,2) + ':' + dateStr.substr(10,2);
+    }
+    return str;
+};
+
 kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ = function(dateStr) {
     var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
     if (dateStr.length > 8) {
@@ -159,6 +170,18 @@ kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM = function (date) {
         '.'+manager.leadingZeros(date.getMonth()+1, 2)+
         '.'+manager.leadingZeros(date.getDate(), 2) +
         '.'+manager.leadingZeros(date.getHours(), 2) +
+        ':'+manager.leadingZeros(date.getMinutes(), 2);
+};
+
+kmaTimeLib.convertDateToYYYYoMMoDD_HHoMM = function (date) {
+    if (date == undefined) {
+        date = kmaTimeLib.toTimeZone(9);
+    }
+
+    return date.getFullYear()+
+        '.'+manager.leadingZeros(date.getMonth()+1, 2)+
+        '.'+manager.leadingZeros(date.getDate(), 2) +
+        ' '+manager.leadingZeros(date.getHours(), 2) +
         ':'+manager.leadingZeros(date.getMinutes(), 2);
 };
 

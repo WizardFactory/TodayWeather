@@ -45,7 +45,7 @@ router.get('/:region', [cTown.checkParamValidation, cTown.getAllDataFromDb, cTow
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast, cTown.getRiseSetInfo,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.sendResult]);
 
@@ -54,7 +54,7 @@ router.get('/:region/:city', [cTown.checkParamValidation, cTown.getAllDataFromDb
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast, cTown.getRiseSetInfo,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.sendResult]);
 
@@ -67,7 +67,7 @@ router.get('/:region/:city/:town', [cTown.checkParamValidation, cTown.getAllData
                                     cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
                                     cTown.mergeByShortest, cTown.adjustShort,
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
-                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast,
+                                    cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast, cTown.getRiseSetInfo,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
                                     cTown.getSummary, cTown.sendResult]);
 
