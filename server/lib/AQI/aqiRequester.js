@@ -17,7 +17,7 @@ function aqiRequester(){
     return this;
 }
 
-    aqiRequester.prototype.getAqiData = function(geocode, key, callback){
+aqiRequester.prototype.getAqiData = function(geocode, key, callback){
     var self = this;
 
     if(!geocode.lat || !geocode.lon){
@@ -31,11 +31,8 @@ function aqiRequester(){
 
     self.getData(url, self.aqiRetryCount, function(err, res){
         if(err){
-            callback(err, {isSuccess: false});
+            callback(err);
             return;
-        }
-        if(res != undefined){
-            res.isSuccess = true;
         }
         callback(err, res);
         return;

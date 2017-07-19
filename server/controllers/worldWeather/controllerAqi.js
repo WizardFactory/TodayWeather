@@ -211,7 +211,7 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                 requester.getAqiData(geocode, key, function(err, result){
                     if(err){
                         log.error('Req Aqi> get fail', geocode, date);
-                        cb(null);
+                        cb(null, {err: 'fail to get AQI'});
                         return;
                     }
 
@@ -240,19 +240,26 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                     timeOffset: timeOffset,
                     data: []
                 };
-                aqiData.forEach(function(item){
-                    if(res.date === 0 || res.date < item.date){
-                        res.date = item.date;
-                    }
-                    if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
-                        res.dateObj = item.dateObj;
-                    }
-                    if(item.timeOffset){
-                        res.timeOffset = item.timeOffset;
-                    }
 
-                    res.data.push(item);
-                });
+                if(aqiData != undefined){
+                    aqiData.forEach(function(item){
+                        if(item.date === undefined){
+                            return;
+                        }
+
+                        if(res.date === 0 || res.date < item.date){
+                            res.date = item.date;
+                        }
+                        if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
+                            res.dateObj = item.dateObj;
+                        }
+                        if(item.timeOffset){
+                            res.timeOffset = item.timeOffset;
+                        }
+
+                        res.data.push(item);
+                    });
+                }
 
                 if(callback){
                     callback(err, res);

@@ -1257,7 +1257,7 @@ function controllerWorldWeather(){
         meta.sID = req.sessionID;
 
         if (req.AQI && req.AQI.data) {
-            if (req.result.thisTime === undefined) {
+            if (req.result.thisTime === undefined || req.AQI.data.length == 0) {
                 return next();
             }
             var aqi = req.AQI.data;
