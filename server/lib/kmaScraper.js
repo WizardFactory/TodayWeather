@@ -1533,27 +1533,31 @@ KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
     var self = this;
     var specialWeatherSituationList = [];
 
-    var specialHtml = $('.special_report_list2').eq(0);
-    var preliminarySpecialHtml = $('.special_report_list2').eq(1);
-    var weatherInformationHtml = $('.special_report_list3').eq(0);
+    try {
+        var specialHtml = $('.special_report_list2').eq(0);
+        var preliminarySpecialHtml = $('.special_report_list2').eq(1);
+        var weatherInformationHtml = $('.special_report_list3').eq(0);
 
-    /**
-     *기상특보 현황 : 2017년 06월 18일 15시 00분 이후 (2017년 06월 18일 15시 00분 발표)
-     */
-    var specialWeatherSituation = {};
-    specialWeatherSituation = self._parseSpecialHtml(specialHtml, KmaSpecialWeatherSituation.TYPE_SPECIAL);
-    specialWeatherSituationList.push(specialWeatherSituation);
-
-    specialWeatherSituation = {};
-    specialWeatherSituation = self._parseSpecialHtml(preliminarySpecialHtml, KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL);
-    specialWeatherSituationList.push(specialWeatherSituation);
-
-    if (weatherInformationHtml.length > 0) {
-        specialWeatherSituation = {};
-        specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml);
+        /**
+         *기상특보 현황 : 2017년 06월 18일 15시 00분 이후 (2017년 06월 18일 15시 00분 발표)
+         */
+        var specialWeatherSituation = {};
+        specialWeatherSituation = self._parseSpecialHtml(specialHtml, KmaSpecialWeatherSituation.TYPE_SPECIAL);
         specialWeatherSituationList.push(specialWeatherSituation);
-    }
 
+        specialWeatherSituation = {};
+        specialWeatherSituation = self._parseSpecialHtml(preliminarySpecialHtml, KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL);
+        specialWeatherSituationList.push(specialWeatherSituation);
+
+        if (weatherInformationHtml.length > 0) {
+            specialWeatherSituation = {};
+            specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml);
+            specialWeatherSituationList.push(specialWeatherSituation);
+        }
+    }
+    catch(err) {
+        return callback(err);
+    }
 
     callback(null, specialWeatherSituationList);
 };
@@ -1573,11 +1577,12 @@ KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
             strContents = iconv.convert(strContents).toString();
 
             var $ = cheerio.load(strContents);
-            callback(null, $);
         }
         catch(err) {
-            callback(err);
+            return callback(err);
         }
+
+        callback(null, $);
     });
 };
 
