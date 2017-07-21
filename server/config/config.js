@@ -29,6 +29,15 @@ module.exports = {
         dsf_keys : [{
             key: (process.env.DSF_SECRET_KEY || 'You have to set key of Dark Sky')
         }],
+        aw_keys : [{
+            key : (process.env.AW_SECRET_KEY || 'You have to set key of AW')
+        }],
+        fc_keys : [{
+            key : (process.env.FC_SECRET_KEY || 'You have to set key of FC')
+        }],
+        aqi_keys : [{
+            key: (process.env.WAQI_SECRET_KEY || 'You have to set key of WAQI')
+        }]
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),
