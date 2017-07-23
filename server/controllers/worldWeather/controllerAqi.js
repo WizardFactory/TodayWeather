@@ -115,7 +115,21 @@ controllerAqi.prototype._removeAllAqiDb = function(geocode, callback){
     });
 };
 
+controllerAqi.prototype._getItemValue = function(item, name){
+    if(item[name] == undefined){
+        return -100;
+    }
+
+    if(item[name].v == undefined){
+        return -100;
+    }
+
+    return parseFloat(item[name].v);
+};
+
 controllerAqi.prototype._parseAQIData = function(data){
+    var self = this;
+
     if(data == undefined || data.data === undefined){
         return undefined;
     }
@@ -125,11 +139,37 @@ controllerAqi.prototype._parseAQIData = function(data){
     if(aqi.time != undefined && aqi.time.tz != undefined){
         timeOffset = parseInt(aqi.time.tz.slice(0, 3));
     }
-    return {
-        aqi: (aqi.aqi != undefined)? aqi.aqi:-100,
-        idx: (aqi.idx != undefined)? aqi.idx:-100,
-        timeOffset: timeOffset
+
+    var ret = {
+        aqi: (aqi.aqi != undefined)? parseFloat(aqi.aqi):-100,
+        idx: (aqi.idx != undefined)? parseFloat(aqi.idx):-100,
+        timeOffset: timeOffset,
+        co: -100,
+        h: -100,
+        no2: -100,
+        o3: -100,
+        p: -100,
+        pm10: -100,
+        pm25: -100,
+        so2: -100,
+        t: -100
     };
+
+    if(aqi.iaqi != undefined){
+        var iaqi = aqi.iaqi;
+
+        ret.co = self._getItemValue(iaqi, 'co');
+        ret.h = self._getItemValue(iaqi, 'h');
+        ret.no2 = self._getItemValue(iaqi, 'no2');
+        ret.o3 = self._getItemValue(iaqi, 'o3');
+        ret.p = self._getItemValue(iaqi, 'p');
+        ret.pm10 = self._getItemValue(iaqi, 'pm10');
+        ret.pm25 = self._getItemValue(iaqi, 'pm25');
+        ret.so2 = self._getItemValue(iaqi, 'so2');
+        ret.t = self._getItemValue(iaqi, 't');
+    }
+
+    return ret;
 };
 
 controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
@@ -146,8 +186,18 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
             dateObj: self._getUtcTime('' + date + '000'),
             timeOffset: newData.timeOffset,
             aqi: newData.aqi,
-            idx: newData.idx
+            idx: newData.idx,
+            co: newData.co,
+            h: newData.h,
+            no2: newData.no2,
+            o3: newData.o3,
+            p: newData.p,
+            pm10: newData.pm10,
+            pm25: newData.pm25,
+            so2: newData.so2,
+            t: newData.t
         };
+
         res.geo.push(parseFloat(geocode.lon));
         res.geo.push(parseFloat(geocode.lat));
 

@@ -1271,6 +1271,16 @@ function controllerWorldWeather(){
                     if (thisTime.date != undefined
                         && self._compareDateString(thisTime.date, aqiItem.date)){
                         thisTime.aqi = aqiItem.aqi;
+                        thisTime.co = aqiItem.co;
+                        thisTime.h = aqiItem.h;
+                        thisTime.no2 = aqiItem.no2;
+                        thisTime.o3 = aqiItem.o3;
+                        thisTime.p = aqiItem.p;
+                        thisTime.pm10 = aqiItem.pm10;
+                        thisTime.pm25 = aqiItem.pm25;
+                        thisTime.so2 = aqiItem.so2;
+                        thisTime.t = aqiItem.t;
+
                     }
                 });
             });
