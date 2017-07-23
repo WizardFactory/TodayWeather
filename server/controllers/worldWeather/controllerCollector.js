@@ -1466,50 +1466,60 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                 log.info('Dsf> dsf count : ', DsfData.length);
 
                 // For response /////////////////////////////
-                DsfData.forEach(function(item){
-                    res.geocode = item.geocode;
-                    if(res.date === 0 || res.date < item.date){
-                        res.date = item.date;
-                    }
-                    if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
-                        res.dateObj = item.dateObj;
-                    }
-                    res.timeOffset = item.timeOffset;
+                try {
+                    DsfData.forEach(function(item){
+                        if (item == undefined) {
+                            log.warn('Dsf data is undefined');
+                            return;
+                        }
 
-                    if(res.data.length === 0){
-                        res.data = item.data;
-                    }else{
-                        res.data.forEach(function(dbItem){
-                            var isExist = false;
-                            item.data.forEach(function(newItem){
-                                if(dbItem.current.dateObj.getTime() === newItem.current.dateObj.getTime()){
-                                    dbItem.current = newItem.current;
-                                    dbItem.hourly = newItem.hourly;
-                                    dbItem.daily = newItem.daily;
-                                    isExist = true;
-                                }
+                        res.geocode = item.geocode;
+                        if(res.date === 0 || res.date < item.date){
+                            res.date = item.date;
+                        }
+                        if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
+                            res.dateObj = item.dateObj;
+                        }
+                        res.timeOffset = item.timeOffset;
 
-                                if(!isExist){
-                                    res.data.push({
-                                        current : newItem.current,
-                                        hourly : newItem.hourly,
-                                        daily: newItem.daily
-                                    });
-                                }
+                        if(res.data.length === 0){
+                            res.data = item.data;
+                        }else{
+                            res.data.forEach(function(dbItem){
+                                var isExist = false;
+                                item.data.forEach(function(newItem){
+                                    if(dbItem.current.dateObj.getTime() === newItem.current.dateObj.getTime()){
+                                        dbItem.current = newItem.current;
+                                        dbItem.hourly = newItem.hourly;
+                                        dbItem.daily = newItem.daily;
+                                        isExist = true;
+                                    }
+
+                                    if(!isExist){
+                                        res.data.push({
+                                            current : newItem.current,
+                                            hourly : newItem.hourly,
+                                            daily: newItem.daily
+                                        });
+                                    }
+                                });
                             });
-                        });
-                    }
+                        }
 
-                    res.data.sort(function(a, b){
-                        if(a.current.date > b.current.date){
-                            return 1;
-                        }
-                        if(a.current.date < b.current.date){
-                            return -1;
-                        }
-                        return 0;
+                        res.data.sort(function(a, b){
+                            if(a.current.date > b.current.date){
+                                return 1;
+                            }
+                            if(a.current.date < b.current.date){
+                                return -1;
+                            }
+                            return 0;
+                        });
                     });
-                });
+                }
+                catch (err) {
+                    return callback(err);
+                }
                 /////////////////////////////////////////////
 
                 if(DsfData){
