@@ -12,10 +12,11 @@ var mongoose = require("mongoose");
  * (1) 호우 예비특보
  * o 06월 29일 저녁 : 제주도(제주도산지)
  * o 06월 29일 밤 : 제주도(제주도남부)
+ * weatherFlash : 기상속보
  */
 var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
     announcement: Date, //YYYY.MM.DD.HH.ZZ is the same as pubDate
-    type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation
+    type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation, 4 weatherFlash
     imageUrl: String,
     situationList: [{
         weather: Number,
@@ -158,13 +159,16 @@ kmaSpecialWeatherSituationSchema.statics = {
                 return 'preliminarySpecial';
             case 3:
                 return 'weatherInformation';
+            case 4:
+                return 'weatherFlash';
             default:
                 return '';
         }
     },
     TYPE_SPECIAL: 1,
     TYPE_PRELIMINARY_SPECIAL: 2,
-    TYPE_WEATHER_INFORMATION: 3
+    TYPE_WEATHER_INFORMATION: 3,
+    TYPE_WEATHER_FLASH: 4
 };
 
 module.exports = mongoose.model('KmaSpecial', kmaSpecialWeatherSituationSchema);
