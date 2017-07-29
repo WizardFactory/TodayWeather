@@ -29,7 +29,16 @@ var aqiSchema = new mongoose.Schema({
     timeOffset: {type: Number, default: 0},
 
     aqi: Number,
-    idx: Number
+    idx: Number,
+    co: Number,
+    h: Number,
+    no2: Number,
+    o3: Number,
+    p: Number,
+    pm10: Number,
+    pm25: Number,
+    so2: Number,
+    t: Number
 });
 
 aqiSchema.index({"geocode.lat" : 1, "geocode.lon" : 1});
