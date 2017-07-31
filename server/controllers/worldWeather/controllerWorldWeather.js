@@ -1252,6 +1252,11 @@ function controllerWorldWeather(){
         next();
     };
 
+    /**********************************************************
+     **********************************************************
+     AQI
+     **********************************************************
+     **********************************************************/
     self.mergeAqi = function(req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;
@@ -1280,7 +1285,7 @@ function controllerWorldWeather(){
                         thisTime.pm25 = aqiItem.pm25;
                         thisTime.so2 = aqiItem.so2;
                         thisTime.t = aqiItem.t;
-
+                        thisTime.air = self._getAqiLevel(aqiItem.aqi);
                     }
                 });
             });
@@ -1341,6 +1346,34 @@ function controllerWorldWeather(){
      * * Private Functions (For internal)
      * * ***************************************************************************
      * *****************************************************************************/
+
+    self._getAqiLevel = function(aqi){
+        if(aqi === undefined || typeof aqi != 'number'){
+            return '';
+        }
+
+        if(aqi >= 0 && aqi <= 50){
+            return 'Good';
+        }
+        else if(aqi >= 51 && aqi <= 100){
+            return 'Moderate';
+        }
+        else if(aqi >= 101 && aqi <= 150){
+            return 'Caution';//'Unhealthy for sensitive group';
+        }
+        else if(aqi >= 151 && aqi <= 200){
+            return 'Unhealthy';
+        }
+        else if(aqi >= 201 && aqi <= 300){
+            return 'Very Unhealthy';
+        }
+        else if(aqi >= 300){
+            return 'Hazardous';
+        }
+        else{
+            return '';
+        }
+    };
 
     self._getDatabyDate = function(list, date){
         list.forEach(function(item, index){
