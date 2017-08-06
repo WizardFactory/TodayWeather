@@ -8,6 +8,7 @@ angular.module('controller.searchctrl', [])
         $scope.cityList = [];
         $scope.imgPath = Util.imgPath;
         $scope.isEditing = false;
+        $scope.isSearching = false;
 
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
@@ -161,6 +162,11 @@ angular.module('controller.searchctrl', [])
             }
         };
 
+        $scope.OnFocusInput = function() {
+            $scope.isEditing = false;
+            $scope.isSearching = true;
+        };
+
         $scope.$on('searchCurrentPositionEvent', function(event) {
             console.log(event);
             $scope.OnSearchCurrentPosition();
@@ -192,8 +198,19 @@ angular.module('controller.searchctrl', [])
         };
 
         $scope.OnEdit = function() {
-            $scope.isEditing = !$scope.isEditing;
-            if ($scope.isEditing) {
+            if ($scope.isEditing) { // ok
+                $scope.isEditing = false;
+            } else {
+                if ($scope.isSearching) { // cancel
+                    $scope.isSearching = false;
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                        if (cordova.plugins.Keyboard.isVisible) {
+                            cordova.plugins.Keyboard.close();
+                        }
+                    }
+                } else { // edit
+                    $scope.isEditing = true;
+                }
                 $scope.search.word = undefined;
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
@@ -250,6 +267,7 @@ angular.module('controller.searchctrl', [])
             $scope.search.word = undefined;
             $scope.searchResults = [];
             $scope.searchResults2 = [];
+            $scope.isSearching = false;
 
             $ionicLoading.show();
 

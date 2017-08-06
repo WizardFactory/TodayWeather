@@ -64,8 +64,11 @@
 -->
 <ion-side-menus>
     <!-- Left menu -->
-    <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''">
+    <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''" class="menu menu-left">
         <header class="bar bar-dark bar-header">
+            <button class="button button-icon button-positive icon"
+                    ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
+            </button>
             <h1 class="title">{{'LOC_TODAYWEATHER'|translate}}</h1>
         </header>
         <ion-content class="has-header">
@@ -100,6 +103,8 @@
                 </a>
             </div>
         </ion-content>
+        <footer class="bar bar-footer" style="height: 50px; background-color: #444; background-image: none" ng-if="viewAdsBanner">
+        </footer>
     </ion-side-menu>
 
     <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">

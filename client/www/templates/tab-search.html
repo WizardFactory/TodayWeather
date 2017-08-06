@@ -6,19 +6,17 @@
         <p class="title search-header">
             <label class="item-input-wrapper">
                 <i class="icon ion-ios-search placeholder-icon"></i>
-                <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}" ng-model="search.word" ng-change="OnChangeSearchWord()">
+                <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}" ng-model="search.word"
+                       ng-change="OnChangeSearchWord()" ng-focus="OnFocusInput()">
             </label>
+            <button class="button button-icon button-positive" ng-click="OnEdit()"
+                    ng-bind-html="isEditing ? 'LOC_OK' : isSearching ? 'LOC_CANCEL' : 'LOC_EDIT' | translate"></button>
         </p>
     </ion-nav-title>
-    <ion-nav-buttons side="right">
-        <button class="button button-icon button-positive" ng-bind-html="isEditing ? 'LOC_OK' : 'LOC_EDIT_LOCATIONS' | translate" ng-click="OnEdit()"></button>
-    </ion-nav-buttons>
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                  delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentHeight()+'px'}" tabs-shrink>
-        <div style="margin: 5px">
-            <button class="button button-block button-outline button-dark" ng-click="OnSearchCurrentPosition()">{{'LOC_FIND_BY_LOCATION'|translate}}</button>
-        </div>
-        <div class="list list-inset" ng-if="search.word!==undefined">
+        <div class="list list-inset" ng-if="isSearching===true">
+            <button class="button button-block button-outline button-light" ng-click="OnSearchCurrentPosition()">{{'LOC_FIND_BY_LOCATION'|translate}}</button>
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row row-no-padding">
                     <div class="col search-item">
@@ -41,7 +39,8 @@
                 <img src="img/powered_by_google_on_non_white.png" width="144px">
             </div>
         </div>
-        <div class="list list-inset" ng-if="search.word===undefined">
+        <div class="list list-inset" ng-if="isSearching===false">
+            <div style="height:16px;"></div>
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
