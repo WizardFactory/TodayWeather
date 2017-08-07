@@ -1735,13 +1735,13 @@ static TodayViewController *todayVC = nil;
     currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
 //    nssAirIndices       = [        NSArray *arrDate            = [nssTmpDate componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
-    
+
     // Test
     //nssAirState = [NSString stringWithFormat:@"통합대기 78 보통"];
 
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
     NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
-    
+
     id idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];
     NSLog(@"[processWeatherResultsWithShowMore] idT1h : %@",idT1h);
     
