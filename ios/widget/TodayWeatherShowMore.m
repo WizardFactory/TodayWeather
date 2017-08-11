@@ -320,7 +320,7 @@
     
     NSString *nssResults        = nil;
     
-    NSLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
+    //NSLog(@"All air state is same!!! khaiGrade(%d), pm10Grade(%d), pm25Grade(%d)", khaiGrade, pm10Grade, pm25Grade);
     
 
     // Grade가 동일하면 통합대기 값을 전달, 동일할때 우선순위 통합대기 > 미세먼지 > 초미세먼지
@@ -364,6 +364,8 @@
         else if ( (khaiGrade == pm10Grade) && (khaiGrade < pm25Grade) )
         {
             return [NSString stringWithFormat:@"%@ %d %@", LSTR_PM25, pm25Value, nssPm25Str];
+        }
+        else if ( (khaiGrade < pm10Grade) && (khaiGrade < pm25Grade) )
         {
             if ( pm10Grade > pm25Grade)
             {
