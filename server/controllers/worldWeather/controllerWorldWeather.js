@@ -887,6 +887,7 @@ function controllerWorldWeather(){
             url = "https://maps.googleapis.com/maps/api/timezone/json";
             url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
 
+            log.info('Get Timezone url : ', url);
             request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
                 if (err) {
                     log.error('DSF Timezone > Fail to get timezone', err, meta);
@@ -896,9 +897,15 @@ function controllerWorldWeather(){
                     try {
                         log.silly(body);
                         var result = body;
-                        var offset = (result.dstOffset+result.rawOffset);
-                        req.result.timezone.min = offset/60; //convert to min;
-                        req.result.timezone.ms = offset * 1000; // convert to millisecond
+                        if(result.status == 'OK')
+                        {
+                            var offset = (result.dstOffset+result.rawOffset);
+                            req.result.timezone.min = offset/60; //convert to min;
+                            req.result.timezone.ms = offset * 1000; // convert to millisecond
+                        }else
+                        {
+                            log.warning('Cannot get timezone from Google : ', lat, lon);
+                        }
 
                         log.info('DSF Timezone > ', req.result.timezone, meta);
 
