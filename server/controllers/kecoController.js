@@ -49,49 +49,65 @@ arpltnController.grade2str = function (grade, type, translate) {
  * @param arpltn
  * @private
  */
-arpltnController._recalculateValue = function (arpltn) {
+arpltnController._recalculateValue = function (arpltn, aqiUnit) {
     if (arpltn == undefined) {
         return arpltn;
     }
 
+    log.info('aqiUnit : ', aqiUnit);
+
     if (arpltn.hasOwnProperty("pm10Value")) {
-        arpltn.pm10Grade = (function (v) {
-            if (v < 0) {
+        arpltn.pm10Grade = (function (v, aqiUnit) {
+            var unit = [0, 30, 80, 150];
+
+            if(aqiUnit == 'airkorea_who'){
+                log.info('WHO unit');
+                
+                unit = [0, 30, 50, 100];
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 30) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if (v <= 80) {
+            else if (v <= unit[2]) {
                 return 2;
             }
-            else if (v <= 150) {
+            else if (v <= unit[3]) {
                 return 3;
             }
-            else if (v > 150) {
+            else if (v > unit[3]) {
                 return 4;
             }
-        })(arpltn.pm10Value);
+        })(arpltn.pm10Value, aqiUnit);
     }
 
     if (arpltn.hasOwnProperty("pm25Value")) {
-        arpltn.pm25Grade = (function (v) {
-            if (v < 0) {
+        arpltn.pm25Grade = (function (v, aqiUnit) {
+            var unit = [0, 15, 50, 100];
+
+            if(aqiUnit == 'airkorea_who'){
+                unit = [0, 15, 25, 50];
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <=15) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v<=50) {
+            else if(v<=unit[2]) {
                 return 2;
             }
-            else if(v<=100) {
+            else if(v<=unit[3]) {
                 return 3;
             }
-            else if(v > 100) {
+            else if(v > unit[3]) {
                 return 4;
             }
-        })(arpltn.pm25Value);
+        })(arpltn.pm25Value, aqiUnit);
     }
 
     if (arpltn.hasOwnProperty("o3Value")) {
@@ -481,7 +497,7 @@ arpltnController.getDustFrcst = function (town, dateList, callback) {
  * @param callback
  * @returns {arpltnController}
  */
-arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
+arpltnController.getArpLtnInfo = function (townInfo, dateTime, aqiUnit, callback) {
     var self = this;
 
     async.waterfall([
@@ -507,7 +523,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 return cb(undefined, arpltn);
             },
             function (arpltn, cb) {
-                return cb(undefined, self._recalculateValue(arpltn));
+                return cb(undefined, self._recalculateValue(arpltn, aqiUnit));
             }],
         function(err, arpltn) {
             if (err)  {
