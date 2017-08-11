@@ -210,7 +210,7 @@ function controllerWorldWeather(){
                     }
 
                     // Need to send request to add this geocode.
-                    req.error = 'WW queryWeather> It is the fist request, will collect weather for this geocode :', req.geocode, req.city;
+                    req.error = 'WW queryWeather> It is the fist request, will collect weather for this geocode :' + req.geocode + req.city;
                     log.error(req.error);
 
                     self.requestData(req, 'req_add', function(err, result){
@@ -904,7 +904,7 @@ function controllerWorldWeather(){
                             req.result.timezone.ms = offset * 1000; // convert to millisecond
                         }else
                         {
-                            log.warning('Cannot get timezone from Google : ', lat, lon);
+                            log.warn('Cannot get timezone from Google : ', lat, lon);
                         }
 
                         log.info('DSF Timezone > ', req.result.timezone, meta);
@@ -1511,7 +1511,7 @@ function controllerWorldWeather(){
         var value = parseFloat(Cp);
 
         if(airnowUnit[type] == undefined){
-            log.warning('_calculateAirnowValue : There is no unit value from airnowUnit : ', type);
+            log.warn('_calculateAirnowValue : There is no unit value from airnowUnit : ', type);
             return 0;
         }
 
@@ -1542,7 +1542,7 @@ function controllerWorldWeather(){
         var value = parseFloat(Cp);
 
         if(airnowUnit[type] == undefined){
-            log.warning('_extractValueFromAqicn : There is no unit value from aqicn : ', type);
+            log.warn('_extractValueFromAqicn : There is no unit value from aqicn : ', type);
             return 0;
         }
 
@@ -1590,7 +1590,7 @@ function controllerWorldWeather(){
             return 'Hazardous';
         }
         else{
-            log.warning('_getAqiLevel : wrong value : ', aqi);
+            log.warn('_getAqiLevel : wrong value : ', aqi);
             return '';
         }
     };
@@ -2345,7 +2345,7 @@ function controllerWorldWeather(){
             modelGeocode.find({}, {_id:0}).lean().exec(function (err, tList){
                 if(err){
                     log.error('WW> Can not found geocode:', + err);
-                    callback(new Error('WW> Can not found geocode:', + err));
+                    callback(new Error('WW> Can not found geocode:' + err));
                     return;
                 }
 
