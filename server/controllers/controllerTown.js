@@ -1848,7 +1848,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
-                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltn) {
+                KecoController.getArpLtnInfo(townInfo, new Date(), "airkorea", function (err, arpltn) {
                     if (err) {
                         log.error(err);
                     }
@@ -2773,7 +2773,9 @@ ControllerTown.prototype._makeCurrent = function(shortList, shortestList, date, 
 /**
  *
  * @param pty
- * @returns {*}
+ * @param translate
+ * @returns {string}
+ * @private
  */
 ControllerTown.prototype._convertKmaPtyToStr = function(pty, translate) {
     var ret = "";
@@ -2844,6 +2846,7 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 /**
  *
  * @param data
+ * @param res
  * @returns {ControllerTown}
  * @private
  */
@@ -2957,6 +2960,7 @@ ControllerTown.prototype._convertKmaWsdToGrade = function (wsd) {
 /**
  *
  * @param wsdGrade
+ * @param translate
  * @returns {*}
  * @private
  */
