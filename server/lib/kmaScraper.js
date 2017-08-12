@@ -35,9 +35,10 @@ function KmaScraper() {
 
 /**
  * 분당, 시간별 들어오는 AWS weather data parsing
+ * @param pubDate
  * @param $
  * @param callback
- * @returns {KmaScraper}
+ * @returns {*}
  * @private
  */
 KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
@@ -49,8 +50,9 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
     stnWeatherList.pubDate = strAr[strAr.length-1];
 
     //actually pubDate is ''
+    var err;
     if (stnWeatherList.pubDate == undefined || stnWeatherList.pubDate == '' || stnWeatherList.pubDate.length < 12) {
-        var err =  new Error('Fail to get weather pubdate='+stnWeatherList.pubDate);
+        err =  new Error('Fail to get weather pubdate='+stnWeatherList.pubDate);
         err.state = 'Retry';
         log.warn(err.toString());
         return callback(err);
@@ -58,7 +60,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     if (pubDate) {
         if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
-            var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+            err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
             err.state = 'Skip';
             return callback(err);
         }
@@ -143,6 +145,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
 /**
  *
+ * @param pubDate
  * @param $
  * @param callback
  * @returns {KmaScraper}
@@ -240,7 +243,6 @@ KmaScraper.prototype._convertKrToEng = function (str) {
  *
  * @param pubDate
  * @param callback
- * @param date
  */
 KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     var self = this;
@@ -891,16 +893,16 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
                 return cb(err, {pubDate: weatherList.pubDate, stnList: weatherList.stnList});
             });
         },
-        function (weatherList, cb) {
-            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
-            self._saveKmaStnMinuteList(weatherList, function (err, results) {
-                log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
-                if (err) {
-                    return cb(err);
-                }
-                return cb(err, weatherList);
-            });
-        },
+        //function (weatherList, cb) {
+        //    log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //    self._saveKmaStnMinuteList(weatherList, function (err, results) {
+        //        log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        return cb(err, weatherList);
+        //    });
+        //},
         function (weatherList, cb) {
             log.info('save2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
             self._saveKmaStnMinute2List(weatherList, function (err, results) {
@@ -1020,17 +1022,17 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 //});
                 cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
             })},
+        //function (weatherList, cb) {
+        //    log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //    self._saveKmaStnHourlyList(weatherList, function (err, results) {
+        //        log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        return cb(err, weatherList);
+        //    });},
         function (weatherList, cb) {
-            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
-            self._saveKmaStnHourlyList(weatherList, function (err, results) {
-                log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
-                if (err) {
-                    return cb(err);
-                }
-                return cb(err, weatherList);
-            });},
-        function (weatherList, cb) {
-            log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+            log.info('save2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
             self._saveKmaStnHourly2List(weatherList, function (err, results) {
                 log.info('done2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
                 if (err) {
@@ -1455,6 +1457,7 @@ KmaScraper.prototype.getSpecialWeatherSituationUrl = function () {
 /**
  *
  * @param specialHtml
+ * @param type
  * @returns {{}}
  * @private
  */
@@ -1473,14 +1476,15 @@ KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
     var comment = bodyArray[1];
 
     var situationList;
+    var situationArray;
     if (type == KmaSpecialWeatherSituation.TYPE_SPECIAL) {
-        var situationArray = situationStr.split('o');
+        situationArray = situationStr.split('o');
         situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
     }
     else if (type == KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL) {
         //(1)호우예비특보o06월29일저녁:제주도(제주도산지)o06월29일밤:제주도(제주도남부)
         var re = new RegExp(/\([0-9]\)/);
-        var situationArray = situationStr.split(re);
+        situationArray = situationStr.split(re);
         for (var i=0; i<situationArray.length; i++) {
             // o없음
             //(1)풍량예비특보o0620일아침:제주도남쪽먼바다
@@ -1681,10 +1685,8 @@ KmaScraper.prototype.gatherSpecialWeatherSituation = function (callback) {
                         return cb('skip');
                     }
                     newSwsList = newSwsList.filter(function (sws) {
-                        if (sws == undefined)  {
-                            return false;
-                        }
-                        return true;
+                        return sws != undefined;
+
                     });
                     if (newSwsList.length <= 0) {
                         return cb('skip');
