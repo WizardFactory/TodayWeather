@@ -1858,12 +1858,13 @@ Manager.prototype.task = function(callback) {
 
 /**
  *
+ * @param items
  * @param region
  * @param accessKey
  * @param secretKey
  * @param apiVersion
  * @param distributionId
- * @private
+ * @param callback
  */
 Manager.prototype.deleteCacheOnCloudFront = function(items, region, accessKey, secretKey, apiVersion, distributionId, callback){
     var cf = new awsCloudFront(region, accessKey, secretKey, apiVersion);
@@ -2211,7 +2212,7 @@ Manager.prototype.startScrape = function () {
                 });
             });
         }
-        if (time === 3 || time === 6 || time === 9 || time === 15) {
+        if (time === 4 || time === 6 || time === 9 || time === 15) {
             self.asyncTasks.push(function (callback) {
                 _getStnHourlyWeather(function () {
                     callback();
