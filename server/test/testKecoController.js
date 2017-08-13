@@ -78,6 +78,28 @@ describe('unit test - keco controller', function() {
     //        done();
     //    });
     //});
+
+    it('test getting aqi grade', function(done){
+        var testData = {
+            pm10Value: 55,
+            pm25Value: 65,
+            o3Value: 0.02,
+            no2Value: 0.10,
+            coValue: 7,
+            so2Value: 0.08,
+            khaiValue: 100
+        };
+
+        kecoController._recalculateValue(testData, 'airkorea');
+        log.info('airkorea : ', testData);
+        kecoController._recalculateValue(testData, 'airkorea_who');
+        log.info('airkorea_who : ', testData);
+        kecoController._recalculateValue(testData, 'airnow');
+        log.info('airnow : ', testData);
+        kecoController._recalculateValue(testData, 'aqicn');
+        log.info('aqicn : ', testData);
+        done();
+    });
 });
 
 
