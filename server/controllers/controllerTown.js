@@ -1071,13 +1071,14 @@ function ControllerTown() {
             return;
         }
 
-        //사용대 시간보다 3시간전데이터부터 사용함.
+        //사용대 시간보다 2시간전데이터부터 사용함.
+        //이전 3시간전부터하면 15,18시 3시간 간격의 측정값도 shortest로 덮어버림. #1725
         var filterdList = shortestList.filter(function (obj) {
             var objTime = parseInt(obj.time.substr(0,2));
             if(parseInt(currentTime.date) < parseInt(obj.date)) {
                 return true;
             }
-            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime-3 < objTime) {
+            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime-2 < objTime) {
                 return true;
             }
             return false;
