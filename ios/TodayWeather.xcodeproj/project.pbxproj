@@ -682,9 +682,6 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -718,9 +715,6 @@
 				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
-					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
 					"\"TodayWeather/Plugins/cordova-libgoogleadmobads\"",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
