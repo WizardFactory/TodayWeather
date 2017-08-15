@@ -1058,11 +1058,11 @@ function ControllerTown() {
      *
      * @param shortList
      * @param shortestList
+     * @param currentList
      * @param currentTime
-     * @param useTime - shortest가 적용될 시간임. 10시일 경우 12시로 넘어옴.
      * @private
      */
-    this._mergeShortByShortest = function (shortList, shortestList, currentTime, useTime) {
+    this._mergeShortByShortest = function (shortList, shortestList, currentList, currentTime) {
 
         if(shortList == undefined || shortList.length == 0) {
             return;
@@ -1071,21 +1071,73 @@ function ControllerTown() {
             return;
         }
 
-        //사용대 시간보다 2시간전데이터부터 사용함.
-        //이전 3시간전부터하면 15,18시 3시간 간격의 측정값도 shortest로 덮어버림. #1725
         var filterdList = shortestList.filter(function (obj) {
-            var objTime = parseInt(obj.time.substr(0,2));
             if(parseInt(currentTime.date) < parseInt(obj.date)) {
                 return true;
             }
-            else if (parseInt(currentTime.date) == parseInt(obj.date) && useTime-2 < objTime) {
+            else if (parseInt(currentTime.date) == parseInt(obj.date) && parseInt(currentTime.time) < parseInt(obj.time)) {
                 return true;
             }
             return false;
         });
+        if (currentList) {
+            if (parseInt(currentTime.time.substr(0,2)) % 3 == 1) {
+                //current + shortest + shortest
+                filterdList.unshift(currentList[currentList.length-1]);
+            }
+            else if (parseInt(currentTime.time.substr(0,2)) % 3 == 2) {
+                //current + shortest + shortest
+                filterdList.unshift(currentList[currentList.length-2], currentList[currentList.length-1]);
+            }
+        }
+
+        var lastFilterTime = parseInt(filterdList[filterdList.length-1].time);
+        var shortLen = shortList.length;
+
+        var restCount = lastFilterTime/100 % 3;
+        if (restCount != 0) {
+            log.error("mergeShortByShortest Make shortest from short restCount="+restCount);
+            //동네예보 v1.3 내용상에는 shortest가 3,6,9 맞게 떨어짐.
+            //var shortestFromShort;
+            //for (i=0; i<shortLen; i++) {
+            //    if (shortList[i].date == filterdList[filterdList.length-1].date
+            //        && lastFilterTime < parseInt(shortList[i].time)) {
+            //        shortestFromShort = {};
+            //        shortestFromShort.date = shortList[i].date;
+            //        shortestFromShort.mx = shortList[i].mx;
+            //        shortestFromShort.my = shortList[i].my;
+            //        shortestFromShort.pty = shortList[i].pty;
+            //        if (shortList[i].r06) {
+            //            shortestFromShort.rn1 = shortList[i].r06/3;
+            //        }
+            //        else if (shortList[i].s06) {
+            //            shortestFromShort.rn1 = shortList[i].s06/3;
+            //        }
+            //        shortestFromShort.sky = shortList[i].sky;
+            //        shortestFromShort.lgt = shortList[i].lgt;
+            //        shortestFromShort.t1h = shortList[i].t3h;
+            //        shortestFromShort.reh = shortList[i].reh;
+            //        shortestFromShort.uuu = shortList[i].uuu;
+            //        shortestFromShort.vvv = shortList[i].vvv;
+            //        shortestFromShort.vec = shortList[i].vec;
+            //        shortestFromShort.wsd = shortList[i].wsd;
+            //        break;
+            //    }
+            //}
+            //if (shortestFromShort) {
+            //    if (restCount >= 1) {
+            //        shortestFromShort.time = ""+(lastFilterTime + 100);
+            //        filterdList.push(shortestFromShort);
+            //    }
+            //    if (restCount >= 2) {
+            //        var shortestFromShort2 = JSON.parse(JSON.stringify(shortestFromShort));
+            //        shortestFromShort2.time = ""+(parseInt(shortestFromShort.time)+100);
+            //        filterdList.push(shortestFromShort2);
+            //    }
+            //}
+        }
 
         var tmpList = self._convert1Hto3H(filterdList, false);
-        var shortLen = shortList.length;
         var i;
         var short;
         tmpList.forEach(function (shortest3h) {
@@ -1148,13 +1200,9 @@ function ControllerTown() {
         log.info('>sID=',req.sessionID, meta);
 
         var currentTime = self._getCurrentTimeValue(9);
-        var useTime = Math.ceil(parseInt(currentTime.time.substr(0, 2)) / 3)*3;
-        if (useTime >= 24) {
-           useTime -= 24;
-        }
 
         if (req.shortestList) {
-            self._mergeShortByShortest(req.short, req.shortestList, currentTime, useTime);
+            self._mergeShortByShortest(req.short, req.shortestList, req.currentList, currentTime);
             next();
         }
         else {
@@ -1175,7 +1223,7 @@ function ControllerTown() {
                     log.verbose(shortestList);
                     if(shortestList && shortestList.length > 0) {
                         req.shortestList = shortestList;
-                        self._mergeShortByShortest(req.short, shortestList, currentTime, useTime);
+                        self._mergeShortByShortest(req.short, shortestList, req.currentList, currentTime);
                     }
 
                     next();
