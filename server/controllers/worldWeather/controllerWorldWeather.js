@@ -382,11 +382,35 @@ function controllerWorldWeather(){
 
         async.waterfall([
                 function(callback){
-                    self.getLocalTimezone(req, function(err){
+                    self.getLocalTimezone(req, req.geocode, function(err){
                         if(err){
-                            log.error('Fail to get LocalTimezone : ', err, meta);
+                            log.error('1. Fail to get LocalTimezone : ', err, meta);
+
+                            if(err == 'ZERO_RESULTS'){
+                                self.getaddressByGeocode(req.geocode.lat, req.geocode.lon, function(err, addr){
+                                    if(err){
+                                        log.error('Fail to get getaddressByGeocode : ', err, meta);
+                                        return callback(null);
+                                    }
+                                    self.getGeocodeByAddr(addr, function(err, geocode){
+                                        if(err || geocode.lat === undefined || geocode.lon === undefined){
+                                            log.error('Fail to get getGeocodeByAddr :', err);
+                                            return callback(null);
+                                        }
+                                        self.getLocalTimezone(req, geocode, function(err){
+                                            if(err) {
+                                                log.error('2. Fail to get LocalTimezone : ', err, meta);
+                                            }
+                                            return callback(null);
+                                        });
+                                    });
+                                });
+                            }else{
+                                return callback(null);
+                            }
+                        }else{
+                            return callback(null);
                         }
-                        return callback(null);
                     });
                 },
                 /*
@@ -859,7 +883,116 @@ function controllerWorldWeather(){
      DSF Util
      **********************************************************
      **********************************************************/
-    self.getLocalTimezone = function (req, callback) {
+
+    /**
+     *
+     * @param addr
+     * @param callback
+     */
+    self.getGeocodeByAddr = function(addr, callback){
+        var url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+ addr + '&language=en';
+
+        var encodedUrl = encodeURI(url);
+        log.info(url);
+
+        request.get(encodedUrl, null, function(err, response, body){
+            if(err) {
+                log.error('Error!!! getGeocodeByAddr : ', err);
+                if(callback){
+                    callback(err);
+                }
+                return;
+            }
+            var statusCode = response.statusCode;
+
+            if(statusCode === 404 || statusCode === 403 || statusCode === 400){
+                err = new Error("StatusCode="+statusCode);
+
+                if(callback){
+                    callback(err);
+                }
+                return;
+            }
+
+            var result = JSON.parse(body);
+            var geocode = {};
+
+            log.info(JSON.stringify(result));
+            if(result.hasOwnProperty('results')){
+                if(Array.isArray(result.results)
+                    && result.results[0].hasOwnProperty('geometry')){
+                    if(result.results[0].geometry.hasOwnProperty('location')){
+                        if(result.results[0].geometry.location.hasOwnProperty('lat')){
+                            geocode.lat = parseFloat(result.results[0].geometry.location.lat);
+                        }
+                        if(result.results[0].geometry.location.hasOwnProperty('lng')){
+                            geocode.lon = parseFloat(result.results[0].geometry.location.lng);
+                        }
+                    }
+                }
+            }
+
+            log.info('converted geocodeo : ', JSON.stringify(geocode));
+            if(callback){
+                callback(err, geocode);
+            }
+        });
+    };
+    /**
+     *
+     * @param lat
+     * @param lon
+     * @param callback
+     */
+    self.getaddressByGeocode = function(lat, lon, callback){
+        var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+ lat + ',' + lon + '&language=en';
+
+        var encodedUrl = encodeURI(url);
+        log.info(url);
+
+        request.get(encodedUrl, null, function(err, response, body){
+            if(err) {
+                log.error('Error!!! getaddressByGeocode : ', err);
+                if(callback){
+                    callback(err);
+                }
+                return;
+            }
+            var statusCode = response.statusCode;
+
+            if(statusCode === 404 || statusCode === 403 || statusCode === 400){
+                err = new Error("StatusCode="+statusCode);
+
+                if(callback){
+                    callback(err);
+                }
+                return;
+            }
+
+            var result = JSON.parse(body);
+            var address = '';
+
+            log.info(result);
+            if(result.hasOwnProperty('results')){
+                if(Array.isArray(result.results)
+                    && result.results[0].hasOwnProperty('formatted_address')){
+                    log.info('formatted_address : ', result.results[0].formatted_address);
+                    address = result.results[0].formatted_address;
+                }
+            }
+
+            if(callback){
+                callback(err, address);
+            }
+        });
+    };
+
+    /**
+     *
+     * @param req
+     * @param callback
+     */
+    self.getLocalTimezone = function (req, geocode, callback) {
 
         //find chached data
         //else
@@ -881,8 +1014,8 @@ function controllerWorldWeather(){
         req.result.timezone.ms = 0;
 
         if(req.geocode.hasOwnProperty('lat') && req.geocode.hasOwnProperty('lon')){
-            lat = req.geocode.lat;
-            lon = req.geocode.lon;
+            lat = geocode.lat;
+            lon = geocode.lon;
             timestamp = (new Date()).getTime();
             url = "https://maps.googleapis.com/maps/api/timezone/json";
             url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
@@ -905,6 +1038,7 @@ function controllerWorldWeather(){
                         }else
                         {
                             log.warn('Cannot get timezone from Google : ', lat, lon);
+                            return callback('ZERO_RESULTS');
                         }
 
                         log.info('DSF Timezone > ', req.result.timezone, meta);

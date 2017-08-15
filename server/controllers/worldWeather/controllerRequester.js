@@ -608,12 +608,14 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
 
             if(result.length > 0){
                 result.forEach(function(item, index){
-                    if(item.type === 'DSF'){
-                        res.DSF = item;
-                    }
+                    if(typeof item === 'object'){
+                        if(item.type === 'DSF'){
+                            res.DSF = item;
+                        }
 
-                    if(item.type === 'AQI'){
-                        res.AQI = item;
+                        if(item.type === 'AQI'){
+                            res.AQI = item;
+                        }
                     }
                 });
             }
