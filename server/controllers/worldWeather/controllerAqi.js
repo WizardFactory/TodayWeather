@@ -102,6 +102,11 @@ controllerAqi.prototype._getLocalLast0H = function (timeOffset) {
 controllerAqi.prototype._removeAllAqiDb = function(geocode, callback){
     var geo = [];
 
+    if(typeof parseFloat(geocode.lan) != 'number' || typeof parseFloat(geocode.lat) != 'number'){
+        log.error('Aqi DB> _removeAllAqiDb : Wrong geocode', geocode);
+        return callback(new Error('Fail to remove Aqi data'));
+    }
+
     geo.push(parseFloat(geocode.lon));
     geo.push(parseFloat(geocode.lat));
 
@@ -135,8 +140,8 @@ controllerAqi.prototype._parseAQIData = function(data){
     }
 
     var aqi = data.data;
-    var timeOffset = 100;
-    if(aqi.time != undefined && aqi.time.tz != undefined){
+    var timeOffset = 0;
+    if(aqi.time != undefined && aqi.time.tz != undefined && aqi.time.tz.length > 5){
         timeOffset = parseInt(aqi.time.tz.slice(0, 3));
     }
 
@@ -205,7 +210,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
 
         modelAqi.update({geo: res.geo, dateObj: res.dateObj}, res, {upsert:true}, function (err) {
             if(err){
-                log.error('Aqi> Fail to update db data: ', geocode);
+                log.error('Aqi> Fail to update db data: ', geocode, err);
             }
         });
 
