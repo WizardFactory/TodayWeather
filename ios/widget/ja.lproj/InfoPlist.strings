@@ -5,5 +5,4 @@
   Created by KwangHo Kim on 2017. 8. 14..
 
 */
-
-CFBundleDisplayName = "今日天氣";
+CFBundleDisplayName = "今日天気";
