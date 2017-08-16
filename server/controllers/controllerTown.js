@@ -1877,6 +1877,8 @@ function ControllerTown() {
     this.getKeco = function (req, res, next) {
 
         var meta = {};
+        var aqiUnit = 'airkorea';
+
         meta.method = 'getKeco';
         meta.region = req.params.region;
         meta.city = req.params.city;
@@ -1890,6 +1892,11 @@ function ControllerTown() {
             req.current.date = nowDate.date;
         }
 
+
+        if(req.query.aqi != undefined){
+            aqiUnit = req.query.aqi;
+        }
+
         try {
             self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
@@ -1897,7 +1904,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
-                KecoController.getArpLtnInfo(townInfo, new Date(), "airkorea", function (err, arpltn) {
+                KecoController.getArpLtnInfo(townInfo, new Date(), aqiUnit, function (err, arpltn) {
                     if (err) {
                         log.error(err);
                     }

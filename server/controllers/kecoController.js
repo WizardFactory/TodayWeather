@@ -45,11 +45,40 @@ arpltnController.grade2str = function (grade, type, translate) {
 };
 
 /**
+ *
+ * @param Mal
+ *           so2 분자량 : 15.99 + 15.99 + 32.07 = 64.05
+ *           no2 분자량 : 15.99 + 15.99 + 14.01 = 45.99
+ *           O3 분자량 : 15.99 + 15.99 + 15.99 = 47.97
+ *           CO 분자량 : 15.99 + 12.01 = 28
+ * @param value
+ * @returns {Number}
+ * @private
+ */
+arpltnController._convertPpmToUm = function (Mol, value){
+    var ppb = parseFloat(value * 1000);
+    var molList = {
+        so2: 64.05,
+        no2: 45.99,
+        o3: 47.97,
+        co: 28.00
+    };
+
+    if(molList[Mol] == undefined){
+        return -1;
+    }
+
+    return parseFloat(ppb * molList[Mol] / 22.4);
+};
+
+/**
  * pm10, pm25는 넘어오는 grade값은 24h기준으로 오기 때문에, 1h로 변경함.
  * @param arpltn
  * @private
  */
 arpltnController._recalculateValue = function (arpltn, aqiUnit) {
+    var self = this;
+
     if (arpltn == undefined) {
         return arpltn;
     }
@@ -61,9 +90,11 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
             var unit = [0, 30, 80, 150];
 
             if(aqiUnit == 'airkorea_who'){
-                log.info('WHO unit');
-                
                 unit = [0, 30, 50, 100];
+            }else if(aqiUnit == 'airnow'){
+                unit = [0, 54, 154, 254, 354, 424];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 50, 150, 250, 350, 420];
             }
 
             if (v < unit[0]) {
@@ -79,6 +110,17 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
                 return 3;
             }
             else if (v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.pm10Value, aqiUnit);
@@ -90,7 +132,12 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
             if(aqiUnit == 'airkorea_who'){
                 unit = [0, 15, 25, 50];
+            }else if(aqiUnit == 'airnow'){
+                unit = [0, 12.0, 35.4, 55.4, 150.4, 250.4];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 35, 75, 115, 150, 250];
             }
+
 
             if (v < unit[0]) {
                 return -1;
@@ -105,6 +152,17 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
                 return 3;
             }
             else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.pm25Value, aqiUnit);
@@ -112,19 +170,47 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
     if (arpltn.hasOwnProperty("o3Value")) {
         arpltn.o3Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0,0.03, 0.09, 0.15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 54, 124, 164, 204, 404];
+
+                v = v * 1000;   // ppm -> ppb
+
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 160, 200, 300, 400, 800];
+
+                // ppm -> ug/m3
+                tmpValue = self._convertPpmToUm('o3', arpltn.o3Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.03) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.09) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.o3Value);
@@ -132,19 +218,47 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
     if (arpltn.hasOwnProperty("no2Value")) {
         arpltn.no2Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 0.03, 0.06, 0.2];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 53, 100, 360, 649, 1249];
+
+                v = v * 1000;    // ppm -> ppb
+
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 100, 200, 700, 1200, 2340];
+
+                // ppm --> ug/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.03) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.06) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.2) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.2) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.no2Value);
@@ -152,19 +266,44 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
     if (arpltn.hasOwnProperty("coValue")) {
         arpltn.coGrade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 2, 9, 15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 4.4, 9.4, 12.4, 15.4, 30.4];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 5, 10, 35, 60, 90];
+
+                // ppm --> mg/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value) * 1000;
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 2) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 9) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.coValue);
@@ -172,19 +311,46 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
     if (arpltn.hasOwnProperty("so2Value")) {
         arpltn.so2Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 0.02, 0.05, 0.15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 35, 75, 185, 304, 604];
+
+                v = v * 1000;   // ppm -> ppb
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 150, 500, 650, 800, 1600];
+
+                // ppm --> ug/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.02) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.05) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.so2Value);
@@ -192,19 +358,36 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
 
     if (arpltn.hasOwnProperty("khaiValue")) {
         arpltn.khaiGrade = (function (value) {
-            if (value < 0) {
+            var unit = [0, 50, 100, 250];
+
+            if(aqiUnit == 'airnow' || aqiUnit == 'aircn'){
+                unit = [0, 50, 100, 150, 200, 300];
+            }
+
+            if (value < unit[0]) {
                 return -1;
             }
-            else if (value <= 50) {
+            else if (value <= unit[1]) {
                 return 1;
             }
-            else if(value <= 100) {
+            else if(value <= unit[2]) {
                 return 2;
             }
-            else if(value <= 250) {
+            else if(value <= unit[3]) {
                 return 3;
             }
-            else if(value > 250) {
+            else if(value > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.khaiValue);
