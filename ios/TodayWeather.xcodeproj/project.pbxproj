@@ -5,7 +5,6 @@
 	};
 	objectVersion = 46;
 	objects = {
-
 /* Begin PBXBuildFile section */
 		0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0207DA571B56EA530066E2B4 /* Images.xcassets */; };
 		026A7EE285CE41FDB35A4964 /* Contacts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF7F6957E8E04039A4E46E82 /* Contacts.framework */; };
@@ -28,8 +27,8 @@
 		5A08DE291D2618E0009A83E1 /* TodayViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A08DE281D2618E0009A83E1 /* TodayViewController.m */; };
 		5A08DE301D2618E0009A83E1 /* widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5A08DE231D2618DF009A83E1 /* widget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5A08DE371D261B40009A83E1 /* widget.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 5A08DE351D261B40009A83E1 /* widget.entitlements */; };
-		5A1350081E342513009555FA /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614BC1E2D082500840986 /* Info.plist */; };
 		5A1350091E342547009555FA /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614BC1E2D082500840986 /* Info.plist */; };
+		5A62D24C1F40A69F0015DBB5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5A62D24E1F40A69F0015DBB5 /* InfoPlist.strings */; };
 		5A6678B51DEAAF9C001FAA44 /* TodayWeatherShowMore.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */; };
 		5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614B81E2D080200840986 /* MainInterface.storyboard */; };
 		5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5A8614C01E2D087900840986 /* InfoPlist.strings */; };
@@ -132,6 +131,12 @@
 		5A08DE281D2618E0009A83E1 /* TodayViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TodayViewController.m; sourceTree = "<group>"; };
 		5A08DE351D261B40009A83E1 /* widget.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = widget.entitlements; sourceTree = "<group>"; };
 		5A08DE361D261B40009A83E1 /* WidgetConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WidgetConfig.h; sourceTree = "<group>"; };
+		5A62D24D1F40A69F0015DBB5 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A62D2501F40A6A40015DBB5 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A62D2511F40A6A70015DBB5 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A62D2521F40A6A80015DBB5 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		5A62D2531F40A6AA0015DBB5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		5A62D2541F40A6AB0015DBB5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherShowMore.m; sourceTree = "<group>"; };
 		5A6678B71DEAB013001FAA44 /* TodayWeatherShowMore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherShowMore.h; sourceTree = "<group>"; };
 		5A8614B71E2D080200840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
@@ -385,6 +390,7 @@
 				5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */,
 				5AEE0BCB1E3EE9EB0049BBB1 /* LocalizationDefine.h */,
 				5AEE0BD01E3EF55A0049BBB1 /* Localizable.strings */,
+				5A62D24E1F40A69F0015DBB5 /* InfoPlist.strings */,
 			);
 			path = widget;
 			sourceTree = "<group>";
@@ -532,11 +538,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A62D24C1F40A69F0015DBB5 /* InfoPlist.strings in Resources */,
 				5AED42291D26A9EA00028FBC /* Wind.png in Resources */,
 				5AED42CA1D26AA6B00028FBC /* weatherIcon2-color in Resources */,
 				5AEE0BCE1E3EF55A0049BBB1 /* Localizable.strings in Resources */,
 				5A8614B61E2D080200840986 /* MainInterface.storyboard in Resources */,
-				5A1350081E342513009555FA /* Info.plist in Resources */,
 				5A08DE371D261B40009A83E1 /* widget.entitlements in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -598,6 +604,19 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
+		5A62D24E1F40A69F0015DBB5 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5A62D24D1F40A69F0015DBB5 /* Base */,
+				5A62D2501F40A6A40015DBB5 /* ko */,
+				5A62D2511F40A6A70015DBB5 /* ja */,
+				5A62D2521F40A6A80015DBB5 /* zh-Hans */,
+				5A62D2531F40A6AA0015DBB5 /* zh-Hant */,
+				5A62D2541F40A6AB0015DBB5 /* de */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
 		5A8614B81E2D080200840986 /* MainInterface.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -673,7 +692,9 @@
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -702,7 +723,9 @@
 				GCC_VERSION = "";
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
