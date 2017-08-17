@@ -579,7 +579,7 @@ Manager.prototype.saveShortest = function(newData, callback){
                                 {date:dbShortestList.shortestData[i].date, time:dbShortestList.shortestData[i].time},
                                 {date:newItem.date, time:newItem.time}
                             );
-                            if(comparedDate === 0){
+                            if(comparedDate === 0) {
                                 //log.info('ST> over write :', newItem);
                                 if (newItem.pty !== -1) {
                                     dbShortestList.shortestData[i].pty = newItem.pty;
@@ -595,6 +595,24 @@ Manager.prototype.saveShortest = function(newData, callback){
                                 }
                                 if (newItem.lgt !== -1) {
                                     dbShortestList.shortestData[i].lgt = newItem.lgt;
+                                }
+                                if (newItem.t1h !== -50) {
+                                    dbShortestList.shortestData[i].t1h = newItem.t1h;
+                                }
+                                if (newItem.reh !== -1) {
+                                    dbShortestList.shortestData[i].reh = newItem.reh;
+                                }
+                                if (newItem.uuu !== -100) {
+                                    dbShortestList.shortestData[i].uuu = newItem.uuu;
+                                }
+                                if (newItem.vvv !== -100) {
+                                    dbShortestList.shortestData[i].vvv = newItem.vvv;
+                                }
+                                if (newItem.vec !== -1) {
+                                    dbShortestList.shortestData[i].vec = newItem.vec;
+                                }
+                                if (newItem.wsd !== -1) {
+                                    dbShortestList.shortestData[i].wsd = newItem.wsd;
                                 }
                                 isNew = 0;
                                 break;
@@ -1122,7 +1140,7 @@ Manager.prototype.getShortestQueryTime = function (baseTime) {
     //log.info(currentDate);
     //log.info(hour, minute);
 
-    if(parseInt(minute) < 30){
+    if(parseInt(minute) < 45) {
         currentDate = self.getWorldTime(+8);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = currentDate.slice(8,10) + '30';
@@ -1143,7 +1161,7 @@ Manager.prototype.getCurrentQueryTime = function (baseTime) {
     };
 
     // 아직 발표 전 시간 대라면 1시간을 뺀 시간을 가져온다.
-    if(parseInt(currentDate.slice(10,12)) < 35){
+    if(parseInt(currentDate.slice(10,12)) < 40) {
         currentDate = self.getWorldTime(baseTime - 1);
         dateString.date = currentDate.slice(0, 8);
         dateString.time = currentDate.slice(8,10) + '00'
@@ -1982,14 +2000,25 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 15 || putAll) {
+    if (time === 10 || putAll) {
         log.info('push short');
         self.asyncTasks.push(function (callback) {
             self._requestApi("short", callback);
         });
     }
 
-    if (time === 35 || putAll) {
+    if (time === 40 || putAll) {
+        //direct request current
+        log.info('push current');
+        //self.asyncTasks.push(function (callback) {
+        self._requestApi("current", function () {
+            log.info('current done');
+            //        callback();
+        });
+        //});
+    }
+
+    if (time === 45 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function (callback) {
             self._requestApi("shortest", function () {
@@ -1997,15 +2026,6 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
                 callback();
             });
         });
-
-        //direct request current
-        log.info('push current');
-        //self.asyncTasks.push(function (callback) {
-            self._requestApi("current", function () {
-                log.info('current done');
-        //        callback();
-            });
-        //});
     }
 
     if(time === 50) {
