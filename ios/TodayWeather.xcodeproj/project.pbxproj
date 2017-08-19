@@ -16,9 +16,6 @@
 		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
 		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
 		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
-		3047A5121AB8059700498E2A /* build-debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A50F1AB8059700498E2A /* build-debug.xcconfig */; };
-		3047A5131AB8059700498E2A /* build-release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A5101AB8059700498E2A /* build-release.xcconfig */; };
-		3047A5141AB8059700498E2A /* build.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A5111AB8059700498E2A /* build.xcconfig */; };
 		4AC9BB3042094AD29A1297A0 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74F3C838F71C4525874F08C1 /* Foundation.framework */; };
 		4E8159013B0146B89943AE45 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B64E89D91E4E4B2490CD9B4A /* MediaPlayer.framework */; };
 		535433886E344BB1B45C5A48 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08BFEC4DA3E438CB6496CB7 /* EventKit.framework */; };
@@ -139,6 +136,10 @@
 		5A62D2541F40A6AB0015DBB5 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5A6678B41DEAAF9C001FAA44 /* TodayWeatherShowMore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherShowMore.m; sourceTree = "<group>"; };
 		5A6678B71DEAB013001FAA44 /* TodayWeatherShowMore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TodayWeatherShowMore.h; sourceTree = "<group>"; };
+		5A7D83831F48A06100B9EEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		5A7D83841F48A08A00B9EEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = en; path = en.lproj/Info.plist; sourceTree = "<group>"; };
+		5A7D83851F48A0D000B9EEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5A7D83861F48A0F300B9EEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5A8614B71E2D080200840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
 		5A8614BB1E2D082500840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Base; path = Base.lproj/Info.plist; sourceTree = "<group>"; };
 		5A8614BF1E2D087900840986 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -451,7 +452,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 510;
+				LastUpgradeCheck = 830;
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
 						DevelopmentTeam = T9X5DG29UJ;
@@ -526,11 +527,8 @@
 				302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */,
 				5A1350091E342547009555FA /* Info.plist in Resources */,
 				5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */,
-				3047A5131AB8059700498E2A /* build-release.xcconfig in Resources */,
-				3047A5141AB8059700498E2A /* build.xcconfig in Resources */,
 				0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */,
 				5AED42281D26A9EA00028FBC /* Wind.png in Resources */,
-				3047A5121AB8059700498E2A /* build-debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -613,6 +611,7 @@
 				5A62D2521F40A6A80015DBB5 /* zh-Hans */,
 				5A62D2531F40A6AA0015DBB5 /* zh-Hant */,
 				5A62D2541F40A6AB0015DBB5 /* de */,
+				5A7D83861F48A0F300B9EEBF /* en */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -634,6 +633,7 @@
 				5AEE0BBC1E3EE4990049BBB1 /* zh-Hans */,
 				5AEE0BBD1E3EE49B0049BBB1 /* zh-Hant */,
 				5AEE0BBE1E3EE49E0049BBB1 /* de */,
+				5A7D83841F48A08A00B9EEBF /* en */,
 			);
 			name = Info.plist;
 			sourceTree = "<group>";
@@ -647,6 +647,7 @@
 				5A8614C91E2E5CAB00840986 /* zh-Hans */,
 				5A8614CC1E2E5CB100840986 /* zh-Hant */,
 				5A8614CF1E2FBC8300840986 /* de */,
+				5A7D83831F48A06100B9EEBF /* en */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -660,6 +661,7 @@
 				5AEE0BD31E3EF5650049BBB1 /* zh-Hans */,
 				5AEE0BD41E3EF5670049BBB1 /* zh-Hant */,
 				5AEE0BD51E3EF5690049BBB1 /* de */,
+				5A7D83851F48A0D000B9EEBF /* en */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -690,7 +692,7 @@
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -722,7 +724,7 @@
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 				);
@@ -816,11 +818,18 @@
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -844,11 +853,17 @@
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
