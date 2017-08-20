@@ -816,6 +816,11 @@ angular.module('controller.forecastctrl', [])
                             //device location을 사용하기 위해서는 아래 코드 사용하면 됨.
                             //cityData.location = WeatherUtil.geolocationNormalize({"lat": coords.latitude, "long": coords.longitude});
                             cityData.location = geoInfo.location;
+                            if (geoInfo.country === "KR") {
+                                cityData.source = "KMA";
+                            } else {
+                                cityData.source = "DSF"; // default source로 설정해야 함
+                            }
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                             deferred.resolve();
                         }, function () {
