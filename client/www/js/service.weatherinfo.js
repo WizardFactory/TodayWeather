@@ -219,16 +219,15 @@ angular.module('service.weatherinfo', [])
             if (newCityInfo.dayChart) {
                 city.dayChart = newCityInfo.dayChart;
             }
+            if (newCityInfo.source) {
+                city.source = newCityInfo.source;
+            }
             if (window.push && city.currentPosition == true) {
                 if (window.push.getAlarm(index)) {
                     window.push.updateAlarm(index, city.address);
                 }
             }
             city.loadTime = new Date();
-
-            if (newCityInfo.source) {
-                city.source = newCityInfo.source;
-            }
 
             that.saveCities();
         };
