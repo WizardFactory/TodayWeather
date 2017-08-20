@@ -404,17 +404,18 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 /* search */
 .search-header {
-  padding: 5px 5px 10px 10px;
+  margin-left: 40px !important;
+  margin-right: 0px !important;
+  padding: 5px 0px 5px 0px;
   background-color: #EC407A;
   background-image: none;
-}
-
-.search-header label {
-  margin-right: 5px;
+  display: flex !important;
+  flex: 1 0;
 }
 
 .search-header input {
   background-color: transparent;
+  width: 100%;
 }
 
 .search-header a {
@@ -502,6 +503,80 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   right: 25px;
 }
 
+.bar.bar-search {
+  border-color: #EC407A;
+  background-color: #EC407A;
+  background-image: linear-gradient(0deg, #EC407A, #EC407A 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-forecast {
+  border-color: #0288D1;
+  background-color: #03A9F4;
+  background-image: linear-gradient(0deg, #0288D1, #0288D1 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-dailyforecast {
+  border-color: #0097A7;
+  background-color: #00BCD4;
+  background-image: linear-gradient(0deg, #0097A7, #0097A7 50%, transparent 50%);
+  color: #fff;
+}
+
+.menu {
+  width: 100% !important;
+}
+
+.menu-content {
+  -webkit-transform: none !important;
+  transform: none !important;
+}
+
+.menu-content.menu-open {
+  z-index: -1;
+}
+
+.menu-left {
+  z-index: auto !important;
+  left: -100%;
+  -webkit-transition: left 200ms ease;
+  transition: left 200ms ease;
+}
+
+.menu-left.menu-open {
+  left: 0px;
+}
+
+[nav-bar-transition="android"] .title,
+[nav-bar-transition="android"] .buttons {
+  -webkit-transition-duration: 0ms;
+  transition-duration: 0ms;
+  -webkit-transition-property: none;
+  transition-property: none;
+  opacity: 1;
+}
+
+[nav-bar-transition="android"] [nav-bar="leaving"] .search-header,
+[nav-bar-transition="android"] [nav-bar="leaving"] .buttons-right {
+  display: none;
+}
+
+[nav-bar-transition="android"] [nav-bar="entering"] .header-item {
+  opacity: 1;
+}
+
+.bar.bar-search .forecast-header,
+.bar.bar-forecast .search-header,
+.bar.bar-search .dailyforecast-header,
+.bar.bar-dailyforecast .search-header {
+  display: none !important;
+}
+
+.has-header.overflow-scroll {
+  overflow-y: auto !important;
+}
+
 /* popup */
 .ionic_popup .popup {
   background-color: #ffffff;
@@ -578,10 +653,8 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .title {
-  font-size: 21px;
-  opacity: 0.87;
-  font-weight: 700;
-  //letter-spacing: 5px;
+  left: 0px !important;
+  right: 0px !important;
 }
 
 .setting-title-light {

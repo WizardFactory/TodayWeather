@@ -1,13 +1,19 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, Util, Purchase, $ionicHistory, $translate) {
-        function init() {
-            $ionicHistory.clearHistory();
-        }
+    .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
+                                        $ionicSideMenuDelegate, $ionicPopup) {
+
+        var strOkay = "OK";
+        var strCancel = "Cancel";
+        $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
+            strOkay = translations.LOC_OK;
+            strCancel = translations.LOC_CANCEL;
+        }, function (translationIds) {
+            console.log("Fail to translate : "+JSON.stringify(translationIds));
+        });
 
         $scope.version = Util.version;
 
         $scope.sendMail = function() {
-
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
             var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
@@ -74,12 +80,8 @@ angular.module('controller.settingctrl', [])
                 strMsg += "<br>";
                 strMsg += translationIds.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
             }).finally(function () {
-                $scope.showAlert(strTitle, strMsg);
+                $rootScope.showAlert(strTitle, strMsg);
             });
-        };
-
-        $scope.isAndroid = function () {
-            return ionic.Platform.isAndroid();
         };
 
         $scope.hasInAppPurchase = function () {
@@ -90,5 +92,42 @@ angular.module('controller.settingctrl', [])
             return Util.language.indexOf("ko") != -1;
         };
 
-        init();
+        $rootScope.isAndroid = function () {
+            return ionic.Platform.isAndroid();
+        };
+
+        $rootScope.isMenuOpen = function() {
+            return $ionicSideMenuDelegate.isOpen();
+        };
+
+        $rootScope.showAlert = function(title, msg, callback) {
+            var alertPopup = $ionicPopup.alert({
+                title: title,
+                template: msg,
+                okText: strOkay
+            });
+            alertPopup.then(function() {
+                console.log("alertPopup close");
+                if (callback != undefined) {
+                    callback();
+                }
+            });
+        };
+
+        $rootScope.showConfirm = function(title, template, callback) {
+            var confirmPopup = $ionicPopup.confirm({
+                title: title,
+                template: template,
+                okText: strOkay,
+                cancelText: strCancel
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log("You are sure");
+                } else {
+                    console.log("You are not sure");
+                }
+                callback(res);
+            });
+        };
     });
