@@ -5,7 +5,7 @@
     <ion-nav-title>
         <p class="title search-header">
             <label class="item-input-wrapper">
-                <i class="icon ion-ios-search placeholder-icon"></i>
+                <i class="icon ion-ios-search"></i>
                 <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}" ng-model="search.word"
                        ng-change="OnChangeSearchWord()" ng-focus="OnFocusInput()">
             </label>
@@ -15,8 +15,13 @@
     </ion-nav-title>
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
                  delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentHeight()+'px'}" tabs-shrink>
-        <div class="list list-inset" ng-if="isSearching===true">
-            <button class="button button-block button-outline button-light" ng-click="OnSearchCurrentPosition()">{{'LOC_FIND_BY_LOCATION'|translate}}</button>
+        <div style="padding: 10px" ng-if="isSearching===true">
+            <button class="button" ng-click="OnSearchCurrentPosition()">
+                {{'LOC_FIND_BY_LOCATION'|translate}}
+            </button>
+        </div>
+        <div class="list card" ng-if="isSearching===true&&(searchResults.length > 0 || searchResults2.length > 0)"
+                style="margin-top: 0px;">
             <div class="item" ng-repeat="result in searchResults" ng-click="OnSelectResult(result)">
                 <div class="row row-no-padding">
                     <div class="col search-item">
@@ -24,7 +29,7 @@
                     </div>
                 </div>
             </div>
-            <div class="item item-divider" style="color: white" ng-if="searchResults.length > 0">
+            <div class="item item-divider dark-text-secondary" ng-if="searchResults.length > 0">
                 powered by TodayWeather
             </div>
             <div class="item" ng-repeat="result in searchResults2" ng-click="OnSelectResult(result)">
@@ -36,19 +41,16 @@
                 </div>
             </div>
             <div class="item item-divider" ng-if="searchResults2.length > 0">
-                <img src="img/powered_by_google_on_non_white.png" width="144px">
+                <img src="img/powered_by_google_on_white.png" width="144px">
             </div>
         </div>
-        <div class="list list-inset" ng-if="isSearching===false">
-            <div style="height:16px;"></div>
+        <div class="list card" ng-if="isSearching===false">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
                     <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
                         <!--location_on-->
-                        <p style="color: white; opacity: 0.84; font-size: inherit;">
-                            {{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
-                            <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">&#xE0C8;</i>
-                        </p>
+                        {{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
+                        <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">&#xE0C8;</i>
                     </div>
                     <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">
                         <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
@@ -74,6 +76,5 @@
                 </div>
             </div>
         </div>
-        <div style="height:16px;"></div>
     </ion-content>
 </ion-view>

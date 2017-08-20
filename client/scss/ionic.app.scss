@@ -60,6 +60,46 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
 
+.dark-text-primary {
+  color: #000000;
+  opacity: 0.87;
+}
+
+.dark-text-secondary {
+  color: #000000;
+  opacity: 0.54;
+}
+
+.dark-text-disabled {
+  color: #000000;
+  opacity: 0.38;
+}
+
+.dark-text-dividers {
+  color: #000000;
+  opacity: 0.12;
+}
+
+.light-text-primary {
+  color: #FFFFFF;
+  opacity: 1.00;
+}
+
+.light-text-secondary {
+  color: #FFFFFF;
+  opacity: 0.70;
+}
+
+.light-text-disabled {
+  color: #FFFFFF;
+  opacity: 0.50;
+}
+
+.light-text-dividers {
+  color: #FFFFFF;
+  opacity: 0.12;
+}
+
 .popup-body {
   line-height: 20px;
 }
@@ -385,6 +425,12 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background-color: transparent;
 }
 
+.tabs-search .tabs {
+  color: #000000;
+  background-image: linear-gradient(0deg, #b2b2b2, #b2b2b2 50%, transparent 70%);
+  background-color: #FFFFFF;
+}
+
 .pane, .view {
   background-color: transparent;
 }
@@ -407,42 +453,39 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin-left: 40px !important;
   margin-right: 0px !important;
   padding: 5px 0px 5px 0px;
-  background-color: #EC407A;
+  background-color: #444;
   background-image: none;
   display: flex !important;
   flex: 1 0;
 }
 
+.search-header .icon {
+  color: #444;
+  padding-right: 6px;
+  font-size: 17px;
+}
+
 .search-header input {
   background-color: transparent;
   width: 100%;
-}
-
-.search-header a {
-  padding: 0 7px;
-  color: white;
-  font-size: 25px;
+  font-size: 17px;
 }
 
 .search-content {
 }
 
-.search-content .list {
-  margin-top: 0;
-  background-color: transparent;
-}
-
-.search-content .item {
-  background-color: transparent;
+.search-content .button {
+  width: 100%;
+  border-color: #ddd;
+  background-color: #fff;
+  font-size: 17px;
 }
 
 .search-item {
   margin: auto;
   text-align: left;
-  color: white;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 17px;
-  opacity: 0.84;
 }
 
 .search-item.last-item {
@@ -459,7 +502,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .search-item a {
-  color: white;
+  color: #444;
 }
 
 .search-item .toggle, .search-item .track {
@@ -483,7 +526,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .toggle.toggle-search input:checked + .track {
-  background-color: #673AB7;
+  background-color: #444;
 }
 
 .toggle.toggle-search .track .handle {
@@ -504,11 +547,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .bar.bar-search {
-  border-color: #EC407A;
-  background-color: #EC407A;
-  background-image: linear-gradient(0deg, #EC407A, #EC407A 50%, transparent 50%);
+  border-color: #444;
+  background-color: #444;
+  background-image: linear-gradient(0deg,#444,#444 50%,transparent 50%);
   color: #fff;
-}
+ }
 
 .bar.bar-forecast {
   border-color: #0288D1;
