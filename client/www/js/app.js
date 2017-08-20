@@ -85,17 +85,21 @@ angular.module('starter', [
         }
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
-            var element = angular.element(document.querySelectorAll('ion-header-bar'));
-            element.removeClass('bar-search');
-            element.removeClass('bar-forecast');
-            element.removeClass('bar-dailyforecast');
-            element.removeClass('bar-dark');
+            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbar.removeClass('bar-search');
+            headerbar.removeClass('bar-forecast');
+            headerbar.removeClass('bar-dailyforecast');
+            headerbar.removeClass('bar-dark');
+
+            var tabs = angular.element(document.querySelectorAll('ion-side-menu-content'));
+            tabs.removeClass('tabs-search');
 
             if (toState.name === 'tab.search') {
-                $rootScope.viewColor = '#ec72a8';
-                element.addClass('bar-search');
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-search');
+                tabs.addClass('tabs-search');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#EC407A');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             } else if (toState.name === 'tab.forecast') {
                 if (fromState.name === '') {
@@ -107,19 +111,19 @@ angular.module('starter', [
                 }
 
                 $rootScope.viewColor = '#03A9F4';
-                element.addClass('bar-forecast');
+                headerbar.addClass('bar-forecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';
-                element.addClass('bar-dailyforecast');
+                headerbar.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
                 }
             } else {
-                $rootScope.viewColor = '#444444';
-                element.addClass('bar-dark');
+                $rootScope.viewColor = '#444';
+                headerbar.addClass('bar-dark');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#111');
                 }
