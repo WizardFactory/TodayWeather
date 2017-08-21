@@ -1091,6 +1091,11 @@ function ControllerTown() {
             }
         }
 
+        if (filterdList == 0) {
+            log.error("mergeShortByShortest shortest list is zero");
+            return;
+        }
+
         var lastFilterTime = parseInt(filterdList[filterdList.length-1].time);
         var shortLen = shortList.length;
 
