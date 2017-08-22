@@ -16,6 +16,9 @@
 		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
 		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
 		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
+		3047A5121AB8059700498E2A /* build-debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A50F1AB8059700498E2A /* build-debug.xcconfig */; };
+		3047A5131AB8059700498E2A /* build-release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A5101AB8059700498E2A /* build-release.xcconfig */; };
+        3047A5141AB8059700498E2A /* build.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 3047A5111AB8059700498E2A /* build.xcconfig */; };
 		4AC9BB3042094AD29A1297A0 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74F3C838F71C4525874F08C1 /* Foundation.framework */; };
 		4E8159013B0146B89943AE45 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B64E89D91E4E4B2490CD9B4A /* MediaPlayer.framework */; };
 		535433886E344BB1B45C5A48 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08BFEC4DA3E438CB6496CB7 /* EventKit.framework */; };
@@ -527,8 +530,11 @@
 				302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */,
 				5A1350091E342547009555FA /* Info.plist in Resources */,
 				5A8614BE1E2D087900840986 /* InfoPlist.strings in Resources */,
+				3047A5131AB8059700498E2A /* build-release.xcconfig in Resources */,
+                3047A5141AB8059700498E2A /* build.xcconfig in Resources */,
 				0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */,
 				5AED42281D26A9EA00028FBC /* Wind.png in Resources */,
+				3047A5121AB8059700498E2A /* build-debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
