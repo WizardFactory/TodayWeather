@@ -85,10 +85,21 @@ angular.module('starter', [
         }
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
+            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbar.removeClass('bar-search');
+            headerbar.removeClass('bar-forecast');
+            headerbar.removeClass('bar-dailyforecast');
+            headerbar.removeClass('bar-dark');
+
+            var tabs = angular.element(document.querySelectorAll('ion-side-menu-content'));
+            tabs.removeClass('tabs-search');
+
             if (toState.name === 'tab.search') {
-                $rootScope.viewColor = '#ec72a8';
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-search');
+                tabs.addClass('tabs-search');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#EC407A');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             } else if (toState.name === 'tab.forecast') {
                 if (fromState.name === '') {
@@ -100,26 +111,21 @@ angular.module('starter', [
                 }
 
                 $rootScope.viewColor = '#03A9F4';
+                headerbar.addClass('bar-forecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';
+                headerbar.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
                 }
-            } else if (toState.name === 'tab.setting') {
-                $rootScope.viewColor = '#FFA726';
+            } else {
+                $rootScope.viewColor = '#444';
+                headerbar.addClass('bar-dark');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#FB8C00');
-                }
-            } else if (toState.name === 'guide') {
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0288D1');
-                }
-            } else if (toState.name === 'units') {
-                if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#444');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             }
 
@@ -1247,16 +1253,6 @@ angular.module('starter', [
                     'tab-dailyforecast': {
                         templateUrl: 'templates/tab-dailyforecast.html',
                         controller: 'ForecastCtrl'
-                    }
-                }
-            })
-            .state('tab.setting', {
-                url: '/setting',
-                cache: true,
-                views: {
-                    'tab-setting': {
-                        templateUrl: 'templates/tab-setting.html',
-                        controller: 'SettingCtrl'
                     }
                 }
             });

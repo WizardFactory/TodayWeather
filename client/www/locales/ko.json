@@ -90,7 +90,7 @@
   "LOC_ENTER_CITY" : "지역 이름을 입력하세요.",
   "LOC_ADD_CURRENT_LOCATION" : "현재위치로 추가",
   "LOC_SAVED_LOCATIONS" : "즐겨찾기",
-  "LOC_EDIT_LOCATIONS" : "편집",
+  "LOC_EDIT" : "편집",
   "LOC_SHARE_WEATHER" : "날씨공유",
   "LOC_VERSION" : "버전",
   "LOC_WIDGET" : "위젯",

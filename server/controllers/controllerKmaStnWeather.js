@@ -332,7 +332,8 @@ controllerKmaStnWeather._getStnMinute = function (stnInfo, dateTime, callback) {
 };
 
 /**
- * 20min내에 n개의 stn에서 비가 왔는지 확인, 측정된 stnId는 랜덤임.
+ * 10min내에 n개의 stn에서 비가 왔는지 확인, 측정된 stnId는 랜덤임.
+ * n개의 stn중에서 2개 이상이어야 true로 반환
  * @param stnList
  * @param dateTime
  * @param callback
@@ -347,9 +348,9 @@ controllerKmaStnWeather._checkPrecipFromStnMinuteList = function (stnList, dateT
         return this;
     }
 
-    //20min - data자체가 3분정도 딜레이가 있음.
+    //10min - data자체가 3분정도 딜레이가 있음.
     var limitTime = new Date(dateTime);
-    limitTime.setMinutes(limitTime.getMinutes() - 20);
+    limitTime.setMinutes(limitTime.getMinutes() - 10);
 
     var query;
     var array = [];
@@ -364,7 +365,28 @@ controllerKmaStnWeather._checkPrecipFromStnMinuteList = function (stnList, dateT
             return callback(err);
         }
 
-        if (stnWeatherList.length > 0) {
+        if (stnWeatherList.length == 0) {
+            return callback(undefined, undefined);
+        }
+
+        var stnList = [];
+        for (var i=0; i<stnWeatherList.length; i++) {
+            if (stnList.length == 0) {
+                stnList.push(stnWeatherList[i].stnId);
+                continue;
+            }
+            for (var j=0; j<stnList.length; j++) {
+                if (stnWeatherList[i].stnId != stnList[j]) {
+                    stnList.push(stnWeatherList[i].stnId);
+                    break;
+                }
+            }
+            if (stnList.length >= 2) {
+                break;
+            }
+        }
+
+        if (stnList.length >= 2) {
             var stnWeather = stnWeatherList[0];
             stnWeather.date = kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM(stnWeather.date);
             return callback(undefined, stnWeather);

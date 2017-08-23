@@ -266,7 +266,7 @@ angular.module('controller.purchase', [])
             }
         };
 
-        $scope.goBack = function() {
+        $scope.onClose = function() {
             if ($scope.accountLevel == Purchase.ACCOUNT_LEVEL_PREMIUM) {
                 TwAds.setShowAds(false);
             }

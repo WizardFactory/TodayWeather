@@ -263,8 +263,6 @@ angular.module('controller.forecastctrl', [])
         var legacyToolbarH = 58;
         var startHeight;
         var headerE;
-        var picture;
-        var alphaBar;
 
         // retry popup이 없는 경우 항상 undefined여야 함.
         var isLoadingIndicator = false;
@@ -346,17 +344,13 @@ angular.module('controller.forecastctrl', [])
 
             /* The height of a toolbar by default in Angular Material */
             legacyToolbarH = 58;
-            startHeight = bodyHeight * headerRatio;
+            startHeight = bodyHeight * headerRatio - 44;
             headerE         = angular.element(document.querySelector('[md-page-header]'));
-            picture        = angular.element(document.querySelector('[md-header-picture]'));
-            alphaBar        = angular.element(document.getElementById('alphaBar'));
 
             //console.log(headerE);
-            //console.log(picture);
             //console.log("startHeight=", startHeight);
 
             headerE.css('height', startHeight+'px');
-            picture.css('height', startHeight+'px');
             //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
             $scope.headerHeight = startHeight;
 
@@ -822,6 +816,11 @@ angular.module('controller.forecastctrl', [])
                             //device location을 사용하기 위해서는 아래 코드 사용하면 됨.
                             //cityData.location = WeatherUtil.geolocationNormalize({"lat": coords.latitude, "long": coords.longitude});
                             cityData.location = geoInfo.location;
+                            if (geoInfo.country === "KR") {
+                                cityData.source = "KMA";
+                            } else {
+                                cityData.source = "DSF"; // default source로 설정해야 함
+                            }
                             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
                             deferred.resolve();
                         }, function () {
@@ -1239,16 +1238,6 @@ angular.module('controller.forecastctrl', [])
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
         });
-
-        $scope.headerScroll = function drawShadow() {
-            var rect = $ionicScrollDelegate.$getByHandle("body").getScrollPosition();
-            if (!(rect == undefined) && rect.hasOwnProperty('top') && rect.top > 0) {
-                alphaBar.css('box-shadow','0px 1px 5px 0 rgba(0, 0, 0, 0.26)');
-            }
-            else {
-                alphaBar.css('box-shadow','initial');
-            }
-        };
 
         $scope.getTempUnit = function () {
            return Units.getUnit('temperatureUnit');

@@ -145,7 +145,10 @@ static TodayViewController *todayVC = nil;
 {
     [super viewDidLoad];
     
-    NSLog(@"self : %@", self);
+    //NSLog(@"self : %@", self);
+    
+    NSString *budleDisplayName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+    NSLog(@"Localized Bundle Display Nmae : %@ ", budleDisplayName);
     
     todayVC = self;
     

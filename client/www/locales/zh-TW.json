@@ -90,7 +90,7 @@
   "LOC_ENTER_CITY" : "輸入地區名",
   "LOC_ADD_CURRENT_LOCATION" : "加入到當前的位置",
   "LOC_SAVED_LOCATIONS" : "收藏夾",
-  "LOC_EDIT_LOCATIONS" : "編輯",
+  "LOC_EDIT" : "編輯",
   "LOC_SHARE_WEATHER" : "天氣分享",
   "LOC_VERSION" : "版本",
   "LOC_WIDGET" : "工具",

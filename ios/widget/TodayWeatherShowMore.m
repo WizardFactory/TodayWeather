@@ -185,7 +185,7 @@
     NSLog(@"reqType : %d", reqType);
     //NSLog(@"[processByTimeData] dict : %@", dict);
     arrTimeData = [TodayWeatherUtil getByTimeArray:dict type:reqType];
-    NSLog(@"[processByTimeData] arrTimeData count : %ld", [arrTimeData count]);
+    NSLog(@"[processByTimeData] arrTimeData count : %lu", (unsigned long)[arrTimeData count]);
     
     for(int i = 0 ; i < [arrTimeData count]; i++)
     {
