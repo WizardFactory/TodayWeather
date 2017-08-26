@@ -9,6 +9,7 @@ var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
 var modelDSForecast = require('../../models/worldWeather/modelDSForecast');
 var modelAQI = require('../../models/worldWeather/modelAqi');
 var config = require('../../config/config');
+var controllerRequester = require('./controllerRequester');
 
 
 var commandList = ['restart', 'renewGeocodeList'];
@@ -509,6 +510,51 @@ function controllerWorldWeather(){
 
                     async.waterfall([
                             function(cb){
+                                /*
+                                 Direct function call
+                                */
+                                var requester = new controllerRequester;
+                                var info = {
+                                    sessionID: req.sessionID,
+                                    query:{}
+                                };
+
+                                if(req.geocode){
+                                    info.query.gcode = '' + req.geocode.lat + ',' + req.geocode.lon;
+                                }
+
+                                if(req.hasOwnProperty('result') &&
+                                    req.result.hasOwnProperty('timezone') &&
+                                    req.result.timezone.min != (100 * 60)){
+                                    info.query.timezone = req.result.timezone.min / 60;
+                                }else{
+                                    info.query.timezone = 0;
+                                }
+
+                                log.info('Query : ', info);
+                                requester.reqDataForTwoDays(info, function(err, response){
+                                    if(err){
+                                        log.error('TWW> fail to request', meta);
+                                        req.error = {res: 'fail', msg:'Fail to request Two days data'};
+                                        return cb(null); // try to read data from DB
+                                    }
+
+                                    log.info('RQ> success adding req_two_days', meta);
+                                    if(response.DSF != undefined){
+                                        req.DSF = JSON.parse(JSON.stringify(response.DSF));
+                                    }
+
+                                    if(response.AQI != undefined){
+                                        req.AQI = JSON.parse(JSON.stringify(response.AQI));
+                                    }
+
+                                    log.info('TWW> get DSF response : ', JSON.stringify(req.DSF));
+                                    log.info('TWW> get AQI response : ', JSON.stringify(req.AQI));
+                                    cb('success to get data', result);
+
+                                });
+                                /*
+                                query data to server
                                 self.requestData(req, 'req_two_days', function(err, result){
                                     if(err){
                                         log.error('TWW> fail to request', meta);
@@ -530,6 +576,7 @@ function controllerWorldWeather(){
                                     log.info('TWW> get AQI response : ', JSON.stringify(req.AQI));
                                     cb('success to get data', result);
                                 });
+                                */
                             },
                             /*
                              function(cb){
