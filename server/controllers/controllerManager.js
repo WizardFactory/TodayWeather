@@ -366,6 +366,7 @@ Manager.prototype.saveShort = function(newData, callback){
  */
 Manager.prototype.saveCurrent = function(newData, callback){
     var self = this;
+    var invalid = false;
 
     //log.info('C> save :', newData);
     var coord = {
@@ -409,6 +410,7 @@ Manager.prototype.saveCurrent = function(newData, callback){
                 //}
                 //else
                 {
+                    var checkInvalid = false;
                     newData.forEach(function(newItem){
                         var isNew = 1;
                         //log.info('C> newItem : ', newItem);
@@ -464,6 +466,7 @@ Manager.prototype.saveCurrent = function(newData, callback){
                             //although newItem is invaild, it is saved.
                             //log.info('C> push data :', newItem);
                             dbCurrentList.currentData.push(newItem);
+                            checkInvalid = true;    // 추가되는 데이터가 있는 경우에만 기존데이터의 t1h데이터를 체크한다
                         }
                     });
 
@@ -486,6 +489,11 @@ Manager.prototype.saveCurrent = function(newData, callback){
                     if(dbCurrentList.currentData.length > self.MAX_CURRENT_COUNT){
                         dbCurrentList.currentData = dbCurrentList.currentData.slice((dbCurrentList.currentData.length - self.MAX_CURRENT_COUNT));
                     }
+
+                    // check invalid t1h
+                    if(checkInvalid){
+                        invalid = self._checkInvalidt1h(dbCurrentList.currentData);
+                    }
                 }
 
                 //skip to update pubDate when pastCondition gather
@@ -498,7 +506,7 @@ Manager.prototype.saveCurrent = function(newData, callback){
                         log.error('C> fail to save');
                     }
                     if(callback){
-                        callback(err);
+                        callback(err, invalid);
                     }
                 });
             });
@@ -514,6 +522,67 @@ Manager.prototype.saveCurrent = function(newData, callback){
     }
 
     return this;
+};
+
+
+Manager.prototype._checkInvalidt1h = function(currentData){
+    var beforePreIndex = currentData.length - 3;  // 두시간전 index
+    var preIndex = currentData.length - 2;        // 한시간전 index
+    var curIndex = currentData.length - 1;        // 현재 데이터 index
+
+    if(currentData.length > 1){
+        var pret1h = currentData[preIndex].t1h;        // 한시간전
+        var preDateMonth = parseInt(currentData[preIndex].date.slice(4, 6));
+        var startMonth = 4;
+        var endMonth = 9;
+
+        // my가 140이 넘는 지역(철원, 포천시 등)은 4월에도 0도 이하의 기온이 나타나는 경우가 있기 때문에 시작 월을 3월로 설정
+        if(parseInt(currentData[preIndex].my) >= 140){
+            startMonth = 3;
+        }
+        log.info('C> Month(', preDateMonth, '), StartMonth(', startMonth, '), EndMonth(', endMonth, ')');
+
+        // 4월에서 9월 사이에 t1h가 0.0이 나타나는 경우는 없기 때문에 이 경우 invalid data로 판단한다
+        // 단 my가 140이 넘는 북쪽지역의 경우 4월까지 0도가 나타나는 경우가 있기 때문에 시작 월이 3월로 조정됨.
+        if(pret1h === 0.0 && (preDateMonth >= startMonth && preDateMonth <= endMonth )){
+            log.info('C> 1. Found invalid data : ', currentData[preIndex]);
+            return true;
+        }
+    }
+
+    if(currentData.length > 2){
+        var limitedVector = 4;
+        log.info('C> Pre data : ', currentData[preIndex]);
+
+        // 한시간 전의 t1h가 0일 경우 t1h가 invalid일 가능성이 있으니 check해야함
+        if(currentData[preIndex].t1h === 0.0){
+            // 한시간 전의 t1h를 기준으로 2시간 전과 현재 데이터 간의 vector값을 구한다
+            var vectorFromPast = Math.abs(currentData[beforePreIndex].t1h);
+            var vectorFromCur = Math.abs(currentData[curIndex].t1h);
+            if(currentData[curIndex].t1h === 0.0){
+                // 지금 받은 current data의 t1h가 0.0이기 때문에 이것 또한 invalid data의 가능성이 있다
+                // 따라서 이경우 두시간 전의 데이터만 이용
+                if(vectorFromPast > limitedVector){
+                    // 한시간 전의 t1h가 0인데, 2시간전 t1h데이터는 -5도 이하 혹은 5도 이상의 기온이다.
+                    // 따라서 한시간 전의 t1h의 데이터가 invalid한 데이터일 가능성이 높기 때문에
+                    // 한시간전의 current data를 다시 받을 수 있도록 설정한다
+                    log.info('C> 2. Found invalid data : ', currentData[preIndex]);
+                    return true;
+                }
+            }else{
+                if(vectorFromPast > limitedVector && vectorFromCur > limitedVector){
+                    // 두시간 전의 t1h와 지금 받은 현재의 t1h 모두를 이용
+                    // 한시간전의 t1h가 0.0이고 2시간전 t1h와 지금 받은 현재의 t1h데이터가 -5도 이하 혹은 5도 이상일때
+                    // 온도의 차이가 너무 크기 때문에 invalid data의 가능성이 높다.
+                    // 한시간전의 current data를 다시 받을 수 있도록 설정
+                    log.info('C> 3. Found invalid data : ', currentData[preIndex]);
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 };
 
 
@@ -861,12 +930,17 @@ Manager.prototype.saveMidSea = function(newData, callback) {
     return this;
 };
 
-Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, callback) {
+Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateString, retryCount, invalidDataList, callback) {
     var self = this;
     var failedList = [];
+    var invalidList = [];
     var collectInfo = new collectTown();
     var dataTypeName = self.getDataTypeName(dataType);
     var err;
+
+    if(invalidDataList != undefined && invalidDataList.length > 0){
+        invalidList = JSON.parse(JSON.stringify(invalidDataList));
+    }
 
     if (!retryCount) {
         err = new Error("retryCount is zero for request DATA : " + dataTypeName);
@@ -900,13 +974,19 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
         }
         log.info(dataTypeName, 'data receive completed : ', dataList.length);
 
-        //log.info(dataList);
+        //log.info(JSON.stringify(dataList));
         //log.info(dataList[0]);
 
         async.mapSeries(dataList,
             function(item, cb) {
                 if (item.isCompleted) {
-                    self.getSaveFunc(dataType).call(self, item.data, function (err) {
+                    self.getSaveFunc(dataType).call(self, item.data, function (err, invalid) {
+                        if(invalid != undefined && invalid == true){
+                            if(invalidList.indexOf(item.mCoord) === -1){
+                                log.info('C> Found invalid t1h', item.mCoord);
+                                invalidList.push(item.mCoord);
+                            }
+                        }
                         cb(err);
                     });
                 }
@@ -923,12 +1003,18 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 if (err) {
                     log.error(err);
                 }
+
                 if (failedList.length) {
-                    return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, callback);
+                    return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                }
+
+                if(invalidList.length){
+                    var adjustedDateString = self.getShortestQueryTime(8);
+                    return self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
                 if (callback) {
-                    callback(err, results);
+                    callback(err, invalidList);
                 }
             });
         //log.info('ST> save OK');
@@ -1212,7 +1298,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
                 log.info('S> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, undefined, function (err, results) {
                 log.info('S> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1269,7 +1355,7 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
 
             //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, undefined, function (err, results) {
                 log.info('ST> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1327,7 +1413,7 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
                 log.info('C> srcList length=', srcList.length);
             }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, function (err, results) {
+            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, undefined, function (err, results) {
                 log.info('C> save OK');
                 if (callback) {
                     return callback(err, results);
@@ -1387,7 +1473,7 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
             log.info('MF> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 20, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_FORECAST, key, dateString, 20, undefined, function (err, results) {
             log.info('MF> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1452,7 +1538,7 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
             log.info('ML> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 20, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_LAND, key, dateString, 20, undefined, function (err, results) {
             log.info('ML> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1518,7 +1604,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
             log.info('MT> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20, undefined, function (err, results) {
             log.info('MT> save OK');
             if (callback) {
                 return callback(err, results);
@@ -1577,7 +1663,7 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
             log.info('Ms> srcList length=', srcList.length);
         }
 
-        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 20, function (err, results) {
+        self._recursiveRequestData(srcList, self.DATA_TYPE.MID_SEA, key, dateString, 20, undefined, function (err, results) {
             log.info('MD> save OK');
             if (callback) {
                 return callback(err, results);
