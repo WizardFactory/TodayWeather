@@ -13,6 +13,7 @@ var keybox = require('../../config/config').keyString;
 var util = require('util');
 var async = require('async');
 var collectTown = require('../../lib/collectTownForecast');
+var test_key = require('../../config/config').keyString.test_normal;
 
 var kecoController = require('../../controllers/kecoController');
 
@@ -27,10 +28,9 @@ var manager = new controllerManager();
 describe('invalid t1h', function(){
     it('test invalid t1h on Sep', function(done){
         var list = [{mx:91, my:131}];
-        var key = 'ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D';
 
-        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201709101700","date":"20170910","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":21.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
-        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20170909","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":20.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201709101700","date":"20170910","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":21.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20170909","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":20.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
         var data = [{
             mCoord: {
                 mx : 91,
@@ -108,7 +108,7 @@ describe('invalid t1h', function(){
             cb(0, listTownDb);
         };
 
-        manager.getTownCurrentData(9, key, function(err, result){
+        manager.getTownCurrentData(9, test_key, function(err, result){
             log.info(data);
             log.info('END -----------------------------');
             done();
@@ -119,11 +119,10 @@ describe('invalid t1h', function(){
 
     it('test collecting current data with invalid t1h on Nov', function(done){
         var list = [{mx:91, my:131}];
-        var key = 'ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D';
 
         var queryCount = 0;
-        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171210","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":0,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
-        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171209","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":20.2,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171210","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":0,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171209","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":20.2,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
         var data = [{
             mCoord: {
                 mx : 91,
@@ -208,7 +207,7 @@ describe('invalid t1h', function(){
             cb(0, listTownDb);
         };
 
-        manager.getTownCurrentData(9, key, function(err, result){
+        manager.getTownCurrentData(9, test_key, function(err, result){
             log.info(data);
             log.info('END -----------------------------');
             done();
@@ -219,11 +218,10 @@ describe('invalid t1h', function(){
 
     it('test invalid t1h on Nov, current t1h is 0', function(done){
         var list = [{mx:91, my:131}];
-        var key = 'ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D';
 
         var queryCount = 0;
-        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171210","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":23.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
-        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171209","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":22.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=ZHnG%2BY4Lm4ro7irtG1atoYPJTVgSPFz5iZbHQYFTEXJfCCrdcF1caV1UK%2FQH5fMqbA%2B%2FpL9Cy%2BSYVi%2BAqzG8bw%3D%3D&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171210","time":"1700","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":23.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
+        var qureyResult2 = [{"isCompleted":true,"data":[{"pubDate":"201712101600","date":"20171209","time":"1600","mx":91,"my":131,"lgt":0,"pty":0,"reh":93,"rn1":0,"sky":4,"t1h":22.5,"uuu":-1.3,"vec":106,"vvv":0.4,"wsd":1.5}],"url":"http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?serviceKey=dummy&base_date=20170910&base_time=1600&nx=91&ny=131&pageNo=1&numOfRows=999","retryCount":0,"options":{"date":"20170910","time":"1600","dataType":0,"code":""},"mCoord":{"mx":91,"my":131}}];
 
         var data = [{
             mCoord: {
@@ -308,7 +306,7 @@ describe('invalid t1h', function(){
             cb(0, listTownDb);
         };
 
-        manager.getTownCurrentData(9, key, function(err, result){
+        manager.getTownCurrentData(9, test_key, function(err, result){
             log.info(data);
             log.info('END -----------------------------');
             done();
