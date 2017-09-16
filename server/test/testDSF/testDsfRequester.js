@@ -192,6 +192,33 @@ describe('unit test - DSF', function(){
         });
     });
 
+    it('test error case : wrong DSF', function(done){
+        var date = '2017-09-16T03:00:00-0900';
+        var dsf = new dsfRequester();
+        var count = 1;
+
+        dsf.get = function(url, option, callback){
+            if(count-- > 0) {
+                return callback(0, {statusCode:200}, '{{sas}');
+            }else{
+                return req.get(url, option, callback);
+            }
+        };
+
+        dsf.getForecast({lat:39.66, lon:116.40}, date, keybox.dsf_keys[0].key, function(err, result){
+            if(err){
+                log.error('!!! failed to get previous weather data');
+                log.error(err);
+                done();
+                return;
+            }
+
+            log.info('!!! Successed to get previous weather data');
+            log.info(result);
+            done();
+
+        });
+    });
 /*
     var leadingZeros = function(n, digits) {
         var zero = '';
