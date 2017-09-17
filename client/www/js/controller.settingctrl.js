@@ -11,8 +11,6 @@ angular.module('controller.settingctrl', [])
             console.log("Fail to translate : "+JSON.stringify(translationIds));
         });
 
-        $scope.version = Util.version;
-
         $scope.sendMail = function() {
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
