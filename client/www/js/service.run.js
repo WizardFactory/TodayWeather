@@ -81,6 +81,7 @@ angular.module('service.run', [])
         Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
         if (window.cordova && cordova.getAppVersion) {
             cordova.getAppVersion.getVersionNumber().then(function (version) {
+                $rootScope.version = version;
                 Util.version = version;
                 Util.ga.trackEvent('app', 'version', Util.version);
             });
