@@ -92,8 +92,9 @@ angular.module('service.push', [])
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    //callback(undefined, result.data);
-                    console.log(data);
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -120,8 +121,9 @@ angular.module('service.push', [])
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    //callback(undefined, result.data);
-                    console.log(data);
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -269,6 +271,16 @@ angular.module('service.push', [])
                 };
             }
 
+            if (!time) {
+                var err = new Error("You have to set time for add alarm");
+                return callback(err);
+            }
+
+            if (town.first=="" && town.second=="" && town.third=="" && city.location == null) {
+                var err = new Error("You have to set location info for add alarm");
+                return callback(err);
+            }
+
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
             }
@@ -292,10 +304,6 @@ angular.module('service.push', [])
                     self.pushData.alarmList[i] = alarmInfo;
                 }
                 else {
-                    if (!time) {
-                        var err = new Error("You have to set time for add alarm");
-                        return callback(err);
-                    }
                     self.pushData.alarmList.push(alarmInfo);
                 }
                 //check alarm in list
