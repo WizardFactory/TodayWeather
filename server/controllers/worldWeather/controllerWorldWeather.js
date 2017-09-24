@@ -2340,7 +2340,7 @@ function controllerWorldWeather(){
                 return list[i][name];
             }
         }
-        log.warn("Fail to find name="+name+" date="+date);
+        log.error("Fail to find name="+name+" date="+date);
         return undefined;
     };
 

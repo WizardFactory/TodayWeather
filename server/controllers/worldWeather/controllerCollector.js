@@ -1432,8 +1432,8 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                 }
                 requester.getForecast(geocode, date, key, function(err, result){
                     if(err){
-                        //print.error('Req Dsf> get fail', geocode, date);
-                        log.warn('Req Dsf> get fail', geocode, date);
+                        print.error('Req Dsf> get fail', geocode, date);
+                        log.error('Req Dsf> get fail', geocode, date);
                         cb(null);
                         return;
                     }
