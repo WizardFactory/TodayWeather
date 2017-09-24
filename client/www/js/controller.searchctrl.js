@@ -441,6 +441,10 @@ angular.module('controller.searchctrl', [])
                                     selectedTime.toString());
 
                         Push.updateAlarm(index, WeatherInfo.getCityOfIndex(index).address, selectedTime, function (err, alarmInfo) {
+                            if (err) {
+                                Util.ga.trackEvent('alarm', 'error', err.message, index);
+                                return;
+                            }
                             console.log('alarm='+JSON.stringify(alarmInfo));
                             $scope.cityList[index].alarmInfo = alarmInfo;
                         });
