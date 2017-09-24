@@ -72,14 +72,15 @@ gulp.task('build', shell.task([
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'gulp rm-prepare-app-pre',
   'ionic build'
 ]));
 
 gulp.task('build_ios', shell.task([
   'ionic state reset',
+  'gulp rmplugins',
   'cp -a ../ios platforms/',
   'ionic state restore --plugins',
+  'cordova plugin add cordova-plugin-app-preferences',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
@@ -89,60 +90,61 @@ gulp.task('build_ios', shell.task([
 
 gulp.task('build_android', shell.task([
   'ionic state reset',
-  'ionic state restore --plugins',
+  'cordova plugin add cordova-plugin-app-preferences',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'gulp rm-prepare-app-pre',
   'ionic build android'
 ]));
 
-gulp.task('release', shell.task([
-  'ionic state reset',
-  'cp -a ../ios platforms/',
-  'ionic state restore --plugins',
-  'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
-  'bower install',
-  'gulp sass',
-  'gulp rm-prepare-app-pre',
-  'ionic build --release'
-]));
-
-gulp.task('release-nonpaid', shell.task([
+gulp.task('release-android-nonpaid', shell.task([
   'cp config-androidsdk19.xml config.xml',
-  'cp ads.package.json package.json',
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
-  'gulp rm-prepare-app-pre',
-  'cp -a ../ios platforms/',
-  'ionic state restore --plugins',
+  'cordova plugin rm cordova-plugin-console',
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="111"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
-  'gulp rm-prepare-app-pre',
+  'cordova plugin add cordova-plugin-app-preferences',
+  //'cordova plugin rm cordova-plugin-inapppurchase',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'ionic build android --release',
-  'cp platforms/android/build/outputs/apk/android-release.apk ./',
-  '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_onestore_v'+json.version+'_min19.apk',
-
   'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
-  'cordova plugin add cordova-plugin-inapppurchase',
   'ionic build android --release',
   'cp platforms/android/build/outputs/apk/android-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_playstore_v'+json.version+'_min19.apk',
 
+  'cp build.gradle platforms/android/',
+  'cp config-androidsdk16.xml config.xml',
+  'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
+  'ionic build android --release',
+  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./',
+  '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min16.apk',
+
   'cp config-androidsdk14.xml config.xml',
   'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
   'ionic build android --release',
-  'cp platforms/android/build/outputs/apk/android-armv7-release.apk ./',
+  'cp -f platforms/android/build/outputs/apk/android-armv7-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
+]));
+
+gulp.task('release-ios-nonpaid', shell.task([
+  'cp config-androidsdk19.xml config.xml',
+  'ionic state reset',
+  'gulp rmplugins',
+  'cp -a ../ios platforms/',
+  'ionic state restore --plugins',
+  'cordova plugin rm cordova-plugin-console',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
+  'cordova plugin add cordova-plugin-app-preferences',
+  'npm install',
+  'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
 
   'cp ads.ios.tw.client.config.js www/tw.client.config.js',
-  'cordova plugin remove phonegap-plugin-push',
   'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
   'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
