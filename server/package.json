@@ -38,7 +38,7 @@
     "morgan": "~1.6.1",
     "newrelic": "^1.24.1",
     "node-gcm": "^0.14.0",
-    "request": "2.60.0",
+    "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
     "tracer": "^0.8.3",
     "winston": "^1.0.1",
