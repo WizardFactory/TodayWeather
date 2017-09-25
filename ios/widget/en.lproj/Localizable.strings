@@ -17,6 +17,11 @@
 "LOC_TODAY"                         = "Today";
 "LOC_TOMORROW"                      = "Tomorrow";
 
-"LOC_AQI"                           = "AQI";
+"LOC_AQI"                             = "AQI";
 "LOC_PM10"                          = "PM10";
 "LOC_PM25"                          = "PM2.5";
+
+"LOC_PROBABILITY_OF_PRECIPITATION"  = "Chance of precipitation";
+"LOC_TODAYWEATHER"                  = "TodayWeather";
+
+"LOC_PLEASE_EXECUTE_MAIN_APP"       = "Run TodayWeather app to create a list of cities";

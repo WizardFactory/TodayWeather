@@ -445,7 +445,6 @@ angular.module('starter', [
                                 }
                                 else if (d.name == 'yesterday') {
                                     currentWeather.value = scope.currentWeather.yesterday;
-                                    currentWeather.value.t1h = Math.round(currentWeather.value.t1h);
                                     currentWeather.value.t3h = currentWeather.value.t1h;
                                 }
                                 var cloneDate = JSON.parse(JSON.stringify(d));
