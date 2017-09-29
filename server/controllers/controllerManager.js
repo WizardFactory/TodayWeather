@@ -1428,6 +1428,78 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
     return this;
 };
 
+
+Manager.prototype.updateInvalidT1hData = function(baseTime, key, callback){
+    var self = this;
+    var dateString = self.getCurrentQueryTime(baseTime);
+
+    log.info('C> +++ Update Invalid T1h : ', dateString);
+
+    modelCurrent.find({'currentData':{$elemMatch:{'t1h':0.0}}}, function(err, list){
+        if(err){
+            log.warn('C> Fail to find current data which has 0 t1h data');
+            if (callback) {
+                return callback(err);
+            }
+            return this;
+        }
+
+        if(list.length === 0){
+            log.info('C> There is no invalid t1h data');
+            if (callback) {
+                return callback(err);
+            }
+            return this;
+        }
+
+        var invalidList = [];
+        log.info('C> There are invalid t1h data : ', list.length);
+
+        // 최근에 받은 current data의 t1h가 invalid일 경우에만 업데이트 하기 위해서 필터링 한다
+        list.forEach(function(item){
+            var latestData = item.currentData.pop();
+
+            log.info('C> check Item : ', item.mCoord.mx, item.mCoord.my, latestData.date, latestData.time);
+            // check whether invalid data is latest or not.
+            if(latestData != undefined /*&& latestData.t1h === 0.0*/){
+                var updateLocation = {
+                    mx: latestData.mx,
+                    my: latestData.my
+                };
+
+                // 최신 current data의 t1h가 invalid한경우 해당 mx, my값을 array에 저장한다
+                invalidList.push(updateLocation);
+
+                dateString = {
+                    date: latestData.date,
+                    time: latestData.time
+                }
+            }
+        });
+
+        if(invalidList.length === 0){
+            log.info('C> no need to update');
+            if (callback) {
+                return callback(err);
+            }
+        }
+
+        log.info('C> need to update :', dateString, 'count : ', invalidList.length);
+        // 위 loop에서 필터링 된 invalid t1h값을 가지는 mx, my 좌표에 대해서 업데이트를 실행 한다
+        self._recursiveRequestData(invalidList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 5, undefined, function (err, results) {
+            log.info('C> update OK for invalid t1h');
+            if (callback) {
+                return callback(err, results);
+            }
+            if (err) {
+                return log.error(err);
+            }
+        });
+    });
+
+    return this;
+};
+
 // get breif middle range forecast data from data.org by using collectTownForecast.js
 Manager.prototype.getMidForecast = function(gmt, key, callback){
     var self = this;
@@ -2136,6 +2208,17 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
                 callback();
             });
         });
+    }
+
+    if (time === 55 || putAll) {
+        //direct request updateInvalidt1h
+        log.info('push updateInvalidt1h');
+        //self.asyncTasks.push(function (callback) {
+        self._requestApi("updateInvalidt1h", function () {
+            log.info('updateInvalidt1h done');
+            //        callback();
+        });
+        //});
     }
 
     if (self.asyncTasks.length <= 17) {

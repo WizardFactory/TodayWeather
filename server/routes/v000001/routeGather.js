@@ -303,4 +303,13 @@ router.get('/gatherKasiRiseSet', function(req, res) {
     });
 });
 
+router.get('/updateInvalidt1h', function(req, res) {
+    manager.updateInvalidT1hData(9, server_key, function (err) {
+        if (err) {
+            log.error(err);
+        }
+        res.send();
+    });
+});
+
 module.exports = router;

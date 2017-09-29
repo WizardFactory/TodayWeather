@@ -14,6 +14,7 @@ var util = require('util');
 var async = require('async');
 var collectTown = require('../../lib/collectTownForecast');
 var test_key = require('../../config/config').keyString.test_normal;
+var mongoose = require('mongoose');
 
 var kecoController = require('../../controllers/kecoController');
 
@@ -23,9 +24,24 @@ var controllerManager = require('../../controllers/controllerManager');
 var town = require('../../models/town');
 var modelCurrent = require('../../models/modelCurrent');
 
+/*
+var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
+    replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
+    mongos: true };
+
+mongoose.Promise = global.Promise;
+mongoose.connect(config.db.path, options, function(err) {
+    if (err) {
+        log.error('Could not connect to MongoDB! ' + config.db.path);
+        log.error(err);
+    }
+});
+*/
 var manager = new controllerManager();
 
+
 describe('invalid t1h', function(){
+
     it('test invalid t1h on Sep', function(done){
         var list = [{mx:91, my:131}];
 
@@ -313,4 +329,18 @@ describe('invalid t1h', function(){
         });
 
     });
+
+/*
+    it('process update invalid t1h from DB', function(done){
+        manager.updateInvalidT1hData(9, test_key, function(err, result){
+            if(err){
+                log.info('Fail to update invalid t1h');
+                return done();
+            }
+
+            log.info('Success to update invalid t1h');
+            done();
+        });
+    });
+    */
 });
