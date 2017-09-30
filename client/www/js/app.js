@@ -192,6 +192,7 @@ angular.module('starter', [
                     var width, height, x, y;
                     var svg, initLine, line;
                     var displayItemCount = 0;
+                    var sharp = false; //3시간 단위의 정각
 
                     function initSvg() {
                         //0.9.1까지 displayItemCount가 없음.
@@ -222,13 +223,15 @@ angular.module('starter', [
                         initLine = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
-                                //timeChart[0] -> yesterday, timeChart[1] -> today
-                                if (i === scope.timeChart[1].currentIndex+1) {
-                                    return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
-                                }
-                                //현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
-                                else if (i > scope.timeChart[1].currentIndex+1) {
-                                    return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                if (sharp === false) {
+                                    //timeChart[0] -> yesterday, timeChart[1] -> today
+                                    if (i === scope.timeChart[1].currentIndex + 1) {
+                                        return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                    }
+                                    //현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
+                                    else if (i > scope.timeChart[1].currentIndex + 1) {
+                                        return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                    }
                                 }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
@@ -237,11 +240,13 @@ angular.module('starter', [
                         line = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
-                                if (i === scope.timeChart[1].currentIndex+1) {
-                                    return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
-                                }
-                                else if (i > scope.timeChart[1].currentIndex+1) {
-                                    return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                if (sharp === false) {
+                                    if (i === scope.timeChart[1].currentIndex + 1) {
+                                        return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                    }
+                                    else if (i > scope.timeChart[1].currentIndex + 1) {
+                                        return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                    }
                                 }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
@@ -277,6 +282,12 @@ angular.module('starter', [
 
                         var currentTime = scope.currentWeather.time;
                         var currentTemp = scope.currentWeather.t1h;
+
+                        if ((scope.currentWeather.liveTime === null || currentTime+'00' == scope.currentWeather.liveTime) && (currentTime % 3 == 0)) {
+                            sharp = true;
+                        } else {
+                            sharp = false;
+                        }
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
@@ -438,18 +449,20 @@ angular.module('starter', [
                         // draw line
                         var lines = lineGroups.selectAll('.line')
                             .data(function(d) {
-                                var currentWeather = {name: d.name};
-                                if (d.name == "today") {
-                                    currentWeather.value = scope.currentWeather;
-                                    currentWeather.value.t3h = currentWeather.value.t1h;
+                                var cloneData = JSON.parse(JSON.stringify(d));
+                                if (sharp === false) {
+                                    var currentWeather = {name: d.name};
+                                    if (d.name == "today") {
+                                        currentWeather.value = scope.currentWeather;
+                                        currentWeather.value.t3h = currentWeather.value.t1h;
+                                    }
+                                    else if (d.name == 'yesterday') {
+                                        currentWeather.value = scope.currentWeather.yesterday;
+                                        currentWeather.value.t3h = currentWeather.value.t1h;
+                                    }
+                                    cloneData.values.splice(data[1].currentIndex+1, 0, currentWeather);
                                 }
-                                else if (d.name == 'yesterday') {
-                                    currentWeather.value = scope.currentWeather.yesterday;
-                                    currentWeather.value.t3h = currentWeather.value.t1h;
-                                }
-                                var cloneDate = JSON.parse(JSON.stringify(d));
-                                cloneDate.values.splice(data[1].currentIndex+1, 0, currentWeather);
-                                return [cloneDate];
+                                return [cloneData];
                             })
                             .attr('d', function (d) {
                                 return initLine(d.values);
@@ -508,20 +521,19 @@ angular.module('starter', [
                                 return [d];
                             })
                             .attr('r', function () {
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                if (sharp === true) {
+                                    return 11;
+                                } else {
                                     return 5;
-                                }
-                                else {
-                                    return currentTime % 3 == 0 ? 11:5;
                                 }
                             })
                             .attr('cx', function () {
                                 var x1 = data[1].currentIndex;
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 0.5;
+                                if (sharp === true) {
+                                    x1 += 0;
                                 }
                                 else {
-                                    x1 += currentTime % 3 == 0 ? 0 : 0.5;
+                                    x1 += 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
@@ -533,20 +545,19 @@ angular.module('starter', [
                                 return 'point circle-' + d.name + '-current';
                             })
                             .attr('r', function () {
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                if (sharp === true) {
+                                    return 11;
+                                } else {
                                     return 5;
-                                }
-                                else {
-                                    return currentTime % 3 == 0 ? 11 : 5;
                                 }
                             })
                             .attr('cx', function () {
                                 var x1 = data[1].currentIndex;
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 0.5;
+                                if (sharp === true) {
+                                    x1 += 0;
                                 }
                                 else {
-                                    x1 += currentTime % 3 == 0 ? 0 : 0.5;
+                                    x1 += 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
@@ -554,22 +565,22 @@ angular.module('starter', [
 
                         point.attr('cx', function () {
                             var x1 = data[1].currentIndex;
-                            if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                x1 += 0.5;
+                            if (sharp === true) {
+                                x1 += 0;
                             }
                             else {
-                                x1 += currentTime % 3 == 0 ? 0 : 0.5;
+                                x1 += 0.5;
                             }
                             return x.rangeBand() * x1 + x.rangeBand() / 2;
                         })
-                            .attr('cy', function (d) {
-                                if (d.name === "today") {
-                                    return y(scope.currentWeather.t1h);
-                                }
-                                else if (d.name === "yesterday") {
-                                    return  y(scope.currentWeather.yesterday.t1h);
-                                }
-                            });
+                        .attr('cy', function (d) {
+                            if (d.name === "today") {
+                                return y(scope.currentWeather.t1h);
+                            }
+                            else if (d.name === "yesterday") {
+                                return  y(scope.currentWeather.yesterday.t1h);
+                            }
+                        });
 
                         point.exit()
                             .remove();
@@ -590,12 +601,12 @@ angular.module('starter', [
                             })
                             .style("fill", function (d) {
                                 if (d.name == "today") {
-                                    if (d.value.time  === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                            return '#0288D1';
+                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
+                                        if (sharp === true) {
+                                            return '#fefefe';
                                         }
                                         else {
-                                            return '#fefefe';
+                                            return '#0288D1';
                                         }
                                     }
                                 }
@@ -614,11 +625,11 @@ angular.module('starter', [
                             .style("fill", function (d) {
                                 if (d.name == "today") {
                                     if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                            return '#0288D1';
+                                        if (sharp === true) {
+                                            return '#fefefe';
                                         }
                                         else {
-                                            return '#fefefe';
+                                            return '#0288D1';
                                         }
                                     }
                                 }
