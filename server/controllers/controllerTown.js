@@ -27,6 +27,8 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var kasiRiseSetController = require('../controllers/kasi.riseset.controller');
 
+var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -117,16 +119,29 @@ function ControllerTown() {
                         // get town weather
                         async.map(townArray,
                             function(item, cb){
-                                self._getTownDataFromDB(item.db, coord, undefined, function(err, data){
-                                    if (err) {
-                                        log.error(new Error('GaD> error to get data : '+ err.message + ' name='+item.name));
-                                        return cb(err);
-                                    }
-                                    req[item.name] = data;
-                                    log.info('T DATA[' + item.name + '] sID=',req.sessionID);
-                                    log.silly('T DATA[' + item.name + '] : ', req[item.name]);
-                                    cb(null);
-                                });
+                                if(config.db.version == '2.0' && item.name == 'modelCurrent'){
+                                    kmaTownCurrent._getCurrentFromDB(item.db, coord, undefined, function (err, data) {
+                                        if (err) {
+                                            log.error(new Error('GaD> error to get data : ' + err.message + ' name=' + item.name));
+                                            return cb(err);
+                                        }
+                                        req[item.name] = data;
+                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                        log.silly('T DATA[' + item.name + '] : ', req[item.name]);
+                                        cb(null);
+                                    });
+                                }else {
+                                    self._getTownDataFromDB(item.db, coord, undefined, function (err, data) {
+                                        if (err) {
+                                            log.error(new Error('GaD> error to get data : ' + err.message + ' name=' + item.name));
+                                            return cb(err);
+                                        }
+                                        req[item.name] = data;
+                                        log.info('T DATA[' + item.name + '] sID=', req.sessionID);
+                                        log.silly('T DATA[' + item.name + '] : ', req[item.name]);
+                                        cb(null);
+                                    });
+                                }
                             },
                             function(err){
                                 if(err){
@@ -572,7 +587,15 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, req, function(err, currentInfo) {
+
+                var getTownCurrentFromDb = function(){};
+                if(config.db.version == '2.0'){
+                    getTownCurrentFromDb = kmaTownCurrent._getCurrentFromDB;
+                }else{
+                    getTownCurrentFromDb = self._getTownDataFromDB;
+                }
+
+                getTownCurrentFromDb(modelCurrent, coord, req, function(err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current ' + err.message));
                         return next();

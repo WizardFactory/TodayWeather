@@ -27,6 +27,13 @@ var taskKmaIndexService = new (require('../lib/lifeIndexKmaRequester'))();
 
 var awsCloudFront = require('../utils/awsCloudFront');
 
+/*
+    New DB Format
+ */
+var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
+
+/*********************/
+
 function Manager(){
     var self = this;
 
@@ -1841,7 +1848,11 @@ Manager.prototype.getDataTypeName = function(value) {
 Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
-            return this.saveCurrent;
+            if(config.db.version === '2.0'){
+                return kmaTownCurrent.saveCurrent;
+            }else{
+                return this.saveCurrent;
+            }
         case this.DATA_TYPE.TOWN_SHORTEST:
             return this.saveShortest;
         case this.DATA_TYPE.TOWN_SHORT:
