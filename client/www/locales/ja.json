@@ -248,5 +248,7 @@
   "LOC_OPENS_THE_APP_INFO_PAGE" : "[設定]>[アプリケーション]>[今日天気] 許可を受けてください。",
   "LOC_DRY": "乾燥",
   "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "許可要求が拒否されました。 地名で検索したり、再試行してください。",
-  "LOC_FIND_BY_LOCATION": "場所で探す"
+  "LOC_FIND_BY_LOCATION": "場所で探す",
+  "LOC_SUNRISE": "日出",
+  "LOC_SUNSET": "日没"
 }

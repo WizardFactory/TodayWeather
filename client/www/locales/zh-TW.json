@@ -248,6 +248,8 @@
   "LOC_OPENS_THE_APP_INFO_PAGE" : "[設定]>[應用程序]>[今天天氣] 請允許許可",
   "LOC_DRY": "乾燥",
   "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "拒絕請求 請按地點名稱搜索或重試",
-  "LOC_FIND_BY_LOCATION": "按位置查找"
+  "LOC_FIND_BY_LOCATION": "按位置查找",
+  "LOC_SUNRISE": "日出",
+  "LOC_SUNSET": "日落"
 }
 
