@@ -97,6 +97,10 @@
                     <div class="row caption" style="padding: 3px">{{"LOC_DETAIL_WEATHER"|translate}}</div>
                     <div class="row row-no-padding">
                         <div style="margin: 0 auto;">
+                            <div class="row subheading" ng-if="!(currentWeather.weatherType == undefined)">
+                                <img ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png" style="height: 24px">
+                                <p class="detail-item-p">{{'LOC_WEATHER'|translate}} {{getWeatherStr(currentWeather)|translate}}</p>
+                            </div>
                             <div class="row subheading">
                                 <img src="img/Temp-05.png" style="height: 24px;">
                                 <p class="detail-item-p">{{diffTempStr}}</p>
@@ -129,13 +133,17 @@
                                 <i class="material-icons">&#xE7FF;</i>
                                 <p class="detail-item-p">{{'LOC_FEELS_LIKE'|translate}} {{getTemp(currentWeather.sensorytem)}}˚</p>
                             </div>
-                            <div class="row subheading" ng-if="!(currentWeather.weatherType == undefined)">
-                                <img ng-src="{{::imgPath}}/{{currentWeather.skyIcon}}.png" style="height: 24px">
-                                <p class="detail-item-p">{{'LOC_WEATHER'|translate}} {{getWeatherStr(currentWeather)|translate}}</p>
-                            </div>
                             <div class="row subheading" ng-if="currentWeather.rn1">
                                 <img src="img/glass-with-water.svg" style="height: 20px; margin: 0 2px">
                                 <p class="detail-item-p">{{'LOC_HOURLY_PRECIPITATION'|translate}} {{currentWeather.rn1}}<small>{{getPrecipUnit()}}</small></p>
+                            </div>
+                            <div class="row subheading" ng-if="currentWeather.today.sunrise">
+                                <img src="img/sunrise.svg" style="height: 24px;">
+                                <p class="detail-item-p">{{'LOC_SUNRISE'|translate}} {{currentWeather.today.sunrise.split(' ')[1]}}</p>
+                            </div>
+                            <div class="row subheading" ng-if="currentWeather.today.sunset">
+                                <img src="img/sunset.svg" style="height: 24px;">
+                                <p class="detail-item-p">{{'LOC_SUNSET'|translate}} {{currentWeather.today.sunset.split(' ')[1]}}</p>
                             </div>
                             <div class="row subheading">
                                 <i class="icon ion-clock" style="font-size: 22px; margin: 0 2px"></i>

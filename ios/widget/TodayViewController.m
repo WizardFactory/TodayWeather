@@ -183,10 +183,18 @@ static TodayViewController *todayVC = nil;
         NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
         
         if(cityList == nil)
+        {
+            NSLog(@"Widget Mode is Compact!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
+            showMoreView.hidden = YES;
+        }
         else
+        {
+            NSLog(@"Widget Mode is Expanded!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeExpanded];
-        showMoreView.hidden = NO;
+            showMoreView.hidden = NO;
+        }
+        
     }
     else
     {
@@ -224,6 +232,7 @@ static TodayViewController *todayVC = nil;
     else
     {
         // Changed to expanded mode
+        self.extensionContext.widgetLargestAvailableDisplayMode = NCWidgetDisplayModeExpanded;
         self.preferredContentSize   = CGSizeMake(self.view.frame.size.width, WIDGET_PADDING);
         [todayWSM transitView:showMoreView
                    transition:UIViewAnimationTransitionFlipFromRight
@@ -284,8 +293,6 @@ static TodayViewController *todayVC = nil;
 {
     todayWSM = [[TodayWeatherShowMore alloc] init];
     todayUtil = [[TodayWeatherUtil alloc] init];
-    
-    [self setPreferredContentSize:CGSizeMake(self.view.bounds.size.width, WIDGET_COMPACT_HEIGHT)];
     
     //NSLog(@"width : %f", self.view.bounds.size.width);
     
