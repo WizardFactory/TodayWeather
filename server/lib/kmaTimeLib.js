@@ -238,4 +238,55 @@ kmaTimeLib.convertKoreaStr2Date = function (str) {
     return (D.getFullYear() == y && D.getMonth() == m && D.getDate() == d) ? D : undefined;
 };
 
+kmaTimeLib.leadingZeros = function(n, digits) {
+    var zero = '';
+    n = n.toString();
+
+    if(n.length < digits) {
+        for(var i = 0; i < digits - n.length; i++){
+            zero += '0';
+        }
+    }
+    return zero + n;
+};
+
+kmaTimeLib.getPast3DaysTime = function(curTime){
+    var now = new Date(curTime.getTime());
+    var tz = now.getTime() + (-72 * 3600000);
+    //var tz = now.getTime() + (3 * 3600000);
+    now.setTime(tz);
+
+    return now;
+};
+
+kmaTimeLib.getPast8DaysTime = function(curTime){
+    var now = new Date(curTime.getTime());
+    var tz = now.getTime() + (-192 * 3600000);
+    //var tz = now.getTime() + (3 * 3600000);
+    now.setTime(tz);
+
+    return now;
+};
+
+kmaTimeLib.getKoreaDateObj = function(curTime){
+    return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':00:00+09:00');
+};
+
+
+kmaTimeLib.getKoreaTimeString = function(curTime){
+    var now = new Date(curTime.getTime());
+    var tz = now.getTime() + (9 * 3600000);
+
+    now.setTime(tz);
+
+    var result =
+        kmaTimeLib.leadingZeros(now.getUTCFullYear(), 4) +
+        kmaTimeLib.leadingZeros(now.getUTCMonth() + 1, 2) +
+        kmaTimeLib.leadingZeros(now.getUTCDate(), 2) +
+        kmaTimeLib.leadingZeros(now.getUTCHours(), 2) +
+        kmaTimeLib.leadingZeros(now.getUTCMinutes(), 2);
+
+    return result;
+};
+
 module.exports = kmaTimeLib;

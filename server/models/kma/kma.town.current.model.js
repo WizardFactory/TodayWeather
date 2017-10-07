@@ -9,7 +9,8 @@ var townCurrentSchema = new mongoose.Schema({
         mx : Number,
         my : Number
     },
-    pubDate : Date, //YYYYMMDDHHMM last baseDate+baseTime
+    pubDate : Date,
+    fcsDate : Date,
     currentData : {
         date: String, // get시 sort용
         time: String,
