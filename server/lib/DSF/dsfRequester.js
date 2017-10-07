@@ -128,6 +128,7 @@ dsfRequester.prototype.getData = function(url, retryCount, callback){
             if(callback){
                 callback(e);
             }
+            return;
         }
         log.info(result);
         if(callback){
