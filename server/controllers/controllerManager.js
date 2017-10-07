@@ -552,14 +552,14 @@ Manager.prototype._checkInvalidt1h = function(currentData){
         // 4월에서 9월 사이에 t1h가 0.0이 나타나는 경우는 없기 때문에 이 경우 invalid data로 판단한다
         // 단 my가 140이 넘는 북쪽지역의 경우 4월까지 0도가 나타나는 경우가 있기 때문에 시작 월이 3월로 조정됨.
         if(pret1h === 0.0 && (preDateMonth >= startMonth && preDateMonth <= endMonth )){
-            log.info('C> 1. Found invalid data : ', currentData[preIndex]);
+            log.info('C> 1. Found invalid data : ', currentData[preIndex].toString());
             return true;
         }
     }
 
     if(currentData.length > 2){
         var limitedVector = 4;
-        log.info('C> Pre data : ', currentData[preIndex]);
+        log.info('C> Pre data : ', currentData[preIndex].toString());
 
         // 한시간 전의 t1h가 0일 경우 t1h가 invalid일 가능성이 있으니 check해야함
         if(currentData[preIndex].t1h === 0.0){
@@ -573,7 +573,7 @@ Manager.prototype._checkInvalidt1h = function(currentData){
                     // 한시간 전의 t1h가 0인데, 2시간전 t1h데이터는 -5도 이하 혹은 5도 이상의 기온이다.
                     // 따라서 한시간 전의 t1h의 데이터가 invalid한 데이터일 가능성이 높기 때문에
                     // 한시간전의 current data를 다시 받을 수 있도록 설정한다
-                    log.info('C> 2. Found invalid data : ', currentData[preIndex]);
+                    log.info('C> 2. Found invalid data : ', currentData[preIndex].toString());
                     return true;
                 }
             }else{
@@ -582,7 +582,7 @@ Manager.prototype._checkInvalidt1h = function(currentData){
                     // 한시간전의 t1h가 0.0이고 2시간전 t1h와 지금 받은 현재의 t1h데이터가 -5도 이하 혹은 5도 이상일때
                     // 온도의 차이가 너무 크기 때문에 invalid data의 가능성이 높다.
                     // 한시간전의 current data를 다시 받을 수 있도록 설정
-                    log.info('C> 3. Found invalid data : ', currentData[preIndex]);
+                    log.info('C> 3. Found invalid data : ', currentData[preIndex].toString());
                     return true;
                 }
             }
