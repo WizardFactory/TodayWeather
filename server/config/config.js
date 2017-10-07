@@ -8,8 +8,8 @@ module.exports = {
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
     mode: (process.env.SERVER_MODE || 'service'), //local, gather, service, push
     db: {
+        version: (process.env.DB_DATA_VERSION || '1.0'),
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/todayweather')
-        version: (process.env.DB_DATA_VERSION || '1.0')
     },
     keyString: {
         test_normal: (process.env.DATA_GO_KR_TEST_NORMAL_KEY || 'You have to set key of data.go.kr'),
