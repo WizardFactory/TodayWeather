@@ -24,7 +24,7 @@ kasiRiseSet._makeLocationApiUrl = function (geocode, date) {
     url += 'latitude='+geocode.lat+'&';
     url += 'locdate='+date+'&';
     url += 'dnYn=Y&_type=json&';
-    url += 'ServiceKey='+config.keyString.test_normal;
+    url += 'ServiceKey='+config.keyString.normal;
 
     return url;
 };
@@ -34,7 +34,7 @@ kasiRiseSet._makeAreaApiUrl = function (location, date) {
     url += 'location='+encodeURIComponent(location)+'&';
     url += 'locdate='+date+'&';
     url += '_type=json&';
-    url += 'ServiceKey='+config.keyString.test_normal;
+    url += 'ServiceKey='+config.keyString.normal;
 
     return url;
 };
