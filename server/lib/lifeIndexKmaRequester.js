@@ -361,6 +361,10 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
 KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var err;
 
+    if (data.LegacyAPIResponse) {
+        data.Response = data.LegacyAPIResponse;
+    }
+
     if (!data.Response || !data.Response.header || !data.Response.header.successYN) {
         err = new Error("Fail to parse LifeList of " + indexName);
         log.error(err);
@@ -601,7 +605,7 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
                         log.silly(errStr+': There is no result');
                         log.error(err);
                     }
-                    else if (err.returnCode && err.returnCode == 1) {
+                    else if (err.returnCode && (err.returnCode == 1 || err.returnCode == 22)) {
                         log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
                         log.warn(err.message);
                         needChangeServiceKey = true;
