@@ -32,6 +32,7 @@ var awsCloudFront = require('../utils/awsCloudFront');
  */
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
+var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 
 /*********************/
 
@@ -40,6 +41,7 @@ function Manager(){
 
     self.kmaTownCurrent = kmaTownCurrent;
     self.kmaTownShort = kmaTownShort;
+    self.kmaTownShortest = kmaTownShortest;
 
     self.TIME_PERIOD = {
         TOWN_SHORT: (1000*60*60*3),
@@ -1348,7 +1350,11 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
             return this;
         }
-        self._checkPubDate(modelShortest, listTownDb, dateString, function (err, srcList) {
+        var checkPubDate = self._checkPubDate;
+        if(config.db.version === '2.0'){
+            checkPubDate = self.kmaTownShortest.checkPubDate;
+        }
+        checkPubDate(modelShortest, listTownDb, dateString, function (err, srcList) {
             if (err) {
                 if (callback) {
                     callback(err);
@@ -1866,7 +1872,11 @@ Manager.prototype.getSaveFunc = function(value) {
                 return this.saveCurrent;
             }
         case this.DATA_TYPE.TOWN_SHORTEST:
-            return this.saveShortest;
+            if(config.db.version === '2.0'){
+                return kmaTownShortest.saveShortest;
+            }else{
+                return this.saveShortest;
+            }
         case this.DATA_TYPE.TOWN_SHORT:
             if(config.db.version === '2.0'){
                 return kmaTownShort.saveShort;

@@ -11,7 +11,7 @@ var Logger = require('../lib/log');
 var convert = require('../utils/coordinate2xy');
 var fs = require('fs');
 var convertGeocode = require('../utils/convertGeocode');
-var controllerTownRss = require('../controllers/controllerShortRss');
+var controllerTownRss = require('../controllers/kma/kma.town.short.rss.controller');
 
 describe('unit test - get short rss by using controllerShortRss', function(){
     //var mongoose = require('mongoose');
@@ -45,7 +45,7 @@ describe('unit test - get short rss by using controllerShortRss', function(){
     //});
     //it('controller/controllerShortRss2', function(done){
     //    log.info('restart mainTask');
-    //    // pubDate 정상 작동 확인
+    //    // pubDate
     //    townRss.mainTask();
     //    this.timeout(1000*8);
     //    setTimeout(done, 1000*10);
