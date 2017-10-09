@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<widget id="net.wizardfactory.todayweather" version="0.9.56" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayweather" version="0.9.59" xmlns="http://www.w3.org/ns/widgets">
   <name>TodayWeather</name>
   <description>
         Inform how warm or cold it is today than yesterday.
