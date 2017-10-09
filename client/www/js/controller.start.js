@@ -41,7 +41,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         console.log("Fail to translate : " + JSON.stringify(translationIds));
     });
 
-
     var startVersion = null;
     var service;
 
@@ -122,6 +121,11 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         else {
             Util.ga.trackEvent('address', 'warn', 'ServiceNotReady');
         }
+    };
+
+    $scope.OnCancel = function() {
+        $scope.search.word = undefined;
+        $scope.searchResults2 = [];
     };
 
     function close() {
@@ -323,7 +327,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         $ionicLoading.hide();
         isLoadingIndicator = false;
     }
-
 
     function updateCurrentPosition() {
         var deferred = $q.defer();
