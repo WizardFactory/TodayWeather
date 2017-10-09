@@ -1,5 +1,5 @@
 sudo: required
 language: node_js
 node_js:
-  - "0.10"
+  - "4.4"
 script: cd server && npm install && npm test
