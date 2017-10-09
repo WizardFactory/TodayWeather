@@ -448,6 +448,17 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
+.start-content .item-input {
+  padding-right: 16px;
+  display: flex !important;
+  flex: 1 0;
+}
+
+.start-content .item-input button {
+  min-height: unset;
+  line-height: unset;
+}
+
 /* search */
 .search-header {
   margin-left: 40px !important;
