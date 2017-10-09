@@ -13,7 +13,11 @@ var targetName = './utils/data/base.csv';
 
 var modelTown = require('../models/town');
 var modelCurrent = require('../models/modelCurrent');
+var modelShort = require('../models/modelShort');
+
+
 var modelKmaTownCurrent = require('../models/kma/kma.town.current.model.js');
+var modelKmaTownShort = require('../models/kma/kma.town.short.model.js');
 
 var Logger = require('../lib/log');
 
@@ -61,15 +65,17 @@ function convertDbForm() {
                                     return cb(null);
                                 }
 
-                                log.info('To convert : ', town.mx, town.my);
+                                log.info('Courrent : To convert : ', town.mx, town.my);
                                 var current = curData[0];
                                 var mCoord = {mx: current.mCoord.mx, my: current.mCoord.my};
                                 async.mapSeries(current.currentData,
                                     function(curData, curCb){
-                                        var pubDate = _getDate(''+ curData.date + curData.time);
+                                        var fcsDate = _getDate(''+ curData.date + curData.time);
+                                        var pubDate = _getDate(current.pubDate);
                                         var newItem = {
                                             mCoord: mCoord,
                                             pubDate: pubDate,
+                                            fcsDate: fcsDate,
                                             currentData: {
                                                 date: curData.date,
                                                 time: curData.time,
@@ -88,7 +94,7 @@ function convertDbForm() {
                                             }
                                         };
 
-                                        modelKmaTownCurrent.update({mCoord: mCoord, pubDate: pubDate}, newItem, {upsert:true}, function(err){
+                                        modelKmaTownCurrent.update({mCoord: mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                                             if(err){
                                                 log.error('Fail to update current item : ', mCoord);
                                                 log.info(JSON.stringify(newItem));
@@ -106,7 +112,65 @@ function convertDbForm() {
                         },
                         function(cb){
                             // short data
-                            cb(null);
+                            modelShort.find({"mCoord.mx":town.mx, "mCoord.my":town.my}).limit(1).lean().exec(function(err, curData){
+                                if(err){
+                                    log.info('Fail to get short of old DB data : ', town.mx, town.my);
+                                    return cb(null);
+                                }
+
+                                if(curData == 0){
+                                    log.info('There is no short item in DB : ', town.mx, town.my);
+                                    return cb(null);
+                                }
+
+                                log.info('Short to convert : ', town.mx, town.my);
+                                var short = curData[0];
+                                var mCoord = {mx: short.mCoord.mx, my: short.mCoord.my};
+                                var pubDate = _getDate(short.pubDate);
+                                async.mapSeries(short.shortData,
+                                    function(shortData, curCb){
+                                        var fcsDate = _getDate(''+ shortData.date + shortData.time);
+                                        var newItem = {
+                                            mCoord: mCoord,
+                                            pubDate: pubDate,
+                                            fcsDate: fcsDate,
+                                            shortData: {
+                                                date: shortData.date,
+                                                time: shortData.time,
+                                                mx: shortData.mx,
+                                                my: shortData.my,
+                                                pop: shortData.pop,
+                                                pty: shortData.pty,
+                                                r06: shortData.r06,
+                                                reh: shortData.reh,
+                                                s06: shortData.s06,
+                                                sky: shortData.sky,
+                                                t3h: shortData.t3h,
+                                                tmn: shortData.tmn,
+                                                tmx: shortData.tmx,
+                                                uuu: shortData.uuu,
+                                                vvv: shortData.vvv,
+                                                wav: shortData.wav,
+                                                vec: shortData.vec,
+                                                wsd: shortData.wsd
+                                            }
+                                        };
+
+                                        modelKmaTownShort.update({mCoord: mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                                            if(err){
+                                                log.error('Fail to update short item : ', mCoord);
+                                                log.info(JSON.stringify(newItem));
+                                            }
+                                            //log.info('crrent OK : ', JSON.stringify(newItem));
+                                            curCb(null);
+                                        });
+                                    },
+                                    function(err, results){
+                                        cb(null);
+                                    }
+                                );
+
+                            });
                         }
                     ],
                     function(err, townResult){

@@ -28,6 +28,7 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 var kasiRiseSetController = require('../controllers/kasi.riseset.controller');
 
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
+var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -119,8 +120,17 @@ function ControllerTown() {
                         // get town weather
                         async.map(townArray,
                             function(item, cb){
-                                if(config.db.version == '2.0' && item.name == 'modelCurrent'){
-                                    kmaTownCurrent._getCurrentFromDB(item.db, coord, undefined, function (err, data) {
+                                if(config.db.version == '2.0' && ((item.name == 'modelCurrent') || (item.name == 'modelShort'))){
+                                    var fnGetDataFromDb = function(){};
+                                    if(item.name == 'modelCurrent'){
+                                        fnGetDataFromDb = kmaTownCurrent.getCurrentFromDB;
+                                    }else if(item.name == 'modelShort'){
+                                        fnGetDataFromDb = kmaTownShort.getShortFromDB;
+                                    }else{
+                                        log.error('GaD> Unknown type of data : ', item.name);
+                                    }
+
+                                    fnGetDataFromDb(item.db, coord, undefined, function (err, data) {
                                         if (err) {
                                             log.error(new Error('GaD> error to get data : ' + err.message + ' name=' + item.name));
                                             return cb(err);
@@ -348,7 +358,11 @@ function ControllerTown() {
                 }
                 log.silly('S> coord : ',coord);
 
-                self._getTownDataFromDB(modelShort, coord, req, function(err, shortInfo){
+                var getShortDataFromDb = self._getTownDataFromDB;
+                if(config.db.version == '2.0'){
+                    getShortDataFromDb = kmaTownShort.getShortFromDB;
+                }
+                getShortDataFromDb(modelShort, coord, req, function(err, shortInfo){
                     if (err) {
                         log.error(new Error('error to get short '+ err.message));
                         return next();
@@ -590,7 +604,7 @@ function ControllerTown() {
 
                 var getTownCurrentFromDb = function(){};
                 if(config.db.version == '2.0'){
-                    getTownCurrentFromDb = kmaTownCurrent._getCurrentFromDB;
+                    getTownCurrentFromDb = kmaTownCurrent.getCurrentFromDB;
                 }else{
                     getTownCurrentFromDb = self._getTownDataFromDB;
                 }
@@ -2203,7 +2217,12 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelCurrent, coord, req, function (err, currentInfo) {
+                var fnGetCurrentDataFromDb = self._getTownDataFromDB;
+                if(config.db.version == '2.0'){
+                    fnGetCurrentDataFromDb = kmaTownCurrent.getCurrentFromDB;
+                }
+
+                fnGetCurrentDataFromDb(modelCurrent, coord, req, function (err, currentInfo) {
                     if (err) {
                         log.error(new Error('error to get current for past' + err.message));
                         return next();

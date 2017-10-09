@@ -31,11 +31,15 @@ var awsCloudFront = require('../utils/awsCloudFront');
     New DB Format
  */
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
+var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 
 /*********************/
 
 function Manager(){
     var self = this;
+
+    self.kmaTownCurrent = kmaTownCurrent;
+    self.kmaTownShort = kmaTownShort;
 
     self.TIME_PERIOD = {
         TOWN_SHORT: (1000*60*60*3),
@@ -1284,7 +1288,11 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
             return this;
         }
 
-        self._checkPubDate(modelShort, listTownDb, dateString, function (err, srcList) {
+        var checkPubDate = self._checkPubDate;
+        if(config.db.version === '2.0'){
+            checkPubDate = self.kmaTownShort.checkPubDate;
+        }
+        checkPubDate(modelShort, listTownDb, dateString, function (err, srcList) {
             if (err) {
                 if (callback) {
                     callback(err);
@@ -1398,7 +1406,11 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
             return this;
         }
 
-        self._checkPubDate(modelCurrent, listTownDb, dateString, function (err, srcList) {
+        var checkPubDate = self._checkPubDate;
+        if(config.db.version === '2.0'){
+            checkPubDate = self.kmaTownCurrent.checkPubDate;
+        }
+        checkPubDate(modelCurrent, listTownDb, dateString, function (err, srcList) {
             if (err) {
                 if (callback) {
                     callback(err);
@@ -1856,7 +1868,11 @@ Manager.prototype.getSaveFunc = function(value) {
         case this.DATA_TYPE.TOWN_SHORTEST:
             return this.saveShortest;
         case this.DATA_TYPE.TOWN_SHORT:
-            return this.saveShort;
+            if(config.db.version === '2.0'){
+                return kmaTownShort.saveShort;
+            }else{
+                return this.saveShort;
+            }
         case this.DATA_TYPE.MID_FORECAST:
             return this.saveMidForecast;
         case this.DATA_TYPE.MID_LAND:
