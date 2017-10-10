@@ -11,6 +11,12 @@ function LifeIndexKmaController() {
 
 }
 
+/**
+ * 식중독지수
+ * @param grade
+ * @param translate
+ * @returns {*}
+ */
 LifeIndexKmaController.fsnStr = function (grade, translate) {
     var ts = translate == undefined?global:translate;
     switch(grade) {
@@ -37,6 +43,12 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
+/**
+ * 자외선지수
+ * @param grade
+ * @param translate
+ * @returns {*}
+ */
 LifeIndexKmaController.ultrvStr = function (grade, translate) {
     var ts = translate == undefined?global:translate;
     switch(grade) {
@@ -275,6 +287,11 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
     return Math.round(discomfortIndex);
 };
 
+/**
+ *
+ * @param discomfortIndex
+ * @returns {number}
+ */
 LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortIndex) {
     var discomfortGrade = 0;
 
@@ -286,48 +303,51 @@ LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortInde
     }
 
     if(discomfortIndex < 68) {
-        discomfortGrade = 1;
+        discomfortGrade = 0;
     } else if(discomfortIndex < 75) {
-        discomfortGrade = 2;
+        discomfortGrade = 1;
     } else if(discomfortIndex < 80) {
-        discomfortGrade = 3;
+        discomfortGrade = 2;
     } else {
-        discomfortGrade = 4;
+        discomfortGrade = 3;
     }
 
     return discomfortGrade;
 };
 
 /**
- * 불쾌지수
+ *
  * @param discomfortIndex
- * @returns {*}
+ * @param translate
+ * @returns {string}
  */
-LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex) {
+LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex, translate) {
+    var ts = translate == undefined?global:translate;
+    var discomfortString = "";
+
     if(discomfortIndex === undefined
         || discomfortIndex < 0)
     {
         log.debug('DiscomfortString > invalid parameter');
-        return "";
+        return discomfortString;
     }
 
-    var discomfortString;
 
     if(discomfortIndex < 68) {
-        discomfortString = __("LOC_LOW");
+        discomfortString = ts.__("LOC_LOW");
     } else if(discomfortIndex < 75) {
-        discomfortString = __("LOC_NORMAL");
+        discomfortString = ts.__("LOC_NORMAL");
     } else if(discomfortIndex < 80) {
-        discomfortString = __("LOC_HIGH");
+        discomfortString = ts.__("LOC_HIGH");
     } else {
-        discomfortString = __("LOC_VERY_HIGH");
+        discomfortString = ts.__("LOC_VERY_HIGH");
     }
 
     return discomfortString;
 };
 
 /**
- * 부패지수
+ * 부패지수 (삭제됨)
  * @param temperature
  * @param humidity
  * @returns {number}
@@ -354,9 +374,26 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
 /**
  *
  * @param DecompositionIndex
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.convertStringFromDecompositionIndex = function(DecompositionIndex) {
+LifeIndexKmaController.gradeFromDecompositionIndex = function(DecompositionIndex) {
+    if(DecompositionIndex > 7) {
+        return 2;
+    } else if(DecompositionIndex > 3) {
+        return 1;
+    } else {
+        return 0;
+    }
+};
+
+/**
+ *
+ * @param DecompositionIndex
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.convertStringFromDecompositionIndex = function(DecompositionIndex, translate) {
+    var ts = translate == undefined?global:translate;
     if(DecompositionIndex === undefined
         || DecompositionIndex < 0)
     {
@@ -364,14 +401,14 @@ LifeIndexKmaController.convertStringFromDecompositionIndex = function(Decomposit
         return "";
     }
 
-    var decompositionString;
+    var decompositionString ="";
 
     if(DecompositionIndex > 7) {
-        decompositionString = __("LOC_HIGH");
+        decompositionString = ts.__("LOC_HIGH");
     } else if(DecompositionIndex > 3) {
-        decompositionString = __("LOC_NORMAL");
+        decompositionString = ts.__("LOC_NORMAL");
     } else {
-        decompositionString = __("LOC_LOW");
+        decompositionString = ts.__("LOC_LOW");
     }
 
     return decompositionString;
@@ -422,9 +459,30 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
 /**
  *
  * @param heatIndex
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
+LifeIndexKmaController.gradeFromHeatIndex = function(heatIndex) {
+    if (heatIndex >= 66) {
+        return 4;
+    } else if(heatIndex >= 54) {
+        return 3;
+    } else if(heatIndex >= 41 && heatIndex < 54) {
+        return 2;
+    } else if(heatIndex >= 32 && heatIndex < 41) {
+        return 1;
+    } else if (heatIndex < 32) {
+        return 0;
+    }
+};
+
+/**
+ *
+ * @param heatIndex
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex, translate) {
+    var ts = translate == undefined?global:translate;
     if(heatIndex === undefined
         || heatIndex < 0) 
     {
@@ -432,42 +490,57 @@ LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
         return "";
     }
         
-    var heatIndexString;
-    
-    if(heatIndex >= 54) {
-        heatIndexString = __("LOC_VERY_HIGH");
+    var heatIndexString = "";
+
+    if (heatIndex >= 66) {
+        heatIndexString = ts.__("LOC_HAZARD");
+    } else if(heatIndex >= 54) {
+        heatIndexString = ts.__("LOC_VERY_HIGH");
     } else if(heatIndex >= 41 && heatIndex < 54) {
-        heatIndexString = __("LOC_HIGH");
+        heatIndexString = ts.__("LOC_HIGH");
     } else if(heatIndex >= 32 && heatIndex < 41) {
-        heatIndexString = __("LOC_NORMAL");
-    } else {
-        heatIndexString = __("LOC_LOW");
+        heatIndexString = ts.__("LOC_NORMAL");
+    } else if (heatIndex < 32) {
+        heatIndexString = ts.__("LOC_LOW");
     }
     
     return heatIndexString;
 };
 
+LifeIndexKmaController.getFrostGrade = function(temperature) {
+     if(temperature < -5) {
+         return 2;
+    } else if(temperature < -1.5) {
+         return 1;
+    } else {
+         return 0;
+    }
+
+};
+
 /**
- * 동상가능지수
+ * 동상가능지수 (삭제됨)
  * @param temperature
- * @returns {*}
+ * @param translate
+ * @returns {string}
  */
-LifeIndexKmaController.getFrostString = function(temperature) {
+LifeIndexKmaController.getFrostString = function(temperature, translate) {
+    var ts = translate == undefined?global:translate;
     if(temperature === undefined
         || temperature < -50)
     {
         log.debug('FrostString > invalid parameter.');
-        return -1;
+        return "";
     }
 
-    var frostString;
+    var frostString = "";
 
     if(temperature < -5) {
-        frostString = __("LOC_HIGH");
+        frostString = ts.__("LOC_HIGH");
     } else if(temperature < -1.5) {
-        frostString = __("LOC_NORMAL");
+        frostString = ts.__("LOC_NORMAL");
     } else {
-        frostString = __("LOC_LOW");
+        frostString = ts.__("LOC_LOW");
     }
 
     return frostString;
@@ -477,30 +550,54 @@ LifeIndexKmaController.getFrostString = function(temperature) {
  *
  * @param temperature
  * @param yesterMinTemperature
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperature) {
-    if(temperature === undefined
-        || temperature < -50)
-    {
-        log.debug('FrostString > invalid parameter.');
-        return -1;
-    }
-
-    var freezeString;
-
+LifeIndexKmaController.getFreezeGrade = function(temperature, yesterMinTemperature) {
     if(temperature <= -10) {
-        freezeString = __("LOC_VERY_HIGH");
+        return 3;
     } else if((temperature <= -5)
                 && (yesterMinTemperature < -5))
     {
-        freezeString = __("LOC_HIGH");
+        return 2;
     } else if((temperature <= -5)
                 && (yesterMinTemperature >= -5))
     {
-        freezeString = __("LOC_NORMAL");
+        return 1;
     } else {
-        freezeString = __("LOC_LOW");
+        return 0;
+    }
+};
+
+/**
+ * 동파가능지수
+ * @param temperature
+ * @param yesterMinTemperature
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperature, translate) {
+    var ts = translate == undefined?global:translate;
+    if(temperature === undefined
+        || temperature < -50)
+    {
+        log.debug('FreezeString > invalid parameter.');
+        return "";
+    }
+
+    var freezeString = "";
+
+    if(temperature <= -10) {
+        freezeString = ts.__("LOC_VERY_HIGH");
+    } else if((temperature <= -5)
+                && (yesterMinTemperature < -5))
+    {
+        freezeString = ts.__("LOC_HIGH");
+    } else if((temperature <= -5)
+                && (yesterMinTemperature >= -5))
+    {
+        freezeString = ts.__("LOC_NORMAL");
+    } else {
+        freezeString = ts.__("LOC_LOW");
     }
 
     return freezeString;
