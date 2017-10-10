@@ -29,6 +29,8 @@ var kasiRiseSetController = require('../controllers/kasi.riseset.controller');
 
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
+var kmaTownShortRss = new (require('./kma/kma.town.short.rss.controller.js'));
+var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -120,12 +122,17 @@ function ControllerTown() {
                         // get town weather
                         async.map(townArray,
                             function(item, cb){
-                                if(config.db.version == '2.0' && ((item.name == 'modelCurrent') || (item.name == 'modelShort'))){
+                                var Db20Collections = ['modelCurrent', 'modelShort', 'modelShortRss', 'modelShortest'];
+                                if(config.db.version === '2.0' && Db20Collections.indexOf(item.name) != -1){
                                     var fnGetDataFromDb = function(){};
                                     if(item.name == 'modelCurrent'){
                                         fnGetDataFromDb = kmaTownCurrent.getCurrentFromDB;
                                     }else if(item.name == 'modelShort'){
                                         fnGetDataFromDb = kmaTownShort.getShortFromDB;
+                                    }else if(item.name == 'modelShortRss'){
+                                        fnGetDataFromDb = kmaTownShortRss.getShortRssFromDB;
+                                    }else if(item.name == 'modelShortest'){
+                                        fnGetDataFromDb = kmaTownShortest.getShortestFromDB;
                                     }else{
                                         log.error('GaD> Unknown type of data : ', item.name);
                                     }
@@ -416,8 +423,12 @@ function ControllerTown() {
                 req.short = self._makeBasicShortList();
             }
 
+            var getShortrssDataFromDb = self._getTownDataFromDB;
+            if(config.db.version == '2.0'){
+                getShortrssDataFromDb = kmaTownShortRss.getShortRssFromDB;
+            }
             // modelShortRss에서 coord에 해당하는 날씨 데이터를 가져온다.
-            self._getTownDataFromDB(modelShortRss, coord, req, function(err, shortRssInfo) {
+            getShortrssDataFromDb(modelShortRss, coord, req, function(err, shortRssInfo) {
                 if(err) {
                     log.error(new Error('error to get short RSS '+ err.message));
                     return next();
@@ -544,7 +555,11 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo){
+                var getShortestDataFromDb = self._getTownDataFromDB;
+                if(config.db.version == '2.0'){
+                    getShortestDataFromDb = kmaTownShortest.getShortestFromDB;
+                }
+                getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo){
                     if (err) {
                         log.error(new Error('error to get shortest '+ err.message));
                         return next();
@@ -1064,7 +1079,11 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo) {
+                var getShortestDataFromDb = self._getTownDataFromDB;
+                if(config.db.version == '2.0'){
+                    getShortestDataFromDb = kmaTownShortest.getShortestFromDB;
+                }
+                getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
                         log.error(new Error('error to get shortest for merge' + err.message));
                         return next();
@@ -1254,7 +1273,11 @@ function ControllerTown() {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
                 }
-                self._getTownDataFromDB(modelShortest, coord, req, function(err, shortestInfo) {
+                var getShortestDataFromDb = self._getTownDataFromDB;
+                if(config.db.version == '2.0'){
+                    getShortestDataFromDb = kmaTownShortest.getShortestFromDB;
+                }
+                getShortestDataFromDb(modelShortest, coord, req, function(err, shortestInfo) {
                     if (err) {
                         log.error(new Error('error to get shortest for merge'+err.message));
                         return next();

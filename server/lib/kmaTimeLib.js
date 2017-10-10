@@ -269,7 +269,7 @@ kmaTimeLib.getPast8DaysTime = function(curTime){
 };
 
 kmaTimeLib.getKoreaDateObj = function(curTime){
-    return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':00:00+09:00');
+    return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':' + curTime.slice(10,12) + ':00+09:00');
 };
 
 

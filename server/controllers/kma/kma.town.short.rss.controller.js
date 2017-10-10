@@ -13,16 +13,19 @@
 var events = require('events');
 var async = require('async');
 var req = require('request');
-var config = require('../config/config');
+var config = require('../../config/config');
 var fs = require('fs');
-var convert = require('../utils/coordinate2xy');
+var convert = require('../../utils/coordinate2xy');
 var xml2json  = require('xml2js').parseString;
-var shortRssDb = require('../models/modelShortRss');
-var town = require('../models/town');
+var shortRssDb = require('../../models/modelShortRss');
+var town = require('../../models/town');
+
+var modelKmaTownShortRss = require('../../models/kma/kma.town.short.rss.model.js');
+var kmaTimelib = require('../../lib/kmaTimeLib');
 
 /*
-*   @constructor
-*/
+ *   @constructor
+ */
 function TownRss(){
     var self = this;
 
@@ -61,23 +64,23 @@ TownRss.prototype.loadList = function(completionCallback){
     var self = this;
     self.coordDb = [];
 
-     town.getCoord(function(err, coordList){
-         if(err){
-             log.error('ShortRSS> failed to get coord');
-         } else {
-             log.silly('ShortRSS> coord: ', coordList);
-             coordList.forEach(function (coord) {
-                 var item = {mCoord: coord};
-                 self.coordDb.push(item);
-             });
+    town.getCoord(function(err, coordList){
+        if(err){
+            log.error('ShortRSS> failed to get coord');
+        } else {
+            log.silly('ShortRSS> coord: ', coordList);
+            coordList.forEach(function (coord) {
+                var item = {mCoord: coord};
+                self.coordDb.push(item);
+            });
 
-             log.info('ShortRSS> coord count : ', self.coordDb.length);
-         }
+            log.info('ShortRSS> coord count : ', self.coordDb.length);
+        }
 
-         if(completionCallback) {
-             completionCallback(err);
-         }
-     });
+        if(completionCallback) {
+            completionCallback(err);
+        }
+    });
 
     return self;
 };
@@ -459,6 +462,111 @@ TownRss.prototype.saveShortRss = function(index, newData, cb){
     });
 };
 
+
+TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
+
+    var pubDate = kmaTimelib.getKoreaDateObj(newData.pubDate);
+    log.info('KMA Town S-RSS> pubDate :', pubDate.toString());
+    //log.info('KMA Town S-RSS> db find :', coord);
+
+
+    try{
+        async.mapSeries(newData.shortData,
+            function(item, cb){
+                var fcsDate = kmaTimelib.getKoreaDateObj(item.date);
+                var newItem = {mCoord: newData.mCoord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
+                log.info('KMA Town S-RSS> item : ', JSON.stringify(newItem));
+
+                modelKmaTownShortRss.update({mCoord: newData.mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                    if(err){
+                        log.error('KMA Town S-RSS> Fail to update current item');
+                        log.info(JSON.stringify(newItem));
+                        return cb();
+                    }
+
+                    cb();
+                });
+            },
+            function(err){
+                var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
+                log.info('KMA Town S-RSS> finished to save town.short.rss data');
+                log.info('KMA Town S-RSS> remove item if it is before : ', limitedTime.toString());
+
+                modelKmaTownShortRss.remove({"mCoord": newData.mCoord, "fcsDate": {$lte:limitedTime}}).exec();
+
+                callback(err);
+            }
+        );
+    }catch(e){
+        if(callback){
+            callback(e);
+        }
+        else {
+            log.error(e);
+        }
+    }
+};
+
+
+TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
+    var errorNo = 0;
+
+    try{
+        if(req != undefined && req['modelShortRss'] != undefined){
+            return callback(errorNo, req['modelShortRss']);
+        }
+
+        modelKmaTownShortRss.find({'mCoord.mx': coord.mx, 'mCoord.my': coord.my}, {_id: 0}).sort({"fcsDate":1}).lean().exec(function(err, result){
+            if(err){
+                log.info('KMA Town S-RSS> Fail to file&get short data from DB');
+                log.warn('KMA Town S-RSS> Fail to file&get short data from DB');
+                return callback(err);
+            }
+
+            if(result.length == 0){
+                log.warn('KMA Town S-RSS> There are no short datas from DB');
+                errorNo = 1;
+                return callback(errorNo);
+            }
+
+            try{
+                var ret = [];
+                var pubDate = kmaTimelib.getKoreaTimeString(result[result.length-1].pubDate);
+
+                log.info('KMA Town S-RSS> get Data : ', result.length);
+                result.forEach(function(item){
+                    var newItem = {};
+                    var shortData = item.shortData;
+
+                    rssString.forEach(function(string){
+                        newItem[string] = shortData[string];
+                    });
+
+                    //log.info(JSON.stringify(item));
+                    ret.push(newItem);
+                });
+
+                callback(errorNo, {pubDate: pubDate, ret:ret});
+            }catch(e){
+                if (callback) {
+                    callback(e);
+                }
+                else {
+                    log.error(e);
+                }
+            }
+        });
+
+    }catch(e){
+        if (callback) {
+            callback(e);
+        }
+        else {
+            log.error(e);
+        }
+    }
+};
+
 /*
  *   @param mx
  *   @param my
@@ -517,22 +625,88 @@ TownRss.prototype.getData = function(index, item, cb){
                 }
                 return;
             }
-
-            self.saveShortRss(index, result, function(err){
-                if(err){
-                    log.error('failed to save the data to DB');
-                    if(cb) {
-                        cb(err);
+            if(config.db.version === '2.0'){
+                self.saveShortRssNewForm(index, result, function(err){
+                    if(err){
+                        log.error('failed to save the data to DB');
+                        if(cb) {
+                            cb(err);
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                if(cb) {
-                    cb();
-                }
-            });
+                    if(cb) {
+                        cb();
+                    }
+                });
+            }else{
+                self.saveShortRss(index, result, function(err){
+                    if(err){
+                        log.error('failed to save the data to DB');
+                        if(cb) {
+                            cb(err);
+                        }
+                        return;
+                    }
+
+                    if(cb) {
+                        cb();
+                    }
+                });
+            }
         });
     });
+};
+
+TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
+    var errCode = 0;
+
+    if(config.db.version === '2.0'){
+        var lastestPubDate = kmaTimelib.getKoreaDateObj(dateString);
+        modelKmaTownShortRss.find({'mCoord.mx': item.mCoord.mx, 'mCoord.my': item.mCoord.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
+            if(err
+                || (dbList.length === 0)
+                || (dbList[0].pubDate === undefined)){
+                log.info('KMA Town S-RSS> There is no data matached to : ', item);
+                log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                return callback(errCode);
+            }
+
+            for(var i=0 ; i<dbList.length ; i++){
+                if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
+                    log.info('KMA Town S-RSS> Already updated : ', item, dateString);
+                    errCode = 1;
+                    return callback(errCode);
+                }
+            }
+
+            return callback(errCode);
+        });
+    }else{
+        shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
+            try{
+                if(err
+                    || (list.length === 0)
+                    || (list[0].pubDate === undefined)) {
+                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                    callback(errCode);
+                } else {
+                    if (Number(list[0].pubDate) < Number(dateString)) {
+                        log.debug('shortRss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
+                        callback(errCode);
+                    } else {
+                        errCode = 1;
+                        log.debug('shortRss : already latest data');
+                        callback(errCode);
+                    }
+                }
+            }catch(e){
+                log.error(e);
+                errCode = 1;
+                return callback(errCode);
+            }
+        })
+    }
 };
 
 /*
@@ -560,42 +734,34 @@ TownRss.prototype.mainTask = function(completionCallback){
         var lastestPubDate = self.lastestPubDate();
 
         var index = 0;
-/*
-        for(var i=0 ; i<gridList.length ; i++){
-            var src = gridList[i].mCoord;
-            //log.info('mCoord : ', src);
-            for(var j=i+1 ; j<gridList.length-1 ; j++){
-                var des = gridList[j].mCoord;
-                if(src.mx == des.mx && src.my == des.my){
-                    log.info('found same coord> ' + '[' + i + ':' + j + '] : ', des);
-                    gridList.splice(j, 1);
-                }
-            }
-        }
-*/
+        /*
+         for(var i=0 ; i<gridList.length ; i++){
+         var src = gridList[i].mCoord;
+         //log.info('mCoord : ', src);
+         for(var j=i+1 ; j<gridList.length-1 ; j++){
+         var des = gridList[j].mCoord;
+         if(src.mx == des.mx && src.my == des.my){
+         log.info('found same coord> ' + '[' + i + ':' + j + '] : ', des);
+         gridList.splice(j, 1);
+         }
+         }
+         }
+         */
         log.info('ShortRss> Adjusted List Count : ', gridList.length);
 
         async.map(gridList,
             function(item, callback) {
                 async.waterfall([
                         function(cb) {
-                            shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
-                                index++;
-                                if(err
-                                    || (list.length === 0)
-                                    || (list[0].pubDate === undefined)) {
-                                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                                    cb(err, item);
-                                } else {
-                                    if (Number(list[0].pubDate) < Number(lastestPubDate)) {
-                                        log.debug('shortRss : refresh data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                                        cb(err, item);
-                                    } else {
-                                        log.debug('shortRss : already latest data');
-                                        cb(err, undefined);
-                                    }
+                            self.checkPubDate(item, lastestPubDate, index, function(err, type){
+                                if(err){
+                                    log.info('shortRss : already latest data');
+                                    return cb(err, undefined);
                                 }
-                            })
+                                index++;
+
+                                cb(err, item);
+                            });
                         },
                         function(item, cb) {
                             if(item != undefined && item.mCoord !== undefined && item.mCoord.mx !== undefined)

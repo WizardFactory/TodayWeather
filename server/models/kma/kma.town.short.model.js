@@ -9,7 +9,7 @@ var townShortSchema = new mongoose.Schema({
         my : Number
     },
     pubDate : Date,
-    fcsDate : Date,
+    fcsDate : Date, // forecast Date, 아래 날씨 데이터의 date, time와 동일한 date object 값.
     shortData : {
         date : String, //fcstDate
         time : String, //fcstTime

@@ -23,6 +23,7 @@ var controllerManager = require('../../controllers/controllerManager');
 var town = require('../../models/town');
 var modelCurrent = require('../../models/modelCurrent');
 
+var kmaTownShortRss = new (require('../../controllers/kma/kma.town.short.rss.controller.js'));
 
 var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
     replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
@@ -83,4 +84,42 @@ describe('test KMA DB 2.0', function(){
             done();
         });
     });
+
+    it('process gathering shortest', function(done){
+        town.getCoord = function(cb){
+            var list = [
+                {mx: 91, my: 131},
+                {mx: 55, my: 119}
+            ];
+
+            cb(0, list);
+        };
+
+        manager.getTownShortestData(9, test_key, function(err, result){
+            if(err){
+                log.info('Fail to gather short');
+                return done();
+            }
+
+            log.info('Success to gather short');
+            done();
+        });
+    });
+
+    it('process gathering short rss', function(done){
+        town.getCoord = function(cb){
+            var list = [
+                {mx: 91, my: 131},
+                {mx: 55, my: 119}
+            ];
+
+            cb(0, list);
+        };
+
+        kmaTownShortRss.mainTask(function() {
+            log.info('Success to gater short rss');
+            done();
+        });
+    });
+
 });
