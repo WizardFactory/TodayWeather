@@ -131,7 +131,6 @@ gulp.task('release-android-nonpaid', shell.task([
 ]));
 
 gulp.task('release-ios-nonpaid', shell.task([
-  'cp config-androidsdk19.xml config.xml',
   'ionic state reset',
   'gulp rmplugins',
   'cp -a ../ios platforms/',
@@ -139,13 +138,13 @@ gulp.task('release-ios-nonpaid', shell.task([
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
   'cordova plugin add cordova-plugin-app-preferences',
+  'cordova plugin add cordova-plugin-inapppurchase',
+  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-
   'cp ads.ios.tw.client.config.js www/tw.client.config.js',
-  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
   'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
   //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''

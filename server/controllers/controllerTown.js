@@ -4389,6 +4389,15 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
 
         result.sort(self._sortByDateTime);
 
+        result = result.filter(function (item) {
+            if (item.wfAm == undefined || item.wfPm == undefined || item.wfAm == "" || item.wfPm == "") {
+                return false;
+            }
+            if (item.taMax == undefined || item.taMin == undefined || item.taMax == -100 || item.taMin == -100) {
+                return false;
+            }
+            return true;
+        });
         //log.info(result);
 
         if(cb){

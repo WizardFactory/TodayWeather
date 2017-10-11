@@ -4,11 +4,15 @@
             <img class="item-center" width="96px" src="img/app-icon.png" style="margin-bottom: 16px">
 
             <div class="list list-inset">
-                <label class="item item-input">
+                <div class="item item-input">
                     <i class="icon ion-search placeholder-icon"></i>
                     <input id="searchInput" type="text" placeholder="{{'LOC_ENTER_CITY'|translate}}"
                            ng-model="search.word" ng-change="OnChangeSearchWord()">
-                </label>
+                    <button class="button button-icon button-stable" ng-click="OnCancel()"
+                            ng-if="search.word !== undefined">
+                        {{'LOC_CANCEL'|translate}}
+                    </button>
+                </div>
                 <div class="item" style="white-space: normal; padding: 8px" ng-if="searchResults2 == undefined || searchResults2.length <= 0">
                     <button class="button button-outline button-positive" style="margin: 4px;"
                            ng-repeat="city in favoriteCityList" ng-click="OnGetWeather($index)" >
@@ -29,9 +33,9 @@
             </div>
 
             <div class="list list-inset" ng-if="searchResults2 == undefined || searchResults2.length <= 0">
-                    <button class="button button-outline button-positive item-center" ng-click="OnUseLocationService()">
-                       {{'LOC_USE_YOUR_CURRENT_LOCATION'|translate}}
-                    </button>
+                <button class="button button-outline button-positive item-center" ng-click="OnUseLocationService()">
+                   {{'LOC_USE_YOUR_CURRENT_LOCATION'|translate}}
+                </button>
             </div>
         </div>
     </ion-content>
