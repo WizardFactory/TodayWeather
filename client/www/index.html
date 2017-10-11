@@ -103,18 +103,11 @@
                 </a>
             </div>
         </ion-content>
-        <footer class="bar bar-footer" style="height: 50px; background-color: #444; background-image: none" ng-if="viewAdsBanner">
-        </footer>
     </ion-side-menu>
 
     <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">
         <ion-nav-bar></ion-nav-bar>
         <ion-nav-view></ion-nav-view>
-        <div style="width: 100%; height: 50px; position: absolute; bottom: 0; text-align: center; z-index: 4"
-             ng-style="{'background-color': viewAdsBanner?'#444':'#03A9F4'}"
-             ng-if="viewAdsBanner" ng-click="clickAdsBanner();">
-            <h4 class="light-text-secondary" ng-bind="adsBannerMessage"></h4>
-        </div>
     </ion-side-menu-content>
 
     <!-- Right menu -->

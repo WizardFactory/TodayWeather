@@ -19,11 +19,6 @@ angular.module('service.run', [])
         } else if (ionic.Platform.isAndroid()) {
             Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
 
-            /**
-             * 기존 버전 호환성이슈로 Android는 유지.
-             */
-            Util.suiteName = "net.wizardfactory.todayweather_preferences";
-
             // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
                 cordova.plugins.diagnostic.getLocationMode(function(locationMode) {

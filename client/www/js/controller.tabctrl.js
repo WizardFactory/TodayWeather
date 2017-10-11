@@ -38,7 +38,6 @@ angular.module('controller.tabctrl', [])
             //}, 1000);
 
             TwAds.init();
-            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
 
         $scope.doTabForecast = function(forecastType) {
@@ -129,20 +128,6 @@ angular.module('controller.tabctrl', [])
             });
 
             Util.ga.trackEvent('action', 'tab', 'share');
-        };
-
-        $scope.contentHeight = function() {
-            if (ionic.Platform.isAndroid() == false) {
-                return $rootScope.contentBottom;
-            }
-
-            if ($rootScope.contentBottom === undefined) {
-                $rootScope.contentBottom = 0;
-            }
-            if ($rootScope.tabsTop === undefined) {
-                $rootScope.tabsTop = 0;
-            }
-            return $rootScope.contentBottom - $rootScope.tabsTop;
         };
 
         $scope.startPopup = function startPopup() {
