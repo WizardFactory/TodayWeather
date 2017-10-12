@@ -15,7 +15,7 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 
 var controllerManager = require('./controllers/controllerManager');
-var controllerShortRss = require('./controllers/controllerShortRss');
+var controllerShortRss = require('./controllers/kma/kma.town.short.rss.controller');
 /*
 * wizard factory's modules
 */
