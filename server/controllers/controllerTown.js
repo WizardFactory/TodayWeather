@@ -713,7 +713,8 @@ function ControllerTown() {
 
                         for(var i=0;i<req.short.length;i++) {
                             if((req.short[i].date ===  yesterdayString)
-                                && (req.short[i].reh !== -1))
+                                && (req.short[i].reh !== -1)
+                                && req.short[i].tmn !== -50)
                             {
                                 yesterdayMinTemperature = req.short[i].tmn;
                                 break;
@@ -2154,6 +2155,7 @@ function ControllerTown() {
                         for(var i=0; i<result.length; i++) {
                             if(result[i].date.getTime() == date.getTime()) {
                                 day[result[i].indexType] = result[i].index;
+                                day[result[i].indexType+"Str"] = LifeIndexKmaController.grade2strHighLow(result[i].index, res);
                             }
                         }
                     });
@@ -2415,27 +2417,31 @@ function ControllerTown() {
                     // get discomfort index(불괘지수)
                     req.current.dspls = LifeIndexKmaController.getDiscomfortIndex(req.current.t1h, req.current.reh);
                     req.current.dsplsGrade = LifeIndexKmaController.convertGradeFromDiscomfortIndex(req.current.dspls);
-                    req.current.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(req.current.dspls);
+                    req.current.dsplsStr = LifeIndexKmaController.stringFromDiscomfortIndexGrade(req.current.dsplsGrade, res);
 
                     // get decomposition index(부패지수)
                     req.current.decpsn = LifeIndexKmaController.getDecompositionIndex(req.current.t1h, req.current.reh);
-                    req.current.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(req.current.decpsn);
+                    req.current.decpsnGrade = LifeIndexKmaController.gradeFromDecompositionIndex(req.current.decpsn);
+                    req.current.decpsnStr = LifeIndexKmaController.stringFromDecompositionIndexGrade(req.current.decpsnGrade, res);
 
                     // get heat index(열지수)
                     req.current.heatIndex = LifeIndexKmaController.getHeatIndex(req.current.t1h, req.current.reh);
-                    req.current.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(req.current.heatIndex);
+                    req.current.heatIndexGrade = LifeIndexKmaController.gradeFromHeatIndex(req.current.heatIndex);
+                    req.current.heatIndexStr = LifeIndexKmaController.stringFromHeatIndexGrade(req.current.heatIndexGrade, res);
 
                     //new sensorytem = old sensorytem + head index
                     req.current.sensorytem = req.current.t1h + (req.current.sensorytem - req.current.t1h) + (req.current.heatIndex - req.current.t1h);
                     req.current.sensorytem = Math.round(req.current.sensorytem);
 
                     if (req.yesterdayMinTemperature) {
-                        req.current.freezeStr = LifeIndexKmaController.getFreezeString(req.current.t1h, req.yesterdayMinTemperature);
+                        req.current.freezeGrade = LifeIndexKmaController.getFreezeGrade(req.current.t1h, req.yesterdayMinTemperature);
+                        req.current.freezeStr = LifeIndexKmaController.getFreezeString(req.current.freezeGrade, res);
                     }
                 }
 
                 // get frost string(동상가능지수)
-                req.current.frostStr = LifeIndexKmaController.getFrostString(req.current.t1h);
+                req.current.frostGrade = LifeIndexKmaController.getFrostGrade(req.current.t1h);
+                req.current.frostStr = LifeIndexKmaController.getFrostString(req.current.frostGrade, res);
             }
         }
 
@@ -2454,27 +2460,31 @@ function ControllerTown() {
                     // get discomfort index(불괘지수)
                     short.dspls = LifeIndexKmaController.getDiscomfortIndex(short.t3h, short.reh);
                     short.dsplsGrade = LifeIndexKmaController.convertGradeFromDiscomfortIndex(short.dspls);
-                    short.dsplsStr = LifeIndexKmaController.convertStringFromDiscomfortIndex(short.dspls);
+                    short.dsplsStr = LifeIndexKmaController.stringFromDiscomfortIndexGrade(short.dsplsGrade, res);
 
                     // get decomposition index(부패지수)
                     short.decpsn = LifeIndexKmaController.getDecompositionIndex(short.t3h, short.reh);
-                    short.decpsnStr = LifeIndexKmaController.convertStringFromDecompositionIndex(short.decpsn);
+                    short.decpsnGrade = LifeIndexKmaController.gradeFromDecompositionIndex(req.current.decpsn);
+                    short.decpsnStr = LifeIndexKmaController.stringFromDecompositionIndexGrade(short.decpsnGrade, res);
 
                     // get heat index(열지수)
                     short.heatIndex = LifeIndexKmaController.getHeatIndex(short.t3h, short.reh);
-                    short.heatIndexStr = LifeIndexKmaController.convertStringFromHeatIndex(short.heatIndex);
+                    short.heatIndexGrade = LifeIndexKmaController.gradeFromHeatIndex(short.heatIndex);
+                    short.heatIndexStr = LifeIndexKmaController.stringFromHeatIndexGrade(short.heatIndexGrade, res);
 
                     //new sensorytem = old sensorytem + head index
                     short.sensorytem = short.t3h + (short.sensorytem - short.t3h) + (short.heatIndex - short.t3h);
                     short.sensorytem = Math.round(short.sensorytem);
 
                     if (req.yesterdayMinTemperature) {
-                        short.freezeStr = LifeIndexKmaController.getFreezeString(short.t3h, req.yesterdayMinTemperature);
+                        short.freezeGrade = LifeIndexKmaController.getFreezeGrade(short.t3h, req.yesterdayMinTemperature);
+                        short.freezeStr = LifeIndexKmaController.getFreezeString(short.freezeGrade, res);
                     }
                 }
 
                 // get frost string(동상가능지수)
-                short.frostStr = LifeIndexKmaController.getFrostString(short.t3h);
+                short.frostGrade = LifeIndexKmaController.getFrostGrade(short.t3h);
+                short.frostStr = LifeIndexKmaController.getFrostString(short.frostGrade, res);
             });
         }
 
