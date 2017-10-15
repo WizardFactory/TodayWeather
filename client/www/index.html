@@ -78,6 +78,14 @@
                     <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="float: right;"></i>
                 </a>
                 <a class="item item-borderless item-select">
+                    {{'LOC_STARTUP_PAGE'|translate}}
+                    <select class="item-note" ng-model="startupPage" ng-change="setStartupPage(startupPage)">
+                        <option value="0">{{'LOC_HOURLY_FORECAST'|translate}}</option>
+                        <option value="1">{{'LOC_DAILY_FORECAST'|translate}}</option>
+                        <option value="2">{{'LOC_SAVED_LOCATIONS'|translate}}</option>
+                    </select>
+                </a>
+                <a class="item item-borderless item-select">
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <select class="item-note" ng-model="refreshInterval" ng-change="setRefreshInterval(refreshInterval)">
                         <option value="0">{{'LOC_MANUAL'|translate}}</option>
