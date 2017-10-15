@@ -12,11 +12,19 @@ angular.module('controller.settingctrl', [])
         });
 
         function init() {
+            $scope.startupPage = localStorage.getItem("startupPage");
+            if ($scope.startupPage === null) {
+                $scope.startupPage = "0"; //시간별날씨
+            }
             $scope.refreshInterval = localStorage.getItem("refreshInterval");
             if ($scope.refreshInterval === null) {
                 $scope.refreshInterval = "0"; //수동
             }
         }
+
+        $scope.setStartupPage = function(startupPage) {
+            localStorage.setItem("startupPage", startupPage);
+        };
 
         $scope.setRefreshInterval = function(refreshInterval) {
             localStorage.setItem("refreshInterval", refreshInterval);

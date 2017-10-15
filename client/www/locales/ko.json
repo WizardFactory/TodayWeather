@@ -250,5 +250,6 @@
   "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "권한 요청이 거부되었습니다. 지역검색으로 이동하거나, 재시도해주세요.",
   "LOC_FIND_BY_LOCATION": "현재위치로 지역찾기",
   "LOC_SUNRISE": "일출",
-  "LOC_SUNSET": "일몰"
+  "LOC_SUNSET": "일몰",
+  "LOC_STARTUP_PAGE" : "시작 페이지"
 }
