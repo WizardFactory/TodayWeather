@@ -119,6 +119,14 @@ angular.module('controller.purchase', [])
             }, 'purchaseInfo', JSON.stringify(purchaseInfo));
         };
 
+        obj.restore = function () {
+            store.refresh();
+        };
+
+        obj.order = function () {
+            store.order(this.productId);
+        };
+
         obj.init = function () {
             var self = this;
             self.loadPurchaseInfo(function () {
@@ -128,40 +136,13 @@ angular.module('controller.purchase', [])
             self.productId = 'tw1year';
 
             if (!window.store) {
-                Util.ga.trackEvent('purchase', 'unused');
-                if (self.paidAppUrl.length > 0) {
-                    $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
-                        $rootScope.adsBannerMessage = bannerMessage;
-                    }, function (translationId) {
-                        $rootScope.adsBannerMessage = translationId;
-                    });
-                    $rootScope.clickAdsBanner = function() {
-                        $location.path('/purchase');
-                    };
-                }
-                else {
-                    $translate('LOC_TODAYWEATHER').then(function (bannerMessage) {
-                        $rootScope.adsBannerMessage = bannerMessage;
-                    }, function (translationId) {
-                        $rootScope.adsBannerMessage = translationId;
-                    });
-                    $rootScope.clickAdsBanner = function() {};
-                }
-                self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
+                Util.ga.trackEvent('purchase', 'error', 'uninstalled');
                 return;
             }
 
             self.hasInAppPurchase = true;
-            $translate('LOC_GET_PREMIUM_TO_REMOVE_ADS').then(function (bannerMessage) {
-                $rootScope.adsBannerMessage = bannerMessage;
-            }, function (translationId) {
-                $rootScope.adsBannerMessage = translationId;
-            });
-            $rootScope.clickAdsBanner = function() {
-                $location.path('/purchase');
-            };
 
-            store.verbosity = store.DEBUG;
+            //store.verbosity = store.DEBUG;
 
             // Enable remote receipt validation
             store.validator = twClientConfig.serverUrl+"/v000705"+"/check-purchase";
@@ -175,13 +156,12 @@ angular.module('controller.purchase', [])
             // Log all errors
             store.error(function(error) {
                 console.log('ERROR ' + error.code + ': ' + error.message);
+                Util.ga.trackEvent('purchase', 'error', error.message);
             });
 
             store.ready(function () {
                 console.log("store ready!");
             });
-
-            store.refresh();
 
             store.when("product").updated(function (p) {
                 console.log(JSON.stringify(p));
@@ -201,6 +181,7 @@ angular.module('controller.purchase', [])
                     console.log("verify expired") ;
                     self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
                     self.savePurchaseInfo(self.accountLevel, self.expirationDate);
+                    Util.ga.trackEvent('purchase', 'error', 'expired');
                 }).error(function (err) {
                     console.log("verify error") ;
                 }).done(function (p) {
@@ -208,6 +189,8 @@ angular.module('controller.purchase', [])
                     p.finish();
                 });
             });
+
+            store.refresh();
         };
 
         return obj;
@@ -222,48 +205,19 @@ angular.module('controller.purchase', [])
             return;
         }
 
-        var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
-
-        var strPurchaseError = "Purchase error";
-        var strFailToConnectServer = "Fail to connect validation server.";
-        var strPleaseRestoreAfter = "Please restore after 1~2 minutes";
-        var strRestoringPurchases = "Restoring Purchases...";
-        var strRestoreError = "Restore error";
-        var strPurchasing = "Purchasing...";
-        $translate(['LOC_PURCHASE_ERROR', 'LOC_FAIL_TO_CONNECT_VALIDATION_SERVER', 'LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES',
-            'LOC_RESTORING_PURCHASES', 'LOC_RESTORE_ERROR', 'LOC_PURCHASING']).then(function (translations) {
-            strPurchaseError = translations.LOC_PURCHASE_ERROR;
-            strFailToConnectServer = translations.LOC_FAIL_TO_CONNECT_VALIDATION_SERVER;
-            strPleaseRestoreAfter = translations.LOC_PLEASE_RESTORE_AFTER_1_2_MINUTES;
-            strRestoringPurchases = translations.LOC_RESTORING_PURCHASES;
-            strRestoreError = translations.LOC_RESTORE_ERROR;
-            strPurchasing = translations.LOC_PURCHASING;
-        }, function (translationIds) {
-           console.log("Fail to translations "+JSON.stringify(translationIds));
-        });
-
         $scope.order = function () {
-            $ionicLoading.show({ template: spinner + strPurchasing });
             console.log('subscribe product='+Purchase.productId);
-            if (window.store) {
-                store.order(Purchase.productId);
-                Util.ga.trackEvent('purchase', 'order', 'subscribe');
-            }
-            else {
-
-            }
+            Util.ga.trackEvent('purchase', 'order', 'subscribe');
+            Purchase.order();
         };
 
         /**
-         * android의 경우 자동 복원되기 때문에 필요없음
+         * 자동 복원되기 때문에 필요없음
          */
         $scope.restore = function () {
-            if (window.store) {
-                store.refresh();
-            }
-            else {
-
-            }
+            console.log('restore product='+Purchase.productId);
+            Util.ga.trackEvent('purchase', 'restore', 'subscribe');
+            Purchase.restore();
         };
 
         $scope.onClose = function() {
@@ -316,8 +270,8 @@ angular.module('controller.purchase', [])
                 $scope.product = {title:'프리미엄',  price: '$1.09', description: '지금 바로 프리미엄 서비스를 신청하시고, 1년간 광고 없이 사용하세요.'};
             }
             else {
-                if (Purchase.products && Purchase.products.length) {
-                    $scope.product = Purchase.products[0];
+                if (Purchase.products) {
+                    $scope.product = Purchase.products;
                 }
                 else {
                     console.log("Failed to get product info at start");
