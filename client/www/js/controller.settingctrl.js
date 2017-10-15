@@ -11,6 +11,18 @@ angular.module('controller.settingctrl', [])
             console.log("Fail to translate : "+JSON.stringify(translationIds));
         });
 
+        function init() {
+            $scope.refreshInterval = localStorage.getItem("refreshInterval");
+            if ($scope.refreshInterval === null) {
+                $scope.refreshInterval = "0"; //수동
+            }
+        }
+
+        $scope.setRefreshInterval = function(refreshInterval) {
+            localStorage.setItem("refreshInterval", refreshInterval);
+            $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
+        };
+
         $scope.sendMail = function() {
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
@@ -128,4 +140,6 @@ angular.module('controller.settingctrl', [])
                 callback(res);
             });
         };
+
+        init();
     });

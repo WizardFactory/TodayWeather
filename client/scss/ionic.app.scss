@@ -448,6 +448,15 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
+.menu-content .item-select:after {
+  content: none !important;
+}
+
+.menu-content select {
+  padding-right: 16px;
+  background: transparent;
+}
+
 .start-content .item-input {
   padding-right: 16px;
   display: flex !important;

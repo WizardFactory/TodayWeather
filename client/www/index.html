@@ -71,11 +71,22 @@
             </button>
             <h1 class="title">{{'LOC_TODAYWEATHER'|translate}}</h1>
         </header>
-        <ion-content class="has-header">
+        <ion-content class="has-header menu-content">
             <div class="list">
                 <a class="item item-borderless" menu-toggle href="#/units">
                     {{'LOC_UNITS'|translate}}
                     <i class="icon ion-chevron-right" ng-if="!isAndroid()" style="float: right;"></i>
+                </a>
+                <a class="item item-borderless item-select">
+                    {{'LOC_REFRESH_INTERVAL'|translate}}
+                    <select class="item-note" ng-model="refreshInterval" ng-change="setRefreshInterval(refreshInterval)">
+                        <option value="0">{{'LOC_MANUAL'|translate}}</option>
+                        <option value="30">{{'LOC_30_MINUTES'|translate}}</option>
+                        <option value="60">{{'LOC_1_HOUR'|translate}}</option>
+                        <option value="180">{{'LOC_3_HOURS'|translate}}</option>
+                        <option value="360">{{'LOC_6_HOURS'|translate}}</option>
+                        <option value="720">{{'LOC_12_HOURS'|translate}}</option>
+                    </select>
                 </a>
                 <a class="item item-borderless" menu-toggle href="#/purchase" ng-if="hasInAppPurchase()">
                     {{'LOC_REMOVE_ADS'|translate}}
