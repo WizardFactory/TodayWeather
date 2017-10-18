@@ -51,7 +51,11 @@ module.exports = {
     },
     platforms: {
         applePassword: (process.env.APPLE_PASSWORD || 'Your apple password'),
-        googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key')
+        googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key'),
+        googleAccToken: (process.env.PLAY_STORE_API_ACCESS_TOKEN || "PLAY_STORE_API_ACCESS_TOKEN"),
+        googleRefToken: (process.env.PLAY_STORE_API_REFRESH_TOKEN || "PLAY_STORE_API_REFRESH_TOKEN"),
+        googleClientID: (process.env.PLAY_STORE_API_CLIENT_ID || "PLAY_STORE_API_CLIENT_ID"),
+        googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
     },
     push: {
         serviceServer : (process.env.SERVICE_SERVER || 'http://localhost:3000'),
