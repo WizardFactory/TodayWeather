@@ -14,7 +14,7 @@
         </p>
     </ion-nav-title>
     <ion-content class="search-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false"
-                 delegate-handle="cityList" on-scroll="OnScrollResults()" ng-style="{'bottom':contentHeight()+'px'}" tabs-shrink>
+                 delegate-handle="cityList" on-scroll="OnScrollResults()" tabs-shrink>
         <div style="padding: 10px" ng-if="isSearching===true">
             <button class="button" ng-click="OnSearchCurrentPosition()">
                 {{'LOC_FIND_BY_LOCATION'|translate}}

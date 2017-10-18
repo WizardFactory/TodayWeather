@@ -250,5 +250,6 @@
   "LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY": "許可要求が拒否されました。 地名で検索したり、再試行してください。",
   "LOC_FIND_BY_LOCATION": "場所で探す",
   "LOC_SUNRISE": "日出",
-  "LOC_SUNSET": "日没"
+  "LOC_SUNSET": "日没",
+  "LOC_STARTUP_PAGE" : "起動ページ"
 }

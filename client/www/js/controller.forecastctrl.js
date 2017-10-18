@@ -9,6 +9,7 @@ angular.module('controller.forecastctrl', [])
         var bodyHeight;
         var colWidth;
         var cityData = null;
+        var refreshTimer = null;
 
         $scope.showDetailWeather = false;
         if ($location.path() === '/tab/dailyforecast') {
@@ -726,7 +727,20 @@ angular.module('controller.forecastctrl', [])
             isLoadingIndicator = false;
         }
 
+        function setRefreshTimer() {
+            clearTimeout(refreshTimer);
+
+            var refreshInterval = localStorage.getItem("refreshInterval");
+            if (refreshInterval != null && refreshInterval !== "0") {
+                refreshTimer = setTimeout(function () {
+                    $scope.$broadcast('reloadEvent');
+                }, parseInt(refreshInterval)*60*1000);
+            }
+        }
+
         function loadWeatherData() {
+            setRefreshTimer();
+
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 showLoadingIndicator();
 
@@ -1227,6 +1241,9 @@ angular.module('controller.forecastctrl', [])
                     Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;
                 }
+            } else if (sender === 'setRefreshInterval') {
+                setRefreshTimer();
+                return;
             }
             else {
                 if (cityData == null) {
@@ -1292,6 +1309,10 @@ angular.module('controller.forecastctrl', [])
                 });
             }
         };
+
+        $scope.$on('$destroy',function(){
+            clearTimeout(refreshTimer);
+        });
 
         init();
     });

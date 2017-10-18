@@ -197,7 +197,15 @@ angular.module('service.util', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.startVersion = 1.0;
-        obj.suiteName = "group.net.wizardfactory.todayweather";
+        if (window.ionic && ionic.Platform.isAndroid()) {
+            /**
+             * 기존 버전 호환성이슈로 Android는 유지.
+             */
+            obj.suiteName = "net.wizardfactory.todayweather_preferences";
+        }
+        else {
+            obj.suiteName = "group.net.wizardfactory.todayweather";
+        }
         obj.language;
         obj.region;
         obj.uuid = '';
@@ -252,7 +260,7 @@ angular.module('service.util', [])
         obj.saveServiceKeys = function () {
             var self = this;
             if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.error('appPreferences is undefined, so load local st');
+                console.log('appPreferences is undefined, so load local st');
             }
             else {
                 var suitePrefs = plugins.appPreferences.suite(self.suiteName);

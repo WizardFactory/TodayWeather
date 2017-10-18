@@ -1153,6 +1153,16 @@ angular.module('service.weatherutil', [])
                         geoInfo.location = obj.geolocationNormalize(info.location);
                         cachedGeoInfo = geoInfo;
                         deferred.resolve(geoInfo);
+                    }, function (err) {
+                        endTime = new Date().getTime();
+                        Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
+                        if (err instanceof Error) {
+                            Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                        } else {
+                            Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
+                        }
+                        console.log(err);
+                        deferred.reject(err);
                     });
                 }
             }, function (err) {
@@ -1214,6 +1224,11 @@ angular.module('service.weatherutil', [])
                 //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
                 //경상북도/영천시/대전동
                 //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
+                //경기도,성남시분당구,,62,123,127.12101944444444,37.37996944444445
+                //position = {coords: {latitude: 37.37996944444445, longitude: 127.12101944444444}};
+
+                //인천광역시,연수구,,55,123,126.68044166666667,37.40712222222222
+                //position = {coords: {latitude: 37.40712222222222, longitude: 126.68044166666667}};
 
                 console.log('navigator geolocation');
                 console.log(position);
