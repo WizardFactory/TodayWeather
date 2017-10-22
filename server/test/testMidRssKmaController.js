@@ -8,7 +8,7 @@ var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
 var assert  = require('assert');
-var midRssKmaController  = require('../controllers/midRssKmaController');
+var midRssKmaController  = require('../controllers/kma/kma.town.mid.rss.controller');
 
 
 describe('unit test - controller of MID RSS KMA service class', function() {

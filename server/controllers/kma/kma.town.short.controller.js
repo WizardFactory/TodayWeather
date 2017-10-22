@@ -98,6 +98,7 @@ kmaTownShortController.prototype.getShortFromDB = function(modelCurrent, coord, 
                 ret.push(newItem);
             });
 
+            log.info('KMA Town S> pubDate : ', pubDate);
             callback(errorNo, {pubDate: pubDate, ret:ret});
         });
 

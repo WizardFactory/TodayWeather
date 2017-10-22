@@ -9,48 +9,6 @@ var kmaTimelib = require('../../lib/kmaTimeLib');
 
 function kmaTownCurrentController(){
 }
-/*
-function _leadingZeros(n, digits) {
-    var zero = '';
-    n = n.toString();
-
-    if(n.length < digits) {
-        for(var i = 0; i < digits - n.length; i++){
-            zero += '0';
-        }
-    }
-    return zero + n;
-}
-
-function _getLimitedTime(curTime){
-    var now = new Date(curTime.getTime());
-    var tz = now.getTime() + (-72 * 3600000);
-    //var tz = now.getTime() + (3 * 3600000);
-    now.setTime(tz);
-
-    return now;
-}
-
-function _getDate(curTime){
-    return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':00:00+09:00');
-}
-
-function _getKoreaTimeString(curTime){
-    var now = new Date(curTime.getTime());
-    var tz = now.getTime() + (9 * 3600000);
-
-    now.setTime(tz);
-
-    var result =
-        _leadingZeros(now.getUTCFullYear(), 4) +
-        _leadingZeros(now.getUTCMonth() + 1, 2) +
-        _leadingZeros(now.getUTCDate(), 2) +
-        _leadingZeros(now.getUTCHours(), 2) +
-        _leadingZeros(now.getUTCMinutes(), 2);
-
-    return result;
-}
-*/
 
 /**
  *

@@ -4,7 +4,10 @@
 
 'use strict';
 
-var MidRssModel = require('../models/modelMidRss');
+var MidRssModel = require('../../models/modelMidRss');
+var modelKmaTownMidRss = require('../../models/kma/kma.town.mid.rss.model.js');
+var config = require('../../config/config');
+var kmaTimelib = require('../../lib/kmaTimeLib');
 
 function midRssKmaController() {
 
@@ -13,17 +16,31 @@ function midRssKmaController() {
 midRssKmaController.getData = function(regId, callback) {
     log.input('midRssKmaController getData '+regId);
 
-    MidRssModel.find({regId:regId}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
-        if (err) {
-            return callback(err);
-        }
-        if (midRssList.length === 0) {
-            err = new Error("Fail to find midRss regId="+regId);
-            return callback(err);
-        }
+    if(config.db.version == '2.0'){
+        modelKmaTownMidRss.find({id:regId.hashCode()}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
+            if (err) {
+                return callback(err);
+            }
+            if (midRssList.length === 0) {
+                err = new Error("Fail to find midRss regId="+regId);
+                return callback(err);
+            }
 
-        callback(err, midRssList[0]);
-    });
+            callback(err, midRssList[0]);
+        });
+    }else{
+        MidRssModel.find({regId:regId}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
+            if (err) {
+                return callback(err);
+            }
+            if (midRssList.length === 0) {
+                err = new Error("Fail to find midRss regId="+regId);
+                return callback(err);
+            }
+
+            callback(err, midRssList[0]);
+        });
+    }
 
     return this;
 };
@@ -42,6 +59,9 @@ midRssKmaController.overwriteData = function(reqMidData, regId, callback) {
         }
 
         reqMidData.rssPubDate = midRssData.pubDate;
+        if(config.db.version == '2.0'){
+            reqMidData.rssPubDate = kmaTimelib.getKoreaTimeString(midRssData.pubDate);
+        }
         reqMidData.province = midRssData.province;
         reqMidData.city = midRssData.city;
         reqMidData.stnId = midRssData.stnId;
