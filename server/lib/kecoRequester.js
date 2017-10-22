@@ -241,7 +241,7 @@ Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
         }
 
         if (isNaN(arpltn[name])) {
-            log.info('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
+            log.verbose('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
             arpltn[name] = -1;
         }
     }
