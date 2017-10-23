@@ -448,6 +448,15 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
+.menu-left .menu-content i {
+  padding-right: 16px;
+  padding-top: 10px;
+  position: absolute;
+  right: 0;
+  color: #333;
+  font-size: 14px;
+}
+
 .menu-content .item-select:after {
   content: none !important;
 }
@@ -639,6 +648,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .has-header.overflow-scroll {
   overflow-y: auto !important;
+  -webkit-overflow-scrolling: auto !important;
 }
 
 /* popup */
