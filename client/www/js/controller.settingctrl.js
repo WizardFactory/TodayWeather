@@ -1,7 +1,8 @@
 angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
-                                        $ionicSideMenuDelegate, $ionicPopup) {
+                                        $ionicSideMenuDelegate, $ionicPopup, $location) {
 
+        var menuContent = null;
         var strOkay = "OK";
         var strCancel = "Cancel";
         $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
@@ -12,6 +13,10 @@ angular.module('controller.settingctrl', [])
         });
 
         function init() {
+            if (ionic.Platform.isIOS()) {
+                menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
+            }
+
             $scope.startupPage = localStorage.getItem("startupPage");
             if ($scope.startupPage === null) {
                 $scope.startupPage = "0"; //시간별날씨
@@ -22,6 +27,27 @@ angular.module('controller.settingctrl', [])
             }
         }
 
+        $scope.clickMenu = function (menu) {
+            if (ionic.Platform.isIOS()) {
+                if (menuContent !== null && menuContent.hasClass('keyboard-up')) {
+                    return;
+                }
+            }
+
+            if (menu === 'sendMail') {
+                $ionicSideMenuDelegate.toggleLeft();
+                sendMail();
+            } else if (menu === 'openMarket') {
+                $ionicSideMenuDelegate.toggleLeft();
+                openMarket();
+            } else if (menu === 'openInfo') {
+                openInfo();
+            } else {
+                $ionicSideMenuDelegate.toggleLeft();
+                $location.path('/' + menu);
+            }
+        };
+
         $scope.setStartupPage = function(startupPage) {
             localStorage.setItem("startupPage", startupPage);
         };
@@ -31,7 +57,7 @@ angular.module('controller.settingctrl', [])
             $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
         };
 
-        $scope.sendMail = function() {
+        var sendMail = function() {
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
             var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
@@ -48,7 +74,7 @@ angular.module('controller.settingctrl', [])
             Util.ga.trackEvent('action', 'click', 'send mail');
         };
 
-        $scope.openMarket = function() {
+        var openMarket = function() {
             var src = "";
             if (ionic.Platform.isIOS()) {
                 src = twClientConfig.iOSStoreUrl;
@@ -80,7 +106,7 @@ angular.module('controller.settingctrl', [])
         /**
          * 설정에 정보 팝업으로, 늦게 로딩되어도 상관없고 호출될 가능성이 적으므로 그냥 현상태 유지.
          */
-        $scope.openInfo = function() {
+        var openInfo = function() {
             var strTitle = "TodayWeather";
             var strMsg;
             $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
@@ -115,7 +141,18 @@ angular.module('controller.settingctrl', [])
         };
 
         $rootScope.isMenuOpen = function() {
-            return $ionicSideMenuDelegate.isOpen();
+            var isOpen = $ionicSideMenuDelegate.isOpen();
+
+            if (ionic.Platform.isIOS()) {
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                    if (isOpen) {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(false);
+                    } else {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+                    }
+                }
+            }
+            return isOpen;
         };
 
         $rootScope.showAlert = function(title, msg, callback) {
