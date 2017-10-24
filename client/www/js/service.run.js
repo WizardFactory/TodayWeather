@@ -1,5 +1,5 @@
 angular.module('service.run', [])
-    .run(function($rootScope, $ionicPlatform, WeatherInfo, Util) {
+    .run(function($rootScope, $ionicPlatform, WeatherInfo, Util, Watch) {
         //위치 재조정해야 함.
         if (twClientConfig.debug) {
             Util.ga.debugMode();
@@ -101,6 +101,10 @@ angular.module('service.run', [])
         document.addEventListener("pause", function() {
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
+
+        if (ionic.Platform.isIOS()) {
+            Watch.init(Util.suiteName);
+        }
 
         WeatherInfo.loadCities();
         WeatherInfo.loadTowns();

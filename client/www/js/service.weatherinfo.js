@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util) {
+    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util, Watch) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -295,6 +295,14 @@ angular.module('service.weatherinfo', [])
                 Util.ga.trackEvent('plugin', 'error', 'saveAppPreferences');
                 Util.ga.trackException(error, false);
             }, 'cityList', JSON.stringify(pList));
+
+            if (ionic.Platform.isIOS()) {
+                Watch.sendUserDefaults(pList, function (err) {
+                    if (err) {
+                        Util.ga.trackEvent('watch', 'error', 'sendUserDefaults');
+                    }
+                });
+            }
         };
 
         obj._loadCitiesPreference = function (callback) {

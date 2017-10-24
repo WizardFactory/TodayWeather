@@ -21,6 +21,7 @@ angular.module('starter', [
     'controller.settingctrl',
     'controller.guidectrl',
     'controller.purchase',
+    'controller.watch',
     'controller.units',
     'controller.start',
     'service.run'
