@@ -2237,14 +2237,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //    })
     //}
 
-    if ((time === 55 && hours === 18)|| putAll) {
+    if ((time === 55)|| putAll) {
         log.info('push kasi rise set');
-        self.asyncTasks.push(function KasiRiseSet(callback) {
+        //self.asyncTasks.push(function KasiRiseSet(callback) {
             self._requestApi("gatherKasiRiseSet", function () {
                 log.info('kasi rise set done');
-                callback();
+        //        callback();
             });
-        });
+        //});
     }
 
     if (time === 55 || putAll) {
