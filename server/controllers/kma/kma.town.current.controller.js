@@ -1,7 +1,7 @@
 /**
  * Created by Peter on 2017. 9. 26..
  */
-
+"use strict";
 var async = require('async');
 
 var modelKmaTownCurrent = require('../../models/kma/kma.town.current.model.js');

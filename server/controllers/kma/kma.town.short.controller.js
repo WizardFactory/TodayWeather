@@ -1,6 +1,8 @@
 /**
  * Created by Peter on 2017. 10. 7..
  */
+"use strict";
+
 var async = require('async');
 
 var modelKmaTownShort = require('../../models/kma/kma.town.short.model.js');

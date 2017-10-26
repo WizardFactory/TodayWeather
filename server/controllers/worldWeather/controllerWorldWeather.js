@@ -1,6 +1,7 @@
 /**
  * Created by Peter on 2016. 3. 17..
  */
+"use strict";
 var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode.js');

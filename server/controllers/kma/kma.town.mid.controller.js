@@ -1,6 +1,8 @@
 /**
  * Created by Peter on 2017. 10. 15..
  */
+"use strict";
+
 var async = require('async');
 
 var modelKmaTownMidForecast = require('../../models/kma/kma.town.mid.forecast.model.js');
@@ -102,12 +104,10 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
 };
 
 kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, callback) {
-    var errorNo = 0;
 
     try{
         var db = dbType[type];
         if(db == undefined){
-            errCode = 1;
             log.error('KMA Town M> getMidFromDB : unknown db type : ', type);
             if(callback){
                 callback(new Error('unknow db type'));
@@ -116,7 +116,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
         }
 
         if(req != undefined && req[type] != undefined){
-            log.info('KMA Town M> return existed data : ', errorNo, type, JSON.stringify(req[type]));
+            log.info('KMA Town M> return existed data : ', type, JSON.stringify(req[type]));
             callback(undefined, req[type]);
             return req[type];
         }
@@ -130,7 +130,6 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
 
             if(result.length == 0){
                 log.warn('KMA Town M> There are no mid datas from DB : ', type);
-                errorNo = 1;
                 callback(new Error('There are no mid datas'));
                 return [];
             }
