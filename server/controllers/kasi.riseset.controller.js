@@ -675,7 +675,7 @@ kasiRiseSet.gatherAreaRiseSetFromApi = function (callback) {
     async.mapSeries(areaList,
         function (area, cb) {
             var dateList = [];
-            for (var i=0; i<2; i++) {
+            for (var i=-8; i<10; i++) {
                 var date = new Date();
                 date.setDate(date.getDate()+i);
                 dateList.push(date);
