@@ -188,7 +188,9 @@ Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
             return callback(err);
         }
         if ( response.statusCode >= 400) {
-            return callback(new Error(body));
+            err = new Error(response.statusMessage);
+            err.statusCode = response.statusCode;
+            return callback(err);
         }
         return callback(err, body);
     });
@@ -333,6 +335,8 @@ Keco.prototype.getMsrstnList = function(key, callback) {
             return callback(err);
         }
         if ( response.statusCode >= 400) {
+            err = new Error(response.statusMessage);
+            err.statusCode = response.statusCode;
             return callback(new Error(body));
         }
         return callback(err, body);
@@ -792,7 +796,12 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         },
         function(err, results) {
             if(err) {
-                log.error(err);
+                if (err.statusCode == 503) {
+                    log.warn(err);
+                }
+                else {
+                    log.error(err);
+                }
                 self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
                 log.info('KECO: next index='+self._currentSidoIndex);
                 return callback(err);
@@ -958,7 +967,12 @@ Keco.prototype.start = function () {
 
     this.getAllMsrStnInfo(function (err) {
         if (err) {
-            log.error(err);
+            if (err.statusCode == 503) {
+                log.warn(err);
+            }
+            else {
+                log.error(err);
+            }
         }
         else {
             log.info('keco get all msr stn info list');
