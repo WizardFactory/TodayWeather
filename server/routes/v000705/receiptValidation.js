@@ -146,10 +146,15 @@ router.post('/', function(req, res) {
                         response = {ok: false, data: {code: 6778001, message: 'receipts is invalid'}};
                     }
                     else {
-                        googleRes.product_id = googleRes.productId;
-                        googleRes.purchase_date_ms = googleRes.purchaseTime;
-                        googleRes.expires_date = (new Date(Number(googleRes.expirationTime))).toUTCString();
-                        response = {ok: true, data:googleRes};
+                        if (googleRes.expirationTime <= (new Date()).getTime()) {
+                            response = {ok: false, data: {code: 6778003, message: 'service is expired or canceled'}};
+                        }
+                        else {
+                            googleRes.product_id = googleRes.productId;
+                            googleRes.purchase_date_ms = googleRes.purchaseTime;
+                            googleRes.expires_date = (new Date(Number(googleRes.expirationTime))).toUTCString();
+                            response = {ok: true, data:googleRes};
+                        }
                     }
 
                     log.info(response);
