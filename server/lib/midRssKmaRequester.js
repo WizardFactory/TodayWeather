@@ -189,13 +189,12 @@ MidRssKmaRequester.prototype.integrateMidRss = function (parsedData, callback) {
 MidRssKmaRequester.prototype.saveMidRssNewForm = function (midKmaList, callback) {
     async.map(midKmaList,
         function(mid, cb){
-            mid['id'] = mid.regId.hashCode();
             mid['pubDate'] = kmaTimelib.getKoreaDateObj(mid.pubDate);
 
             log.info('save mid rss : ', JSON.stringify(mid));
-            kmaTownMidRss.update({id:mid.id}, mid, {upsert:true}, function(err){
+            kmaTownMidRss.update({regId:mid.regId}, mid, {upsert:true}, function(err){
                 if(err){
-                    log.error('midRssNewForm > failed to update db item', mid.id);
+                    log.error('midRssNewForm > failed to update db item', mid.regId);
                 }
                 cb(null, mid.pubDate);
             });

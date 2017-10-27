@@ -22,7 +22,7 @@ function kmaTownMidController(){
 }
 
 kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, callback){
-    var id = 0;
+    var regId = '';
     var errCode = 0;
 
     try{
@@ -31,9 +31,9 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
         log.verbose('KMA Town M> pubDate :', pubDate.toString());
 
         if(newData.pointNumber !== undefined){
-            id = newData.pointNumber.hashCode();
+            regId = newData.pointNumber;
         }else{
-            id = newData.regId.hashCode();
+            regId = newData.regId;
         }
 
         var db = dbType[type];
@@ -51,20 +51,20 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
         async.waterfall([
             function(cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(newData.date + newData.time);
-                var newItem = {id: id, pubDate: pubDate, fcsDate: fcsDate, data: newData};
+                var newItem = {regId: regId, pubDate: pubDate, fcsDate: fcsDate, data: newData};
 
                 //log.info(JSON.stringify(newItem));
                 if(overwrite){
-                    db.update({id: id}, newItem, {upsert:true}, function(err){
+                    db.update({regId: regId}, newItem, {upsert:true}, function(err){
                         if(err){
-                            log.error('KMA Town M> Fail to update Mid : '+ type + ' ID : ' + id);
+                            log.error('KMA Town M> Fail to update Mid : '+ type + ' ID : ' + regId);
                             log.info(JSON.stringify(newItem));
                             return cb();
                         }
                         cb();
                     });
                 }else{
-                    db.update({id: id, pubDate: pubDate}, newItem, {upsert:true}, function(err){
+                    db.update({regId: regId, pubDate: pubDate}, newItem, {upsert:true}, function(err){
                         if(err){
                             log.error('KMA Town M> Fail to update Mid'+ type + 'item');
                             log.info(JSON.stringify(newItem));
@@ -80,10 +80,10 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
                 log.info('KMA Town M> finished to save town.mid : ', type);
                 if(overwrite){
                     log.info('KMA Town M> remove all item before pubData: ', pubDate.toString());
-                    db.remove({id: id, "fcsDate": {$lt:pubDate}}).exec();
+                    db.remove({regId: regId, "fcsDate": {$lt:pubDate}}).exec();
                 }else{
                     log.info('KMA Town M> remove all past 8days items: ', limitedTime.toString());
-                    db.remove({id: id, "fcsDate": {$lte:limitedTime}}).exec();
+                    db.remove({regId: regId, "fcsDate": {$lte:limitedTime}}).exec();
                 }
 
                 callback(err);
@@ -121,7 +121,7 @@ kmaTownMidController.prototype.getMidFromDB = function(type, indicator, req, cal
             return req[type];
         }
 
-        db.find({id : indicator.hashCode()}, {_id: 0}).limit(1).lean().exec(function(err, result){
+        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
             if(err){
                 log.warn('KMA Town M> Fail to file&get mid data from DB : ', type);
                 callback(err);
@@ -204,7 +204,7 @@ kmaTownMidController.prototype.checkPubDate = function(type, srcList, dateString
 
         async.mapSeries(srcList,
             function(src,cb){
-                db.find({id: src.code.hashCode()}, {_id: 0, id: 1, pubDate: 1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
+                db.find({regId: src.code}, {_id: 0, regId: 1, pubDate: 1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
                     if(err){
                         log.info('KMA Town M> There is no data matached to : ', src);
                         return cb(null, src);
@@ -212,12 +212,12 @@ kmaTownMidController.prototype.checkPubDate = function(type, srcList, dateString
 
                     for(var i=0 ; i<dbList.length ; i++){
                         if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                            log.info('KMA Town M> Already updated : ', src, dateString, src.code.hashCode());
+                            log.info('KMA Town M> Already updated : ', src, dateString, src.code);
                             return cb(null);
                         }
                     }
 
-                    log.info('KMA Town M> Need to update : ', src.code.hashCode())
+                    log.info('KMA Town M> Need to update : ', src.code);
                     cb(null, src);
                 });
             },

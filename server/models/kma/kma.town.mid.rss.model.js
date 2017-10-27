@@ -4,7 +4,6 @@
 var mongoose = require('mongoose');
 
 var townMidRssSchema = mongoose.Schema({
-    id: Number,
     stnId: String,
     regId: String,
     province: String,
@@ -30,6 +29,6 @@ var townMidRssSchema = mongoose.Schema({
     ]
 });
 
-townMidRssSchema.index({id: 1});
+townMidRssSchema.index({regId: "hashed"});
 
 module.exports = mongoose.model('kma.town.mid.rss', townMidRssSchema);

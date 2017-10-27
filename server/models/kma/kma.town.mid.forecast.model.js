@@ -4,7 +4,6 @@
 var mongoose = require('mongoose');
 
 var townMidForecastSchema = mongoose.Schema({
-    id: Number,
     regId : String,
     pubDate: Date, //last data.date+data.time
     fcsDate: Date,
@@ -17,6 +16,6 @@ var townMidForecastSchema = mongoose.Schema({
     }
 });
 
-townMidForecastSchema.index({id: 1});
+townMidForecastSchema.index({regId: "hashed"});
 
 module.exports = mongoose.model('kma.town.mid.forecast', townMidForecastSchema);

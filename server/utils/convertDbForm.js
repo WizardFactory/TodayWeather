@@ -51,17 +51,6 @@ function _getDate(curTime){
     return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':00:00+09:00');
 }
 
-String.prototype.hashCode = function(){
-    var hash = 0;
-    if (this.length == 0) return hash;
-    for (var i = 0; i < this.length; i++) {
-        var char = this.charCodeAt(i);
-        hash = ((hash<<5)-hash)+char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash;
-};
-
 function convertDbForm(){
     async.waterfall([
         function(cb){
@@ -88,15 +77,14 @@ function convertTownMidDbForm(fnCallback){
                 log.info('Forcaset count : ', midForecastList.length);
                 async.mapSeries(midForecastList,
                     function(mid, callback){
-                        var id  = mid.regId.hashCode();
                         var pubDate = kmaTimelib.getKoreaDateObj(mid.pubDate);
 
                         log.info('mid forecast : ', mid.regId, id, mid.pubDate, mid.data.length);
                         async.mapSeries(mid.data,
                             function(item, cbMidData){
                                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
-                                var newItem = {id: id, regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
-                                modelKmaTownMidForecast.update({id:id, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                                var newItem = {regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
+                                modelKmaTownMidForecast.update({regId:mid.regId, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                                     if(err){
                                         log.info('Failed to update Mid Forecast Data : ', newItem);
                                     }
@@ -105,7 +93,7 @@ function convertTownMidDbForm(fnCallback){
                                 });
                             },
                             function(err, res){
-                                log.info('convert Mid Forecast : ', id, mid.regId);
+                                log.info('convert Mid Forecast : ', mid.regId);
                                 return callback(null);
                             }
                         );
@@ -122,14 +110,13 @@ function convertTownMidDbForm(fnCallback){
             modelMidLand.find({}, {_id: 0}).lean().exec(function(err, midLandList){
                 async.mapSeries(midLandList,
                     function(mid, callback){
-                        var id  = mid.regId.hashCode();
                         var pubDate = kmaTimelib.getKoreaDateObj(mid.pubDate);
 
                         async.mapSeries(mid.data,
                             function(item, cbMidData){
                                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
-                                var newItem = {id: id, regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
-                                modelKmaTownMidLand.update({id:id, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                                var newItem = {regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
+                                modelKmaTownMidLand.update({regId:mid.regId, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                                     if(err){
                                         log.info('Failed to update Mid Land Data : ', newItem);
                                     }
@@ -138,7 +125,7 @@ function convertTownMidDbForm(fnCallback){
                                 });
                             },
                             function(err, res){
-                                log.info('convert Mid Land : ', id, mid.regId);
+                                log.info('convert Mid Land : ', mid.regId);
                                 return callback(null);
                             }
                         );
@@ -155,14 +142,13 @@ function convertTownMidDbForm(fnCallback){
             modelMidSea.find({}, {_id: 0}).lean().exec(function(err, midSeaList){
                 async.mapSeries(midSeaList,
                     function(mid, callback){
-                        var id  = mid.regId.hashCode();
                         var pubDate = kmaTimelib.getKoreaDateObj(mid.pubDate);
 
                         async.mapSeries(mid.data,
                             function(item, cbMidData){
                                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
-                                var newItem = {id: id, regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
-                                modelKmaTownMidSea.update({id:id, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                                var newItem = {regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
+                                modelKmaTownMidSea.update({regId:mid.regId, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                                     if(err){
                                         log.info('Failed to update Mid Sea Data : ', newItem);
                                     }
@@ -171,7 +157,7 @@ function convertTownMidDbForm(fnCallback){
                                 });
                             },
                             function(err, res){
-                                log.info('convert Mid Sea : ', id, mid.regId);
+                                log.info('convert Mid Sea : ', mid.regId);
                                 return callback(null);
                             }
                         );
@@ -188,14 +174,13 @@ function convertTownMidDbForm(fnCallback){
             modelMidTemp.find({}, {_id: 0}).lean().exec(function(err, midTempList){
                 async.mapSeries(midTempList,
                     function(mid, callback){
-                        var id  = mid.regId.hashCode();
                         var pubDate = kmaTimelib.getKoreaDateObj(mid.pubDate);
 
                         async.mapSeries(mid.data,
                             function(item, cbMidData){
                                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
-                                var newItem = {id: id, regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
-                                modelKmaTownMidTemp.update({id:id, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
+                                var newItem = {regId: mid.regId, pubDate: pubDate, fcsDate: fcsDate, data: item};
+                                modelKmaTownMidTemp.update({regId:mid.regId, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                                     if(err){
                                         log.info('Failed to update Mid Temp Data : ', newItem);
                                     }
@@ -204,7 +189,7 @@ function convertTownMidDbForm(fnCallback){
                                 });
                             },
                             function(err, res){
-                                log.info('convert Temp Sea : ', id, mid.regId);
+                                log.info('convert Temp Sea : ', mid.regId);
                                 return callback(null);
                             }
                         );
@@ -221,10 +206,8 @@ function convertTownMidDbForm(fnCallback){
             modelMidRss.find({}, {_id: 0}).lean().exec(function(err, midRssList){
                 async.mapSeries(midRssList,
                     function(mid, callback){
-                        var id  = mid.regId.hashCode();
                         var pubDate = kmaTimelib.getKoreaDateObj(mid.pubDate);
                         var newItem = {
-                            id: id,
                             stnId: mid.stnId,
                             regId: mid.regId,
                             province: mid.province,
@@ -234,11 +217,11 @@ function convertTownMidDbForm(fnCallback){
                             pubDate: pubDate,
                             midData: mid.midData
                         };
-                        modelKmaTownMidRss.update({id:id}, newItem, {upsert:true}, function(err){
+                        modelKmaTownMidRss.update({regId:mid.regId}, newItem, {upsert:true}, function(err){
                             if(err){
                                 log.info('Failed to update Mid temp Data : ', newItem);
                             }else{
-                                log.info('convert Temp Rss : ', id, mid.regId);
+                                log.info('convert Temp Rss : ', mid.regId);
                             }
                             //log.info('save temp sea : ', JSON.stringify(newItem));
                             callback(null);

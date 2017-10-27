@@ -41,17 +41,6 @@ mongoose.connect(config.db.path, options, function(err) {
 var manager = new controllerManager();
 
 
-String.prototype.hashCode = function(){
-    var hash = 0;
-    if (this.length == 0) return hash;
-    for (var i = 0; i < this.length; i++) {
-        char = this.charCodeAt(i);
-        hash = ((hash<<5)-hash)+char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash;
-};
-
 describe('test KMA DB 2.0', function(){
 /*
     it('process gathering current', function(done){
@@ -134,7 +123,7 @@ describe('test KMA DB 2.0', function(){
         });
     });
 */
-    /*
+/*
     it('process gathering mid forecast', function(done) {
         manager.getMidForecast(9, test_key, function (err) {
             if (err) {
@@ -177,7 +166,7 @@ describe('test KMA DB 2.0', function(){
             done();
         });
     });
-    */
+*/
     it('process gathering mid rss', function(done) {
 
         var midRequester = new libMidRss();

@@ -4,7 +4,6 @@
 var mongoose = require('mongoose');
 
 var townMidSeaSchema = mongoose.Schema({
-    id: Number,
     regId: String,
     pubDate: Date, //last data.date+data.time
     fcsDate: Date,
@@ -54,6 +53,6 @@ var townMidSeaSchema = mongoose.Schema({
     }
 });
 
-townMidSeaSchema.index({id: 1});
+townMidSeaSchema.index({regId: "hashed"});
 
 module.exports = mongoose.model('kma.town.mid.sea', townMidSeaSchema);

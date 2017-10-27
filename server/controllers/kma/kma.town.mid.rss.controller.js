@@ -17,7 +17,7 @@ midRssKmaController.getData = function(regId, callback) {
     log.input('midRssKmaController getData '+regId);
 
     if(config.db.version == '2.0'){
-        modelKmaTownMidRss.find({id:regId.hashCode()}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
+        modelKmaTownMidRss.find({regId:regId}, {_id: 0}).limit(1).lean().exec(function(err, midRssList) {
             if (err) {
                 return callback(err);
             }
