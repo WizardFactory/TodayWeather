@@ -13,6 +13,23 @@ var assert  = require('assert');
 var Scrape = require('../lib/kmaScraper');
 
 describe('unit test - kma city weather scraping', function() {
+    before(function () {
+        var controllerManager = require('../controllers/controllerManager');
+        global.manager = new controllerManager();
+
+        var mongoose = require('mongoose');
+        mongoose.connect('localhost/todayweather', function(err) {
+            if (err) {
+                console.error('Could not connect to MongoDB!');
+                console.log(err);
+            }
+        });
+        mongoose.connection.on('error', function(err) {
+            console.error('MongoDB connection error: ' + err);
+        });
+
+    });
+
     //it('test get city weather', function(done) {
     //    var scrape = new Scrape();
     //    scrape.getCityWeather(function (err, data) {
@@ -124,20 +141,6 @@ describe('unit test - kma city weather scraping', function() {
     //it('test get kma stn weather info', function (done) {
     //    this.timeout( 30*1000);
     //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
-    //
     //    var scrape = new Scrape();
     //    scrape.getStnHourlyWeather(function (err, results) {
     //        if (err) {
@@ -150,21 +153,6 @@ describe('unit test - kma city weather scraping', function() {
 
     //it('test get kma stn weather info', function (done) {
     //    this.timeout( 24*1000*60*60);
-    //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    log.info('connect db');
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
     //
     //    var scrape = new Scrape();
     //    scrape.getStnPastHourlyWeather(8, function (err, results) {
@@ -179,20 +167,6 @@ describe('unit test - kma city weather scraping', function() {
     //it('test get kma stn weather info', function (done) {
     //    this.timeout( 30*1000);
     //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
-    //
     //    var scrape = new Scrape();
     //    scrape.getStnMinuteWeather(function (err, results) {
     //        if (err) {
@@ -206,20 +180,6 @@ describe('unit test - kma city weather scraping', function() {
     //it('test update rns hit rate', function (done) {
     //    this.timeout( 30*1000);
     //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
-    //
     //    var scrape = new Scrape();
     //    scrape.updateRnsHitRates(function (err) {
     //        if (err) {
@@ -231,20 +191,6 @@ describe('unit test - kma city weather scraping', function() {
 
     //it('test reset rns hit rate', function (done) {
     //    this.timeout( 30*1000);
-    //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
     //
     //    var scrape = new Scrape();
     //    scrape.resetRnsHitRates(function (err) {
@@ -258,20 +204,6 @@ describe('unit test - kma city weather scraping', function() {
     //it('test add stn address to towns', function (done) {
     //    this.timeout( 100*1000);
     //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather2', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
-    //
     //    var scrape = new Scrape();
     //    scrape.addStnAddressToTown(function(err, results) {
     //        if (err) {
@@ -283,21 +215,6 @@ describe('unit test - kma city weather scraping', function() {
 
     //it('test reset mountain info', function (done) {
     //    this.timeout( 300*1000);
-    //
-    //    var controllerManager = require('../controllers/controllerManager');
-    //    global.manager = new controllerManager();
-    //
-    //    var mongoose = require('mongoose');
-    //    mongoose.connect('localhost/todayweather', function(err) {
-    //        if (err) {
-    //            console.error('Could not connect to MongoDB!');
-    //            console.log(err);
-    //        }
-    //    });
-    //    mongoose.connection.on('error', function(err) {
-    //        console.error('MongoDB connection error: ' + err);
-    //    });
-    //
     //    var scrape = new Scrape();
     //    scrape.resetMoutainInfo(function (err) {
     //        if (err) {
@@ -318,5 +235,17 @@ describe('unit test - kma city weather scraping', function() {
     //      done();
     //    });
     //});
+
+    it('test special weather situation', function (done) {
+        this.timeout(100*1000);
+        var scrape = new Scrape();
+        scrape._removeBefore10days("Minute", function (err, result) {
+            if (err) {
+                log.error(err);
+            }
+            //log.info(result);
+          done();
+        });
+    });
 });
 

@@ -42,7 +42,7 @@ kasiRiseSet._makeAreaApiUrl = function (location, date) {
 kasiRiseSet._requestRiseSetFromApi = function (url, callback) {
     log.info('request rise set from api url='+url);
 
-    req(url, {json: true}, function(err, response, body) {
+    req(url, {json: true, timeout: 5000}, function(err, response, body) {
         if (err) {
             return callback(err);
         }
@@ -675,7 +675,7 @@ kasiRiseSet.gatherAreaRiseSetFromApi = function (callback) {
     async.mapSeries(areaList,
         function (area, cb) {
             var dateList = [];
-            for (var i=0; i<2; i++) {
+            for (var i=-8; i<10; i++) {
                 var date = new Date();
                 date.setDate(date.getDate()+i);
                 dateList.push(date);

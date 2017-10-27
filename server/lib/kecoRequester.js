@@ -188,7 +188,9 @@ Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
             return callback(err);
         }
         if ( response.statusCode >= 400) {
-            return callback(new Error(body));
+            err = new Error(response.statusMessage);
+            err.statusCode = response.statusCode;
+            return callback(err);
         }
         return callback(err, body);
     });
@@ -241,7 +243,7 @@ Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
         }
 
         if (isNaN(arpltn[name])) {
-            log.info('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
+            log.verbose('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
             arpltn[name] = -1;
         }
     }
@@ -333,6 +335,8 @@ Keco.prototype.getMsrstnList = function(key, callback) {
             return callback(err);
         }
         if ( response.statusCode >= 400) {
+            err = new Error(response.statusMessage);
+            err.statusCode = response.statusCode;
             return callback(new Error(body));
         }
         return callback(err, body);
@@ -792,7 +796,12 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         },
         function(err, results) {
             if(err) {
-                log.error(err);
+                if (err.statusCode == 503) {
+                    log.warn(err);
+                }
+                else {
+                    log.error(err);
+                }
                 self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
                 log.info('KECO: next index='+self._currentSidoIndex);
                 return callback(err);
@@ -929,6 +938,17 @@ Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
     return this;
 };
 
+Keco.prototype.removeOldData = function (callback) {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+    var strRemoveDataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(removeDate);
+
+    Arpltn.remove({"dataTime": {$lt:strRemoveDataTime} }, function (err) {
+        log.info('removed keco data from date : ' + strRemoveDataTime);
+        if (callback)callback(err);
+    });
+};
+
 /**
  * 20분에도 데이터가 갱신되지 않은 경우가 있어서, 2분 가장 마지막, 35분 초기에도 시도함.
  * @param self
@@ -947,6 +967,7 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
         callback(err);
     });
 
+    self.removeOldData();
     return this;
 };
 
@@ -958,7 +979,12 @@ Keco.prototype.start = function () {
 
     this.getAllMsrStnInfo(function (err) {
         if (err) {
-            log.error(err);
+            if (err.statusCode == 503) {
+                log.warn(err);
+            }
+            else {
+                log.error(err);
+            }
         }
         else {
             log.info('keco get all msr stn info list');

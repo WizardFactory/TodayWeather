@@ -746,7 +746,9 @@ angular.module('controller.forecastctrl', [])
 
                 updateCurrentPosition().then(function() {
                     updateWeatherData().then(function () {
-                        hideLoadingIndicator();
+                        setTimeout(function () {
+                            hideLoadingIndicator();
+                        }, ionic.Platform.isAndroid()?0:300);
                     }, function (msg) {
                         hideLoadingIndicator();
                         $scope.showRetryConfirm(strError, msg, 'weather');
