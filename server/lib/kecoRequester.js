@@ -938,6 +938,17 @@ Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
     return this;
 };
 
+Keco.prototype.removeOldData = function (callback) {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+    var strRemoveDataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(removeDate);
+
+    Arpltn.remove({"dataTime": {$lt:strRemoveDataTime} }, function (err) {
+        log.info('removed keco data from date : ' + strRemoveDataTime);
+        if (callback)callback(err);
+    });
+};
+
 /**
  * 20분에도 데이터가 갱신되지 않은 경우가 있어서, 2분 가장 마지막, 35분 초기에도 시도함.
  * @param self
@@ -956,6 +967,7 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
         callback(err);
     });
 
+    self.removeOldData();
     return this;
 };
 
