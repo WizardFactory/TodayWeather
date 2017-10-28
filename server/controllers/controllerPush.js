@@ -355,7 +355,14 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
             body.units = obj;
         }
 
-        callback(undefined, self._makeKmaPushMessage(pushInfo, body));
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeKmaPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
     });
 
     return this;
@@ -633,7 +640,14 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
             body.units = obj;
         }
 
-        callback(undefined, self._makeDsfPushMessage(pushInfo, body));
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeDsfPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
     });
 };
 
