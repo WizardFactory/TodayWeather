@@ -337,7 +337,7 @@ Keco.prototype.getMsrstnList = function(key, callback) {
         if ( response.statusCode >= 400) {
             err = new Error(response.statusMessage);
             err.statusCode = response.statusCode;
-            return callback(new Error(body));
+            return callback(new Error(err));
         }
         return callback(err, body);
     });
