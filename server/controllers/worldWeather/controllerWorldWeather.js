@@ -3070,6 +3070,7 @@ function controllerWorldWeather(){
             case 'heavy drizzle': return 16;
             case 'drizzle clear': return 17;
             case 'light rain at times': return 18;
+            case 'possible light rain':
             case 'light rain': return 19;
             case 'rain at times': return 20;
             case 'rain': return 21;
