@@ -1,6 +1,7 @@
 /**
  * Created by Peter on 2017. 10. 9..
  */
+"use strict";
 var async = require('async');
 
 var modelKmaTownShortest = require('../../models/kma/kma.town.shortest.model.js');

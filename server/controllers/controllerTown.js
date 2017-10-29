@@ -31,6 +31,7 @@ var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortRss = new (require('./kma/kma.town.short.rss.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
+var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -1682,7 +1683,7 @@ function ControllerTown() {
                     return next();
                 }
 
-                var midRssKmaController = require('../controllers/midRssKmaController');
+                var midRssKmaController = require('./kma/kma.town.mid.rss.controller');
                 midRssKmaController.overwriteData(req.midData, code.cityCode, function (err) {
                     if (err) {
                         log.error(err);
@@ -1761,9 +1762,16 @@ function ControllerTown() {
                             }
                             var tempList = tempInfo.ret;
                             //log.info(tempList);
-                            if (landInfo.pubDate != tempInfo.pubDate) {
-                                log.error('RM> publishing date of land and temp are different');
+                            if(config.db.version == '2.0'){
+                                if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
+                                    log.error('RM> publishing date of land and temp are different');
+                                }
+                            }else{
+                                if (landInfo.pubDate != tempInfo.pubDate) {
+                                    log.error('RM> publishing date of land and temp are different');
+                                }
                             }
+
                             self._mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
                                     log.error('RM> failed to merge land and temp');
@@ -3884,82 +3892,93 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
     meta.method = '_getMidDataFromDB';
     meta.indicator = indicator;
 
-    try{
-        if(req != undefined){
-            for (var i=0; i<midArray.length; i++) {
-                var item =  midArray[i];
-                if(item.db == db && req[item.name] != undefined){
-                    log.silly('data is already received');
-                    log.silly(req[item.name]);
-                    return cb(0, req[item.name]);
-                }
+    if(config.db.version == '2.0'){
+        var type = '';
+        for(var i=0; i<midArray.length; i++) {
+            if(midArray[i].db == db){
+                type = midArray[i].name;
+                break;
             }
         }
 
-        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
-            if(err){
-                log.error('~> _getMidDataFromDB : fail to find db item');
+        return kmaTownMid.getMidFromDB(type, indicator, req, cb);
+    }else{
+        try{
+            if(req != undefined){
+                for (var i=0; i<midArray.length; i++) {
+                    var item =  midArray[i];
+                    if(item.db == db && req[item.name] != undefined){
+                        log.silly('data is already received');
+                        log.silly(req[item.name]);
+                        return cb(0, req[item.name]);
+                    }
+                }
+            }
+
+            db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
+                if(err){
+                    log.error('~> _getMidDataFromDB : fail to find db item');
+                    if(cb){
+                        cb(err);
+                    }
+                    return;
+                }
+                if(result.length === 0){
+                    log.error('~> _getMidDataFromDB : there is no data');
+                    if(cb){
+                        cb(new Error("there is no data regId="+indicator));
+                    }
+                    return;
+                }
+                if(result.length > 1){
+                    log.error('~> _getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
+                }
+
                 if(cb){
-                    cb(err);
-                }
-                return;
-            }
-            if(result.length === 0){
-                log.error('~> _getMidDataFromDB : there is no data');
-                if(cb){
-                    cb(new Error("there is no data regId="+indicator));
-                }
-                return;
-            }
-            if(result.length > 1){
-                log.error('~> _getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
-            }
+                    var ret = [];
+                    var privateString = [];
+                    if(result[0].data[0].hasOwnProperty('wfsv')){
+                        privateString = forecastString;
+                    } else if(result[0].data[0].hasOwnProperty('wh10B')){
+                        privateString = seaString;
+                    } else if(result[0].data[0].hasOwnProperty('taMax10')){
+                        privateString = tempString;
+                    } else if(result[0].data[0].hasOwnProperty('wf10')){
+                        privateString = landString;
+                    } else {
+                        err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
+                        log.error(err);
+                        log.error(meta);
+                        cb(err);
+                        return [];
+                    }
 
-            if(cb){
-                var ret = [];
-                var privateString = [];
-                if(result[0].data[0].hasOwnProperty('wfsv')){
-                    privateString = forecastString;
-                } else if(result[0].data[0].hasOwnProperty('wh10B')){
-                    privateString = seaString;
-                } else if(result[0].data[0].hasOwnProperty('taMax10')){
-                    privateString = tempString;
-                } else if(result[0].data[0].hasOwnProperty('wf10')){
-                    privateString = landString;
-                } else {
-                    err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
-                    log.error(err);
-                    log.error(meta);
-                    cb(err);
-                    return [];
-                }
-
-                result[0].data.forEach(function(item){
-                    var newItem = {};
-                    commonString.forEach(function(string){
-                        newItem[string] = item[string];
+                    result[0].data.forEach(function(item){
+                        var newItem = {};
+                        commonString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        privateString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        //log.info(newItem);
+                        ret.push(newItem);
                     });
-                    privateString.forEach(function(string){
-                        newItem[string] = item[string];
-                    });
-                    //log.info(newItem);
-                    ret.push(newItem);
-                });
 
-                cb(0, {pubDate: result[0].pubDate, ret: ret});
+                    cb(0, {pubDate: result[0].pubDate, ret: ret});
+                }
+                return result[0];
+            });
+        }catch(e){
+            log.error(meta);
+            if (cb) {
+                cb(e);
             }
-            return result[0];
-        });
-    }catch(e){
-        log.error(meta);
-        if (cb) {
-            cb(e);
-        }
-        else {
-            log.error(e);
+            else {
+                log.error(e);
+            }
         }
     }
-
     return [];
 };
 
@@ -4323,7 +4342,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         //log.info(todayLand);
         var startDate = kmaTimeLib.convertStringToDate(todayLand.date);
         startDate.setDate(startDate.getDate()+3);
-
         for(i=0 ; i<8 ; i++){
             currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
             item = {
@@ -4342,21 +4360,27 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
             result.push(item);
             startDate.setDate(startDate.getDate()+1);
         }
-
         //log.info(todayTemp);
         startDate = kmaTimeLib.convertStringToDate(todayTemp.date);
         startDate.setDate(startDate.getDate()+3);
         for(i=0 ; i<8 ; i++) {
             var isNew = false;
             currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
-            item = result.find(function (obj) {
-                return obj.date === currentDate;
-            });
+            item = null;
+            for(var j=0 ; j < result.length ; j++){
+                if(result[j].date === currentDate){
+                    item = result[j];
+                    break;
+                }
+            }
+            //item = result.find(function (obj) {
+            //    return obj.date === currentDate;
+            //});
+
             if (item == null) {
                 item = {date: currentDate};
                 isNew = true;
             }
-
             index = i+3;
             item.taMin = todayTemp['taMin' + index];
             item.taMax = todayTemp['taMax' + index];
@@ -4365,7 +4389,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
             }
             startDate.setDate(startDate.getDate()+1);
         }
-
         //log.info('res', result);
         // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
         if (landList > 1) {
@@ -4396,7 +4419,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
                 }
             }
         }
-
         result.sort(self._sortByDateTime);
 
         result = result.filter(function (item) {
@@ -4415,7 +4437,7 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         }
 
     } catch(e){
-        log.error('> something wrong');
+        log.error('> something wrong : ', e);
         log.error(meta);
         if (cb) {
             cb(e);

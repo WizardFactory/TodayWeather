@@ -33,6 +33,7 @@ var awsCloudFront = require('../utils/awsCloudFront');
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
+var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 
 /*********************/
 
@@ -42,6 +43,7 @@ function Manager(){
     self.kmaTownCurrent = kmaTownCurrent;
     self.kmaTownShort = kmaTownShort;
     self.kmaTownShortest = kmaTownShortest;
+    self.kmaTownMid = kmaTownMid;
 
     self.TIME_PERIOD = {
         TOWN_SHORT: (1000*60*60*3),
@@ -924,22 +926,38 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    this.saveMid(modelMidForecast, newData[0], callback);
+    if(config.db.version === '2.0'){
+        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidForecast, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    this.saveMid(modelMidLand, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidLand, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    this.saveMid(modelMidTemp, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidTemp, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    this.saveMid(modelMidSea, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidSea, newData[0], callback);
+    }
     return this;
 };
 
@@ -1549,7 +1567,12 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
 
     log.info('+++ GET MID Forecast : ', dateString);
 
-    self._checkPubDate(modelMidForecast, (new collectTown()).listPointNumber, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkForecastPubDate;
+    }
+
+    fnCheckPubDate(modelMidForecast, (new collectTown()).listPointNumber, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1613,8 +1636,12 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
     }
 
     log.info('+++ GET MID LAND Forecast : ', dateString);
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkLandPubDate;
+    }
 
-    self._checkPubDate(modelMidLand, (new collectTown()).listAreaCode, dateString, function (err, srcList) {
+    fnCheckPubDate(modelMidLand, (new collectTown()).listAreaCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1679,8 +1706,11 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
-
-    self._checkPubDate(modelMidTemp, (new collectTown()).listCityCode, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
+    }
+    fnCheckPubDate(modelMidTemp, (new collectTown()).listCityCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1738,8 +1768,11 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
     }
 
     log.info('+++ GET MID SEA Forecast : ', dateString);
-
-    self._checkPubDate(modelMidSea, (new collectTown()).listSeaCode, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkSeaPubDate;
+    }
+    fnCheckPubDate(modelMidSea, (new collectTown()).listSeaCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);

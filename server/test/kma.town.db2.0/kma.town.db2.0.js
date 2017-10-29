@@ -24,6 +24,7 @@ var town = require('../../models/town');
 var modelCurrent = require('../../models/modelCurrent');
 
 var kmaTownShortRss = new (require('../../controllers/kma/kma.town.short.rss.controller.js'));
+var libMidRss = require('../../lib/midRssKmaRequester');
 
 var options = { server: { socketOptions: { keepAlive: 1, connectTimeoutMS: 30000 } },
     replset: { socketOptions: { keepAlive: 1, connectTimeoutMS : 30000 } },
@@ -41,7 +42,7 @@ var manager = new controllerManager();
 
 
 describe('test KMA DB 2.0', function(){
-
+/*
     it('process gathering current', function(done){
         town.getCoord = function(cb){
             var list = [
@@ -121,5 +122,60 @@ describe('test KMA DB 2.0', function(){
             done();
         });
     });
+*/
+/*
+    it('process gathering mid forecast', function(done) {
+        manager.getMidForecast(9, test_key, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            log.info('Success to get mid forecast');
+            done();
+        });
+    });
 
+    it('process gathering mid Land', function(done) {
+
+        manager.getMidLand(9, test_key, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            log.info('Success to get mid land');
+            done();
+        });
+    });
+
+    it('process gathering mid Temp', function(done) {
+
+        manager.getMidTemp(9, test_key, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            log.info('Success to get mid temp');
+            done();
+        });
+    });
+
+    it('process gathering mid Sea', function(done) {
+
+        manager.getMidSea(9, test_key, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            log.info('Success to get mid sea');
+            done();
+        });
+    });
+*/
+    it('process gathering mid rss', function(done) {
+
+        var midRequester = new libMidRss();
+        midRequester.mainProcess(midRequester, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            log.info('Success to get mid rss');
+            done();
+        });
+    });
 });
