@@ -80,8 +80,7 @@
   "cordovaPlatforms": [
     {
       "platform": "android",
-      "version": "",
-      "locator": "android@5.1.1"
+      "version": ""
     },
     {
       "platform": "ios",
