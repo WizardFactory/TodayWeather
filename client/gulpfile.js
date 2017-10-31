@@ -103,7 +103,7 @@ gulp.task('build_android', shell.task([
 ]));
 
 gulp.task('release-android-nonpaid', shell.task([
-  'cp config-androidsdk19.xml config.xml',
+  'cp config-androidsdk20.xml config.xml',
   'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
   'cordova plugin rm cordova-plugin-console',
@@ -123,16 +123,16 @@ gulp.task('release-android-nonpaid', shell.task([
 
   'cp build.gradle platforms/android/',
   'cp config-androidsdk16.xml config.xml',
-  'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
+  'cordova plugin add cordova-plugin-crosswalk-webview',
   'ionic build android --release',
   'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./',
   '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min16.apk',
 
-  'cp config-androidsdk14.xml config.xml',
-  'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
-  'ionic build android --release',
-  'cp -f platforms/android/build/outputs/apk/android-armv7-release.apk ./',
-  '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
+  //'cp config-androidsdk14.xml config.xml',
+  //'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
+  //'ionic build android --release',
+  //'cp -f platforms/android/build/outputs/apk/android-armv7-release.apk ./',
+  //'~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
 ]));
 
 gulp.task('release-ios-nonpaid', shell.task([

@@ -13,7 +13,7 @@
   <preference name="UIWebViewBounce" value="false"/>
   <preference name="DisallowOverscroll" value="true"/>
   <preference name="android-minSdkVersion" value="16"/>
-  <preference name="android-maxSdkVersion" value="18" />
+  <preference name="android-maxSdkVersion" value="19" />
   <preference name="BackupWebStorage" value="local"/>
   <preference name="SplashScreen" value="screen"/>
   <preference name="FadeSplashScreen" value="false"/>
