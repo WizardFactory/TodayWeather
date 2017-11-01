@@ -103,30 +103,28 @@ gulp.task('build_android', shell.task([
 ]));
 
 gulp.task('release-android-nonpaid', shell.task([
-  'cp config-androidsdk20.xml config.xml',
-  'cp ads.onestore.tw.client.config.js www/tw.client.config.js',
   'ionic state reset',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="111"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
   'cordova plugin add cordova-plugin-app-preferences',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="1111"',
-  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'npm install',
   'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
-  'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
-  'ionic build android --release',
-  'cp platforms/android/build/outputs/apk/android-release.apk ./',
-  '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-release.apk TodayWeather_ads_playstore_v'+json.version+'_min19.apk',
 
-  'cp build.gradle platforms/android/',
+  'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
+  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
+
+  'cp config-androidsdk20.xml config.xml',
+  'ionic build android --release',
+  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min20.apk',
+
   'cp config-androidsdk16.xml config.xml',
   'cordova plugin add cordova-plugin-crosswalk-webview',
   'ionic build android --release',
-  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./',
-  '~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min16.apk',
+  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min16.apk',
 
   //'cp config-androidsdk14.xml config.xml',
   //'cordova plugin add cordova-plugin-crosswalk-webview@1.8.0',
