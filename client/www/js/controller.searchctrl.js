@@ -22,6 +22,7 @@ angular.module('controller.searchctrl', [])
         var strAlreadyTheSameLocationHasBeenAdded = "Already the same location has been added.";
         var strCurrent = "Current";
         var strLocation = "Location";
+        var placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
 
         $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
             'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
@@ -39,15 +40,19 @@ angular.module('controller.searchctrl', [])
         });
 
         var service;
-        if (window.google == undefined) {
-            $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
-                console.log('googleapis loaded');
+        function _lazyLoad(url) {
+            $ocLazyLoad.load(url).then(function () {
+                console.log('google apis loaded');
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 Util.ga.trackEvent('window', 'error', 'lazyLoad');
                 Util.ga.trackException(e, true);
                 window.alert(e);
             });
+        }
+
+        if (window.google == undefined) {
+           _lazyLoad(placesUrl);
         }
         else {
             service = new google.maps.places.AutocompleteService();
@@ -62,6 +67,12 @@ angular.module('controller.searchctrl', [])
                 if (status != google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
                     Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
                     console.log(status);
+                }
+                else if (status != google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
+                    if (twClientConfig.googleapikey) {
+                        placesUrl += ("&key="+twClientConfig.googleapikey);
+                        _lazyLoad(placesUrl);
+                    }
                 }
                 return;
             }
