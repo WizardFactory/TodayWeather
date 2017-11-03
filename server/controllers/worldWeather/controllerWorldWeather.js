@@ -3086,6 +3086,7 @@ function controllerWorldWeather(){
             case 'heavy sleet': return 30;
             case 'sleet clear': return 31;
             case 'light snow at times': return 32;
+            case 'possible light snow':
             case 'light snow': return 33;
             case 'snow at times': return 34;
             case 'snow': return 35;
