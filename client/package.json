@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.59",
+  "version": "0.9.62",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -80,8 +80,7 @@
   "cordovaPlatforms": [
     {
       "platform": "android",
-      "version": "",
-      "locator": "android@5.1.1"
+      "version": ""
     },
     {
       "platform": "ios",

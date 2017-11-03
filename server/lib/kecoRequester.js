@@ -337,7 +337,7 @@ Keco.prototype.getMsrstnList = function(key, callback) {
         if ( response.statusCode >= 400) {
             err = new Error(response.statusMessage);
             err.statusCode = response.statusCode;
-            return callback(new Error(body));
+            return callback(new Error(err));
         }
         return callback(err, body);
     });
@@ -765,7 +765,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
 
     log.info('get all Ctprvn start from '+list[0]);
 
-    async.map(list,
+    async.mapSeries(list,
         function(sido, callback) {
             async.waterfall([
                 function(cb) {
@@ -959,7 +959,7 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
 
     callback = callback || function(){};
 
-    self.retryGetAllCtprvn(self, 3, function (err) {
+    self.retryGetAllCtprvn(self, 10, function (err) {
         if (err) {
             log.warn('KECO: Stopped index='+self._currentSidoIndex);
             return callback(err);

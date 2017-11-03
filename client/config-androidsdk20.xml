@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<widget id="net.wizardfactory.todayweather" version="0.9.59" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayweather" version="0.9.62" android-versionCode="9629" xmlns="http://www.w3.org/ns/widgets">
   <name>TodayWeather</name>
   <description>
         Inform how warm or cold it is today than yesterday.
@@ -12,7 +12,7 @@
   <preference name="webviewbounce" value="false"/>
   <preference name="UIWebViewBounce" value="false"/>
   <preference name="DisallowOverscroll" value="true"/>
-  <preference name="android-minSdkVersion" value="19"/>
+  <preference name="android-minSdkVersion" value="20"/>
   <preference name="BackupWebStorage" value="local"/>
   <preference name="SplashScreen" value="screen"/>
   <preference name="FadeSplashScreen" value="false"/>
