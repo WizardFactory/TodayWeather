@@ -49,8 +49,6 @@ tSchema.statics = {
                 }
             }
 
-            result = result.splice(0, 15);
-
             cb(err, result);
         });
     },
