@@ -379,25 +379,25 @@ describe('unit test - keco requester', function() {
     //    });
     //});
 
-    it('remove old data', function (done) {
-        this.timeout(60*1000); //1min
-
-        var mongoose = require('mongoose');
-        mongoose.connect('localhost/todayweather', function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-                console.log(err);
-            }
-        });
-        mongoose.connection.on('error', function(err) {
-            console.error('MongoDB connection error: ' + err);
-            process.exit(-1);
-        });
-        keco.removeOldData(function (err) {
-            if (err) {
-                console.error(err);
-            }
-            done();
-        });
-    });
+    //it('remove old data', function (done) {
+    //    this.timeout(60*1000); //1min
+    //
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //        process.exit(-1);
+    //    });
+    //    keco.removeOldData(function (err) {
+    //        if (err) {
+    //            console.error(err);
+    //        }
+    //        done();
+    //    });
+    //});
 });
