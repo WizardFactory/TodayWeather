@@ -22,7 +22,6 @@ angular.module('controller.searchctrl', [])
         var strAlreadyTheSameLocationHasBeenAdded = "Already the same location has been added.";
         var strCurrent = "Current";
         var strLocation = "Location";
-        var placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
 
         $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
             'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
@@ -47,12 +46,12 @@ angular.module('controller.searchctrl', [])
             }, function (e) {
                 Util.ga.trackEvent('window', 'error', 'lazyLoad');
                 Util.ga.trackException(e, true);
-                window.alert(e);
+                //window.alert(e);
             });
         }
 
         if (window.google == undefined) {
-           _lazyLoad(placesUrl);
+           _lazyLoad(Util.placesUrl);
         }
         else {
             service = new google.maps.places.AutocompleteService();
@@ -68,11 +67,8 @@ angular.module('controller.searchctrl', [])
                     Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
                     console.log(status);
                 }
-                else if (status != google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-                    if (twClientConfig.googleapikey) {
-                        placesUrl += ("&key="+twClientConfig.googleapikey);
-                        _lazyLoad(placesUrl);
-                    }
+                else {
+                    //zero results
                 }
                 return;
             }
