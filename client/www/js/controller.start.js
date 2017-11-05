@@ -45,14 +45,14 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     var service;
 
     if (window.google == undefined) {
-        $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
+        $ocLazyLoad.load(Util.placesUrl).then(function () {
             console.log('googleapis loaded');
             service = new google.maps.places.AutocompleteService();
         }, function (e) {
             console.log(e);
             Util.ga.trackEvent('window', 'error', 'lazyLoad');
             Util.ga.trackException(e, true);
-            window.alert(e);
+            //window.alert(e);
         });
     }
     else {

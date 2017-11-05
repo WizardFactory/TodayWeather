@@ -805,9 +805,13 @@ angular.module('service.weatherutil', [])
         //    return deferred.promise;
         //}
 
-        function getGeoCodeFromGoogle(address) {
+        function _getGeoCodeFromGoogle(address, apiKey) {
             var deferred = $q.defer();
+
             var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + address;
+            if (apiKey) {
+                url += "&key="+apiKey;
+            }
 
             console.log(url);
             $http({method: 'GET', url: url, timeout: 3000})
@@ -833,7 +837,9 @@ angular.module('service.weatherutil', [])
                     }
                     else {
                         //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                        deferred.reject(new Error(data.status));
+                        var err = new Error(data.status);
+                        err.status = data.status;
+                        deferred.reject(err);
                     }
                 })
                 .error(function (data, status) {
@@ -844,6 +850,29 @@ angular.module('service.weatherutil', [])
                     deferred.reject(err);
                 });
 
+            return deferred.promise;
+        }
+
+        function getGeoCodeFromGoogle(address) {
+            var deferred = $q.defer();
+            _getGeoCodeFromGoogle(address).then(
+                function (geoInfo) {
+                    deferred.resolve(geoInfo);
+                }, function (err) {
+                    if (err && err.status === 'OVER_QUERY_LIMIT') {
+                        _getGeoCodeFromGoogle(address, twClientConfig.googleapikey).then(
+                            function (geoInfo) {
+                                deferred.resolve(geoInfo);
+                            },
+                            function (err) {
+                                deferred.reject(err);
+                            });
+                    }
+                    else {
+                        deferred.reject(err);
+                    }
+
+                });
             return deferred.promise;
         }
 
@@ -918,7 +947,7 @@ angular.module('service.weatherutil', [])
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data, status, headers, config, statusText) {
                     console.log("s="+status+" h="+headers+" c="+config+" sT="+statusText);
-                    if (data.fullName) {
+                    if (data.fullName && data.name0 === '대한민국') {
                         var address = data.fullName;
                         var name = data.name;
 
@@ -967,20 +996,17 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         }
 
-        /**
-         * address에서 왼쪽에 국가가 나오거나, 오른쪽에 국가가 나옴 반대쪽 지명을 name으로 사용.
-         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
-         * @param lat
-         * @param lng
-         * @returns {*}
-         */
-        function getGeoInfoFromGoogle(lat, lng) {
+        function _getGeoInfoFromGoogle(lat, lng, apiKey) {
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
+            if (apiKey) {
+                url += "&key="+apiKey;
+            }
 
             console.log(url);
             $http({method: 'GET', url: url, timeout: 3000})
                 .success(function (data) {
+                    var err;
                     if (data.status === "OK") {
                         var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
                         var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
@@ -990,7 +1016,6 @@ angular.module('service.weatherutil', [])
                         var sub_level1_name;
                         var local_name;
                         var country_name;
-                        var err;
 
                         for (var i=0; i < data.results.length; i++) {
                             var result = data.results[i];
@@ -1078,7 +1103,9 @@ angular.module('service.weatherutil', [])
                     }
                     else {
                         //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
-                        deferred.reject(new Error(data.status));
+                        err = new Error(data.status);
+                        err.status = data.status;
+                        deferred.reject(err);
                     }
                 })
                 .error(function (data, status) {
@@ -1092,9 +1119,41 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         }
 
+
+        /**
+         * address에서 왼쪽에 국가가 나오거나, 오른쪽에 국가가 나옴 반대쪽 지명을 name으로 사용.
+         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
+         * @param lat
+         * @param lng
+         * @returns {*}
+         */
+        function getGeoInfoFromGoogle(lat, lng) {
+            var deferred = $q.defer();
+
+            _getGeoInfoFromGoogle(lat, lng).then(function (geoInfo) {
+                deferred.resolve(geoInfo);
+            }, function (err) {
+                if (err && err.status === 'OVER_QUERY_LIMIT') {
+                    _getGeoInfoFromGoogle(lat, lng, twClientConfig.googleapikey).then(
+                        function (geoInfo) {
+                            deferred.resolve(geoInfo);
+                        },
+                        function (err) {
+
+                            deferred.reject(err);
+                        });
+                }
+                else {
+                    deferred.reject(err);
+                }
+            });
+
+            return deferred.promise;
+        }
+
         var cachedGeoInfo;
         /**
-         * 찾은 주소가 한국이면, daum에서 주소 갱신함.
+         * daum(check country) -> check language -> google
          * @param lat
          * @param long
          * @returns {*}
@@ -1105,6 +1164,7 @@ angular.module('service.weatherutil', [])
             var endTime;
             lat = parseFloat(lat.toFixed(3));
             long = parseFloat(long.toFixed(3));
+
             if (cachedGeoInfo && lat == cachedGeoInfo.location.lat && long == cachedGeoInfo.location.long) {
                 endTime = new Date().getTime();
                 Util.ga.trackEvent('address', 'get', 'cache', endTime - startTime);
@@ -1112,71 +1172,67 @@ angular.module('service.weatherutil', [])
                 return deferred.promise;
             }
 
-            getGeoInfoFromGoogle(lat, long).then(function (geoInfo) {
-                endTime = new Date().getTime();
-                Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
-                Util.ga.trackEvent('address', 'get', 'google', endTime - startTime);
-
-                console.log(geoInfo);
-                //todo: if (geoInfo.country == "KR" && source == "KMA")
-                if (geoInfo.country == "KR") {
-                    startTime = new Date().getTime();
-                    getAddressFromDaum(lat, long).then(function (data) {
+            getAddressFromDaum(lat, long).then(
+                function (data) {
+                    if (Util.language.indexOf("ko") != -1) {
                         endTime = new Date().getTime();
-                        Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
-                        Util.ga.trackEvent('address', 'get', 'daum', endTime - startTime);
+                        Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
 
-                        //search에서 임시적으로 사용함
+                        var geoInfo =  {country: "KR", address: data.address};
+                        geoInfo.location = {lat:lat, long: long};
                         geoInfo.googleAddress = geoInfo.address;
-                        geoInfo.address = data.address;
-                        if (Util.language.indexOf("ko") != -1 && data.name) {
-                            geoInfo.name = data.name;
-                        }
+                        geoInfo.name = data.name;
                         console.log(geoInfo);
                         cachedGeoInfo = geoInfo;
                         deferred.resolve(geoInfo);
-                    }, function (err) {
-                        endTime = new Date().getTime();
-                        Util.ga.trackTiming('address', endTime - startTime, 'error', 'daum');
-                        if (err instanceof Error) {
-                            Util.ga.trackEvent('address', 'error', 'daum(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
-                        } else {
-                            Util.ga.trackEvent('address', 'error', 'daum(' + err + ')', endTime - startTime);
-                        }
+                    }
+                    else {
+                        getGeoInfoFromGoogle(lat, long).then(
+                            function (geoInfo) {
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
 
-                        console.log(err);
-                        deferred.reject(err);
-                    });
-                }
-                else {
-                    getGeoCodeFromGoogle(geoInfo.address).then(function (info) {
-                        geoInfo.location = obj.geolocationNormalize(info.location);
-                        cachedGeoInfo = geoInfo;
-                        deferred.resolve(geoInfo);
-                    }, function (err) {
-                        endTime = new Date().getTime();
-                        Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
-                        if (err instanceof Error) {
-                            Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
-                        } else {
-                            Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
-                        }
-                        console.log(err);
-                        deferred.reject(err);
-                    });
-                }
-            }, function (err) {
-                endTime = new Date().getTime();
-                Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
-                if (err instanceof Error) {
-                    Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
-                } else {
-                    Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
-                }
+                                cachedGeoInfo = geoInfo;
+                                console.log(geoInfo);
+                                deferred.resolve(geoInfo);
+                            },
+                            function (err) {
+                                endTime = new Date().getTime();
+                                Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
+                                if (err instanceof Error) {
+                                    Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                                } else {
+                                    Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
+                                }
+                                console.log(err);
+                                deferred.reject(err);
+                            });
+                    }
+                },
+                function (err) {
+                    console.log(err);
+                    getGeoInfoFromGoogle(lat, long).then(
+                        function (geoInfo) {
+                            endTime = new Date().getTime();
+                            Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
 
-                console.log(err);
-                deferred.reject(err);
-            });
+                            cachedGeoInfo = geoInfo;
+                            console.log(geoInfo);
+                            deferred.resolve(geoInfo);
+                        },
+                        function (err) {
+                            endTime = new Date().getTime();
+                            Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
+                            if (err instanceof Error) {
+                                Util.ga.trackEvent('address', 'error', 'google(message:' + err.message + ', code:' + err.code + ')', endTime - startTime);
+                            } else {
+                                Util.ga.trackEvent('address', 'error', 'google(' + err + ')', endTime - startTime);
+                            }
+                            console.log(err);
+                            deferred.reject(err);
+                        });
+                });
+
             return deferred.promise;
         };
 
@@ -1989,7 +2045,7 @@ angular.module('service.weatherutil', [])
             //var normal_lon = lon - (lon%baseLength) + baseLength/2;
             //return {lat: normal_lat, long: normal_lon};
 
-            return {lat: parseFloat(coords.lat.toFixed(2)), long: parseFloat(coords.long.toFixed(2))}
+            return {lat: parseFloat(coords.lat.toFixed(3)), long: parseFloat(coords.long.toFixed(3))}
         };
 
         return obj;
