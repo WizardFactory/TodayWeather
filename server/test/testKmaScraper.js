@@ -13,22 +13,22 @@ var assert  = require('assert');
 var Scrape = require('../lib/kmaScraper');
 
 describe('unit test - kma city weather scraping', function() {
-    before(function () {
-        var controllerManager = require('../controllers/controllerManager');
-        global.manager = new controllerManager();
-
-        var mongoose = require('mongoose');
-        mongoose.connect('localhost/todayweather', function(err) {
-            if (err) {
-                console.error('Could not connect to MongoDB!');
-                console.log(err);
-            }
-        });
-        mongoose.connection.on('error', function(err) {
-            console.error('MongoDB connection error: ' + err);
-        });
-
-    });
+    //before(function () {
+    //    var controllerManager = require('../controllers/controllerManager');
+    //    global.manager = new controllerManager();
+    //
+    //    var mongoose = require('mongoose');
+    //    mongoose.connect('localhost/todayweather', function(err) {
+    //        if (err) {
+    //            console.error('Could not connect to MongoDB!');
+    //            console.log(err);
+    //        }
+    //    });
+    //    mongoose.connection.on('error', function(err) {
+    //        console.error('MongoDB connection error: ' + err);
+    //    });
+    //
+    //});
 
     //it('test get city weather', function(done) {
     //    var scrape = new Scrape();
@@ -236,16 +236,16 @@ describe('unit test - kma city weather scraping', function() {
     //    });
     //});
 
-    it('test special weather situation', function (done) {
-        this.timeout(100*1000);
-        var scrape = new Scrape();
-        scrape._removeBefore10days("Minute", function (err, result) {
-            if (err) {
-                log.error(err);
-            }
-            //log.info(result);
-          done();
-        });
-    });
+    //it('test special weather situation', function (done) {
+    //    this.timeout(100*1000);
+    //    var scrape = new Scrape();
+    //    scrape._removeBefore10days("Minute", function (err, result) {
+    //        if (err) {
+    //            log.error(err);
+    //        }
+    //        //log.info(result);
+    //      done();
+    //    });
+    //});
 });
 
