@@ -2228,14 +2228,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 10 || putAll) {
+    if (time === 11 || putAll) {
         log.info('push short');
         self.asyncTasks.push(function Short(callback) {
             self._requestApi("short", callback);
         });
     }
 
-    if (time === 40 || putAll) {
+    if (time === 41 || putAll) {
         //direct request current
         log.info('push current');
         //self.asyncTasks.push(function Current(callback) {
@@ -2246,7 +2246,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 45 || putAll) {
+    if (time === 46 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
