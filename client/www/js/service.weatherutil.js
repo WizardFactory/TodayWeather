@@ -970,6 +970,10 @@ angular.module('service.weatherutil', [])
                             data = JSON.stringify(data);
                         }
                         data = data || "Request failed";
+                        //data is "null" at error of CORS
+                        if (data === 'null') {
+                           data = "Request failed";
+                        }
                         var err = new Error(data);
                         err.code = status;
                         return callback(err);
@@ -996,6 +1000,47 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         }
 
+        function _getAddressInfoFromGoogleResult(result) {
+            var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+            var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+            var local_types = [ "locality", "political" ];
+            var info = {};
+            info.address = result.formatted_address;
+
+            for (var j=0; j < result.address_components.length; j++) {
+                var address_component = result.address_components[j];
+                if ( address_component.types[0] == sub_level2_types[0]
+                    && address_component.types[1] == sub_level2_types[1]
+                    && address_component.types[2] == sub_level2_types[2] ) {
+                    info.sub_level2_name = address_component.short_name;
+                }
+
+                if ( address_component.types[0] == sub_level1_types[0]
+                    && address_component.types[1] == sub_level1_types[1]
+                    && address_component.types[2] == sub_level1_types[2] ) {
+                    info.sub_level1_name = address_component.short_name;
+                }
+
+                if ( address_component.types[0] == local_types[0]
+                    && address_component.types[1] == local_types[1] ) {
+                    info.local_name = address_component.short_name;
+                }
+            }
+            return info;
+        }
+
+        /**
+         * name은 sublocality_level_2부터 가장 작은 단위 사용.
+         * address는 result.types를 보고 원하는 types의 address를 사용
+         * 항상 동일한 것은 아니지만 array에서 앞이 더 좋은 결과라고 보고 사용함.
+         * 국가는 전 영역에 걸쳐서 검사함
+         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
+         * @param lat
+         * @param lng
+         * @param apiKey
+         * @returns {*|promise}
+         * @private
+         */
         function _getGeoInfoFromGoogle(lat, lng, apiKey) {
             var deferred = $q.defer();
             var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + lat + "," + lng;
@@ -1012,45 +1057,50 @@ angular.module('service.weatherutil', [])
                         var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
                         var local_types = [ "locality", "political" ];
                         var country_types = ["country"];
-                        var sub_level2_name;
-                        var sub_level1_name;
-                        var local_name;
                         var country_name;
+                        var address_sublocality_level_2;
+                        var address_sublocality_level_1;
+                        var address_locality;
+                        var address;
+                        var name;
+
+                        //console.log(data.results);
 
                         for (var i=0; i < data.results.length; i++) {
                             var result = data.results[i];
+
+                            //get country_name
                             for (var j=0; j < result.address_components.length; j++) {
+                                if (country_name) {
+                                    break;
+                                }
                                 var address_component = result.address_components[j];
-                                if ( address_component.types[0] == sub_level2_types[0]
-                                    && address_component.types[1] == sub_level2_types[1]
-                                    && address_component.types[2] == sub_level2_types[2] ) {
-                                    sub_level2_name = address_component.short_name;
-                                }
-
-                                if ( address_component.types[0] == sub_level1_types[0]
-                                    && address_component.types[1] == sub_level1_types[1]
-                                    && address_component.types[2] == sub_level1_types[2] ) {
-                                    sub_level1_name = address_component.short_name;
-                                }
-
-                                if ( address_component.types[0] == local_types[0]
-                                    && address_component.types[1] == local_types[1] ) {
-                                    local_name = address_component.short_name;
-                                }
-
                                 if ( address_component.types[0] == country_types[0] ) {
                                     if (address_component.short_name.length <= 2) {
                                         country_name = address_component.short_name;
                                     }
                                 }
-
-                                if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                                    break;
-                                }
                             }
 
-                            if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                                break;
+                            //postal_code
+                            switch (result.types.toString()) {
+                                case sub_level2_types.toString():
+                                    if (!address_sublocality_level_2) {
+                                        address_sublocality_level_2 = _getAddressInfoFromGoogleResult(result);
+                                    }
+                                    break;
+                                case sub_level1_types.toString():
+                                    if (!address_sublocality_level_1) {
+                                        address_sublocality_level_1 = _getAddressInfoFromGoogleResult(result);
+                                    }
+                                    break;
+                                case local_types.toString():
+                                    if (!address_locality) {
+                                        address_locality = _getAddressInfoFromGoogleResult(result);
+                                    }
+                                    break;
+                                default:
+                                    break;
                             }
                         }
 
@@ -1061,29 +1111,26 @@ angular.module('service.weatherutil', [])
                             return;
                         }
 
-                        var name;
-                        var address = "";
-                        //국내는 동단위까지 표기해야 함.
-                        if (country_name == "KR") {
-                            if (sub_level2_name) {
-                                address += sub_level2_name;
-                                name = sub_level2_name
-                            }
+                        if (address_sublocality_level_2) {
+                            address = address_sublocality_level_2.address;
+                            name = address_sublocality_level_2.sub_level2_name;
                         }
-                        if (sub_level1_name) {
-                            address += " " + sub_level1_name;
-                            if (name == undefined) {
-                                name = sub_level1_name;
-                            }
+                        else if (address_sublocality_level_1) {
+                            address = address_sublocality_level_1.address;
+                            name = address_sublocality_level_1.sub_level1_name;
                         }
-                        if (local_name) {
-                            address += " " + local_name;
-                            if (name == undefined) {
-                                name = local_name;
-                            }
+                        else if (address_locality) {
+                            address = address_locality.address;
+                            name = address_locality.local_name;
                         }
+                        else {
+                            Util.ga.trackEvent('address', 'error', 'failToFindLocation');
+                            err = new Error('failToFindLocation latlng='+lat+","+lng);
+                            deferred.reject(err);
+                            return;
+                        }
+
                         if (country_name) {
-                            address += " " + country_name;
                             if (name == undefined) {
                                 name = country_name;
                             }
@@ -1121,8 +1168,6 @@ angular.module('service.weatherutil', [])
 
 
         /**
-         * address에서 왼쪽에 국가가 나오거나, 오른쪽에 국가가 나옴 반대쪽 지명을 name으로 사용.
-         * tokyo 35.6894875,139.6917064 의 경우 types에 postal_code가 없음.
          * @param lat
          * @param lng
          * @returns {*}
@@ -1154,6 +1199,7 @@ angular.module('service.weatherutil', [])
         var cachedGeoInfo;
         /**
          * daum(check country) -> check language -> google
+         * daum error -> google -> ko-KR만 ok이고, 타 언어는 address 부재로 오류로 처리
          * @param lat
          * @param long
          * @returns {*}
@@ -1174,24 +1220,27 @@ angular.module('service.weatherutil', [])
 
             getAddressFromDaum(lat, long).then(
                 function (data) {
+                    var geoInfo;
+                    geoInfo =  {country: "KR", address: data.address};
+                    geoInfo.location = {lat:lat, long: long};
+                    geoInfo.address = data.address;
+                    geoInfo.name = data.name;
+
                     if (Util.language.indexOf("ko") != -1) {
                         endTime = new Date().getTime();
-                        Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
-
-                        var geoInfo =  {country: "KR", address: data.address};
-                        geoInfo.location = {lat:lat, long: long};
-                        geoInfo.googleAddress = geoInfo.address;
-                        geoInfo.name = data.name;
+                        Util.ga.trackTiming('address', endTime - startTime, 'get', 'daum');
                         console.log(geoInfo);
                         cachedGeoInfo = geoInfo;
                         deferred.resolve(geoInfo);
                     }
                     else {
                         getGeoInfoFromGoogle(lat, long).then(
-                            function (geoInfo) {
+                            function (googlGeoInfo) {
                                 endTime = new Date().getTime();
                                 Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
 
+                                geoInfo.googleAddress = googlGeoInfo.address;
+                                geoInfo.name = googlGeoInfo.name;
                                 cachedGeoInfo = geoInfo;
                                 console.log(geoInfo);
                                 deferred.resolve(geoInfo);
@@ -1210,15 +1259,21 @@ angular.module('service.weatherutil', [])
                     }
                 },
                 function (err) {
-                    console.log(err);
                     getGeoInfoFromGoogle(lat, long).then(
                         function (geoInfo) {
                             endTime = new Date().getTime();
-                            Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
-
-                            cachedGeoInfo = geoInfo;
-                            console.log(geoInfo);
-                            deferred.resolve(geoInfo);
+                            if (geoInfo.country == 'KR' && Util.language.indexOf("ko") != -1) {
+                                var msg = 'Need to korea address for query';
+                                Util.ga.trackTiming('address', endTime - startTime, 'error', 'google');
+                                Util.ga.trackEvent('address', 'error', msg, endTime - startTime);
+                                deferred.reject(new Error(msg));
+                            }
+                            else {
+                                Util.ga.trackTiming('address', endTime - startTime, 'get', 'google');
+                                cachedGeoInfo = geoInfo;
+                                console.log(geoInfo);
+                                deferred.resolve(geoInfo);
+                            }
                         },
                         function (err) {
                             endTime = new Date().getTime();
@@ -1259,8 +1314,8 @@ angular.module('service.weatherutil', [])
             navigator.geolocation.getCurrentPosition(function (position) {
                 //경기도,광주시,오포읍,37.36340556,127.2307667
                 //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                //세종특별자치시,세종특별자치시,연기면,36.517338,127.259247
-                //37.472595, 126.795249
+                //세종특별자치시,도담동
+                //position = {coords: {latitude: 36.517338, longitude: 127.259247}};
                 //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
                 //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
                 //서울특별시
@@ -1282,7 +1337,6 @@ angular.module('service.weatherutil', [])
                 //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
                 //경기도,성남시분당구,,62,123,127.12101944444444,37.37996944444445
                 //position = {coords: {latitude: 37.37996944444445, longitude: 127.12101944444444}};
-
                 //인천광역시,연수구,,55,123,126.68044166666667,37.40712222222222
                 //position = {coords: {latitude: 37.40712222222222, longitude: 126.68044166666667}};
 
