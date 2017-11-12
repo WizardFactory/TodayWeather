@@ -27,6 +27,14 @@ describe('unit test - keco requester', function() {
         assert.equal(key, keco.getServiceKey(), '');
     });
 
+    //it('test set/get daum key', function () {
+    //    var config = require('../config/config');
+    //    keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
+    //    var daum_key = keco.getDaumApiKey();
+    //
+    //    assert.equal(daum_key, "65e0aacada12c166c6ee9ee76844164e" , '');
+    //});
+
     //it('_check data time', function (done) {
     //    var mongoose = require('mongoose');
     //    mongoose.connect('localhost/todayweather', function(err) {

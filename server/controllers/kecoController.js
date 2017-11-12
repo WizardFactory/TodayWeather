@@ -765,7 +765,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
 
     var keyBox = require('../config/config').keyString;
     keco.setServiceKey(keyBox.normal);
-    keco.setDaumApiKey(keyBox.daum_key);
+    keco.setDaumApiKeys(JSON.parse(keyBox.daum_keys));
 
     async.waterfall([
         function(cb) {

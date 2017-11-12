@@ -2319,7 +2319,7 @@ Manager.prototype.startManager = function(){
     self.midRssKmaRequester = midRssKmaRequester;
 
     keco.setServiceKey(config.keyString.normal);
-    keco.setDaumApiKey(config.keyString.daum_key);
+    keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
     keco.getCtprvnSidoList();
 
     self.keco = keco;

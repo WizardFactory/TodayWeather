@@ -30,8 +30,11 @@ function saveDst() {
 }
 
 function getGeoCodeFromDaum(address, callback) {
+    var keyList = JSON.parse(config.keyString.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+
     var url = 'https://apis.daum.net/local/geo/addr2coord'+
-        '?apikey=' + config.keyString.daum_key +
+        '?apikey=' + daum_key +
         '&q='+ encodeURIComponent(address) +
         '&output=json';
 
