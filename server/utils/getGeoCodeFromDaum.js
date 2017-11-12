@@ -2,6 +2,7 @@
  * Created by aleckim on 2015. 12. 3..
  */
 
+"use strict";
 
 var fs = require('fs');
 var req = require('request');

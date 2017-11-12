@@ -3,6 +3,8 @@
  * Created by aleckim on 2017. 11. 7..
  */
 
+"use strict";
+
 var router = require('express').Router();
 var async = require('async');
 

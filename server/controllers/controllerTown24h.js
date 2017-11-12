@@ -638,7 +638,7 @@ function ControllerTown24h() {
     this.sendResult = function (req, res) {
         log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
         res.json(req.result);
-    }
+    };
 }
 
 // subclass extends superclass

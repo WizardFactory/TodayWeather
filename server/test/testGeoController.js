@@ -3,7 +3,8 @@
  * Created by aleckim on 2017. 11. 9..
  */
 
-var assert  = require('assert');
+"use strict";
+
 var GeoCtrl = require('../controllers/geo.controller');
 
 var Logger = require('../lib/log');

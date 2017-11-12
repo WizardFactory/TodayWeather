@@ -3,6 +3,8 @@
  * Created by aleckim on 2017. 11. 8..
  */
 
+"use strict";
+
 var async = require('async');
 var request = require('request');
 
@@ -162,7 +164,7 @@ GeoController.prototype._parseGoogleResult = function (data) {
     }
 
     if (country_name == undefined) {
-        throw new Error('country_name null latlng='+lat+","+lng);
+        throw new Error('country_name null');
     }
 
     var name;
@@ -171,7 +173,7 @@ GeoController.prototype._parseGoogleResult = function (data) {
     if (country_name == "KR") {
         if (sub_level2_name) {
             address += sub_level2_name;
-            name = sub_level2_name
+            name = sub_level2_name;
         }
     }
     if (sub_level1_name) {
