@@ -10,14 +10,14 @@ var request = require('request');
 
 var config = require('../config/config');
 
+var daumKeys = JSON.parse(config.keyString.daum_keys);
+var googleApiKey = config.keyString.google_key;
 
 function GeoController(lat, lon, lang, country) {
     this.lat = lat;
     this.lon = lon;
     this.lang = lang;
     this.country = country;
-    this.daumKeys = JSON.parse(config.keyString.daum_keys);
-    this.googleApiKey = config.keyString.google_key;
     this.kmaAddress = null;
     this.address = "";
     this.name = "";
@@ -49,10 +49,10 @@ GeoController.prototype._getAddressFromDaum = function (callback) {
     var that = this;
     var index = 0;
 
-    async.retry(that.daumKeys.length,
+    async.retry(daumKeys.length,
         function (cb) {
             var url = 'https://apis.daum.net/local/geo/coord2addr'+
-                '?apikey=' + that.daumKeys[index] +
+                '?apikey=' + daumKeys[index] +
                 '&longitude='+ that.lon +
                 '&latitude='+that.lat+
                 '&inputCoordSystem=WGS84'+
@@ -111,6 +111,35 @@ GeoController.prototype._getAddressFromDaum = function (callback) {
     return this;
 };
 
+function _getAddressInfoFromGoogleResult(result) {
+    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+    var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+    var local_types = [ "locality", "political" ];
+    var info = {};
+    info.address = result.formatted_address;
+
+    for (var j=0; j < result.address_components.length; j++) {
+        var address_component = result.address_components[j];
+        if ( address_component.types[0] == sub_level2_types[0]
+            && address_component.types[1] == sub_level2_types[1]
+            && address_component.types[2] == sub_level2_types[2] ) {
+            info.sub_level2_name = address_component.short_name;
+        }
+
+        if ( address_component.types[0] == sub_level1_types[0]
+            && address_component.types[1] == sub_level1_types[1]
+            && address_component.types[2] == sub_level1_types[2] ) {
+            info.sub_level1_name = address_component.short_name;
+        }
+
+        if ( address_component.types[0] == local_types[0]
+            && address_component.types[1] == local_types[1] ) {
+            info.local_name = address_component.short_name;
+        }
+    }
+    return info;
+}
+
 GeoController.prototype._parseGoogleResult = function (data) {
     if (data.status !== "OK") {
         //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
@@ -121,45 +150,48 @@ GeoController.prototype._parseGoogleResult = function (data) {
     var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
     var local_types = [ "locality", "political" ];
     var country_types = ["country"];
-    var sub_level2_name;
-    var sub_level1_name;
-    var local_name;
     var country_name;
+    var address_sublocality_level_2;
+    var address_sublocality_level_1;
+    var address_locality;
+    var address;
+    var name;
 
     for (var i=0; i < data.results.length; i++) {
         var result = data.results[i];
+
+        //get country_name
         for (var j=0; j < result.address_components.length; j++) {
+            if (country_name) {
+                break;
+            }
             var address_component = result.address_components[j];
-            if ( address_component.types[0] == sub_level2_types[0]
-                && address_component.types[1] == sub_level2_types[1]
-                && address_component.types[2] == sub_level2_types[2] ) {
-                sub_level2_name = address_component.short_name;
-            }
-
-            if ( address_component.types[0] == sub_level1_types[0]
-                && address_component.types[1] == sub_level1_types[1]
-                && address_component.types[2] == sub_level1_types[2] ) {
-                sub_level1_name = address_component.short_name;
-            }
-
-            if ( address_component.types[0] == local_types[0]
-                && address_component.types[1] == local_types[1] ) {
-                local_name = address_component.short_name;
-            }
-
             if ( address_component.types[0] == country_types[0] ) {
                 if (address_component.short_name.length <= 2) {
                     country_name = address_component.short_name;
                 }
             }
-
-            if (sub_level2_name && sub_level1_name && local_name && country_name) {
-                break;
-            }
         }
 
-        if (sub_level2_name && sub_level1_name && local_name && country_name) {
-            break;
+        //postal_code
+        switch (result.types.toString()) {
+            case sub_level2_types.toString():
+                if (!address_sublocality_level_2) {
+                    address_sublocality_level_2 = _getAddressInfoFromGoogleResult(result);
+                }
+                break;
+            case sub_level1_types.toString():
+                if (!address_sublocality_level_1) {
+                    address_sublocality_level_1 = _getAddressInfoFromGoogleResult(result);
+                }
+                break;
+            case local_types.toString():
+                if (!address_locality) {
+                    address_locality = _getAddressInfoFromGoogleResult(result);
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -167,35 +199,23 @@ GeoController.prototype._parseGoogleResult = function (data) {
         throw new Error('country_name null');
     }
 
-    var name;
-    var address = "";
-    //국내는 동단위까지 표기해야 함.
-    if (country_name == "KR") {
-        if (sub_level2_name) {
-            address += sub_level2_name;
-            name = sub_level2_name;
-        }
+    if (address_sublocality_level_2) {
+        address = address_sublocality_level_2.address;
+        name = address_sublocality_level_2.sub_level2_name;
     }
-    if (sub_level1_name) {
-        address += " " + sub_level1_name;
-        if (name == undefined) {
-            name = sub_level1_name;
-        }
+    else if (address_sublocality_level_1) {
+        address = address_sublocality_level_1.address;
+        name = address_sublocality_level_1.sub_level1_name;
     }
-    if (local_name) {
-        address += " " + local_name;
-        if (name == undefined) {
-            name = local_name;
-        }
+    else if (address_locality) {
+        address = address_locality.address;
+        name = address_locality.local_name;
     }
-    if (country_name) {
-        address += " " + country_name;
-        if (name == undefined) {
-            name = country_name;
-        }
+    else {
+        throw new Error('failToFindLocation');
     }
 
-    if (name == undefined || name == country_name) {
+    if (name == undefined || address == undefined) {
         throw new Error('failToFindLocation');
     }
 
@@ -211,12 +231,13 @@ GeoController.prototype._getAddressFromGoogle = function (callback) {
     if (that.lang) {
         url += "&language="+that.lang;
     }
-    if (that.googleApiKey) {
-        url += "&key="+that.googleApiKey;
+    if (googleApiKey) {
+        url += "&key="+googleApiKey;
     }
     else {
         log.warn("google api key is not valid");
     }
+    log.info(url);
     async.retry(3,
         function (cb) {
             that._request(url, function (err, result) {
@@ -322,10 +343,7 @@ GeoController.prototype.location2address = function(req, res, next) {
             req.result.address = that.address;
             req.result.country = that.country;
 
-            //req.result.location
-            //req.result.address
-            //req.result.name
-            //req.reqult.timezone
+            log.info(that);
             next();
         });
 
