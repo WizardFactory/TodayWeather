@@ -572,10 +572,10 @@ function ControllerTown24h() {
         return this;
     };
 
-    this.sendResult = function (req, res) {
+    this.makeResult = function (req, res, next) {
         var meta = {};
 
-        var result = {};
+        var result;
         var regionName = req.params.region;
         var cityName = req.params.city;
         var townName = req.params.town;
@@ -585,6 +585,10 @@ function ControllerTown24h() {
         meta.city = cityName;
         meta.town = townName;
 
+        if (req.result == undefined) {
+            req.result = {};
+        }
+        result = req.result;
         result.regionName = regionName;
         result.cityName = cityName;
         result.townName = townName;
@@ -626,11 +630,14 @@ function ControllerTown24h() {
         if (req.dailySummary) {
             result.dailySummary = req.dailySummary;
         }
-
-        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
-        res.json(result);
-
+        result.source = "KMA";
+        next();
         return this;
+    };
+
+    this.sendResult = function (req, res) {
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
+        res.json(req.result);
     };
 }
 

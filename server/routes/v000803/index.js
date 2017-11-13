@@ -126,4 +126,6 @@ router.post('/', function(req,res) {
 
 router.use('/test', require('./route.test'));
 
+router.use('/geo', require('./route.geo'));
+
 module.exports = router;
