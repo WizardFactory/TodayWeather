@@ -42,6 +42,7 @@ GeoController.prototype._request = function(url, callback) {
  * "name3":"역삼1동","x":127.03306535867272,"y":37.495359482762545}
  * {"type":"H","code":"90003","name":"일본","fullName":"일본","name0":"일본",
  * "x":135.2266257553163,"y":33.63189788608174}
+ * {"error":{"code":"RESULT_NOT_FOUND","message":"Results do not exist"}}
  * @param callback
  * @private
  */
@@ -111,6 +112,12 @@ GeoController.prototype._getAddressFromDaum = function (callback) {
     return this;
 };
 
+/**
+ *
+ * @param result
+ * @returns {{}}
+ * @private
+ */
 function _getAddressInfoFromGoogleResult(result) {
     var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
     var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
@@ -140,6 +147,90 @@ function _getAddressInfoFromGoogleResult(result) {
     return info;
 }
 
+/**
+ *
+ * @param results
+ * @param countryShortName
+ * @returns {{name: *, address: string}}
+ * @private
+ */
+function _getAddressInfoFromAddressComponents(results, countryShortName) {
+
+    var sub_level2_types = [ "political", "sublocality", "sublocality_level_2" ];
+    var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
+    var local_types = [ "locality", "political" ];
+    var country_types = ["country"];
+    var sub_level2_name;
+    var sub_level1_name;
+    var local_name;
+    var country_name;
+
+    for (var i=0; i < results.length; i++) {
+        var result = results[i];
+        for (var j=0; j < result.address_components.length; j++) {
+            var address_component = result.address_components[j];
+            if ( address_component.types[0] == sub_level2_types[0]
+                && address_component.types[1] == sub_level2_types[1]
+                && address_component.types[2] == sub_level2_types[2] ) {
+                sub_level2_name = address_component.short_name;
+            }
+
+            if ( address_component.types[0] == sub_level1_types[0]
+                && address_component.types[1] == sub_level1_types[1]
+                && address_component.types[2] == sub_level1_types[2] ) {
+                sub_level1_name = address_component.short_name;
+            }
+
+            if ( address_component.types[0] == local_types[0]
+                && address_component.types[1] == local_types[1] ) {
+                local_name = address_component.short_name;
+            }
+
+            if ( address_component.types[0] == country_types[0] ) {
+                country_name = address_component.long_name;
+            }
+
+            if (sub_level2_name && sub_level1_name && local_name && country_name) {
+                break;
+            }
+        }
+
+        if (sub_level2_name && sub_level1_name && local_name && country_name) {
+            break;
+        }
+    }
+
+    var name;
+    var address = "";
+    //국내는 동단위까지 표기해야 함.
+    if (countryShortName === "KR") {
+        if (sub_level2_name) {
+            address += sub_level2_name;
+            name = sub_level2_name;
+        }
+    }
+    if (sub_level1_name) {
+        address += " " + sub_level1_name;
+        if (name == undefined) {
+            name = sub_level1_name;
+        }
+    }
+    if (local_name) {
+        address += " " + local_name;
+        if (name == undefined) {
+            name = local_name;
+        }
+    }
+    if (country_name) {
+        address += " " + country_name;
+        if (name == undefined) {
+            name = country_name;
+        }
+    }
+
+    return {name: name, address:address};
+}
+
 GeoController.prototype._parseGoogleResult = function (data) {
     if (data.status !== "OK") {
         //'ZERO_RESULTS', 'OVER_QUERY_LIMIT', 'REQUEST_DENIED',  'INVALID_REQUEST', 'UNKNOWN_ERROR'
@@ -150,25 +241,23 @@ GeoController.prototype._parseGoogleResult = function (data) {
     var sub_level1_types = [ "political", "sublocality", "sublocality_level_1" ];
     var local_types = [ "locality", "political" ];
     var country_types = ["country"];
-    var country_name;
     var address_sublocality_level_2;
     var address_sublocality_level_1;
     var address_locality;
-    var address;
-    var name;
+    var countryName;
 
     for (var i=0; i < data.results.length; i++) {
         var result = data.results[i];
 
         //get country_name
         for (var j=0; j < result.address_components.length; j++) {
-            if (country_name) {
+            if (countryName) {
                 break;
             }
             var address_component = result.address_components[j];
             if ( address_component.types[0] == country_types[0] ) {
                 if (address_component.short_name.length <= 2) {
-                    country_name = address_component.short_name;
+                    countryName = address_component.short_name;
                 }
             }
         }
@@ -195,32 +284,32 @@ GeoController.prototype._parseGoogleResult = function (data) {
         }
     }
 
-    if (country_name == undefined) {
+    if (countryName == undefined) {
         throw new Error('country_name null');
     }
 
-    if (address_sublocality_level_2) {
-        address = address_sublocality_level_2.address;
-        name = address_sublocality_level_2.sub_level2_name;
+    var geoInfo = {country: countryName};
+    if (address_sublocality_level_2 && countryName == "KR") {
+        geoInfo.address = address_sublocality_level_2.address;
+        geoInfo.name = address_sublocality_level_2.sub_level2_name;
     }
     else if (address_sublocality_level_1) {
-        address = address_sublocality_level_1.address;
-        name = address_sublocality_level_1.sub_level1_name;
+        geoInfo.address = address_sublocality_level_1.address;
+        geoInfo.name = address_sublocality_level_1.sub_level1_name;
     }
     else if (address_locality) {
-        address = address_locality.address;
-        name = address_locality.local_name;
+        geoInfo.address = address_locality.address;
+        geoInfo.name = address_locality.local_name;
     }
     else {
+        geoInfo = _getAddressInfoFromAddressComponents(data.results, countryName);
+        geoInfo.country = countryName;
+    }
+
+    if (geoInfo.name == undefined || geoInfo.address == undefined) {
         throw new Error('failToFindLocation');
     }
 
-    if (name == undefined || address == undefined) {
-        throw new Error('failToFindLocation');
-    }
-
-    var geoInfo =  {country: country_name, address: address};
-    geoInfo.name = name;
     return geoInfo;
 };
 
