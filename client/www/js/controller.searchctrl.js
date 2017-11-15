@@ -23,21 +23,6 @@ angular.module('controller.searchctrl', [])
         var strCurrent = "Current";
         var strLocation = "Location";
 
-        $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
-            'LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED', 'LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
-            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
-            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-            strError = translations.LOC_ERROR;
-            strAlreadyTheSameLocationHasBeenAdded = translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED;
-            strCurrent = translations.LOC_CURRENT;
-            strLocation = translations.LOC_LOCATION;
-        }, function (translationIds) {
-            console.log("Fail to translate : " + JSON.stringify(translationIds));
-        });
-
         var service;
         function _lazyLoad(url) {
             $ocLazyLoad.load(url).then(function () {
@@ -94,7 +79,17 @@ angular.module('controller.searchctrl', [])
                 }
 
                 if (city.currentPosition && city.address === null) {
-                    address = [strCurrent, strLocation];
+                    if (
+                        Util.language.indexOf("ko") != -1 ||
+                        Util.language.indexOf("ja") != -1 ||
+                        Util.language.indexOf("zh-CN") != -1 ||
+                        Util.language.indexOf("zh-TU") != -1) {
+
+                        address = [strCurrent+strLocation];
+                    }
+                    else {
+                        address = [strCurrent+" "+strLocation];
+                    }
                 }
                 if (!city.currentWeather) {
                     city.currentWeather = {};
@@ -177,6 +172,11 @@ angular.module('controller.searchctrl', [])
         $scope.$on('searchCurrentPositionEvent', function(event) {
             console.log(event);
             $scope.OnSearchCurrentPosition();
+        });
+
+        $scope.$on('updateCurrentPositionWeatherEvent', function(event) {
+            console.log(event);
+            updateCurrentPositionWeather();
         });
 
         $scope.OnSearchCurrentPosition = function() {
@@ -391,16 +391,61 @@ angular.module('controller.searchctrl', [])
             $location.path('/tab/forecast');
         };
 
+        function updateCurrentPositionWeather() {
+            showLoadingIndicator();
+            updateCurrentPosition().then(function(geoInfo) {
+                console.log('updated current position');
+                WeatherInfo.updateCity(0, geoInfo);
+                updateWeatherData(0).then(function (city) {
+                    index = WeatherInfo.getIndexOfCity(city);
+                    if (index !== -1) {
+                        WeatherInfo.updateCity(index, city);
+
+                        var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                        var todayData = city.currentWeather.today;
+                        var data = $scope.cityList[index];
+                        if (city.name) {
+                            data.address = [];
+                            data.address.push(city.name);
+                        }
+                        else {
+                            data.address = address;
+                        }
+                        data.skyIcon = city.currentWeather.skyIcon;
+                        data.t1h = city.currentWeather.t1h;
+                        data.tmn = todayData.tmn;
+                        data.tmx = todayData.tmx;
+                    }
+                }).finally(function () {
+                    hideLoadingIndicator();
+                });
+            }, function(msg) {
+                console.log('Fail to get current position');
+                hideLoadingIndicator();
+                if (msg !== null) {
+                    $scope.showRetryConfirm(strError, msg, 'search');
+                }
+                else {
+                    $scope.$broadcast('updateCurrentPositionWeatherEvent');
+                }
+            });
+        }
+
         /**
          *
          * @returns {boolean}
          * @constructor
          */
         $scope.OnDisableCity = function() {
-            Util.ga.trackEvent('city', 'disable', $scope.cityList[0].disable, 0);
+            var city = $scope.cityList[0];
+            Util.ga.trackEvent('city', 'disable', city.disable, 0);
 
-            WeatherInfo.disableCity($scope.cityList[0].disable);
+            WeatherInfo.disableCity(city.disable);
 
+            if (city.disable === false && city.t1h === '-') {
+                //it is enable at first time
+                updateCurrentPositionWeather();
+            }
             return false; //OnDisableCity가 호출되지 않도록 이벤트 막음
         };
 
@@ -662,6 +707,7 @@ angular.module('controller.searchctrl', [])
 
             // 현재 위치는 저장된 위치가 있는 경우에만 날씨 데이터를 업데이트함
             if (cityData.currentPosition === true && cityData.address === null && cityData.location === null) {
+                console.log('city address and location are null');
                 deferred.reject();
             } else {
                 var startTime = new Date().getTime();
@@ -717,5 +763,20 @@ angular.module('controller.searchctrl', [])
             }
         });
 
-        init();
+        $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
+            'LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED', 'LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
+            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            strError = translations.LOC_ERROR;
+            strAlreadyTheSameLocationHasBeenAdded = translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED;
+            strCurrent = translations.LOC_CURRENT;
+            strLocation = translations.LOC_LOCATION;
+        }, function (translationIds) {
+            console.log("Fail to translate : " + JSON.stringify(translationIds));
+        }).finally(function () {
+            init();
+        });
     });

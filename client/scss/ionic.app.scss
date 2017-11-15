@@ -518,6 +518,20 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   font-size: 17px;
 }
 
+.search-item.search-name {
+  text-overflow:ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.search-item .material-icons {
+  font-size: inherit;
+  position: relative;
+  top:2px;
+  right: 3px;
+  letter-spacing: -4px
+}
+
 .search-item.last-item {
   width: 48px;
   text-align: center;
