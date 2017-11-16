@@ -86,7 +86,7 @@
     {
       "platform": "ios",
       "version": "",
-      "locator": "ios@4.3.1"
+      "locator": "ios"
     }
   ]
 }
