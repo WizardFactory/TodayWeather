@@ -4,8 +4,6 @@
 "use strict";
 var fs = require('fs');
 
-var kmaTimelib = require('../lib/kmaTimeLib');
-
 var libAirkoreaImageParser = require('../lib/airkorea.finedust.image.parser.js');
 
 function airkoreaDustImageController(){
@@ -38,8 +36,6 @@ function airkoreaDustImageController(){
         {"r":135,"g":192,"b":232,"val":6}, {"r":170,"g":210,"b":225,"val":0}
     ];
     this.parser = new libAirkoreaImageParser();
-    this.storeType = 'file';
-
 }
 /*
 airkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, path, pixelMap, callback){
