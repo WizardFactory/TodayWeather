@@ -90,6 +90,7 @@ describe('Test - Airkorea Image parser ', function(){
         var controller = new (require('../../controllers/airkorea.dust.image.controller'));
         var image_url = './image.gif';
         var geocode = {lat: 35.8927778, lon : 129.4949194};
+        /*
         var expectedRes = [
             {"r":152,"g":201,"b":228},{"r":152,"g":201,"b":228},
             {"r":152,"g":201,"b":228},{"r":54,"g":74,"b":86},
@@ -115,13 +116,19 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":135,"g":192,"b":232},{"r":100,"g":175,"b":240},
             {"r":100,"g":175,"b":240},{"r":135,"g":192,"b":232},
             {"r":135,"g":192,"b":232},{"r":135,"g":192,"b":232}];
-        var expectedColorValue = [6,6,6,6,6,18,18,24,40,80,40,40,30,30,24,18,18,6,6,6,6,6,6,18,18,6,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,6,6,18,18,6,6,6];
+        */
+        var expectedColorValue = [
+            6,6,6,6,6,18,18,24,40,80,
+            40,40,30,30,24,18,18,6,6,6,6,
+            6,6,18,18,6,18,18,18,18,18,
+            18,18,18,18,18,18,18,18,18,18,
+            6,6,18,18,6,6,6];
         controller.startDustImageMgr(image_url, 'image/gif', function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
                 return done();
             }
-
+            log.info(pixel.image_count);
             controller.getDustInfo(geocode.lat, geocode.lon, function(err, result){
                 if(err){
                     log.info('2. ERROR!!!!');

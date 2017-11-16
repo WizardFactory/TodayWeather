@@ -8,15 +8,14 @@ var fs = require('fs');
 
 
 function airkoreaImageParser(){
-    var self = this;
-    self.default_coordinate = {
+    this.default_coordinate = {
         top_left: {lat: 39.3769, lon: 123.9523},
         top_right: {lat: 39.3769, lon: 130.6741},
         bottom_left: {lat: 32.6942, lon: 123.9523},
         bottom_right: {lat: 32.6942, lon: 130.6741}
     };
     //self.map_area = {left:12, right:597, top: 72, bottom:790}
-    self.map_area = {left:78, right:663, top: 80, bottom:798};
+    this.map_area = {left:78, right:663, top: 80, bottom:798};
 
 }
 

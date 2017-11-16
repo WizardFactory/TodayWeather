@@ -3,23 +3,20 @@
  */
 "use strict";
 var fs = require('fs');
-var async = require('async');
 
 var kmaTimelib = require('../lib/kmaTimeLib');
 
 var libAirkoreaImageParser = require('../lib/airkorea.finedust.image.parser.js');
 
 function airkoreaDustImageController(){
-    var self = this;
-
     // image default geocode
-    self.coordinate = {
+    this.coordinate = {
         top_left: {lat: 39.3769, lon: 123.9523},
         top_right: {lat: 39.3769, lon: 130.6741},
         bottom_left: {lat: 32.6942, lon: 123.9523},
         bottom_right: {lat: 32.6942, lon: 130.6741}
     };
-    self.colorTable = [
+    this.colorTable = [
         {"r":104,"g":0,"b":0,"val":999},    {"r":142,"g":0,"b":0,"val":320},
         {"r":179,"g":0,"b":0,"val":280},    {"r":179,"g":0,"b":0,"val":260},
         {"r":205,"g":0,"b":0,"val":240},    {"r":242,"g":0,"b":0,"val":220},
@@ -40,11 +37,11 @@ function airkoreaDustImageController(){
         {"r":100,"g":175,"b":240,"val":12}, {"r":152,"g":201,"b":228,"val":6},
         {"r":135,"g":192,"b":232,"val":6}, {"r":170,"g":210,"b":225,"val":0}
     ];
-    self.parser = new libAirkoreaImageParser();
-    self.storeType = 'file';
+    this.parser = new libAirkoreaImageParser();
+    this.storeType = 'file';
 
 }
-
+/*
 airkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, path, pixelMap, callback){
     var self = this;
     var newData = {
@@ -86,6 +83,7 @@ airkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, 
         });
     }
 };
+*/
 
 airkoreaDustImageController.prototype.parseMapImage = function(path, type, callback){
     var self = this;
@@ -111,7 +109,7 @@ airkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback)
     var x = parseInt((lon - self.coordinate.top_left.lon) / pixels.map_pixel_distance_width) + pixels.map_area.left;
     var y = parseInt((self.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height) + pixels.map_area.top;
 
-    log.info('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height,  pixels.map_area.top);
+    log.info('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
     log.info('Airkorea Image > x: ', x, 'y: ',y);
 
     var result = [];
@@ -120,7 +118,7 @@ airkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback)
             var w = 0;
             var h = 0;
 
-            if(j != 0){
+            if(j !== 0){
                 // 정확한 x,y 좌표가 invalid한 색일 경우 좌표를 보정한다
                 w = parseInt(j/8) - 4;
                 h = parseInt(j%8) - 4;
@@ -145,7 +143,7 @@ airkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback)
                 break;
             }
         }
-        if(j == 64){
+        if(j === 64){
             // 보정된 좌표 64개 모두 invalid한 색이 나올 경우 error 처리 한다
             log.error('Airkorea Image > Fail to find color value : ', i);
             result.push(6);
@@ -172,7 +170,7 @@ airkoreaDustImageController.prototype.startDustImageMgr = function(path, type, c
 
         self.imagePixels = pixelMap;
         if(callback){
-            callback(null);
+            callback(null, pixelMap);
         }
         return ;
     });
