@@ -20,5 +20,6 @@ window.twClientConfig = {
     serverUrl : 'https://tw-test.wizardfactory.net',
     mailTo : 'todayweather@wizardfactory.net',
     isPaidApp : false,
-    debug : true
+    debug : true,
+    googleapikey : 'GOOGLE_API_KEY'
 };

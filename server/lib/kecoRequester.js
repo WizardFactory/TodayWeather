@@ -34,7 +34,7 @@ function Keco() {
     this._svcKey ='';
     this._sidoList = [];
     this._currentSidoIndex = 0;
-    this._daumApiKey = '';  //for convert x,y
+    this._daumApiKeys = '';  //for convert x,y
 }
 
 /**
@@ -42,8 +42,8 @@ function Keco() {
  * @param key
  * @returns {Keco}
  */
-Keco.prototype.setDaumApiKey = function (key) {
-    this._daumApiKey = key;
+Keco.prototype.setDaumApiKeys = function (keys) {
+    this._daumApiKeys = keys;
     return this;
 };
 
@@ -52,7 +52,7 @@ Keco.prototype.setDaumApiKey = function (key) {
  * @returns {string|*}
  */
 Keco.prototype.getDaumApiKey = function () {
-    return this._daumApiKey;
+    return this._daumApiKeys[Math.floor(Math.random() * this._daumApiKeys.length)];
 };
 
 /**

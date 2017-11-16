@@ -39,15 +39,19 @@ angular.module('controller.searchctrl', [])
         });
 
         var service;
-        if (window.google == undefined) {
-            $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
-                console.log('googleapis loaded');
+        function _lazyLoad(url) {
+            $ocLazyLoad.load(url).then(function () {
+                console.log('google apis loaded');
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 Util.ga.trackEvent('window', 'error', 'lazyLoad');
                 Util.ga.trackException(e, true);
-                window.alert(e);
+                //window.alert(e);
             });
+        }
+
+        if (window.google == undefined) {
+           _lazyLoad(Util.placesUrl);
         }
         else {
             service = new google.maps.places.AutocompleteService();
@@ -62,6 +66,9 @@ angular.module('controller.searchctrl', [])
                 if (status != google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
                     Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
                     console.log(status);
+                }
+                else {
+                    //zero results
                 }
                 return;
             }

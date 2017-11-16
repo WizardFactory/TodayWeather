@@ -80,20 +80,22 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
-        if(req.error){
-            res.json(req.error);
+        var result;
+        if(req.error) {
+            result = req.error;
         }
         else if(req.result){
             if (req.result.thisTime.length != 2) {
                 log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
             }
-            res.json(req.result);
-            return;
+            result = req.result;
         }
         else {
-            res.json({result: 'Unknown result'});
+            result = {result: 'Unknown result'};
         }
+
         log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
+        res.json(result);
         return;
     };
 
@@ -1609,6 +1611,7 @@ function controllerWorldWeather(){
             });
         }
 
+        req.result.source = "DSF";
         next();
     };
 
@@ -3086,6 +3089,7 @@ function controllerWorldWeather(){
             case 'heavy sleet': return 30;
             case 'sleet clear': return 31;
             case 'light snow at times': return 32;
+            case 'possible light snow':
             case 'light snow': return 33;
             case 'snow at times': return 34;
             case 'snow': return 35;
