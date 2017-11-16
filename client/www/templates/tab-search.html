@@ -47,16 +47,15 @@
         <div class="list card" ng-if="isSearching===false">
             <div class="item" ng-repeat="city in cityList" ng-hide="city.disable && !isEditing">
                 <div class="row row-no-padding">
-                    <div class="col col-40 search-item" style="margin: auto 0" ng-click="OnSelectCity($index)" >
+                    <div class="col search-item search-name" ng-class="{'col-40': city.t1h != '-'}" style="margin: auto 0;" ng-click="OnSelectCity($index)" >
                         <!--location_on-->
-                        {{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
-                        <i ng-if="city.currentPosition" class="material-icons" style="font-size: inherit;">&#xE0C8;</i>
+                        <i ng-if="city.currentPosition" class="material-icons">&#xE0C8;</i>{{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
                     </div>
-                    <div class="search-item" style="margin: auto 0" ng-click="OnSelectCity($index)">
+                    <div class="search-item" ng-if="city.t1h != '-'" style="margin: auto 0" ng-click="OnSelectCity($index)">
                         <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
                     </div>
-                    <div class="search-item" style="text-align: center;" ng-click="OnSelectCity($index)">
-                        {{city.t1h.toFixed(0)}}˚<br>
+                    <div class="search-item" ng-if="city.t1h != '-'" style="text-align: center;" ng-click="OnSelectCity($index)">
+                        <span>{{city.t1h.toFixed(0)}}˚</span><br>
                         <span style="font-size: 12px;">{{city.tmn.toFixed(0)}}˚/{{city.tmx.toFixed(0)}}˚</span>
                     </div>
                     <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenTimePicker($index)">
