@@ -159,10 +159,12 @@ angular.module('service.twads', [])
                 self.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
+            var adSize = ionic.Platform.isIOS()?admob.AD_SIZE.SMART_BANNER:admob.AD_SIZE.BANNER;
+
             admob.setOptions({
                 publisherId:    self.bannerAdUnit,
                 interstitialAdId: self.interstitialAdUnit,
-                adSize:         admob.AD_SIZE.BANNER,
+                adSize:         adSize,
                 bannerAtTop:    false,
                 overlap:        false,
                 offsetStatusBar:    false,
