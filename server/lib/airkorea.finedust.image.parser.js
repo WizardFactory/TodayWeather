@@ -4,10 +4,10 @@
 "use strict";
 
 var getPixels = require('get-pixels');
-var fs = require('fs');
+//var fs = require('fs');
 
 
-function airkoreaImageParser(){
+function AirkoreaImageParser(){
     this.default_coordinate = {
         top_left: {lat: 39.3769, lon: 123.9523},
         top_right: {lat: 39.3769, lon: 130.6741},
@@ -19,7 +19,7 @@ function airkoreaImageParser(){
 
 }
 
-airkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
+AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
     var self = this;
 
     getPixels(path, type, function(err, pixels){
@@ -102,4 +102,4 @@ airkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
     });
 };
 
-module.exports = airkoreaImageParser;
+module.exports = AirkoreaImageParser;

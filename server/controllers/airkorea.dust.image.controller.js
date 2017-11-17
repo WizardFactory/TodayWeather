@@ -174,7 +174,6 @@ AirkoreaDustImageController.prototype.startDustImageMgr = function(path, type, c
         if(callback){
             callback(null, pixelMap);
         }
-        return ;
     });
 };
 
