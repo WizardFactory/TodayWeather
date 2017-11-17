@@ -18,7 +18,7 @@ var town = require('../../models/town');
 
 describe('Test - Airkorea Image parser ', function(){
     it('get map pixels', function(done){
-        var parser = new (require('../../lib/airkorea.finedust.image.parser'));
+        var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
 
         //var image_url = './test/testImageParser/dust_test_image.png';
         var image_url = './image.gif';
@@ -67,7 +67,7 @@ describe('Test - Airkorea Image parser ', function(){
             }
         });
 
-        var airkoreaController = new (require('../../controllers/airkorea.dust.image.controller'));
+        var airkoreaController = new (require('../../controllers/airkorea.dust.image.controller'))();
         var image_url = './image.gif';
 
         airkoreaController.parseMapImage(image_url, 'image/gif', function(err, pixel){
@@ -87,7 +87,7 @@ describe('Test - Airkorea Image parser ', function(){
     });
 */
     it('dust image', function(done){
-        var controller = new (require('../../controllers/airkorea.dust.image.controller'));
+        var controller = new (require('../../controllers/airkorea.dust.image.controller'))();
         var image_url = './image.gif';
         var geocode = {lat: 35.8927778, lon : 129.4949194};
         /*
@@ -179,7 +179,7 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":76,"g":163,"b":245,"val":24},{"r":100,"g":175,"b":240,"val":18},
             {"r":100,"g":175,"b":240,"val":12},{"r":152,"g":201,"b":228,"val":6},
             {"r":170,"g":210,"b":225,"val":0}];
-        var parser = new (require('../../lib/airkorea.finedust.image.parser'));
+        var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
         var image_url = './image.gif';
         var imageData = {
             width: 820,
