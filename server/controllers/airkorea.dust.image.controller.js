@@ -2,11 +2,11 @@
  * Created by Peter on 2017. 11. 5..
  */
 "use strict";
-var fs = require('fs');
+//var fs = require('fs');
 
 var libAirkoreaImageParser = require('../lib/airkorea.finedust.image.parser.js');
 
-function airkoreaDustImageController(){
+function AirkoreaDustImageController(){
     // image default geocode
     this.coordinate = {
         top_left: {lat: 39.3769, lon: 123.9523},
@@ -36,9 +36,11 @@ function airkoreaDustImageController(){
         {"r":135,"g":192,"b":232,"val":6}, {"r":170,"g":210,"b":225,"val":0}
     ];
     this.parser = new libAirkoreaImageParser();
+
+    return this;
 }
 /*
-airkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, path, pixelMap, callback){
+ AirkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, path, pixelMap, callback){
     var self = this;
     var newData = {
         pubDate: pubDate,
@@ -81,8 +83,12 @@ airkoreaDustImageController.prototype.savePixelMap = function(pubDate, fcsDate, 
 };
 */
 
-airkoreaDustImageController.prototype.parseMapImage = function(path, type, callback){
+AirkoreaDustImageController.prototype.parseMapImage = function(path, type, callback){
     var self = this;
+
+    if(self.parser === undefined){
+        return callback(new Error('Need to init airkoreaDustImageController'));
+    }
 
     self.parser.getPixelMap(path, type, self.coordinate, function(err, pixelMap){
         if(err){
@@ -94,7 +100,7 @@ airkoreaDustImageController.prototype.parseMapImage = function(path, type, callb
 };
 
 
-airkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback){
+AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback){
     var self = this;
 
     if(self.imagePixels === undefined){
@@ -156,7 +162,7 @@ airkoreaDustImageController.prototype.getDustInfo = function(lat, lon, callback)
 };
 
 
-airkoreaDustImageController.prototype.startDustImageMgr = function(path, type, callback){
+AirkoreaDustImageController.prototype.startDustImageMgr = function(path, type, callback){
     var self = this;
 
     self.parseMapImage(path, type, function(err, pixelMap){
@@ -172,4 +178,4 @@ airkoreaDustImageController.prototype.startDustImageMgr = function(path, type, c
     });
 };
 
-module.exports = airkoreaDustImageController;
+module.exports = AirkoreaDustImageController;
