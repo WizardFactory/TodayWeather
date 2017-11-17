@@ -32,6 +32,7 @@ var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortRss = new (require('./kma/kma.town.short.rss.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
+var GeoController = require('./geo.controller');
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -66,7 +67,14 @@ function ControllerTown() {
             req.params.region = req.params.city;
             req.params.city= regionName;
             req.params.town = undefined;
-            next();
+
+            var geo = new GeoController(0, 0, 'ko', 'KR');
+            geo.name2address(req, function(err) {
+               if (err)  {
+                   return next(err);
+               }
+                next();
+            });
         }
         else if (townName == 'JP') {
             log.error('Invalid params='+JSON.stringify(req.params));
