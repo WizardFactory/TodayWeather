@@ -39,6 +39,7 @@ function ControllerTown24h() {
             return this;
         }
 
+        //t3h, tmx, tmn로부터 일별 taMax, taMin을 만들고 tmx, tmn을 초기화 한다.
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
 
@@ -59,6 +60,7 @@ function ControllerTown24h() {
                 log.verbose(index+" tmx clear");
                 //clear tmx
             }
+
             short.tmx = -50;
 
             if (daySummary.taMin === -50 && short.t3h !== -50) {
@@ -298,13 +300,13 @@ function ControllerTown24h() {
             }
         });
 
+        //앞의 invalid한 날씨정보를 제거
         i = req.short.length - 1;
         for(;i>=0;i--) {
             if(req.short[i].t3h !== -50) {
                 break;
             }
         }
-
         req.short.splice(i+1, (req.short.length-(i+1)));
 
         next();
@@ -549,6 +551,47 @@ function ControllerTown24h() {
         return this;
     };
 
+
+    this.AirkoreaForecast = function (req, res, next){
+        var meta = {};
+
+        var result;
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = '/:region/:city/:town';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        if(global.airkoreaDustImageMgr){
+            if(req.geocode){
+                airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', function(err, pm10){
+                    if(err){
+                        log.info('Fail to get PM 10 info');
+                        return next();
+                    }
+                    req.airkorea_dust_forecast = {};
+                    req.airkorea_dust_forecast['PM10'] = pm10;
+
+                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', function(err, pm25){
+                        if(err){
+                            log.info('Fail to get PM 25 info');
+                            return next();
+                        }
+                        req.airkorea_dust_forecast['PM25'] = pm25;
+                        next();
+                    });
+                });
+            }
+        }else{
+            next();
+        }
+
+        return this;
+    };
+
     this.sendDailySummaryResult = function (req, res) {
         var meta = {};
 
@@ -629,6 +672,9 @@ function ControllerTown24h() {
         }
         if (req.dailySummary) {
             result.dailySummary = req.dailySummary;
+        }
+        if (req.airkorea_dust_forecast){
+            result.airkorea_dust_forecast = req.airkorea_dust_forecast;
         }
         result.source = "KMA";
         next();

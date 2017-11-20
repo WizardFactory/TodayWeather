@@ -130,7 +130,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
         });
         //log.info(JSON.stringify(stnMinInfo));
         if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
-           log.error('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
+           log.warn('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
         }
         else {
             stnWeatherList.stnList.push(stnMinInfo);
