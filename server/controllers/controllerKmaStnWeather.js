@@ -98,10 +98,91 @@ controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
         case 'dry': return 62;
         case 'dangerously windy': return 63;
         case '진눈깨비': return 64;
+        case '비': return 65;
+        case '눈': return 66;
         default :
             log.error("Fail weatherStr="+weatherStr);
     }
     return -1;
+};
+
+controllerKmaStnWeather.updateWeather = function (current) {
+    if (current.pty >= 1) {
+       switch (current.weatherType) {
+           case 0:
+           case 1:
+           case 2:
+           case 3:
+           case 4:
+           case 5:
+           case 6:
+           case 7:
+           case 8:
+           case 9:
+           case 10:
+           case 11:
+           case 12:
+               if (current.pty == 1) {
+                   current.weather = '비';
+                   current.weatherType = 65;
+               }
+               else if (current.pty == 2) {
+                   current.weather = '진눈깨비';
+                   current.weatherType = 64;
+               }
+               else if (current.pty == 3) {
+                   current.weather = '눈';
+                   current.weatherType = 65;
+               }
+               break;
+           case 17:
+               current.weatherType = 15;
+               current.weather = '보통이슬비';
+               break;
+           case 27:
+               current.weatherType = 24;
+               current.weather = '약한소나기';
+               break;
+           case 28:
+               current.weatherType = 20;
+               current.weather = '보통비단속';
+               break;
+           case 31:
+               current.weatherType = 64;
+               current.weather = '진눈깨비';
+               break;
+           case 40:
+               current.weatherType = 38;
+               current.weather = '소낙눈/약';
+               break;
+           case 41:
+               current.weatherType = 65;
+               current.weather = '눈';
+               break;
+           case 56:
+               current.weatherType = 55;
+               current.weather = '번개';
+               break;
+           default:
+               break;
+
+       }
+    }
+    else if (current.pty == 0) {
+
+        switch (current.weatherType) {
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 10:
+            case 11:
+            case 12:
+                current.pty = 4; //안개,황사
+                break;
+        }
+    }
 };
 
 /**

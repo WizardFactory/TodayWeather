@@ -39,6 +39,7 @@ function ControllerTown24h() {
             return this;
         }
 
+        //t3h, tmx, tmn로부터 일별 taMax, taMin을 만들고 tmx, tmn을 초기화 한다.
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
 
@@ -59,6 +60,7 @@ function ControllerTown24h() {
                 log.verbose(index+" tmx clear");
                 //clear tmx
             }
+
             short.tmx = -50;
 
             if (daySummary.taMin === -50 && short.t3h !== -50) {
@@ -298,13 +300,13 @@ function ControllerTown24h() {
             }
         });
 
+        //앞의 invalid한 날씨정보를 제거
         i = req.short.length - 1;
         for(;i>=0;i--) {
             if(req.short[i].t3h !== -50) {
                 break;
             }
         }
-
         req.short.splice(i+1, (req.short.length-(i+1)));
 
         next();

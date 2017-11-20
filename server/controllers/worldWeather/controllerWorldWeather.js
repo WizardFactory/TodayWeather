@@ -3123,6 +3123,8 @@ function controllerWorldWeather(){
             case 'dry': return 62;
             case 'dangerously windy': return 63; //LOC_VERY_STRONG_WIND
             case 'sleet': return 64;
+            case '비': return 65; //for KMA
+            case '눈': return 66; //for KMA
             default :
                 log.error("Fail weatherStr="+weatherStr);
         }

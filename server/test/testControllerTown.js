@@ -87,5 +87,68 @@ describe('unit test - controller town', function() {
         };
         cTown.convertMidKorStrToSkyInfo(req, {}, next);
     });
+
+    var current = {
+        date : '20171119',
+        time : '0500',
+        liveTime : '0500',
+        t1h: 22.5,
+        rn1: 1,
+        sky: 1,
+        uuu: 1,
+        vvv: 1,
+        reh: 30,
+        pty: 2,
+        lgt: 1,
+        vec: 0,
+        wsd: 0
+    };
+
+    it('test update current from stn weather', function() {
+        var current1 = {
+            date : '20171119',
+            time : '0500',
+            t1h: 10,
+            rn1: 1,
+            sky: 1,
+            uuu: 1,
+            vvv: 1,
+            reh: 30,
+            pty: 2,
+            lgt: 1,
+            vec: 0,
+            wsd: 0
+        };
+
+        var currentList = [];
+        currentList.push(current1);
+        cTown._updateCurrentFromMinWeather(currentList, current);
+        assert.equal(currentList[0].t1h, current.t1h);
+        console.log(currentList);
+    });
+
+    it('test add current from stn weather', function() {
+        var current1 = {
+            date : '20171119',
+            time : '0400',
+            t1h: 10,
+            rn1: 1,
+            sky: 1,
+            uuu: 1,
+            vvv: 1,
+            reh: 30,
+            pty: 2,
+            lgt: 1,
+            vec: 0,
+            wsd: 0
+        };
+
+        var currentList = [];
+        currentList.push(current1);
+        cTown._updateCurrentFromMinWeather(currentList, current);
+        assert.equal(currentList[0].t1h, current1.t1h);
+        assert.equal(currentList[1].t1h, current.t1h);
+        console.log(currentList);
+    });
 });
 
