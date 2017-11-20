@@ -17,6 +17,7 @@ var mongoose = require('mongoose');
 
 var controllerManager = require('./controllers/controllerManager');
 var controllerShortRss = require('./controllers/kma/kma.town.short.rss.controller');
+var controllerAirkoreaDustImage = require('./controllers/airkorea.dust.image.controller');
 /*
 * wizard factory's modules
 */
@@ -122,6 +123,17 @@ if (config.mode === 'push') {
 
 if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
+}
+
+if (config.mode === 'dust_service'){
+    global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
+    airkoreaDustImageMgr.startDustImageMgr(function(err){
+        if(err){
+            log.error('Fail to start image mgr');
+            return;
+        }
+        log.info('Start Image Mgr');
+    })
 }
 
 // catch 404 and forward to error handler

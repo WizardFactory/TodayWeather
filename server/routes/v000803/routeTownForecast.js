@@ -51,7 +51,7 @@ var routerList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.chec
                                     cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo, cTown.getPastMid, cTown.mergeMidWithShort,
                                     cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco, cTown.getKecoDustForecast, cTown.getRiseSetInfo,
                                     cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
-                                    cTown.getSummary, cTown.makeResult, cTown.sendResult];
+                                    cTown.getSummary, cTown.AirkoreaForecast, cTown.makeResult, cTown.sendResult];
 
 router.get('/:region', routerList);
 
