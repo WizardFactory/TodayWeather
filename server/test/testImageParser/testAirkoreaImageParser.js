@@ -17,11 +17,11 @@ global.log  = new Logger(__dirname + "/debug.log");
 var town = require('../../models/town');
 
 describe('Test - Airkorea Image parser ', function(){
-    it('get map pixels', function(done){
+    it('get pm10 map pixels', function(done){
         var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
 
         //var image_url = './test/testImageParser/dust_test_image.png';
-        var image_url = './image.gif';
+        var image_url = './image_pm10.gif';
         var imageData = {
             width: 820,
             height: 830,
@@ -88,7 +88,8 @@ describe('Test - Airkorea Image parser ', function(){
 */
     it('dust image', function(done){
         var controller = new (require('../../controllers/airkorea.dust.image.controller'))();
-        var image_url = './image.gif';
+        var image_pm10_url = './image_pm10.gif';
+        var image_pm25_url = './image_pm25.gif';
         var geocode = {lat: 35.8927778, lon : 129.4949194};
         /*
         var expectedRes = [
@@ -117,34 +118,64 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":100,"g":175,"b":240},{"r":135,"g":192,"b":232},
             {"r":135,"g":192,"b":232},{"r":135,"g":192,"b":232}];
         */
-        var expectedColorValue = [
+        var expectedColorValue_pm10 = [
             6,6,6,6,6,18,18,24,40,80,
             40,40,30,30,24,18,18,6,6,6,6,
             6,6,18,18,6,18,18,18,18,18,
             18,18,18,18,18,18,18,18,18,18,
             6,6,18,18,6,6,6];
-        controller.startDustImageMgr(image_url, 'image/gif', function(err, pixel){
+
+        var expectedColorValue_pm25 = [
+            43,22,19,15,15,12,12,12,
+            12,12,12,12,12,12,12,15,
+            15,19,26,22,19,15,19,22,
+            26,26,26,26,22,19,19,19,
+            15,15,12,12,12,12,12,12,
+            12,15,19,22,22,22,22,22
+        ];
+
+        controller.getImaggPath = function(type, callback){
+            if(type === 'PM10'){
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm10_url});
+            }
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
+        };
+
+        controller.startDustImageMgr(function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
                 return done();
             }
-            log.info(pixel.image_count);
-            controller.getDustInfo(geocode.lat, geocode.lon, function(err, result){
+            log.info(pixel['PM10'].data.image_count);
+            controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', function(err, result){
                 if(err){
                     log.info('2. ERROR!!!!');
                     return done();
                 }
 
                 //log.info(JSON.stringify(result));
-                for(var i = 0 ; i<expectedColorValue.length ; i++){
-                    assert.equal(result[i], expectedColorValue[i], 'No matched color value : '+i);
+                log.info('PM10 pubDate : ', result.pubDate);
+                for(var i = 0 ; i<expectedColorValue_pm10.length ; i++){
+                    assert.equal(result.data[i], expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
                 }
-                done();
+                controller.getDustInfo(geocode.lat, geocode.lon, 'PM25', function(err, result){
+                    if(err){
+                        log.info('3. ERROR!!!!');
+                        return done();
+                    }
+
+                    //log.info(JSON.stringify(result));
+                    log.info('PM25 pubDate : ', result.pubDate);
+                    for(var i = 0 ; i<expectedColorValue_pm25.length ; i++){
+                        assert.equal(result.data[i], expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
+                    }
+                    done();
+                });
             });
         });
     });
 
-    it('get color table', function(done){
+    it('get color table PM10', function(done){
         var colorPosX = 686;
         var colorPosY = [
                             88, 106, 128, 147, 165, 182, 205, 222, 243, 259, 279,
@@ -152,14 +183,14 @@ describe('Test - Airkorea Image parser ', function(){
                             499, 517, 527, 554, 575, 595, 614, 634, 654, 672,
                             693, 711, 731, 740, 770, 789
         ];
-        var dustValue = [
+        var dustValue_pm10 = [
                             0, 6, 12, 18, 24, 30,
                             35, 40,45, 50, 55, 60, 65, 70, 75, 80,
                             87, 94, 101, 108, 115, 122, 129, 136, 143, 150,
                             160, 170, 180, 190, 200, 220, 240, 260, 280, 320, 999
         ];
 
-        var expectedRes = [
+        var expectedRes_pm10 = [
             {"r":104,"g":0,"b":0,"val":999},{"r":142,"g":0,"b":0,"val":320},
             {"r":179,"g":0,"b":0,"val":280},{"r":179,"g":0,"b":0,"val":260},
             {"r":205,"g":0,"b":0,"val":240},{"r":242,"g":0,"b":0,"val":220},
@@ -180,7 +211,8 @@ describe('Test - Airkorea Image parser ', function(){
             {"r":100,"g":175,"b":240,"val":12},{"r":152,"g":201,"b":228,"val":6},
             {"r":170,"g":210,"b":225,"val":0}];
         var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
-        var image_url = './image.gif';
+        var image_url = './image_pm10.gif';
+
         var imageData = {
             width: 820,
             height: 830,
@@ -200,16 +232,90 @@ describe('Test - Airkorea Image parser ', function(){
                     r: pixels.pixels.get(0, colorPosX, colorPosY[i], 0),
                     g: pixels.pixels.get(0, colorPosX, colorPosY[i], 1),
                     b: pixels.pixels.get(0, colorPosX, colorPosY[i], 2),
-                    val: dustValue[dustValue.length - (i+1)]
+                    val: dustValue_pm10[dustValue_pm10.length - (i+1)]
                 });
             }
 
-            //log.info(JSON.stringify(result));
-            for(i=0 ; i<expectedRes.length ; i++){
-                assert.equal(result[i].r, expectedRes[i].r, 'No matched R color value : '+i);
-                assert.equal(result[i].g, expectedRes[i].g, 'No matched R color value : '+i);
-                assert.equal(result[i].b, expectedRes[i].b, 'No matched R color value : '+i);
-                assert.equal(result[i].val, expectedRes[i].val, 'No matched dust value : '+i);
+            log.info(JSON.stringify(result));
+            for(i=0 ; i<expectedRes_pm10.length ; i++){
+                assert.equal(result[i].r, expectedRes_pm10[i].r, 'No matched R color value : '+i);
+                assert.equal(result[i].g, expectedRes_pm10[i].g, 'No matched R color value : '+i);
+                assert.equal(result[i].b, expectedRes_pm10[i].b, 'No matched R color value : '+i);
+                assert.equal(result[i].val, expectedRes_pm10[i].val, 'No matched dust value : '+i);
+            }
+            done();
+        });
+    });
+
+
+    it('get color table PM25', function(done){
+        var colorPosX = 686;
+        var colorPosY = [
+            88, 106, 128, 147, 165, 182, 205, 222, 243, 259, 279,
+            296, 320, 337, 360, 380, 400, 422, 439, 460, 479,
+            499, 517, 527, 554, 575, 595, 614, 634, 654, 672,
+            693, 711, 731, 740, 770, 789
+        ];
+
+        var dustValue_pm25 = [
+            0, 3, 6, 9, 12, 15,
+            19, 22, 26, 29, 32, 36, 39, 43, 46, 50,
+            55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
+            110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 999
+        ];
+
+        var expectedRes_pm25 =[
+            {"r":104,"g":0,"b":0,"val":999},{"r":142,"g":0,"b":0,"val":200},
+            {"r":179,"g":0,"b":0,"val":190},{"r":179,"g":0,"b":0,"val":180},
+            {"r":205,"g":0,"b":0,"val":170},{"r":230,"g":0,"b":0,"val":160},
+            {"r":255,"g":0,"b":0,"val":150},{"r":255,"g":59,"b":59,"val":140},
+            {"r":255,"g":90,"b":90,"val":130},{"r":255,"g":120,"b":120,"val":120},
+            {"r":255,"g":150,"b":150,"val":110},{"r":107,"g":107,"b":0,"val":100},
+            {"r":139,"g":139,"b":0,"val":95},{"r":139,"g":139,"b":0,"val":90},
+            {"r":170,"g":170,"b":0,"val":85},{"r":139,"g":139,"b":0,"val":80},
+            {"r":201,"g":201,"b":0,"val":75},{"r":201,"g":201,"b":0,"val":70},
+            {"r":201,"g":201,"b":0,"val":65},{"r":201,"g":201,"b":0,"val":60},
+            {"r":232,"g":232,"b":0,"val":55},{"r":0,"g":119,"b":0,"val":50},
+            {"r":0,"g":138,"b":0,"val":46},{"r":0,"g":158,"b":0,"val":43},
+            {"r":0,"g":178,"b":0,"val":39},{"r":0,"g":197,"b":0,"val":36},
+            {"r":0,"g":216,"b":0,"val":32},{"r":0,"g":235,"b":0,"val":29},
+            {"r":0,"g":255,"b":0,"val":26},{"r":100,"g":255,"b":100,"val":22},
+            {"r":150,"g":255,"b":150,"val":19},{"r":53,"g":151,"b":250,"val":15},
+            {"r":76,"g":163,"b":245,"val":12},{"r":100,"g":175,"b":240,"val":9},
+            {"r":100,"g":175,"b":240,"val":6},{"r":152,"g":201,"b":228,"val":3},
+            {"r":170,"g":209,"b":224,"val":0}];
+
+        var parser = new (require('../../lib/airkorea.finedust.image.parser'))();
+        var image_url = './image_pm25.gif';
+        var imageData = {
+            width: 820,
+            height: 830,
+            map_width: 585,
+            map_height: 718
+        };
+
+        parser.getPixelMap(image_url, 'image/gif', null, function(err, pixels){
+            if(err){
+                log.error('Error !! : ', err);
+                assert.equal(null, imageData, 'Fail to get pixels data');
+                done();
+            }
+            var result = [];
+            for(var i=0 ; i<colorPosY.length ; i++){
+                result.push({
+                    r: pixels.pixels.get(0, colorPosX, colorPosY[i], 0),
+                    g: pixels.pixels.get(0, colorPosX, colorPosY[i], 1),
+                    b: pixels.pixels.get(0, colorPosX, colorPosY[i], 2),
+                    val: dustValue_pm25[dustValue_pm25.length - (i+1)]
+                });
+            }
+
+            log.info(JSON.stringify(result));
+            for(i=0 ; i<expectedRes_pm25.length ; i++){
+                assert.equal(result[i].r, expectedRes_pm25[i].r, 'No matched R color value : '+i);
+                assert.equal(result[i].g, expectedRes_pm25[i].g, 'No matched R color value : '+i);
+                assert.equal(result[i].b, expectedRes_pm25[i].b, 'No matched R color value : '+i);
+                assert.equal(result[i].val, expectedRes_pm25[i].val, 'No matched dust value : '+i);
             }
             done();
         });
