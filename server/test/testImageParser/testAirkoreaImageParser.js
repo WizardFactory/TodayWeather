@@ -146,7 +146,7 @@ describe('Test - Airkorea Image parser ', function(){
                 log.info('1. ERROR!!!');
                 return done();
             }
-            log.info(pixel['PM10'].data.image_count);
+            log.info(pixel.PM10.data.image_count);
             controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', function(err, result){
                 if(err){
                     log.info('2. ERROR!!!!');

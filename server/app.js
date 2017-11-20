@@ -127,13 +127,13 @@ if (config.mode === 'scrape' || config.mode === 'local') {
 
 if (config.mode === 'dust_service'){
     global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
-    airkoreaDustImageMgr.startDustImageMgr(function(err){
+    global.airkoreaDustImageMgr.startDustImageMgr(function(err){
         if(err){
             log.error('Fail to start image mgr');
             return;
         }
         log.info('Start Image Mgr');
-    })
+    });
 }
 
 // catch 404 and forward to error handler

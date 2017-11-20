@@ -232,7 +232,7 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
         if (err)  {
             return callback(err);
         }
-        if (frcstList.length == 0) {
+        if (frcstList.length === 0) {
             return callback(new Error('Airkorea Image > There is no image'));
         }
 
@@ -251,8 +251,8 @@ AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
     async.waterfall(
         [
             function(cb){
-                self.imagePixels['PM10'] = undefined;
-                self.imagePixels['PM25'] = undefined;
+                self.imagePixels.PM10 = undefined;
+                self.imagePixels.PM25 = undefined;
                 cb();
             },
             function(cb){
@@ -272,9 +272,9 @@ AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
                     }
 
                     log.info('Airkorea Image > Got pixel info for PM10');
-                    self.imagePixels['PM10'] = {};
-                    self.imagePixels['PM10'].pubDate = pm10Path.pubDate;
-                    self.imagePixels['PM10'].data = pixelMap;
+                    self.imagePixels.PM10 = {};
+                    self.imagePixels.PM10.pubDate = pm10Path.pubDate;
+                    self.imagePixels.PM10.data = pixelMap;
                     return cb();
                 });
             },
@@ -294,9 +294,9 @@ AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
                         return cb(err);
                     }
                     log.info('Airkorea Image > Got pixel info for PM25');
-                    self.imagePixels['PM25'] = {};
-                    self.imagePixels['PM25'].pubDate = pm25Path.pubDate;
-                    self.imagePixels['PM25'].data = pixelMap;
+                    self.imagePixels.PM25 = {};
+                    self.imagePixels.PM25.pubDate = pm25Path.pubDate;
+                    self.imagePixels.PM25.data = pixelMap;
                     return cb();
                 });
             }

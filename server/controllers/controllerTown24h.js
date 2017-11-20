@@ -555,7 +555,6 @@ function ControllerTown24h() {
     this.AirkoreaForecast = function (req, res, next){
         var meta = {};
 
-        var result;
         var regionName = req.params.region;
         var cityName = req.params.city;
         var townName = req.params.town;
@@ -567,20 +566,20 @@ function ControllerTown24h() {
 
         if(global.airkoreaDustImageMgr){
             if(req.geocode){
-                airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', function(err, pm10){
+                global.airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', function(err, pm10){
                     if(err){
                         log.info('Fail to get PM 10 info');
                         return next();
                     }
                     req.airkorea_dust_forecast = {};
-                    req.airkorea_dust_forecast['PM10'] = pm10;
+                    req.airkorea_dust_forecast.PM10 = pm10;
 
                     airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', function(err, pm25){
                         if(err){
                             log.info('Fail to get PM 25 info');
                             return next();
                         }
-                        req.airkorea_dust_forecast['PM25'] = pm25;
+                        req.airkorea_dust_forecast.PM25 = pm25;
                         next();
                     });
                 });
