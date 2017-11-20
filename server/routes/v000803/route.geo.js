@@ -27,7 +27,7 @@ var kmaRouterList = [cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.c
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
-    cTown.getPastMid, cTown.mergeMidWithShort, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
+    cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
     cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
     cTown.getSummary, cTown.makeResult];
 
