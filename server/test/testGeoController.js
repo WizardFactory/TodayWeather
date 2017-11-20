@@ -39,8 +39,6 @@ describe('unit test - geo controller class', function() {
             callback(null, JSON.parse(result));
         };
 
-        geoCtrl.googleApiKey = null;
-
         geoCtrl._getAddressFromGoogle(function (err) {
             if (err) {
                 console.error(err);
@@ -51,5 +49,22 @@ describe('unit test - geo controller class', function() {
             done();
         });
     });
+
+    //it('get name from google', function (done) {
+    //    var geoCtrl = new GeoCtrl(0, 0, 'ko', 'KR');
+    //    var req = {params:{region:"성남시", city:"분당구"}};
+    //    //var req = {params:{region:"성남시", city:"분당구"}};
+    //
+    //    geoCtrl.googleApiKey = null;
+    //
+    //    geoCtrl.name2address(req, function (err) {
+    //        if (err) {
+    //            console.error(err);
+    //        }
+    //        console.log(req);
+    //        done();
+    //    });
+    //
+    //});
 });
 

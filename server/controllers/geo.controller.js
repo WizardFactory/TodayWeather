@@ -439,4 +439,58 @@ GeoController.prototype.location2address = function(req, res, next) {
     return this;
 };
 
+
+GeoController.prototype.name2address = function(req, callback) {
+    var that = this;
+    //retry with key
+    var address = req.params.region + req.params.city;
+    var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + encodeURIComponent(address);
+
+    if (that.lang) {
+        url += "&language="+that.lang;
+    }
+    if (googleApiKey) {
+        url += "&key="+googleApiKey;
+    }
+    else {
+        log.warn("google api key is not valid");
+    }
+
+    log.info(url);
+    async.retry(3,
+        function (cb) {
+            that._request(url, function (err, result) {
+                if (err) {
+                    return cb(err);
+                }
+                cb(null, result);
+            });
+        },
+        function (err, result) {
+            if (err) {
+                return callback(err);
+            }
+            try {
+                var geoInfo = that._parseGoogleResult(result);
+                log.info(geoInfo);
+                var addressArray = geoInfo.address.split(" ");
+                req.params.region = addressArray[1];
+                if (addressArray.length == 3) {
+                    req.params.city = addressArray[2];
+                }
+                else if (addressArray.length == 4) {
+                    req.params.city = addressArray[2] + addressArray[3];
+                }
+                else if (addressArray.length == 5) {
+                    req.params.city = addressArray[2] + addressArray[3];
+                    req.params.town = addressArray[4];
+                }
+            }
+            catch(e) {
+                return callback(e);
+            }
+            callback();
+        });
+};
+
 module.exports = GeoController;
