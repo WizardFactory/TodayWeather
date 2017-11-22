@@ -1291,82 +1291,42 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         };
 
-        function _navigatorRetryGetCurrentPosition(retryCount, callback)  {
-            var maximumAge;
-            var timeout;
-            var enableHighAccuracy;
-            if (retryCount == 3) {
-                maximumAge = 3000;
-                timeout = 5000;
-                enableHighAccuracy = false;
-            }
-            else if (retryCount == 2) {
-                maximumAge = 30000;
-                timeout = 5000;
-                enableHighAccuracy = true;
-            }
-            else if (retryCount == 1) {
-                maximumAge = 300000;
-                timeout = 5000;
-                enableHighAccuracy = false;
-            }
-
-            navigator.geolocation.getCurrentPosition(function (position) {
-                //경기도,광주시,오포읍,37.36340556,127.2307667
-                //deferred.resolve({latitude: 37.363, longitude: 127.230});
-                //세종특별자치시,도담동
-                //position = {coords: {latitude: 36.517338, longitude: 127.259247}};
-                //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
-                //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
-                //서울특별시
-                //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
-                //경기 수원시 영통구 광교1동
-                //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
-
-                // Tokyo 35.6894875,139.6917064
-                // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
-                // Shanghai 31.227797,121.475194
-                //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
-                // NY 40.663527,-73.960852
-                //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
-                // Berlin 52.516407,13.403322
-                //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
-                // Hochinminh 10.779001,106.662796
-                //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
-                //경상북도/영천시/대전동
-                //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
-                //경기도,성남시분당구,,62,123,127.12101944444444,37.37996944444445
-                //position = {coords: {latitude: 37.37996944444445, longitude: 127.12101944444444}};
-                //인천광역시,연수구,,55,123,126.68044166666667,37.40712222222222
-                //position = {coords: {latitude: 37.40712222222222, longitude: 126.68044166666667}};
-
-                console.log('navigator geolocation');
-                console.log(position);
-
-                callback(undefined, position, retryCount);
-            }, function (error) {
-                console.log("Fail to get current position from navigator");
-                console.log("retry:"+retryCount+" code:"+error.code+" message:"+error.message);
-
-                retryCount--;
-                if (retryCount <= 0) {
-                    return callback(error, undefined, retryCount);
-                }
-                else {
-                    //간격을 주지 않으면 계속 실패해버림.
-                    setTimeout(function () {
-                        _navigatorRetryGetCurrentPosition(retryCount, callback);
-                    }, 500);
-                }
-            }, { maximumAge: maximumAge, timeout: timeout, enableHighAccuracy: enableHighAccuracy });
-        }
-
+        var watchID;
         obj.getCurrentPosition = function () {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
             var endTime;
 
-            var watchID = navigator.geolocation.watchPosition(function (position) {
+            //경기도,광주시,오포읍
+            //position = {coords: {latitude: 37.36340556, longitude: 127.2307667}};
+            //세종특별자치시,,도담동
+            //position = {coords: {latitude: 36.517338, longitude: 127.259247}};
+            //경기도 부천시 소사본동
+            //position = {coords: {latitude: 37.472595, longitude: 126.795249}};
+            //경상남도/거제시옥포2동 "lng":128.6875, "lat":34.8966
+            //deferred.resolve({latitude: 34.8966, longitude: 128.6875});
+            //서울특별시
+            //deferred.resolve({latitude: 37.5635694, longitude: 126.9800083});
+            //경기 수원시 영통구 광교1동
+            //deferred.resolve({latitude: 37.298876, longitude: 127.047527});
+            // Tokyo 35.6894875,139.6917064
+            // position = {coords: {latitude: 35.6894875, longitude: 139.6917064}};
+            // Shanghai 31.227797,121.475194
+            //position = {coords: {latitude: 31.227797, longitude: 121.475194}};
+            // NY 40.663527,-73.960852
+            //position = {coords: {latitude: 40.663527, longitude: -73.960852}};
+            // Berlin 52.516407,13.403322
+            //position = {coords: {latitude: 52.516407, longitude: 13.403322}};
+            // Hochinminh 10.779001,106.662796
+            //position = {coords: {latitude: 10.779001, longitude: 106.662796}};
+            //경상북도/영천시/대전동
+            //position = {coords: {latitude: 35.9859147103, longitude: 128.9122925322}};
+            //경기도,성남시분당구,,62,123,127.12101944444444,37.37996944444445
+            //position = {coords: {latitude: 37.37996944444445, longitude: 127.12101944444444}};
+            //인천광역시,연수구,,55,123,126.68044166666667,37.40712222222222
+            //position = {coords: {latitude: 37.40712222222222, longitude: 126.68044166666667}};
+
+            watchID = navigator.geolocation.watchPosition(function (position) {
                 endTime = new Date().getTime();
                 Util.ga.trackTiming('position', endTime - startTime, 'get', 'watch');
                 Util.ga.trackEvent('position', 'get', 'watch', endTime - startTime);
@@ -1375,21 +1335,7 @@ angular.module('service.weatherutil', [])
             }, function (error) {
                 Util.ga.trackEvent('position', 'warn', 'watch(message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 return deferred.reject();
-            }, { timeout: 30000 });
-
-            _navigatorRetryGetCurrentPosition(3, function (error, position, retryCount) {
-                //navigator.geolocation.clearWatch(watchID);
-                endTime = new Date().getTime();
-                if (error) {
-                    Util.ga.trackTiming('position', endTime - startTime, 'error', 'default');
-                    Util.ga.trackEvent('position', 'warn', 'default(retry:' + retryCount + ', message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
-                    return deferred.reject();
-                }
-
-                Util.ga.trackTiming('position', endTime - startTime, 'get', 'default');
-                Util.ga.trackEvent('position', 'get', 'default(retry:' + retryCount + ')', endTime - startTime);
-                deferred.resolve({coords: position.coords, provider: 'getCurrentPosition'});
-            });
+            }, { timeout: 60000, maximumAge: 3000, enableHighAccuracy: true});
 
             return deferred.promise;
         };

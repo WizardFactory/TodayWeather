@@ -741,25 +741,33 @@ angular.module('controller.forecastctrl', [])
         function loadWeatherData() {
             setRefreshTimer();
 
+            /**
+             * What's mean cityData adress is null?
+             */
             if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
                 showLoadingIndicator();
 
-                updateCurrentPosition().then(function() {
-                    updateWeatherData().then(function () {
-                        setTimeout(function () {
-                            hideLoadingIndicator();
-                        }, ionic.Platform.isAndroid()?0:300);
-                    }, function (msg) {
+                updateWeatherData().then(function () {
+                    setTimeout(function () {
                         hideLoadingIndicator();
-                        $scope.showRetryConfirm(strError, msg, 'weather');
+                    }, ionic.Platform.isAndroid()?0:300);
+                }, function (msg) {
+                    hideLoadingIndicator();
+                    $scope.showRetryConfirm(strError, msg, 'weather');
+                });
+
+                /**
+                 * one more update when finished position is updated
+                 */
+                updateCurrentPosition().then(function() {
+                    console.log("current position is updated !!");
+                    updateWeatherData().then(function () {
+                    }, function (msg) {
+                        console.log(msg);
                     });
                 }, function(msg) {
-                    hideLoadingIndicator();
                     if (msg !== null) {
-                        $scope.showRetryConfirm(strError, msg, 'forecast');
-                    }
-                    else {
-                        //pass for reload
+                        console.log(msg);
                     }
                 });
                 return;
