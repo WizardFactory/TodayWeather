@@ -125,7 +125,7 @@ if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
 }
 
-if (config.mode === 'dust_service'){
+if (config.mode === 'service'){
     global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
     global.airkoreaDustImageMgr.startDustImageMgr(function(err){
         if(err){
