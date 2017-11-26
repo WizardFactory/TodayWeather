@@ -16,7 +16,6 @@ module.exports = {
         test_cert: (process.env.DATA_GO_KR_TEST_CERT_KEY || 'You have to set key of data.go.kr'),
         normal: (process.env.DATA_GO_KR_NORMAL_KEY || 'You have to set key of data.go.kr'),
         cert_key: (process.env.DATA_GO_KR_CERT_KEY || 'You have to set key of data.go.kr'),
-        daum_key: (process.env.DAUM_KEY || 'You have to set key of daum.net'),
         newrelic: (process.env.NEW_RELIC_LICENSE_KEY || 'Your New Relic license key'),
         aws_access_key:(process.env.AWS_ACCESS_KEY || 'You have to set key of AWS'),
         aws_secret_key:(process.env.AWS_SECRET_KEY || 'You have to set key of AWS'),
@@ -38,7 +37,9 @@ module.exports = {
         }],
         aqi_keys : [{
             key: (process.env.WAQI_SECRET_KEY || 'You have to set key of WAQI')
-        }]
+        }],
+        daum_keys : (process.env.DAUM_SECRET_KEYS || '["set string of array of daum keys","key1", "key2"]'),
+        google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api ke')
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),
@@ -51,7 +52,11 @@ module.exports = {
     },
     platforms: {
         applePassword: (process.env.APPLE_PASSWORD || 'Your apple password'),
-        googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key')
+        googlePublicKey: (process.env.GOOGLE_PUBLIC_KEY || 'Your google public key'),
+        googleAccToken: (process.env.PLAY_STORE_API_ACCESS_TOKEN || "PLAY_STORE_API_ACCESS_TOKEN"),
+        googleRefToken: (process.env.PLAY_STORE_API_REFRESH_TOKEN || "PLAY_STORE_API_REFRESH_TOKEN"),
+        googleClientID: (process.env.PLAY_STORE_API_CLIENT_ID || "PLAY_STORE_API_CLIENT_ID"),
+        googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
     },
     push: {
         serviceServer : (process.env.SERVICE_SERVER || 'http://localhost:3000'),

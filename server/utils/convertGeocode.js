@@ -8,8 +8,11 @@ var convert = require('./coordinate2xy');
 var keyBox = require('../config/config').keyString;
 
 function convertGeocodeByDaum(first, second, third, callback) {
+    var keyList = JSON.parse(keyBox.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+
     var url = 'https://apis.daum.net/local/geo/addr2coord'+
-        '?apikey=' + keyBox.daum_key +
+        '?apikey=' + daum_key +
         '&q='+ encodeURIComponent(first + second + third) +
         '&output=json';
     var encodedUrl = url;

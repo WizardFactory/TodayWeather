@@ -145,24 +145,20 @@ describe('unit test - controller push', function() {
     //    this.timeout(20*1000);
     //    var co = new ControllerPush();
     //    co.requestDailySummary(pushInfo, function (err, result) {
-    //        if (err) {
-    //            console.log(err);
-    //        }
-    //        else {
-    //            console.log(result);
-    //        }
-    //       //done();
+    //        assert.equal(err, null, err);
+    //        console.log(result);
+    //        done();
     //    });
     //
-    //    co.requestDailySummary(pushInfo0, function (err, result) {
-    //        if (err) {
-    //            console.log(err);
-    //        }
-    //        else {
-    //            console.log(result);
-    //        }
-    //       //done();
-    //    });
+    //    //co.requestDailySummary(pushInfo0, function (err, result) {
+    //    //    if (err) {
+    //    //        console.log(err);
+    //    //    }
+    //    //    else {
+    //    //        console.log(result);
+    //    //    }
+    //    //   //done();
+    //    //});
     //});
 });
 

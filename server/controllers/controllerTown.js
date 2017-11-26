@@ -31,6 +31,8 @@ var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortRss = new (require('./kma/kma.town.short.rss.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
+var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
+var GeoController = require('./geo.controller');
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -65,7 +67,14 @@ function ControllerTown() {
             req.params.region = req.params.city;
             req.params.city= regionName;
             req.params.town = undefined;
-            next();
+
+            var geo = new GeoController(0, 0, 'ko', 'KR');
+            geo.name2address(req, function(err) {
+               if (err)  {
+                   return next(err);
+               }
+                next();
+            });
         }
         else if (townName == 'JP') {
             log.error('Invalid params='+JSON.stringify(req.params));
@@ -1399,6 +1408,34 @@ function ControllerTown() {
 
     };
 
+    this._updateCurrentFromMinWeather = function (currentList, reqCurrent) {
+
+        if (reqCurrent.liveTime && reqCurrent.liveTime.substr(2,2) === '00') {
+            var currentInList = currentList.find(function (object) {
+                return (object.date === reqCurrent.date && object.time === reqCurrent.liveTime);
+            });
+
+            log.debug(currentInList);
+            if (currentInList) {
+                modelCurrent.getPropertyList().forEach(function (propertyName) {
+                    currentInList[propertyName] = reqCurrent[propertyName];
+                });
+                log.debug('updated');
+            }
+            else {
+                currentInList = {};
+                currentInList = {date: reqCurrent.date, time: reqCurrent.liveTime,
+                    mx: reqCurrent.mx, my: reqCurrent.my};
+                modelCurrent.getPropertyList().forEach(function (propertyName) {
+                    currentInList[propertyName] = reqCurrent[propertyName];
+                });
+                currentList.push(currentInList);
+            }
+        }
+
+        return this;
+    };
+
     /**
      * req.current에만 적용하고 currentlist에는 적용안함.
      * req.current에 liveTime이라고 새로운 시간 정보를 추가함.
@@ -1449,104 +1486,117 @@ function ControllerTown() {
                         return;
                     }
 
-                    /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
-                    /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함.
-                        current -> 도시별 날씨 -> AWS 분단위 -> 초단기 */
+                    try {
+                        /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
+                        /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함.
+                         current -> 도시별 날씨 -> AWS 분단위 -> 초단기 */
 
-                    var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
-                    var stnFirst = true;
-                    if (!(req.currentPubDate == undefined)) {
-                        var currentTime = kmaTimeLib.convertStringToDate(req.currentPubDate);
+                        var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
+                        var stnFirst = true;
+                        if (!(req.currentPubDate == undefined)) {
+                            var currentTime = kmaTimeLib.convertStringToDate(req.currentPubDate);
 
-                        if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
+                            if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
 
-                            log.info('>sID=',req.sessionID,
-                                'use api first, just append new data of stn hourly weather info', meta);
-                            stnFirst = false;
-                        }
-                        else {
-                            log.info('>sID=',req.sessionID, 'overwrite all data', meta);
-                        }
-                    }
-
-                    for (var key in stnWeatherInfo) {
-                        if (stnFirst || req.current[key] == undefined) {
-                            req.current[key] = stnWeatherInfo[key];
-                        }
-                    }
-
-                    if (stnFirst) {
-                        req.current.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
-                        req.current.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
-                    }
-
-                    if (req.current.rn1 == undefined || stnFirst) {
-                        if (!(stnWeatherInfo.rs1h == undefined)) {
-                            req.current.rn1 = stnWeatherInfo.rs1h;
-                        }
-                    }
-                    if (req.current.sky == undefined || stnFirst) {
-                        if (!(stnWeatherInfo.cloud == undefined)) {
-                            req.current.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
-                        }
-                    }
-                    if (req.current.pty == undefined || stnFirst) {
-                        if (!(stnWeatherInfo.weather == undefined) && !(stnWeatherInfo.rns == undefined)) {
-                            req.current.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
-                        }
-                    }
-                    if (req.current.lgt == undefined || stnFirst) {
-                        if (!(stnWeatherInfo.weather == undefined)) {
-                            req.current.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
-                        }
-                    }
-
-                    if (stnFirst) {
-                        //24시 01분부터 1시까지 날짜 맞지 않음.
-                        //req.current.date = date;
-                        req.current.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
-
-                        req.current.overwrite = true;
-                        if (req.current.rns === true) {
-                            if (req.current.pty === 0) {
-                                log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
-                                    req.params.region + req.params.city + req.params.town);
-
-                                //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
-                                if (req.current.t1h > 2) {
-                                    req.current.pty = 1;
-                                }
-                                else if (req.current.t1h > -1) {
-                                    req.current.pty = 2;
-                                }
-                                else {
-                                    req.current.pty = 3;
-                                }
-                                if (req.current.sky === 1) {
-                                    req.current.sky = 2;
-                                }
+                                log.info('>sID=',req.sessionID,
+                                    'use api first, just append new data of stn hourly weather info', meta);
+                                stnFirst = false;
                             }
-                            if (req.current.rs1h > 0) {
-                                req.current.rn1 = req.current.rs1h;
-                                if (req.current.rn1 > 10) {
-                                    req.current.rn1 = Math.round(req.current.rn1);
-                                }
-                                else {
-                                    req.current.rn1 = +(req.current.rn1).toFixed(1);
-                                }
+                            else {
+                                log.info('>sID=',req.sessionID, 'overwrite all data', meta);
                             }
                         }
-                        else if (req.current.rns === false) {
-                            //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
-                            //if (req.current.pty != 0) {
-                            //    log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
-                            //        req.params.region + req.params.city + req.params.town);
-                            //    req.current.pty = 0;
-                            //}
+
+                        for (var key in stnWeatherInfo) {
+                            if (stnFirst || req.current[key] == undefined) {
+                                req.current[key] = stnWeatherInfo[key];
+                            }
                         }
-                        else {
-                            log.debug('we did not get rns info');
+
+                        var reqCurrent = req.current;
+
+                        if (stnFirst) {
+                            reqCurrent.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
+                            reqCurrent.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
                         }
+
+                        if (reqCurrent.rn1 == undefined || stnFirst) {
+                            if (!(stnWeatherInfo.rs1h == undefined)) {
+                                reqCurrent.rn1 = stnWeatherInfo.rs1h;
+                            }
+                        }
+                        if (reqCurrent.sky == undefined || stnFirst) {
+                            if (!(stnWeatherInfo.cloud == undefined)) {
+                                reqCurrent.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
+                            }
+                        }
+                        if (reqCurrent.pty == undefined || stnFirst) {
+                            if (!(stnWeatherInfo.weather == undefined) && !(stnWeatherInfo.rns == undefined)) {
+                                reqCurrent.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
+                            }
+                        }
+                        if (reqCurrent.lgt == undefined || stnFirst) {
+                            if (!(stnWeatherInfo.weather == undefined)) {
+                                reqCurrent.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
+                            }
+                        }
+
+                        if (stnFirst) {
+                            //24시 01분부터 1시까지 날짜 맞지 않음.
+                            //reqCurrent.date = date;
+                            reqCurrent.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
+
+                            reqCurrent.overwrite = true;
+                            if (reqCurrent.rns === true) {
+                                if (reqCurrent.pty === 0) {
+                                    log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
+                                        req.params.region + req.params.city + req.params.town);
+
+                                    //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                                    //0~3도는 눈/비
+                                    if (reqCurrent.t1h > 3) {
+                                        reqCurrent.pty = 1;
+                                    }
+                                    else if (reqCurrent.t1h >= 0) {
+                                        reqCurrent.pty = 2;
+                                    }
+                                    else {
+                                        reqCurrent.pty = 3;
+                                    }
+                                    //if sky is clear change to partly cloud
+                                    if (reqCurrent.sky === 1) {
+                                        reqCurrent.sky = 2;
+                                    }
+                                }
+                                if (reqCurrent.rs1h > 0) {
+                                    reqCurrent.rn1 = reqCurrent.rs1h;
+                                    if (reqCurrent.rn1 > 10) {
+                                        reqCurrent.rn1 = Math.round(reqCurrent.rn1);
+                                    }
+                                    else {
+                                        reqCurrent.rn1 = +(reqCurrent.rn1).toFixed(1);
+                                    }
+                                }
+
+                                controllerKmaStnWeather.updateWeather(current);
+                            }
+                            else if (reqCurrent.rns === false) {
+                                //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
+                                //if (reqCurrent.pty != 0) {
+                                //    log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
+                                //        req.params.region + req.params.city + req.params.town);
+                                //    reqCurrent.pty = 0;
+                                //}
+                            }
+                            else {
+                                log.debug('we did not get rns info');
+                            }
+                        }
+
+                        self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
+                    }
+                    catch(e) {
+                        log.error(e);
                     }
                     next();
                 });
@@ -1682,7 +1732,7 @@ function ControllerTown() {
                     return next();
                 }
 
-                var midRssKmaController = require('../controllers/midRssKmaController');
+                var midRssKmaController = require('./kma/kma.town.mid.rss.controller');
                 midRssKmaController.overwriteData(req.midData, code.cityCode, function (err) {
                     if (err) {
                         log.error(err);
@@ -1761,9 +1811,16 @@ function ControllerTown() {
                             }
                             var tempList = tempInfo.ret;
                             //log.info(tempList);
-                            if (landInfo.pubDate != tempInfo.pubDate) {
-                                log.error('RM> publishing date of land and temp are different');
+                            if(config.db.version == '2.0'){
+                                if (landInfo.pubDate.getTime() != tempInfo.pubDate.getTime()) {
+                                    log.error('RM> publishing date of land and temp are different');
+                                }
+                            }else{
+                                if (landInfo.pubDate != tempInfo.pubDate) {
+                                    log.error('RM> publishing date of land and temp are different');
+                                }
                             }
+
                             self._mergeLandWithTemp(landList, tempList, function(err, dataList){
                                 if(err){
                                     log.error('RM> failed to merge land and temp');
@@ -2314,6 +2371,28 @@ function ControllerTown() {
             log.error('You have to getShort before mergeMid');
             next();
         }
+        return this;
+    };
+
+    this.updateMidTempMaxMin = function (req, res, next) {
+        try {
+            var todayStr = req.current.date;
+            var currentTemp = req.current.t1h;
+            var dayWeather = req.midData.dailyData.find(function (dayData) {
+                return dayData.date === todayStr;
+            });
+            if (currentTemp > dayWeather.taMax) {
+                dayWeather.taMax = currentTemp;
+            }
+            if (currentTemp < dayWeather.taMin) {
+                dayWeather.taMin = currentTemp;
+            }
+        }
+        catch(e) {
+            log.error(e);
+        }
+
+        next();
         return this;
     };
 
@@ -3884,82 +3963,93 @@ ControllerTown.prototype._getMidDataFromDB = function(db, indicator, req, cb) {
     meta.method = '_getMidDataFromDB';
     meta.indicator = indicator;
 
-    try{
-        if(req != undefined){
-            for (var i=0; i<midArray.length; i++) {
-                var item =  midArray[i];
-                if(item.db == db && req[item.name] != undefined){
-                    log.silly('data is already received');
-                    log.silly(req[item.name]);
-                    return cb(0, req[item.name]);
-                }
+    if(config.db.version == '2.0'){
+        var type = '';
+        for(var i=0; i<midArray.length; i++) {
+            if(midArray[i].db == db){
+                type = midArray[i].name;
+                break;
             }
         }
 
-        db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
-            if(err){
-                log.error('~> _getMidDataFromDB : fail to find db item');
+        return kmaTownMid.getMidFromDB(type, indicator, req, cb);
+    }else{
+        try{
+            if(req != undefined){
+                for (var i=0; i<midArray.length; i++) {
+                    var item =  midArray[i];
+                    if(item.db == db && req[item.name] != undefined){
+                        log.silly('data is already received');
+                        log.silly(req[item.name]);
+                        return cb(0, req[item.name]);
+                    }
+                }
+            }
+
+            db.find({regId : indicator}, {_id: 0}).limit(1).lean().exec(function(err, result){
+                if(err){
+                    log.error('~> _getMidDataFromDB : fail to find db item');
+                    if(cb){
+                        cb(err);
+                    }
+                    return;
+                }
+                if(result.length === 0){
+                    log.error('~> _getMidDataFromDB : there is no data');
+                    if(cb){
+                        cb(new Error("there is no data regId="+indicator));
+                    }
+                    return;
+                }
+                if(result.length > 1){
+                    log.error('~> _getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
+                }
+
                 if(cb){
-                    cb(err);
-                }
-                return;
-            }
-            if(result.length === 0){
-                log.error('~> _getMidDataFromDB : there is no data');
-                if(cb){
-                    cb(new Error("there is no data regId="+indicator));
-                }
-                return;
-            }
-            if(result.length > 1){
-                log.error('~> _getMidDataFromDB : what happened?? ' + result.length + ' regId='+indicator);
-            }
+                    var ret = [];
+                    var privateString = [];
+                    if(result[0].data[0].hasOwnProperty('wfsv')){
+                        privateString = forecastString;
+                    } else if(result[0].data[0].hasOwnProperty('wh10B')){
+                        privateString = seaString;
+                    } else if(result[0].data[0].hasOwnProperty('taMax10')){
+                        privateString = tempString;
+                    } else if(result[0].data[0].hasOwnProperty('wf10')){
+                        privateString = landString;
+                    } else {
+                        err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
+                        log.error(err);
+                        log.error(meta);
+                        cb(err);
+                        return [];
+                    }
 
-            if(cb){
-                var ret = [];
-                var privateString = [];
-                if(result[0].data[0].hasOwnProperty('wfsv')){
-                    privateString = forecastString;
-                } else if(result[0].data[0].hasOwnProperty('wh10B')){
-                    privateString = seaString;
-                } else if(result[0].data[0].hasOwnProperty('taMax10')){
-                    privateString = tempString;
-                } else if(result[0].data[0].hasOwnProperty('wf10')){
-                    privateString = landString;
-                } else {
-                    err = new Error('~> what is it???'+JSON.stringify(result[0].data[0]));
-                    log.error(err);
-                    log.error(meta);
-                    cb(err);
-                    return [];
-                }
-
-                result[0].data.forEach(function(item){
-                    var newItem = {};
-                    commonString.forEach(function(string){
-                        newItem[string] = item[string];
+                    result[0].data.forEach(function(item){
+                        var newItem = {};
+                        commonString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        privateString.forEach(function(string){
+                            newItem[string] = item[string];
+                        });
+                        //log.info(newItem);
+                        ret.push(newItem);
                     });
-                    privateString.forEach(function(string){
-                        newItem[string] = item[string];
-                    });
-                    //log.info(newItem);
-                    ret.push(newItem);
-                });
 
-                cb(0, {pubDate: result[0].pubDate, ret: ret});
+                    cb(0, {pubDate: result[0].pubDate, ret: ret});
+                }
+                return result[0];
+            });
+        }catch(e){
+            log.error(meta);
+            if (cb) {
+                cb(e);
             }
-            return result[0];
-        });
-    }catch(e){
-        log.error(meta);
-        if (cb) {
-            cb(e);
-        }
-        else {
-            log.error(e);
+            else {
+                log.error(e);
+            }
         }
     }
-
     return [];
 };
 
@@ -4323,7 +4413,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         //log.info(todayLand);
         var startDate = kmaTimeLib.convertStringToDate(todayLand.date);
         startDate.setDate(startDate.getDate()+3);
-
         for(i=0 ; i<8 ; i++){
             currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
             item = {
@@ -4342,21 +4431,27 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
             result.push(item);
             startDate.setDate(startDate.getDate()+1);
         }
-
         //log.info(todayTemp);
         startDate = kmaTimeLib.convertStringToDate(todayTemp.date);
         startDate.setDate(startDate.getDate()+3);
         for(i=0 ; i<8 ; i++) {
             var isNew = false;
             currentDate = kmaTimeLib.convertDateToYYYYMMDD(startDate);
-            item = result.find(function (obj) {
-                return obj.date === currentDate;
-            });
+            item = null;
+            for(var j=0 ; j < result.length ; j++){
+                if(result[j].date === currentDate){
+                    item = result[j];
+                    break;
+                }
+            }
+            //item = result.find(function (obj) {
+            //    return obj.date === currentDate;
+            //});
+
             if (item == null) {
                 item = {date: currentDate};
                 isNew = true;
             }
-
             index = i+3;
             item.taMin = todayTemp['taMin' + index];
             item.taMax = todayTemp['taMax' + index];
@@ -4365,7 +4460,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
             }
             startDate.setDate(startDate.getDate()+1);
         }
-
         //log.info('res', result);
         // 11일 전의 데이터부터 차례차례 가져와서 과거의 날씨 정보를 채워 넣자...
         if (landList > 1) {
@@ -4396,7 +4490,6 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
                 }
             }
         }
-
         result.sort(self._sortByDateTime);
 
         result = result.filter(function (item) {
@@ -4415,7 +4508,7 @@ ControllerTown.prototype._mergeLandWithTemp = function(landList, tempList, cb){
         }
 
     } catch(e){
-        log.error('> something wrong');
+        log.error('> something wrong : ', e);
         log.error(meta);
         if (cb) {
             cb(e);

@@ -233,5 +233,10 @@ angular.module('service.util', [])
             }
         };
 
+        obj.placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
+        if (twClientConfig.googleapikey) {
+            obj.placesUrl += '&key='+twClientConfig.googleapikey;
+        }
+
         return obj;
     });

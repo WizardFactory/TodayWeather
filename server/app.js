@@ -7,6 +7,7 @@
 require('newrelic');
 
 var express = require('express');
+var cors = require('cors');
 var path = require('path');
 var favicon = require('serve-favicon');
 //var logger = require('morgan');
@@ -16,6 +17,7 @@ var mongoose = require('mongoose');
 
 var controllerManager = require('./controllers/controllerManager');
 var controllerShortRss = require('./controllers/kma/kma.town.short.rss.controller');
+var controllerAirkoreaDustImage = require('./controllers/airkorea.dust.image.controller');
 /*
 * wizard factory's modules
 */
@@ -60,6 +62,8 @@ i18n.configure({
 
     register: global
 });
+
+app.use(cors());
 
 // Use the session middleware
 app.use(session({ secret: 'wizard factory',
@@ -119,6 +123,17 @@ if (config.mode === 'push') {
 
 if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
+}
+
+if (config.mode === 'service'){
+    global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
+    global.airkoreaDustImageMgr.startDustImageMgr(function(err){
+        if(err){
+            log.error('Fail to start image mgr');
+            return;
+        }
+        log.info('Start Image Mgr');
+    });
 }
 
 // catch 404 and forward to error handler

@@ -11,6 +11,10 @@ iap.config({
     applePassword: config.platforms.applePassword,
     googlePublicKeyStrSandbox: config.platforms.googlePublicKey,
     googlePublicKeyStrLive: config.platforms.googlePublicKey,
+    googleAccToken: config.platforms.googleAccToken,
+    googleRefToken: config.platforms.googleRefToken,
+    googleClientID: config.platforms.googleClientID,
+    googleClientSecret: config.platforms.googleClientSecret,
     verbose: true
 });
 
@@ -96,30 +100,31 @@ router.post('/', function(req, res) {
                 iap.APPLE,
                 receipt,
                 function (err, appleRes) {
+
+                    var response;
                     if (err) {
-                        res.send({ok: false, data: {code: 6778002, message: err.message}});
-                        return;
+                        response = {ok: false, data: {code: 6778002, message: err.message}};
+                    }
+                    else if (!iap.isValidated(appleRes)) {
+                        response = {ok: false, data: {code: 6778001, message: 'receipts is invalid'}};
+                    }
+                    else {
+                        //can not use this func because it is not check cancellation_date
+                        //var purchaseDataList = iap.getPurchaseData(appleRes);
+
+                        var expires_date = calcExpirationDate(productId, appleRes.receipt.in_app);
+                        if (expires_date == undefined) {
+                            //PURCHASE_EXPIRED
+                            response = {ok: false, data: {code: 6778003, message: 'service is expired or canceled'}};
+                        }
+                        else {
+                            appleRes.receipt.expires_date = expires_date;
+                            response = {ok: true, data:appleRes.receipt};
+                        }
                     }
 
-                    if (!iap.isValidated(appleRes)) {
-                        res.send({ok: false, data: {code: 6778001, message: 'receipts is invalid'}});
-                        return;
-                    }
-
-                    //can not use this func because it is not check cancellation_date
-                    //var purchaseDataList = iap.getPurchaseData(appleRes);
-
-                    var expires_date = calcExpirationDate(productId, appleRes.receipt.in_app);
-                    if (expires_date == undefined) {
-                        //PURCHASE_EXPIRED
-                        res.send({ok: false, data: {code: 6778003, message: 'service is expired or canceled'}});
-                        return;
-                    }
-
-                    appleRes.receipt.expires_date = expires_date;
-
-                    //save db
-                    res.send({ok: true, data:appleRes.receipt});
+                    log.info(response);
+                    res.send(response);
                 });
         }
         else if (type === 'android') {
@@ -131,39 +136,37 @@ router.post('/', function(req, res) {
             iap.validate(iap.GOOGLE,
                 { data: receipt[0].receipt, signature: receipt[0].signature },
                 function (err, googleRes) {
-                    if (err) {
-                        res.send({ok: false, data: {code: 6778002, message: err.message}});
-                        return;
-                    }
-                    if (!iap.isValidated(googleRes)) {
-                        res.send({ok: false, data: {code: 6778001, message: 'receipts is invalid'}});
-                        return;
-                    }
-
-                    if (googleRes.purchaseState != 0)
-                    {
-                        res.send({ok: false, data: {code: 6778001, message: 'Purchase is canceled or refund'}});
-                        return;
-                    }
-
                     log.info(googleRes);
+                    var response;
 
-                    googleRes.product_id = googleRes.productId;
-                    googleRes.purchase_date_ms = googleRes.purchaseTime;
-                    var expires_date = calcExpirationDate(productId, [googleRes]);
-                    if (expires_date == undefined) {
-                        //PURCHASE_EXPIRED
-                        res.send({ok: false, data: {code: 6778003, message: 'service is expired'}});
-                        return;
+                    if (err) {
+                        response = {ok: false, data: {code: 6778002, message: err.message}};
+                    }
+                    else if (!iap.isValidated(googleRes)) {
+                        response = {ok: false, data: {code: 6778001, message: 'receipts is invalid'}};
+                    }
+                    else {
+                        if (googleRes.expirationTime <= (new Date()).getTime()) {
+                            response = {ok: false, data: {code: 6778003, message: 'service is expired or canceled'}};
+                        }
+                        else {
+                            googleRes.product_id = googleRes.productId;
+                            googleRes.purchase_date_ms = googleRes.purchaseTime;
+                            googleRes.expires_date = (new Date(Number(googleRes.expirationTime))).toUTCString();
+                            response = {ok: true, data:googleRes};
+                        }
                     }
 
-                    googleRes.expires_date = expires_date;
-
-                    res.send({ok: true, data:googleRes});
+                    log.info(response);
+                    res.send(response);
                 });
+        }
+        else {
+            throw new Error("Unknown type");
         }
     }
     catch(e) {
+        log.error(e);
         res.status(500).send('e');
     }
 });

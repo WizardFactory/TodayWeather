@@ -185,6 +185,18 @@ kmaTimeLib.convertDateToYYYYoMMoDD_HHoMM = function (date) {
         ':'+manager.leadingZeros(date.getMinutes(), 2);
 };
 
+kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM = function (date) {
+    if (date == undefined) {
+        date = kmaTimeLib.toTimeZone(9);
+    }
+
+    return date.getFullYear()+
+        '-'+manager.leadingZeros(date.getMonth()+1, 2)+
+        '-'+manager.leadingZeros(date.getDate(), 2) +
+        ' '+manager.leadingZeros(date.getHours(), 2) +
+        ':'+manager.leadingZeros(date.getMinutes(), 2);
+};
+
 kmaTimeLib.convert0Hto24H = function (obj) {
     if (obj.time === "0000") {
         var D = kmaTimeLib.convertStringToDate(obj.date);

@@ -546,6 +546,7 @@ TownRss.prototype.getShortRssFromDB = function(model, coord, req, callback) {
                     ret.push(newItem);
                 });
 
+                log.info('KMA Town S-RSS> result : ', pubDate);
                 callback(errorNo, {pubDate: pubDate, ret:ret});
             }catch(e){
                 if (callback) {

@@ -33,6 +33,7 @@ var awsCloudFront = require('../utils/awsCloudFront');
 var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
+var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 
 /*********************/
 
@@ -42,6 +43,7 @@ function Manager(){
     self.kmaTownCurrent = kmaTownCurrent;
     self.kmaTownShort = kmaTownShort;
     self.kmaTownShortest = kmaTownShortest;
+    self.kmaTownMid = kmaTownMid;
 
     self.TIME_PERIOD = {
         TOWN_SHORT: (1000*60*60*3),
@@ -553,7 +555,7 @@ Manager.prototype._checkInvalidt1h = function(currentData){
         if(parseInt(currentData[preIndex].my) >= 140){
             startMonth = 3;
         }
-        log.info('C> Month(', preDateMonth, '), StartMonth(', startMonth, '), EndMonth(', endMonth, ')');
+        log.debug('C> Month(', preDateMonth, '), StartMonth(', startMonth, '), EndMonth(', endMonth, ')');
 
         // 4월에서 9월 사이에 t1h가 0.0이 나타나는 경우는 없기 때문에 이 경우 invalid data로 판단한다
         // 단 my가 140이 넘는 북쪽지역의 경우 4월까지 0도가 나타나는 경우가 있기 때문에 시작 월이 3월로 조정됨.
@@ -565,7 +567,7 @@ Manager.prototype._checkInvalidt1h = function(currentData){
 
     if(currentData.length > 2){
         var limitedVector = 4;
-        log.info('C> Pre data : ', currentData[preIndex].toString());
+        log.debug('C> Pre data : ', currentData[preIndex].toString());
 
         // 한시간 전의 t1h가 0일 경우 t1h가 invalid일 가능성이 있으니 check해야함
         if(currentData[preIndex].t1h === 0.0){
@@ -924,22 +926,38 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    this.saveMid(modelMidForecast, newData[0], callback);
+    if(config.db.version === '2.0'){
+        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidForecast, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    this.saveMid(modelMidLand, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidLand, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    this.saveMid(modelMidTemp, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidTemp, newData[0], callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    this.saveMid(modelMidSea, newData[0], callback);
+    if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
+    }else{
+        this.saveMid(modelMidSea, newData[0], callback);
+    }
     return this;
 };
 
@@ -1549,7 +1567,12 @@ Manager.prototype.getMidForecast = function(gmt, key, callback){
 
     log.info('+++ GET MID Forecast : ', dateString);
 
-    self._checkPubDate(modelMidForecast, (new collectTown()).listPointNumber, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkForecastPubDate;
+    }
+
+    fnCheckPubDate(modelMidForecast, (new collectTown()).listPointNumber, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1613,8 +1636,12 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
     }
 
     log.info('+++ GET MID LAND Forecast : ', dateString);
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkLandPubDate;
+    }
 
-    self._checkPubDate(modelMidLand, (new collectTown()).listAreaCode, dateString, function (err, srcList) {
+    fnCheckPubDate(modelMidLand, (new collectTown()).listAreaCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1679,8 +1706,11 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
-
-    self._checkPubDate(modelMidTemp, (new collectTown()).listCityCode, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
+    }
+    fnCheckPubDate(modelMidTemp, (new collectTown()).listCityCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -1738,8 +1768,11 @@ Manager.prototype.getMidSea = function(gmt, key, callback){
     }
 
     log.info('+++ GET MID SEA Forecast : ', dateString);
-
-    self._checkPubDate(modelMidSea, (new collectTown()).listSeaCode, dateString, function (err, srcList) {
+    var fnCheckPubDate = self._checkPubDate;
+    if(config.db.version === '2.0'){
+        fnCheckPubDate = self.kmaTownMid.checkSeaPubDate;
+    }
+    fnCheckPubDate(modelMidSea, (new collectTown()).listSeaCode, dateString, function (err, srcList) {
         if (err) {
             if (callback) {
                 callback(err);
@@ -2125,39 +2158,39 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     if (time === 2 || putAll) {
         //spend long time
         log.info('push past');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function Past(callback) {
             self._requestApi("past", callback);
         });
 
         log.info('push keco_forecast');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function KecoForecast(callback) {
             self._requestApi("kecoForecast", callback);
         });
 
         log.info('push mid temp');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function MidTemp(callback) {
             self._requestApi("midtemp", callback);
         });
         log.info('push mid land');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function MidLand(callback) {
             self._requestApi("midland", callback);
         });
         log.info('push mid forecast');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function MidForecast(callback) {
             self._requestApi("midforecast", callback);
         });
         log.info('push mid sea');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function MidSea(callback) {
             self._requestApi("midsea", callback);
         });
 
         log.info('push mid rss');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function MidRss(callback) {
             self._requestApi("midrss", callback);
         });
 
         log.info('push short rss');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function ShortRss(callback) {
             self._requestApi("shortrss", callback);
         });
     }
@@ -2168,7 +2201,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         var hour = (new Date()).getUTCHours()+9;
 
         if(hour === 6 || hour === 18 || putAll) {
-            self.asyncTasks.push(function (callback) {
+            self.asyncTasks.push(function HealthDAy(callback) {
                 self._requestApi('healthday', callback);
             });
         }
@@ -2177,7 +2210,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         //direct request keco
         log.info('push keco');
-        //self.asyncTasks.push(function (callback) {
+        //self.asyncTasks.push(function Keco(callback) {
             self._requestApi("keco", function() {
                 log.info('keco done');
         //        callback();
@@ -2190,22 +2223,22 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
      */
     if (time === 10 || putAll) {
         log.info('push life index');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function LifeIndex(callback) {
             self._requestApi("lifeindex", callback);
         });
     }
 
-    if (time === 10 || putAll) {
+    if (time === 11 || putAll) {
         log.info('push short');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function Short(callback) {
             self._requestApi("short", callback);
         });
     }
 
-    if (time === 40 || putAll) {
+    if (time === 41 || putAll) {
         //direct request current
         log.info('push current');
-        //self.asyncTasks.push(function (callback) {
+        //self.asyncTasks.push(function Current(callback) {
         self._requestApi("current", function () {
             log.info('current done');
             //        callback();
@@ -2213,9 +2246,9 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 45 || putAll) {
+    if (time === 46 || putAll) {
         log.info('push shortest');
-        self.asyncTasks.push(function (callback) {
+        self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
                 log.info('shortest done');
                 callback();
@@ -2232,25 +2265,25 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     //if(time === 50 || putAll){
     //    log.info('push invalidateCloudFront');
-    //    self.asyncTasks.push(function(callback){
+    //    self.asyncTasks.push(function InvalidDateCloudFront(callback){
     //        self._requestApi("invalidateCloudFront/ALL", callback);
     //    })
     //}
 
-    if ((time === 55 && hours === 18)|| putAll) {
+    if ((time === 55)|| putAll) {
         log.info('push kasi rise set');
-        self.asyncTasks.push(function (callback) {
+        //self.asyncTasks.push(function KasiRiseSet(callback) {
             self._requestApi("gatherKasiRiseSet", function () {
                 log.info('kasi rise set done');
-                callback();
+        //        callback();
             });
-        });
+        //});
     }
 
     if (time === 55 || putAll) {
         //direct request updateInvalidt1h
         log.info('push updateInvalidt1h');
-        //self.asyncTasks.push(function (callback) {
+        //self.asyncTasks.push(function UpdateInvalidT1H(callback) {
         self._requestApi("updateInvalidt1h", function () {
             log.info('updateInvalidt1h done');
             //        callback();
@@ -2262,6 +2295,12 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
     }
     else {
+        var strFuncName = "";
+        self.asyncTasks.forEach(function (fObj) {
+            strFuncName+= (fObj.name+", ");
+        });
+        log.error("Wait tasks name="+strFuncName);
+
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
         log.error('ERROR WAIT '+self.asyncTasks.length+' tasks');
@@ -2280,7 +2319,7 @@ Manager.prototype.startManager = function(){
     self.midRssKmaRequester = midRssKmaRequester;
 
     keco.setServiceKey(config.keyString.normal);
-    keco.setDaumApiKey(config.keyString.daum_key);
+    keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
     keco.getCtprvnSidoList();
 
     self.keco = keco;

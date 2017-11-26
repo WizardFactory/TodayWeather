@@ -1,6 +1,7 @@
 /**
  * Created by Peter on 2016. 3. 17..
  */
+"use strict";
 var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode.js');
@@ -79,20 +80,22 @@ function controllerWorldWeather(){
      * @param res
      */
     self.sendResult = function(req, res){
-        if(req.error){
-            res.json(req.error);
+        var result;
+        if(req.error) {
+            result = req.error;
         }
         else if(req.result){
             if (req.result.thisTime.length != 2) {
                 log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
             }
-            res.json(req.result);
-            return;
+            result = req.result;
         }
         else {
-            res.json({result: 'Unknown result'});
+            result = {result: 'Unknown result'};
         }
+
         log.info('## - ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' + req.sessionID);
+        res.json(result);
         return;
     };
 
@@ -390,12 +393,12 @@ function controllerWorldWeather(){
                             if(err == 'ZERO_RESULTS'){
                                 self.getaddressByGeocode(req.geocode.lat, req.geocode.lon, function(err, addr){
                                     if(err){
-                                        log.error('Fail to get getaddressByGeocode : ', err, meta);
+                                        log.error('Fail to get addressByGeocode : ', err, meta);
                                         return callback(null);
                                     }
                                     self.getGeocodeByAddr(addr, function(err, geocode){
                                         if(err || geocode.lat === undefined || geocode.lon === undefined){
-                                            log.error('Fail to get getGeocodeByAddr :', err);
+                                            log.error('Fail to get GeocodeByAddr :', err);
                                             return callback(null);
                                         }
                                         self.getLocalTimezone(req, geocode, function(err){
@@ -944,7 +947,7 @@ function controllerWorldWeather(){
 
         request.get(encodedUrl, null, function(err, response, body){
             if(err) {
-                log.error('Error!!! getGeocodeByAddr : ', err);
+                log.error('Error!!! get GeocodeByAddr : ', err);
                 if(callback){
                     callback(err);
                 }
@@ -961,22 +964,28 @@ function controllerWorldWeather(){
                 return;
             }
 
-            var result = JSON.parse(body);
-            var geocode = {};
+            try {
+                var result = JSON.parse(body);
+                var geocode = {};
 
-            log.info(JSON.stringify(result));
-            if(result.hasOwnProperty('results')){
-                if(Array.isArray(result.results)
-                    && result.results[0].hasOwnProperty('geometry')){
-                    if(result.results[0].geometry.hasOwnProperty('location')){
-                        if(result.results[0].geometry.location.hasOwnProperty('lat')){
-                            geocode.lat = parseFloat(result.results[0].geometry.location.lat);
-                        }
-                        if(result.results[0].geometry.location.hasOwnProperty('lng')){
-                            geocode.lon = parseFloat(result.results[0].geometry.location.lng);
+                log.info(JSON.stringify(result));
+                if(result.hasOwnProperty('results')){
+                    if(Array.isArray(result.results)
+                        && result.results[0].hasOwnProperty('geometry')){
+                        if(result.results[0].geometry.hasOwnProperty('location')){
+                            if(result.results[0].geometry.location.hasOwnProperty('lat')){
+                                geocode.lat = parseFloat(result.results[0].geometry.location.lat);
+                            }
+                            if(result.results[0].geometry.location.hasOwnProperty('lng')){
+                                geocode.lon = parseFloat(result.results[0].geometry.location.lng);
+                            }
                         }
                     }
                 }
+            }
+            catch(e) {
+                if (callback) callback(e);
+                return;
             }
 
             log.info('converted geocodeo : ', JSON.stringify(geocode));
@@ -999,7 +1008,7 @@ function controllerWorldWeather(){
 
         request.get(encodedUrl, null, function(err, response, body){
             if(err) {
-                log.error('Error!!! getaddressByGeocode : ', err);
+                log.error('Error!!! get addressByGeocode : ', err);
                 if(callback){
                     callback(err);
                 }
@@ -1016,16 +1025,22 @@ function controllerWorldWeather(){
                 return;
             }
 
-            var result = JSON.parse(body);
-            var address = '';
+            try {
+                var result = JSON.parse(body);
+                var address = '';
 
-            log.info(result);
-            if(result.hasOwnProperty('results')){
-                if(Array.isArray(result.results)
-                    && result.results[0].hasOwnProperty('formatted_address')){
-                    log.info('formatted_address : ', result.results[0].formatted_address);
-                    address = result.results[0].formatted_address;
+                log.info(result);
+                if(result.hasOwnProperty('results')){
+                    if(Array.isArray(result.results)
+                        && result.results[0].hasOwnProperty('formatted_address')){
+                        log.info('formatted_address : ', result.results[0].formatted_address);
+                        address = result.results[0].formatted_address;
+                    }
                 }
+            }
+            catch(e) {
+                if (callback) callback(e);
+                return;
             }
 
             if(callback){
@@ -1596,6 +1611,7 @@ function controllerWorldWeather(){
             });
         }
 
+        req.result.source = "DSF";
         next();
     };
 
@@ -3058,6 +3074,7 @@ function controllerWorldWeather(){
             case 'heavy drizzle': return 16;
             case 'drizzle clear': return 17;
             case 'light rain at times': return 18;
+            case 'possible light rain':
             case 'light rain': return 19;
             case 'rain at times': return 20;
             case 'rain': return 21;
@@ -3072,6 +3089,7 @@ function controllerWorldWeather(){
             case 'heavy sleet': return 30;
             case 'sleet clear': return 31;
             case 'light snow at times': return 32;
+            case 'possible light snow':
             case 'light snow': return 33;
             case 'snow at times': return 34;
             case 'snow': return 35;
@@ -3105,6 +3123,8 @@ function controllerWorldWeather(){
             case 'dry': return 62;
             case 'dangerously windy': return 63; //LOC_VERY_STRONG_WIND
             case 'sleet': return 64;
+            case '비': return 65; //for KMA
+            case '눈': return 66; //for KMA
             default :
                 log.error("Fail weatherStr="+weatherStr);
         }

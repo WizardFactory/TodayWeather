@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.59",
+  "version": "0.9.62",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -81,12 +81,12 @@
     {
       "platform": "android",
       "version": "",
-      "locator": "android@5.1.1"
+      "locator": "android"
     },
     {
       "platform": "ios",
       "version": "",
-      "locator": "ios@4.3.1"
+      "locator": "ios"
     }
   ]
 }
