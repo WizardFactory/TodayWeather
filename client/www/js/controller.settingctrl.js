@@ -1,8 +1,9 @@
 angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
-                                        $ionicSideMenuDelegate, $ionicPopup, $location) {
+                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage) {
 
         var menuContent = null;
+        var settingsInfo = null;
         var strOkay = "OK";
         var strCancel = "Cancel";
         $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
@@ -17,14 +18,16 @@ angular.module('controller.settingctrl', [])
                 menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
             }
 
-            $scope.startupPage = localStorage.getItem("startupPage");
-            if ($scope.startupPage === null) {
-                $scope.startupPage = "0"; //시간별날씨
+            settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo === null) {
+                settingsInfo = {
+                    startupPage: "0", //시간별날씨
+                    refreshInterval: "0" //수동
+                };
+                TwStorage.set("settingsInfo", settingsInfo);
             }
-            $scope.refreshInterval = localStorage.getItem("refreshInterval");
-            if ($scope.refreshInterval === null) {
-                $scope.refreshInterval = "0"; //수동
-            }
+            $scope.startupPage = settingsInfo.startupPage;
+            $scope.refreshInterval = settingsInfo.refreshInterval;
         }
 
         $scope.clickMenu = function (menu) {
@@ -49,11 +52,13 @@ angular.module('controller.settingctrl', [])
         };
 
         $scope.setStartupPage = function(startupPage) {
-            localStorage.setItem("startupPage", startupPage);
+            settingsInfo.startupPage = startupPage;
+            TwStorage.set("settingsInfo", settingsInfo);
         };
 
         $scope.setRefreshInterval = function(refreshInterval) {
-            localStorage.setItem("refreshInterval", refreshInterval);
+            settingsInfo.refreshInterval = refreshInterval;
+            TwStorage.set("settingsInfo", settingsInfo);
             $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
         };
 

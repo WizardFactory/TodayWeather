@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util) {
+    .factory('Purchase', function($http, $q, TwAds, TwStorage, Util) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -67,17 +67,17 @@ angular.module('controller.purchase', [])
         };
 
         obj.saveStoreReceipt = function (storeReceipt) {
-            localStorage.setItem("storeReceipt", JSON.stringify(storeReceipt));
+            TwStorage.set("storeReceipt", storeReceipt);
         };
 
         obj.loadStoreReceipt = function () {
-            return JSON.parse(localStorage.getItem("storeReceipt"));
+            return TwStorage.get("storeReceipt");
         };
 
         obj.loadPurchaseInfo = function () {
             var self = this;
             console.log('load purchase info');
-            var purchaseInfo = JSON.parse(localStorage.getItem("purchaseInfo"));
+            var purchaseInfo = TwStorage.get("purchaseInfo");
 
             if (purchaseInfo != undefined) {
                 console.log('load purchaseInfo='+JSON.stringify(purchaseInfo));
@@ -98,7 +98,7 @@ angular.module('controller.purchase', [])
         obj.savePurchaseInfo = function (accountLevel, expirationDate) {
             var self = this;
             var purchaseInfo = {accountLevel: accountLevel, expirationDate: expirationDate};
-            localStorage.setItem("purchaseInfo", JSON.stringify(purchaseInfo));
+            TwStorage.set("purchaseInfo", purchaseInfo);
 
             if (purchaseInfo.accountLevel === self.ACCOUNT_LEVEL_PREMIUM) {
                 TwAds.saveTwAdsInfo(false);
@@ -160,34 +160,15 @@ angular.module('controller.purchase', [])
                 })
         };
 
-        return obj;
-    })
-    .run(function($ionicPopup, $q, Purchase, $rootScope, $location, $translate, Util) {
-
-        if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_PAID) {
-            return;
-        }
-
-        if (ionic.Platform.isIOS()) {
-            Purchase.paidAppUrl = twClientConfig.iOSPaidAppUrl;
-        }
-        else if (ionic.Platform.isAndroid()) {
-            Purchase.paidAppUrl = twClientConfig.androidPaidAppUrl;
-        }
-
-        if (!window.inAppPurchase) {
-            Util.ga.trackEvent('purchase', 'error', 'uninstalled');
-            return;
-        }
-
         /**
          * check validation receipt by saved data in local storage
          */
-        function checkPurchase() {
+        obj.checkPurchase = function () {
+            var self = this;
             var storeReceipt;
             var updatePurchaseInfo;
 
-            storeReceipt = Purchase.loadStoreReceipt();
+            storeReceipt = self.loadStoreReceipt();
             if (storeReceipt) {
 
                 console.log('Purchases INFO!!!');
@@ -195,7 +176,7 @@ angular.module('controller.purchase', [])
 
                 updatePurchaseInfo = function () {
                     var deferred = $q.defer();
-                    Purchase.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
+                    self.checkReceiptValidation(storeReceipt, function (err, receiptInfo) {
                         if (err) {
                             deferred.reject(new Error("Fail to connect validation server. Please restore after 1~2 minutes"));
                             return;
@@ -207,17 +188,17 @@ angular.module('controller.purchase', [])
                 };
             }
             else {
-                updatePurchaseInfo = Purchase.updatePurchaseInfo;
+                updatePurchaseInfo = self.updatePurchaseInfo;
             }
 
             updatePurchaseInfo()
                 .then(function (receiptInfo) {
-                    Purchase.loaded = true;
+                    self.loaded = true;
                     if (!receiptInfo.ok) {
                         //downgrade by canceled, refund ..
                         console.log(JSON.stringify(receiptInfo.data));
-                        Purchase.setAccountLevel(Purchase.ACCOUNT_LEVEL_FREE);
-                        Purchase.savePurchaseInfo(Purchase.accountLevel, Purchase.expirationDate);
+                        self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
+                        self.savePurchaseInfo(self.accountLevel, self.expirationDate);
 
                         Util.ga.trackEvent('purchase', 'invalid', 'subscribe', 2);
 
@@ -236,51 +217,72 @@ angular.module('controller.purchase', [])
                     Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
                     Util.ga.trackException(err, false);
                 });
-        }
+        };
 
-        Purchase.loadPurchaseInfo();
+        obj.init = function() {
+            var self = this;
 
-        //check purchase state is canceled or refund
-        if (Purchase.loaded) {
-            console.log('already check purchase info');
-            return;
-        }
+            if (self.accountLevel == self.ACCOUNT_LEVEL_PAID) {
+                return;
+            }
 
-        Purchase.productId = 'tw1year';
-        console.log('productId='+Purchase.productId);
+            if (ionic.Platform.isIOS()) {
+                self.paidAppUrl = twClientConfig.iOSPaidAppUrl;
+            }
+            else if (ionic.Platform.isAndroid()) {
+                self.paidAppUrl = twClientConfig.androidPaidAppUrl;
+            }
 
-        Purchase.hasInAppPurchase = true;
+            if (!window.inAppPurchase) {
+                Util.ga.trackEvent('purchase', 'error', 'uninstalled');
+                return;
+            }
 
-        inAppPurchase
-            .getProducts([Purchase.productId])
-            .then(function (products) {
-                console.log(JSON.stringify(products));
-                Purchase.products =  products;
-                if (Purchase.loaded === false) {
-                    //It seems fail to check purchase info
-                    //retry check purchase info
-                    checkPurchase();
-                }
-            })
-            .catch(function (err) {
-                console.log('Fail to get products of id='+Purchase.productId);
-                console.log(JSON.stringify(err));
-                Util.ga.trackException(err, false);
-            });
+            self.loadPurchaseInfo();
 
-        //if saved accountLevel skip checkPurchase but, have to get products
-        if (Purchase.accountLevel === Purchase.ACCOUNT_LEVEL_FREE) {
-            console.log('account Level is '+Purchase.accountLevel);
-            Purchase.loaded = true;
-            return;
-        }
+            //check purchase state is canceled or refund
+            if (self.loaded) {
+                console.log('already check purchase info');
+                return;
+            }
 
-        //some times fail to get restorePurchases because inAppPurchase is not ready
-        checkPurchase();
+            self.productId = 'tw1year';
+            console.log('productId='+Purchase.productId);
+
+            self.hasInAppPurchase = true;
+
+            inAppPurchase
+                .getProducts([self.productId])
+                .then(function (products) {
+                    console.log(JSON.stringify(products));
+                    self.products =  products;
+                    if (self.loaded === false) {
+                        //It seems fail to check purchase info
+                        //retry check purchase info
+                        checkPurchase();
+                    }
+                })
+                .catch(function (err) {
+                    console.log('Fail to get products of id='+self.productId);
+                    console.log(JSON.stringify(err));
+                    Util.ga.trackException(err, false);
+                });
+
+            //if saved accountLevel skip checkPurchase but, have to get products
+            if (self.accountLevel === self.ACCOUNT_LEVEL_FREE) {
+                console.log('account Level is '+self.accountLevel);
+                self.loaded = true;
+                return;
+            }
+
+            //some times fail to get restorePurchases because inAppPurchase is not ready
+            self.checkPurchase();
+        };
+
+        return obj;
     })
     .controller('PurchaseCtrl', function($scope, $ionicLoading, $ionicHistory, $ionicPopup,
                                          Purchase, TwAds, $translate, Util) {
-
         var spinner = '<ion-spinner icon="dots" class="spinner-stable"></ion-spinner><br/>';
 
         var strPurchaseError = "Purchase error";

@@ -197,15 +197,6 @@ angular.module('service.util', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.startVersion = 1.0;
-        if (window.ionic && ionic.Platform.isAndroid()) {
-            /**
-             * 기존 버전 호환성이슈로 Android는 유지.
-             */
-            obj.suiteName = "net.wizardfactory.todayweather_preferences";
-        }
-        else {
-            obj.suiteName = "group.net.wizardfactory.todayweather";
-        }
         obj.language;
         obj.region;
         obj.uuid = '';
@@ -239,49 +230,6 @@ angular.module('service.util', [])
             }
             else {
                 return true;
-            }
-        };
-
-        obj._saveServiceKeys = function () {
-            var self = this;
-            var suitePrefs = plugins.appPreferences.suite(self.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
-                },
-                function (error) {
-                    self.ga.trackEvent('plugin', 'error', 'storeAppPreferences');
-                    console.error("save preference Error: " + error);
-                },
-                'daumServiceKeys',
-                JSON.stringify(twClientConfig.daumServiceKeys));
-        };
-
-        obj.saveServiceKeys = function () {
-            var self = this;
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined, so load local st');
-            }
-            else {
-                var suitePrefs = plugins.appPreferences.suite(self.suiteName);
-                suitePrefs.fetch(
-                    function (value) {
-                        if (value == undefined || value == '') {
-                            self._saveServiceKeys();
-                        }
-                        else {
-                            if (JSON.parse(value).length != twClientConfig.daumServiceKeys.length) {
-                                self._saveServiceKeys();
-                            }
-                            else {
-                                console.log("fetch preference Success: " + value);
-                            }
-                        }
-                    },
-                    function (error) {
-                        self.ga.trackEvent('plugin', 'error', 'fetchAppPreferences');
-                    },
-                    'daumServiceKeys');
             }
         };
 

@@ -5,7 +5,7 @@
 var start = angular.module('controller.start', []);
 
 start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Purchase, $ocLazyLoad, Util, $ionicLoading,
-                                       $q, WeatherUtil, WeatherInfo, $translate, $ionicPopup ) {
+                                       $q, WeatherUtil, WeatherInfo, $translate, $ionicPopup, TwStorage) {
     var strError = "Error";
     var strAddLocation = "Add locations";
     var strOkay = "OK";
@@ -41,7 +41,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         console.log("Fail to translate : " + JSON.stringify(translationIds));
     });
 
-    var startVersion = null;
     var service;
 
     if (window.google == undefined) {
@@ -129,7 +128,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     };
 
     function close() {
-        localStorage.setItem("startVersion", Util.startVersion.toString());
+
+        TwStorage.set("startVersion", Util.startVersion);
         _setShowAds(true);
         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
         $location.path('/tab/forecast');
@@ -195,7 +195,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     function init() {
         _setShowAds(false);
         _makeFavoriteList();
-        startVersion = localStorage.getItem("startVersion");
     }
 
     $scope.OnSelectResult = function(result) {

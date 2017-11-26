@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units) {
         var obj = {};
         obj.config = {
             "android": {
@@ -36,7 +36,7 @@ angular.module('service.push', [])
 
         obj.loadPushInfo = function () {
             var self = this;
-            var pushData = JSON.parse(localStorage.getItem("pushData"));
+            var pushData = TwStorage.get("pushData");
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
@@ -61,7 +61,7 @@ angular.module('service.push', [])
         obj.savePushInfo = function () {
             var self = this;
             console.log('save push data');
-            localStorage.setItem("pushData", JSON.stringify(self.pushData));
+            TwStorage.set("pushData", self.pushData);
         };
 
         /**
@@ -357,10 +357,10 @@ angular.module('service.push', [])
             console.log('fail to find cityIndex='+cityIndex);
         };
 
-        return obj;
-    })
-    .run(function(Push, Util) {
-            Push.loadPushInfo();
+        obj.init = function () {
+            var self = this;
+
+            self.loadPushInfo();
 
             if (!window.PushNotification) {
                 console.log("push notification plugin is not set");
@@ -369,14 +369,14 @@ angular.module('service.push', [])
             }
 
             if (ionic.Platform.isIOS()) {
-                Push.pushData.type = 'ios';
+                self.pushData.type = 'ios';
             }
             else if (ionic.Platform.isAndroid()) {
-                Push.pushData.type = 'android';
+                self.pushData.type = 'android';
             }
 
             //if push is on, call register
-            if (Push.pushData.alarmList.length > 0) {
+            if (self.pushData.alarmList.length > 0) {
                 PushNotification.hasPermission(function(data) {
                     if (data.isEnabled) {
                         console.log('isEnabled');
@@ -391,9 +391,12 @@ angular.module('service.push', [])
                     console.log('Already set push notification');
                     return;
                 }
-                Push.register(function (registrationId) {
-                   console.log('start push registrationId='+registrationId);
+                self.register(function (registrationId) {
+                    console.log('start push registrationId='+registrationId);
                 });
             }
+        };
+
+        return obj;
     });
 
