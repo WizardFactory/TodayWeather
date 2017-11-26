@@ -4,6 +4,7 @@
  */
 
 "use strict";
+var assert  = require('assert');
 
 var GeoCtrl = require('../controllers/geo.controller');
 
@@ -48,6 +49,12 @@ describe('unit test - geo controller class', function() {
             }
             done();
         });
+    });
+
+    it('check is korea area', function () {
+        var geoCtrl = new GeoCtrl();
+        var isKoreaArea = geoCtrl._isKoreaArea(37.566, 126.977);
+        assert.equal(isKoreaArea, true);
     });
 
     //it('get name from google', function (done) {
