@@ -23,6 +23,10 @@ function GeoController(lat, lon, lang, country) {
     this.name = "";
 }
 
+GeoController.prototype.setGoogleApiKey = function (key) {
+   googleApiKey = key;
+};
+
 GeoController.prototype._request = function(url, callback) {
     request(url, {json: true, timeout: 5000}, function(err, response, body) {
         if (err) {
@@ -34,6 +38,53 @@ GeoController.prototype._request = function(url, callback) {
         }
         callback(err, body);
     });
+};
+
+/**
+ *
+ * @param lat
+ * @param lng
+ * @returns {boolean}
+ * @private
+ */
+GeoController.prototype._isKoreaArea = function (lat, lon) {
+    return 39.3769 >= lat && lat >=32.6942 &&
+        130.6741 >= lon && lon >= 123.9523;
+};
+
+GeoController.prototype._parseAddressFromDaum = function (result) {
+    var geoInfo = {};
+
+    if (result.name0 === "대한민국") {
+        geoInfo.country = "KR";
+        geoInfo.address = result.fullName;
+        if (result.name3 && result.name3 != "") {
+            geoInfo.name = result.name3;
+        }
+        else if (result.name2 && result.name2 != "") {
+            geoInfo.name = result.name2;
+        }
+        else if (result.name1 && result.name1 != "") {
+            geoInfo.name = result.name1;
+        }
+        else if (result.name0 && result.name0 != "") {
+            geoInfo.name = result.name0;
+        }
+        //remove space in "성남시 분당구"
+        var name2 = result.name2;
+        if (name2) {
+            name2 = name2.replace(/ /g,"");
+        }
+        geoInfo.kmaAddress = {"region": result.name1, "city": name2, "town": result.name3};
+    }
+    else if (result.name0 === "일본") {
+        geoInfo.country = "JP";
+    }
+    else {
+        log.debug("It is not korea");
+    }
+
+    return geoInfo;
 };
 
 /**
@@ -72,41 +123,7 @@ GeoController.prototype._getAddressFromDaum = function (callback) {
             if (err) {
                 return callback(err);
             }
-
-            try {
-                if (result.name0 === "대한민국") {
-                    that.country = "KR";
-                    that.kmaAddress = {"region": result.name1, "city": result.name2, "town": result.name3};
-                    //if lang is not ko, get address from google api
-                    if (!that.lang) {
-                        that.lang = "ko";
-                    }
-                    if (that.lang === "ko") {
-                        that.address = result.fullName;
-                    }
-                    that.country = "KR";
-                    if (result.name3 && result.name3 != "") {
-                        that.name = result.name3;
-                    }
-                    else if (result.name2 && result.name2 != "") {
-                        that.name = result.name2;
-                    }
-                    else if (result.name1 && result.name1 != "") {
-                        that.name = result.name1;
-                    }
-                    else if (result.name0 && result.name0 != "") {
-                        that.name = result.name0;
-                    }
-                }
-                else {
-                    log.debug("It is not korea");
-                }
-
-            }
-            catch (e) {
-               return callback(e);
-            }
-            callback();
+            callback(null, result);
         });
 
     return this;
@@ -340,45 +357,42 @@ GeoController.prototype._getAddressFromGoogle = function (callback) {
             if (err) {
                 return callback(err);
             }
-            try {
-               var geoInfo = that._parseGoogleResult(result);
-                that.country = geoInfo.country;
-                that.name = geoInfo.name;
-                that.address = geoInfo.address;
-            }
-            catch(e) {
-                return callback(e);
-            }
-            callback();
+            callback(null, result);
         });
 
     return this;
 };
 
 GeoController.prototype.setInfoFromReq = function (req) {
-    var lat = req.params.lat;
-    var lon = req.params.lon;
-    var country = req.query.country;
-    var address = req.query.address;
-    var lang;
+    this.lat = req.params.lat;
+    this.lon = req.params.lon;
+    if (req.query) {
+        this.country = req.query.country;
+        this.address = req.query.address;
+        this.name = req.query.name;
+        this.lang = req.query.lang;
+        if (req.query.kma_region) {
+            this.kmaAddress = {
+                "region" : req.query.kma_region,
+                "city" : req.query.kma_city,
+                "town" : req.query.kma_town
+            };
+        }
+    }
 
-    var al = req.headers['accept-language'];
-    if (al) {
-        lang = al.split('-')[0];
+    if (!this.lang && req.headers) {
+        var al = req.headers['accept-language'];
+        if (al) {
+            this.lang = al.split('-')[0];
+        }
     }
-    if (country) {
-        country = country.toUpperCase();
+    if (this.country) {
+        this.country = this.country.toUpperCase();
     }
-    this.lat = lat;
-    this.lon = lon;
-    this.lang = lang;
-    this.country = country;
-    this.address = address;
-    //set units
 };
 
 /**
- *
+ * e2e test ./test/e2e/test.e2e.geo.controller.js
  * @param req
  * @param res
  * @param next
@@ -389,31 +403,110 @@ GeoController.prototype.location2address = function(req, res, next) {
 
     async.waterfall([
             function (callback) {
-                if (that.country === undefined || that.country === 'KR') {
-                    that._getAddressFromDaum(function (err) {
+                if (that.country) {
+                    return callback();
+                }
+                if (that._isKoreaArea(that.lat, that.lon)) {
+                    that._getAddressFromDaum(function (err, result) {
+                        try {
+                            var geoInfo = that._parseAddressFromDaum(result);
+                            that.country = that.country || geoInfo.country;
+                            that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
+                            if (that.lang === 'ko') {
+                                that.address = that.address || geoInfo.address;
+                                that.name = that.name || geoInfo.name;
+                            }
+                        }
+                        catch (e) {
+                            return callback(e);
+                        }
                         callback(err);
                     });
                 }
                 else {
-                    callback();
+                    that._getAddressFromGoogle(function (err, result) {
+                        try {
+                            var geoInfo = that._parseGoogleResult(result);
+                            that.country = that.country || geoInfo.country;
+                            that.address = that.address || geoInfo.address;
+                            that.name = that.name || geoInfo.name;
+                        }
+                        catch(e) {
+                            return callback(e);
+                        }
+                        callback(err);
+                    });
                 }
             },
             function (callback) {
-                if (that.lang !== 'ko' ||
-                        that.country !== 'KR') {
-                   that._getAddressFromGoogle(function (err) {
-                       callback(err);
-                   });
+                if (that.country !== 'KR') {
+                    return callback();
                 }
-                else {
-                    callback();
+                if (that.kmaAddress) {
+                    return callback();
                 }
+
+                that._getAddressFromDaum(function (err, result) {
+                    try {
+                        var geoInfo = that._parseAddressFromDaum(result);
+                        that.country = that.country || geoInfo.country;
+                        that.kmaAddress = that.kmaAddress || geoInfo.kmaAddress;
+                        if (that.lang === 'ko') {
+                            that.address = that.address || geoInfo.address;
+                            that.name = that.name || geoInfo.name;
+                        }
+                    }
+                    catch (e) {
+                        return callback(e);
+                    }
+                    callback(err);
+                });
+            },
+            function (callback) {
+                if (that.address) {
+                    return callback();
+                }
+                that._getAddressFromGoogle(function (err, result) {
+                    try {
+                        var geoInfo = that._parseGoogleResult(result);
+                        that.country = that.country || geoInfo.country;
+                        that.address = that.address || geoInfo.address;
+                        that.name = that.name || geoInfo.name;
+                    }
+                    catch(e) {
+                        return callback(e);
+                    }
+                    callback(err);
+                });
+            },
+            function (callback) {
+                if (that.name) {
+                   return callback();
+                }
+                that._getAddressFromGoogle(function (err, result) {
+                    try {
+                        var geoInfo = that._parseGoogleResult(result);
+                        that.country = that.country || geoInfo.country;
+                        that.address = that.address || geoInfo.address;
+                        that.name = that.name || geoInfo.name;
+                    }
+                    catch(e) {
+                        return callback(e);
+                    }
+                    callback(err);
+                });
             }
         ],
         function (err) {
             if (err) {
                 return next(err);
             }
+            if (that.country === 'KR' && that.lang === 'ko') {
+                if (!that.kmaAddress) {
+                    return next(new Error("Fail to get kma address in ko-KR"));
+                }
+            }
+
             req.country = that.country;
             if (that.kmaAddress) {
                 req.params.region = that.kmaAddress.region;
@@ -428,9 +521,9 @@ GeoController.prototype.location2address = function(req, res, next) {
 
             req.result = req.result?req.result:{};
             req.result.location = {lat:req.params.lat, lon:req.params.lon};
-            req.result.name = that.name;
-            req.result.address = that.address;
             req.result.country = that.country;
+            req.result.address = that.address;
+            req.result.name = that.name;
 
             log.info(that);
             next();
