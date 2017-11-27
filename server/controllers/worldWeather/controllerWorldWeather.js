@@ -1560,6 +1560,15 @@ function controllerWorldWeather(){
                             thisTime.pm10Str = self._getAqiLevel(thisTime.pm10Grade);
                             thisTime.pm25Str = self._getAqiLevel(thisTime.pm25Grade);
                             thisTime.so2Str = self._getAqiLevel(thisTime.so2Grade);
+
+                            // convert IAQI value to grade
+                            thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
+                            thisTime.coGrade = self._getAqiGrade(thisTime.coGrade);
+                            thisTime.no2Grade = self._getAqiGrade(thisTime.no2Grade);
+                            thisTime.o3Grade = self._getAqiGrade(thisTime.o3Grade);
+                            thisTime.pm10Grade = self._getAqiGrade(thisTime.pm10Grade);
+                            thisTime.pm25Grade = self._getAqiGrade(thisTime.pm25Grade);
+                            thisTime.so2Grade = self._getAqiGrade(thisTime.so2Grade);
                         }
                     }
                 });
@@ -1898,6 +1907,38 @@ function controllerWorldWeather(){
         else{
             log.warn('_getAqiLevel : wrong value : ', value);
             return '';
+        }
+    };
+
+    self._getAqiGrade = function(value){
+        if(value == undefined) {
+            log.warn('_getAqiGrade : invalid parameter');
+            return '';
+        }
+
+        var aqi = parseInt(value);
+
+        if(aqi >= 0 && aqi <= 50){
+            return 1;
+        }
+        else if(aqi >= 51 && aqi <= 100){
+            return 2;
+        }
+        else if(aqi >= 101 && aqi <= 150){
+            return 3;
+        }
+        else if(aqi >= 151 && aqi <= 200){
+            return 4;
+        }
+        else if(aqi >= 201 && aqi <= 300){
+            return 5;
+        }
+        else if(aqi >= 300){
+            return 6;
+        }
+        else{
+            log.warn('_getAqiGrade : wrong value : ', value);
+            return 0;
         }
     };
 
