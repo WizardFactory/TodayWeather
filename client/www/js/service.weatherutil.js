@@ -814,7 +814,7 @@ angular.module('service.weatherutil', [])
             }
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 3000})
+            $http({method: 'GET', url: url, timeout: 3000, cache: true})
                 .success(function (data) {
                     if (data.status === 'OK') {
                         try {
@@ -944,7 +944,7 @@ angular.module('service.weatherutil', [])
                 '&output=json';
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 3000})
+            $http({method: 'GET', url: url, timeout: 3000, cache:true})
                 .success(function (data, status, headers, config, statusText) {
                     console.log("s="+status+" h="+headers+" c="+config+" sT="+statusText);
                     if (data.fullName && data.name0 === '대한민국') {
@@ -1049,7 +1049,7 @@ angular.module('service.weatherutil', [])
             }
 
             console.log(url);
-            $http({method: 'GET', url: url, timeout: 3000})
+            $http({method: 'GET', url: url, timeout: 3000, cache:true})
                 .success(function (data) {
                     var err;
                     if (data.status === "OK") {
@@ -1297,6 +1297,12 @@ angular.module('service.weatherutil', [])
             var startTime = new Date().getTime();
             var endTime;
 
+            console.log('watchID : '+watchID);
+            if (watchID) {
+                deferred.reject("alreadyCalled");
+                return deferred.promise;
+            }
+
             //경기도,광주시,오포읍
             //position = {coords: {latitude: 37.36340556, longitude: 127.2307667}};
             //세종특별자치시,,도담동
@@ -1331,11 +1337,12 @@ angular.module('service.weatherutil', [])
                 Util.ga.trackTiming('position', endTime - startTime, 'get', 'watch');
                 Util.ga.trackEvent('position', 'get', 'watch', endTime - startTime);
                 navigator.geolocation.clearWatch(watchID);
+                watchID = null;
                 deferred.resolve({coords: position.coords, provider: 'watchPosition'});
             }, function (error) {
                 Util.ga.trackEvent('position', 'warn', 'watch(message: ' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 return deferred.reject();
-            }, { timeout: 60000, maximumAge: 3000, enableHighAccuracy: true});
+            }, { timeout: 60000, maximumAge: 60000, enableHighAccuracy: true});
 
             return deferred.promise;
         };
