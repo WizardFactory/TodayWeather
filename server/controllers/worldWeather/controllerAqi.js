@@ -266,10 +266,10 @@ controllerAqi.prototype.requestAqiData = function(geocode, From, To, timeOffset,
                 requester.getAqiData(geocode, key, function(err, result){
                     if(err){
                         log.error('Req Aqi> get fail', geocode, date);
+                        log.warn(err);
                         cb(null, {err: 'fail to get AQI'});
                         return;
                     }
-
 
                     if(date === undefined){
                         var curTime = new Date();
