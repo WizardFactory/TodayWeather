@@ -238,7 +238,7 @@ KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
             l.nextTime.setUTCMonth(l.offerMonth.start);
         }
         else if (l.nextTime.getUTCMonth()> l.offerMonth.end) {
-            l.nextTime.setUTCFullYear(time.getUTCFullYear()+1);
+            l.nextTime.setUTCFullYear(l.nextTime.getUTCFullYear()+1);
             l.nextTime.setUTCMonth(l.offerMonth.start);
             l.nextTime.setUTCDate(0);
             l.nextTime.setUTCHours(0);
