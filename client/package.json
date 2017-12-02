@@ -75,7 +75,8 @@
     {
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
       "id": "cordova-plugin-todayweather-config"
-    }
+    },
+    "cordova-plugin-apple-watch"
   ],
   "cordovaPlatforms": [
     {
