@@ -1,9 +1,8 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
 var bower = require('bower');
-var concat = require('gulp-concat');
 var sass = require('gulp-sass');
-var minifyCss = require('gulp-minify-css');
+var cleanCss = require('gulp-clean-css');
 var rename = require('gulp-rename');
 var sh = require('shelljs');
 var fs = require('fs');
@@ -26,7 +25,7 @@ gulp.task('sass', function(done) {
       errLogToConsole: true
     }))
     .pipe(gulp.dest('./www/css/'))
-    .pipe(minifyCss({
+    .pipe(cleanCss({
       keepSpecialComments: 0
     }))
     .pipe(rename({ extname: '.min.css' }))
@@ -34,7 +33,7 @@ gulp.task('sass', function(done) {
     .on('end', done);
 });
 
-gulp.task('watch', function() {
+gulp.task('watch', ['sass'], function() {
   gulp.watch(paths.sass, ['sass']);
 });
 
@@ -69,7 +68,6 @@ gulp.task('build', shell.task([
   'cp -a ../ios platforms/',
   'ionic state restore --plugins',
   'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
   'ionic build'
@@ -84,7 +82,6 @@ gulp.task('build_ios', shell.task([
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
   'ionic build ios'
@@ -96,7 +93,6 @@ gulp.task('build_android', shell.task([
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="111"',
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
   'ionic build android'
@@ -110,7 +106,6 @@ gulp.task('release-android-nonpaid', shell.task([
   'cordova plugin add cordova-plugin-app-preferences',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="1111"',
   'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
 
@@ -145,7 +140,6 @@ gulp.task('release-ios-nonpaid', shell.task([
   'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'npm install',
-  'cd node_modules/cordova-uglify/;npm install',
   'bower install',
   'gulp sass',
   'cp ads.ios.tw.client.config.js www/tw.client.config.js',
