@@ -431,6 +431,7 @@ angular.module('controller.forecastctrl', [])
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
+            applyWeatherData();
             loadWeatherData();
         }
 
@@ -778,7 +779,6 @@ angular.module('controller.forecastctrl', [])
                                     return;
                                 }
 
-                                WeatherInfo.updateCity(0, geoInfo);
                                 if (WeatherInfo.getCityIndex() != 0) {
                                     console.log("already changed to new location");
                                     return;

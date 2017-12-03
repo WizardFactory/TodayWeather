@@ -227,10 +227,7 @@ angular.module('service.weatherinfo', [])
                     window.push.updateAlarm(index, city.address);
                 }
             }
-            //geoInfo가 오는 경우에는 loadTime적용안함
-            if (newCityInfo.currentWeather) {
-                city.loadTime = new Date();
-            }
+            city.loadTime = new Date();
 
             that.saveCities();
         };
