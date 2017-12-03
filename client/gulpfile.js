@@ -129,15 +129,17 @@ gulp.task('release-android-nonpaid', shell.task([
 ]));
 
 gulp.task('release-ios-nonpaid', shell.task([
+  'cp package.json import_today_ext/package.json.backup',
+  'cp import_today_ext/empty.package.json package.json',
   'ionic state reset',
-  'gulp rmplugins',
   'cp -a ../ios platforms/',
+  'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
   'cordova plugin add cordova-plugin-app-preferences',
   'cordova plugin add cordova-plugin-inapppurchase',
-  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="111"',
+  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="1111"',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'npm install',
   'bower install',
