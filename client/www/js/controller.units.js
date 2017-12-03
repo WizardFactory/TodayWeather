@@ -3,7 +3,7 @@
  */
 
 angular.module('controller.units', [])
-    .factory('Units', function(Util) {
+    .factory('Units', function(TwStorage, Util) {
         var obj = {};
         obj.temperatureUnit;
         obj.windSpeedUnit;
@@ -89,64 +89,24 @@ angular.module('controller.units', [])
 
         obj.loadUnits = function () {
             var self = this;
-            var units;
-            var key;
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined, so load local st');
-                units = JSON.parse(localStorage.getItem("units"));
-                if (units == undefined) {
-                    self._initUnits();
-                    self.saveUnits();
-                }
-                else {
-                    for (key in units) {
-                        self[key] = units[key];
-                    }
-                }
+
+            var units = TwStorage.get("units");
+            if (units == undefined) {
+                self._initUnits();
+                self.saveUnits();
                 return;
             }
 
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.fetch(function (value) {
-                console.log("fetch preference Success: " + value);
-                if (value == undefined || value == '') {
-                    self._initUnits();
-                    self.saveUnits();
-                    return;
-                }
-
-                units = JSON.parse(value);
-                if (units == undefined) {
-                    self._initUnits();
-                    self.saveUnits();
-                    return;
-                }
-
-                for (key in units) {
-                    self[key] = units[key];
-                }
-            }, function (error) {
-                console.log("fetch preference Error: " + error);
-                self._initUnits();
-                self.saveUnits();
-            }, 'units');
+            for (var key in units) {
+                self[key] = units[key];
+            }
         };
 
         //saveUnits
         obj.saveUnits = function () {
             var self = this;
 
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined, so save local st');
-                localStorage.setItem("units", JSON.stringify(self));
-                return;
-            }
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(function (value) {
-                console.log("save preference Success: " + value);
-            }, function (error) {
-                console.log("save preference Error: " + error);
-            }, 'units', JSON.stringify(self));
+            TwStorage.set("units", self);
         };
 
         obj.setUnit = function (unit, value) {

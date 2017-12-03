@@ -2,7 +2,7 @@ angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
-                                          $ionicPopup, $translate, Units) {
+                                          $ionicPopup, $translate, Units, TwStorage) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -730,8 +730,8 @@ angular.module('controller.forecastctrl', [])
         function setRefreshTimer() {
             clearTimeout(refreshTimer);
 
-            var refreshInterval = localStorage.getItem("refreshInterval");
-            if (refreshInterval != null && refreshInterval !== "0") {
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
                     $scope.$broadcast('reloadEvent');
                 }, parseInt(refreshInterval)*60*1000);

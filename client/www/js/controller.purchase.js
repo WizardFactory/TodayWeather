@@ -20,6 +20,9 @@ angular.module('controller.purchase', [])
         obj.hasInAppPurchase = false;
         obj.paidAppUrl='';
 
+        obj.init = function() {
+        };
+
         if (twClientConfig.isPaidApp) {
             obj.accountLevel = obj.ACCOUNT_LEVEL_PAID;
             TwAds.setEnableAds(false);
@@ -27,11 +30,6 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function() {
-
-        return;
-    })
     .controller('PurchaseCtrl', function() {
-
         return;
     });
