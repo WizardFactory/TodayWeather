@@ -111,12 +111,11 @@ angular.module('service.util', [])
                 }
             },
             trackEvent: function (category, action, label, value, newSession) {
-                if (twClientConfig.debug) {
-                   console.log('category='+category+' action='+action+' label='+label+' value='+value);
-                }
+                console.log(category, action, label, value);
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackEvent(category, action, label, value, newSession, function(result) {
-                        console.log("trackEvent success = " + result);
+                        //console.log("trackEvent success = " + result);
                     }, function(error) {
                         console.log("trackEvent error = " + error);
                         gaArray.push(["trackEvent", category, action, label, value, newSession]);
@@ -127,12 +126,11 @@ angular.module('service.util', [])
                 }
             },
             trackException: function (description, fatal) {
-                if (twClientConfig.debug) {
-                   console.log('description='+description+' fatal='+fatal);
-                }
+                console.log(description, fatal);
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackException(description, fatal, function(result) {
-                        console.log("trackException success = " + result);
+                        //console.log("trackException success = " + result);
                     }, function(error) {
                         console.log("trackException error = " + error);
                         gaArray.push(["trackException", description, fatal]);
@@ -143,9 +141,10 @@ angular.module('service.util', [])
                 }
             },
             trackTiming: function (category, intervalInMilliseconds, name, label) {
+                console.log(category, intervalInMilliseconds, name, label);
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackTiming(category, intervalInMilliseconds, name, label, function(result) {
-                        console.log("trackTiming success = " + result);
+                        //console.log("trackTiming success = " + result);
                     }, function(error) {
                         console.log("trackTiming error = " + error);
                     });
@@ -154,7 +153,7 @@ angular.module('service.util', [])
             addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
-                        console.log("addTransaction success = " + result);
+                        //console.log("addTransaction success = " + result);
                     }, function(error) {
                         console.log("addTransaction error = " + error);
                     });
@@ -163,7 +162,7 @@ angular.module('service.util', [])
             addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
-                        console.log("addTransactionItem success = " + result);
+                        //console.log("addTransactionItem success = " + result);
                     }, function(error) {
                         console.log("addTransactionItem error = " + error);
                     });
@@ -172,7 +171,7 @@ angular.module('service.util', [])
             enableUncaughtExceptionReporting: function (enable) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.enableUncaughtExceptionReporting(enable, function(result) {
-                        console.log("enableUncaughtExceptionReporting success = " + result);
+                        //console.log("enableUncaughtExceptionReporting success = " + result);
                     }, function(error) {
                         console.log("enableUncaughtExceptionReporting error = " + error);
                     });
