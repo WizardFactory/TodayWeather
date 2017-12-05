@@ -388,22 +388,22 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getLocalTimezone(req, req.geocode, function(err){
                         if(err){
-                            log.error('1. Fail to get LocalTimezone : ', err, meta);
+                            log.warn('TWW> 1. Fail to get LocalTimezone : ', err, meta);
 
                             if(err == 'ZERO_RESULTS'){
                                 self.getaddressByGeocode(req.geocode.lat, req.geocode.lon, function(err, addr){
                                     if(err){
-                                        log.error('Fail to get addressByGeocode : ', err, meta);
+                                        log.error('TWW> Fail to get addressByGeocode : ', err, meta);
                                         return callback(null);
                                     }
                                     self.getGeocodeByAddr(addr, function(err, geocode){
                                         if(err || geocode.lat === undefined || geocode.lon === undefined){
-                                            log.error('Fail to get GeocodeByAddr :', err);
+                                            log.error('TWW> Fail to get GeocodeByAddr :', err);
                                             return callback(null);
                                         }
                                         self.getLocalTimezone(req, geocode, function(err){
                                             if(err) {
-                                                log.error('2. Fail to get LocalTimezone : ', err, meta);
+                                                log.error('TWW> 2. Fail to get LocalTimezone : ', err, meta);
                                             }
                                             return callback(null);
                                         });
@@ -449,7 +449,7 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getDataFromDSF(req, function(err, result){
                         if(err){
-                            log.error('TWW> Fail to get DSF data', err, meta);
+                            log.warn('TWW> 1. Fail to get DSF data', err, meta);
                             callback('err_exit_DSF');
                             return;
                         }
@@ -479,7 +479,7 @@ function controllerWorldWeather(){
                 function(callback){
                     self.getDataFromAQI(req, function(err, result){
                         if(err){
-                            log.error('TWW> Fail to get AQI data', err, meta);
+                            log.warn('TWW> Fail to get AQI data', err, meta);
                             callback('err_exit_AQI');
                             return;
                         }
@@ -598,7 +598,7 @@ function controllerWorldWeather(){
                             function(cb){
                                 self.getDataFromDSF(req, function(err, result){
                                     if(err){
-                                        log.error('TWW> Fail to get DSF data', err, meta);
+                                        log.error('TWW> 2. Fail to get DSF data', err, meta);
                                         cb('err_exit_DSF');
                                         return;
                                     }

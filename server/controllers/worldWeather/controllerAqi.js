@@ -182,6 +182,9 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
 
     try{
         var newData = self._parseAQIData(data);
+        if(isNaN(newData.aqi)){
+            newData.aqi = -100;
+        }
 
         log.info('AQI> New Data : ', newData);
         var res = {

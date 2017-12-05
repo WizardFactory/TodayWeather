@@ -1174,7 +1174,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 //log.info(data);
                 dbData.save(function(err){
                     if(err){
-                        log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
+                        log.error('Dsf> fail to save to DB :', err , geocode, " date="+newData.current.dateObj.toISOString());
                     }
                     else {
                         log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
