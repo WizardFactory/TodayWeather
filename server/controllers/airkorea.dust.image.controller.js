@@ -317,9 +317,9 @@ AirkoreaDustImageController.prototype.taskDustImageMgr = function(callback){
 AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
     var self = this;
     
-    self.taskDustImageMgr();
+    self.taskDustImageMgr(callback);
     self.task = setInterval(function(){
-        self.taskDustImageMgr();
+        self.taskDustImageMgr(undefined);
     }, 3 * 60 * 1000);
 };
 
