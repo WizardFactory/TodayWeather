@@ -43,7 +43,7 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
     var self = this;
     var agentOptions = {
         ciphers: 'ALL',
-        secureProtocol: 'TLSv1_method',
+        secureProtocol: 'TLSv1_method'
     };
 
     log.silly('AQI> get data : ', url);
@@ -64,16 +64,22 @@ aqiRequester.prototype.getData = function(url, retryCount, callback){
         if(statusCode === 404 || statusCode === 403){
             log.debug('AQI> ERROR!!! StatusCode : ', statusCode);
             if(callback){
-                callback(1);
+                callback(statusCode);
             }
             return;
         }
 
-        var result = JSON.parse(body);
-        log.info(result);
+        var result;
+        try {
+            result = JSON.parse(body);
+            log.info(result);
+        }
+        catch (err) {
+            return callback(err);
+        }
 
         if(result.status != 'ok'){
-            callback(2);
+            callback(result.status);
         }else{
             callback(err, result);
         }

@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util) {
+    .factory('WeatherInfo', function (WeatherUtil, TwStorage, Util) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -85,7 +85,7 @@ angular.module('service.weatherinfo', [])
             if (index >= -1 && index < cities.length) {
                 cityIndex = index;
                 // save current cityIndex
-                localStorage.setItem("cityIndex", JSON.stringify(cityIndex));
+                TwStorage.set("cityIndex", cityIndex);
                 console.log("cityIndex = " + cityIndex);
             }
         };
@@ -234,7 +234,7 @@ angular.module('service.weatherinfo', [])
 
         obj.loadCities = function() {
             var that = this;
-            var items = JSON.parse(localStorage.getItem("cities"));
+            var items = TwStorage.get("cities");
 
             if (items === null) {
                 createCity();
@@ -253,7 +253,7 @@ angular.module('service.weatherinfo', [])
             }
 
             // load last cityIndex
-            cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
+            cityIndex = TwStorage.get("cityIndex");
             if (cityIndex === null) {
                 that.setFirstCityIndex();
             }
@@ -280,44 +280,20 @@ angular.module('service.weatherinfo', [])
             });
 
             console.log('save preference plist='+JSON.stringify(pList));
-
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(function (value) {
-                console.log("save preference Success: " + value);
-            }, function (error) {
-                console.log("save preference Error: " + error);
-                Util.ga.trackEvent('plugin', 'error', 'saveAppPreferences');
-                Util.ga.trackException(error, false);
-            }, 'cityList', JSON.stringify(pList));
+            TwStorage.set("cityList", pList);
         };
 
         obj._loadCitiesPreference = function (callback) {
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
-                return;
+            var cityList = TwStorage.get("cityList");
+            if (cityList == undefined) {
+                callback(new Error("Can not find cityList"));
+            } else {
+                callback(undefined, cityList);
             }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.fetch(function (value) {
-                console.log("fetch preference Success: " + value);
-                callback(undefined, value);
-            }, function (error) {
-                console.log("fetch preference Error: " + error);
-                Util.ga.trackEvent('plugin', 'error', 'fetchAppPreferences');
-                Util.ga.trackException(error, false);
-                callback(error);
-            }, 'cityList');
         };
 
         obj.saveCities = function() {
-            localStorage.setItem("cities", JSON.stringify(cities));
+            TwStorage.set("cities", cities);
             this._saveCitiesPreference(cities);
         };
 

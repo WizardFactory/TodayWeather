@@ -4,7 +4,7 @@
  */
 
 angular.module('controller.purchase', [])
-    .factory('Purchase', function($rootScope, $http, $q, TwAds, Util, $translate) {
+    .factory('Purchase', function($http, $q, TwAds, TwStorage, Util) {
         var obj = {};
         obj.ACCOUNT_LEVEL_FREE = 'free';
         obj.ACCOUNT_LEVEL_PREMIUM = 'premium';
@@ -57,42 +57,19 @@ angular.module('controller.purchase', [])
         };
 
         obj.loadPurchaseInfo = function (callback) {
-            var purchaseInfo;
             var self = this;
             if (callback == undefined) {
                 console.log('callback is undefined');
                 return;
             }
 
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('load purchase info');
-                purchaseInfo = JSON.parse(localStorage.getItem("purchaseInfo"));
-                self._loadPurchaseInfo(purchaseInfo);
-                return callback();
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-
-            suitePrefs.fetch(
-                function (value) {
-                    console.log("fetch preference Success: " + value);
-                    try {
-                        self._loadPurchaseInfo.call(self, JSON.parse(value));
-                        callback(null, value);
-                    }
-                    catch(e) {
-                        callback(e);
-                    }
-                },
-                function (error) {
-                    console.log("fetch preference Error: " + error);
-                    callback(error);
-                },
-                "purchaseInfo");
+            console.log('load purchase info');
+            var purchaseInfo = TwStorage.get("purchaseInfo");
+            self._loadPurchaseInfo(purchaseInfo);
+            return callback();
         };
 
         obj.savePurchaseInfo = function (accountLevel, expirationDate, callback) {
-
             callback = callback || function() {};
 
             var purchaseInfo = {accountLevel: accountLevel, expirationDate: expirationDate};
@@ -103,20 +80,8 @@ angular.module('controller.purchase', [])
                 TwAds.saveTwAdsInfo(true);
             }
 
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                localStorage.setItem("purchaseInfo", JSON.stringify(purchaseInfo));
-                return callback();
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-
-            suitePrefs.store(function (value) {
-                console.log("save preference Success: " + value);
-                callback();
-            }, function (error) {
-                console.log("save preference Error: " + error);
-                callback(error);
-            }, 'purchaseInfo', JSON.stringify(purchaseInfo));
+            TwStorage.set("purchaseInfo", purchaseInfo);
+            return callback();
         };
 
         obj.restore = function () {
@@ -195,11 +160,7 @@ angular.module('controller.purchase', [])
 
         return obj;
     })
-    .run(function(Purchase) {
-       Purchase.init();
-    })
-    .controller('PurchaseCtrl', function($scope, $ionicHistory, $ionicLoading, Util, Purchase, TwAds, $translate) {
-
+    .controller('PurchaseCtrl', function($scope, $ionicHistory, Util, Purchase, TwAds) {
         if (ionic.Platform.isIOS()) {
             Util.ga.trackEvent('plugin', 'error', 'PurchaseCtrlOnIOS');
             return;

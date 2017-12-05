@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, Util) {
+    .factory('TwAds', function(TwStorage, Util) {
         var obj = {};
         obj.enableAds = null;
         obj.showAds = null;
@@ -15,7 +15,7 @@ angular.module('service.twads', [])
 
         obj.loadTwAdsInfo = function () {
             var self = this;
-            var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
+            var twAdsInfo = TwStorage.get("twAdsInfo");
             console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
                         ' request enable='+self.requestEnable+' show='+self.requestShow);
 
@@ -36,7 +36,7 @@ angular.module('service.twads', [])
 
         obj.saveTwAdsInfo = function (enable) {
             var twAdsInfo = {enable: enable};
-            localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
+            TwStorage.set("twAdsInfo", twAdsInfo);
         };
 
         obj._admobCreateBanner = function() {

@@ -15,6 +15,7 @@ angular.module('starter', [
     'service.util',
     'service.twads',
     'service.push',
+    'service.storage',
     'controller.tabctrl',
     'controller.forecastctrl',
     'controller.searchctrl',
@@ -22,36 +23,155 @@ angular.module('starter', [
     'controller.guidectrl',
     'controller.purchase',
     'controller.units',
-    'controller.start',
-    'service.run'
+    'controller.start'
 ])
     .factory('$exceptionHandler', function (Util) {
-       return function (exception, cause) {
-           console.log(exception, cause);
-           if (Util && Util.ga) {
-               if (exception) {
-                   Util.ga.trackEvent('angular', 'error', exception.message);
-                   Util.ga.trackException(exception.stack, true);
-               }
-               else {
-                   Util.ga.trackEvent('angular', 'error', 'execption is null');
-               }
-           }
-           else {
-               console.log('util or util.ga is undefined');
-           }
-           if (twClientConfig && twClientConfig.debug) {
-               alert("ERROR in " + exception);
-           }
-       }
+        return function (exception, cause) {
+            console.log(exception, cause);
+            if (Util && Util.ga) {
+                if (exception) {
+                    Util.ga.trackEvent('angular', 'error', exception.message);
+                    Util.ga.trackException(exception.stack, true);
+                }
+                else {
+                    Util.ga.trackEvent('angular', 'error', 'execption is null');
+                }
+            }
+            else {
+                console.log('util or util.ga is undefined');
+            }
+            if (twClientConfig && twClientConfig.debug) {
+                alert("ERROR in " + exception);
+            }
+        }
     })
-    .run(function(Util, Purchase, $rootScope, $location, WeatherInfo, $state, Units) {
-        //$translate.use('ja');
-        //splash screen을 빠르게 닫기 위해 event 분리
-        //차후 device ready이후 순차적으로 실행할 부분 넣어야 함.
-        if (navigator.splashscreen) {
-            console.log('splash screen hide!!!');
-            navigator.splashscreen.hide();
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase) {
+        if (twClientConfig.debug) {
+            Util.ga.debugMode();
+        }
+
+        if (ionic.Platform.isIOS()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+
+            // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                }, function (error) {
+                    console.error("Error getting for location enabled status: " + error);
+                });
+            }
+        } else if (ionic.Platform.isAndroid()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
+
+            // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                    Util.locationStatus = locationMode;
+                }, function(error) {
+                    console.error("Error getting for location mode: " + error);
+                });
+            }
+        }
+        else {
+            console.log("Error : Unknown platform");
+        }
+        Util.ga.platformReady();
+
+        Util.ga.enableUncaughtExceptionReporting(true);
+        Util.ga.setAllowIDFACollection(true);
+
+        Util.language = navigator.userLanguage || navigator.language;
+        if (navigator.globalization) {
+            navigator.globalization.getLocaleName(
+                function (locale) {
+                    Util.region = locale.value.split('-')[1];
+                    console.log('region: ' + Util.region + '\n');
+                },
+                function () {
+                    console.log('Error getting locale\n');
+                }
+            );
+        }
+
+        Util.ga.trackEvent('app', 'language', Util.language);
+
+        if (window.hasOwnProperty("device")) {
+            Util.uuid = window.device.uuid;
+            console.log("UUID:"+window.device.uuid);
+        }
+
+        console.log("UA:"+ionic.Platform.ua);
+        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
+        console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
+
+        if (window.screen) {
+            Util.ga.trackEvent('app', 'screen width', window.screen.width);
+            Util.ga.trackEvent('app', 'screen height', window.screen.height);
+        }
+        else if (window.outerHeight) {
+            Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+            Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+        }
+
+        if (window.hasOwnProperty("device")) {
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+        }
+        Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+        if (window.cordova && cordova.getAppVersion) {
+            cordova.getAppVersion.getVersionNumber().then(function (version) {
+                $rootScope.version = version;
+                Util.version = version;
+                Util.ga.trackEvent('app', 'version', Util.version);
+            });
+        }
+
+        window.onerror = function(msg, url, line) {
+            var idx = url.lastIndexOf("/");
+            if(idx > -1) {url = url.substring(idx+1);}
+            var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
+            Util.ga.trackEvent('window', 'error', errorMsg);
+            Util.ga.trackException(errorMsg, true);
+            console.log(errorMsg);
+            if (twClientConfig.debug) {
+                alert("ERROR in " + url + " (line #" + line + "): " + msg);
+            }
+            return false; //suppress Error Alert;
+        };
+
+        document.addEventListener("resume", function() {
+            Util.ga.trackEvent('app', 'status', 'resume');
+        }, false);
+        document.addEventListener("pause", function() {
+            Util.ga.trackEvent('app', 'status', 'pause');
+        }, false);
+
+        WeatherInfo.loadTowns();
+        $ionicPlatform.on('resume', function(){
+            $rootScope.$broadcast('reloadEvent', 'resume');
+        });
+
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+            // ios는 실행 시 registerLocationStateChangeHandler 호출되어 locationStatus가 설정됨
+            cordova.plugins.diagnostic.registerLocationStateChangeHandler(function (state) {
+                var oldLocationEnabled = Util.isLocationEnabled();
+
+                console.log("Location state changed to: " + state);
+                Util.locationStatus = state;
+
+                Util.ga.trackEvent('position', 'status', state);
+
+                if (oldLocationEnabled === false && Util.isLocationEnabled()) {
+                    $rootScope.$broadcast('reloadEvent', 'locationOn');
+                }
+            }, function (error) {
+                console.error("Error registering for location state changes: " + error);
+                Util.ga.trackEvent('position', 'error', 'registerLocationStateChange');
+            });
+        }
+        else {
+            Util.ga.trackEvent('plugin', 'error', 'loadDiagnostic')
         }
 
         if (ionic.Platform.isIOS()) {
@@ -70,25 +190,12 @@ angular.module('starter', [
             cordova.plugins.Keyboard.disableScroll(true);
         }
 
-        //localStorage2Pre가 끝나면 j3k0랑 기존 inapp같이 진행
-        //Purchase.init();
-
-        Units.loadUnits();
-        Util.saveServiceKeys();
-
-        //For backward compatibility
-        console.log(localStorage.getItem('startVersion'));
-        if (localStorage.getItem('startVersion') == null) {
-            if (localStorage.getItem('guideVersion') != null) {
-             localStorage.setItem('startVersion', localStorage.getItem('guideVersion'));
-            }
-        }
-
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
             var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
             headerbar.removeClass('bar-search');
             headerbar.removeClass('bar-forecast');
             headerbar.removeClass('bar-dailyforecast');
+            headerbar.removeClass('bar-clear');
             headerbar.removeClass('bar-dark');
 
             var tabs = angular.element(document.querySelectorAll('ion-side-menu-content'));
@@ -102,14 +209,6 @@ angular.module('starter', [
                     StatusBar.backgroundColorByHexString('#111');
                 }
             } else if (toState.name === 'tab.forecast') {
-                if (fromState.name === '') {
-                    var startVersion = localStorage.getItem('startVersion');
-                    if (startVersion === null || Util.startVersion > Number(startVersion)) {
-                        $location.path('/start');
-                        return;
-                    }
-                }
-
                 $rootScope.viewColor = '#03A9F4';
                 headerbar.addClass('bar-forecast');
                 if (window.StatusBar) {
@@ -120,6 +219,12 @@ angular.module('starter', [
                 headerbar.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
+                }
+            } else if (toState.name === 'start') {
+                $rootScope.viewColor = '#fff';
+                headerbar.addClass('bar-clear');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             } else {
                 $rootScope.viewColor = '#444';
@@ -151,8 +256,39 @@ angular.module('starter', [
             console.log('Fail to find ionic deep link plugin');
             Util.ga.trackException('Fail to find ionic deep link plugin', false);
         }
-    })
 
+        TwStorage.init().finally(function() {
+            if (navigator.splashscreen) {
+                console.log('splash screen hide!!!');
+                navigator.splashscreen.hide();
+            }
+
+            WeatherInfo.loadCities();
+            Push.init();
+            Purchase.init();
+            Units.loadUnits();
+
+            var daumServiceKeys = TwStorage.get("daumServiceKeys");
+            if (daumServiceKeys == undefined || daumServiceKeys.length != twClientConfig.daumServiceKeys.length) {
+                TwStorage.set("daumServiceKeys", twClientConfig.daumServiceKeys);
+            }
+
+            var startVersion = TwStorage.get("startVersion");
+            if (startVersion === null || Util.startVersion > Number(startVersion)) {
+                $location.path('/start');
+                return;
+            }
+
+            var startupPage = TwStorage.get("startupPage");
+            if (startupPage === "1") { //일별날씨
+                $state.go('tab.dailyforecast');
+            } else if (startupPage === "2") { //즐겨찾기
+                $state.go('tab.search');
+            } else { //시간별날씨
+                $state.go('tab.forecast');
+            }
+        });
+    })
     .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider,
                      ionicTimePickerProvider, $translateProvider) {
 
@@ -1266,16 +1402,6 @@ angular.module('starter', [
                     }
                 }
             });
-
-        // if none of the above states are matched, use this as the fallback
-        var startupPage = localStorage.getItem("startupPage");
-        if (startupPage === "1") { //일별날씨
-            $urlRouterProvider.otherwise('tab/dailyforecast');
-        } else if (startupPage === "2") { //즐겨찾기
-            $urlRouterProvider.otherwise('tab/search');
-        } else { //시간별날씨
-            $urlRouterProvider.otherwise('tab/forecast');
-        }
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
