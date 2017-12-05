@@ -245,9 +245,10 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
 
 };
 
-AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
+AirkoreaDustImageController.prototype.taskDustImageMgr = function(callback){
     var self = this;
 
+    log.info('taskDustImageMgr -----------');
     async.waterfall(
         [
             function(cb){
@@ -311,9 +312,14 @@ AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
             }
         }
     );
+};
 
+AirkoreaDustImageController.prototype.startDustImageMgr = function(callback){
+    var self = this;
+    
+    self.taskDustImageMgr();
     self.task = setInterval(function(){
-        self.startDustImageMgr();
+        self.taskDustImageMgr();
     }, 3 * 60 * 1000);
 };
 
