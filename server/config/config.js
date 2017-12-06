@@ -39,7 +39,9 @@ module.exports = {
             key: (process.env.WAQI_SECRET_KEY || 'You have to set key of WAQI')
         }],
         daum_keys : (process.env.DAUM_SECRET_KEYS || '["set string of array of daum keys","key1", "key2"]'),
-        google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api ke')
+        kma_keys: (process.env.KMA_SECRET_KEYS || '["key1","key2"]'),
+        airkorea_keys : (process.env.AIRKOREA_SECRET_KEYS || '["key1", "key2"]'),
+        google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api key')
     },
     logToken: {
         gather: (process.env.LOGENTRIES_GATHER_TOKEN||'Your Logentries key'),

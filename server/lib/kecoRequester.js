@@ -20,10 +20,10 @@ var DOMAIN_ARPLTN_KECO = 'http://openapi.airkorea.or.kr/openapi/services/rest';
 var PATH_MSRSTN_INFO_INQIRE_SVC = 'MsrstnInfoInqireSvc';
 var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';
 var MSRSTN_LIST = 'getMsrstnList';
-var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';
+var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';        //미세먼지/오존 예보통보 조회
 
 var PATH_ARPLTN_INFOR_INQIRE_SVC = 'ArpltnInforInqireSvc';
-var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';
+var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';  //시도별 실시간 측정정보 조회
 
 /**
  *
@@ -31,7 +31,7 @@ var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';
  */
 function Keco() {
     this._nextGetCtprvnTime = new Date();
-    this._svcKey ='';
+    this._svcKeys ='';
     this._sidoList = [];
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
@@ -60,17 +60,10 @@ Keco.prototype.getDaumApiKey = function () {
  * @param key
  * @returns {Keco}
  */
-Keco.prototype.setServiceKey = function(key) {
-    this._svcKey = key;
+Keco.prototype.setServiceKeys = function(keys) {
+    this._svcKeys = keys;
+    log.info({svcKeys: this._svcKeys});
     return this;
-};
-
-/**
- *
- * @returns {string|*}
- */
-Keco.prototype.getServiceKey = function() {
-    return this._svcKey;
 };
 
 /**
@@ -172,17 +165,7 @@ Keco.prototype.updateTimeGetCtprvn = function() {
     return this;
 };
 
-/**
- * It hasn't supported json format
- * @param key
- * @param sidoName
- * @param callback
- */
-Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
-    var url = this.getUrlCtprvn(sidoName, key);
-
-    log.debug(url);
-
+Keco.prototype._request = function (url, callback) {
     req(url, function(err, response, body) {
         if (err) {
             return callback(err);
@@ -194,6 +177,54 @@ Keco.prototype.getCtprvn = function(key, sidoName, callback)  {
         }
         return callback(err, body);
     });
+
+    return this;
+};
+
+Keco.prototype._jsonRequest = function (url, callback) {
+    log.info(url);
+    req(url, {json:true}, function(err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if ( response.statusCode >= 400) {
+            err = new Error(response.statusMessage);
+            err.statusCode = response.statusCode;
+            return callback(err);
+        }
+        return callback(err, body);
+    });
+
+    return this;
+};
+
+Keco.prototype._retryGetCtprvn = function (index, sidoName, callback) {
+    var self = this;
+    if (index < 0) {
+        return callback(new Error("EXCEEDS_LIMIT"));
+    }
+    var url = this.getUrlCtprvn(sidoName, self._svcKeys[index]);
+    log.info({url:url});
+    self._request(url, function (err, result) {
+        if (self._checkLimit(result)) {
+            return self._retryGetCtprvn(--index, sidoName, callback);
+        }
+        callback(err, result);
+    });
+
+    return this;
+};
+
+/**
+ * It hasn't supported json format
+ * @param sidoName
+ * @param callback
+ */
+Keco.prototype.getCtprvn = function(sidoName, callback)  {
+    this._retryGetCtprvn(this._svcKeys.length-1, sidoName, function (err, result) {
+        callback(err, result);
+    });
+    return this;
 };
 
 /**
@@ -316,31 +347,36 @@ Keco.prototype.saveCtprvn = function (arpltnList, callback) {
         });
 };
 
-/**
- *
- * @param key
- * @param callback
- */
-Keco.prototype.getMsrstnList = function(key, callback) {
+Keco.prototype._retryGetMsrstnList = function (index, callback) {
+    var self = this;
     var url = DOMAIN_ARPLTN_KECO + '/' + PATH_MSRSTN_INFO_INQIRE_SVC + '/' + MSRSTN_LIST +
-        '?ServiceKey='+key +
+        '?ServiceKey='+self._svcKeys[index] +
         '&ver=1.0'+
         '&numOfRows='+999 +
         '&_returnType=json';
 
     log.debug(url);
 
-    req(url, {json:true}, function(err, response, body) {
-        if (err) {
-            return callback(err);
+    self._jsonRequest(url, function (err, result) {
+        if (self._checkLimit(result)) {
+            return self._retryGetMsrstnList(--index, callback);
         }
-        if ( response.statusCode >= 400) {
-            err = new Error(response.statusMessage);
-            err.statusCode = response.statusCode;
-            return callback(new Error(err));
-        }
-        return callback(err, body);
+        callback(err, result);
     });
+
+    return this;
+};
+
+/**
+ *
+ * @param callback
+ */
+Keco.prototype.getMsrstnList = function(callback) {
+    this._retryGetMsrstnList(this._svcKeys.length-1, function (err, result) {
+        callback(err, result);
+    });
+
+    return this;
 };
 
 /**
@@ -466,7 +502,7 @@ Keco.prototype.getAllMsrStnInfo = function(callback) {
     async.waterfall([
         function (cb) {
             log.info('get msr stn list');
-            self.getMsrstnList(self.getServiceKey(), function (err, body) {
+            self.getMsrstnList(function (err, body) {
                 if (err) {
                     return cb(err);
                 }
@@ -562,32 +598,55 @@ Keco.prototype._checkDataTime = function (callback) {
     return this;
 };
 
-/**
- * date format is YYYY-MM-DD
- * @param key
- * @param date
- * @param callback
- * @private
- */
-Keco.prototype._getFrcst = function(key, date, callback) {
-    var url =  DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + MINU_DUST_FRCST_DSPTH +
+Keco.prototype._makeFrcstUrl = function (key, date) {
+    return DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + MINU_DUST_FRCST_DSPTH +
         '?ServiceKey='+key +
         '&searchDate=' + date +
         '&ver=1.3'+
         '&pageNo='+ 1 +
         '&numOfRows='+999 +
         '&_returnType=json';
+};
 
-    log.debug(url);
+Keco.prototype._checkLimit = function (result) {
+    if (typeof result === 'string') {
+       if (result.indexOf('LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR') != -1) {
+           return true;
+       }
+    }
+    return false;
+};
 
-    req(url, {json:true}, function(err, response, body) {
-        if (err) {
-            return callback(err);
+Keco.prototype._retryGetFrcst = function (index, date, callback) {
+    var self = this;
+
+    if (index < 0) {
+        return callback(new Error("EXCEEDS_LIMIT"));
+    }
+
+    log.info({index:index});
+    var url = self._makeFrcstUrl(self._svcKeys[index], date);
+    self._jsonRequest(url, function (err, result) {
+        if (self._checkLimit(result)) {
+            return self._retryGetFrcst(--index, date, callback);
         }
-        if ( response.statusCode >= 400) {
-            return callback(new Error(body));
-        }
-        return callback(err, body);
+        callback(err, result);
+    });
+
+    return this;
+};
+
+/**
+ * date format is YYYY-MM-DD
+ * @param date
+ * @param callback
+ * @private
+ */
+Keco.prototype._getFrcst = function(date, callback) {
+    var self = this;
+
+    self._retryGetFrcst(self._svcKeys.length-1, date, function (err, result) {
+        return callback(err, result);
     });
 
     return this;
@@ -598,7 +657,7 @@ Keco.prototype._parseFrcst = function (rawData, dataTime) {
     var parsedList = [];
 
     if (rawDataList == undefined || !Array.isArray(rawDataList)) {
-        log.error('keco parseFrcst rawData is not array');
+        log.error({rawData:rawData});
         return;
     }
 
@@ -714,7 +773,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                 });
             },
             function (dataTime, cb) {
-                self._getFrcst(self.getServiceKey(), dataTime.dataDate, function (err, body) {
+                self._getFrcst(dataTime.dataDate, function (err, body) {
                     if (err) {
                         return cb(err);
                     }
@@ -779,7 +838,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         function(sido, callback) {
             async.waterfall([
                 function(cb) {
-                    self.getCtprvn(self.getServiceKey(), sido, function (err, body) {
+                    self.getCtprvn(sido, function (err, body) {
                         if (err) {
                             return cb(err);
                         }
@@ -848,30 +907,40 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
 //    });
 //};
 
-/**
- *
- * @param key
- * @param my
- * @param mx
- * @param callback
- */
-Keco.prototype.getNearbyMsrstn = function(key, my, mx, callback)  {
+
+Keco.prototype._retryGetNearbyMsrStn = function (index, my, mx, callback) {
+    var self = this;
+    if (index < 0) {
+        return callback(new Error("EXCEEDS_LIMIT"));
+    }
+
     var url = DOMAIN_ARPLTN_KECO + '/' + PATH_MSRSTN_INFO_INQIRE_SVC + '/' + NEAR_BY_MSRSTN_LIST +
-        '?ServiceKey='+key +
+        '?ServiceKey='+self._svcKeys[index] +
         '&tmY='+my +
         '&tmX='+mx +
         '&pageNo='+ 1 +
         '&numOfRows='+999;
 
-    log.debug(url);
-    req(url, function(err, response, body) {
-        if (err) {
-            return callback(err);
+    log.debug({url:url});
+    self._request(url, function (err, result) {
+        if (self._checkLimit(result)) {
+            return self._retryGetNearbyMsrStn(--index, my, mx, callback);
         }
-        if ( response.statusCode >= 400) {
-            return callback(new Error(body));
-        }
-        return callback(err, body);
+        callback(err, result);
+    });
+
+    return this;
+};
+
+/**
+ *
+ * @param my
+ * @param mx
+ * @param callback
+ */
+Keco.prototype.getNearbyMsrstn = function(my, mx, callback)  {
+    this._retryGetNearbyMsrStn(this._svcKeys.length-1, my, mx, function (err, result) {
+        callback(err, result);
     });
 };
 
@@ -916,18 +985,10 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     url += '&y='+y;
     url += '&toCoord=TM';
     url += '&output=json';
-
     log.debug(url);
 
-    req(url, {json:true}, function(err, response, body) {
-        if (err) {
-            return callback(err);
-        }
-        if ( response.statusCode >= 400) {
-            err = new Error("response.statusCode="+response.statusCode);
-            return callback(err);
-        }
-        return callback(err, body);
+    this._jsonRequest(url, function (err, result) {
+        callback(err, result);
     });
 };
 

@@ -22,7 +22,7 @@ describe('e2e test - keco requester', function() {
     before(function (done) {
         this.timeout(10*1000);
         keco = new Keco();
-        keco.setServiceKey(JSON.parse(config.keyString.airkorea_keys)[0]);
+        keco.setServiceKeys(JSON.parse(config.keyString.airkorea_keys));
         keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
         mongoose.Promise = global.Promise;
         mongoose.connect('mongodb://localhost/todayweather', function(err) {
@@ -39,9 +39,19 @@ describe('e2e test - keco requester', function() {
         });
     });
 
+    it('_check data time', function (done) {
+        keco._checkDataTime(function (err, result) {
+            if (err) {
+                console.log(err);
+            }
+            console.log(result);
+            done();
+        });
+    });
+
     it('_get frcst', function (done) {
         var dataTime = { dataDate: '2017-12-06', dataHours: '11시 발표'};
-        keco._getFrcst(keco.getServiceKey(), dataTime.dataDate, function (err, body) {
+        keco._getFrcst(dataTime.dataDate, function (err, body) {
             if (err) {
                 console.log(err);
             }
@@ -58,6 +68,122 @@ describe('e2e test - keco requester', function() {
             console.log('get it done');
             done();
         });
+    });
+
+    it('get get ctprvn', function (done) {
+        // var async = require('async');
+        // async.retry(100,
+        //     function (callback) {
+        //         keco.getCtprvn("서울", function (err, body) {
+        //             if (err) {
+        //                 console.error(err);
+        //             }
+        //             console.info(body);
+        //             callback(1);
+        //         });
+        //     },
+        //     function (err, result) {
+        //        console.log(err, result);
+        //     });
+
+        keco.getCtprvn("서울", function (err, body) {
+            if (err) {
+                console.error(err);
+            }
+            console.info(body);
+            done();
+        });
+    });
+
+    it('get Near By Msrstn', function (done) {
+        this.timeout(10*1000);
+        var tmCoord = {"y":476266.59248414496,"x":369036.86549488344};
+        keco.getNearbyMsrstn(tmCoord.y, tmCoord.x, function (err, body) {
+            if (err) {console.log(err);}
+
+            keco.getStationNameFromMsrstn(body, function (err, result) {
+                console.log(err);
+                console.log(result);
+                done();
+            });
+        });
+    });
+
+    it ('get Msrstn List', function (done) {
+        keco.getMsrstnList(function (err, body) {
+            if (err) {
+                console.log(err);
+            }
+            assert.equal('number', typeof body.list.length, 'Fail to get length of msr stn list');
+            done();
+        });
+    });
+
+    //강릉시, 강동면 , 37.7254,128.9565111 -> tmX 373627.403952, tmY 465928.44815,
+    it('convert WGS84 to TM', function (done) {
+        this.timeout(10*1000);
+        keco.getTmPointFromWgs84(keco._daumApiKey, 37.773315, 128.919327, function (err, body) {
+            console.log(body);
+            done();
+        });
+    });
+
+    it('get All data from keco', function(done) {
+        this.timeout(60*1000); //1min
+
+        var Arpltn = require('../../models/arpltnKeco');
+
+        keco.getAllCtprvn(['서울'], null, function(err) {
+            if (err) console.log(err);
+
+            Arpltn.find({}, function(err, arpltnList) {
+                if(err) console.log(err);
+                console.log(arpltnList);
+                done();
+            });
+        });
+    });
+
+    it ('get all msr stn list', function (done) {
+        this.timeout(10*60*1000);
+
+        keco.getAllMsrStnInfo(function (err, result) {
+            if (err) {
+                log.error(err);
+            }
+            console.log('saved msr stn list len=', result.length);
+            assert.equal('number', typeof result.length, 'Fail to get all msr stn list');
+            done();
+        });
+    });
+
+    // it('save msr stn list', function (done) {
+    //
+    //     var coords = parsedList[1].geo;
+    //
+    //     keco.saveMsrstnList(parsedList, function(err, results) {
+    //         if (err) {
+    //             console.log(err);
+    //         }
+    //
+    //         assert.equal(1, results[results.length-1].ok, 'Fail to save msr stn list');
+    //         done();
+    //
+    //         //var MsrStn = require('../models/modelMsrStnInfo.js');
+    //         //console.log(coords);
+    //         //
+    //         //MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).lean().exec(function (err, msrStnList) {
+    //         //    if (err) {
+    //         //        console.log(err);
+    //         //    }
+    //         //    console.log(JSON.stringify(msrStnList));
+    //         //    done();
+    //         //});
+    //     });
+    // });
+
+    after(function () {
+        mongoose.disconnect();
     });
 });
 
