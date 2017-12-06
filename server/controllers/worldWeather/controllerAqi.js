@@ -184,6 +184,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
         var newData = self._parseAQIData(data);
         if(isNaN(newData.aqi)){
             newData.aqi = -100;
+            log.error('AQI> Invalid AQI Data: ', JSON.stringify(newData));
         }
 
         log.info('AQI> New Data : ', newData);
