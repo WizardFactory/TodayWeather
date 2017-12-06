@@ -40,7 +40,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
         if (statusCode >= 400) {
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
-            err = new Error("StatusCode="+statusCode);
+            err = new Error("StatusCode="+statusCode+" url="+url);
 
             if (callback) {
                 callback(err);
