@@ -573,7 +573,7 @@ Keco.prototype._getFrcst = function(key, date, callback) {
     var url =  DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + MINU_DUST_FRCST_DSPTH +
         '?ServiceKey='+key +
         '&searchDate=' + date +
-        '&ver=1.0'+
+        '&ver=1.3'+
         '&pageNo='+ 1 +
         '&numOfRows='+999 +
         '&_returnType=json';
@@ -620,6 +620,7 @@ Keco.prototype._parseFrcst = function (rawData, dataTime) {
             var gradeObjectList = grade.split(" : ") ;
             parsedData.informGrade.push({"region":gradeObjectList[0], "grade":gradeObjectList[1]});
         });
+        parsedData.actionKnack = rawData.actionKnack;
         parsedData.imageUrl = [];
         parsedData.imageUrl.push(rawData.imageUrl1);
         parsedData.imageUrl.push(rawData.imageUrl2);
@@ -627,6 +628,9 @@ Keco.prototype._parseFrcst = function (rawData, dataTime) {
         parsedData.imageUrl.push(rawData.imageUrl4);
         parsedData.imageUrl.push(rawData.imageUrl5);
         parsedData.imageUrl.push(rawData.imageUrl6);
+        parsedData.imageUrl.push(rawData.imageUrl7);
+        parsedData.imageUrl.push(rawData.imageUrl8);
+        parsedData.imageUrl.push(rawData.imageUrl9);
 
         parsedList.push(parsedData);
     });
@@ -696,43 +700,49 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
 Keco.prototype.getMinuDustFrcstDspth = function(callback) {
     var self = this;
 
-    async.waterfall([function (cb) {
-        self._checkDataTime(function (err, result) {
+    async.waterfall([
+            function (cb) {
+                self._checkDataTime(function (err, result) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    if (result.isLatest) {
+                        log.info('minu dust forecast is already latest');
+                        return cb('skip');
+                    }
+                    cb(undefined, result.dataTime);
+                });
+            },
+            function (dataTime, cb) {
+                self._getFrcst(self.getServiceKey(), dataTime.dataDate, function (err, body) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    return cb(err, body, dataTime);
+                });
+            },
+            function (body, dataTime, cb) {
+                var parsedList = self._parseFrcst(body, dataTime.dataDate+' '+dataTime.dataHours);
+                if (!parsedList) {
+                    return cb(new Error("Fail to parse minu dust frcst dspth"));
+                }
+                return cb(undefined, parsedList);
+            },
+            function (parsedFrcstList, cb) {
+                self._saveFrcst(parsedFrcstList, function (err, result) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    cb(err, result);
+                });
+            }
+        ],
+        function (err, result) {
             if (err) {
-                return cb(err);
+                return callback(err);
             }
-            if (result.isLatest) {
-                log.info('minu dust forecast is already latest');
-                return cb('skip');
-            }
-            cb(undefined, result.dataTime);
+            callback(err, result);
         });
-    }, function (dataTime, cb) {
-        self._getFrcst(self.getServiceKey(), dataTime.dataDate, function (err, body) {
-            if (err) {
-                return cb(err);
-            }
-            return cb(err, body, dataTime);
-        });
-    }, function (body, dataTime, cb) {
-        var parsedList = self._parseFrcst(body, dataTime.dataDate+' '+dataTime.dataHours);
-        if (!parsedList) {
-            return cb(new Error("Fail to parse minu dust frcst dspth"));
-        }
-        return cb(undefined, parsedList);
-    }, function (parsedFrcstList, cb) {
-        self._saveFrcst(parsedFrcstList, function (err, result) {
-            if (err) {
-                return cb(err);
-            }
-            cb(err, result);
-        });
-    }], function (err, result) {
-        if (err) {
-            return callback(err);
-        }
-        callback(err, result);
-    });
 
     return this;
 };
