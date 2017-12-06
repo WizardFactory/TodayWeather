@@ -128,7 +128,7 @@ Keco.prototype.convertRegionToSido = function(regionName) {
  */
 Keco.prototype.getUrlCtprvn = function(sido, key) {
     if (!key)  {
-        key = this._svcKey;
+        key = this._svcKeys[0];
     }
 
     if (!key) {

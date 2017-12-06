@@ -12,6 +12,7 @@ global.manager = new controllerManager();
 
 var assert  = require('assert');
 var Keco  = require('../lib/kecoRequester.js');
+var config = require('../config/config');
 
 describe('unit test - keco requester', function() {
     var keco;
@@ -19,6 +20,7 @@ describe('unit test - keco requester', function() {
 
     it('create keco service', function () {
         keco = new Keco();
+        keco.setServiceKeys(JSON.parse(config.keyString.airkorea_keys));
         assert.equal(keco._currentSidoIndex, 0, '');
     });
 
@@ -148,7 +150,7 @@ describe('unit test - keco requester', function() {
         assert.equal(list.length, keco._sidoList.length, '');
     });
     it('get Ctpvn url', function () {
-        var url = keco.getUrlCtprvn(keco._sidoList[0]);
+        var url = keco.getUrlCtprvn(keco._sidoList[0], keco._svcKeys[0]);
         assert.notEqual(url.search('sidoName'), -1, '');
     });
     it('update time to get Ctpvn', function () {
