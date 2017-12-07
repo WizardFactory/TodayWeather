@@ -29,6 +29,8 @@ angular.module('controller.units', [])
                 self[key] = units[key];
             }
 
+            Util.ga.trackEvent('app', 'init', 'units');
+
             if (Util.region == 'KR') {
                 //skip
             }

@@ -11,9 +11,11 @@ angular.module('service.util', [])
 
         obj.ga = {
             startTrackerWithId: function (id, dispatchPeriod) {
+                console.log({trackerWithId:id, dispatchPeriod: dispatchPeriod});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.startTrackerWithId(id, dispatchPeriod, function(result) {
-                        console.log("startTrackerWithId success = " + result);
+                        //console.log("startTrackerWithId success = " + result);
                     }, function(error) {
                         console.log("startTrackerWithId error = " + error);
                     });
@@ -22,19 +24,21 @@ angular.module('service.util', [])
             setAllowIDFACollection: function (enable) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAllowIDFACollection(enable, function(result) {
-                        console.log("setAllowIDFACollection success = " + result);
+                        //console.log("setAllowIDFACollection success = " + result);
                     }, function(error) {
                         console.log("setAllowIDFACollection error = " + error);
                     });
                 }
             },
             setUserId: function (id) {
+                console.log({userId: id});
+
                 if (window.fabric && window.fabric.Crashlytics) {
                     window.fabric.Crashlytics.setUserIdentifier(id);
                 }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setUserId(id, function(result) {
-                        console.log("setUserId success = " + result);
+                        // console.log("setUserId success = " + result);
                     }, function(error) {
                         console.log("setUserId error = " + error);
                     });
@@ -43,7 +47,7 @@ angular.module('service.util', [])
             setAnonymizeIp: function (anonymize) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAnonymizeIp(anonymize, function(result) {
-                        console.log("setAnonymizeIp success = " + result);
+                        // console.log("setAnonymizeIp success = " + result);
                     }, function(error) {
                         console.log("setAnonymizeIp error = " + error);
                     });
@@ -52,16 +56,18 @@ angular.module('service.util', [])
             setOptOut: function (optout) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setOptOut(optout, function(result) {
-                        console.log("setOptOut success = " + result);
+                        // console.log("setOptOut success = " + result);
                     }, function(error) {
                         console.log("setOptOut error = " + error);
                     });
                 }
             },
             setAppVersion: function (version) {
+                console.log({appVersion: version});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAppVersion(version, function(result) {
-                        console.log("setAppVersion success = " + result);
+                        //console.log("setAppVersion success = " + result);
                     }, function(error) {
                         console.log("setAppVersion error = " + error);
                     });
@@ -77,9 +83,11 @@ angular.module('service.util', [])
                 }
             },
             trackMetric: function (key, value) {
+                console.log({key: key, value: value});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackMetric(key, value, function(result) {
-                        console.log("trackMetric success = " + result);
+                        // console.log("trackMetric success = " + result);
                     }, function(error) {
                         console.log("trackMetric error = " + error);
                     });
@@ -87,12 +95,13 @@ angular.module('service.util', [])
             },
             trackView: function (screen, campaingUrl, newSession) {
                 console.log({screen: screen, campaingUrl: campaingUrl, newSession: newSession});
+
                 if (window.fabric && window.fabric.Answers) {
                     window.fabric.Answers.sendContentView(screen, campaingUrl);
                 }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackView(screen, campaingUrl, newSession, function(result) {
-                        console.log("trackView success = " + result);
+                        // console.log("trackView success = " + result);
                     }, function(error) {
                         console.log("trackView error = " + error);
                         gaArray.push(["trackView", screen, campaingUrl]);
@@ -103,16 +112,18 @@ angular.module('service.util', [])
                 }
             },
             addCustomDimension: function (key, value) {
+                console.log({customDimension:{key:key, value: value}});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addCustomDimension(key, value, function(result) {
-                        console.log("addCustomDimension success = " + result);
+                        // console.log("addCustomDimension success = " + result);
                     }, function(error) {
                         console.log("addCustomDimension error = " + error);
                     });
                 }
             },
             trackEvent: function (category, action, label, value, newSession) {
-                console.log(category, action, label, value);
+                console.log({category:category, action: action, label: label, value: value, newSession: newSession});
 
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackEvent(category, action, label, value, newSession, function(result) {
@@ -127,7 +138,7 @@ angular.module('service.util', [])
                 }
             },
             trackException: function (description, fatal) {
-                console.log(description, fatal);
+                console.log({description:description, fatal:fatal});
 
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackException(description, fatal, function(result) {
@@ -142,7 +153,7 @@ angular.module('service.util', [])
                 }
             },
             trackTiming: function (category, intervalInMilliseconds, name, label) {
-                console.log(category, intervalInMilliseconds, name, label);
+                console.log({category: category, intervalInMilliseconds: intervalInMilliseconds, name: name, label: label});
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackTiming(category, intervalInMilliseconds, name, label, function(result) {
                         //console.log("trackTiming success = " + result);

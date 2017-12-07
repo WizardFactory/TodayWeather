@@ -255,10 +255,11 @@ angular.module('service.weatherinfo', [])
             // load last cityIndex
             cityIndex = TwStorage.get("cityIndex");
             if (cityIndex === null) {
+                Util.ga.trackEvent('app', 'error', 'cityIndexNull');
                 that.setFirstCityIndex();
             }
             else if (cityIndex >= cities.length) {
-                console.log('city index is over');
+                Util.ga.trackEvent('app', 'error', 'cityIndexOver');
                 that.setFirstCityIndex();
             }
         };

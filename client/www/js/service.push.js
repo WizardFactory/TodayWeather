@@ -363,7 +363,6 @@ angular.module('service.push', [])
             self.loadPushInfo();
 
             if (!window.PushNotification) {
-                console.log("push notification plugin is not set");
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }

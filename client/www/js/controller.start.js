@@ -48,7 +48,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             console.log('googleapis loaded');
             service = new google.maps.places.AutocompleteService();
         }, function (e) {
-            console.log(e);
             Util.ga.trackEvent('window', 'error', 'lazyLoad');
             Util.ga.trackException(e, true);
             //window.alert(e);
