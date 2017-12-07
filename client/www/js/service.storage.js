@@ -159,10 +159,10 @@ angular.module('service.storage', [])
             if (_hasAppPreferences()) {
                 suitePrefs.store(function (data) {
                     //callback("OK");
-                }, function(error) {
+                }, function(err) {
                     Util.ga.trackEvent('storage', 'error', 'set ' + name);
                     Util.ga.trackException(err, false);
-                    //callback(error);
+                    //callback(err);
                 }, name, data);
             }
 

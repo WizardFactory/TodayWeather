@@ -86,6 +86,7 @@ angular.module('service.util', [])
                 }
             },
             trackView: function (screen, campaingUrl, newSession) {
+                console.log({screen: screen, campaingUrl: campaingUrl, newSession: newSession});
                 if (window.fabric && window.fabric.Answers) {
                     window.fabric.Answers.sendContentView(screen, campaingUrl);
                 }
