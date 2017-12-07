@@ -273,7 +273,14 @@ angular.module('starter', [
                 return;
             }
 
-            var startupPage = TwStorage.get("startupPage");
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            Util.ga.trackEvent('app', 'startupPage', startupPage);
+
             if (startupPage === "1") { //일별날씨
                 $state.go('tab.dailyforecast');
             } else if (startupPage === "2") { //즐겨찾기
