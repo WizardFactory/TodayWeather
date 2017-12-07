@@ -2318,7 +2318,7 @@ Manager.prototype.startManager = function(){
     midRssKmaRequester.setNextGetTime(new Date());
     self.midRssKmaRequester = midRssKmaRequester;
 
-    keco.setServiceKey(config.keyString.normal);
+    keco.setServiceKeys(JSON.parse(config.keyString.airkorea_keys));
     keco.setDaumApiKeys(JSON.parse(config.keyString.daum_keys));
     keco.getCtprvnSidoList();
 

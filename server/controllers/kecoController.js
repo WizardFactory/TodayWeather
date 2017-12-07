@@ -764,7 +764,7 @@ arpltnController._appendFromDb = function(town, current, callback) {
 arpltnController._appendFromKeco = function(town, current, callback) {
 
     var keyBox = require('../config/config').keyString;
-    keco.setServiceKey(keyBox.normal);
+    keco.setServiceKeys(JSON.parse(keyBox.airkorea_keys));
     keco.setDaumApiKeys(JSON.parse(keyBox.daum_keys));
 
     async.waterfall([
@@ -789,7 +789,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
                 });
         },
         function(tmCoord, cb) {
-            keco.getNearbyMsrstn(keco.getServiceKey(), tmCoord.y, tmCoord.x, function(err, result) {
+            keco.getNearbyMsrstn(tmCoord.y, tmCoord.x, function(err, result) {
                 if (err) {
                     return cb(err);}
                 log.debug(result);
@@ -807,7 +807,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         },
         function(stationName, cb) {
             var sido = keco.convertRegionToSido(town.first);
-            keco.getCtprvn(keco.getServiceKey(), sido, function (err, body) {
+            keco.getCtprvn(sido, function (err, body) {
                 if (err) {
                     return cb(err);
                 }
