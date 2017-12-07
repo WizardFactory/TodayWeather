@@ -91,6 +91,7 @@ angular.module('controller.purchase', [])
                 self.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
+                console.log('load purchaseInfo is null');
                 self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
             }
         };
@@ -246,7 +247,7 @@ angular.module('controller.purchase', [])
             }
 
             self.productId = 'tw1year';
-            console.log('productId='+Purchase.productId);
+            console.log('productId='+self.productId);
 
             self.hasInAppPurchase = true;
 
