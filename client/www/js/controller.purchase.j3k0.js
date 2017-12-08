@@ -120,7 +120,6 @@ angular.module('controller.purchase', [])
 
             // Log all errors
             store.error(function(error) {
-                console.log('ERROR ' + error.code + ': ' + error.message);
                 Util.ga.trackEvent('purchase', 'error', error.message);
             });
 

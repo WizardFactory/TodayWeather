@@ -1419,7 +1419,6 @@ angular.module('service.weatherutil', [])
                 data.source = "KMA";
             }
             catch(e) {
-                console.log(e);
                 Util.ga.trackEvent('weather', 'error', 'parseKmaWeather');
                 Util.ga.trackException(e, false);
                 alert(e.message);
@@ -1975,7 +1974,6 @@ angular.module('service.weatherutil', [])
                 }
             }
             catch (e) {
-                console.log(e);
                 Util.ga.trackEvent('weather', 'error', 'parseWorldWeather');
                 Util.ga.trackException(e, false);
                 alert(e.message);
