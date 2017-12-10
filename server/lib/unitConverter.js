@@ -272,11 +272,12 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
 };
 
 UnitConverter.getUnitList = function () {
-    return ['tempUnit', 'windUnit', 'pressUnit', 'distUnit', 'pressUnit', 'airUnit'];
+    return ['temperatureUnit', 'windSpeedUnit', 'pressureUnit', 'distanceUnit', 'precipitationUnit', 'airUnit'];
 };
 
 UnitConverter.getDefaultValueList = function () {
-    return {tempUnit: 'C', windUnit: 'm/s', pressUnit: 'hPa', distUnit: 'km', precipUnit: 'mm', airUnit: 'airKorea'};
+    return {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa',
+        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airKorea'};
 };
 
 UnitConverter.getDefaultValue = function (name) {
@@ -287,6 +288,60 @@ UnitConverter.wdd2Str = function (data, ts) {
     data = data.replace(/N/g, ts.__('LOC_N')).replace(/S/g, ts.__('LOC_S'));
     data = data.replace(/E/g, ts.__('LOC_E')).replace(/W/g, ts.__('LOC_W'));
     return data;
+};
+
+/**
+ * airkorea AQI grade
+ * @param grade
+ * @param type so2, o3, co, no2
+ * @param translate
+ * @returns {*}
+ */
+UnitConverter.airkoreaGrade2str = function (grade, type, translate) {
+    var ts = translate == undefined?global:translate;
+
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_GOOD");
+        case 2:
+            return ts.__("LOC_MODERATE");
+        case 3:
+            return ts.__("LOC_UNHEALTHY");
+        case 4:
+            return ts.__("LOC_VERY_UNHEALTHY");
+        default :
+            log.error("Unknown grade="+grade+" type="+type);
+    }
+    return "";
+};
+
+/**
+ *
+ * @param grade
+ * @param type
+ * @param translate
+ * @returns {*}
+ */
+UnitConverter.airGrade2str = function (grade, type, translate) {
+    var ts = translate == undefined?global:translate;
+
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_GOOD");
+        case 2:
+            return ts.__("LOC_MODERATE");
+        case 3:
+            return ts.__("LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS");
+        case 4:
+            return ts.__("LOC_UNHEALTHY");
+        case 5:
+            return ts.__("LOC_VERY_UNHEALTHY");
+        case 6:
+            return ts.__("LOC_HAZARDOUS");
+        default :
+            log.error("Unknown grade="+grade+" type="+type);
+    }
+    return "";
 };
 
 module.exports = UnitConverter;

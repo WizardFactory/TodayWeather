@@ -24,6 +24,7 @@ var convertGeocode = require('../utils/convertGeocode');
 
 var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
 var KecoController = require('../controllers/kecoController');
+
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -1882,19 +1883,21 @@ function ControllerTown() {
 
         var airInfo = current.arpltn || current;
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
+        airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
 
         var locStr = ts.__('LOC_PM25');
         tmpGrade = airInfo.pm25Grade;
+        str = locStr + " " + airInfo.pm25Str;
         if (tmpGrade < airInfo.pm10Grade) {
             locStr = ts.__('LOC_PM10');
             tmpGrade = airInfo.pm10Grade;
+            str = locStr + " " + airInfo.pm10Str;
         }
         if (tmpGrade < (airInfo.aqiGrade)) {
             locStr = ts.__('LOC_AQI');
-            tmpGrade = airInfo.khaiGrade || airInfo.aqiGrade;
+            tmpGrade = airInfo.aqiGrade;
+            str = locStr + " " + airInfo.aqiStr;
         }
-
-        str = locStr + " " + KecoController.grade2str(tmpGrade, 'Summary', ts);
 
         item = {str: str, grade: tmpGrade};
         itemList.push(item);
@@ -1914,7 +1917,7 @@ function ControllerTown() {
                     current.ptyStr = "";
             }
 
-            current.rn1Str = current.rn1 + units.precipUnit;
+            current.rn1Str = current.rn1 + units.precipitationUnit;
             item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
             itemList.push(item);
         }
@@ -3112,25 +3115,25 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 ControllerTown.prototype._makeArpltnStr = function (data, res) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10", res);
+        data.pm10Str = UnitConverter.airkoreaGrade2str(data.pm10Grade, "pm10", res);
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25", res);
+        data.pm25Str = UnitConverter.airkoreaGrade2str(data.pm25Grade, "pm25", res);
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.grade2str(data.o3Grade, "o3", res);
+        data.o3Str = UnitConverter.airkoreaGrade2str(data.o3Grade, "o3", res);
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.grade2str(data.no2Grade, "no2", res);
+        data.no2Str = UnitConverter.airkoreaGrade2str(data.no2Grade, "no2", res);
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.grade2str(data.coGrade, "co", res);
+        data.coStr = UnitConverter.airkoreaGrade2str(data.coGrade, "co", res);
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.grade2str(data.so2Grade, "so2", res);
+        data.so2Str = UnitConverter.airkoreaGrade2str(data.so2Grade, "so2", res);
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai", res);
+        data.khaiStr = UnitConverter.airkoreaGrade2str(data.khaiGrade, "khai", res);
     }
     return this;
 };

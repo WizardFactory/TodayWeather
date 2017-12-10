@@ -32,7 +32,7 @@ describe('unit test - controller town 24h', function() {
     });
 
     it('test convertUnits', function (done) {
-        var req = {query:{tempUnit:"F", precipUnit:"in", distUnit:"mi", windUnit:"mph", pressUnit:"mmHg", airUnit:"airkorea_who"}};
+        var req = {query:{temperatureUnit:"F", precipitationUnit:"in", distanceUnit:"mi", windSpeedUnit:"mph", pressureUnit:"mmHg", airUnit:"airkorea_who"}};
         req.current = {"date":"20171208","time":"1300","t1h":-1.4,"rn1":0,"sky":1,"uuu":2.8,"vvv":-1.6,
                "reh":27,"pty":0,"lgt":0,"vec":280.5,"wsd":3.4,"stnId":108,"stnName":"서울","addr":"서울특별시종로구송월동",
                "isCityWeather":true,"altitude":86,"geo":[126.96519465749947,37.57006278446992],"rnsCount":615,

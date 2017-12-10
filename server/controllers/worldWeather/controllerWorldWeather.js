@@ -2,8 +2,10 @@
  * Created by Peter on 2016. 3. 17..
  */
 "use strict";
+
 var request = require('request');
 var async = require('async');
+
 var modelGeocode = require('../../models/worldWeather/modelGeocode.js');
 var modelWuForecast = require('../../models/worldWeather/modelWuForecast');
 var modelWuCurrent = require('../../models/worldWeather/modelWuCurrent');
@@ -12,7 +14,7 @@ var modelAQI = require('../../models/worldWeather/modelAqi');
 var config = require('../../config/config');
 var controllerRequester = require('./controllerRequester');
 var ControllerWeatherDesc = require('../controller.weather.desc');
-var KecoController = require('../kecoController');
+var UnitConverter = require('../../lib/unitConverter');
 
 
 var commandList = ['restart', 'renewGeocodeList'];
@@ -91,6 +93,10 @@ function controllerWorldWeather() {
                 log.error("thisTime's length is not 2 loc="+JSON.stringify(req.result.location));
             }
             result = req.result;
+            result.units ={};
+            UnitConverter.getUnitList().forEach(function (value) {
+                result.units[value] = req.query[value] || UnitConverter.getDefaultValue(value);
+            });
         }
         else {
             result = {result: 'Unknown result'};
@@ -1547,13 +1553,13 @@ function controllerWorldWeather() {
 
                         // string
                         if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who')){
-                            thisTime.aqiStr = KecoController.grade2str(thisTime.aqiGrade, 'aqi', res);
-                            thisTime.coStr = KecoController.grade2str(thisTime.coGrade, 'co2', res);
-                            thisTime.no2Str = KecoController.grade2str(thisTime.no2Grade, 'no2', res);
-                            thisTime.o3Str = KecoController.grade2str(thisTime.o3Grade, 'o3', res);
-                            thisTime.pm10Str = KecoController.grade2str(thisTime.pm10Grade, 'pm10', res);
-                            thisTime.pm25Str = KecoController.grade2str(thisTime.pm25Grade, 'pm25', res);
-                            thisTime.so2Str = KecoController.grade2str(thisTime.so2Grade, 'so2', res);
+                            thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            thisTime.coStr = UnitConverter.airkoreaGrade2str(thisTime.coGrade, 'co2', res);
+                            thisTime.no2Str = UnitConverter.airkoreaGrade2str(thisTime.no2Grade, 'no2', res);
+                            thisTime.o3Str = UnitConverter.airkoreaGrade2str(thisTime.o3Grade, 'o3', res);
+                            thisTime.pm10Str = UnitConverter.airkoreaGrade2str(thisTime.pm10Grade, 'pm10', res);
+                            thisTime.pm25Str = UnitConverter.airkoreaGrade2str(thisTime.pm25Grade, 'pm25', res);
+                            thisTime.so2Str = UnitConverter.airkoreaGrade2str(thisTime.so2Grade, 'so2', res);
                         }else{
                             // convert IAQI value to grade
                             thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
@@ -1564,13 +1570,13 @@ function controllerWorldWeather() {
                             thisTime.pm25Grade = self._getAqiGrade(thisTime.pm25Grade);
                             thisTime.so2Grade = self._getAqiGrade(thisTime.so2Grade);
 
-                            thisTime.aqiStr = self.grade2str(thisTime.aqiGrade, 'aqi', res);
-                            thisTime.coStr = self.grade2str(thisTime.coGrade, 'co', res);
-                            thisTime.no2Str = self.grade2str(thisTime.no2Grade, 'no2', res);
-                            thisTime.o3Str = self.grade2str(thisTime.o3Grade, 'o3', res);
-                            thisTime.pm10Str = self.grade2str(thisTime.pm10Grade, 'pm10', res);
-                            thisTime.pm25Str = self.grade2str(thisTime.pm25Grade, 'pm25', res);
-                            thisTime.so2Str = self.grade2str(thisTime.so2Grade, 'so2', res);
+                            thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            thisTime.coStr = UnitConverter.airGrade2str(thisTime.coGrade, 'co', res);
+                            thisTime.no2Str = UnitConverter.airGrade2str(thisTime.no2Grade, 'no2', res);
+                            thisTime.o3Str = UnitConverter.airGrade2str(thisTime.o3Grade, 'o3', res);
+                            thisTime.pm10Str = UnitConverter.airGrade2str(thisTime.pm10Grade, 'pm10', res);
+                            thisTime.pm25Str = UnitConverter.airGrade2str(thisTime.pm25Grade, 'pm25', res);
+                            thisTime.so2Str = UnitConverter.airGrade2str(thisTime.so2Grade, 'so2', res);
                         }
                     }
                 });
@@ -1878,28 +1884,6 @@ function controllerWorldWeather() {
         log.info('Extra type: ', type, 'Value : ', result, 'aqi : ', Cp);
         return result;
 
-    };
-
-    self.grade2str = function (grade, type, translate) {
-        var ts = translate == undefined?global:translate;
-
-        switch (grade) {
-            case 1:
-                return ts.__("LOC_GOOD");
-            case 2:
-                return ts.__("LOC_MODERATE");
-            case 3:
-                return ts.__("LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS");
-            case 4:
-                return ts.__("LOC_UNHEALTHY");
-            case 5:
-                return ts.__("LOC_VERY_UNHEALTHY");
-            case 6:
-                return ts.__("LOC_HAZARDOUS");
-            default :
-                log.error("Unknown grade="+grade+" type="+type);
-        }
-        return "";
     };
 
     self._getAqiGrade = function(value){

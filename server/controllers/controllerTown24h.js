@@ -22,8 +22,8 @@ function ControllerTown24h() {
     this.checkQueryValidation = function(req, res, next) {
         /**
          *
-         * tempUnit(C,F), windUnit(mph,km/h,m/s,bft,kr), pressUnit(mmHg,inHg,hPa,mb),
-         * distUnit(km,mi), precipUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+         * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
+         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
          */
         if(!req.hasOwnProperty('query')) {
             req.query = {};
@@ -702,6 +702,13 @@ function ControllerTown24h() {
             result.airkorea_dust_forecast = req.airkorea_dust_forecast;
         }
         result.source = "KMA";
+
+        var units ={};
+        UnitConverter.getUnitList().forEach(function (value) {
+            units[value] = req.query[value] || UnitConverter.getDefaultValue(value);
+        });
+        result.units = units;
+
         next();
         return this;
     };
@@ -879,8 +886,8 @@ ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
 };
 
 /**
- * tempUnit(C,F), windUnit(mph,km/h,m/s,bft,kr), pressUnit(mmHg,inHg,hPa,mb),
- * distUnit(km,mi), precipUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+ * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
+ * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
  * @param wData
  * @param query
  * @returns {ControllerTown24h}
@@ -904,11 +911,11 @@ ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
         return this;
     }
 
-    toTempUnit = query.tempUnit;
-    toPrecipUnit = query.precipUnit;
-    toWindUnit = query.windUnit;
-    toPressUnit = query.pressUnit;
-    toDistUnit = query.distUnit;
+    toTempUnit = query.temperatureUnit;
+    toPrecipUnit = query.precipitationUnit;
+    toWindUnit = query.windSpeedUnit;
+    toPressUnit = query.pressureUnit;
+    toDistUnit = query.distanceUnit;
 
     defaultValueList = UnitConverter.getDefaultValueList();
 
@@ -919,11 +926,11 @@ ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
         }
     });
 
-    if (toTempUnit && toTempUnit !== defaultValueList['tempUnit']) {
+    if (toTempUnit && toTempUnit !== defaultValueList['temperatureUnit']) {
         //client에서는 taMax,taMin은 tmx, tmn으로 변환해서 사용하고 있음.
         ['t1h', 'sensorytem', 'dpt', 'heatIndex', 't3h', 'tmx', 'tmn', 't1d'].forEach(function (name) {
             if (wData.hasOwnProperty(name) && wData[name] !== -50) {
-                wData[name] = unitConverter.convertUnits(defaultValueList['tempUnit'], toTempUnit, wData[name]);
+                wData[name] = unitConverter.convertUnits(defaultValueList['temperatureUnit'], toTempUnit, wData[name]);
                 if (toTempUnit === 'F') {
                     wData[name] = Math.floor(wData[name]);
                 }
@@ -932,22 +939,22 @@ ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
     }
 
     //will remove rs1h, rs1d
-    if (toPrecipUnit && toPrecipUnit !== defaultValueList['precipUnit']) {
+    if (toPrecipUnit && toPrecipUnit !== defaultValueList['precipitationUnit']) {
         ['rn1', 'rs1h', 'rs1d', 'r06', 's06', 'sn1', 's1d'].forEach(function (name) {
             if (wData.hasOwnProperty(name)) {
-                wData[name] = unitConverter.convertUnits(defaultValueList['precipUnit'], toWindUnit, wData[name]);
+                wData[name] = unitConverter.convertUnits(defaultValueList['precipitationUnit'], toWindUnit, wData[name]);
             }
         });
     }
 
     if (wData.hasOwnProperty('wsd')) {
-        wData.wsd = unitConverter.convertUnits(defaultValueList['windUnit'], toWindUnit, wData.wsd);
+        wData.wsd = unitConverter.convertUnits(defaultValueList['windSpeedUnit'], toWindUnit, wData.wsd);
     }
     if (wData.hasOwnProperty('hPa')) {
-        wData.hPa = unitConverter.convertUnits(defaultValueList['pressUnit'], toPressUnit, wData.hPa);
+        wData.hPa = unitConverter.convertUnits(defaultValueList['pressureUnit'], toPressUnit, wData.hPa);
     }
     if (wData.hasOwnProperty('visibility')) {
-        wData.visibility = unitConverter.convertUnits(defaultValueList['distUnit'], toDistUnit, wData.visibility);
+        wData.visibility = unitConverter.convertUnits(defaultValueList['distanceUnit'], toDistUnit, wData.visibility);
     }
 };
 

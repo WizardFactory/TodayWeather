@@ -14,36 +14,12 @@ var Frcst = require('../models/modelMinuDustFrcst');
 var keco = new (require('../lib/kecoRequester.js'))();
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
-var ControllerWorldWeather = require('./worldWeather/controllerWorldWeather');
+var UnitConverter = require('../lib/unitConverter');
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
 
 }
-
-/**
- * AQI grade 공통 사용.
- * @param grade
- * @param type so2, o3, co, no2
- * @returns {*}
- */
-arpltnController.grade2str = function (grade, type, translate) {
-    var ts = translate == undefined?global:translate;
-
-    switch (grade) {
-        case 1:
-            return ts.__("LOC_GOOD");
-        case 2:
-            return ts.__("LOC_MODERATE");
-        case 3:
-            return ts.__("LOC_UNHEALTHY");
-        case 4:
-            return ts.__("LOC_VERY_UNHEALTHY");
-        default :
-            log.error("Unknown grade="+grade+" type="+type);
-    }
-    return "";
-};
 
 /**
  *
@@ -395,27 +371,26 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
     }
 
     if (aqiUnit === 'airnow' || aqiUnit === 'aircn') {
-        var ctrlWW = new ControllerWorldWeather();
         if (arpltn.hasOwnProperty('pm10Grade')) {
-            arpltn.pm10Str = ctrlWW.grade2str(arpltn.pm10Grade, "pm10", ts);
+            arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
         }
         if (arpltn.hasOwnProperty('pm25Grade')) {
-            arpltn.pm25Str = ctrlWW.grade2str(arpltn.pm25Grade, "pm25", ts);
+            arpltn.pm25Str = UnitConverter.airGrade2str(arpltn.pm25Grade, "pm25", ts);
         }
         if (arpltn.hasOwnProperty('o3Grade')) {
-            arpltn.o3Str = ctrlWW.grade2str(arpltn.o3Grade, "o3", ts);
+            arpltn.o3Str = UnitConverter.airGrade2str(arpltn.o3Grade, "o3", ts);
         }
         if (arpltn.hasOwnProperty('no2Grade')) {
-            arpltn.no2Str = ctrlWW.grade2str(arpltn.no2Grade, "no2", ts);
+            arpltn.no2Str = UnitConverter.airGrade2str(arpltn.no2Grade, "no2", ts);
         }
         if (arpltn.hasOwnProperty('coGrade')) {
-            arpltn.coStr = ctrlWW.grade2str(arpltn.coGrade, "co", ts);
+            arpltn.coStr = UnitConverter.airGrade2str(arpltn.coGrade, "co", ts);
         }
         if (arpltn.hasOwnProperty('so2Grade')) {
-            arpltn.so2Str = ctrlWW.grade2str(arpltn.so2Grade, "so2", ts);
+            arpltn.so2Str = UnitConverter.airGrade2str(arpltn.so2Grade, "so2", ts);
         }
         if (arpltn.hasOwnProperty('khaiGrade')) {
-            arpltn.khaiStr = ctrlWW.grade2str(arpltn.khaiGrade, "khai", ts);
+            arpltn.khaiStr = UnitConverter.airGrade2str(arpltn.khaiGrade, "khai", ts);
         }
     }
     return arpltn;

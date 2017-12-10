@@ -15,8 +15,8 @@ function ControllerWWUnits() {
     this.checkQueryValidation =  function (req, res, next) {
         /**
          *
-         * tempUnit(C,F), windUnit(mph,km/h,m/s,bft,kr), pressUnit(mmHg,inHg,hPa,mb),
-         * distUnit(km,mi), precipUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+         * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
+         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
          */
         if(!req.hasOwnProperty('query')) {
             req.query = {};
@@ -125,11 +125,11 @@ ControllerWWUnits.prototype._decideHumidityIcon = function(reh) {
 ControllerWWUnits.prototype._convertThisTimeWeather = function (wData, query) {
     var unitConverter = new UnitConverter();
 
-    var toTempUnit = query.tempUnit;
-    var toPrecipUnit = query.precipUnit;
-    var toWindUnit = query.windUnit;
-    var toPressUnit = query.pressUnit;
-    var toDistUnit = query.distUnit;
+    var toTempUnit = query.temperatureUnit;
+    var toPrecipUnit = query.precipitationUnit;
+    var toWindUnit = query.windSpeedUnit;
+    var toPressUnit = query.pressureUnit;
+    var toDistUnit = query.distanceUnit;
 
     wData['pty'] = wData.precType || 0;
 
@@ -148,11 +148,11 @@ ControllerWWUnits.prototype._convertThisTimeWeather = function (wData, query) {
     wData['humidityIcon'] = this._decideHumidityIcon(wData.reh);
 
     if (wData.hasOwnProperty('precip')) {
-        wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+        wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
     }
-    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windUnit'), toWindUnit, wData.windSpd_ms);
-    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressUnit'), toPressUnit, wData.press);
-    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distUnit'), toDistUnit, wData.vis);
+    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
+    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
     wData['stnDateTime'] = wData.date;
     wData['wdd'] = this._convertWindDirToWdd(wData.windDir);
     wData['dateObj'] = wData.date;
@@ -162,11 +162,11 @@ ControllerWWUnits.prototype._convertThisTimeWeather = function (wData, query) {
 ControllerWWUnits.prototype._convertDailyWeather = function (wData, query, currentDate) {
     var unitConverter = new UnitConverter();
 
-    var toTempUnit = query.tempUnit;
-    var toPrecipUnit = query.precipUnit;
-    var toWindUnit = query.windUnit;
-    var toPressUnit = query.pressUnit;
-    var toDistUnit = query.distUnit;
+    var toTempUnit = query.temperatureUnit;
+    var toPrecipUnit = query.precipitationUnit;
+    var toWindUnit = query.windSpeedUnit;
+    var toPressUnit = query.pressureUnit;
+    var toDistUnit = query.distanceUnit;
 
     if (toTempUnit === 'C') {
         wData['tmx'] = wData.tempMax_c;
@@ -189,30 +189,30 @@ ControllerWWUnits.prototype._convertDailyWeather = function (wData, query, curre
 
     if (wData.hasOwnProperty('precip')) {
         if (wData.date <= currentDate) {
-            wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+            wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
             wData.rn1 = parseFloat(wData.rn1.toFixed(1));
         }
         else {
             if (wData.precType === 1) {
-                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.r06 = parseFloat(wData.r06.toFixed(1));
             }
             else if (wData.precType === 2) {
-                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.r06 = parseFloat(wData.r06.toFixed(1));
-                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.s06 = parseFloat(wData.s06.toFixed(1));
             }
             else if (wData.precType === 3) {
-                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.s06 = parseFloat(wData.s06.toFixed(1));
             }
         }
     }
 
-    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windUnit'), toWindUnit, wData.windSpd_ms);
-    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressUnit'), toPressUnit, wData.press);
-    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distUnit'), toDistUnit, wData.vis);
+    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
+    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
     wData['wdd'] = this._convertWindDirToWdd(wData.windDir);
     wData['dateObj'] = wData.date;
     wData['date'] = kmaTimeLib.convertDateToYYYYMMDD(wData.date);
@@ -221,11 +221,11 @@ ControllerWWUnits.prototype._convertDailyWeather = function (wData, query, curre
 ControllerWWUnits.prototype._convertHourlyWeather = function (wData, query, currentDate) {
     var unitConverter = new UnitConverter();
 
-    var toTempUnit = query.tempUnit;
-    var toPrecipUnit = query.precipUnit;
-    var toWindUnit = query.windUnit;
-    var toPressUnit = query.pressUnit;
-    var toDistUnit = query.distUnit;
+    var toTempUnit = query.temperatureUnit;
+    var toPrecipUnit = query.precipitationUnit;
+    var toWindUnit = query.windSpeedUnit;
+    var toPressUnit = query.pressureUnit;
+    var toDistUnit = query.distanceUnit;
 
     if (toTempUnit === 'C') {
         wData['t3h'] = wData.temp_c;
@@ -238,7 +238,7 @@ ControllerWWUnits.prototype._convertHourlyWeather = function (wData, query, curr
 
     wData['pty'] = wData.precType || 0;
     wData['pop'] = wData.precProb || 0;
-    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windUnit'), toWindUnit, wData.windSpd_ms);
+    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
     if (!wData.hasOwnProperty('humid')) {
         log.error('Invalid humdid '+JSON.stringify(wData));
     }
@@ -249,29 +249,29 @@ ControllerWWUnits.prototype._convertHourlyWeather = function (wData, query, curr
 
     if (wData.hasOwnProperty('precip')) {
         if (wData.date <= currentDate ) {
-            wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+            wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
             wData.rn1 = parseFloat(wData.rn1.toFixed(1));
         }
         else {
             if (wData.precType === 1) {
-                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.r06 = parseFloat(wData.r06.toFixed(1));
             }
             else if (wData.precType === 2) {
-                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['r06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.r06 = parseFloat(wData.r06.toFixed(1));
-                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.s06 = parseFloat(wData.s06.toFixed(1));
             }
             else if (wData.precType === 3) {
-                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipUnit'), toPrecipUnit, wData.precip);
+                wData['s06'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
                 wData.s06 = parseFloat(wData.s06.toFixed(1));
             }
         }
     }
 
-    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressUnit'), toPressUnit, wData.press);
-    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distUnit'), toDistUnit, wData.vis);
+    wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
+    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
     wData['dateObj'] = wData.date;
     wData['time'] = kmaTimeLib.convertDateToHHZZ(wData.date);
     wData['date'] = kmaTimeLib.convertDateToYYYYMMDD(wData.date);
