@@ -12,7 +12,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node --max-old-space-size=512 ./bin/www",
+    "start": "node ./bin/www",
     "test": "./node_modules/mocha/bin/mocha",
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
