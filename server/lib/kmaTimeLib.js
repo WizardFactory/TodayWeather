@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 2. 13..
  */
 
+'use strict';
+
 var kmaTimeLib = {};
 
 /**

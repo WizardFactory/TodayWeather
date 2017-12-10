@@ -2,6 +2,8 @@
  * Created by aleckim on 2017. 12. 8..
  */
 
+'use strict';
+
 var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -24,8 +26,7 @@ describe('unit test - controller town 24h', function() {
     });
 
     it('test _getShortestTimeValue ', function (done) {
-        var date = new Date();
-        var ret = cTown24h.checkQueryValidation({query:{}}, null, function () {
+        cTown24h.checkQueryValidation({query:{}}, null, function () {
             done();
         });
     });

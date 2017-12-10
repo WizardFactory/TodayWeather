@@ -3,6 +3,8 @@
  * controllerTown에서 short의 time table을 0~21 에서 3~24시로 변경한 클래스임.
  */
 
+'use strict';
+
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 var UnitConverter = require('../lib/unitConverter');

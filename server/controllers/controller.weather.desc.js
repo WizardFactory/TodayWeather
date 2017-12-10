@@ -3,6 +3,8 @@
  * Created by aleckim on 2017. 12. 10..
  */
 
+'use strict';
+
 class WeatherDescription {
     constructor() {
 
@@ -196,7 +198,7 @@ class WeatherDescription {
             'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY',
             'LOC_HUMID', 'LOC_WINDY', 'LOC_DRY', 'LOC_VERY_STRONG_WIND', 'LOC_SLEET', 'LOC_RAIN', 'LOC_SNOW'];
         return ts.__(weatherTypeStr[weatherType]);
-    };
+    }
 }
 
 module.exports = WeatherDescription;

@@ -3,6 +3,8 @@
  * Created by aleckim on 2017. 12. 08..
  */
 
+'use strict';
+
 var router = require('express').Router();
 
 var worldWeather = new (require('../../controllers/worldWeather/controllerWorldWeather'))();

@@ -2,6 +2,8 @@
  * Created by aleckim on 2017. 12. 8..
  */
 
+'use strict';
+
 var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 

@@ -2,6 +2,8 @@
  * Created by aleckim on 2017. 7. 2..
  */
 
+'use strict';
+
 var async = require('async');
 var req = require('request');
 var config = require('../config/config');

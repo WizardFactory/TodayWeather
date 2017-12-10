@@ -3,11 +3,13 @@
  * Created by aleckim on 2017. 12. 08..
  */
 
+'use strict';
+
 var UnitConverter = require('../../lib/unitConverter');
 var ControllerTown = require('../controllerTown');
 var kmaTimeLib = require('../../lib/kmaTimeLib');
 
-ControllerWWUnits = function () {
+function ControllerWWUnits() {
     var self = this;
 
     this.checkQueryValidation =  function (req, res, next) {
@@ -112,7 +114,7 @@ ControllerWWUnits.prototype._convertWindDirToWdd = function (windDir) {
 ControllerWWUnits.prototype._decideHumidityIcon = function(reh) {
     var tempIconName = "Humidity-";
 
-    if (reh == 100) {
+    if (reh === 100) {
         tempIconName += "90";
     }
     else {
