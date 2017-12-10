@@ -223,11 +223,11 @@ UnitConverter.prototype._convertPressure = function(from, to, val) {
 };
 
 UnitConverter.prototype._convertDistance = function(from, to, val) {
-    if (from == 'm') {
-        return parseFloat((val*39.370079).toFixed(1));
+    if (from == 'km') {
+        return parseFloat((val*0.621371).toFixed(1));
     }
     else if (from =='mi') {
-        return parseFloat((val*0.0254).toFixed(1));
+        return parseFloat((val*1.609344).toFixed(1));
     }
 };
 
@@ -260,7 +260,7 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
     if (from == 'mmHg' || from == 'inHg' || from == 'hPa' || from == 'mb') {
         return self._convertPressure(from, to, val);
     }
-    if (from == 'm' || from == 'mi') {
+    if (from == 'km' || from == 'mi') {
         return self._convertDistance(from, to, val);
     }
     if (from == 'mm' || from == 'in') {
@@ -269,6 +269,24 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
 
     log.error('Fail to convert from '+from+" to "+to+" value="+val);
     return val;
+};
+
+UnitConverter.getUnitList = function () {
+    return ['tempUnit', 'windUnit', 'pressUnit', 'distUnit', 'pressUnit', 'airUnit'];
+};
+
+UnitConverter.getDefaultValueList = function () {
+    return {tempUnit: 'C', windUnit: 'm/s', pressUnit: 'hPa', distUnit: 'km', precipUnit: 'mm', airUnit: 'airKorea'};
+};
+
+UnitConverter.getDefaultValue = function (name) {
+    return UnitConverter.getDefaultValueList()[name];
+};
+
+UnitConverter.wdd2Str = function (data, ts) {
+    data = data.replace(/N/g, ts.__('LOC_N')).replace(/S/g, ts.__('LOC_S'));
+    data = data.replace(/E/g, ts.__('LOC_E')).replace(/W/g, ts.__('LOC_W'));
+    return data;
 };
 
 module.exports = UnitConverter;

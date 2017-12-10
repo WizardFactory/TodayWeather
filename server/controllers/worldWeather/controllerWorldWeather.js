@@ -11,6 +11,8 @@ var modelDSForecast = require('../../models/worldWeather/modelDSForecast');
 var modelAQI = require('../../models/worldWeather/modelAqi');
 var config = require('../../config/config');
 var controllerRequester = require('./controllerRequester');
+var ControllerWeatherDesc = require('../controller.weather.desc');
+var KecoController = require('../kecoController');
 
 
 var commandList = ['restart', 'renewGeocodeList'];
@@ -1346,14 +1348,14 @@ function controllerWorldWeather(){
                     req.result.thisTime.forEach(function(thisTime, index){
                         if(thisTime.date != undefined &&
                             self._compareDateString(yesterdayDate, thisTime.date)){
-                            req.result.thisTime[index] = self._makeCurrentDataFromDSFCurrent(dbItem);
+                            req.result.thisTime[index] = self._makeCurrentDataFromDSFCurrent(dbItem, res);
                             isExist = true;
                         }
                     });
 
                     if(!isExist){
                         log.info('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
-                        req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem));
+                        req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem, res));
                     }
                 }
 
@@ -1366,7 +1368,7 @@ function controllerWorldWeather(){
                         if(self._compareDateString(hourly.date, dbItem.dateObj)){
                             //log.info('hourlyItem : ', hourly.date.toString());
                             req.result.hourly[index] = self._makeHourlyDataFromDSF(dbItem, hourlyList[dataIndex-1],
-                                hourlyList[dataIndex-2], req.result.daily);
+                                hourlyList[dataIndex-2], req.result.daily, res);
                             isExist = true;
                             break;
                         }
@@ -1374,7 +1376,7 @@ function controllerWorldWeather(){
 
                     if(!isExist){
                         req.result.hourly.push(self._makeHourlyDataFromDSF(dbItem, hourlyList[dataIndex-1],
-                            hourlyList[dataIndex-2], req.result.daily ));
+                            hourlyList[dataIndex-2], req.result.daily, res));
                         var len = req.result.hourly.length;
                         //log.info('NEW! DSF -> Hourly : ', JSON.stringify(req.result.hourly[len-1]));
                     }
@@ -1433,7 +1435,7 @@ function controllerWorldWeather(){
                         if (thisTime.date != undefined &&
                             self._compareDateString(curDate, thisTime.date)) {
 
-                            var current = self._makeCurrentDataFromDSFCurrent(item.current);
+                            var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
                             var isNight = self._isNight(curDate, item.daily.data);
                             current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
                             req.result.thisTime[index] = current;
@@ -1443,7 +1445,7 @@ function controllerWorldWeather(){
 
                     if(!isExist){
                         log.info('DSF current > Found current data', item.current.dateObj.toString(), meta);
-                        var current = self._makeCurrentDataFromDSFCurrent(item.current);
+                        var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
                         var isNight = self._isNight(curDate, item.daily.data);
                         current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
                         req.result.thisTime.push(current);
@@ -1545,22 +1547,14 @@ function controllerWorldWeather(){
 
                         // string
                         if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who')){
-                            thisTime.aqiStr = self._getAqiLevelAirkorea(thisTime.aqiGrade);
-                            thisTime.coStr = self._getAqiLevelAirkorea(thisTime.coGrade);
-                            thisTime.no2Str = self._getAqiLevelAirkorea(thisTime.no2Grade);
-                            thisTime.o3Str = self._getAqiLevelAirkorea(thisTime.o3Grade);
-                            thisTime.pm10Str = self._getAqiLevelAirkorea(thisTime.pm10Grade);
-                            thisTime.pm25Str = self._getAqiLevelAirkorea(thisTime.pm25Grade);
-                            thisTime.so2Str = self._getAqiLevelAirkorea(thisTime.so2Grade);
+                            thisTime.aqiStr = KecoController.grade2str(thisTime.aqiGrade, 'aqi', res);
+                            thisTime.coStr = KecoController.grade2str(thisTime.coGrade, 'co2', res);
+                            thisTime.no2Str = KecoController.grade2str(thisTime.no2Grade, 'no2', res);
+                            thisTime.o3Str = KecoController.grade2str(thisTime.o3Grade, 'o3', res);
+                            thisTime.pm10Str = KecoController.grade2str(thisTime.pm10Grade, 'pm10', res);
+                            thisTime.pm25Str = KecoController.grade2str(thisTime.pm25Grade, 'pm25', res);
+                            thisTime.so2Str = KecoController.grade2str(thisTime.so2Grade, 'so2', res);
                         }else{
-                            thisTime.aqiStr = self._getAqiLevel(thisTime.aqiGrade);
-                            thisTime.coStr = self._getAqiLevel(thisTime.coGrade);
-                            thisTime.no2Str = self._getAqiLevel(thisTime.no2Grade);
-                            thisTime.o3Str = self._getAqiLevel(thisTime.o3Grade);
-                            thisTime.pm10Str = self._getAqiLevel(thisTime.pm10Grade);
-                            thisTime.pm25Str = self._getAqiLevel(thisTime.pm25Grade);
-                            thisTime.so2Str = self._getAqiLevel(thisTime.so2Grade);
-
                             // convert IAQI value to grade
                             thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
                             thisTime.coGrade = self._getAqiGrade(thisTime.coGrade);
@@ -1569,6 +1563,14 @@ function controllerWorldWeather(){
                             thisTime.pm10Grade = self._getAqiGrade(thisTime.pm10Grade);
                             thisTime.pm25Grade = self._getAqiGrade(thisTime.pm25Grade);
                             thisTime.so2Grade = self._getAqiGrade(thisTime.so2Grade);
+
+                            thisTime.aqiStr = self.grade2str(thisTime.aqiGrade, 'aqi', res);
+                            thisTime.coStr = self.grade2str(thisTime.coGrade, 'co', res);
+                            thisTime.no2Str = self.grade2str(thisTime.no2Grade, 'no2', res);
+                            thisTime.o3Str = self.grade2str(thisTime.o3Grade, 'o3', res);
+                            thisTime.pm10Str = self.grade2str(thisTime.pm10Grade, 'pm10', res);
+                            thisTime.pm25Str = self.grade2str(thisTime.pm25Grade, 'pm25', res);
+                            thisTime.so2Str = self.grade2str(thisTime.so2Grade, 'so2', res);
                         }
                     }
                 });
@@ -1878,36 +1880,26 @@ function controllerWorldWeather(){
 
     };
 
-    self._getAqiLevel = function(value){
-        if(value == undefined) {
-            log.warn('_getAqiLevel : invalid parameter');
-            return '';
-        }
+    self.grade2str = function (grade, type, translate) {
+        var ts = translate == undefined?global:translate;
 
-        var aqi = parseInt(value);
-
-        if(aqi >= 0 && aqi <= 50){
-            return 'Good';
+        switch (grade) {
+            case 1:
+                return ts.__("LOC_GOOD");
+            case 2:
+                return ts.__("LOC_MODERATE");
+            case 3:
+                return ts.__("LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS");
+            case 4:
+                return ts.__("LOC_UNHEALTHY");
+            case 5:
+                return ts.__("LOC_VERY_UNHEALTHY");
+            case 6:
+                return ts.__("LOC_HAZARDOUS");
+            default :
+                log.error("Unknown grade="+grade+" type="+type);
         }
-        else if(aqi >= 51 && aqi <= 100){
-            return 'Moderate';
-        }
-        else if(aqi >= 101 && aqi <= 150){
-            return 'Unhealthy for sensitive';
-        }
-        else if(aqi >= 151 && aqi <= 200){
-            return 'Unhealthy';
-        }
-        else if(aqi >= 201 && aqi <= 300){
-            return 'Very Unhealthy';
-        }
-        else if(aqi >= 300){
-            return 'Hazardous';
-        }
-        else{
-            log.warn('_getAqiLevel : wrong value : ', value);
-            return '';
-        }
+        return "";
     };
 
     self._getAqiGrade = function(value){
@@ -1942,20 +1934,6 @@ function controllerWorldWeather(){
         }
     };
 
-    self._getAqiLevelAirkorea = function(grade){
-
-        if(grade == 1){
-            return 'Good';
-        }else if(grade == 2){
-            return 'Moderate';
-        }else if(grade == 3){
-            return 'Unhealthy';
-        }else if(grade == 4){
-            return 'Very Unhealthy';
-        }
-
-        return '';
-    };
     /**************************************************************
      *  End AQI functions
      **************************************************************/
@@ -2446,10 +2424,11 @@ function controllerWorldWeather(){
      * @param summary2 1hour before
      * @param summary1 2hours ago
      * @param daily day list
+     * @param ts
      * @returns {{}}
      * @private
      */
-    self._makeHourlyDataFromDSF = function(summary, summary2, summary1, daily) {
+    self._makeHourlyDataFromDSF = function(summary, summary2, summary1, daily, ts) {
         var self = this;
         var hourly = {};
         if (summary2 == undefined) {
@@ -2555,7 +2534,8 @@ function controllerWorldWeather(){
         hourly.desc = self._mergeSummary(list);
         //log.info('desc='+hourly.desc);
 
-        hourly.weatherType = self._description2weatherType(summary.summary);
+        hourly.weatherType = ControllerWeatherDesc.makeWeatherType(summary.summary);
+        hourly.desc = ControllerWeatherDesc.getWeatherStr(hourly.weatherType, ts);
 
         /**
          * precProb 값에 따라 아이콘을 rain으로 표시해야 함
@@ -2564,7 +2544,14 @@ function controllerWorldWeather(){
         return hourly;
     };
 
-    self._makeCurrentDataFromDSFCurrent = function(summary) {
+    /**
+     *
+     * @param summary
+     * @param ts
+     * @returns {{}}
+     * @private
+     */
+    self._makeCurrentDataFromDSFCurrent = function(summary, ts) {
         var current = {};
 
         if(summary.date){
@@ -2575,7 +2562,8 @@ function controllerWorldWeather(){
         }
         if(summary.summary){
             current.desc = summary.summary;
-            current.weatherType = self._description2weatherType(summary.summary);
+            current.weatherType = ControllerWeatherDesc.makeWeatherType(summary.summary);
+            current.desc = ControllerWeatherDesc.getWeatherStr(current.weatherType, ts);
         }
         if(summary.temp){
             current.temp_c = parseFloat(((summary.temp - 32) / (9/5)).toFixed(1));
@@ -3070,106 +3058,6 @@ function controllerWorldWeather(){
         catch(e){
             callback(new Error('WW> something wrong!'));
         }
-    };
-
-    /**
-     * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
-     * @param weatherStr
-     * @returns {number}
-     * @private
-     */
-    self._description2weatherType = function (weatherStr) {
-        if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
-            return;
-        }
-
-        /**
-         *  'light rain and breezy' -> 'light rain'
-         */
-        weatherStr = weatherStr.toLowerCase();
-        if (weatherStr.indexOf('and')) {
-            //log.info('weatherStr='+weatherStr);
-            weatherStr = weatherStr.split(' and ')[0];
-        }
-
-        switch (weatherStr) {
-            case 'sunny':
-            case 'clear': return 0;
-            case 'partly cloudy': return 1;
-            case 'mostly cloudy': return 2;
-            case 'cloudy':
-            case 'overcast': return 3;
-            case 'mist': return 4;
-            case 'haze': return 5;
-            case 'fog': return 6;
-            case 'thin fog': return 7;
-            case 'dense fog':
-            case 'foggy': return 8;
-            case 'fog clear': return 9;
-            case '시계내안개': return 10;
-            case 'partly fog': return 11;
-            case 'yellow dust': return 12;
-            case '시계내강수': return 13;
-            case 'light drizzle': return 14;
-            case 'drizzle': return 15;
-            case 'heavy drizzle': return 16;
-            case 'drizzle clear': return 17;
-            case 'light rain at times': return 18;
-            case 'possible light rain':
-            case 'light rain': return 19;
-            case 'rain at times': return 20;
-            case 'rain': return 21;
-            case 'heavy rain at times': return 22;
-            case 'heavy rain': return 23;
-            case 'light showers': return 24;
-            case 'showers': return 25;
-            case 'heavy showers': return 26;
-            case 'showers clear': return 27;
-            case 'rain clear': return 28;
-            case 'light sleet': return 29;
-            case 'heavy sleet': return 30;
-            case 'sleet clear': return 31;
-            case 'light snow at times': return 32;
-            case 'possible light snow':
-            case 'light snow': return 33;
-            case 'snow at times': return 34;
-            case 'snow': return 35;
-            case 'heavy snow at times': return 36;
-            case 'heavy snow': return 37;
-            case 'light snow showers': return 38;
-            case 'heavy snow showers': return 39;
-            case 'snow showers clear': return 40;
-            case 'snow clear': return 41;
-            case 'light snow pellets': return 42;
-            case 'heavy snow pellets': return 43;
-            case 'light snowstorm': return 44;
-            case 'snowstorm': return 45;
-            case 'heavy snowstorm': return 46;
-            case 'flurries': return 47;
-            case 'waterspout': return 48;
-            case 'hail': return 49;
-            case 'thundershowers': return 50;
-            case 'thundershowers hail': return 51;
-            case 'thundershowers snow/rain':
-            case 'thundershowers rain/snow': return 52;
-            case 'thundershowers clear, rain': return 53;
-            case 'thundershowers clear, snow': return 54;
-            case 'lightning': return 55;
-            case 'dry lightning': return 56;
-            case 'thunderstorm clear': return 57;
-            case 'ice pellets': return 58;
-            case 'breezy': return 59;
-            case 'humid': return 60;
-            case 'windy': return 61;
-            case 'dry': return 62;
-            case 'dangerously windy': return 63; //LOC_VERY_STRONG_WIND
-            case 'sleet': return 64;
-            case '비': return 65; //for KMA
-            case '눈': return 66; //for KMA
-            default :
-                log.error("Fail weatherStr="+weatherStr);
-        }
-        return -1;
     };
 
     return self;

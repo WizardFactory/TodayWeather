@@ -243,7 +243,7 @@ kasiRiseSet._apiRaw2riseSetList = function (rawDataList, callback) {
             var propertyList = KasiRiseSet.getDataPropertyList();
             propertyList.forEach(function (propertyName) {
                 if (typeof rawdata[propertyName] == 'number' || rawdata[propertyName].indexOf('-') == -1) {
-                    riseSet[propertyName] = kmaTimeLib.convertYYYYMMDDHHMMSStoYYYYoMMoDD_HHoMMoSS(rawdata.locdate + (''+rawdata[propertyName]));
+                    riseSet[propertyName] = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(rawdata.locdate + (''+rawdata[propertyName]));
                 }
                 else {
                     riseSet[propertyName] = '';

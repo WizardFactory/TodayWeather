@@ -14,6 +14,7 @@ var Frcst = require('../models/modelMinuDustFrcst');
 var keco = new (require('../lib/kecoRequester.js'))();
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var ControllerWorldWeather = require('./worldWeather/controllerWorldWeather');
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
@@ -76,7 +77,7 @@ arpltnController._convertPpmToUm = function (Mol, value){
  * @param arpltn
  * @private
  */
-arpltnController._recalculateValue = function (arpltn, aqiUnit) {
+arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
     var self = this;
 
     if (arpltn == undefined) {
@@ -393,6 +394,30 @@ arpltnController._recalculateValue = function (arpltn, aqiUnit) {
         })(arpltn.khaiValue);
     }
 
+    if (aqiUnit === 'airnow' || aqiUnit === 'aircn') {
+        var ctrlWW = ControllerWorldWeather();
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = ctrlWW.grade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = ctrlWW.grade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = ctrlWW.grade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = ctrlWW.grade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = ctrlWW.grade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = ctrlWW.grade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = ctrlWW.grade2str(arpltn.khaiGrade, "khai", ts);
+        }
+    }
     return arpltn;
 };
 
@@ -680,7 +705,7 @@ arpltnController.getDustFrcst = function (town, dateList, callback) {
  * @param callback
  * @returns {arpltnController}
  */
-arpltnController.getArpLtnInfo = function (townInfo, dateTime, aqiUnit, callback) {
+arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
     var self = this;
 
     async.waterfall([
@@ -704,9 +729,6 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, aqiUnit, callback
             function (arpltnList, cb) {
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
                 return cb(undefined, arpltn);
-            },
-            function (arpltn, cb) {
-                return cb(undefined, self._recalculateValue(arpltn, aqiUnit));
             }],
         function(err, arpltn) {
             if (err)  {

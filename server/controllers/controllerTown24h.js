@@ -5,6 +5,8 @@
 
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
+var UnitConverter = require('../lib/unitConverter');
+var KecoController = require('../controllers/kecoController');
 
 /**
  *
@@ -14,6 +16,28 @@ function ControllerTown24h() {
     var self = this;
 
     ControllerTown.call(this);
+
+    this.checkQueryValidation = function(req, res, next) {
+        /**
+         *
+         * tempUnit(C,F), windUnit(mph,km/h,m/s,bft,kr), pressUnit(mmHg,inHg,hPa,mb),
+         * distUnit(km,mi), precipUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+         */
+        if(!req.hasOwnProperty('query')) {
+            req.query = {};
+        }
+
+        UnitConverter.getUnitList().forEach(function (value) {
+                if (!req.query.hasOwnProperty(value)) {
+                    req.query[value] = UnitConverter.getDefaultValue(value);
+                }
+        });
+
+        log.info({sId:req.sessionID, reqQuery: req.query});
+
+        next();
+        return this;
+    };
 
     /**
      * adjust tmn, tmx and reorganize position of tmn and tmx
@@ -684,6 +708,68 @@ function ControllerTown24h() {
         log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
         res.json(req.result);
     };
+
+    this.convertUnits = function (req, res, next) {
+        try {
+            var current = req.current;
+            var currentDate;
+            if (current.hasOwnProperty('stnDateTime')) {
+                current.dateObj = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYoMMoDD_HHoMM(current.stnDateTime);
+            }
+            else {
+                current.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(current.date+current.time);
+            }
+            currentDate = current.dateObj;
+            current.time = parseInt(current.time.slice(0, -2));
+            self._convertWeatherData(current, req.query);
+            self._convertWeatherData(current.yesterday, req.query);
+
+            req.shortest.forEach(function (value) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);
+                self._convertWeatherData(value, req.query);
+            });
+            var short = req.short;
+            var foundCurrentIndex = false;
+            short.forEach(function (value, index) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);
+                value.time = parseInt(value.time.slice(0, -2));
+                value.fromToday = kmaTimeLib.getDiffDays(value.dateObj, currentDate);
+                if (foundCurrentIndex === false && value.dateObj <= currentDate) {
+                    if (index === short.length-1) {
+                        value.currentIndex = true;
+                    }
+                    else {
+                        var nextObj = short[index+1];
+                        var nextIndexDate = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(nextObj.date+nextObj.time);
+                        if(currentDate <= nextIndexDate) {
+                            value.currentIndex = true;
+                        }
+                    }
+                }
+                self._convertWeatherData(value, req.query);
+            });
+            req.midData.dailyData.forEach(function (value, index) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+"0000");
+                value.skyAm = value.skyAmIcon;
+                value.skyPm = value.skyPmIcon;
+                value.tmx = value.taMax;
+                value.tmn = value.taMin;
+                value.fromToday = kmaTimeLib.getDiffDays(value.dateObj, currentDate);
+                value.dayOfWeek = (new Date(value.dateObj)).getDay();
+                if (value.date === current.date) {
+                    current.todayIndex = index;
+                }
+                self._convertWeatherData(value, req.query);
+            });
+            if (req.current.hasOwnProperty('arpltn')) {
+                KecoController.recalculateValue(req.current.arpltn, req.query.airUnit, res);
+            }
+        }
+        catch (err) {
+            log.error(err);
+        }
+        return next();
+    };
 }
 
 // subclass extends superclass
@@ -789,5 +875,79 @@ ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
     log.error('Fail to find emoji skyIcon='+skyIcon);
     return '';
 };
+
+/**
+ * tempUnit(C,F), windUnit(mph,km/h,m/s,bft,kr), pressUnit(mmHg,inHg,hPa,mb),
+ * distUnit(km,mi), precipUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+ * @param wData
+ * @param query
+ * @returns {ControllerTown24h}
+ * @private
+ */
+ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
+    var unitConverter = new UnitConverter();
+    var toTempUnit;
+    var toWindUnit;
+    var toPressUnit;
+    var toDistUnit;
+    var toPrecipUnit;
+    var defaultValueList;
+
+    if (wData == undefined) {
+        log.error('Invalid weather data for converting');
+        return this;
+    }
+    if (query == undefined) {
+        log.error('Invalid query for converting');
+        return this;
+    }
+
+    toTempUnit = query.tempUnit;
+    toPrecipUnit = query.precipUnit;
+    toWindUnit = query.windUnit;
+    toPressUnit = query.pressUnit;
+    toDistUnit = query.distUnit;
+
+    defaultValueList = UnitConverter.getDefaultValueList();
+
+    //convert cm to mm s06, sn1, s1d
+    ['s06', 'sn1', 's1d'].forEach(function (name) {
+        if (wData.hasOwnProperty(name)) {
+            wData[name] *= 10;
+        }
+    });
+
+    if (toTempUnit && toTempUnit !== defaultValueList['tempUnit']) {
+        //client에서는 taMax,taMin은 tmx, tmn으로 변환해서 사용하고 있음.
+        ['t1h', 'sensorytem', 'dpt', 'heatIndex', 't3h', 'tmx', 'tmn', 't1d'].forEach(function (name) {
+            if (wData.hasOwnProperty(name) && wData[name] !== -50) {
+                wData[name] = unitConverter.convertUnits(defaultValueList['tempUnit'], toTempUnit, wData[name]);
+                if (toTempUnit === 'F') {
+                    wData[name] = Math.floor(wData[name]);
+                }
+            }
+        });
+    }
+
+    //will remove rs1h, rs1d
+    if (toPrecipUnit && toPrecipUnit !== defaultValueList['precipUnit']) {
+        ['rn1', 'rs1h', 'rs1d', 'r06', 's06', 'sn1', 's1d'].forEach(function (name) {
+            if (wData.hasOwnProperty(name)) {
+                wData[name] = unitConverter.convertUnits(defaultValueList['precipUnit'], toWindUnit, wData[name]);
+            }
+        });
+    }
+
+    if (wData.hasOwnProperty('wsd')) {
+        wData.wsd = unitConverter.convertUnits(defaultValueList['windUnit'], toWindUnit, wData.wsd);
+    }
+    if (wData.hasOwnProperty('hPa')) {
+        wData.hPa = unitConverter.convertUnits(defaultValueList['pressUnit'], toPressUnit, wData.hPa);
+    }
+    if (wData.hasOwnProperty('visibility')) {
+        wData.visibility = unitConverter.convertUnits(defaultValueList['distUnit'], toDistUnit, wData.visibility);
+    }
+};
+
 
 module.exports = ControllerTown24h;

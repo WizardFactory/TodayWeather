@@ -6,6 +6,7 @@
   "LOC_USE_PREMIUM_WITHOUT_ADS" : "광고없는 프리미엄을 사용해보세요",
   "LOC_THAN_YESTERDAY" : "어제보다 %s˚",
   "LOC_SAME_AS_YESTERDAY" : "어제와 동일",
+  "LOC_SIMILAR_TO_YESTERDAY" : "어제와 비슷",
   "LOC_AIR_QUALITY_INDEX" : "통합대기지수",
   "LOC_DAILY_AQI_FORECAST" : "일별대기예보",
   "LOC_AQI" : "통합대기",
@@ -251,5 +252,9 @@
   "LOC_FIND_BY_LOCATION": "현재위치로 지역찾기",
   "LOC_SUNRISE": "일출",
   "LOC_SUNSET": "일몰",
-  "LOC_STARTUP_PAGE" : "시작 페이지"
+  "LOC_STARTUP_PAGE" : "시작 페이지",
+  "LOC_E": "동",
+  "LOC_W": "서",
+  "LOC_S": "남",
+  "LOC_N": "북"
 }
