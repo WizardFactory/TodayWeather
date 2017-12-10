@@ -86,8 +86,7 @@ function ControllerWWUnits() {
         //airSummary
         next();
     };
-
-};
+}
 
 ControllerWWUnits.prototype._convertWindDirToWdd = function (windDir) {
     switch(windDir) {

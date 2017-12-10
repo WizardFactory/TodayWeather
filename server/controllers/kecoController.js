@@ -395,7 +395,7 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
     }
 
     if (aqiUnit === 'airnow' || aqiUnit === 'aircn') {
-        var ctrlWW = ControllerWorldWeather();
+        var ctrlWW = new ControllerWorldWeather();
         if (arpltn.hasOwnProperty('pm10Grade')) {
             arpltn.pm10Str = ctrlWW.grade2str(arpltn.pm10Grade, "pm10", ts);
         }

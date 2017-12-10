@@ -69,7 +69,7 @@ var itemWuForecast = [
  *
  * @returns {controllerWorldWeather}
  */
-function controllerWorldWeather(){
+function controllerWorldWeather() {
     var self = this;
 
     self.geocodeList = [];
