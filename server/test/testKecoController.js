@@ -90,13 +90,13 @@ describe('unit test - keco controller', function() {
             khaiValue: 100
         };
 
-        kecoController._recalculateValue(testData, 'airkorea');
+        kecoController.recalculateValue(testData, 'airkorea');
         log.info('airkorea : ', testData);
-        kecoController._recalculateValue(testData, 'airkorea_who');
+        kecoController.recalculateValue(testData, 'airkorea_who');
         log.info('airkorea_who : ', testData);
-        kecoController._recalculateValue(testData, 'airnow');
+        kecoController.recalculateValue(testData, 'airnow');
         log.info('airnow : ', testData);
-        kecoController._recalculateValue(testData, 'aqicn');
+        kecoController.recalculateValue(testData, 'aqicn');
         log.info('aqicn : ', testData);
         done();
     });

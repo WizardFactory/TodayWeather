@@ -6,6 +6,7 @@
   "LOC_USE_PREMIUM_WITHOUT_ADS": "広告のないプレミアムを使用してみてください",
   "LOC_THAN_YESTERDAY": "昨日より %s˚",
   "LOC_SAME_AS_YESTERDAY": "昨日と同じ",
+  "LOC_SIMILAR_TO_YESTERDAY" : "昨日と似てい",
   "LOC_AIR_QUALITY_INDEX": "空気質指数",
   "LOC_DAILY_AQI_FORECAST": "日ごとの大気予報",
   "LOC_AQI": "空気質指数",
@@ -251,5 +252,9 @@
   "LOC_FIND_BY_LOCATION": "場所で探す",
   "LOC_SUNRISE": "日出",
   "LOC_SUNSET": "日没",
-  "LOC_STARTUP_PAGE" : "起動ページ"
+  "LOC_STARTUP_PAGE" : "起動ページ",
+  "LOC_E": "東",
+  "LOC_W": "西",
+  "LOC_S": "南",
+  "LOC_N": "北"
 }

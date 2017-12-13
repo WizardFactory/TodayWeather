@@ -14,97 +14,11 @@ var KmaStnMinute = require('../models/modelKmaStnMinute');
 var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
 var kmaTimeLib = require('../lib/kmaTimeLib');
+var ControllerWeatherDesc = require('./controller.weather.desc');
 
 function controllerKmaStnWeather() {
 
 }
-
-/**
- * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
- * 영어로 적인 값은 해외 api용임
- * @param weatherStr
- * @private
- */
-controllerKmaStnWeather._makeWeatherType = function (weatherStr) {
-    if (!weatherStr.hasOwnProperty('length') || weatherStr.length <= 0) {
-       return -1;
-    }
-
-    switch (weatherStr) {
-        case '맑음': return 0;
-        case '구름조금': return 1;
-        case '구름많음': return 2;
-        case '흐림': return 3;
-        case '박무': return 4;
-        case '연무': return 5;
-        case '안개변화무': return 6;
-        case '안개엷어짐': return 7;
-        case '안개강해짐': return 8;
-        case '안개끝': return 9;
-        case '시계내안개': return 10;
-        case '부분안개': return 11;
-        case '황사': return 12;
-        case '시계내강수': return 13;
-        case '약한이슬비': return 14;
-        case '보통이슬비': return 15;
-        case '강한이슬비': return 16;
-        case '이슬비끝': return 17;
-        case '약한비단속': return 18;
-        case '약한비계속': return 19;
-        case '보통비단속': return 20;
-        case '보통비계속': return 21;
-        case '강한비단속': return 22;
-        case '강한비계속': return 23;
-        case '약한소나기': return 24;
-        case '보통소나기': return 25;
-        case '강한소나기': return 26;
-        case '소나기끝': return 27;
-        case '비끝남': return 28;
-        case "약진눈깨비":
-        case '진눈깨비약': return 29;
-        case '강진눈깨비': return 30;
-        case '진눈깨비끝': return 31;
-        case '약한눈단속': return 32;
-        case '약한눈계속': return 33;
-        case '보통눈단속': return 34;
-        case '보통눈계속': return 35;
-        case '강한눈단속': return 36;
-        case '강한눈계속': return 37;
-        case '소낙눈/약': return 38;
-        case '소낙눈/강': return 39;
-        case '소낙눈끝': return 40;
-        case '눈끝남': return 41;
-        case '싸락눈/약': return 42;
-        case '싸락눈/강': return 43;
-        case '약한눈보라': return 44;
-        case '보통눈보라': return 45;
-        case '강한눈보라': return 46;
-        case '가루눈': return 47;
-        case '용오름': return 48;
-        case '우박': return 49;
-        case '뇌우': return 50;
-        case '뇌우,우박': return 51;
-        case '뇌우,눈/비':
-        case '뇌우,비/눈': return 52;
-        case '뇌우끝,비': return 53;
-        case '뇌우끝,눈': return 54;
-        case '번개': return 55;
-        case '마른뇌전': return 56;
-        case '뇌전끝': return 57;
-        case '얼음싸라기': return 58;
-        case 'breezy': return 59;
-        case 'humid': return 60;
-        case 'windy': return 61;
-        case 'dry': return 62;
-        case 'dangerously windy': return 63;
-        case '진눈깨비': return 64;
-        case '비': return 65;
-        case '눈': return 66;
-        default :
-            log.error("Fail weatherStr="+weatherStr);
-    }
-    return -1;
-};
 
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
@@ -254,7 +168,7 @@ controllerKmaStnWeather._mergeStnWeatherList = function (stnWeatherList, opt) {
                 }
                 mergedStnWeatherInfo[propertyName[i]] = stnWeatherInfo[propertyName[i]];
                 if (propertyName[i] == 'weather') {
-                    mergedStnWeatherInfo[propertyName[i]+'Type'] = self._makeWeatherType(mergedStnWeatherInfo[propertyName[i]]);
+                    mergedStnWeatherInfo[propertyName[i]+'Type'] = ControllerWeatherDesc.makeWeatherType(mergedStnWeatherInfo[propertyName[i]]);
                 }
                 if (mergedStnWeatherInfo.stnId != stnWeatherInfo.stnId) {
                     mergedStnWeatherInfo[propertyName[i]+'Stn'] = stnWeatherInfo.stnName;
@@ -1130,7 +1044,7 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
             }
             stnWeather.stnDateTime = stnWeather.date;
             if (stnWeather.weather) {
-               stnWeather.weatherType =  self._makeWeatherType(stnWeather.weather);
+               stnWeather.weatherType =  ControllerWeatherDesc.makeWeatherType(stnWeather.weather);
             }
 
             log.info("stnWeather="+JSON.stringify(stnWeather));

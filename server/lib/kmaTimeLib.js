@@ -2,9 +2,12 @@
  * Created by aleckim on 2016. 2. 13..
  */
 
+'use strict';
+
 var kmaTimeLib = {};
 
 /**
+ * 201712242255 -> date
  * @param str YYYYmmDDHHMMSS
  * @returns {*}
  */
@@ -34,7 +37,7 @@ kmaTimeLib.convertStringToDate = function(str) {
 };
 
 /**
- *
+ * Date -> 20171007
  * @param date
  * @returns {string}
  */
@@ -52,6 +55,11 @@ kmaTimeLib.convertDateToYYYYMMDD = function(date) {
     return year+month+day;
 };
 
+/**
+ * Date -> 1200
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToHHZZ = function(date) {
     //I don't know why one more create Date object by aleckim
     var d = new Date(date);
@@ -61,6 +69,11 @@ kmaTimeLib.convertDateToHHZZ = function(date) {
     return hh+'00';
 };
 
+/**
+ * Date -> 1210
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToHHMM = function(date) {
     //I don't know why one more create Date object by aleckim
     var d = new Date(date);
@@ -85,7 +98,7 @@ kmaTimeLib.toTimeZone = function (zone, time) {
 };
 
 /**
- * return format YYYY-MM-DD
+ *  Date -> 2017-10-17
  * @param date
  * @returns {string}
  */
@@ -99,14 +112,30 @@ kmaTimeLib.convertDateToYYYY_MM_DD = function (date) {
         '-'+manager.leadingZeros(date.getDate(), 2);
 };
 
+/**
+ * 20170107 -> 2017-10-07
+ * @param dateStr
+ * @returns {string}
+ */
 kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD = function (dateStr) {
     return dateStr.substr(0,4)+'-'+dateStr.substr(4,2)+'-'+dateStr.substr(6,2);
 };
 
+/**
+ * 2017-01-07 -> 20171007
+ * 2017.01.07 -> 20171007
+ * @param dateStr
+ * @returns {string}
+ */
 kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD = function (dateStr) {
     return dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
 };
 
+/**
+ * 201701071210 -> 2017.10.07.12:10
+ * @param dateStr
+ * @returns {string}
+ */
 kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM = function(dateStr) {
     var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
     if (dateStr.length > 8) {
@@ -115,7 +144,12 @@ kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM = function(dateStr) {
     return str;
 };
 
-kmaTimeLib.convertYYYYMMDDHHMMSStoYYYYoMMoDD_HHoMMoSS = function(dateStr) {
+/**
+ * 201701071210 -> 2017.10.07 12:10
+ * @param dateStr
+ * @returns {string}
+ */
+kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM = function(dateStr) {
     var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
     if (dateStr.length > 8) {
         str += ' ' + dateStr.substr(8,2) + ':' + dateStr.substr(10,2);
@@ -123,6 +157,24 @@ kmaTimeLib.convertYYYYMMDDHHMMSStoYYYYoMMoDD_HHoMMoSS = function(dateStr) {
     return str;
 };
 
+/**
+ * 201701071210 -> 2017.10.07 12:00
+ * @param dateStr
+ * @returns {string}
+ */
+kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoZZ = function(dateStr) {
+    var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
+    if (dateStr.length > 8) {
+        str += ' ' + dateStr.substr(8,2) + ':00';
+    }
+    return str;
+};
+
+/**
+ * 201701071210 -> 2017.10.07.12:00
+ * @param dateStr
+ * @returns {string}
+ */
 kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoZZ = function(dateStr) {
     var str = dateStr.substr(0,4)+'.'+dateStr.substr(4,2)+'.'+dateStr.substr(6,2);
     if (dateStr.length > 8) {
@@ -140,6 +192,19 @@ kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM = function(dateStr) {
     var str = dateStr.substr(0,4)+dateStr.substr(5,2)+dateStr.substr(8,2);
     if (dateStr.length > 10) {
         str += dateStr.substr(11,2) + dateStr.substr(14,2);
+    }
+    return str;
+};
+
+/**
+ * 2017.01.07.15:10 -> 2017.01.07 15:10
+ * @param dateStr
+ * @returns {string}
+ */
+kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYoMMoDD_HHoMM = function(dateStr) {
+    var str = dateStr.substr(0,4)+'.'+dateStr.substr(5,2)+'.'+dateStr.substr(8,2);
+    if (dateStr.length > 10) {
+        str += ' ' + dateStr.substr(11,2)+ ':' + dateStr.substr(14,2);
     }
     return str;
 };
@@ -171,6 +236,18 @@ kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM = function (date) {
         '.'+manager.leadingZeros(date.getDate(), 2) +
         '.'+manager.leadingZeros(date.getHours(), 2) +
         ':'+manager.leadingZeros(date.getMinutes(), 2);
+};
+
+kmaTimeLib.convertDateToYYYYoMMoDD_HHoZZ = function (date) {
+    if (date == undefined) {
+        date = kmaTimeLib.toTimeZone(9);
+    }
+
+    return date.getFullYear()+
+        '.'+manager.leadingZeros(date.getMonth()+1, 2)+
+        '.'+manager.leadingZeros(date.getDate(), 2) +
+        ' '+manager.leadingZeros(date.getHours(), 2) +
+        ':00';
 };
 
 kmaTimeLib.convertDateToYYYYoMMoDD_HHoMM = function (date) {
@@ -235,7 +312,7 @@ kmaTimeLib.compareDateTime = function (objA, objB) {
 };
 
 /**
- * 2017년 06월 18일 15시 00분
+ * 2017년 06월 18일 15시 00분 -> date
  * @param str
  */
 kmaTimeLib.convertKoreaStr2Date = function (str) {
@@ -299,6 +376,23 @@ kmaTimeLib.getKoreaTimeString = function(curTime){
         kmaTimeLib.leadingZeros(now.getUTCMinutes(), 2);
 
     return result;
+};
+
+kmaTimeLib.getDiffDays = function(target, current) {
+    if (!target || !current) {
+        log.error("target or current is invalid");
+        return 0;
+    }
+    if (typeof target === 'string') {
+        target = new Date(target);
+    }
+    if (typeof current === 'string') {
+        current = new Date(current);
+    }
+
+    var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+    var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+    return Math.ceil((targetDay - date) / (1000 * 3600 * 24));
 };
 
 module.exports = kmaTimeLib;

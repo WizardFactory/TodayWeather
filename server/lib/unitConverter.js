@@ -223,11 +223,11 @@ UnitConverter.prototype._convertPressure = function(from, to, val) {
 };
 
 UnitConverter.prototype._convertDistance = function(from, to, val) {
-    if (from == 'm') {
-        return parseFloat((val*39.370079).toFixed(1));
+    if (from == 'km') {
+        return parseFloat((val*0.621371).toFixed(1));
     }
     else if (from =='mi') {
-        return parseFloat((val*0.0254).toFixed(1));
+        return parseFloat((val*1.609344).toFixed(1));
     }
 };
 
@@ -260,7 +260,7 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
     if (from == 'mmHg' || from == 'inHg' || from == 'hPa' || from == 'mb') {
         return self._convertPressure(from, to, val);
     }
-    if (from == 'm' || from == 'mi') {
+    if (from == 'km' || from == 'mi') {
         return self._convertDistance(from, to, val);
     }
     if (from == 'mm' || from == 'in') {
@@ -269,6 +269,79 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
 
     log.error('Fail to convert from '+from+" to "+to+" value="+val);
     return val;
+};
+
+UnitConverter.getUnitList = function () {
+    return ['temperatureUnit', 'windSpeedUnit', 'pressureUnit', 'distanceUnit', 'precipitationUnit', 'airUnit'];
+};
+
+UnitConverter.getDefaultValueList = function () {
+    return {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa',
+        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airKorea'};
+};
+
+UnitConverter.getDefaultValue = function (name) {
+    return UnitConverter.getDefaultValueList()[name];
+};
+
+UnitConverter.wdd2Str = function (data, ts) {
+    data = data.replace(/N/g, ts.__('LOC_N')).replace(/S/g, ts.__('LOC_S'));
+    data = data.replace(/E/g, ts.__('LOC_E')).replace(/W/g, ts.__('LOC_W'));
+    return data;
+};
+
+/**
+ * airkorea AQI grade
+ * @param grade
+ * @param type so2, o3, co, no2
+ * @param translate
+ * @returns {*}
+ */
+UnitConverter.airkoreaGrade2str = function (grade, type, translate) {
+    var ts = translate == undefined?global:translate;
+
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_GOOD");
+        case 2:
+            return ts.__("LOC_MODERATE");
+        case 3:
+            return ts.__("LOC_UNHEALTHY");
+        case 4:
+            return ts.__("LOC_VERY_UNHEALTHY");
+        default :
+            log.error("Unknown grade="+grade+" type="+type);
+    }
+    return "";
+};
+
+/**
+ *
+ * @param grade
+ * @param type
+ * @param translate
+ * @returns {*}
+ */
+UnitConverter.airGrade2str = function (grade, type, translate) {
+    var ts = translate == undefined?global:translate;
+
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_GOOD");
+        case 2:
+            return ts.__("LOC_MODERATE");
+        case 3:
+            return ts.__("LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS");
+        case 4:
+            return ts.__("LOC_UNHEALTHY");
+        case 5:
+            return ts.__("LOC_VERY_UNHEALTHY");
+        case 6:
+            return ts.__("LOC_HAZARDOUS");
+        default :
+            log.error("Unknown grade="+grade+" type="+type);
+    }
+    return "";
 };
 
 module.exports = UnitConverter;
