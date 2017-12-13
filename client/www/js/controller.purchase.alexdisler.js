@@ -91,6 +91,7 @@ angular.module('controller.purchase', [])
                 self.setAccountLevel(purchaseInfo.accountLevel);
             }
             else {
+                console.log('load purchaseInfo is null');
                 self.setAccountLevel(self.ACCOUNT_LEVEL_FREE);
             }
         };
@@ -213,7 +214,6 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     //again to check purchase info
-                    console.log('fail to check purchase info err='+err.message);
                     Util.ga.trackEvent('plugin', 'error', 'updatePurchaseInfo');
                     Util.ga.trackException(err, false);
                 });
@@ -247,7 +247,7 @@ angular.module('controller.purchase', [])
             }
 
             self.productId = 'tw1year';
-            console.log('productId='+Purchase.productId);
+            console.log('productId='+self.productId);
 
             self.hasInAppPurchase = true;
 
@@ -264,7 +264,6 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     console.log('Fail to get products of id='+self.productId);
-                    console.log(JSON.stringify(err));
                     Util.ga.trackException(err, false);
                 });
 
@@ -396,7 +395,6 @@ angular.module('controller.purchase', [])
                 })
                 .catch(function (err) {
                     $ionicLoading.hide();
-                    console.log(JSON.stringify(err));
                     Util.ga.trackEvent('purchase', 'error', 'subscribe');
                     Util.ga.trackException(err, false);
                     $ionicPopup.alert({

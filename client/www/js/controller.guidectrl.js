@@ -27,7 +27,6 @@ angular.module('controller.guidectrl', [])
                     console.log("guidectrl location setting is " + (enabled ? "enabled" : "disabled"));
                     $scope.data.autoSearch = enabled;
                 }, function (error) {
-                    console.log("The following error occurred: "+error);
                     Util.ga.trackEvent('position', 'error', 'isLocationEnabled');
                     Util.ga.trackException(error, false);
                 });

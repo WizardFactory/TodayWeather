@@ -98,13 +98,8 @@ angular.module('starter', [
 
         if (window.hasOwnProperty("device")) {
             Util.uuid = window.device.uuid;
-            console.log("UUID:"+window.device.uuid);
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
         }
-
-        console.log("UA:"+ionic.Platform.ua);
-        console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
-        console.log("OuterHeight:" + window.outerHeight + ", OuterWidth:" + window.outerWidth);
-        console.log("ScreenHeight:"+window.screen.height+", ScreenWidth:"+window.screen.width);
 
         if (window.screen) {
             Util.ga.trackEvent('app', 'screen width', window.screen.width);
@@ -114,11 +109,12 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'outer width', window.outerWidth);
             Util.ga.trackEvent('app', 'outer height', window.outerHeight);
         }
-
-        if (window.hasOwnProperty("device")) {
-            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+        else {
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
         }
+
         Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+
         if (window.cordova && cordova.getAppVersion) {
             cordova.getAppVersion.getVersionNumber().then(function (version) {
                 $rootScope.version = version;
@@ -133,7 +129,6 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            console.log(errorMsg);
             if (twClientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
@@ -253,7 +248,6 @@ angular.module('starter', [
             });
         }
         else {
-            console.log('Fail to find ionic deep link plugin');
             Util.ga.trackException('Fail to find ionic deep link plugin', false);
         }
 
@@ -279,7 +273,14 @@ angular.module('starter', [
                 return;
             }
 
-            var startupPage = TwStorage.get("startupPage");
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            Util.ga.trackEvent('app', 'startupPage', startupPage);
+
             if (startupPage === "1") { //일별날씨
                 $state.go('tab.dailyforecast');
             } else if (startupPage === "2") { //즐겨찾기

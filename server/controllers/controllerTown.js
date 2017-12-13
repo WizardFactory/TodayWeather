@@ -5,6 +5,8 @@
 "use strict";
 
 var async = require('async');
+var sprintf = require('sprintf');
+
 var config = require('../config/config');
 
 var dbTown = require('../models/town');
@@ -22,6 +24,7 @@ var convertGeocode = require('../utils/convertGeocode');
 
 var LifeIndexKmaController = require('../controllers/lifeIndexKmaController');
 var KecoController = require('../controllers/kecoController');
+
 var controllerKmaStnWeather = require('../controllers/controllerKmaStnWeather');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -33,6 +36,7 @@ var kmaTownShortRss = new (require('./kma/kma.town.short.rss.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 var GeoController = require('./geo.controller');
+var UnitConverter = require('../lib/unitConverter');
 
 var townArray = [
     {db:modelShort, name:'modelShort'},
@@ -1578,7 +1582,7 @@ function ControllerTown() {
                                     }
                                 }
 
-                                controllerKmaStnWeather.updateWeather(current);
+                                controllerKmaStnWeather.updateWeather(reqCurrent);
                             }
                             else if (reqCurrent.rns === false) {
                                 //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
@@ -1847,6 +1851,137 @@ function ControllerTown() {
     };
 
     /**
+     * 어제오늘(맨앞에 들어가지만 우선순위는 꼴찌), 날씨(박무, 연무,..), 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음),
+     * 강수량/적설량, 체감온도, 불쾌지수, 자외선, 바람, 감기, 식중독, 부패,
+     * @param current
+     * @param yesterday
+     * @param res
+     * @returns {string}
+     */
+    this.makeSummary = function(current, yesterday, units, res) {
+        var str = "";
+        var item;
+        var itemList = [];
+        var diffTemp;
+        var tmpGrade;
+        var ts = res;
+
+        if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
+            var obj = self._diffTodayYesterday(current, yesterday, ts);
+            item = {str: obj.str, grade: obj.grade};
+            itemList.push(item);
+        }
+
+        if (current.hasOwnProperty('weatherType')) {
+            tmpGrade = 1;
+            if (current.weatherType > 3) {
+                tmpGrade = 3;
+            }
+            item = {str: current.weather, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        var airInfo = current.arpltn || current;
+        airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
+        airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
+
+        var locStr = ts.__('LOC_PM25');
+        tmpGrade = airInfo.pm25Grade;
+        str = locStr + " " + airInfo.pm25Str;
+        if (tmpGrade < airInfo.pm10Grade) {
+            locStr = ts.__('LOC_PM10');
+            tmpGrade = airInfo.pm10Grade;
+            str = locStr + " " + airInfo.pm10Str;
+        }
+        if (tmpGrade < (airInfo.aqiGrade)) {
+            locStr = ts.__('LOC_AQI');
+            tmpGrade = airInfo.aqiGrade;
+            str = locStr + " " + airInfo.aqiStr;
+        }
+
+        item = {str: str, grade: tmpGrade};
+        itemList.push(item);
+
+        if (current.rn1 && current.pty) {
+            switch (current.pty) {
+                case 1:
+                    current.ptyStr = ts.__('LOC_RAINFALL');
+                    break;
+                case 2:
+                    current.ptyStr = ts.__('LOC_PRECIPITATION');
+                    break;
+                case 3:
+                    current.ptyStr = ts.__('LOC_SNOWFALL');
+                    break;
+                default :
+                    current.ptyStr = "";
+            }
+
+            current.rn1Str = current.rn1 + units.precipitationUnit;
+            item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+            itemList.push(item);
+        }
+
+        if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
+            tmpGrade = current.dsplsGrade;
+            str = ts.__('LOC_DISCOMFORT_INDEX') + " " + current.dsplsStr;
+            item = {str:str, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        if (current.sensorytem && current.sensorytem !== current.t1h) {
+            diffTemp = Math.round(current.sensorytem - current.t1h);
+            str = ts.__('LOC_FEELS_LIKE') + ' ' + current.sensorytem +"˚";
+            item = {str : str, grade: Math.abs(diffTemp)};
+            itemList.push(item);
+        }
+
+        if (current.ultrv && Number(current.time) < 1800) {
+            tmpGrade = current.ultrvGrade;
+            str = ts.__('LOC_UV') +' '+current.ultrvStr;
+            item = {str:str, grade: tmpGrade+1};
+            itemList.push(item);
+        }
+
+        if (current.wsdGrade && current.wsdStr) {
+            //약함(1)을 보통으로 보고 보정 1함.
+            item = {str: current.wsdStr, grade: current.wsdGrade+1};
+            itemList.push(item);
+        }
+
+        if (current.fsnGrade && current.fsnStr) {
+            //주의(1)를 보통으로 보고 보정 1함.
+            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+            item = {str: str, grade: current.fsnGrade+1};
+            itemList.push(item);
+        }
+
+        //감기
+
+        itemList.sort(function (a, b) {
+            if(a.grade > b.grade){
+                return -1;
+            }
+            if(a.grade < b.grade){
+                return 1;
+            }
+            return 0;
+        });
+
+        log.info(JSON.stringify(itemList));
+
+        if (itemList.length == 0) {
+            log.error("Fail to make summary");
+            return "";
+        }
+        else if(itemList.length > 1) {
+            return itemList[0].str+", "+itemList[1].str;
+        } else {
+            return itemList[0].str;
+        }
+    };
+
+    /**
      * time은 current에 들어있는 것을 써서 24전으로 맞춤.
      * @param req
      * @param res
@@ -1854,47 +1989,51 @@ function ControllerTown() {
      * @returns {ControllerTown}
      */
     this.getSummary = function(req, res, next){
-        var meta = {};
+        try {
+            var meta = {};
+            meta.method = 'getSummary';
+            meta.region = req.params.region;
+            meta.city = req.params.city;
+            meta.town = req.params.town;
+            log.info('>sID=',req.sessionID, meta);
 
-        meta.method = 'getSummary';
-        meta.region = req.params.region;
-        meta.city = req.params.city;
-        meta.town = req.params.town;
-        log.info('>sID=',req.sessionID, meta);
+            if (!req.current || !req.currentList)  {
+                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                next();
+                return this;
+            }
 
-        if (!req.current || !req.currentList)  {
-            var err = new Error("Fail to find current weather or current list "+JSON.stringify(meta));
-            log.warn(err);
-            next();
-            return this;
-        }
+            var yesterdayDate = self._getCurrentTimeValue(+9-24);
+            var yesterdayItem;
+            if (yesterdayDate.time == '0000') {
+                kmaTimeLib.convert0Hto24H(yesterdayDate);
+            }
 
-        var yesterdayDate = self._getCurrentTimeValue(+9-24);
-        var yesterdayItem;
-        if (yesterdayDate.time == '0000') {
-           kmaTimeLib.convert0Hto24H(yesterdayDate);
-        }
+            /**
+             * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
+             * 새로 데이터를 수집하면 23시간전부터 있음.
+             * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
+             */
+            for (var i=0; i<req.currentList.length-1; i++) {
+                if (req.currentList[i].date == yesterdayDate.date &&
+                    parseInt(req.currentList[i].time) >= parseInt(req.current.time))
+                {
+                    yesterdayItem =  req.currentList[i];
+                    break;
+                }
+            }
 
-        /**
-         * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
-         * 새로 데이터를 수집하면 23시간전부터 있음.
-         * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
-         */
-        for (var i=0; i<req.currentList.length-1; i++) {
-            if (req.currentList[i].date == yesterdayDate.date &&
-                parseInt(req.currentList[i].time) >= parseInt(req.current.time))
-            {
-                yesterdayItem =  req.currentList[i];
-                break;
+            if (yesterdayItem) {
+                req.current.yesterday = yesterdayItem;
+                req.current.summary = self.makeSummary(req.current, yesterdayItem, req.query, res);
+            }
+            else {
+                log.error('Fail to gt yesterday weather info');
+                req.current.summary = '';
             }
         }
-
-        if (yesterdayItem) {
-            req.current.summary = self._makeSummary(req.current, yesterdayItem);
-            req.current.yesterday = yesterdayItem;
-        }
-        else {
-            log.error('Fail to gt yesterday weather info');
+        catch (err) {
+            log.error(err);
             req.current.summary = '';
         }
         next();
@@ -2000,7 +2139,6 @@ function ControllerTown() {
     this.getKeco = function (req, res, next) {
 
         var meta = {};
-        var aqiUnit = 'airkorea';
 
         meta.method = 'getKeco';
         meta.region = req.params.region;
@@ -2015,11 +2153,6 @@ function ControllerTown() {
             req.current.date = nowDate.date;
         }
 
-
-        if(req.query.aqi != undefined){
-            aqiUnit = req.query.aqi;
-        }
-
         try {
             self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
                 if (err) {
@@ -2027,7 +2160,7 @@ function ControllerTown() {
                     next();
                     return;
                 }
-                KecoController.getArpLtnInfo(townInfo, new Date(), aqiUnit, function (err, arpltn) {
+                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltn) {
                     if (err) {
                         log.error(err);
                     }
@@ -2800,127 +2933,41 @@ function ControllerTown() {
 }
 
 /**
- * 어제오늘(맨앞에 들어가지만 우선순위는 꼴찌), 날씨(박무, 연무,..), 미세먼지(보통이하 일반 단 나쁨이면 높음), 초미세먼지(미세먼지랑 같이 나오지 않음),
- * 강수량/적설량, 체감온도, 불쾌지수, 자외선, 바람, 감기, 식중독, 부패,
- * @param {Object} current
- * @param {Object} yesterday
- * @returns {String}
+ *
+ * @param current
+ * @param yesterday
+ * @param ts
+ * @returns {{str: string, grade: number}}
+ * @private
  */
-ControllerTown.prototype._makeSummary = function(current, yesterday) {
+ControllerTown.prototype._diffTodayYesterday = function(current, yesterday, ts) {
+    var strSameAsYesterday = ts.__('LOC_SIMILAR_TO_YESTERDAY');
+    var strThanYesterday = ts.__('LOC_THAN_YESTERDAY');
+
     var str = "";
-    var item;
-    var itemList = [];
-    var diffTemp;
-    var tmpGrade;
-
+    var diffTemp = 0;
+    var grade = 0;
     if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-        diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
+        diffTemp = current.t1h - yesterday.t1h;
+        grade = Math.round(Math.abs(diffTemp));
+        diffTemp = Math.round(diffTemp);
 
-        str = "어제";
         if (diffTemp == 0) {
-            str += "와 동일";
+            str += strSameAsYesterday;
         }
         else {
-            str += "보다 ";
-            if (diffTemp < 0) {
-                str += diffTemp+"˚";
+            var tempStr;
+            if (diffTemp > 0) {
+                tempStr = '+' + diffTemp;
             }
-            else if (diffTemp > 0) {
-                str += "+"+diffTemp+"˚";
+            else {
+                tempStr = '' + diffTemp;
             }
+            str += sprintf(strThanYesterday, tempStr);
         }
-        item = {str: str, grade: Math.abs(diffTemp)};
-        itemList.push(item);
     }
 
-    if (current.weather) {
-        if(current.weather == '구름많음' ||
-            current.weather == '구름조금' ||
-            current.weather == '맑음' ||
-            current.weather == '흐림') {
-            //skip
-            item = {str: current.weather, grade: 1};
-        }
-        else {
-           item = {str: current.weather, grade: 3};
-        }
-        itemList.push(item);
-    }
-
-    if (current.arpltn) {
-        str = "통합대기" + " " + current.arpltn.khaiStr;
-        tmpGrade = current.arpltn.khaiGrade;
-        if (tmpGrade < current.arpltn.pm25Grade) {
-            str = "초미세먼지"+" "+ current.arpltn.pm25Str;
-            tmpGrade = current.arpltn.pm25Grade;
-        }
-        if (tmpGrade < current.arpltn.pm10Grade) {
-            str = "미세먼지" + " " + current.arpltn.pm10Str;
-            tmpGrade = current.arpltn.pm10Grade;
-        }
-
-        item = {str: str, grade: tmpGrade};
-        itemList.push(item);
-    }
-
-    if (current.rn1 && current.rn1Str && current.ptyStr) {
-        item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
-        itemList.push(item);
-    }
-
-    if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
-        tmpGrade = current.dsplsGrade;
-        item = {str:"불쾌지수"+" "+current.dsplsStr, grade: tmpGrade};
-        itemList.push(item);
-    }
-
-    if (current.sensorytem && current.sensorytem !== current.t1h) {
-        diffTemp = Math.round(current.sensorytem - current.t1h);
-        item = {str :"체감온도" +" "+ current.sensorytem +"˚", grade: Math.abs(diffTemp)};
-        itemList.push(item);
-    }
-
-    if (current.ultrv && Number(current.time) < 1800) {
-        tmpGrade = current.ultrvGrade;
-        item = {str:"자외선"+" "+current.ultrvStr, grade: tmpGrade+1};
-        itemList.push(item);
-    }
-
-    if (current.wsdGrade && current.wsdStr) {
-        //약함(1)을 보통으로 보고 보정 1함.
-        item = {str: current.wsdStr, grade: current.wsdGrade+1};
-        itemList.push(item);
-    }
-
-    if (current.fsnStr) {
-        //주의(1)를 보통으로 보고 보정 1함.
-        item = {str: "식중독"+" "+current.fsnStr, grade: current.fsnGrade+1};
-        itemList.push(item);
-    }
-
-    //감기
-
-    itemList.sort(function (a, b) {
-        if(a.grade > b.grade){
-            return -1;
-        }
-        if(a.grade < b.grade){
-            return 1;
-        }
-        return 0;
-    });
-
-    log.debug(JSON.stringify(itemList));
-
-    if (itemList.length == 0) {
-        log.error("Fail to make summary");
-        return "";
-    }
-    else if(itemList.length > 1) {
-        return itemList[0].str+", "+itemList[1].str;
-    } else {
-        return itemList[0].str;
-    }
+    return {str: str, grade: grade};
 };
 
 ControllerTown.prototype._calcValue3hTo1h = function(time, prvValue, nextValue) {
@@ -3068,25 +3115,25 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 ControllerTown.prototype._makeArpltnStr = function (data, res) {
 
     if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = KecoController.grade2str(data.pm10Grade, "pm10", res);
+        data.pm10Str = UnitConverter.airkoreaGrade2str(data.pm10Grade, "pm10", res);
     }
     if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = KecoController.grade2str(data.pm25Grade, "pm25", res);
+        data.pm25Str = UnitConverter.airkoreaGrade2str(data.pm25Grade, "pm25", res);
     }
     if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = KecoController.grade2str(data.o3Grade, "o3", res);
+        data.o3Str = UnitConverter.airkoreaGrade2str(data.o3Grade, "o3", res);
     }
     if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = KecoController.grade2str(data.no2Grade, "no2", res);
+        data.no2Str = UnitConverter.airkoreaGrade2str(data.no2Grade, "no2", res);
     }
     if (data.hasOwnProperty('coGrade')) {
-        data.coStr = KecoController.grade2str(data.coGrade, "co", res);
+        data.coStr = UnitConverter.airkoreaGrade2str(data.coGrade, "co", res);
     }
     if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = KecoController.grade2str(data.so2Grade, "so2", res);
+        data.so2Str = UnitConverter.airkoreaGrade2str(data.so2Grade, "so2", res);
     }
     if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = KecoController.grade2str(data.khaiGrade, "khai", res);
+        data.khaiStr = UnitConverter.airkoreaGrade2str(data.khaiGrade, "khai", res);
     }
     return this;
 };
@@ -3110,6 +3157,9 @@ ControllerTown.prototype._makeStrForKma = function(data, res) {
     if (data.hasOwnProperty('wsd')) {
         data.wsdGrade = self._convertKmaWsdToGrade(data.wsd);
         data.wsdStr = self._convertKmaWsdToStr(data.wsdGrade, res);
+    }
+    if (data.hasOwnProperty('wdd')) {
+        data.wdd = UnitConverter.wdd2Str(data.wdd, res);
     }
 
     /**

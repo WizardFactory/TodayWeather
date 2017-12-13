@@ -6,6 +6,7 @@
   "LOC_USE_PREMIUM_WITHOUT_ADS" : "Upgrade to our Ads-free Premium.",
   "LOC_THAN_YESTERDAY" : "%s˚ from yesterday",
   "LOC_SAME_AS_YESTERDAY" : "Same as yesterday",
+  "LOC_SIMILAR_TO_YESTERDAY" : "Similar to yesterday",
   "LOC_AIR_QUALITY_INDEX" : "Air Quality Index",
   "LOC_DAILY_AQI_FORECAST" : "Daily AQI forecast",
   "LOC_AQI" : "AQI",
@@ -251,5 +252,9 @@
   "LOC_FIND_BY_LOCATION": "Find by location",
   "LOC_SUNRISE": "Sunrise",
   "LOC_SUNSET": "Sunset",
-  "LOC_STARTUP_PAGE" : "Startup Page"
+  "LOC_STARTUP_PAGE" : "Startup Page",
+  "LOC_E": "E",
+  "LOC_W": "W",
+  "LOC_S": "S",
+  "LOC_N": "N"
 }

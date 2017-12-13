@@ -115,7 +115,7 @@ angular.module('service.storage', [])
         }
         
         function _setBackwardCompatibility() {
-            console.log(localStorage.getItem('startVersion'));
+            console.log({'startVersion':localStorage.getItem('startVersion')});
             if (localStorage.getItem('startVersion') == null && localStorage.getItem('guideVersion') != null) {
                 localStorage.setItem('startVersion', localStorage.getItem('guideVersion'));
                 localStorage.removeItem('guideVersion');
@@ -145,10 +145,12 @@ angular.module('service.storage', [])
         }
 
         obj.get = function (name) {
-            var value = localStorage.getItem(name);
+            var value;
             try {
                 value = JSON.parse(localStorage.getItem(name));
-            } catch (e) {
+            } catch (err) {
+                Util.ga.trackEvent('storage', 'error', 'get ' + name);
+                Util.ga.trackException(err, false);
             }
             return value;
         };
@@ -159,10 +161,10 @@ angular.module('service.storage', [])
             if (_hasAppPreferences()) {
                 suitePrefs.store(function (data) {
                     //callback("OK");
-                }, function(error) {
+                }, function(err) {
                     Util.ga.trackEvent('storage', 'error', 'set ' + name);
                     Util.ga.trackException(err, false);
-                    //callback(error);
+                    //callback(err);
                 }, name, data);
             }
 

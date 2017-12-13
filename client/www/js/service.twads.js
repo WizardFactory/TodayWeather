@@ -54,7 +54,6 @@ angular.module('service.twads', [])
                 },
                 function (e) {
                     console.log('Fail to create banner view');
-                    console.log(e);
                     Util.ga.trackEvent('plugin', 'error', 'admobCreateBanner');
                     Util.ga.trackException(e, false);
                 });
@@ -80,8 +79,6 @@ angular.module('service.twads', [])
                 admob.destroyBannerView(function () {
                     console.log('destroy banner view');
                 }, function (e) {
-                    console.log('Fail to destroy banner');
-                    console.log(e);
                     Util.ga.trackEvent('plugin', 'error', 'admobDestroyBanner');
                     Util.ga.trackException(e, false);
                 });
@@ -130,8 +127,6 @@ angular.module('service.twads', [])
             admob.showBannerAd(show, function () {
                 console.log('show/hide about ad mob show='+show);
             }, function (e) {
-                console.log('fail to show about ad mob show='+show);
-                console.log(JSON.stringify(e));
                 Util.ga.trackEvent('plugin', 'error', 'admobShowBanner');
                 Util.ga.trackException(e, false);
             });
@@ -176,8 +171,6 @@ angular.module('service.twads', [])
                 console.log('Set options of Ad mob');
                 self.loadTwAdsInfo();
             }, function (e) {
-                console.log('Fail to set options of Ad mob');
-                console.log(e);
                 Util.ga.trackException('setAdmobOptions', 'error', e);
                 Util.ga.trackException(e, false);
             });

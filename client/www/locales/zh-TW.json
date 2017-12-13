@@ -6,6 +6,7 @@
   "LOC_USE_PREMIUM_WITHOUT_ADS" : "嘗試有附加費無廣告的系統",
   "LOC_THAN_YESTERDAY" : "比昨天 %s˚",
   "LOC_SAME_AS_YESTERDAY" : "和昨天相同",
+  "LOC_SIMILAR_TO_YESTERDAY" : "和昨天一樣",
   "LOC_AIR_QUALITY_INDEX" : "統計空氣指數",
   "LOC_DAILY_AQI_FORECAST" : "每日空氣預報",
   "LOC_AQI" : "空氣指數",
@@ -251,6 +252,10 @@
   "LOC_FIND_BY_LOCATION": "按位置查找",
   "LOC_SUNRISE": "日出",
   "LOC_SUNSET": "日落",
-  "LOC_STARTUP_PAGE" : "始網頁"
+  "LOC_STARTUP_PAGE" : "始網頁",
+  "LOC_E": "東",
+  "LOC_W": "西",
+  "LOC_S": "南",
+  "LOC_N": "北"
 }
 

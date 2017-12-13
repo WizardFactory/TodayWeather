@@ -12,7 +12,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node --max-old-space-size=512 ./bin/www",
+    "start": "node ./bin/www",
     "test": "./node_modules/mocha/bin/mocha",
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
@@ -43,6 +43,7 @@
     "node-gcm": "^0.14.0",
     "request": "^2.60.0",
     "serve-favicon": "~2.3.0",
+    "sprintf": "^0.1.5",
     "tracer": "^0.8.3",
     "winston": "^1.0.1",
     "winston-logentries": "^2.0.0",

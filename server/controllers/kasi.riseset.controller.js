@@ -2,6 +2,8 @@
  * Created by aleckim on 2017. 7. 2..
  */
 
+'use strict';
+
 var async = require('async');
 var req = require('request');
 var config = require('../config/config');
@@ -243,7 +245,7 @@ kasiRiseSet._apiRaw2riseSetList = function (rawDataList, callback) {
             var propertyList = KasiRiseSet.getDataPropertyList();
             propertyList.forEach(function (propertyName) {
                 if (typeof rawdata[propertyName] == 'number' || rawdata[propertyName].indexOf('-') == -1) {
-                    riseSet[propertyName] = kmaTimeLib.convertYYYYMMDDHHMMSStoYYYYoMMoDD_HHoMMoSS(rawdata.locdate + (''+rawdata[propertyName]));
+                    riseSet[propertyName] = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(rawdata.locdate + (''+rawdata[propertyName]));
                 }
                 else {
                     riseSet[propertyName] = '';

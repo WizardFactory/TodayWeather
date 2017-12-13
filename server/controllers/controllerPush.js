@@ -265,14 +265,14 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
 
     if (theDay.pmGrade) {
         //미세먼지예보는 grade 값이 다름.
-        dailyArray.push(trans.__("LOC_PM10") + " " + KecoController.grade2str(theDay.pmGrade+1, 'PM', trans));
+        dailyArray.push(trans.__("LOC_PM10") + " " + UnitConverter.airkoreaGrade2str(theDay.pmGrade+1, 'PM', trans));
     }
     if (theDay.ultrvGrade) {
         dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
     }
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
     if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
-        dailyArray.push(trans.__("LOC_O3") + " "+ KecoController.grade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
+        dailyArray.push(trans.__("LOC_O3") + " "+ UnitConverter.airkoreaGrade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
     }
 
     //불쾌지수
@@ -296,7 +296,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     }
 
     if (current.arpltn && current.arpltn.khaiGrade) {
-        hourlyArray.push(trans.__("LOC_AQI")+" "+ KecoController.grade2str(current.arpltn.khaiGrade, "khai", trans));
+        hourlyArray.push(trans.__("LOC_AQI")+" "+ UnitConverter.airkoreaGrade2str(current.arpltn.khaiGrade, "khai", trans));
     }
     if (current.pty && current.pty > 0 && current.rn1 != undefined) {
         current.ptyStr = cTown._convertKmaPtyToStr(current.pty, trans);
