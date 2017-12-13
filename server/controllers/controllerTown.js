@@ -1582,7 +1582,7 @@ function ControllerTown() {
                                     }
                                 }
 
-                                controllerKmaStnWeather.updateWeather(current);
+                                controllerKmaStnWeather.updateWeather(reqCurrent);
                             }
                             else if (reqCurrent.rns === false) {
                                 //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
