@@ -121,7 +121,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
             if(err){
                 log.error('>>ERROR : failed to convert to json');
                 if(callback){
-                    callback(self.ERROR);
+                    return callback(self.ERROR);
                 }
             }
             try{
