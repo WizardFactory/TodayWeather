@@ -123,6 +123,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
                 if(callback){
                     callback(self.ERROR);
                 }
+                return;
             }
             try{
                 //log.info(result)
