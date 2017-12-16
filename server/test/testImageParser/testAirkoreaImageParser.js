@@ -134,6 +134,8 @@ describe('Test - Airkorea Image parser ', function(){
             12,15,19,22,22,22,22,22
         ];
 
+        var controllerManager = require('../../controllers/controllerManager');
+        global.manager = new controllerManager();
         controller.getImaggPath = function(type, callback){
             if(type === 'PM10'){
                 return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm10_url});
@@ -147,7 +149,7 @@ describe('Test - Airkorea Image parser ', function(){
                 return done();
             }
             log.info(pixel.PM10.data.image_count);
-            controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', function(err, result){
+            controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', 'airkorea', function(err, result){
                 if(err){
                     log.info('2. ERROR!!!!');
                     return done();
@@ -156,9 +158,9 @@ describe('Test - Airkorea Image parser ', function(){
                 //log.info(JSON.stringify(result));
                 log.info('PM10 pubDate : ', result.pubDate);
                 for(var i = 0 ; i<expectedColorValue_pm10.length ; i++){
-                    assert.equal(result.data[i], expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
+                    assert.equal(result.hourly[i].value, expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
                 }
-                controller.getDustInfo(geocode.lat, geocode.lon, 'PM25', function(err, result){
+                controller.getDustInfo(geocode.lat, geocode.lon, 'PM25', 'airkorea', function(err, result){
                     if(err){
                         log.info('3. ERROR!!!!');
                         return done();
@@ -167,7 +169,7 @@ describe('Test - Airkorea Image parser ', function(){
                     //log.info(JSON.stringify(result));
                     log.info('PM25 pubDate : ', result.pubDate);
                     for(var i = 0 ; i<expectedColorValue_pm25.length ; i++){
-                        assert.equal(result.data[i], expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
+                        assert.equal(result.hourly[i].value, expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
                     }
                     done();
                 });

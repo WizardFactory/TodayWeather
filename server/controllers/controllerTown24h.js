@@ -592,20 +592,35 @@ function ControllerTown24h() {
 
         if(global.airkoreaDustImageMgr){
             if(req.geocode){
-                global.airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', function(err, pm10){
+                global.airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', req.query.airUnit, function(err, pm10){
                     if(err){
                         log.info('Fail to get PM 10 info');
                         return next();
                     }
-                    req.airkorea_dust_forecast = {};
-                    req.airkorea_dust_forecast.PM10 = pm10;
+                    req.air_forecast = [];
+                    var pm10Forecast = {
+                        source: 'airkorea',
+                        code: 'PM10',
+                        pubDate: pm10.pubDate,
+                        hourly: pm10.hourly
+                    };
 
-                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', function(err, pm25){
+                    req.air_forecast.push(pm10Forecast);
+
+                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', req.query.airUnit, function(err, pm25){
                         if(err){
                             log.info('Fail to get PM 25 info');
                             return next();
                         }
-                        req.airkorea_dust_forecast.PM25 = pm25;
+                        var pm25Forecast = {
+                            source: 'airkorea',
+                            code: 'PM25',
+                            pubDate: pm25.pubDate,
+                            hourly: pm25.hourly
+                        };
+
+                        req.air_forecast.push(pm25Forecast);
+
                         next();
                     });
                 });
@@ -698,8 +713,8 @@ function ControllerTown24h() {
         if (req.dailySummary) {
             result.dailySummary = req.dailySummary;
         }
-        if (req.airkorea_dust_forecast){
-            result.airkorea_dust_forecast = req.airkorea_dust_forecast;
+        if (req.air_forecast){
+            result.air_forecast = req.air_forecast;
         }
         result.source = "KMA";
 
