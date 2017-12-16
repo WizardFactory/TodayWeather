@@ -128,17 +128,16 @@ AirkoreaDustImageController.prototype.parseMapImage = function(path, type, callb
 };
 
 AirkoreaDustImageController.prototype.getGrade = function(type, aqiUnit, value){
-    var self = this;
     var unit = [];
 
     if(type === 'PM10'){
         unit = [0, 30, 80, 150];
 
-        if(aqiUnit == 'airkorea_who'){
+        if(aqiUnit === 'airkorea_who'){
             unit = [0, 30, 50, 100];
-        }else if(aqiUnit == 'airnow'){
+        }else if(aqiUnit === 'airnow'){
             unit = [0, 54, 154, 254, 354, 424];
-        }else if(aqiUnit == 'aircn'){
+        }else if(aqiUnit === 'aircn'){
             unit = [0, 50, 150, 250, 350, 420];
         }
     }else
@@ -146,11 +145,11 @@ AirkoreaDustImageController.prototype.getGrade = function(type, aqiUnit, value){
         // PM 25
         unit = [0, 15, 50, 100];
 
-        if(aqiUnit == 'airkorea_who'){
+        if(aqiUnit === 'airkorea_who'){
             unit = [0, 15, 25, 50];
-        }else if(aqiUnit == 'airnow'){
+        }else if(aqiUnit === 'airnow'){
             unit = [0, 12.0, 35.4, 55.4, 150.4, 250.4];
-        }else if(aqiUnit == 'aircn'){
+        }else if(aqiUnit === 'aircn'){
             unit = [0, 35, 75, 115, 150, 250];
         }
     }
@@ -247,7 +246,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     }
     var forecastDate = kmaTimelib.toTimeZone(9);
     var forecast = [];
-    for(var i=0 ; i<48 ; i++){
+    for(i=0 ; i<48 ; i++){
         var item = {};
         if(i === 24){
             forecastDate.setDate(forecastDate.getDate()+1);
@@ -308,6 +307,7 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
 
     modelMinuDustFrcst.find({dataTime: dataDate+' '+dataHours, informCode: type}).lean().exec(function (err, frcstList) {
         if (err)  {
+            log.error('Airkorea Image > Can not find latest image url : ', err);
             return callback(err);
         }
         if (frcstList.length === 0) {
@@ -323,7 +323,7 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
         }
 
         var urlComponent = url.parse(frcstList[0].imageUrl[imageIndex], true);
-        if((urlComponent.protocol === null) || urlComponent.query['atch_id'] === undefined || isNaN(parseInt(urlComponent.query['atch_id']))){
+        if((urlComponent.protocol === null) || urlComponent.query.atch_id === undefined || isNaN(parseInt(urlComponent.query.atch_id))){
             return callback('_no_image_url_');
         }
 
@@ -345,7 +345,7 @@ AirkoreaDustImageController.prototype.taskDustImageMgr = function(callback){
                         return cb(err);
                     }
                     if(err){
-                        log.error('Airkorea Image > Failed to get PM10 image');
+                        log.error('Airkorea Image > Failed to get PM10 image : ', err);
                         return cb(err);
                     }
                     log.info('Airkorea Image > PM10 Path : ', pm10Path.path);
