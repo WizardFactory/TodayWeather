@@ -7,12 +7,31 @@ var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
 
 var Scrape = require('../../lib/kmaScraper');
+var PastConditionGather = require('../../lib/PastConditionGather');
+var ctrlHealthDay = require('../../controllers/controllerHealthDay');
+var KasiRiseSet = require('../../controllers/kasi.riseset.controller');
 
 router.use(function timestamp(req, res, next){
     var printTime = new Date();
     log.info('+ gather > request | Time[', printTime.toISOString(), ']');
 
     next();
+});
+
+router.get('/current/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("current", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
+    });
 });
 
 router.get('/current', function(req, res) {
@@ -25,7 +44,6 @@ router.get('/current', function(req, res) {
 });
 
 router.get('/past', function(req, res) {
-    var PastConditionGather = require('../../lib/PastConditionGather');
     var pastGather = new PastConditionGather();
     pastGather.start(1, server_key, function (err) {
         if (err) {
@@ -98,11 +116,27 @@ router.get('/keco', function(req, res) {
 
 router.get('/kecoForecast', function(req, res) {
     manager.keco.getMinuDustFrcstDspth.call(manager.keco, function (err) {
-        if (err) {
+        if (err !== 'skip') {
             log.error(err);
         }
 
         res.send();
+    });
+});
+
+router.get('/short/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("short", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
     });
 });
 
@@ -112,6 +146,22 @@ router.get('/short', function(req, res) {
             log.error(err);
         }
         res.send();
+    });
+});
+
+router.get('/shortest/:mx/:my', function(req, res) {
+    if (req.params.mx == undefined || req.params.my == undefined) {
+        res.sendStatus(400);
+        return;
+    }
+    var mCoord = {mx:req.params.mx, my:req.params.my};
+    manager.getKmaData("shortest", mCoord, server_key, function (err, results) {
+        if (err) {
+            res.status(500).send(err.message);
+        }
+        else {
+            res.send(results);
+        }
     });
 });
 
@@ -133,9 +183,47 @@ router.get('/lifeindex', function (req, res) {
     });
 });
 
+router.get('/healthday', function(req, res) {
+    var requestUrl;
+    var urlList = [];
+    
+    for(var i=1;i<=7;i++) {
+        requestUrl = ctrlHealthDay.makeRequestString(i, 0);
+        urlList.push(requestUrl);
+    }
+
+    ctrlHealthDay.getData(urlList, function(err) {
+        if(err) {
+            log.error(err);
+        }
+        res.send();
+    });
+});
+
+/**
+ * don't use
+ */
 router.get('/kmaStnHourly', function (req, res) {
     var scrape = new Scrape();
-    scrape.getStnHourlyWeather(function (err, results) {
+    scrape.getStnHourlyWeather(undefined, function (err, results) {
+        if (err) {
+            if (err === 'skip') {
+                log.info('stn hourly weather info is already updated');
+            }
+            else {
+                log.error(err);
+            }
+        }
+        else {
+            log.silly(results);
+        }
+        res.send();
+    });
+});
+
+router.get('/kmaStnPastHourly', function (req, res) {
+    var scrape = new Scrape();
+    scrape.getStnPastHourlyWeather(8, function (err, results) {
         if (err) {
             if (err === 'skip') {
                 log.info('stn hourly weather info is already updated');
@@ -203,7 +291,25 @@ router.get('/invalidateCloudFront/:items', function(req, res){
             res.send();
         }
     );
+});
 
+router.get('/gatherKasiRiseSet', function(req, res) {
+    KasiRiseSet.gatherAreaRiseSetFromApi(function (err, result) {
+        if (err) {
+            log.error(err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
+});
+
+router.get('/updateInvalidt1h', function(req, res) {
+    manager.updateInvalidT1hData(9, server_key, function (err) {
+        if (err) {
+            log.error(err);
+        }
+        res.send();
+    });
 });
 
 module.exports = router;

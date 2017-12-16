@@ -6,16 +6,21 @@ var mongoose = require("mongoose");
 var wuForecastSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
     address: {country:String, city:String, zipcode:Number, postcode:Number},
-    date: Number,   // YYYYMMDDHHMM
+    date:    {type: Number, default: 0},                    // YYYYMMDDHHMM
+    dateObj: {type: Object, default: Date},                 // UTC time
+    timeOffset: {type: Number, default: 0},
     days:[{
         summary :{
-            date:       {type : Number, default:0},         // YYYYMMDD
+            dateObj:    {type: Object, default: Date},      // UTC time
+            date:       {type : Number, default:0},         // GMT YYYYMMDD
             sunrise:    {type : Number, default:-100},      // HHMM or HMM
             sunset:     {type : Number, default:-100},      // HHMM or HMM
             moonrise:   {type : Number, default:-100},      // HHMM or HMM
             moonset:    {type : Number, default:-100},      // HHMM or HMM
             tmax:       {type : Number, default:-100},
+            tmax_f:       {type : Number, default:-100},
             tmin:       {type : Number, default:-100},
+            tmin_f:       {type : Number, default:-100},
             precip:     {type : Number, default:-100},      // millimeters, total 강수량 (rain + snow + etc)
             rain:       {type : Number, default:-100},      // millimeters
             snow:       {type : Number, default:-100},      // millimeters
@@ -28,16 +33,20 @@ var wuForecastSchema = new mongoose.Schema({
             slpmin:     {type : Number, default:-100}       // millibars, min sea level presure
         },
         forecast : [{
-            date:       {type : Number, default:0},         // YYYYMMDD,
-            time:       {type : Number, default:0},         // HHMM or HMM
+            dateObj:    {type: Object, default: Date},      // UTC time
+            date:       {type : Number, default:0},         // GMT YYYYMMDD,
+            time:       {type : Number, default:0},         // GMT HHMM or HMM
             utcDate:    {type : Number, default:0},         // YYYYMMDD,,
             utcTime:    {type : Number, default:0},         // HHMM
             desc:       {type : String, default:''},        //
             code:       {type : Number, default:-100},      //
             tmp:        {type : Number, default:-100},      //
+            tmp_f:        {type : Number, default:-100},      //
             ftmp:       {type : Number, default:-100},      // 체감 온도
+            ftmp_f:       {type : Number, default:-100},      // 체감 온도
             winddir:    {type : Number, default:-100},      // degree(0~360), 풍향
             windspd:    {type : Number, default:-100},      // metres per second
+            windspd_mh:    {type : Number, default:-100},      // metres per second
             windgst:    {type : Number, default:-100},      // metres per second
             cloudlow:   {type : Number, default:-100},      // percent, low level cloud
             cloudmid:   {type : Number, default:-100},      // percent, mid level cloud

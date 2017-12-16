@@ -6,7 +6,7 @@
 
 var async = require('async');
 
-var Town = require('../models/town');
+//var Town = require('../models/town');
 var arpltnTown = require('../models/arpltnTownKeco');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
@@ -14,127 +14,38 @@ var Frcst = require('../models/modelMinuDustFrcst');
 var keco = new (require('../lib/kecoRequester.js'))();
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var UnitConverter = require('../lib/unitConverter');
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
 
 }
 
-arpltnController.parseSo2Info = function (so2Grade) {
-    switch (so2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown so2Grade="+so2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseCoInfo = function (coGrade) {
-    switch (coGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown coGrade="+coGrade);
-    }
-    return "";
-};
-
-arpltnController.parseNo2Info = function (no2Grade) {
-    switch (no2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown no2Grade="+no2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseO3Info = function (o3Grade) {
-    switch (o3Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown o3Grade="+o3Grade);
-    }
-    return "";
-};
-
-arpltnController.parseKhaiInfo = function (khaiGrade) {
-    switch (khaiGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown khaiGrade="+khaiGrade);
-    }
-    return "";
-};
-
 /**
  *
- * @param pm10Grade
- * @returns {*}
+ * @param Mal
+ *           so2 분자량 : 15.99 + 15.99 + 32.07 = 64.05
+ *           no2 분자량 : 15.99 + 15.99 + 14.01 = 45.99
+ *           O3 분자량 : 15.99 + 15.99 + 15.99 = 47.97
+ *           CO 분자량 : 15.99 + 12.01 = 28
+ * @param value
+ * @returns {Number}
+ * @private
  */
-arpltnController.parsePm10Info = function(pm10Grade) {
-    switch (pm10Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown pm10Grade="+pm10Grade);
-    }
-    return "";
-};
+arpltnController._convertPpmToUm = function (Mol, value){
+    var ppb = parseFloat(value * 1000);
+    var molList = {
+        so2: 64.05,
+        no2: 45.99,
+        o3: 47.97,
+        co: 28.00
+    };
 
-arpltnController.parsePm25Info = function (pm25Grade) {
-    switch (pm25Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown pm25Grade="+pm25Grade);
+    if(molList[Mol] == undefined){
+        return -1;
     }
-    return "";
+
+    return parseFloat(ppb * molList[Mol] / 22.4);
 };
 
 /**
@@ -142,63 +53,141 @@ arpltnController.parsePm25Info = function (pm25Grade) {
  * @param arpltn
  * @private
  */
-arpltnController._recalculateValue = function (arpltn) {
+arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
+    var self = this;
+
+    if (arpltn == undefined) {
+        return arpltn;
+    }
+
+    log.info('aqiUnit : ', aqiUnit);
 
     if (arpltn.hasOwnProperty("pm10Value")) {
-        arpltn.pm10Grade = (function (v) {
-            if (v < 0) {
+        arpltn.pm10Grade = (function (v, aqiUnit) {
+            var unit = [0, 30, 80, 150];
+
+            if(aqiUnit == 'airkorea_who'){
+                unit = [0, 30, 50, 100];
+            }else if(aqiUnit == 'airnow'){
+                unit = [0, 54, 154, 254, 354, 424];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 50, 150, 250, 350, 420];
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 30) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if (v <= 80) {
+            else if (v <= unit[2]) {
                 return 2;
             }
-            else if (v <= 150) {
+            else if (v <= unit[3]) {
                 return 3;
             }
-            else if (v > 150) {
+            else if (v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
-        })(arpltn.pm10Value);
+        })(arpltn.pm10Value, aqiUnit);
     }
 
     if (arpltn.hasOwnProperty("pm25Value")) {
-        arpltn.pm25Grade = (function (v) {
-            if (v < 0) {
+        arpltn.pm25Grade = (function (v, aqiUnit) {
+            var unit = [0, 15, 50, 100];
+
+            if(aqiUnit == 'airkorea_who'){
+                unit = [0, 15, 25, 50];
+            }else if(aqiUnit == 'airnow'){
+                unit = [0, 12.0, 35.4, 55.4, 150.4, 250.4];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 35, 75, 115, 150, 250];
+            }
+
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <=15) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v<=50) {
+            else if(v<=unit[2]) {
                 return 2;
             }
-            else if(v<=100) {
+            else if(v<=unit[3]) {
                 return 3;
             }
-            else if(v > 100) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
-        })(arpltn.pm25Value);
+        })(arpltn.pm25Value, aqiUnit);
     }
 
     if (arpltn.hasOwnProperty("o3Value")) {
         arpltn.o3Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0,0.03, 0.09, 0.15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 54, 124, 164, 204, 404];
+
+                v = v * 1000;   // ppm -> ppb
+
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 160, 200, 300, 400, 800];
+
+                // ppm -> ug/m3
+                tmpValue = self._convertPpmToUm('o3', arpltn.o3Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.03) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.09) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.o3Value);
@@ -206,19 +195,47 @@ arpltnController._recalculateValue = function (arpltn) {
 
     if (arpltn.hasOwnProperty("no2Value")) {
         arpltn.no2Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 0.03, 0.06, 0.2];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 53, 100, 360, 649, 1249];
+
+                v = v * 1000;    // ppm -> ppb
+
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 100, 200, 700, 1200, 2340];
+
+                // ppm --> ug/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.03) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.06) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.2) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.2) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.no2Value);
@@ -226,19 +243,44 @@ arpltnController._recalculateValue = function (arpltn) {
 
     if (arpltn.hasOwnProperty("coValue")) {
         arpltn.coGrade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 2, 9, 15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 4.4, 9.4, 12.4, 15.4, 30.4];
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 5, 10, 35, 60, 90];
+
+                // ppm --> mg/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value) * 1000;
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 2) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 9) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.coValue);
@@ -246,19 +288,46 @@ arpltnController._recalculateValue = function (arpltn) {
 
     if (arpltn.hasOwnProperty("so2Value")) {
         arpltn.so2Grade = (function (v) {
-            if (v < 0) {
+            var unit = [0, 0.02, 0.05, 0.15];
+            var tmpValue = 0;
+            if(aqiUnit == 'airnow'){
+                unit = [0, 35, 75, 185, 304, 604];
+
+                v = v * 1000;   // ppm -> ppb
+            }else if(aqiUnit == 'aircn'){
+                unit = [0, 150, 500, 650, 800, 1600];
+
+                // ppm --> ug/m3
+                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
+                if(tmpValue > 0){
+                    v = tmpValue;
+                }
+            }
+
+            if (v < unit[0]) {
                 return -1;
             }
-            else if (v <= 0.02) {
+            else if (v <= unit[1]) {
                 return 1;
             }
-            else if(v <= 0.05) {
+            else if(v <= unit[2]) {
                 return 2;
             }
-            else if(v <= 0.15) {
+            else if(v <= unit[3]) {
                 return 3;
             }
-            else if(v > 0.15) {
+            else if(v > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.so2Value);
@@ -266,24 +335,64 @@ arpltnController._recalculateValue = function (arpltn) {
 
     if (arpltn.hasOwnProperty("khaiValue")) {
         arpltn.khaiGrade = (function (value) {
-            if (value < 0) {
+            var unit = [0, 50, 100, 250];
+
+            if(aqiUnit == 'airnow' || aqiUnit == 'aircn'){
+                unit = [0, 50, 100, 150, 200, 300];
+            }
+
+            if (value < unit[0]) {
                 return -1;
             }
-            else if (value <= 50) {
+            else if (value <= unit[1]) {
                 return 1;
             }
-            else if(value <= 100) {
+            else if(value <= unit[2]) {
                 return 2;
             }
-            else if(value <= 250) {
+            else if(value <= unit[3]) {
                 return 3;
             }
-            else if(value > 250) {
+            else if(value > unit[3]) {
+
+                if(unit.length > 4){
+                    if(v <= unit[3]){
+                        return 4;
+                    }else if(v <= unit[4]){
+                        return 5;
+                    }else if(v > unit[5]){
+                        return 6;
+                    }
+                }
+
                 return 4;
             }
         })(arpltn.khaiValue);
     }
 
+    if (aqiUnit === 'airnow' || aqiUnit === 'aircn') {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
+    }
     return arpltn;
 };
 
@@ -391,15 +500,14 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
     }
 
     dateTime.setHours(dateTime.getHours()-8);
-    if (dateTime.getTime() < arpltnTime.getTime()) {
-        return true;
-    }
-    return false;
+
+    return dateTime.getTime() < arpltnTime.getTime();
 };
 
 /**
  *
  * @param arpltnList
+ * @param currentTime
  * @returns {*}
  * @private
  */
@@ -410,7 +518,7 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
 
     if (!Array.isArray(arpltnList)) {
         log.error(new Error("arpltn is not array"));
-        return arpltn;
+        return;
     }
 
     for (var i=0; i<arpltnList.length; i++) {
@@ -504,57 +612,62 @@ arpltnController._convertDustForecastStrToGrade = function (str) {
 
 arpltnController.getDustFrcst = function (town, dateList, callback) {
     var region = this._convertDustFrcstRegion(town.region, town.city);
-    var informDataList = [];
     var self = this;
 
+    var query;
+    var array = [];
     dateList.forEach(function (date) {
-        informDataList.push(kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date));
+        var q = {informData: kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date)};
+        array.push(q);
     });
-
-    async.map(informDataList, function (informData, cb) {
-        Frcst.find({informData: informData}, {_id:0}).lean().exec(function (err, dustFrcstList) {
-            if (err) {
-                return cb(err)
-            }
-
-            if (dustFrcstList.length === 0) {
-                return cb(err);
-            }
-
-            var result = {};
-            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(informData);
-
-            dustFrcstList.forEach(function (dustFrcst) {
-                for (var i=0; i<dustFrcst.informGrade.length;i++) {
-                    if (dustFrcst.informGrade[i].region === region)  {
-                        if (dustFrcst.informGrade[i].grade != '예보없음') {
-                            if (result.dustForecast === undefined) {
-                                result.dustForecast = {};
-                            }
-                            var keyGradeStr = dustFrcst.informCode+"Grade";
-                            var keyStrStr = dustFrcst.informCode+"Str";
-                            result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
-                            result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
-                        }
-                        return;
-                    }
-                }
-            });
-
-            if (result.dustForecast == undefined) {
-                return cb(err);
-            }
-            result.dustForecast.sido = region;
-            cb(err, result);
-        });
-    }, function (err, results) {
+    query = {$or: array};
+    Frcst.find(query, {_id:0}).lean().exec(function (err, dustFrcstList) {
         if (err) {
             return callback(err);
         }
-        results = results.filter(function (result) {
-            return !!result;
+        if (dustFrcstList.length == 0) {
+            err = new Error("Fail to find dust forecast query="+JSON.stringify(query));
+            return callback(err);
+        }
+
+        var resultList = [];
+
+        dustFrcstList.forEach(function (dustFrcst) {
+            for (var i=0; i<dustFrcst.informGrade.length;i++) {
+                if (dustFrcst.informGrade[i].region === region)  {
+                    if (dustFrcst.informGrade[i].grade != '예보없음') {
+
+                        var result = resultList.filter(function (r) {
+                            if (r.date == kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData)) {
+                                return true;
+                            }
+                            return false;
+                        })[0];
+
+                        if (result == null) {
+                            result = {};
+                            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData);
+                            result.dustForecast = {};
+                            result.dustForecast.sido = region;
+                            resultList.push(result);
+                        }
+
+                        var keyGradeStr = dustFrcst.informCode+"Grade";
+                        var keyStrStr = dustFrcst.informCode+"Str";
+                        result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
+                        result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
+                    }
+                    return;
+                }
+            }
         });
-        return callback(err, results);
+
+        if (resultList.length == 0) {
+            err = new Error("dust forecast length is zero query="+JSON.stringify(query));
+            return callback(err);
+        }
+
+        callback(err, resultList);
     });
 
     return this;
@@ -591,9 +704,6 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
             function (arpltnList, cb) {
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
                 return cb(undefined, arpltn);
-            },
-            function (arpltn, cb) {
-                return cb(undefined, self._recalculateValue(arpltn));
             }],
         function(err, arpltn) {
             if (err)  {
@@ -651,8 +761,8 @@ arpltnController._appendFromDb = function(town, current, callback) {
 arpltnController._appendFromKeco = function(town, current, callback) {
 
     var keyBox = require('../config/config').keyString;
-    keco.setServiceKey(keyBox.normal);
-    keco.setDaumApiKey(keyBox.daum_key);
+    keco.setServiceKeys(JSON.parse(keyBox.airkorea_keys));
+    keco.setDaumApiKeys(JSON.parse(keyBox.daum_keys));
 
     async.waterfall([
         function(cb) {
@@ -676,7 +786,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
                 });
         },
         function(tmCoord, cb) {
-            keco.getNearbyMsrstn(keco.getServiceKey(), tmCoord.y, tmCoord.x, function(err, result) {
+            keco.getNearbyMsrstn(tmCoord.y, tmCoord.x, function(err, result) {
                 if (err) {
                     return cb(err);}
                 log.debug(result);
@@ -694,7 +804,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         },
         function(stationName, cb) {
             var sido = keco.convertRegionToSido(town.first);
-            keco.getCtprvn(keco.getServiceKey(), sido, function (err, body) {
+            keco.getCtprvn(sido, function (err, body) {
                 if (err) {
                     return cb(err);
                 }

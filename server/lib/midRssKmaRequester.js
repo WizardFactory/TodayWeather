@@ -5,10 +5,13 @@
 var xml2json  = require('xml2js').parseString;
 var async = require('async');
 var req = require('request');
+var config = require('../config/config');
 
 var MidRssModel = require('../models/modelMidRss');
+var kmaTownMidRss = require('../models/kma/kma.town.mid.rss.model');
 
 var collectTown = require('../lib/collectTownForecast');
+var kmaTimelib = require('./kmaTimeLib');
 
 /**
  *
@@ -183,6 +186,30 @@ MidRssKmaRequester.prototype.integrateMidRss = function (parsedData, callback) {
     return this;
 };
 
+MidRssKmaRequester.prototype.saveMidRssNewForm = function (midKmaList, callback) {
+    async.map(midKmaList,
+        function(mid, cb){
+            mid['pubDate'] = kmaTimelib.getKoreaDateObj(mid.pubDate);
+
+            log.info('save mid rss : ', JSON.stringify(mid));
+            kmaTownMidRss.update({regId:mid.regId}, mid, {upsert:true}, function(err){
+                if(err){
+                    log.error('midRssNewForm > failed to update db item', mid.regId);
+                }
+                cb(null, mid.pubDate);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            callback(err, results[0]);
+        }
+    );
+
+    return this;
+};
+
 MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
     MidRssModel.find({}, function (err, midRssModelList) {
         if (err) {
@@ -250,9 +277,15 @@ MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
                 });
             },
             function(integratedData, callback) {
-                self.saveMidRss(integratedData, function (err, result) {
-                    callback(err, result);
-                });
+                if(config.db.version == '2.0'){
+                    self.saveMidRssNewForm(integratedData, function (err, result) {
+                        callback(err, result);
+                    });
+                }else{
+                    self.saveMidRss(integratedData, function (err, result) {
+                        callback(err, result);
+                    });
+                }
             }],
         function (err, result) { //pubDate = lastUpdateTime
             if (err) {

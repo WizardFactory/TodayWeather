@@ -30,4 +30,10 @@ var currentSchema = new mongoose.Schema({
 currentSchema.index({mCoord:1});
 currentSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
 
+currentSchema.statics = {
+    getPropertyList: function () {
+        return ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
+    }
+};
+
 module.exports = mongoose.model('current', currentSchema);

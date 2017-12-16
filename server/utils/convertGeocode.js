@@ -8,8 +8,11 @@ var convert = require('./coordinate2xy');
 var keyBox = require('../config/config').keyString;
 
 function convertGeocodeByDaum(first, second, third, callback) {
+    var keyList = JSON.parse(keyBox.daum_keys);
+    var daum_key = keyList[Math.floor(Math.random() * keyList.length)];
+
     var url = 'https://apis.daum.net/local/geo/addr2coord'+
-        '?apikey=' + keyBox.daum_key +
+        '?apikey=' + daum_key +
         '&q='+ encodeURIComponent(first + second + third) +
         '&output=json';
     var encodedUrl = url;
@@ -37,7 +40,7 @@ function convertGeocodeByDaum(first, second, third, callback) {
         if (statusCode >= 400) {
             //log.error('ERROR!!! StatusCode : ', statusCode);
             //log.error('#', meta);
-            err = new Error("StatusCode="+statusCode);
+            err = new Error("StatusCode="+statusCode+" url="+url);
 
             if (callback) {
                 callback(err);

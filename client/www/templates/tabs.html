@@ -3,30 +3,25 @@ Create tabs with an icon and label, using the tabs-positive style.
 Each tab's child <ion-nav-view> directive will have its own
 navigation history that also transitions its views in and out.
 -->
-<ion-tabs class="tabs-icon-top tabs-dark">
+<ion-tabs class="tabs-icon-top">
 
     <!-- Search Tab -->
-    <ion-tab title="도시검색" icon-off="ion-ios-search" icon-on="ion-ios-search" href="#/tab/search">
+    <ion-tab  title="{{'LOC_SAVED_LOCATIONS'|translate}}" icon-off="ion-ios-star" icon-on="ion-ios-star" href="#/tab/search">
         <ion-nav-view name="tab-search"></ion-nav-view>
     </ion-tab>
 
     <!-- Forecast/Reload Tab -->
-    <ion-tab title="시간별날씨" icon-off="ion-ios-clock-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('forecast')">
+    <ion-tab title="{{'LOC_HOURLY_FORECAST'|translate}}" icon-off="ion-ios-clock-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('forecast')">
         <ion-nav-view name="tab-forecast"></ion-nav-view>
     </ion-tab>
 
     <!-- Forecast/Reload Tab -->
-    <ion-tab title="일별날씨" icon-off="ion-ios-calendar-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('dailyforecast')">
+    <ion-tab title="{{'LOC_DAILY_FORECAST'|translate}}" icon-off="ion-ios-calendar-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('dailyforecast')">
         <ion-nav-view name="tab-dailyforecast"></ion-nav-view>
     </ion-tab>
 
     <!-- Share tab-->
-    <ion-tab title="날씨공유" icon-off="ion-ios-upload-outline" icon-on="ion-ios-upload-outline" ng-click="doTabShare()">
-    </ion-tab>
-
-    <!-- Setting Tab -->
-    <ion-tab title="설정" icon-off="ion-ios-gear-outline" icon-on="ion-ios-gear-outline" href="#/tab/setting">
-        <ion-nav-view name="tab-setting"></ion-nav-view>
+    <ion-tab title="{{'LOC_SHARE_WEATHER'|translate}}" icon-off="ion-ios-upload-outline" icon-on="ion-ios-upload-outline" ng-click="doTabShare()">
     </ion-tab>
 
 </ion-tabs>

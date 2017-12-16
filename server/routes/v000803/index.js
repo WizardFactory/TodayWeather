@@ -22,6 +22,15 @@ var router = express.Router();
 var idBearerToken = [];
 
 router.use(function checkAuthorization(req, res, next) {
+    var deviceId = '';
+    if (req.headers['device-id']) {
+       deviceId = req.headers['device-id'];
+    }
+
+    log.info('@@ + ' + decodeURI(req.originalUrl) + ' Time[', (new Date()).toISOString() + '] sID=' +
+        req.sessionID+ ' UUID='+deviceId);
+    log.info('user-agent='+req.headers['user-agent']+ '  sID=' + req.sessionID+ ' UUID='+deviceId);
+
     var err;
     // post일 경우에만 check 한다.
     if(req.method === 'POST') {
@@ -109,8 +118,14 @@ router.use('/daily', require('../v000705/dailySummary'));
 router.use('/check-purchase', require('../v000705/receiptValidation'));
 router.use('/push', require('../v000705/routePushNotification'));
 
+router.use('/nation', require('./route.nation'));
+
 router.post('/', function(req,res) {
     res.render('index', {title:'TodayWeather : post'});
 });
+
+router.use('/test', require('./route.test'));
+
+router.use('/geo', require('./route.geo'));
 
 module.exports = router;

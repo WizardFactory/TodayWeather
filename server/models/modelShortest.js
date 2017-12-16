@@ -18,7 +18,13 @@ var shortestSchema = new mongoose.Schema({
         pty: {type:Number, default:-1},
         rn1: {type:Number, default:-1},
         sky: {type:Number, default:-1},
-        lgt: {type:Number, default:-1}
+        lgt: {type:Number, default:-1},
+        t1h: {type:Number, default:-50},
+        reh: {type:Number, default:-1},
+        uuu: {type:Number, default:-100},
+        vvv: {type:Number, default:-100},
+        vec: {type:Number, default:-1},
+        wsd: {type:Number, default:-1}
     }]
 });
 

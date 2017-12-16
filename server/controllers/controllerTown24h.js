@@ -3,8 +3,12 @@
  * controllerTown에서 short의 time table을 0~21 에서 3~24시로 변경한 클래스임.
  */
 
+'use strict';
+
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
+var UnitConverter = require('../lib/unitConverter');
+var KecoController = require('../controllers/kecoController');
 
 /**
  *
@@ -14,6 +18,28 @@ function ControllerTown24h() {
     var self = this;
 
     ControllerTown.call(this);
+
+    this.checkQueryValidation = function(req, res, next) {
+        /**
+         *
+         * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
+         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+         */
+        if(!req.hasOwnProperty('query')) {
+            req.query = {};
+        }
+
+        UnitConverter.getUnitList().forEach(function (value) {
+                if (!req.query.hasOwnProperty(value)) {
+                    req.query[value] = UnitConverter.getDefaultValue(value);
+                }
+        });
+
+        log.info({sId:req.sessionID, reqQuery: req.query});
+
+        next();
+        return this;
+    };
 
     /**
      * adjust tmn, tmx and reorganize position of tmn and tmx
@@ -31,7 +57,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info('>', meta);
+        log.info('>sID=',req.sessionID, meta);
 
         if (!req.hasOwnProperty('short')) {
             log.error("Short forecast data hasn't attached on req");
@@ -39,8 +65,14 @@ function ControllerTown24h() {
             return this;
         }
 
+        //t3h, tmx, tmn로부터 일별 taMax, taMin을 만들고 tmx, tmn을 초기화 한다.
         var daySummaryList = [];
         req.short.forEach(function (short, index) {
+
+            //과거 short가 없는 경우 -1로 client로 넘어가는 것을 방지함. 이것은 short에 대한 merge가 완료된 후에 해야 함.
+            if (short.pop == undefined || short.pop == -1) {
+                short.pop = 0;
+            }
 
             var daySummary = self._createOrGetDaySummaryList(daySummaryList, short.date);
             daySummary.taMax = daySummary.taMax === undefined ? -50:daySummary.taMax;
@@ -54,6 +86,7 @@ function ControllerTown24h() {
                 log.verbose(index+" tmx clear");
                 //clear tmx
             }
+
             short.tmx = -50;
 
             if (daySummary.taMin === -50 && short.t3h !== -50) {
@@ -104,7 +137,9 @@ function ControllerTown24h() {
                         //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
                     }
                     else {
-                        log.error("It has r06 but pty is zero short index="+i);
+                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
+                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
+                        log.warn("It has r06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
                     }
                     req.short[i-1].r06 = 0;
                     req.short[i].r06 = 0;
@@ -133,7 +168,9 @@ function ControllerTown24h() {
                         //과거의 경우 예보상으로 온다고 했지만, 오지 않은 경우에 발생할 수 있음.
                     }
                     else {
-                        log.error("It has s06 but pty is zero short index=" + i);
+                        //17.01.12 05시 단기 예보에서, pty가 0이지만, R06,S06은 1이었음. 충청남도 아산시 온양4동 mx 60, my 110
+                        //kma에서는 이경우 r06,s06을 표시하지 않고, 눈,비 안옴으로 표기
+                        log.warn("It has s06 but pty is zero short date="+req.short[i].date+" time="+req.short[i].time);
                     }
                     req.short[i-1].s06 = 0;
                     req.short[i].s06 = 0;
@@ -289,13 +326,13 @@ function ControllerTown24h() {
             }
         });
 
+        //앞의 invalid한 날씨정보를 제거
         i = req.short.length - 1;
         for(;i>=0;i--) {
-            if(req.short[i].reh !== -1) {
+            if(req.short[i].t3h !== -50) {
                 break;
             }
         }
-
         req.short.splice(i+1, (req.short.length-(i+1)));
 
         next();
@@ -334,7 +371,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
-        log.info(">", meta);
+        log.info('>sID=',req.sessionID, meta);
 
         var todayDate = req.current.date;
         var yD = kmaTimeLib.convertStringToDate(todayDate);
@@ -361,7 +398,9 @@ function ControllerTown24h() {
             }
             else if (dailyData.date === todayDate) {
                 today = req.midData.dailyData[i];
-                today.skyIcon = self._parseSkyState(today.sky, today.pty, 0, true);
+                today.skyIcon = self._parseSkyState(today.sky, today.pty, 0, false);
+                today.skyIconAm = self._parseSkyState(today.skyAm, today.ptyAm, 0, false);
+                today.skyIconPm = self._parseSkyState(today.skyPm, today.ptyPm, 0, false);
                 pmObject = self._makeDailyPmStr(today.dustForecast);
                 if (pmObject) {
                     today.pmStr = pmObject.pmStr;
@@ -370,11 +409,27 @@ function ControllerTown24h() {
             }
             else if (dailyData.date === tomorrowDate) {
                 tomorrow = req.midData.dailyData[i];
-                tomorrow.skyIcon = self._parseSkyState(tomorrow.sky, tomorrow.pty, 0, true);
+                tomorrow.skyIcon = self._parseSkyState(tomorrow.sky, tomorrow.pty, 0, false);
+                tomorrow.skyIconAm = self._parseSkyState(tomorrow.skyAm, tomorrow.ptyAm, 0, false);
+                tomorrow.skyIconPm = self._parseSkyState(tomorrow.skyPm, tomorrow.ptyPm, 0, false);
                 pmObject = self._makeDailyPmStr(tomorrow.dustForecast);
                 if (pmObject) {
                     tomorrow.pmStr = pmObject.pmStr;
                     tomorrow.pmGrade = pmObject.pmGrade;
+                }
+            }
+        }
+
+        //update pop
+        if (req.short) {
+            today.pop = 0;
+            var len = req.short.length;
+            for (i=0; i<len; i++) {
+                var w3h = req.short[i];
+                if (w3h.date === today.date && w3h.time > req.current.time) {
+                   if (w3h.pop > today.pop) {
+                       today.pop = w3h.pop;
+                   }
                 }
             }
         }
@@ -403,15 +458,18 @@ function ControllerTown24h() {
             dailySummary += "내일: ";
         }
 
-        if (theDay.skyIcon) {
+        if (theDay.skyIconAm && theDay.skyIconPm) {
+            dailyArray.push(self._getWeatherEmoji(theDay.skyIconAm)+self._getEmoji("RightwardsArrow")+self._getWeatherEmoji(theDay.skyIconPm));
+        }
+        else if (theDay.skyIcon) {
             dailyArray.push(self._getWeatherEmoji(theDay.skyIcon));
         }
+
         if (theDay.taMin != undefined && theDay.taMax != undefined) {
-            dailyArray.push(self._getEmoji("DownwardsArrow")+theDay.taMin+"˚"+
-                self._getEmoji("UpwardsArrow")+theDay.taMax+"˚");
+            dailyArray.push(theDay.taMin+"˚/"+theDay.taMax+"˚");
         }
         if (theDay.pty && theDay.pty > 0) {
-            if (theDay.pop) {
+            if (theDay.pop && current.pty <= 0) {
                 dailyArray.push("강수확률"+" "+theDay.pop+"%");
             }
         }
@@ -483,6 +541,82 @@ function ControllerTown24h() {
         return next();
     };
 
+    this.insertSkyIcon = function (req, res, next) {
+        if(req.short){
+            req.short.forEach(function (data) {
+                var time = parseInt(data.time.substr(0, 2));
+                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+            });
+        }
+        if(req.shortest){
+            req.shortest.forEach(function (data) {
+                var time = parseInt(data.time.substr(0, 2));
+                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+            });
+        }
+        if(req.current){
+            var data = req.current;
+            var time = parseInt(data.time.substr(0, 2));
+            data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
+        }
+        if(req.midData){
+            req.midData.dailyData.forEach(function (data) {
+                if (data.sky) {
+                    data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, false);
+                }
+                if (data.skyAm) {
+                    data.skyAmIcon = self._parseSkyState(data.skyAm, data.ptyAm, data.lgtAm, false);
+                }
+                if (data.skyPm) {
+                    data.skyPmIcon = self._parseSkyState(data.skyPm, data.ptyPm, data.lgtPm, false);
+                }
+            });
+        }
+
+        next();
+        return this;
+    };
+
+
+    this.AirkoreaForecast = function (req, res, next){
+        var meta = {};
+
+        var regionName = req.params.region;
+        var cityName = req.params.city;
+        var townName = req.params.town;
+
+        meta.method = '/:region/:city/:town';
+        meta.region = regionName;
+        meta.city = cityName;
+        meta.town = townName;
+
+        if(global.airkoreaDustImageMgr){
+            if(req.geocode){
+                global.airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', function(err, pm10){
+                    if(err){
+                        log.info('Fail to get PM 10 info');
+                        return next();
+                    }
+                    req.airkorea_dust_forecast = {};
+                    req.airkorea_dust_forecast.PM10 = pm10;
+
+                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', function(err, pm25){
+                        if(err){
+                            log.info('Fail to get PM 25 info');
+                            return next();
+                        }
+                        req.airkorea_dust_forecast.PM25 = pm25;
+                        next();
+                    });
+                });
+            }
+        }else{
+            next();
+        }
+
+        return this;
+    };
+
     this.sendDailySummaryResult = function (req, res) {
         var meta = {};
 
@@ -495,6 +629,7 @@ function ControllerTown24h() {
         meta.region = regionName;
         meta.city = cityName;
         meta.town = townName;
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
 
         result.regionName = regionName;
         result.cityName = cityName;
@@ -505,10 +640,10 @@ function ControllerTown24h() {
         return this;
     };
 
-    this.sendResult = function (req, res) {
+    this.makeResult = function (req, res, next) {
         var meta = {};
 
-        var result = {};
+        var result;
         var regionName = req.params.region;
         var cityName = req.params.city;
         var townName = req.params.town;
@@ -518,8 +653,10 @@ function ControllerTown24h() {
         meta.city = cityName;
         meta.town = townName;
 
-        log.info('##', decodeURI(req.originalUrl));
-
+        if (req.result == undefined) {
+            req.result = {};
+        }
+        result = req.result;
         result.regionName = regionName;
         result.cityName = cityName;
         result.townName = townName;
@@ -531,6 +668,9 @@ function ControllerTown24h() {
             result.shortRssPubDate = req.shortRssPubDate;
         }
         if(req.short) {
+            if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
+                log.error("Short is invalid >sID=",req.sessionID, meta)
+            }
             result.short = req.short;
         }
         if (req.shortestPubDate) {
@@ -543,17 +683,101 @@ function ControllerTown24h() {
             result.currentPubDate = req.currentPubDate;
         }
         if(req.current) {
+            if (req.current == undefined || req.current.t1h == undefined || req.current.yesterday == undefined) {
+                log.error("Current is invalid >sID=",req.sessionID, meta)
+            }
             result.current = req.current;
         }
         if(req.midData) {
+            if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
+                || req.midData.dailyData.length < 17) {
+                log.error("daily Data is invalid >sID=",req.sessionID, meta)
+            }
             result.midData = req.midData;
         }
         if (req.dailySummary) {
             result.dailySummary = req.dailySummary;
         }
-        res.json(result);
+        if (req.airkorea_dust_forecast){
+            result.airkorea_dust_forecast = req.airkorea_dust_forecast;
+        }
+        result.source = "KMA";
 
+        var units ={};
+        UnitConverter.getUnitList().forEach(function (value) {
+            units[value] = req.query[value] || UnitConverter.getDefaultValue(value);
+        });
+        result.units = units;
+
+        next();
         return this;
+    };
+
+    this.sendResult = function (req, res) {
+        log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
+        res.json(req.result);
+    };
+
+    this.convertUnits = function (req, res, next) {
+        try {
+            var current = req.current;
+            var currentDate;
+            if (current.hasOwnProperty('stnDateTime')) {
+                current.dateObj = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYoMMoDD_HHoMM(current.stnDateTime);
+            }
+            else {
+                current.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(current.date+current.time);
+            }
+            currentDate = current.dateObj;
+            current.time = parseInt(current.time.slice(0, -2));
+            self._convertWeatherData(current, req.query);
+            self._convertWeatherData(current.yesterday, req.query);
+
+            req.shortest.forEach(function (value) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);
+                self._convertWeatherData(value, req.query);
+            });
+            var short = req.short;
+            var foundCurrentIndex = false;
+            short.forEach(function (value, index) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);
+                value.time = parseInt(value.time.slice(0, -2));
+                value.fromToday = kmaTimeLib.getDiffDays(value.dateObj, currentDate);
+                if (foundCurrentIndex === false && value.dateObj <= currentDate) {
+                    if (index === short.length-1) {
+                        value.currentIndex = true;
+                    }
+                    else {
+                        var nextObj = short[index+1];
+                        var nextIndexDate = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(nextObj.date+nextObj.time);
+                        if(currentDate <= nextIndexDate) {
+                            value.currentIndex = true;
+                        }
+                    }
+                }
+                self._convertWeatherData(value, req.query);
+            });
+            req.midData.dailyData.forEach(function (value, index) {
+                value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+"0000");
+                value.skyAm = value.skyAmIcon;
+                value.skyPm = value.skyPmIcon;
+                value.tmx = value.taMax;
+                value.tmn = value.taMin;
+                value.fromToday = kmaTimeLib.getDiffDays(value.dateObj, currentDate);
+                value.dayOfWeek = (new Date(value.dateObj)).getDay();
+                if (value.date === current.date) {
+                    current.todayIndex = index;
+                }
+                self._convertWeatherData(value, req.query);
+            });
+            if (req.current.hasOwnProperty('arpltn')) {
+                KecoController.recalculateValue(req.current.arpltn, req.query.airUnit, res);
+            }
+        }
+        catch (err) {
+            log.error(err);
+        }
+        return next();
     };
 }
 
@@ -585,7 +809,7 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
             skyIconName = "Cloud";
             break;
         default:
-            console.log('Fail to parse sky='+sky);
+            log.error('Fail to parse sky='+sky);
             break;
     }
 
@@ -603,7 +827,7 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
             skyIconName += "Snow";
             break;
         default:
-            console.log('Fail to parse pty='+pty);
+            log.error('Fail to parse pty='+pty);
             break;
     }
 
@@ -618,8 +842,14 @@ ControllerTown24h.prototype._getEmoji = function (name) {
     switch (name) {
         case 'UpwardsArrow':
             return '\u2191';
+        case 'RightwardsArrow':
+            return '\u2192';
         case 'DownwardsArrow':
             return '\u2193';
+        case 'UpwardsArrowToBar':
+            return '\u2912';
+        case 'DownwardsArrowToBar':
+            return '\u2913';
         default:
             log.error('Fail to find emoji name='+name);
     }
@@ -654,5 +884,79 @@ ControllerTown24h.prototype._getWeatherEmoji = function (skyIcon) {
     log.error('Fail to find emoji skyIcon='+skyIcon);
     return '';
 };
+
+/**
+ * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
+ * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+ * @param wData
+ * @param query
+ * @returns {ControllerTown24h}
+ * @private
+ */
+ControllerTown24h.prototype._convertWeatherData = function(wData, query) {
+    var unitConverter = new UnitConverter();
+    var toTempUnit;
+    var toWindUnit;
+    var toPressUnit;
+    var toDistUnit;
+    var toPrecipUnit;
+    var defaultValueList;
+
+    if (wData == undefined) {
+        log.error('Invalid weather data for converting');
+        return this;
+    }
+    if (query == undefined) {
+        log.error('Invalid query for converting');
+        return this;
+    }
+
+    toTempUnit = query.temperatureUnit;
+    toPrecipUnit = query.precipitationUnit;
+    toWindUnit = query.windSpeedUnit;
+    toPressUnit = query.pressureUnit;
+    toDistUnit = query.distanceUnit;
+
+    defaultValueList = UnitConverter.getDefaultValueList();
+
+    //convert cm to mm s06, sn1, s1d
+    ['s06', 'sn1', 's1d'].forEach(function (name) {
+        if (wData.hasOwnProperty(name)) {
+            wData[name] *= 10;
+        }
+    });
+
+    if (toTempUnit && toTempUnit !== defaultValueList['temperatureUnit']) {
+        //client에서는 taMax,taMin은 tmx, tmn으로 변환해서 사용하고 있음.
+        ['t1h', 'sensorytem', 'dpt', 'heatIndex', 't3h', 'tmx', 'tmn', 't1d'].forEach(function (name) {
+            if (wData.hasOwnProperty(name) && wData[name] !== -50) {
+                wData[name] = unitConverter.convertUnits(defaultValueList['temperatureUnit'], toTempUnit, wData[name]);
+                if (toTempUnit === 'F') {
+                    wData[name] = Math.floor(wData[name]);
+                }
+            }
+        });
+    }
+
+    //will remove rs1h, rs1d
+    if (toPrecipUnit && toPrecipUnit !== defaultValueList['precipitationUnit']) {
+        ['rn1', 'rs1h', 'rs1d', 'r06', 's06', 'sn1', 's1d'].forEach(function (name) {
+            if (wData.hasOwnProperty(name)) {
+                wData[name] = unitConverter.convertUnits(defaultValueList['precipitationUnit'], toWindUnit, wData[name]);
+            }
+        });
+    }
+
+    if (wData.hasOwnProperty('wsd')) {
+        wData.wsd = unitConverter.convertUnits(defaultValueList['windSpeedUnit'], toWindUnit, wData.wsd);
+    }
+    if (wData.hasOwnProperty('hPa')) {
+        wData.hPa = unitConverter.convertUnits(defaultValueList['pressureUnit'], toPressUnit, wData.hPa);
+    }
+    if (wData.hasOwnProperty('visibility')) {
+        wData.visibility = unitConverter.convertUnits(defaultValueList['distanceUnit'], toDistUnit, wData.visibility);
+    }
+};
+
 
 module.exports = ControllerTown24h;

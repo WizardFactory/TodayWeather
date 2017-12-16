@@ -1,0 +1,29 @@
+#!/bin/bash
+ 
+#Force file syncronization and lock writes
+mongo admin --eval "printjson(db.fsyncLock())"
+ 
+MONGODUMP_PATH="mongodump"
+MONGO_HOST="localhost"
+MONGO_PORT=
+MONGO_DATABASE="twonlyone"
+ 
+TIMESTAMP=`date +%F-%H%M`
+S3_BUCKET_NAME="twbkup"
+S3_BUCKET_PATH="dailybkup"
+ 
+ 
+# Create backup
+#$MONGODUMP_PATH -h $MONGO_HOST:$MONGO_PORT -d $MONGO_DATABASE
+$MONGODUMP_PATH -h $MONGO_HOST -d $MONGO_DATABASE
+
+# Add timestamp to backup
+mv dump mongodb-$HOSTNAME-$TIMESTAMP
+tar cf mongodb-$HOSTNAME-$TIMESTAMP.tar mongodb-$HOSTNAME-$TIMESTAMP
+ 
+# Upload to S3
+s3cmd put mongodb-$HOSTNAME-$TIMESTAMP.tar s3://$S3_BUCKET_NAME/$S3_BUCKET_PATH/mongodb-$HOSTNAME-$TIMESTAMP.tar
+ 
+ 
+#Unlock databases writes
+mongo admin --eval "printjson(db.fsyncUnlock())"

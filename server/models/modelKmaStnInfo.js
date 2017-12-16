@@ -18,8 +18,7 @@ var ksiSchema = new mongoose.Schema({
     isMountain: Boolean,
 });
 
-ksiSchema.index({stnName:'text'}, {default_language: 'none'});
-ksiSchema.index({stnId: 1});
+ksiSchema.index({stnId: 'text'});
 ksiSchema.index({isCityWeather:1});
 
 module.exports = mongoose.model('KmaStnInfo', ksiSchema);

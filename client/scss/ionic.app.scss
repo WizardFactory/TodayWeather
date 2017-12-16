@@ -18,28 +18,87 @@ $dark:                            #444 !default;
 // The path for our ionicons font files, relative to the built CSS in www/css
 $ionicons-font-path: "../lib/ionic/fonts" !default;
 
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro1.otf") format("opentype");
-  font-weight: 300; //Light
-}
+$font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif !default;
 
 @font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro2.otf") format("opentype");
-  font-weight: 400; //Normal
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url(../fonts/MaterialIcons-Regular.eot); /* For IE6-8 */
+  src: local('Material Icons'),
+  local('MaterialIcons-Regular'),
+  url(../fonts/MaterialIcons-Regular.woff2) format('woff2'),
+  url(../fonts/MaterialIcons-Regular.woff) format('woff'),
+  url(../fonts/MaterialIcons-Regular.ttf) format('truetype');
 }
 
-@font-face {
-  font-family: "Bareun Dotum Pro";
-  src: url("../fonts/BareunDotumOTFPro3.otf") format("opentype");
-  font-weight: 700; //Bold
-}
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;  /* Preferred icon size */
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
 
-$font-family-base: "Bareun Dotum Pro", sans-serif !default;
+  /* Support for all WebKit browsers. */
+  -webkit-font-smoothing: antialiased;
+  /* Support for Safari and Chrome. */
+  text-rendering: optimizeLegibility;
+
+  /* Support for Firefox. */
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Support for IE. */
+  font-feature-settings: 'liga';
+}
 
 // Include all of Ionic
 @import "www/lib/ionic/scss/ionic";
+
+.dark-text-primary {
+  color: #000000;
+  opacity: 0.87;
+}
+
+.dark-text-secondary {
+  color: #000000;
+  opacity: 0.54;
+}
+
+.dark-text-disabled {
+  color: #000000;
+  opacity: 0.38;
+}
+
+.dark-text-dividers {
+  color: #000000;
+  opacity: 0.12;
+}
+
+.light-text-primary {
+  color: #FFFFFF;
+  opacity: 1.00;
+}
+
+.light-text-secondary {
+  color: #FFFFFF;
+  opacity: 0.70;
+}
+
+.light-text-disabled {
+  color: #FFFFFF;
+  opacity: 0.50;
+}
+
+.light-text-dividers {
+  color: #FFFFFF;
+  opacity: 0.12;
+}
 
 .popup-body {
   line-height: 20px;
@@ -71,6 +130,8 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 
 .cityArrow {
   width: 10%;
+  padding-bottom: 7%;
+  padding-top: 7%;
   margin: auto;
   text-align: center;
 }
@@ -102,6 +163,13 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   background-size: contain;
 }
 
+.guide-content-head {
+  width: 100%;
+  margin: 0 0 10px;
+  text-align: center;
+  color: inherit;
+}
+
 .guide-content-text {
   width: 100%;
   margin: 0 0 5px;
@@ -120,16 +188,24 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 
 .guide-pager-left {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: left;
   text-align: right;
 }
 
 .guide-pager-right {
   width: 30%;
-  padding: 20px;
+  padding: 20px 5px;
   float: right;
   text-align: left;
+}
+
+.guide-close {
+  font-size: 28px;
+  padding: 10px;
+  position: absolute;
+  right: 0px;
+  color: inherit;
 }
 
 /* time chart style */
@@ -196,6 +272,40 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   stroke: #fff;
 }
 
+.label {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 5%;
+  position: absolute;
+  bottom: 10px;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.label-today {
+  background-color: #ffffff;
+  width:10px;
+  height: 10px;
+  display: inline-block;
+}
+
+.label-yesterday {
+  background-color: #9E9E9E;
+  width:10px;
+  height: 10px;
+  display: inline-block;
+}
+
+.day-title-list {
+  position: relative;
+  height: 14px;
+}
+
+.day-title {
+  position: absolute;
+  top: 0;
+  width: 120px;
+}
+
 /* day chart style */
 .rect {
   fill: #ffffff;
@@ -247,6 +357,20 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   width: 200px
 }
 
+.row-detail-aqi {
+  padding: 0 16px 5px 16px;
+}
+
+.col-detail-aqi {
+  margin: auto 0;
+  padding: 0;
+}
+
+.img-detail-aqi {
+  font-size: 24px;
+  vertical-align: middle;
+  margin: 0 8px;
+}
 
 .main-content {
   width: 100%;
@@ -295,19 +419,28 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   text-align: center;
 }
 
-.tabs-dark .tabs {
+.tabs {
+  color: #fff;
   background-image: linear-gradient(0deg, #ffffff, #ffffff 60%, transparent 60%);
   background-color: transparent;
+}
+
+.tabs-search .tabs {
+  color: #000000;
+  background-image: linear-gradient(0deg, #b2b2b2, #b2b2b2 50%, transparent 70%);
+  background-color: #FFFFFF;
 }
 
 .pane, .view {
   background-color: transparent;
 }
 
+.tab-item.tab-item-active {
+  line-height: 14px;
+}
+
 .purchase-content {
   background-color: #F5F5F5;
-  width: 100%;
-  height: 100%;
 }
 
 .item-center {
@@ -315,46 +448,88 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   margin: auto;
 }
 
-/* search */
-.search-header {
-  padding: 5px 5px 10px 10px;
-  background-color: #EC407A;
-  background-image: none;
+.menu-left .menu-content i {
+  padding-right: 16px;
+  padding-top: 10px;
+  position: absolute;
+  right: 0;
+  color: #333;
+  font-size: 14px;
 }
 
-.search-header label {
-  margin-right: 5px;
+.menu-content .item-select:after {
+  content: none !important;
+}
+
+.menu-content select {
+  padding-right: 16px;
+  background: transparent;
+}
+
+.start-content .item-input {
+  padding-right: 16px;
+  display: flex !important;
+  flex: 1 0;
+}
+
+.start-content .item-input button {
+  min-height: unset;
+  line-height: unset;
+}
+
+/* search */
+.search-header {
+  margin-left: 40px !important;
+  margin-right: 0px !important;
+  padding: 5px 0px 5px 0px;
+  background-color: #444;
+  background-image: none;
+  display: flex !important;
+  flex: 1 0;
+}
+
+.search-header .icon {
+  color: #444;
+  padding-right: 6px;
+  font-size: 17px;
 }
 
 .search-header input {
   background-color: transparent;
-}
-
-.search-header a {
-  padding: 0px 7px;
-  color: white;
-  font-size: 25px;
+  width: 100%;
+  font-size: 17px;
+  line-height: normal;
 }
 
 .search-content {
 }
 
-.search-content .list {
-  margin-top: 0px;
-  background-color: transparent;
-}
-
-.search-content .item {
-  background-color: transparent;
+.search-content .button {
+  width: 100%;
+  border-color: #ddd;
+  background-color: #fff;
+  font-size: 17px;
 }
 
 .search-item {
   margin: auto;
   text-align: left;
-  color: white;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 17px;
-  opacity: 0.84;
+}
+
+.search-item.search-name {
+  text-overflow:ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.search-item .material-icons {
+  font-size: inherit;
+  position: relative;
+  top:2px;
+  right: 3px;
+  letter-spacing: -4px
 }
 
 .search-item.last-item {
@@ -371,7 +546,7 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 }
 
 .search-item a {
-  color: white;
+  color: #444;
 }
 
 .search-item .toggle, .search-item .track {
@@ -383,19 +558,19 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
 }
 
 .toggle.toggle-search {
-  margin: 0px;
+  margin: 0;
 }
 
 .toggle.toggle-search .track {
   height: 14px;
-  border: 0px;
+  border: 0;
   border-radius: 8px;
-  margin: auto 0px;
+  margin: auto 0;
   background-color: rgba(158,158,158,0.8);
 }
 
 .toggle.toggle-search input:checked + .track {
-  background-color: #673AB7;
+  background-color: #444;
 }
 
 .toggle.toggle-search .track .handle {
@@ -415,23 +590,103 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   right: 25px;
 }
 
+.bar.bar-search {
+  border-color: #444;
+  background-color: #444;
+  background-image: linear-gradient(0deg,#444,#444 50%,transparent 50%);
+  color: #fff;
+ }
+
+.bar.bar-forecast {
+  border-color: #0288D1;
+  background-color: #03A9F4;
+  background-image: linear-gradient(0deg, #0288D1, #0288D1 50%, transparent 50%);
+  color: #fff;
+}
+
+.bar.bar-dailyforecast {
+  border-color: #0097A7;
+  background-color: #00BCD4;
+  background-image: linear-gradient(0deg, #0097A7, #0097A7 50%, transparent 50%);
+  color: #fff;
+}
+
+.menu {
+  width: 100% !important;
+}
+
+.menu-content {
+  -webkit-transform: none !important;
+  transform: none !important;
+}
+
+.menu-content.menu-open {
+  z-index: -1;
+}
+
+.menu-left {
+  z-index: auto !important;
+  left: -100%;
+  -webkit-transition: left 200ms ease;
+  transition: left 200ms ease;
+}
+
+.menu-left.menu-open {
+  left: 0px;
+}
+
+[nav-bar-transition="android"] .title,
+[nav-bar-transition="android"] .buttons {
+  -webkit-transition-duration: 0ms;
+  transition-duration: 0ms;
+  -webkit-transition-property: none;
+  transition-property: none;
+  opacity: 1;
+}
+
+[nav-bar-transition="android"] [nav-bar="leaving"] .search-header,
+[nav-bar-transition="android"] [nav-bar="leaving"] .buttons-right {
+  display: none;
+}
+
+[nav-bar-transition="android"] [nav-bar="entering"] .header-item {
+  opacity: 1;
+}
+
+.bar.bar-search .forecast-header,
+.bar.bar-forecast .search-header,
+.bar.bar-search .dailyforecast-header,
+.bar.bar-dailyforecast .search-header {
+  display: none !important;
+}
+
+.menu-content.overflow-scroll {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
 /* popup */
 .ionic_popup .popup {
   background-color: #ffffff;
+  width: 280px;
 }
 
 .ionic_popup .popup-head {
-  height: 44px;
-  background-color: #03A9F4;
-  text-align: center;
-  line-height: 44px;
+  display: none;
 }
 
-.ionic_popup .popup-title {
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-}
+//.ionic_popup .popup-head {
+//  height: 44px;
+//  background-color: #03A9F4;
+//  text-align: center;
+//  line-height: 44px;
+//}
+//
+//.ionic_popup .popup-title {
+//  color: #ffffff;
+//  font-size: 18px;
+//  font-weight: 700;
+//}
 
 .ionic_popup .popup-body {
   padding: 0;
@@ -471,28 +726,43 @@ $font-family-base: "Bareun Dotum Pro", sans-serif !default;
   font-size: 45px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .display1 {
   font-size: 34px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .headline {
   font-size: 24px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0;
 }
 
 .title {
-  font-size: 21px;
+  left: 0px !important;
+  right: 0px !important;
+}
+
+.setting-title-light {
+  background-color: inherit;
+  color: inherit;
+  font-size: 20px;
   opacity: 0.87;
-  font-weight: 700;
-  //letter-spacing: 5px;
+  //letter-spacing: 2px;
+}
+
+.setting-subheading-light {
+  background-color: inherit;
+  color: inherit;
+  font-size: 17px;
+  opacity: 0.87;
+  //letter-spacing: 2px;
+}
+
+.item-select:after {
+  color: white;
 }
 
 p small {
@@ -510,30 +780,25 @@ p small {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
 }
 
 .body1 {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 400;
-  letter-spacing: 0px;
 }
 
 .caption {
   font-size: 13px;
   opacity: 0.54;
   font-weight: 400;
-  letter-spacing: 2px;
 }
 
 .button {
   font-size: 15px;
   opacity: 0.87;
   font-weight: 700;
-  letter-spacing: 5px;
 }
-
 
 [md-page-header] {
   padding: 0;
@@ -588,8 +853,6 @@ p small {
   color: #795548;
   opacity: 0.87;
 }
-
-//chrome extension
 
 //iphone 4
 @media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/480)

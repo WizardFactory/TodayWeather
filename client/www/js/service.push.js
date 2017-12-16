@@ -5,11 +5,11 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units) {
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": Util.googleSenderId,
+                "senderID": twClientConfig.googleSenderId
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -23,7 +23,7 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = Util.url + '/push';
+        obj.pushUrl = twClientConfig.serverUrl + '/v000705'+'/push';
 
         //attach push object to the window object for android event
         //obj.push;
@@ -36,7 +36,7 @@ angular.module('service.push', [])
 
         obj.loadPushInfo = function () {
             var self = this;
-            var pushData = JSON.parse(localStorage.getItem("pushData"));
+            var pushData = TwStorage.get("pushData");
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
@@ -49,7 +49,7 @@ angular.module('service.push', [])
                 if (self.pushData.alarmList.length > 0) {
                     setTimeout(function() {
                         self.pushData.alarmList.forEach(function (alarmInfo) {
-                            postPushInfo(alarmInfo);
+                            self._postPushInfo(alarmInfo);
                         });
                     }, 3000);
                 }
@@ -59,83 +59,106 @@ angular.module('service.push', [])
         };
 
         obj.savePushInfo = function () {
-            console.log('save push data');
             var self = this;
-            localStorage.setItem("pushData", JSON.stringify(self.pushData));
+            console.log('save push data');
+            TwStorage.set("pushData", self.pushData);
         };
 
         /**
          * loadPushInfo로 데이터를 읽어온 경우 time은 string임.
+         * controllers에서 localTime으로 설정한 후, 여기서 UTC기준으로 전달함.
          * @param alarmInfo
          */
-        function postPushInfo(alarmInfo) {
+        obj._postPushInfo  = function postPushInfo(alarmInfo) {
+            var self = this;
             var time = alarmInfo.time;
             var pushTime = time.getUTCHours() * 60 * 60 + time.getUTCMinutes() * 60;
-
-            var pushInfo = { registrationId: obj.pushData.registrationId,
-                type: obj.pushData.type,
+            var pushInfo = { registrationId: self.pushData.registrationId,
+                type: self.pushData.type,
                 pushTime: pushTime,
                 cityIndex: alarmInfo.cityIndex,
-                town: alarmInfo.town };
+                town: alarmInfo.town,               //first, second, third
+                name: alarmInfo.name,
+                location: alarmInfo.location,       //lat, long
+                source: alarmInfo.source,           //KMA or DSF, ...
+                units: Units.getAllUnits()
+            };
+            //name, units
             $http({
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                url: obj.pushUrl,
+                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language, 'Device-Id': Util.uuid},
+                url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
             })
-                .then(function (result) {
-                    //callback(undefined, result.data);
-                    console.log(result);
-                },
-                function (err) {
-                    //callback(err);
+                .success(function (data) {
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
                     console.log(err);
+                    //callback(err);
                 });
-        }
+        };
 
-        function deletePushInfo(alarmInfo) {
-             var pushInfo = { registrationId: obj.pushData.registrationId,
-                type: obj.pushData.type,
+        obj._deletePushInfo = function deletePushInfo(alarmInfo) {
+            var self = this;
+            var pushInfo = { registrationId: self.pushData.registrationId,
+                type: self.pushData.type,
                 cityIndex: alarmInfo.cityIndex,
                 town: alarmInfo.town };
 
             $http({
                 method: 'DELETE',
-                headers: {'Content-Type': 'application/json'},
-                url: obj.pushUrl,
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
+                url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
             })
-                .then(function (result) {
-                    //callback(undefined, result.data);
-                    console.log(result);
-                },
-                function (err) {
-                    //callback(err);
+                .success(function (data) {
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
                     console.log(err);
+                    //callback(err);
                 });
-        }
+        };
 
-        function updateRegistrationId( registrationId) {
+        obj._updateRegistrationId = function updateRegistrationId( registrationId) {
+            var self = this;
             //update registration id on server
             $http({
                 method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                url: obj.pushUrl,
-                data: {newRegId: registrationId, oldRegId: obj.pushData.registrationId},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
+                url: self.pushUrl,
+                data: {newRegId: registrationId, oldRegId: self.pushData.registrationId},
                 timeout: 10*1000
             })
-                .then(function (result) {
+                .success(function (data) {
                     //callback(undefined, result.data);
-                    console.log(result);
-                },
-                function (err) {
-                    //callback(err);
+                    console.log(data);
+                })
+                .error(function (data, status) {
+                    console.log(status +":"+data);
+                    data = data || "Request failed";
+                    var err = new Error(data);
+                    err.code = status;
                     console.log(err);
+                    //callback(err);
                 });
-            obj.pushData.registrationId = registrationId;
-        }
+            self.pushData.registrationId = registrationId;
+        };
 
         obj.register = function (callback) {
             var self = this;
@@ -150,7 +173,7 @@ angular.module('service.push', [])
             window.push.on('registration', function(data) {
                 console.log(JSON.stringify(data));
                 if (self.pushData.registrationId != data.registrationId) {
-                    updateRegistrationId(data.registrationId);
+                    self._updateRegistrationId(data.registrationId);
                 }
                 return callback(data.registrationId);
             });
@@ -166,7 +189,7 @@ angular.module('service.push', [])
                 // data.additionalData.foreground
                 // data.additionalData.coldstart
                 // data.additionalData.cityIndex
-                if (data.additionalData.foreground === false) {
+                if (data && data.additionalData && data.additionalData.foreground === false) {
                     //clicked 인지 아닌지 구분 필요.
                     //ios의 경우 badge 업데이트
                     //현재위치의 경우 데이타 업데이트 가능? 체크
@@ -175,14 +198,29 @@ angular.module('service.push', [])
                     //if have additionalData go to index page
                     var url = '/tab/forecast?fav='+data.additionalData.cityIndex;
                     //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                    WeatherInfo.setCityIndex(data.additionalData.cityIndex);
+                    var fav = parseInt(data.additionalData.cityIndex);
+                    if (!isNaN(fav)) {
+                        if (fav === 0) {
+                            var city = WeatherInfo.getCityOfIndex(0);
+                            if (city !== null && !city.disable) {
+                                WeatherInfo.setCityIndex(fav);
+                            }
+                        } else {
+                            WeatherInfo.setCityIndex(fav);
+                        }
+                    }
                     console.log('clicked: ' + data.additionalData.cityIndex + ' url='+url);
                     $location.url(url);
+                    Util.ga.trackEvent('action', 'click', 'push url='+url);
+                }
+                else {
+                    Util.ga.trackEvent('action', 'error', 'push data='+data);
                 }
             });
 
             window.push.on('error', function(e) {
-                console.log('notification error='+JSON.stringify(e));
+                console.log('notification error='+e.message);
+                Util.ga.trackEvent('plugin', 'error', 'push '+ e.message);
                 // e.message
             });
 
@@ -194,17 +232,16 @@ angular.module('service.push', [])
              * @param callback
              */
             window.push.updateAlarm = function (cityIndex, address, time, callback) {
-                return obj.updateAlarm(cityIndex, address, time, callback);
+                return self.updateAlarm(cityIndex, address, time, callback);
             };
 
             window.push.getAlarm = function (cityIndex) {
-                return obj.getAlarm(cityIndex);
+                return self.getAlarm(cityIndex);
             };
         };
 
         obj.unregister = function () {
-            console.log('we donot use unregister');
-            return;
+            console.log('we do not use unregister');
             //var self = this;
             //console.log('push unregister');
             //window.push.unregister(function() {
@@ -217,9 +254,14 @@ angular.module('service.push', [])
         };
 
         obj.updateAlarm = function (cityIndex, address, time, callback) {
+            var self = this;
             var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(address));
             var alarmInfo = {cityIndex: cityIndex, town: town, time: time};
-            var self = this;
+
+            var city = WeatherInfo.getCityOfIndex(cityIndex);
+
+            alarmInfo = {cityIndex: cityIndex, town: town, time: time,
+                        location: city.location, name: city.name, source: city.source};
 
             if (!callback) {
                 callback = function (err) {
@@ -227,6 +269,16 @@ angular.module('service.push', [])
                         console.log(err);
                     }
                 };
+            }
+
+            if (!time) {
+                var err = new Error("You have to set time for add alarm");
+                return callback(err);
+            }
+
+            if (town.first=="" && town.second=="" && town.third=="" && city.location == null) {
+                var err = new Error("You have to set location info for add alarm");
+                return callback(err);
             }
 
             if (self.pushData.alarmList.length == 0) {
@@ -252,10 +304,6 @@ angular.module('service.push', [])
                     self.pushData.alarmList[i] = alarmInfo;
                 }
                 else {
-                    if (!time) {
-                        var err = new Error("You have to set time for add alarm");
-                        return callback(err);
-                    }
                     self.pushData.alarmList.push(alarmInfo);
                 }
                 //check alarm in list
@@ -263,13 +311,13 @@ angular.module('service.push', [])
 
             if (!window.push) {
                 self.register(function () {
-                    postPushInfo(alarmInfo);
+                    self._postPushInfo(alarmInfo);
                     self.savePushInfo();
                     return callback(undefined, alarmInfo);
                 });
             }
             else {
-                postPushInfo(alarmInfo);
+                self._postPushInfo(alarmInfo);
                 self.savePushInfo();
                 return callback(undefined, alarmInfo);
             }
@@ -290,7 +338,7 @@ angular.module('service.push', [])
             }
 
             self.pushData.alarmList.splice(i, 1);
-            deletePushInfo(alarmInfo);
+            self._deletePushInfo(alarmInfo);
 
             if (self.pushData.alarmList.length == 0) {
                 self.unregister();
@@ -307,30 +355,27 @@ angular.module('service.push', [])
                 }
             }
             console.log('fail to find cityIndex='+cityIndex);
-            return;
         };
 
-        return obj;
-    })
-    .run(function($ionicPlatform, Push) {
+        obj.init = function () {
+            var self = this;
 
-        Push.loadPushInfo();
+            self.loadPushInfo();
 
-        $ionicPlatform.ready(function() {
             if (!window.PushNotification) {
-                console.log("push notification plugin is not set");
+                Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
 
             if (ionic.Platform.isIOS()) {
-                Push.pushData.type = 'ios';
+                self.pushData.type = 'ios';
             }
             else if (ionic.Platform.isAndroid()) {
-                Push.pushData.type = 'android';
+                self.pushData.type = 'android';
             }
 
             //if push is on, call register
-            if (Push.pushData.alarmList.length > 0) {
+            if (self.pushData.alarmList.length > 0) {
                 PushNotification.hasPermission(function(data) {
                     if (data.isEnabled) {
                         console.log('isEnabled');
@@ -345,10 +390,12 @@ angular.module('service.push', [])
                     console.log('Already set push notification');
                     return;
                 }
-                Push.register(function (registrationId) {
-                   console.log('start push registrationId='+registrationId);
+                self.register(function (registrationId) {
+                    console.log('start push registrationId='+registrationId);
                 });
             }
-        });
+        };
+
+        return obj;
     });
 
