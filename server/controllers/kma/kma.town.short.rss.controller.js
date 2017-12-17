@@ -117,7 +117,7 @@ TownRss.prototype.getShortRss = function(index, url, callback){
         }
 
         //log.info(body);
-        xml2json(body, function(err, result){
+        xml2json(body, function(err, result) {
             if(err){
                 log.error('>>ERROR : failed to convert to json');
                 if(callback){
@@ -125,17 +125,9 @@ TownRss.prototype.getShortRss = function(index, url, callback){
                 }
                 return;
             }
-            try{
-                //log.info(result)
-                if(callback){
-                    callback(self.SUCCESS, result);
-                }
-            }
-            catch(e) {
-                log.error('>>ERROR : get exception error in xml2json');
-                if(callback){
-                    callback(self.ERROR);
-                }
+
+            if(callback){
+                callback(self.SUCCESS, result);
             }
         });
     });
@@ -245,6 +237,7 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
         mx:0,
         my:0
     };
+    var pubDate;
 
     //log.info('data:', data);
     //log.info('head:', data.wid.header[0]);
@@ -320,15 +313,18 @@ TownRss.prototype.parseShortRss = function(index, data, callback){
         });
 
         //log.info(dataList);
-        if(callback){
-            callback(self.SUCCESS, {mCoord: coord, pubDate: data.wid.header[0].tm[0], shortData: dataList});
-        }
+        pubDate = data.wid.header[0].tm[0];
     }
     catch(e){
         log.error('parse error! (%d)', index);
         if(callback){
             callback(self.ERROR);
         }
+        return;
+    }
+
+    if(callback){
+        callback(self.SUCCESS, {mCoord: coord, pubDate: pubDate, shortData: dataList});
     }
 };
 
@@ -606,10 +602,12 @@ TownRss.prototype.getData = function(index, item, cb){
     var self = this;
     var url = self.makeUrl(item.mCoord.mx, item.mCoord.my);
     self.getShortRss(index, url, function(err, RssData){
-        if(err){
+        if(err) {
             log.error('failed to get short rss (%d)', index);
             if(err == self.RETRY){
                 self.emit('recvFail', index, item);
+                //It will try again!
+                return;
             }
 
             if(cb) {
