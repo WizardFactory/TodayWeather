@@ -2320,7 +2320,7 @@ function controllerWorldWeather() {
         if(summary.pres){
             day.press = summary.pres;
         }
-        if(summary.vis){
+        if(summary.vis && summary.vis != -100){
             day.vis = parseFloat((summary.vis * 1.609344).toFixed(2));
         }
 
