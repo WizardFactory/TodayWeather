@@ -212,6 +212,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
         $ionicLoading.show();
 
+        var geoInfo;
+
         if (result.hasOwnProperty('first')) {
             console.info("from town.js "+JSON.stringify(result));
             var address = "대한민국"+" "+result.first;
@@ -240,9 +242,9 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 address += " " + result.third;
             }
 
-            var geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
-            var startTime = new Date().getTime();
+            geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
 
+            var startTime = new Date().getTime();
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
@@ -310,7 +312,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         }
         else {
             console.info("from geoinfo server "+JSON.stringify(result));
-            var geoInfo = result;
+            geoInfo = result;
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 if (saveCity(weatherData, geoInfo) == false) {
                     Util.ga.trackEvent('city', 'add error', geoInfo.address, WeatherInfo.getCityCount() - 1);
