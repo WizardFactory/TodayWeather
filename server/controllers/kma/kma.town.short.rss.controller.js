@@ -605,9 +605,8 @@ TownRss.prototype.getData = function(index, item, cb){
         if(err) {
             log.error('failed to get short rss (%d)', index);
             if(err == self.RETRY){
+                //called getData without callback parameter
                 self.emit('recvFail', index, item);
-                //It will try again!
-                return;
             }
 
             if(cb) {
