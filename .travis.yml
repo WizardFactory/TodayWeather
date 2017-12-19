@@ -3,3 +3,22 @@ language: node_js
 node_js:
   - "4.4"
 script: cd server && npm install && npm test
+
+services:
+  - docker
+
+after_deploy:
+  - echo "done deploying"
+
+deploy:
+  provider: elasticbeanstalk
+  script: git subtree split --prefix=server -b release
+  access_key_id: $ACCESSKEYID
+  secret_access_key:
+    secure: "$SECRETACCESSKEY"
+  region: "us-east-1"
+  app: "tw-test2"
+  env: "tw-service"
+  bucket_name: "elasticbeanstalk-us-east-1-141248341265"
+  on:
+    branch: master
