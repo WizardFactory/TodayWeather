@@ -192,18 +192,6 @@ angular.module('service.weatherinfo', [])
             var that = this;
             var city = cities[index];
 
-            if (newCityInfo.name) {
-                city.name = newCityInfo.name;
-            }
-            if (newCityInfo.country) {
-                city.country = newCityInfo.country;
-            }
-            if (newCityInfo.address) {
-                city.address = newCityInfo.address;
-            }
-            if (newCityInfo.location) {
-                city.location = newCityInfo.location;
-            }
             if (newCityInfo.currentWeather) {
                 city.currentWeather = newCityInfo.currentWeather;
             }
@@ -222,9 +210,23 @@ angular.module('service.weatherinfo', [])
             if (newCityInfo.source) {
                 city.source = newCityInfo.source;
             }
-            if (window.push && city.currentPosition == true) {
-                if (window.push.getAlarm(index)) {
-                    window.push.updateAlarm(index, city.address);
+            if (city.currentPosition == true) {
+                if (newCityInfo.name) {
+                    city.name = newCityInfo.name;
+                }
+                if (newCityInfo.country) {
+                    city.country = newCityInfo.country;
+                }
+                if (newCityInfo.address) {
+                    city.address = newCityInfo.address;
+                }
+                if (newCityInfo.location) {
+                    city.location = newCityInfo.location;
+                }
+                if (window.push) {
+                    if (window.push.getAlarm(index)) {
+                        window.push.updateAlarm(index, city.address);
+                    }
                 }
             }
             city.loadTime = new Date();
