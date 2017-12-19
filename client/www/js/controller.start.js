@@ -332,6 +332,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
             if (ionic.Platform.isIOS()) {
                 if (Util.isLocationEnabled()) {
+                    $scope.setLocationAuthorizationStatus(Util.locationStatus);
                     _getCurrentPosition(deferred, true, true);
                 } else if (Util.locationStatus === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED) {
                     // location service가 off 상태로 시작한 경우에는 denied로 설정되어 있음. on 상태인 경우에 not_requested로 들어옴
@@ -658,7 +659,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
                 Util.ga.trackEvent('window', 'show', 'deniedPopup');
             }
-            else {
+            else if (Util.isLocationEnabled() == false) {
                 buttons.push({
                     text: strSetting,
                     onTap: function () {
@@ -666,6 +667,9 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     }
                 });
 
+                Util.ga.trackEvent('window', 'show', 'locationDisabledPopup');
+            }
+            else {
                 Util.ga.trackEvent('window', 'show', 'retryPopup');
             }
 
