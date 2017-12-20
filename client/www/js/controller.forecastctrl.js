@@ -185,38 +185,15 @@ angular.module('controller.forecastctrl', [])
                 case 5:
                     str = '&#xE814;';
                     break;
+                case 6:
+                    str = '&#xE814;';
+                    break;
                 default:
                     console.log('Fail to find grade='+grade);
             }
             return $sce.trustAsHtml(str);
         };
 
-        $scope.getSentimentStr = function(grade) {
-            var airGradeStr = ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'];
-            if (grade >= 3) {
-                grade++;
-            }
-            return airGradeStr[grade-1];
-        };
-
-        $scope.getLowHighGradeStr = function (grade) {
-           var lowHighGradeStr = ['LOC_LOW', 'LOC_NORMAL', 'LOC_HIGH', 'LOC_VERY_HIGH', 'LOC_HAZARD'];
-            return lowHighGradeStr[grade];
-        };
-
-        $scope.getAttentionWarningGradeStr = function (grade) {
-            var awGradeStr = ['LOC_ATTENTION', 'LOC_CAUTION', 'LOC_WARNING', 'LOC_HAZARD'];
-            return awGradeStr[grade];
-        };
-
-        /**
-         * controllerKmaStnWeather._makeWeatherType , $scope.getWeatherStr, self._description2weatherType 와 sync 맞추어야 함
-         * @param current
-         * @returns {*}
-         */
-        $scope.getWeatherStr = function (current) {
-            return current.weather;
-        };
 
         var regionSize;
         var regionSumSize;
@@ -1151,6 +1128,14 @@ angular.module('controller.forecastctrl', [])
             return Units.getUnit('precipitationUnit');
         };
 
+        $scope.getCurrentAirUnitStr = function () {
+            return Units.getAirUnitStr(Units.getUnit('airUnit'));
+        };
+
+        $scope.getForecastAirUnitStr = function () {
+            return Units.getAirUnitStr('airkorea');
+        };
+
         /**
          *
          * @param temp
@@ -1188,6 +1173,12 @@ angular.module('controller.forecastctrl', [])
         $scope.$on('$destroy',function(){
             clearTimeout(refreshTimer);
         });
+
+        $scope.clickEvent = function (item) {
+            if (item === 'units') {
+                $location.path('/units');
+            }
+        };
 
         init();
     });

@@ -61,6 +61,17 @@
                     <option value="in">inch</option>
                 </select>
             </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_AIR_QUALITY_INDEX_UNIT'|translate}}
+                </div>
+                <select ng-model="airUnit" ng-change="setUnit('airUnit', airUnit)">
+                    <option value="airnow">{{getAirUnitStr('airnow')|translate}}</option>
+                    <option value="aircn">{{getAirUnitStr('aircn')|translate}}</option>
+                    <option value="airkorea">{{getAirUnitStr('airkorea')|translate}}</option>
+                    <option value="airkorea_who">{{getAirUnitStr('airkorea_who')|translate}}</option>
+                </select>
+            </label>
         </div>
     </ion-content>
 </ion-view>

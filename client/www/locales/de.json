@@ -256,5 +256,10 @@
   "LOC_E": "O",
   "LOC_W": "W",
   "LOC_S": "S",
-  "LOC_N": "N"
+  "LOC_N": "N",
+  "LOC_AIR_QUALITY_INDEX_UNIT" : "Index Standard",
+  "LOC_AIR_QUALITY_INDEX_KR" : "S.Korea",
+  "LOC_AIR_QUALITY_INDEX_KR_WHO" : "S.Korea(WHO)",
+  "LOC_AIR_QUALITY_INDEX_US" : "USA",
+  "LOC_AIR_QUALITY_INDEX_CN" : "China"
 }
