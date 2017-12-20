@@ -10,8 +10,8 @@ services:
 before_deploy:
   - pip install --user awscli
   - aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
-  - ls ./
-  - cat ./config/config.js
+  - git add config/config.js
+  - git commit -m "update release-config.js"
 
 after_deploy:
   - echo "done deploying"
