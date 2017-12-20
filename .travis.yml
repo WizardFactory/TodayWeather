@@ -8,10 +8,10 @@ services:
   - docker
 
 before_deploy:
-  - echo "install awscli"
   - pip install --user awscli
-  - echo 'copy config.js'
   - aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
+  - ls ./
+  - cat ./config/config.js
 
 after_deploy:
   - echo "done deploying"
