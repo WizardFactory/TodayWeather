@@ -215,36 +215,7 @@ angular.module('controller.forecastctrl', [])
          * @returns {*}
          */
         $scope.getWeatherStr = function (current) {
-            if (current.weatherType == undefined) {
-                if (!(current.weather == undefined)) {
-                    return current.weather;
-                }
-                return "";
-            }
-
-            /**
-             * 순서가 server의 _description2weatherType, _makeWeatherType와 동일해야 함.
-             * @type {string[]}
-             */
-            var weatherTypeStr = ['LOC_CLEAR', 'LOC_PARTLY_CLOUDY', 'LOC_MOSTLY_CLOUDY', 'LOC_CLOUDY', 'LOC_MIST',
-                'LOC_HAZE', 'LOC_FOG', 'LOC_THIN_FOG', 'LOC_DENSE_FOG', 'LOC_FOG_STOPPED',
-
-                'LOC_FOG', 'LOC_PARTLY_FOG', 'LOC_YELLOW_DUST', 'LOC_RAIN', 'LOC_LIGHT_DRIZZLE',
-                'LOC_DRIZZLE', 'LOC_HEAVY_DRIZZLE', 'LOC_DRIZZLE_STOPPED', 'LOC_LIGHT_RAIN_AT_TIMES', 'LOC_LIGHT_RAIN',
-
-                'LOC_RAIN_AT_TIMES', 'LOC_RAIN', 'LOC_HEAVY_RAIN_AT_TIMES', 'LOC_HEAVY_RAIN', 'LOC_LIGHT_SHOWERS',
-                'LOC_SHOWERS', 'LOC_HEAVY_SHOWERS', 'LOC_SHOWERS_STOPPED', 'LOC_RAIN_STOPPED', 'LOC_LIGHT_SLEET',
-
-                'LOC_HEAVY_SLEET', 'LOC_SLEET_STOPPED', 'LOC_LIGHT_SNOW_AT_TIMES', 'LOC_LIGHT_SNOW', 'LOC_SNOW_AT_TIMES',
-                'LOC_SNOW', 'LOC_HEAVY_SNOW_AT_TIMES', 'LOC_HEAVY_SNOW', 'LOC_LIGHT_SNOW_SHOWERS', 'LOC_HEAVY_SNOW_SHOWERS',
-
-                'LOC_SNOW_SHOWERS_STOPPED', 'LOC_SNOW_STOPPED', 'LOC_LIGHT_SNOW_PELLETS', 'LOC_HEAVY_SNOW_PELLETS', 'LOC_LIGHT_SNOW_STORM',
-                'LOC_SNOW_STORM', 'LOC_HEAVY_SNOW_STORM', 'LOC_POWDER_SNOW', 'LOC_WATER_SPOUT', 'LOC_HAIL',
-
-                'LOC_THUNDERSHOWERS', 'LOC_THUNDERSHOWERS_HAIL', 'LOC_THUNDERSHOWERS_RAIN_SNOW', 'LOC_THUNDERSHOWERS_STOPPED_RAIN', 'LOC_THUNDERSHOWERS_STOPPED_SNOW',
-                'LOC_LIGHTNING', 'LOC_BOLT_FROM_THE_BLUE', 'LOC_BOLT_STOPPED', 'LOC_ICE_PELLETS', 'LOC_BREEZY',
-                'LOC_HUMID', 'LOC_WINDY', 'LOC_DRY', 'LOC_VERY_STRONG_WIND', 'LOC_SLEET'];
-            return weatherTypeStr[current.weatherType];
+            return current.weather;
         };
 
         var regionSize;
@@ -674,8 +645,9 @@ angular.module('controller.forecastctrl', [])
             }
 
             $scope.showDetailWeather = true;
+            $scope.summary = $scope.currentWeather.summary;
+
             _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-            _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday);
             if($scope.forecastType == 'short') {
                 $scope.timeTable = cityData.timeTable;
                 $scope.timeChart = cityData.timeChart;
@@ -876,12 +848,9 @@ angular.module('controller.forecastctrl', [])
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (data) {
                         Util.ga.trackEvent('position', 'done', data.provider);
-                        var coords = data.coords;
-                        WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                            deferred.resolve(geoInfo);
-                        }, function () {
-                            deferred.reject(strFailToGetAddressInfo);
-                        });
+
+                        var location = WeatherUtil.geolocationNormalize({lat: data.coords.latitude, long: data.coords.longitude});
+                        deferred.resolve({location:location});
                     }, function (errMsg) {
                         if (errMsg === 'alreadyCalled') {
                             Util.ga.trackEvent('position', 'warning', 'already called');
@@ -970,7 +939,7 @@ angular.module('controller.forecastctrl', [])
             var deferred = $q.defer();
             var startTime = new Date().getTime();
 
-            WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
                 Util.ga.trackEvent('weather', 'get', geoInfo.address +
@@ -1090,6 +1059,12 @@ angular.module('controller.forecastctrl', [])
             return value;
         };
 
+        /**
+         * 타지역 비교시 필요함.
+         * @param current
+         * @param yesterday
+         * @private
+         */
         function _diffTodayYesterday(current, yesterday) {
             var strSameAsYesterday = "Same as yesterday";
             var strThanYesterday = "%s˚ than yesterday";
@@ -1125,148 +1100,6 @@ angular.module('controller.forecastctrl', [])
                 }
                 $scope.diffTempStr = str;
             });
-        }
-
-        function _convertKmaWsdToStr(windGrade)  {
-            switch (windGrade) {
-                case 0: return "";
-                case 1: return "LOC_LIGHT_WIND";
-                case 2: return "LOC_MODERATE_WIND";
-                case 3: return "LOC_STRONG_WIND";
-                case 4: return "LOC_VERY_STRONG_WIND";
-            }
-            return "";
-        }
-
-        function _makeSummary(current, yesterday) {
-            var deferred = $q.defer();
-            var translations;
-            $translate(['LOC_PM10', 'LOC_PM25', 'LOC_AQI', 'LOC_DISCOMFORT_INDEX', 'LOC_FEELS_LIKE',
-                'LOC_UV', 'LOC_FOOD_POISONING', 'LOC_RAINFALL', 'LOC_SNOWFALL', 'LOC_PRECIPITATION'
-            ]).then(function (trans) {
-                translations = trans;
-            }, function (translationIds) {
-                translations = translationIds;
-            }).finally(function () {
-                var str = "";
-                var item;
-                var itemList = [];
-                var diffTemp;
-                var tmpGrade;
-
-                if (current.t1h !== undefined && yesterday && yesterday.t1h !== undefined) {
-                    diffTemp = Math.round(current.t1h) - Math.round(yesterday.t1h);
-                    str = $scope.diffTempStr;
-                    item = {str: str, grade: Math.abs(diffTemp)};
-                    itemList.push(item);
-                }
-
-                if (!(current.weatherType == undefined)) {
-                    tmpGrade = 1;
-                    if (current.weatherType > 3) {
-                        tmpGrade = 3;
-                    }
-                    item = {str: $translate.instant($scope.getWeatherStr(current)), grade: tmpGrade};
-                    itemList.push(item);
-                }
-
-                if (current.arpltn) {
-                    var arpltn = current.arpltn;
-                    var locStr = translations.LOC_AQI;
-                    tmpGrade = arpltn.khaiGrade;
-                    if (tmpGrade < arpltn.pm25Grade) {
-                        locStr = translations.LOC_PM25;
-                        tmpGrade = arpltn.pm25Grade;
-                    }
-                    if (tmpGrade < arpltn.pm10Grade) {
-                        locStr = translations.LOC_PM10;
-                        tmpGrade = arpltn.pm10Grade;
-                    }
-
-                    str = locStr + " " + $translate.instant($scope.getSentimentStr(tmpGrade));
-                    item = {str: str, grade: tmpGrade};
-                    itemList.push(item);
-                }
-
-                if (current.rn1 && current.pty) {
-                    switch (current.pty) {
-                        case 1:
-                            current.ptyStr = translations.LOC_RAINFALL;
-                            break;
-                        case 2:
-                            current.ptyStr = translations.LOC_PRECIPITATION;
-                            break;
-                        case 3:
-                            current.ptyStr = translations.LOC_SNOWFALL;
-                            break;
-                        default :
-                            current.ptyStr = "";
-                    }
-                    current.rn1Str = current.rn1 + Units.getUnit("precipitationUnit");
-                    item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
-                    itemList.push(item);
-                }
-
-                if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
-                    tmpGrade = current.dsplsGrade;
-                    str = translations.LOC_DISCOMFORT_INDEX + " ";
-                    str += $translate.instant($scope.getLowHighGradeStr(tmpGrade));
-                    item = {str:str, grade: tmpGrade};
-                    itemList.push(item);
-                }
-
-                if (current.sensorytem && current.sensorytem !== current.t1h) {
-                    diffTemp = Math.round(current.sensorytem - current.t1h);
-                    str = translations.LOC_FEELS_LIKE + " " + $scope.getTemp(current.sensorytem) +"˚";
-                    item = {str :str, grade: Math.abs(diffTemp)};
-                    itemList.push(item);
-                }
-
-                if (current.ultrvGrade && Number(current.time) < 1800) {
-                    tmpGrade = current.ultrvGrade;
-                    str = translations.LOC_UV + " ";
-                    str += $translate.instant($scope.getLowHighGradeStr(tmpGrade));
-                    item = {str: str, grade: tmpGrade+1};
-                    itemList.push(item);
-                }
-
-                if (current.wsdGrade) {
-                    str = $translate.instant(_convertKmaWsdToStr(current.wsdGrade));
-                    item = {str:str, grade: current.wsdGrade+1};
-                    itemList.push(item);
-                }
-
-                if (current.fsnGrade) {
-                    tmpGrade = current.fsnGrade;
-                    str = translations.LOC_FOOD_POISONING + " ";
-                    str += $translate.instant($scope.getAttentionWarningGradeStr(tmpGrade));
-                    item = {str: str, grade: tmpGrade+1};
-                    itemList.push(item);
-                }
-
-                //감기
-
-                itemList.sort(function (a, b) {
-                    if(a.grade > b.grade){
-                        return -1;
-                    }
-                    if(a.grade < b.grade){
-                        return 1;
-                    }
-                    return 0;
-                });
-
-
-                str = itemList[0].str;
-                if (itemList.length > 1) {
-                    str += ", "+itemList[1].str;
-                }
-
-                $rootScope.summary = str;
-                deferred.resolve(str);
-            });
-
-            return deferred.promise;
         }
 
         $scope.$on('reloadEvent', function(event, sender) {

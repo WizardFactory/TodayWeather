@@ -325,12 +325,14 @@ angular.module('controller.tabctrl', [])
                 }
                 else {
                     //fail to get address information
-                    buttons.push({
-                        text: strClose,
-                        onTap: function () {
-                            return 'close';
-                        }
-                    });
+                    if (type == 'forecast') {
+                        buttons.push({
+                            text: strClose,
+                            onTap: function () {
+                                return 'close';
+                            }
+                        });
+                    }
 
                     buttons.push({
                         text: strOkay,

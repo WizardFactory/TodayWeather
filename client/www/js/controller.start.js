@@ -212,7 +212,10 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
         $ionicLoading.show();
 
+        var geoInfo;
+
         if (result.hasOwnProperty('first')) {
+            console.info("from town.js "+JSON.stringify(result));
             var address = "대한민국"+" "+result.first;
             var name = result.first;
             if (result.second !== "") {
@@ -239,21 +242,20 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 address += " " + result.third;
             }
 
-            var geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
-            var startTime = new Date().getTime();
+            geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
 
-            WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
+            var startTime = new Date().getTime();
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
+                Util.ga.trackEvent('weather', 'get', address , endTime - startTime);
 
                 if (saveCity(weatherData, geoInfo) == false) {
-                    Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
+                    Util.ga.trackEvent('city', 'add error', address, WeatherInfo.getCityCount() - 1);
                     $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                 }
                 else {
-                    Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-
+                    Util.ga.trackEvent('city', 'add', address, WeatherInfo.getCityCount() - 1);
                     close();
                 }
                 $ionicLoading.hide();
@@ -261,10 +263,10 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', address +
                         '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
+                    Util.ga.trackEvent('weather', 'error', address +
                         '(' + error + ')', endTime - startTime);
                 }
 
@@ -273,7 +275,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 $ionicLoading.hide();
             });
         }
-        else {
+        else if (result.hasOwnProperty('matched_substrings')) {
+            console.info("from google "+JSON.stringify(result));
             if (result.matched_substrings && result.matched_substrings.length > 0) {
                 var matched_substrings_offset =  result.matched_substrings[0].offset;
                 for (var i=0; i<result.terms.length; i++) {
@@ -284,25 +287,46 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 }
             }
 
-            WeatherUtil.getGeoInfoFromAddress(result.description).then(function(geoInfo) {
-                geoInfo.name = result.name;
-                WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
-
-                    if (saveCity(weatherData, geoInfo) == false) {
-                        $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                    }
-                    else {
-                        close();
-                    }
-                    $ionicLoading.hide();
-                }, function () {
-                    Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                    $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+            WeatherUtil.getGeoInfoByAddr(result.description)
+                .then(function (geoInfo) {
+                    geoInfo.name = result.name;
+                    WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+                        if (saveCity(weatherData, geoInfo) == false) {
+                            Util.ga.trackEvent('city', 'add error', result.description, WeatherInfo.getCityCount() - 1);
+                            $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                        }
+                        else {
+                            Util.ga.trackEvent('city', 'add', result.description, WeatherInfo.getCityCount() - 1);
+                            close();
+                        }
+                        $ionicLoading.hide();
+                    }, function () {
+                        Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                        $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+                        $ionicLoading.hide();
+                    });
+                }, function (err) {
+                    Util.ga.trackEvent('weather', 'error', err);
                     $ionicLoading.hide();
                 });
+        }
+        else {
+            console.info("from geoinfo server "+JSON.stringify(result));
+            geoInfo = result;
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+                if (saveCity(weatherData, geoInfo) == false) {
+                    Util.ga.trackEvent('city', 'add error', geoInfo.address, WeatherInfo.getCityCount() - 1);
+                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                }
+                else {
+                    Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
+                    close();
+                }
             }, function (err) {
-                console.log(err);
-                Util.ga.trackEvent('weather', 'error', err);
+                console.error(err);
+                Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+            }).finally(function () {
                 $ionicLoading.hide();
             });
         }
@@ -332,6 +356,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
             if (ionic.Platform.isIOS()) {
                 if (Util.isLocationEnabled()) {
+                    $scope.setLocationAuthorizationStatus(Util.locationStatus);
                     _getCurrentPosition(deferred, true, true);
                 } else if (Util.locationStatus === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED) {
                     // location service가 off 상태로 시작한 경우에는 denied로 설정되어 있음. on 상태인 경우에 not_requested로 들어옴
@@ -375,12 +400,17 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             if (isLocationAuthorized === true) {
                 WeatherUtil.getCurrentPosition().then(function (data) {
                     Util.ga.trackEvent('position', 'done', data.provider);
-                    var coords = data.coords;
-                    WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                        deferred.resolve(geoInfo);
-                    }, function () {
-                        deferred.reject(strFailToGetAddressInfo);
-                    });
+
+                    var location = WeatherUtil.geolocationNormalize({lat: data.coords.latitude, long: data.coords.longitude});
+                    WeatherUtil.getGeoInfoByLocation(location)
+                            .then(function (geoInfo) {
+                                console.log(geoInfo);
+                                deferred.resolve(geoInfo);
+                            }, function (err) {
+                                console.error(err);
+                                deferred.reject(strFailToGetAddressInfo);
+                            });
+
                 }, function () {
                     Util.ga.trackEvent('position', 'error', 'all');
                     msg = strFailToGetCurrentPosition;
@@ -460,14 +490,9 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             //$scope.searchResults = [];
             $scope.searchResults2 = [];
             $scope.search.word = geoInfo.name;
-            if (geoInfo.googleAddress) {
-                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
-            }
-            else {
-                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.address});
-            }
-            //$ionicScrollDelegate.$getByHandle('cityList').scrollTop();
-            //searchIndex = -1;
+            geoInfo.description = geoInfo.address;
+            $scope.searchResults2.push(geoInfo);
+
         }, function(msg) {
             hideLoadingIndicator();
             if (msg !== null) {
@@ -531,7 +556,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         else {
             $ionicLoading.show();
             var geoInfo = $scope.favoriteCityList[index];
-            WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
 
                 if (saveCity(weatherData, geoInfo) == false) {
                     $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
@@ -553,7 +578,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
         updateCurrentPosition().then(function(geoInfo) {
 
-            WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
 
                 WeatherInfo.disableCity(false);
                 if (saveCity(weatherData, geoInfo, true) == false) {
@@ -658,7 +683,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
                 Util.ga.trackEvent('window', 'show', 'deniedPopup');
             }
-            else {
+            else if (Util.isLocationEnabled() == false) {
                 buttons.push({
                     text: strSetting,
                     onTap: function () {
@@ -666,6 +691,9 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     }
                 });
 
+                Util.ga.trackEvent('window', 'show', 'locationDisabledPopup');
+            }
+            else {
                 Util.ga.trackEvent('window', 'show', 'retryPopup');
             }
 

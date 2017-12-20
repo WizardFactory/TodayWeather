@@ -38,8 +38,8 @@ function ControllerWWUnits() {
             var current = req.result.thisTime[1];
             var currentDate = current.date;
             req.result.thisTime.forEach(function (value) {
-                value['time'] = kmaTimeLib.convertDateToHHZZ(value.date);
-                value['weather'] = value.desc;
+                value.time = new Date(value.date).getHours();
+                value.weather = value.desc;
                 self._convertThisTimeWeather(value, req.query);
             });
 
@@ -273,7 +273,7 @@ ControllerWWUnits.prototype._convertHourlyWeather = function (wData, query, curr
     wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
     wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
     wData['dateObj'] = wData.date;
-    wData['time'] = kmaTimeLib.convertDateToHHZZ(wData.date);
+    wData['time'] = new Date(wData.date).getHours();
     wData['date'] = kmaTimeLib.convertDateToYYYYMMDD(wData.date);
 };
 
