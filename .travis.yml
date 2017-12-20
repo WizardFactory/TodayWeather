@@ -12,10 +12,14 @@ after_deploy:
 
 deploy:
   - provider: elasticbeanstalk
-    before_deploy: ./before_server_deploy.sh
-    access_key_id: $ACCESSKEYID
+    before_deploy:
+      pip install --user awscli
+      git subtree split --prefix=server -b release-server
+      git checkout release-server
+      aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
+    access_key_id: $AWS_ACCESS_KEY_ID
     secret_access_key:
-      secure: "$SECRETACCESSKEY"
+      secure: "$AWS_SECRET_ACCESS_KEY"
     region: "us-east-1"
     app: "tw-service"
     env: "tw-test2"
