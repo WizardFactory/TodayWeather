@@ -7,16 +7,17 @@ script: cd server && npm install && npm test
 services:
   - docker
 
+before_deploy:
+  - echo "install awscli"
+  - pip install --user awscli
+  - echo 'copy config.js'
+  - aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
+
 after_deploy:
   - echo "done deploying"
 
 deploy:
   - provider: elasticbeanstalk
-    before_deploy:
-      echo 'install awscli'
-      pip install --user awscli
-      echo 'copy config.js'
-      aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
     access_key_id: $AWS_ACCESS_KEY_ID
     secret_access_key:
       secure: "$AWS_SECRET_ACCESS_KEY"
