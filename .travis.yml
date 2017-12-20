@@ -12,7 +12,7 @@ after_deploy:
 
 deploy:
   - provider: elasticbeanstalk
-    before_deploy: git subtree split --prefix=server -b release;git checkout release
+    before_deploy: ./before_server_deploy.sh
     access_key_id: $ACCESSKEYID
     secret_access_key:
       secure: "$SECRETACCESSKEY"
