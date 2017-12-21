@@ -45,14 +45,18 @@ router.get('/', function(req, res) {
 /**
  * getCurrent가는 getShortest, getShort보다 앞에 올 수 없음.
  * getSummary는 getShortest, getCurrent보다 앞에 올수 없음.
+ * 기존의 getSummary를 단위변환때문에 setYesterDay와 getSummaryAfterUnitConverter로 분리함.
+ * skyIcon은 convertUnits 전에 불러야 함.
+ * insrtStr은 convertUnits 후에 불러야함.
  */
 var routerList = [cTown.checkQueryValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,
     cTown.getPastMid, cTown.mergeMidWithShort, cTown.updateMidTempMaxMin, cTown.getLifeIndexKma, cTown.getHealthDay, cTown.getKeco,
-    cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.insertStrForData, cTown.insertSkyIcon,
-    cTown.getSummary, cTown.AirkoreaForecast, cTown.convertUnits, cTown.makeResult, cTown.sendResult];
+    cTown.getKecoDustForecast, cTown.getRiseSetInfo, cTown.insertIndex, cTown.AirkoreaForecast, cTown.insertSkyIcon,
+    cTown.setYesterday, cTown.convertUnits, cTown.insertStrForData, cTown.getSummaryAfterUnitConverter,
+    cTown.makeResult, cTown.sendResult];
 
 router.get('/:region', routerList);
 

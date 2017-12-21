@@ -59,7 +59,10 @@ describe('unit test - controller ww units', function() {
         var ctrlWWUnits = new ControllerWWUnits();
 
         ctrlWWUnits.convertUnits(req, res, function () {
+            //console.log(req.result.thisTime[1]);
             assert.equal(req.result.thisTime[1].time, 3);
+            assert.equal(req.result.thisTime[1].arpltn.coValue, 0.23);
+            assert.equal(req.result.thisTime[1].arpltn.khaiGrade, 1);
             done();
         });
     });

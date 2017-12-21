@@ -41,6 +41,7 @@ function ControllerWWUnits() {
                 value.time = new Date(value.date).getHours();
                 value.weather = value.desc;
                 self._convertThisTimeWeather(value, req.query);
+                self._makeArpltn(value);
             });
 
             req.result.daily.forEach(function (value, index) {
@@ -87,6 +88,22 @@ function ControllerWWUnits() {
         next();
     };
 }
+
+ControllerWWUnits.prototype._makeArpltn = function (current) {
+    current.arpltn = {};
+
+    ['co', 'no2', 'o3', 'pm10', 'pm25', 'so2', 'aqi'].forEach(function (prefix) {
+        ['Value', 'Grade', 'Str'].forEach(function (postfix) {
+            var name = prefix+postfix;
+            if (current.hasOwnProperty(name)) {
+                current.arpltn[name] = current[name];
+                if (prefix === 'aqi') {
+                    current.arpltn['khai'+postfix] = current[name];
+                }
+            }
+        });
+    });
+};
 
 ControllerWWUnits.prototype._convertWindDirToWdd = function (windDir) {
     switch(windDir) {

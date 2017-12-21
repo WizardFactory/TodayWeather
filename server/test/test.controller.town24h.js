@@ -67,19 +67,37 @@ describe('unit test - controller town 24h', function() {
                 "wsdStr":"바람약간강함","skyIcon":"MoonSmallCloud"}];
         req.midData = {};
         req.midData.dailyData = [
-            {"date":"20171217","wfPm":"구름많음","wfAm":"구름많음","taMin":-5,"taMax":2,"reliability":"보통","skyAm":3,
-                "ptyAm":0,"lgtAm":0,"skyPm":3,"ptyPm":0,"lgtPm":0,"sky":3,"pty":0,"lgt":0,"locationName":"서울",
-                "locationGeo":[37.55,37.55],"sunrise":"2017.12.17 07:40","suntransit":"2017.12.17 12:28",
-                "sunset":"2017.12.17 17:15","moonrise":"2017.12.17 06:22","moontransit":"2017.12.17 11:35",
-                "moonset":"2017.12.17 16:46","civilm":"2017.12.17 07:11","civile":"2017.12.17 17:44",
-                "nautm":"2017.12.17 06:38","naute":"2017.12.17 18:17","astm":"2017.12.17 06:06",
-                "aste":"2017.12.17 18:49","skyIcon":"SunBigCloud","skyAmIcon":"SunBigCloud","skyPmIcon":"SunBigCloud"},
-            {"date":"20171218","wfPm":"구름조금","wfAm":"구름조금","taMin":-6,"taMax":2,"skyAm":2,"ptyAm":0,"lgtAm":0,
-                "skyPm":2,"ptyPm":0,"lgtPm":0,"sky":2,"pty":0,"lgt":0,"skyIcon":"SunSmallCloud",
-                "skyAmIcon":"SunSmallCloud","skyPmIcon":"SunSmallCloud"}];
+            {"date":"20171220","lgt":0,"pty":3,"reh":64,"rn1":0,"sky":3,"lgtAm":0,"ptyAm":0,"skyAm":2,"wfAm":"구름조금",
+                "lgtPm":0,"ptyPm":3,"skyPm":4,"wfPm":"흐리고 눈","t1d":-2.3,"wsd":1,"taMax":3,"taMin":-7.8,"pop":70,
+                "r06":2,"s06":0.1,"fsn":62,"fsnGrade":1,"brain":2,"brainStr":"높음","skin":0,"skinStr":"낮음",
+                "asthma-lunt":3,"asthma-luntStr":"매우 높음","flowerWoody":2,"flowerWoodyStr":"높음",
+                "dustForecast":{"sido":"서울","PM25Grade":1,"PM25Str":"보통","PM10Grade":1,"PM10Str":"보통"},
+                "locationName":"서울","locationGeo":[37.55,37.55],"sunrise":"2017.12.20 07:42",
+                "suntransit":"2017.12.20 12:29","sunset":"2017.12.20 17:16","moonrise":"2017.12.20 08:54",
+                "moontransit":"2017.12.20 13:58","moonset":"2017.12.20 19:04","civilm":"2017.12.20 07:13",
+                "civile":"2017.12.20 17:45","nautm":"2017.12.20 06:40","naute":"2017.12.20 18:18",
+                "astm":"2017.12.20 06:08","aste":"2017.12.20 18:50","fsnStr":"주의","wsdGrade":1,"wsdStr":"바람약함",
+                "ptyStr":"적설량","s06Str":"~0.1cm","rn1Str":"0cm","skyIcon":"SunBigCloudSnow",
+                "skyAmIcon":"SunSmallCloud","skyPmIcon":"CloudSnow"},
+            {"date":"20171221","pop":20,"pty":0,"r06":0,"reh":66,"s06":0,"sky":2,"lgtAm":0,"ptyAm":0,"skyAm":2,
+                "wfAm":"구름조금","lgtPm":0,"ptyPm":0,"skyPm":1,"wfPm":"맑음","t1d":-0.5,"taMax":3,"taMin":-5,"wsd":0.9,
+                "fsn":67,"fsnGrade":1,"skin":0,"skinStr":"낮음","flowerWoody":2,"flowerWoodyStr":"높음","brain":2,
+                "brainStr":"높음","asthma-lunt":2,"asthma-luntStr":"높음",
+                "dustForecast":{"sido":"서울","PM25Grade":1, "PM25Str":"보통","PM10Grade":1,"PM10Str":"보통"},
+                "locationName":"서울","locationGeo":[37.55,37.55],"sunrise":"2017.12.21 07:43",
+                "suntransit":"2017.12.21 12:30","sunset":"2017.12.21 17:17","moonrise":"2017.12.21 09:38",
+                "moontransit":"2017.12.21 14:46","moonset":"2017.12.21 19:57","civilm":"2017.12.21 07:13",
+                "civile":"2017.12.21 17:46","nautm":"2017.12.21 06:40","naute":"2017.12.21 18:19",
+                "astm":"2017.12.21 06:08","aste":"2017.12.21 18:51","fsnStr":"주의","wsdGrade":1,"wsdStr":"바람약함",
+                "skyIcon":"SunSmallCloud","skyAmIcon":"SunSmallCloud","skyPmIcon":"Sun"}];
 
         cTown24h.convertUnits(req, null, function () {
            console.info(JSON.stringify({req:req}));
+           var daily = req.midData.dailyData[0];
+           assert(daily.tmx, 3);
+           if (daily.dustForecast) {
+               assert(daily.dustForecast.pm10Grade, 2);
+           }
            done();
         });
     });

@@ -577,7 +577,6 @@ function ControllerTown24h() {
         return this;
     };
 
-
     this.AirkoreaForecast = function (req, res, next){
         var meta = {};
 
@@ -652,6 +651,88 @@ function ControllerTown24h() {
         result.dailySummary = req.dailySummary;
         res.json(result);
 
+        return this;
+    };
+
+    this.setYesterday = function (req, res, next) {
+        try {
+            var meta = {};
+            meta.method = 'setYesterday';
+            meta.region = req.params.region;
+            meta.city = req.params.city;
+            meta.town = req.params.town;
+            log.info('>sID=',req.sessionID, meta);
+
+            if (!req.current || !req.currentList)  {
+                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                next();
+                return this;
+            }
+
+            var yesterdayDate = self._getCurrentTimeValue(+9-24);
+            var yesterdayItem;
+            if (yesterdayDate.time == '0000') {
+                kmaTimeLib.convert0Hto24H(yesterdayDate);
+            }
+
+            /**
+             * short 만들때, 당시간에 데이터가 없는 경우에 그 이전 데이터를 사용하지만,
+             * 새로 데이터를 수집하면 23시간전부터 있음.
+             * 그래서 해당 시간 데이터가 없는 경우 그 이후 데이터를 사용.
+             */
+            for (var i=0; i<req.currentList.length-1; i++) {
+                if (req.currentList[i].date == yesterdayDate.date &&
+                    parseInt(req.currentList[i].time) >= parseInt(req.current.time))
+                {
+                    yesterdayItem =  req.currentList[i];
+                    break;
+                }
+            }
+
+            if (yesterdayItem) {
+                req.current.yesterday = yesterdayItem;
+            }
+            else {
+                log.error('Fail to gt yesterday weather info');
+            }
+        }
+        catch (err) {
+            log.error(err);
+        }
+        next();
+        return this;
+    };
+
+    /**
+     * getSummary -> setYesterday + getSummaryAfterUnitConverter
+     * @param req
+     * @param res
+     * @param next
+     * @returns {ControllerTown24h}
+     */
+    this.getSummaryAfterUnitConverter = function(req, res, next){
+        try {
+            var meta = {};
+            meta.method = 'getSummaryAfterUnitConverter';
+            meta.region = req.params.region;
+            meta.city = req.params.city;
+            meta.town = req.params.town;
+            log.info('>sID=',req.sessionID, meta);
+
+            if (!req.current || !req.currentList)  {
+                log.warn(new Error("Fail to find current weather or current list "+JSON.stringify(meta)));
+                next();
+                return this;
+            }
+
+            var current = req.current;
+            current.summary = self.makeSummary(current, current.yesterday, req.query, res);
+        }
+        catch (err) {
+            log.error(err);
+            req.current.summary = '';
+        }
+        next();
         return this;
     };
 
@@ -783,6 +864,34 @@ function ControllerTown24h() {
                 if (value.date === current.date) {
                     current.todayIndex = index;
                 }
+
+                if (!(value.dustForecast == undefined)) {
+                    var dustForecast = value.dustForecast;
+
+                    if (!(dustForecast.PM10Grade == undefined)) {
+                        dustForecast.pm10Grade = dustForecast.PM10Grade+1;
+                        dustForecast.pm10Str = dustForecast.PM10Str;
+                        delete dustForecast.PM10Grade;
+                        delete dustForecast.PM10Str;
+                    }
+                    if (!(dustForecast.PM25Grade == undefined)) {
+                        dustForecast.pm25Grade = dustForecast.PM25Grade+1;
+                        dustForecast.pm25Str = dustForecast.PM25Str;
+                        delete dustForecast.PM25Grade;
+                        delete dustForecast.PM25Str;
+                    }
+                    if (!(dustForecast.O3Grade == undefined)) {
+                        dustForecast.o3Grade = dustForecast.O3Grade+1;
+                        dustForecast.o3Str = dustForecast.O3Str;
+                        delete dustForecast.O3Grade;
+                        delete dustForecast.O3Str;
+                    }
+                }
+                delete value.skyAmIcon;
+                delete value.skyPmIcon;
+                delete value.taMax;
+                delete value.taMin;
+
                 self._convertWeatherData(value, req.query);
             });
             if (req.current.hasOwnProperty('arpltn')) {
