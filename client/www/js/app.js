@@ -85,7 +85,10 @@ angular.module('starter', [
         if (navigator.globalization) {
             navigator.globalization.getLocaleName(
                 function (locale) {
-                    Util.region = locale.value.split('-')[1];
+                    console.log(locale);
+                    //"ko-Kore-KR"
+                    var valueArray = locale.value.split('-');
+                    Util.region = valueArray[valueArray.length-1];
                     console.log('region: ' + Util.region + '\n');
                 },
                 function () {
@@ -269,6 +272,7 @@ angular.module('starter', [
 
             var startVersion = TwStorage.get("startVersion");
             if (startVersion === null || Util.startVersion > Number(startVersion)) {
+                Util.ga.trackEvent('app', 'startupPage', 'start');
                 $location.path('/start');
                 return;
             }
