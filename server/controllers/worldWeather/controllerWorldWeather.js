@@ -1488,12 +1488,13 @@ function controllerWorldWeather() {
                         && self._compareDateString(thisTime.date, aqiItem.date)){
 
                         // value
-                        thisTime.coValue = self._extractValueFromAqicn('co', aqiItem.co);
-                        thisTime.no2Value = self._extractValueFromAqicn('no2', aqiItem.no2);
-                        thisTime.o3Value = self._extractValueFromAqicn('o3', aqiItem.o3);
-                        thisTime.pm10Value = self._extractValueFromAqicn('pm10', aqiItem.pm10);
-                        thisTime.pm25Value = self._extractValueFromAqicn('pm25', aqiItem.pm25);
-                        thisTime.so2Value = self._extractValueFromAqicn('so2', aqiItem.so2);
+                        thisTime.aqiValue = aqiItem.aqi;
+                        thisTime.coValue = Math.round((self._extractValueFromAqicn('co', aqiItem.co));
+                        thisTime.no2Value = Math.round((self._extractValueFromAqicn('no2', aqiItem.no2));
+                        thisTime.o3Value = Math.round((self._extractValueFromAqicn('o3', aqiItem.o3));
+                        thisTime.so2Value = Math.round((self._extractValueFromAqicn('so2', aqiItem.so2));
+                        thisTime.pm10Value = Math.round(self._extractValueFromAqicn('pm10', aqiItem.pm10));
+                        thisTime.pm25Value = Math.round(self._extractValueFromAqicn('pm25', aqiItem.pm25));
 
                         log.info('Aqi Unit : ', req.query.aqi);
                         // grade
@@ -1560,6 +1561,7 @@ function controllerWorldWeather() {
                             thisTime.pm10Str = UnitConverter.airkoreaGrade2str(thisTime.pm10Grade, 'pm10', res);
                             thisTime.pm25Str = UnitConverter.airkoreaGrade2str(thisTime.pm25Grade, 'pm25', res);
                             thisTime.so2Str = UnitConverter.airkoreaGrade2str(thisTime.so2Grade, 'so2', res);
+                            thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
                         }else{
                             // convert IAQI value to grade
                             thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
@@ -1577,6 +1579,48 @@ function controllerWorldWeather() {
                             thisTime.pm10Str = UnitConverter.airGrade2str(thisTime.pm10Grade, 'pm10', res);
                             thisTime.pm25Str = UnitConverter.airGrade2str(thisTime.pm25Grade, 'pm25', res);
                             thisTime.so2Str = UnitConverter.airGrade2str(thisTime.so2Grade, 'so2', res);
+                        }
+
+                        // check valid data
+                        if(aqiItem.aqi != undefined || aqiItem.aqi === -100){
+                            delete thisTime.aqiValue;
+                            delete thisTime.aqiStr;
+                            delete thisTime.aqiGrade;
+                        }
+
+                        if(aqiItem.co != undefined || aqiItem.co === -100){
+                            delete thisTime.coValue;
+                            delete thisTime.coStr;
+                            delete thisTime.coGrade;
+                        }
+                        if(aqiItem.no2 != undefined || aqiItem.no2 === -100){
+                            delete thisTime.no2Value;
+                            delete thisTime.no2Str;
+                            delete thisTime.no2Grade;
+                        }
+
+                        if(aqiItem.o3 != undefined || aqiItem.o3 === -100){
+                            delete thisTime.o3Value;
+                            delete thisTime.o3Str;
+                            delete thisTime.o3Grade;
+                        }
+
+                        if(aqiItem.pm10 != undefined || aqiItem.pm10 === -100){
+                            delete thisTime.pm10Value;
+                            delete thisTime.pm10Str;
+                            delete thisTime.pm10Grade;
+                        }
+
+                        if(aqiItem.pm25 != undefined || aqiItem.pm25 === -100){
+                            delete thisTime.pm25Value;
+                            delete thisTime.pm25Str;
+                            delete thisTime.pm25Grade;
+                        }
+
+                        if(aqiItem.so2 != undefined || aqiItem.so2 === -100){
+                            delete thisTime.so2Value;
+                            delete thisTime.so2Str;
+                            delete thisTime.so2Grade;
                         }
                     }
                 });
