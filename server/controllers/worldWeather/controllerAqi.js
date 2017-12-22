@@ -157,7 +157,7 @@ controllerAqi.prototype._parseAQIData = function(data){
         pm10: -100,
         pm25: -100,
         so2: -100,
-        t: -100
+        t: -100,
     };
 
     if(aqi.iaqi != undefined){
@@ -174,6 +174,12 @@ controllerAqi.prototype._parseAQIData = function(data){
         ret.t = self._getItemValue(iaqi, 't');
     }
 
+    if(aqi.time != undefined && aqi.time.s != undefined && aqi.time.s.length > 5){
+        ret.mTime = aqi.time.s;
+    }
+    if(aqi.city != undefined && aqi.city.name != undefined){
+        ret.mCity = aqi.city.name;
+    }
     return ret;
 };
 
@@ -206,6 +212,12 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
             so2: newData.so2,
             t: newData.t
         };
+        if(newData.mTime){
+            res.mTime = newData.mTime;
+        }
+        if(newData.mCity){
+            res.mCity = newData.mCity;
+        }
 
         res.geo.push(parseFloat(geocode.lon));
         res.geo.push(parseFloat(geocode.lat));
