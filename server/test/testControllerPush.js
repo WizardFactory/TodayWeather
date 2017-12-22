@@ -49,7 +49,8 @@ describe('unit test - controller push', function() {
             windSpeedUnit: "m/s",
             pressureUnit: "hPa",
             distanceUnit: "km",
-            precipitationUnit: "mm"
+            precipitationUnit: "mm",
+            airUnit: "airkorea"
         }
     };
 
@@ -80,24 +81,24 @@ describe('unit test - controller push', function() {
     //    }
     //};
 
-    //var pushInfo3 = {
-    //    registrationId: 'asdf',
-    //    pushTime: 6900,
-    //    cityIndex: 0,
-    //    type: 'ios',
-    //    town: {first: '', second: '', third: ''},
-    //    geo: [139.6917064, 35.6894875],
-    //    lang: 'en',
-    //    name: 'Tokyo',
-    //    source: 'DSF',
-    //    units: {
-    //        temperatureUnit: "F",
-    //        windSpeedUnit: "mph",
-    //        pressureUnit: "mbar",
-    //        distanceUnit: "miles",
-    //        precipitationUnit: "inch"
-    //    }
-    //};
+    var pushInfo3 = {
+       registrationId: 'asdf',
+       pushTime: 6900,
+       cityIndex: 0,
+       type: 'ios',
+       town: {first: '', second: '', third: ''},
+       geo: [139.6917064, 35.6894875],
+       lang: 'en',
+       name: 'Tokyo',
+       source: 'DSF',
+       units: {
+           temperatureUnit: "F",
+           windSpeedUnit: "mph",
+           pressureUnit: "mbar",
+           distanceUnit: "miles",
+           precipitationUnit: "inch"
+       }
+    };
 
     it('test update push info', function(done) {
         var PushInfo = require('../models/modelPush');
@@ -141,25 +142,25 @@ describe('unit test - controller push', function() {
         });
     });
 
-    //it('test request daily summary', function(done) {
+    // it('test request daily summary', function(done) {
     //    this.timeout(20*1000);
     //    var co = new ControllerPush();
     //    co.requestDailySummary(pushInfo, function (err, result) {
     //        assert.equal(err, null, err);
     //        console.log(result);
-    //        done();
+    //        //done();
     //    });
     //
-    //    //co.requestDailySummary(pushInfo0, function (err, result) {
-    //    //    if (err) {
-    //    //        console.log(err);
-    //    //    }
-    //    //    else {
-    //    //        console.log(result);
-    //    //    }
-    //    //   //done();
-    //    //});
-    //});
+    //    co.requestDailySummary(pushInfo3, function (err, result) {
+    //       if (err) {
+    //           console.log(err);
+    //       }
+    //       else {
+    //           console.log(result);
+    //       }
+    //      //done();
+    //    });
+    // });
 });
 
 
