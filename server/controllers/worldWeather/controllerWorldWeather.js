@@ -1605,42 +1605,42 @@ function controllerWorldWeather() {
                         log.info('AQI info > pm25 :', thisTime.pm25Value);
 
                         // check valid data
-                        if(aqiItem.aqi != undefined || aqiItem.aqi === -100){
+                        if(aqiItem.aqi == undefined || aqiItem.aqi === -100){
                             delete thisTime.aqiValue;
                             delete thisTime.aqiStr;
                             delete thisTime.aqiGrade;
                         }
 
-                        if(aqiItem.co != undefined || aqiItem.co === -100){
+                        if(aqiItem.co == undefined || aqiItem.co === -100){
                             delete thisTime.coValue;
                             delete thisTime.coStr;
                             delete thisTime.coGrade;
                         }
-                        if(aqiItem.no2 != undefined || aqiItem.no2 === -100){
+                        if(aqiItem.no2 == undefined || aqiItem.no2 === -100){
                             delete thisTime.no2Value;
                             delete thisTime.no2Str;
                             delete thisTime.no2Grade;
                         }
 
-                        if(aqiItem.o3 != undefined || aqiItem.o3 === -100){
+                        if(aqiItem.o3 == undefined || aqiItem.o3 === -100){
                             delete thisTime.o3Value;
                             delete thisTime.o3Str;
                             delete thisTime.o3Grade;
                         }
 
-                        if(aqiItem.pm10 != undefined || aqiItem.pm10 === -100){
+                        if(aqiItem.pm10 == undefined || aqiItem.pm10 === -100){
                             delete thisTime.pm10Value;
                             delete thisTime.pm10Str;
                             delete thisTime.pm10Grade;
                         }
 
-                        if(aqiItem.pm25 != undefined || aqiItem.pm25 === -100){
+                        if(aqiItem.pm25 == undefined || aqiItem.pm25 === -100){
                             delete thisTime.pm25Value;
                             delete thisTime.pm25Str;
                             delete thisTime.pm25Grade;
                         }
 
-                        if(aqiItem.so2 != undefined || aqiItem.so2 === -100){
+                        if(aqiItem.so2 == undefined || aqiItem.so2 === -100){
                             delete thisTime.so2Value;
                             delete thisTime.so2Str;
                             delete thisTime.so2Grade;
