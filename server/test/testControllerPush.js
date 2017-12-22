@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 5. 3..
  */
 
+"use strict";
+
 var assert  = require('assert');
 var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
@@ -81,24 +83,24 @@ describe('unit test - controller push', function() {
     //    }
     //};
 
-    var pushInfo3 = {
-       registrationId: 'asdf',
-       pushTime: 6900,
-       cityIndex: 0,
-       type: 'ios',
-       town: {first: '', second: '', third: ''},
-       geo: [139.6917064, 35.6894875],
-       lang: 'en',
-       name: 'Tokyo',
-       source: 'DSF',
-       units: {
-           temperatureUnit: "F",
-           windSpeedUnit: "mph",
-           pressureUnit: "mbar",
-           distanceUnit: "miles",
-           precipitationUnit: "inch"
-       }
-    };
+    // var pushInfo3 = {
+    //    registrationId: 'asdf',
+    //    pushTime: 6900,
+    //    cityIndex: 0,
+    //    type: 'ios',
+    //    town: {first: '', second: '', third: ''},
+    //    geo: [139.6917064, 35.6894875],
+    //    lang: 'en',
+    //    name: 'Tokyo',
+    //    source: 'DSF',
+    //    units: {
+    //        temperatureUnit: "F",
+    //        windSpeedUnit: "mph",
+    //        pressureUnit: "mbar",
+    //        distanceUnit: "miles",
+    //        precipitationUnit: "inch"
+    //    }
+    // };
 
     it('test update push info', function(done) {
         var PushInfo = require('../models/modelPush');

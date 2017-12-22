@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 5. 2..
  */
 
+"use strict";
+
 var apn = require('apn');
 var gcm = require('node-gcm');
 var config = require('../config/config');
@@ -289,12 +291,12 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
         dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
     }
 
-    if (theDay.tmn != undefined && theDay.tmx != undefined) {
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
         dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
     }
     if (theDay.pty && theDay.pty > 0) {
         if (theDay.pop && current.pty <= 0) {
-            if(theDay.date == today.date && current.pty <= 0) {
+            if(theDay.date === today.date && current.pty <= 0) {
                //It's raining or snowing so we didn't show pop
             }
             else {
@@ -368,7 +370,7 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
 
     var count = 0;
     var querys = pushInfo.units;
-    for (let key in querys) {
+    for (var key in querys) {
         url += count === 0? '?':'&';
         url += key+'='+querys[key];
         count ++;
@@ -554,13 +556,13 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
         dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
     }
 
-    if (!(theDay.tmn == undefined) && !(theDay.tmx == undefined)) {
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
         dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
     }
 
     if (theDay.pty && theDay.pty > 0) {
         if (theDay.pop) {
-            if (theDay.date == today.date && current.pty <= 0) {
+            if (theDay.date === today.date && current.pty <= 0) {
                //current is raining or snowing so we didn't pop
             }
             else {
@@ -618,7 +620,7 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
 
     var count = 0;
     var querys = pushInfo.units;
-    for (let key in querys) {
+    for (var key in querys) {
         url += count === 0? '?':'&';
         url += key+'='+querys[key];
         count ++;
