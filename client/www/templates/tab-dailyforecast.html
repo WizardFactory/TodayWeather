@@ -55,7 +55,7 @@
                 </ion-scroll>
                 <div class="col" style="margin: 0; padding: 0">
                    <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                   <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}}</p>
+                   <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}} ({{getForecastAirUnitStr()|translate}})</p>
                    <table style="width: 100%">
                        <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
                            ng-repeat="day in dayChart[0].values">
@@ -74,7 +74,7 @@
                                </div>
                                <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
                                    <p class="body2"
-                                      style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm10Grade)|translate}}</p>
+                                      style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
                                </div>
                            </td>
                            <td style="text-align: center; margin: auto">
@@ -85,7 +85,7 @@
                                    </i>
                                </p>
                                <p class="body2"
-                                  style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.pm25Grade)|translate}}</p>
+                                  style="margin: 0 0 5px;">{{day.dustForecast.pm25Str}}</p>
                            </td>
                            <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined">
                                <p class="body1" style="margin: 0;">{{"LOC_O3"|translate}}</p>
@@ -95,7 +95,7 @@
                                    </i>
                                </p>
                                <p class="body2"
-                                  style="margin: 0 0 5px;">{{getSentimentStr(day.dustForecast.o3Grade)|translate}}</p>
+                                  style="margin: 0 0 5px;">{{day.dustForecast.o3Str}}</p>
                            </td>
                        </tr>
                    </table>
@@ -132,14 +132,14 @@
                                <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['ultrvGrade'])">
                                    <img src="img/Ultrv.png" style="height: 24px; margin: auto 0;">
                                    <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{getLowHighGradeStr(day.ultrvGrade)|translate}}</p>
+                                       <p class="subheading" style="margin: 0;">{{day.ultrvStr}}</p>
                                        <span class="caption">{{"LOC_UV"|translate}}</span>
                                    </div>
                                </div>
                                <div class="row subheading" style="margin: 0" ng-if="day.fsnGrade != undefined">
                                    <img src="img/fish.svg" style="height: 20px; margin: auto 2px;">
                                    <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{getAttentionWarningGradeStr(day.fsnGrade)|translate}}</p>
+                                       <p class="subheading" style="margin: 0;">{{day.fsnStr}}</p>
                                        <span class="caption">{{"LOC_FOOD_POISONING"|translate}}</span>
                                    </div>
                                </div>

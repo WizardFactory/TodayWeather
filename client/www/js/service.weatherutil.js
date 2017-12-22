@@ -362,18 +362,6 @@ angular.module('service.weatherutil', [])
                 if (tmpDisplayCount > displayItemCount) {
                     displayItemCount = tmpDisplayCount;
                 }
-
-                if (!(data.dustForecast == undefined)) {
-                    if (!(data.dustForecast.PM10Grade == undefined)) {
-                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
-                    }
-                    if (!(data.dustForecast.PM25Grade == undefined)) {
-                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
-                    }
-                    if (!(data.dustForecast.O3Grade == undefined)) {
-                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
-                    }
-                }
             });
 
             //console.log(tmpDayTable);
@@ -524,18 +512,6 @@ angular.module('service.weatherutil', [])
                 if (tmpDisplayCount > displayItemCount) {
                     displayItemCount = tmpDisplayCount;
                 }
-
-                if (!(data.dustForecast == undefined)) {
-                    if (!(data.dustForecast.PM10Grade == undefined)) {
-                        data.dustForecast.pm10Grade = data.dustForecast.PM10Grade+1;
-                    }
-                    if (!(data.dustForecast.PM25Grade == undefined)) {
-                        data.dustForecast.pm25Grade = data.dustForecast.PM25Grade+1;
-                    }
-                    if (!(data.dustForecast.O3Grade == undefined)) {
-                        data.dustForecast.o3Grade = data.dustForecast.O3Grade+1;
-                    }
-                }
             });
             console.log(JSON.stringify(tmpDayTable));
             return {displayItemCount: displayItemCount, dayTable: tmpDayTable, today: todayInfo};
@@ -593,7 +569,7 @@ angular.module('service.weatherutil', [])
                 console.log({weatherUnits: weatherData.units});
             }
             else {
-                weatherData.units = Units.getDefaultUnits();
+                Util.ga.trackEvent('weather', 'error', 'FailGetUnits');
             }
 
             var data;

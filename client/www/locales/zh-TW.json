@@ -256,6 +256,11 @@
   "LOC_E": "東",
   "LOC_W": "西",
   "LOC_S": "南",
-  "LOC_N": "北"
+  "LOC_N": "北",
+  "LOC_AIR_QUALITY_INDEX_UNIT" : "指數標準",
+  "LOC_AIR_QUALITY_INDEX_KR" : "韓國",
+  "LOC_AIR_QUALITY_INDEX_KR_WHO" : "韓國(WHO)",
+  "LOC_AIR_QUALITY_INDEX_US" : "美國",
+  "LOC_AIR_QUALITY_INDEX_CN" : "中國"
 }
 

@@ -256,5 +256,10 @@
   "LOC_E": "동",
   "LOC_W": "서",
   "LOC_S": "남",
-  "LOC_N": "북"
+  "LOC_N": "북",
+  "LOC_AIR_QUALITY_INDEX_UNIT" : "대기환경기준",
+  "LOC_AIR_QUALITY_INDEX_KR" : "한국환경공단",
+  "LOC_AIR_QUALITY_INDEX_KR_WHO" : "WHO",
+  "LOC_AIR_QUALITY_INDEX_US" : "미국",
+  "LOC_AIR_QUALITY_INDEX_CN" : "중국"
 }
