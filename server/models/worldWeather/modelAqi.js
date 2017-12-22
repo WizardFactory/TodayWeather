@@ -38,7 +38,9 @@ var aqiSchema = new mongoose.Schema({
     pm10: Number,
     pm25: Number,
     so2: Number,
-    t: Number
+    t: Number,
+    mTime: String,      // measuring time
+    mCity: String       // measuring city
 });
 
 aqiSchema.index({"geocode.lat" : 1, "geocode.lon" : 1});

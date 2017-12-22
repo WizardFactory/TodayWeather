@@ -1489,12 +1489,21 @@ function controllerWorldWeather() {
 
                         // value
                         thisTime.aqiValue = aqiItem.aqi;
-                        thisTime.coValue = Math.round((self._extractValueFromAqicn('co', aqiItem.co));
-                        thisTime.no2Value = Math.round((self._extractValueFromAqicn('no2', aqiItem.no2));
-                        thisTime.o3Value = Math.round((self._extractValueFromAqicn('o3', aqiItem.o3));
-                        thisTime.so2Value = Math.round((self._extractValueFromAqicn('so2', aqiItem.so2));
-                        thisTime.pm10Value = Math.round(self._extractValueFromAqicn('pm10', aqiItem.pm10));
-                        thisTime.pm25Value = Math.round(self._extractValueFromAqicn('pm25', aqiItem.pm25));
+                        thisTime.coValue = self._extractValueFromAqicn('co', aqiItem.co);
+                        thisTime.no2Value = self._extractValueFromAqicn('no2', aqiItem.no2);
+                        thisTime.o3Value = self._extractValueFromAqicn('o3', aqiItem.o3);
+                        thisTime.so2Value = self._extractValueFromAqicn('so2', aqiItem.so2);
+                        thisTime.pm10Value = self._extractValueFromAqicn('pm10', aqiItem.pm10);
+                        thisTime.pm25Value = self._extractValueFromAqicn('pm25', aqiItem.pm25);
+
+                        if(aqiItem.mTime != undefined){
+                            thisTime.mTime = aqiItem.mTime;
+                            log.info('AQI Measuring Time : ', thisTime.mTime);
+                        }
+                        if(aqiItem.mCity != undefined){
+                            thisTime.mCity = aqiItem.mCity;
+                            log.info('AQI Measuring City : ', thisTime.mCity);
+                        }
 
                         log.info('Aqi Unit : ', req.query.aqi);
                         // grade
@@ -1580,6 +1589,20 @@ function controllerWorldWeather() {
                             thisTime.pm25Str = UnitConverter.airGrade2str(thisTime.pm25Grade, 'pm25', res);
                             thisTime.so2Str = UnitConverter.airGrade2str(thisTime.so2Grade, 'so2', res);
                         }
+
+                        // unit conversion
+                        thisTime.coValue = self._convertUmtoPpm('co', thisTime.coValue);
+                        thisTime.no2Value = self._convertUmtoPpm('no2', thisTime.no2Value);
+                        thisTime.o3Value = self._convertUmtoPpm('o3', thisTime.o3Value);
+                        thisTime.so2Value = self._convertUmtoPpm('so2', thisTime.so2Value);
+                        thisTime.pm10Value = Math.round(thisTime.pm10Value);
+                        thisTime.pm25Value = Math.round(thisTime.pm25Value);
+                        log.info('AQI info > co :', thisTime.coValue);
+                        log.info('AQI info > no2 :', thisTime.no2Value);
+                        log.info('AQI info > o3 :', thisTime.o3Value);
+                        log.info('AQI info > so2 :', thisTime.so2Value);
+                        log.info('AQI info > pm10 :', thisTime.pm10Value);
+                        log.info('AQI info > pm25 :', thisTime.pm25Value);
 
                         // check valid data
                         if(aqiItem.aqi != undefined || aqiItem.aqi === -100){
@@ -1822,6 +1845,39 @@ function controllerWorldWeather() {
         aqi: [0, 50, 100, 250]
     };
 
+    /**
+     *
+     * @param Mol
+     * @param value
+     * @returns {*}
+     * @private
+     *
+     ug/m3 - > ppb
+     SO2 : x ug/m3 * 22.4 / 64.05 = y ppb
+     NO2 : x ug/m3 * 22.4 / 45.99 = y ppb
+     O3 : x ug/m3 * 22.4 / 47.97 = y ppb
+     CO : x mg/m3 * 22.4 / 28 = y ppm
+     */
+    self._convertUmtoPpm = function (Mol, value){
+        var molList = {
+            so2: 64.05,
+            no2: 45.99,
+            o3: 47.97,
+            co: 28.00
+        };
+
+        if(molList[Mol] == undefined){
+            return -1;
+        }
+
+        var result = parseFloat(value * 22.4) / molList[Mol];
+        if(Mol != 'co'){
+            result = result / 1000;
+        }
+
+        return parseFloat(result.toFixed(3));
+    };
+
     self._calculateAirkoreaGrade = function(type, value){
         var unit = [];
 
@@ -1925,7 +1981,7 @@ function controllerWorldWeather() {
         }
 
         var result = (value - unit.Ilo) * (unit.BPhi - unit.BPlo) / (unit.Ihi - unit.Ilo) + unit.BPlo;
-        log.info('Extra type: ', type, 'Value : ', result, 'aqi : ', Cp);
+        log.info('Extra type: ', type, 'Value :', result, ' aqi : ', Cp);
         return result;
 
     };
