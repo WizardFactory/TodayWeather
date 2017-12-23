@@ -197,6 +197,19 @@ kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYMMDDHHMM = function(dateStr) {
 };
 
 /**
+ * 2017.01.07.15:10 -> 1510
+ * @param dateStr
+ * @returns {string}
+ */
+kmaTimeLib.convertYYYYoMMoDDoHHoMMtoHHMM = function(dateStr) {
+    var str = "";
+    if (dateStr.length > 10) {
+        str += dateStr.substr(11,2) + dateStr.substr(14,2);
+    }
+    return str;
+};
+
+/**
  * 2017.01.07.15:10 -> 2017.01.07 15:10
  * @param dateStr
  * @returns {string}
