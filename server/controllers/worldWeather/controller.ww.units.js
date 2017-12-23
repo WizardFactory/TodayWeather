@@ -103,6 +103,13 @@ ControllerWWUnits.prototype._makeArpltn = function (current) {
             }
         });
     });
+
+    if (current.hasOwnProperty('mTime')) {
+        current.arpltn.dataTime = current.mTime;
+    }
+    if (current.hasOwnProperty('mCity')) {
+        current.arpltn.stationName = current.mCity;
+    }
 };
 
 ControllerWWUnits.prototype._convertWindDirToWdd = function (windDir) {
