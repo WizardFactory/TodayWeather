@@ -1,5 +1,5 @@
 angular.module('controller.guidectrl', [])
-    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate,
+    .controller('GuideCtrl', function($scope, $rootScope, $ionicSlideBoxDelegate, $ionicNavBarDelegate, $ionicHistory,
                                       $location, Util, TwAds, $ionicPopup, WeatherInfo, $translate, Purchase) {
 
         $scope.data = { 'autoSearch': true };
@@ -27,7 +27,6 @@ angular.module('controller.guidectrl', [])
                     console.log("guidectrl location setting is " + (enabled ? "enabled" : "disabled"));
                     $scope.data.autoSearch = enabled;
                 }, function (error) {
-                    console.log("The following error occurred: "+error);
                     Util.ga.trackEvent('position', 'error', 'isLocationEnabled');
                     Util.ga.trackException(error, false);
                 });
@@ -73,7 +72,7 @@ angular.module('controller.guidectrl', [])
 
         function close() {
             _setShowAds(true);
-            $location.path('/tab/setting');
+            $ionicHistory.goBack();
         }
 
         function update() {

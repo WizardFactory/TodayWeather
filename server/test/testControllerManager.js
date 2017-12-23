@@ -9,7 +9,8 @@ var assert  = require('assert');
 var config = require('../config/config');
 var controllerManager = require('../controllers/controllerManager');
 
-var controllerShortRss = require('../controllers/controllerShortRss');
+var controllerShortRss = require('../controllers/kma/kma.town.short.rss.controller');
+
 global.townRss = new controllerShortRss();
 
 var manager = new controllerManager();

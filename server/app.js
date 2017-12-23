@@ -7,6 +7,7 @@
 require('newrelic');
 
 var express = require('express');
+var cors = require('cors');
 var path = require('path');
 var favicon = require('serve-favicon');
 //var logger = require('morgan');
@@ -15,7 +16,8 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 
 var controllerManager = require('./controllers/controllerManager');
-var controllerShortRss = require('./controllers/controllerShortRss');
+var controllerShortRss = require('./controllers/kma/kma.town.short.rss.controller');
+var controllerAirkoreaDustImage = require('./controllers/airkorea.dust.image.controller');
 /*
 * wizard factory's modules
 */
@@ -61,6 +63,8 @@ i18n.configure({
     register: global
 });
 
+app.use(cors());
+
 // Use the session middleware
 app.use(session({ secret: 'wizard factory',
                 resave: false,
@@ -85,8 +89,12 @@ app.use('/', require('./routes/v000001'));
 app.use('/v000001', require('./routes/v000001'));
 app.use('/v000705', require('./routes/v000705'));
 app.use('/v000803', require('./routes/v000803'));
+app.use('/v000901', require('./routes/v000901'));
 app.use('/ww', require('./routes/worldweather/routeWeather'));
 app.use('/req', require('./routes/worldweather/routeRequester'));
+app.get('/health', function (req, res) {
+   res.send("OK");
+});
 
 global.curString = ['t1h', 'rn1', 'sky', 'uuu', 'vvv', 'reh', 'pty', 'lgt', 'vec', 'wsd'];
 global.shortString = ['pop', 'pty', 'r06', 'reh', 's06', 'sky', 't3h', 'tmn', 'tmx', 'uuu', 'vvv', 'wav', 'vec', 'wsd'];
@@ -119,6 +127,17 @@ if (config.mode === 'push') {
 
 if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
+}
+
+if (config.mode === 'service'){
+    global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
+    global.airkoreaDustImageMgr.startDustImageMgr(function(err){
+        if(err){
+            log.error('Fail to start image mgr');
+            return;
+        }
+        log.info('Start Image Mgr');
+    });
 }
 
 // catch 404 and forward to error handler

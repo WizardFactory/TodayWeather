@@ -36,6 +36,8 @@
 - (void) processDailyData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
 - (void) processByTimeData:(NSDictionary *)jsonDict type:(TYPE_REQUEST)reqType;
 - (NSString *) getAirState:(NSDictionary *)currentArpltnDict;
+- (NSMutableAttributedString *) getChangedColorAirState:(NSString *)nssAirState;
+
 - (void) transitView:(UIView *)curView
           transition:(UIViewAnimationTransition)transiton
             duration:(NSTimeInterval)duration;

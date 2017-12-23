@@ -9,7 +9,7 @@ window.twClientConfig = {
     googleSenderId : '',
     gaIOSKey : '',
     gaAndroidKey : '',
-    daumServiceKey : '',
+    daumServiceKeys : ['0','1'],
     airBridgeToken : '',
     airBridgeAppId : '',
     iOSStoreUrl : 'https://itunes.apple.com/',
@@ -17,8 +17,9 @@ window.twClientConfig = {
     iOSPaidAppUrl : 'https://itunes.apple.com/',
     androidPaidAppUrl : 'market://',
     etcUrl : 'https://',
-    serverUrl : 'https://tw-wzdfac.rhcloud.com',
+    serverUrl : 'https://tw-test.wizardfactory.net',
     mailTo : 'todayweather@wizardfactory.net',
     isPaidApp : false,
-    debug : true
+    debug : true,
+    googleapikey : 'GOOGLE_API_KEY'
 };

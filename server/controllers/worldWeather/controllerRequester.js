@@ -8,6 +8,7 @@ var request = require('request');
 var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
+var controllerAqi = require('./controllerAqi');
 
 var commandCategory = ['all','met','owm','wu', 'dsf'];
 var command = ['get_all','get', 'req_add', 'req_two_days', 'add_key'];
@@ -81,7 +82,7 @@ function ControllerRequester(){
                 break;
 
             case 'req_two_days':
-                self.reqDataForTwoDays(req, function(err){
+                self.reqDataForTwoDays(req, function(err, response){
                     if(err){
                         log.error('RQ>  fail to run req_two_days', meta);
                         req.result = {status: 'Fail', cmd: req.params.command};
@@ -89,7 +90,7 @@ function ControllerRequester(){
                         return;
                     }
                     log.info('RQ> success adding req_two_days', meta);
-                    req.result = {status: 'OK', cmd: req.params.command};
+                    req.result = {status: 'OK', cmd: req.params.command, data: response};
                     next();
                 });
                 break;
@@ -581,7 +582,20 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                         return;
                     }
 
-                    cb(null);
+                    cb(null, dsfData);
+                });
+            },
+            function(cb){
+                var collectorAqi = new controllerAqi;
+
+                collectorAqi.requestAqiData(req.geocode, 0, 0, req.timezone, function(err, aqiData){
+                    if(err){
+                        log.error('RQ> Fail to requestAqiData', meta);
+                        return cb('Fail to requestAqiData');
+                    }
+
+                    log.info('RQ> AQI result : ', aqiData);
+                    cb(null, aqiData);
                 });
             }
         ],
@@ -589,7 +603,27 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
             if(err){
                 log.error('RQ> Fail to request weather', meta);
             }
-            callback(err, result);
+
+            var res = {};
+
+            if(result.length > 0){
+                result.forEach(function(item, index){
+                    if(typeof item === 'object'){
+                        if(item.type === 'DSF'){
+                            res.DSF = item;
+                        }
+
+                        if(item.type === 'AQI'){
+                            res.AQI = item;
+                        }
+                    }
+                });
+            }
+
+            log.info('RQ> dsf : ', JSON.stringify(res.DSF));
+            log.info('RQ> aqi : ', JSON.stringify(res.AQI));
+
+            callback(err, res);
         }
     );
 };

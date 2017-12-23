@@ -2,12 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, viewport-fit=cover">
     <meta http-equiv="Content-Security-Policy">
     <title translate="LOC_TODAYWEATHER"></title>
 
     <!-- compiled css output -->
-    <link href="css/ionic.app.min.css" rel="stylesheet">
+    <link href="css/ionic.app.css" rel="stylesheet">
 
     <!-- ionic/angularjs js -->
     <script src="lib/ionic/js/ionic.bundle.min.js"></script>
@@ -23,7 +23,6 @@
     <!-- d3 chart -->
     <script src="lib/d3/d3.min.js"></script>
     <script src="lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js"></script>
-    <script src="lib/es6-promise/es6-promise.auto.min.js"></script>
 
     <!-- your app's js -->
     <script src="js/app.js"></script>
@@ -38,8 +37,8 @@
     <script src="js/service.weatherinfo.js"></script>
     <script src="js/service.weatherutil.js"></script>
     <script src="js/service.util.js"></script>
-    <script src="js/service.run.js"></script>
     <script src="js/service.push.js"></script>
+    <script src="js/service.storage.js"></script>
     <script src="tw.client.config.js"></script>
     <script src="data/town.js"></script>
     <script src="js/controller.units.js"></script>
@@ -62,11 +61,93 @@
   Templates are in the /templates folder (but you could also
   have templates inline in this html file if you'd like).
 -->
-<ion-nav-view></ion-nav-view>
-<div style="width: 100%; height: 50px; position: absolute; bottom: 0; text-align: center; z-index: 4"
-     ng-style="{'background-color': viewAdsBanner?'#444':'#03A9F4'}"
-     ng-if="viewAdsBanner" ng-click="clickAdsBanner();">
-    <h4 style="color: white; opacity: 0.84" ng-bind="adsBannerMessage"></h4>
-</div>
+<ion-side-menus>
+    <!-- Left menu -->
+    <ion-side-menu side="left" ng-controller="SettingCtrl" ng-class="isMenuOpen() ? 'menu-open' : ''" class="menu menu-left">
+        <header class="bar bar-dark bar-header">
+            <button class="button button-icon button-positive icon"
+                    ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" menu-toggle>
+            </button>
+            <h1 class="title">{{'LOC_TODAYWEATHER'|translate}}</h1>
+        </header>
+        <ion-content class="has-header menu-content">
+            <div class="list">
+                <a class="item item-input" ng-click="clickMenu('units')">
+                    <div class="input-label">
+                        {{'LOC_UNITS'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+                <label class="item item-input item-select">
+                    <div class="input-label">
+                        {{'LOC_STARTUP_PAGE'|translate}}
+                    </div>
+                    <select ng-model="startupPage" ng-change="setStartupPage(startupPage)">
+                        <option value="0">{{'LOC_HOURLY_FORECAST'|translate}}</option>
+                        <option value="1">{{'LOC_DAILY_FORECAST'|translate}}</option>
+                        <option value="2">{{'LOC_SAVED_LOCATIONS'|translate}}</option>
+                    </select>
+                </label>
+                <label class="item item-input item-select">
+                    <div class="input-label">
+                        {{'LOC_REFRESH_INTERVAL'|translate}}
+                    </div>
+                    <select ng-model="refreshInterval" ng-change="setRefreshInterval(refreshInterval)">
+                        <option value="0">{{'LOC_MANUAL'|translate}}</option>
+                        <option value="30">{{'LOC_30_MINUTES'|translate}}</option>
+                        <option value="60">{{'LOC_1_HOUR'|translate}}</option>
+                        <option value="180">{{'LOC_3_HOURS'|translate}}</option>
+                        <option value="360">{{'LOC_6_HOURS'|translate}}</option>
+                        <option value="720">{{'LOC_12_HOURS'|translate}}</option>
+                    </select>
+                </label>
+                <a class="item item-input" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
+                    <div class="input-label">
+                        {{'LOC_REMOVE_ADS'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+                <a class="item item-input" ng-click="clickMenu('sendMail')">
+                    <div class="input-label">
+                        {{'LOC_SEND_FEEDBACK'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+                <a class="item item-input" ng-click="clickMenu('openMarket')">
+                    <div class="input-label">
+                        {{'LOC_RATE_THIS_APP'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+                <a class="item item-input" href="#">
+                    <div class="input-label">
+                        {{'LOC_VERSION'|translate}}
+                    </div>
+                    <i>{{version}}</i>
+                </a>
+                <a class="item item-input" ng-click="clickMenu('guide')">
+                    <div class="input-label">
+                        {{'LOC_GUIDE'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+                <a class="item item-input" ng-click="clickMenu('openInfo')" ng-if="showAbout()">
+                    <div class="input-label">
+                        {{'LOC_ABOUT'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
+            </div>
+        </ion-content>
+    </ion-side-menu>
+
+    <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">
+        <ion-nav-bar></ion-nav-bar>
+        <ion-nav-view></ion-nav-view>
+    </ion-side-menu-content>
+
+    <!-- Right menu -->
+    <!--<ion-side-menu side="right"></ion-side-menu>-->
+</ion-side-menus>
 </body>
 </html>

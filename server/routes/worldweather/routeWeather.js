@@ -24,6 +24,6 @@ router.get('/:version/:category', [worldWeather.checkApiVersion, worldWeather.qu
 router.get('/:version/:category/:days', worldWeather.checkApiVersion,
     worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
     worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData, worldWeather.mergeDsfHourlyData,
-    worldWeather.dataSort, worldWeather.sendResult);
+    worldWeather.mergeAqi, worldWeather.dataSort, worldWeather.sendResult);
 
 module.exports = router;

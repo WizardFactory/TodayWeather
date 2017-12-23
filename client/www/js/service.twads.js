@@ -3,7 +3,7 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, Util) {
+    .factory('TwAds', function(TwStorage, Util) {
         var obj = {};
         obj.enableAds = null;
         obj.showAds = null;
@@ -13,11 +13,9 @@ angular.module('service.twads', [])
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
 
-        $rootScope.viewAdsBanner = false;
-
         obj.loadTwAdsInfo = function () {
             var self = this;
-            var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
+            var twAdsInfo = TwStorage.get("twAdsInfo");
             console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
                         ' request enable='+self.requestEnable+' show='+self.requestShow);
 
@@ -38,13 +36,7 @@ angular.module('service.twads', [])
 
         obj.saveTwAdsInfo = function (enable) {
             var twAdsInfo = {enable: enable};
-            localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
-        };
-
-        obj.setLayout = function (enable) {
-            //close bottom box
-            $rootScope.contentBottom = enable?100:50;
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', enable?'50px':'0px');
+            TwStorage.set("twAdsInfo", twAdsInfo);
         };
 
         obj._admobCreateBanner = function() {
@@ -62,7 +54,6 @@ angular.module('service.twads', [])
                 },
                 function (e) {
                     console.log('Fail to create banner view');
-                    console.log(e);
                     Util.ga.trackEvent('plugin', 'error', 'admobCreateBanner');
                     Util.ga.trackException(e, false);
                 });
@@ -88,19 +79,15 @@ angular.module('service.twads', [])
                 admob.destroyBannerView(function () {
                     console.log('destroy banner view');
                 }, function (e) {
-                    console.log('Fail to destroy banner');
-                    console.log(e);
                     Util.ga.trackEvent('plugin', 'error', 'admobDestroyBanner');
                     Util.ga.trackException(e, false);
                 });
 
                 self.enableAds = enable;
-                self.setLayout(enable);
                 Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
                 self.enableAds = enable;
-                self.setLayout(enable);
                 self._admobCreateBanner();
                 Util.ga.trackEvent('app', 'account', 'free');
             }
@@ -109,7 +96,6 @@ angular.module('service.twads', [])
         obj.setShowAds = function(show) {
             var self = this;
             console.log('set show ads show='+show);
-            $rootScope.viewAdsBanner = show;
 
             if(self.showAds === show) {
                 console.log('already TwAds is show='+show);
@@ -141,8 +127,6 @@ angular.module('service.twads', [])
             admob.showBannerAd(show, function () {
                 console.log('show/hide about ad mob show='+show);
             }, function (e) {
-                console.log('fail to show about ad mob show='+show);
-                console.log(JSON.stringify(e));
                 Util.ga.trackEvent('plugin', 'error', 'admobShowBanner');
                 Util.ga.trackException(e, false);
             });
@@ -156,7 +140,6 @@ angular.module('service.twads', [])
                 if (self.requestEnable != undefined) {
                     console.log('set requestEnable='+self.requestEnable);
                     self.setShowAds(self.requestEnable);
-                    self.setLayout(self.requestEnable);
                 }
                 Util.ga.trackEvent('plugin', 'error', 'loadAdmob');
                 return;
@@ -171,12 +154,14 @@ angular.module('service.twads', [])
                 self.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
+            var adSize = ionic.Platform.isIOS()?admob.AD_SIZE.SMART_BANNER:admob.AD_SIZE.BANNER;
+
             admob.setOptions({
                 publisherId:    self.bannerAdUnit,
                 interstitialAdId: self.interstitialAdUnit,
-                adSize:         admob.AD_SIZE.BANNER,
+                adSize:         adSize,
                 bannerAtTop:    false,
-                overlap:        true,
+                overlap:        false,
                 offsetStatusBar:    false,
                 isTesting:  twClientConfig.debug,
                 adExtras :  {},
@@ -186,8 +171,6 @@ angular.module('service.twads', [])
                 console.log('Set options of Ad mob');
                 self.loadTwAdsInfo();
             }, function (e) {
-                console.log('Fail to set options of Ad mob');
-                console.log(e);
                 Util.ga.trackException('setAdmobOptions', 'error', e);
                 Util.ga.trackException(e, false);
             });

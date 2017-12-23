@@ -38,16 +38,7 @@ angular.module('controller.tabctrl', [])
             //}, 1000);
 
             TwAds.init();
-            TwAds.setLayout(TwAds.enableAds == undefined? TwAds.requestEnable:TwAds.enableAds);
         }
-
-        $scope.doTabSetting = function() {
-            if (WeatherInfo.getEnabledCityCount() === 0) {
-                $scope.startPopup();
-                return;
-            }
-            $location.path('/tab/setting');
-        };
 
         $scope.doTabForecast = function(forecastType) {
             if (WeatherInfo.getEnabledCityCount() === 0) {
@@ -137,51 +128,6 @@ angular.module('controller.tabctrl', [])
             });
 
             Util.ga.trackEvent('action', 'tab', 'share');
-        };
-
-        $scope.showAlert = function(title, msg, callback) {
-            var alertPopup = $ionicPopup.alert({
-                title: title,
-                template: msg,
-                okText: strOkay
-            });
-            alertPopup.then(function() {
-                console.log("alertPopup close");
-                if (callback != undefined) {
-                    callback();
-                }
-            });
-        };
-
-        $scope.showConfirm = function(title, template, callback) {
-            var confirmPopup = $ionicPopup.confirm({
-                title: title,
-                template: template,
-                okText: strOkay,
-                cancelText: strCancel
-            });
-            confirmPopup.then(function (res) {
-                if (res) {
-                    console.log("You are sure");
-                } else {
-                    console.log("You are not sure");
-                }
-                callback(res);
-            });
-        };
-
-        $scope.contentHeight = function() {
-            if (ionic.Platform.isAndroid() == false) {
-                return $rootScope.contentBottom;
-            }
-
-            if ($rootScope.contentBottom === undefined) {
-                $rootScope.contentBottom = 0;
-            }
-            if ($rootScope.tabsTop === undefined) {
-                $rootScope.tabsTop = 0;
-            }
-            return $rootScope.contentBottom - $rootScope.tabsTop;
         };
 
         $scope.startPopup = function startPopup() {
@@ -308,7 +254,8 @@ angular.module('controller.tabctrl', [])
 
                     Util.ga.trackEvent('window', 'show', 'getWeatherPopup');
                 }
-                else if (gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
+                else if (ionic.Platform.isAndroid() &&
+                    gLocationAuthorizationStatus == cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
                     template += '<br>';
                     template += strOpensTheAppInfoPage;
 
@@ -378,12 +325,14 @@ angular.module('controller.tabctrl', [])
                 }
                 else {
                     //fail to get address information
-                    buttons.push({
-                        text: strClose,
-                        onTap: function () {
-                            return 'close';
-                        }
-                    });
+                    if (type == 'forecast') {
+                        buttons.push({
+                            text: strClose,
+                            onTap: function () {
+                                return 'close';
+                            }
+                        });
+                    }
 
                     buttons.push({
                         text: strOkay,

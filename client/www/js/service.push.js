@@ -5,7 +5,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, Util, WeatherUtil, WeatherInfo, $location, Units) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units) {
         var obj = {};
         obj.config = {
             "android": {
@@ -36,7 +36,7 @@ angular.module('service.push', [])
 
         obj.loadPushInfo = function () {
             var self = this;
-            var pushData = JSON.parse(localStorage.getItem("pushData"));
+            var pushData = TwStorage.get("pushData");
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
@@ -61,7 +61,7 @@ angular.module('service.push', [])
         obj.savePushInfo = function () {
             var self = this;
             console.log('save push data');
-            localStorage.setItem("pushData", JSON.stringify(self.pushData));
+            TwStorage.set("pushData", self.pushData);
         };
 
         /**
@@ -86,14 +86,15 @@ angular.module('service.push', [])
             //name, units
             $http({
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language},
+                headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language, 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    //callback(undefined, result.data);
-                    console.log(data);
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -114,14 +115,15 @@ angular.module('service.push', [])
 
             $http({
                 method: 'DELETE',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: pushInfo,
                 timeout: 10*1000
             })
                 .success(function (data) {
-                    //callback(undefined, result.data);
-                    console.log(data);
+                    if (data) {
+                        console.log(JSON.stringify(data));
+                    }
                 })
                 .error(function (data, status) {
                     console.log(status +":"+data);
@@ -138,7 +140,7 @@ angular.module('service.push', [])
             //update registration id on server
             $http({
                 method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
                 data: {newRegId: registrationId, oldRegId: self.pushData.registrationId},
                 timeout: 10*1000
@@ -269,6 +271,16 @@ angular.module('service.push', [])
                 };
             }
 
+            if (!time) {
+                var err = new Error("You have to set time for add alarm");
+                return callback(err);
+            }
+
+            if (town.first=="" && town.second=="" && town.third=="" && city.location == null) {
+                var err = new Error("You have to set location info for add alarm");
+                return callback(err);
+            }
+
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
             }
@@ -292,10 +304,6 @@ angular.module('service.push', [])
                     self.pushData.alarmList[i] = alarmInfo;
                 }
                 else {
-                    if (!time) {
-                        var err = new Error("You have to set time for add alarm");
-                        return callback(err);
-                    }
                     self.pushData.alarmList.push(alarmInfo);
                 }
                 //check alarm in list
@@ -349,26 +357,25 @@ angular.module('service.push', [])
             console.log('fail to find cityIndex='+cityIndex);
         };
 
-        return obj;
-    })
-    .run(function(Push, Util) {
-            Push.loadPushInfo();
+        obj.init = function () {
+            var self = this;
+
+            self.loadPushInfo();
 
             if (!window.PushNotification) {
-                console.log("push notification plugin is not set");
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
 
             if (ionic.Platform.isIOS()) {
-                Push.pushData.type = 'ios';
+                self.pushData.type = 'ios';
             }
             else if (ionic.Platform.isAndroid()) {
-                Push.pushData.type = 'android';
+                self.pushData.type = 'android';
             }
 
             //if push is on, call register
-            if (Push.pushData.alarmList.length > 0) {
+            if (self.pushData.alarmList.length > 0) {
                 PushNotification.hasPermission(function(data) {
                     if (data.isEnabled) {
                         console.log('isEnabled');
@@ -383,9 +390,12 @@ angular.module('service.push', [])
                     console.log('Already set push notification');
                     return;
                 }
-                Push.register(function (registrationId) {
-                   console.log('start push registrationId='+registrationId);
+                self.register(function (registrationId) {
+                    console.log('start push registrationId='+registrationId);
                 });
             }
+        };
+
+        return obj;
     });
 

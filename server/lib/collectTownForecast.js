@@ -856,28 +856,35 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
     try{
         var result = {};
+        var itemNameList = ['taMin3', 'taMax3', 'taMin4', 'taMax4','taMin5', 'taMax5', 'taMin6', 'taMax6','taMin7', 'taMax7',
+           'taMin8', 'taMax8', 'taMin9', 'taMax9','taMin10', 'taMax10'];
+
         var template = {
             pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
-            regId: 0, /* 예보 구역 코드 */
-            taMin3: -100, /* 3일 후 예상 최저 기온 */
-            taMax3: -100, /* 3일 후 예상 최고 기온 */
-            taMin4: -100, /* 4일 후 예상 최저 기온 */
-            taMax4: -100, /* 4일 후 예상 최고 기온 */
-            taMin5: -100, /* 5일 후 예상 최저 기온 */
-            taMax5: -100, /* 5일 후 예상 최고 기온 */
-            taMin6: -100, /* 6일 후 예상 최저 기온 */
-            taMax6: -100, /* 6일 후 예상 최고 기온 */
-            taMin7: -100, /* 7일 후 예상 최저 기온 */
-            taMax7: -100, /* 7일 후 예상 최고 기온 */
-            taMin8: -100, /* 8일 후 예상 최저 기온 */
-            taMax8: -100, /* 8일 후 예상 최고 기온 */
-            taMin9: -100, /* 9일 후 예상 최저 기온 */
-            taMax9: -100, /* 9일 후 예상 최고 기온 */
-            taMin10: -100, /* 10일 후 예상 최저 기온 */
-            taMax10: -100 /* 10일 후 예상 최고 기온 */
+            regId: 0 /* 예보 구역 코드 */
+            //taMin3: -100, /* 3일 후 예상 최저 기온 */
+            //taMax3: -100, /* 3일 후 예상 최고 기온 */
+            //taMin4: -100, /* 4일 후 예상 최저 기온 */
+            //taMax4: -100, /* 4일 후 예상 최고 기온 */
+            //taMin5: -100, /* 5일 후 예상 최저 기온 */
+            //taMax5: -100, /* 5일 후 예상 최고 기온 */
+            //taMin6: -100, /* 6일 후 예상 최저 기온 */
+            //taMax6: -100, /* 6일 후 예상 최고 기온 */
+            //taMin7: -100, /* 7일 후 예상 최저 기온 */
+            //taMax7: -100, /* 7일 후 예상 최고 기온 */
+            //taMin8: -100, /* 8일 후 예상 최저 기온 */
+            //taMax8: -100, /* 8일 후 예상 최고 기온 */
+            //taMin9: -100, /* 9일 후 예상 최저 기온 */
+            //taMax9: -100, /* 9일 후 예상 최고 기온 */
+            //taMin10: -100, /* 10일 후 예상 최저 기온 */
+            //taMax10: -100 /* 10일 후 예상 최고 기온 */
         };
+
+        itemNameList.forEach(function (name) {
+            template[name] = -100;
+        });
 
         listItem.forEach(function(item){
             if(item.regId === undefined){
@@ -887,22 +894,12 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
             result = template;
             result.regId = item.regId[0];
-            result.taMin3 = parseFloat(item.taMin3[0]);
-            result.taMax3 = parseFloat(item.taMax3[0]);
-            result.taMin4 = parseFloat(item.taMin4[0]);
-            result.taMax4 = parseFloat(item.taMax4[0]);
-            result.taMin5 = parseFloat(item.taMin5[0]);
-            result.taMax5 = parseFloat(item.taMax5[0]);
-            result.taMin6 = parseFloat(item.taMin6[0]);
-            result.taMax6 = parseFloat(item.taMax6[0]);
-            result.taMin7 = parseFloat(item.taMin7[0]);
-            result.taMax7 = parseFloat(item.taMax7[0]);
-            result.taMin8 = parseFloat(item.taMin8[0]);
-            result.taMax8 = parseFloat(item.taMax8[0]);
-            result.taMin9 = parseFloat(item.taMin9[0]);
-            result.taMax9 = parseFloat(item.taMax9[0]);
-            result.taMin10 = parseFloat(item.taMin10[0]);
-            result.taMax10 = parseFloat(item.taMax10[0]);
+
+            itemNameList.forEach(function (name) {
+                if(item[name] && item[name][0]) {
+                    result[name] = parseFloat(item[name][0]);
+                }
+            });
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -918,6 +915,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     }
     catch(e){
         log.error('Error!! organizeTempData : failed data organized');
+        log.error(e.toString());
         self.emit('recvFail', index);
     }
 };

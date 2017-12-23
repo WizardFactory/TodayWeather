@@ -11,9 +11,11 @@ angular.module('service.util', [])
 
         obj.ga = {
             startTrackerWithId: function (id, dispatchPeriod) {
+                console.log({trackerWithId:id, dispatchPeriod: dispatchPeriod});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.startTrackerWithId(id, dispatchPeriod, function(result) {
-                        console.log("startTrackerWithId success = " + result);
+                        //console.log("startTrackerWithId success = " + result);
                     }, function(error) {
                         console.log("startTrackerWithId error = " + error);
                     });
@@ -22,19 +24,21 @@ angular.module('service.util', [])
             setAllowIDFACollection: function (enable) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAllowIDFACollection(enable, function(result) {
-                        console.log("setAllowIDFACollection success = " + result);
+                        //console.log("setAllowIDFACollection success = " + result);
                     }, function(error) {
                         console.log("setAllowIDFACollection error = " + error);
                     });
                 }
             },
             setUserId: function (id) {
+                console.log({userId: id});
+
                 if (window.fabric && window.fabric.Crashlytics) {
                     window.fabric.Crashlytics.setUserIdentifier(id);
                 }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setUserId(id, function(result) {
-                        console.log("setUserId success = " + result);
+                        // console.log("setUserId success = " + result);
                     }, function(error) {
                         console.log("setUserId error = " + error);
                     });
@@ -43,7 +47,7 @@ angular.module('service.util', [])
             setAnonymizeIp: function (anonymize) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAnonymizeIp(anonymize, function(result) {
-                        console.log("setAnonymizeIp success = " + result);
+                        // console.log("setAnonymizeIp success = " + result);
                     }, function(error) {
                         console.log("setAnonymizeIp error = " + error);
                     });
@@ -52,16 +56,18 @@ angular.module('service.util', [])
             setOptOut: function (optout) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setOptOut(optout, function(result) {
-                        console.log("setOptOut success = " + result);
+                        // console.log("setOptOut success = " + result);
                     }, function(error) {
                         console.log("setOptOut error = " + error);
                     });
                 }
             },
             setAppVersion: function (version) {
+                console.log({appVersion: version});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.setAppVersion(version, function(result) {
-                        console.log("setAppVersion success = " + result);
+                        //console.log("setAppVersion success = " + result);
                     }, function(error) {
                         console.log("setAppVersion error = " + error);
                     });
@@ -77,21 +83,25 @@ angular.module('service.util', [])
                 }
             },
             trackMetric: function (key, value) {
+                console.log({key: key, value: value});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackMetric(key, value, function(result) {
-                        console.log("trackMetric success = " + result);
+                        // console.log("trackMetric success = " + result);
                     }, function(error) {
                         console.log("trackMetric error = " + error);
                     });
                 }
             },
             trackView: function (screen, campaingUrl, newSession) {
+                console.log({screen: screen, campaingUrl: campaingUrl, newSession: newSession});
+
                 if (window.fabric && window.fabric.Answers) {
                     window.fabric.Answers.sendContentView(screen, campaingUrl);
                 }
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackView(screen, campaingUrl, newSession, function(result) {
-                        console.log("trackView success = " + result);
+                        // console.log("trackView success = " + result);
                     }, function(error) {
                         console.log("trackView error = " + error);
                         gaArray.push(["trackView", screen, campaingUrl]);
@@ -102,21 +112,22 @@ angular.module('service.util', [])
                 }
             },
             addCustomDimension: function (key, value) {
+                console.log({customDimension:{key:key, value: value}});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addCustomDimension(key, value, function(result) {
-                        console.log("addCustomDimension success = " + result);
+                        // console.log("addCustomDimension success = " + result);
                     }, function(error) {
                         console.log("addCustomDimension error = " + error);
                     });
                 }
             },
             trackEvent: function (category, action, label, value, newSession) {
-                if (twClientConfig.debug) {
-                   console.log('category='+category+' action='+action+' label='+label+' value='+value);
-                }
+                console.log({category:category, action: action, label: label, value: value, newSession: newSession});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackEvent(category, action, label, value, newSession, function(result) {
-                        console.log("trackEvent success = " + result);
+                        //console.log("trackEvent success = " + result);
                     }, function(error) {
                         console.log("trackEvent error = " + error);
                         gaArray.push(["trackEvent", category, action, label, value, newSession]);
@@ -127,12 +138,11 @@ angular.module('service.util', [])
                 }
             },
             trackException: function (description, fatal) {
-                if (twClientConfig.debug) {
-                   console.log('description='+description+' fatal='+fatal);
-                }
+                console.log({description:description, fatal:fatal});
+
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackException(description, fatal, function(result) {
-                        console.log("trackException success = " + result);
+                        //console.log("trackException success = " + result);
                     }, function(error) {
                         console.log("trackException error = " + error);
                         gaArray.push(["trackException", description, fatal]);
@@ -143,9 +153,10 @@ angular.module('service.util', [])
                 }
             },
             trackTiming: function (category, intervalInMilliseconds, name, label) {
+                console.log({category: category, intervalInMilliseconds: intervalInMilliseconds, name: name, label: label});
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.trackTiming(category, intervalInMilliseconds, name, label, function(result) {
-                        console.log("trackTiming success = " + result);
+                        //console.log("trackTiming success = " + result);
                     }, function(error) {
                         console.log("trackTiming error = " + error);
                     });
@@ -154,7 +165,7 @@ angular.module('service.util', [])
             addTransaction: function (transactionId, affiliation, revenue, tax, shipping, currencyCode) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addTransaction(transactionId, affiliation, revenue, tax, shipping, currencyCode, function(result) {
-                        console.log("addTransaction success = " + result);
+                        //console.log("addTransaction success = " + result);
                     }, function(error) {
                         console.log("addTransaction error = " + error);
                     });
@@ -163,7 +174,7 @@ angular.module('service.util', [])
             addTransactionItem: function (transactionId, name, sku, category, price, quantity, currencyCode) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.addTransactionItem(transactionId, name, sku, category, price, quantity, currencyCode, function(result) {
-                        console.log("addTransactionItem success = " + result);
+                        //console.log("addTransactionItem success = " + result);
                     }, function(error) {
                         console.log("addTransactionItem error = " + error);
                     });
@@ -172,7 +183,7 @@ angular.module('service.util', [])
             enableUncaughtExceptionReporting: function (enable) {
                 if (typeof $window.ga !== "undefined") {
                     return $window.ga.enableUncaughtExceptionReporting(enable, function(result) {
-                        console.log("enableUncaughtExceptionReporting success = " + result);
+                        //console.log("enableUncaughtExceptionReporting success = " + result);
                     }, function(error) {
                         console.log("enableUncaughtExceptionReporting error = " + error);
                     });
@@ -197,9 +208,9 @@ angular.module('service.util', [])
         obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.startVersion = 1.0;
-        obj.suiteName = "group.net.wizardfactory.todayweather";
         obj.language;
         obj.region;
+        obj.uuid = '';
 
         //obj.url = "/v000803";
         //obj.url = "https://todayweather-wizardfactory.rhcloud.com/v000803";
@@ -232,6 +243,11 @@ angular.module('service.util', [])
                 return true;
             }
         };
+
+        obj.placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
+        if (twClientConfig.googleapikey) {
+            obj.placesUrl += '&key='+twClientConfig.googleapikey;
+        }
 
         return obj;
     });

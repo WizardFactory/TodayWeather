@@ -1,5 +1,5 @@
 angular.module('service.weatherinfo', [])
-    .factory('WeatherInfo', function ($rootScope, WeatherUtil, Util) {
+    .factory('WeatherInfo', function (WeatherUtil, TwStorage, Util) {
         var cities = [];
         var cityIndex = -1;
         var obj = {
@@ -85,7 +85,7 @@ angular.module('service.weatherinfo', [])
             if (index >= -1 && index < cities.length) {
                 cityIndex = index;
                 // save current cityIndex
-                localStorage.setItem("cityIndex", JSON.stringify(cityIndex));
+                TwStorage.set("cityIndex", cityIndex);
                 console.log("cityIndex = " + cityIndex);
             }
         };
@@ -192,18 +192,6 @@ angular.module('service.weatherinfo', [])
             var that = this;
             var city = cities[index];
 
-            if (newCityInfo.name) {
-                city.name = newCityInfo.name;
-            }
-            if (newCityInfo.country) {
-                city.country = newCityInfo.country;
-            }
-            if (newCityInfo.address) {
-                city.address = newCityInfo.address;
-            }
-            if (newCityInfo.location) {
-                city.location = newCityInfo.location;
-            }
             if (newCityInfo.currentWeather) {
                 city.currentWeather = newCityInfo.currentWeather;
             }
@@ -219,23 +207,36 @@ angular.module('service.weatherinfo', [])
             if (newCityInfo.dayChart) {
                 city.dayChart = newCityInfo.dayChart;
             }
-            if (window.push && city.currentPosition == true) {
-                if (window.push.getAlarm(index)) {
-                    window.push.updateAlarm(index, city.address);
-                }
-            }
-            city.loadTime = new Date();
-
             if (newCityInfo.source) {
                 city.source = newCityInfo.source;
             }
+            if (city.currentPosition == true) {
+                if (newCityInfo.name) {
+                    city.name = newCityInfo.name;
+                }
+                if (newCityInfo.country) {
+                    city.country = newCityInfo.country;
+                }
+                if (newCityInfo.address) {
+                    city.address = newCityInfo.address;
+                }
+                if (newCityInfo.location) {
+                    city.location = newCityInfo.location;
+                }
+                if (window.push) {
+                    if (window.push.getAlarm(index)) {
+                        window.push.updateAlarm(index, city.address);
+                    }
+                }
+            }
+            city.loadTime = new Date();
 
             that.saveCities();
         };
 
         obj.loadCities = function() {
             var that = this;
-            var items = JSON.parse(localStorage.getItem("cities"));
+            var items = TwStorage.get("cities");
 
             if (items === null) {
                 createCity();
@@ -254,12 +255,13 @@ angular.module('service.weatherinfo', [])
             }
 
             // load last cityIndex
-            cityIndex = JSON.parse(localStorage.getItem("cityIndex"));
+            cityIndex = TwStorage.get("cityIndex");
             if (cityIndex === null) {
+                Util.ga.trackEvent('app', 'error', 'cityIndexNull');
                 that.setFirstCityIndex();
             }
             else if (cityIndex >= cities.length) {
-                console.log('city index is over');
+                Util.ga.trackEvent('app', 'error', 'cityIndexOver');
                 that.setFirstCityIndex();
             }
         };
@@ -281,44 +283,20 @@ angular.module('service.weatherinfo', [])
             });
 
             console.log('save preference plist='+JSON.stringify(pList));
-
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(function (value) {
-                console.log("save preference Success: " + value);
-            }, function (error) {
-                console.log("save preference Error: " + error);
-                Util.ga.trackEvent('plugin', 'error', 'saveAppPreferences');
-                Util.ga.trackException(error, false);
-            }, 'cityList', JSON.stringify(pList));
+            TwStorage.set("cityList", pList);
         };
 
         obj._loadCitiesPreference = function (callback) {
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                Util.ga.trackEvent('plugin', 'error', 'loadAppPreferences');
-                return;
+            var cityList = TwStorage.get("cityList");
+            if (cityList == undefined) {
+                callback(new Error("Can not find cityList"));
+            } else {
+                callback(undefined, cityList);
             }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.fetch(function (value) {
-                console.log("fetch preference Success: " + value);
-                callback(undefined, value);
-            }, function (error) {
-                console.log("fetch preference Error: " + error);
-                Util.ga.trackEvent('plugin', 'error', 'fetchAppPreferences');
-                Util.ga.trackException(error, false);
-                callback(error);
-            }, 'cityList');
         };
 
         obj.saveCities = function() {
-            localStorage.setItem("cities", JSON.stringify(cities));
+            TwStorage.set("cities", cities);
             this._saveCitiesPreference(cities);
         };
 

@@ -8,6 +8,7 @@ angular.module('controller.searchctrl', [])
         $scope.cityList = [];
         $scope.imgPath = Util.imgPath;
         $scope.isEditing = false;
+        $scope.isSearching = false;
 
         var towns = WeatherInfo.towns;
         var searchIndex = -1;
@@ -22,31 +23,20 @@ angular.module('controller.searchctrl', [])
         var strCurrent = "Current";
         var strLocation = "Location";
 
-        $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
-            'LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED', 'LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
-            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
-            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
-            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
-            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
-            strError = translations.LOC_ERROR;
-            strAlreadyTheSameLocationHasBeenAdded = translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED;
-            strCurrent = translations.LOC_CURRENT;
-            strLocation = translations.LOC_LOCATION;
-        }, function (translationIds) {
-            console.log("Fail to translate : " + JSON.stringify(translationIds));
-        });
-
         var service;
-        if (window.google == undefined) {
-            $ocLazyLoad.load('js!https://maps.googleapis.com/maps/api/js?libraries=places').then(function () {
-                console.log('googleapis loaded');
+        function _lazyLoad(url) {
+            $ocLazyLoad.load(url).then(function () {
+                console.log('google apis loaded');
                 service = new google.maps.places.AutocompleteService();
             }, function (e) {
                 Util.ga.trackEvent('window', 'error', 'lazyLoad');
                 Util.ga.trackException(e, true);
-                window.alert(e);
+                //window.alert(e);
             });
+        }
+
+        if (window.google == undefined) {
+           _lazyLoad(Util.placesUrl);
         }
         else {
             service = new google.maps.places.AutocompleteService();
@@ -61,6 +51,9 @@ angular.module('controller.searchctrl', [])
                 if (status != google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
                     Util.ga.trackEvent('address', 'error', 'PlacesServiceStatus='+status);
                     console.log(status);
+                }
+                else {
+                    //zero results
                 }
                 return;
             }
@@ -86,7 +79,17 @@ angular.module('controller.searchctrl', [])
                 }
 
                 if (city.currentPosition && city.address === null) {
-                    address = [strCurrent, strLocation];
+                    if (
+                        Util.language.indexOf("ko") != -1 ||
+                        Util.language.indexOf("ja") != -1 ||
+                        Util.language.indexOf("zh-CN") != -1 ||
+                        Util.language.indexOf("zh-TU") != -1) {
+
+                        address = [strCurrent+strLocation];
+                    }
+                    else {
+                        address = [strCurrent+" "+strLocation];
+                    }
                 }
                 if (!city.currentWeather) {
                     city.currentWeather = {};
@@ -161,9 +164,19 @@ angular.module('controller.searchctrl', [])
             }
         };
 
+        $scope.OnFocusInput = function() {
+            $scope.isEditing = false;
+            $scope.isSearching = true;
+        };
+
         $scope.$on('searchCurrentPositionEvent', function(event) {
             console.log(event);
             $scope.OnSearchCurrentPosition();
+        });
+
+        $scope.$on('updateCurrentPositionWeatherEvent', function(event) {
+            console.log(event);
+            updateCurrentPositionWeather();
         });
 
         $scope.OnSearchCurrentPosition = function() {
@@ -177,7 +190,9 @@ angular.module('controller.searchctrl', [])
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
                 $scope.search.word = geoInfo.name;
-                $scope.searchResults2.push({name: geoInfo.name, description: geoInfo.googleAddress});
+                geoInfo.description = geoInfo.address;
+                $scope.searchResults2.push(geoInfo);
+
                 $ionicScrollDelegate.$getByHandle('cityList').scrollTop();
                 searchIndex = -1;
             }, function(msg) {
@@ -192,8 +207,19 @@ angular.module('controller.searchctrl', [])
         };
 
         $scope.OnEdit = function() {
-            $scope.isEditing = !$scope.isEditing;
-            if ($scope.isEditing) {
+            if ($scope.isEditing) { // ok
+                $scope.isEditing = false;
+            } else {
+                if ($scope.isSearching) { // cancel
+                    $scope.isSearching = false;
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                        if (cordova.plugins.Keyboard.isVisible) {
+                            cordova.plugins.Keyboard.close();
+                        }
+                    }
+                } else { // edit
+                    $scope.isEditing = true;
+                }
                 $scope.search.word = undefined;
                 $scope.searchResults = [];
                 $scope.searchResults2 = [];
@@ -250,10 +276,14 @@ angular.module('controller.searchctrl', [])
             $scope.search.word = undefined;
             $scope.searchResults = [];
             $scope.searchResults2 = [];
+            $scope.isSearching = false;
 
             $ionicLoading.show();
 
+            var geoInfo;
+
             if (result.hasOwnProperty('first')) {
+                console.info("from town.js "+JSON.stringify(result));
                 var address = "대한민국"+" "+result.first;
                 var name = result.first;
                 if (result.second !== "") {
@@ -280,20 +310,20 @@ angular.module('controller.searchctrl', [])
                     address += " " + result.third;
                 }
 
-                var geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
-                var startTime = new Date().getTime();
+                geoInfo = {address: address, location: {lat:result.lat, long:result.long}, country: "KR", name: name};
 
-                WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
+                var startTime = new Date().getTime();
+                WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(address) , endTime - startTime);
+                    Util.ga.trackEvent('weather', 'get', address , endTime - startTime);
 
                     if (saveCity(weatherData, geoInfo) == false) {
-                        Util.ga.trackEvent('city', 'add error', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
-                        $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                        Util.ga.trackEvent('city', 'add error', address, WeatherInfo.getCityCount() - 1);
+                        $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
                     }
                     else {
-                        Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(address), WeatherInfo.getCityCount() - 1);
+                        Util.ga.trackEvent('city', 'add', address, WeatherInfo.getCityCount() - 1);
 
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
                         $location.path('/tab/forecast');
@@ -303,19 +333,20 @@ angular.module('controller.searchctrl', [])
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                     if (error instanceof Error) {
-                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
+                        Util.ga.trackEvent('weather', 'error', address +
                             '(message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                     } else {
-                        Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(address) +
+                        Util.ga.trackEvent('weather', 'error', address +
                             '(' + error + ')', endTime - startTime);
                     }
 
-                    $scope.showAlert(strError, strFailToGetWeatherInfo);
+                    $rootScope.showAlert(strError, strFailToGetWeatherInfo);
 
                     $ionicLoading.hide();
                 });
             }
-            else {
+            else if (result.hasOwnProperty('matched_substrings')) {
+                console.info("from google "+JSON.stringify(result));
                 if (result.matched_substrings && result.matched_substrings.length > 0) {
                     var matched_substrings_offset =  result.matched_substrings[0].offset;
                     for (var i=0; i<result.terms.length; i++) {
@@ -326,26 +357,48 @@ angular.module('controller.searchctrl', [])
                     }
                 }
 
-                WeatherUtil.getGeoInfoFromAddress(result.description).then(function(geoInfo) {
-                    geoInfo.name = result.name;
-                    WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
-
-                        if (saveCity(weatherData, geoInfo) == false) {
-                            $scope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                        }
-                        else {
-                            WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                            $location.path('/tab/forecast');
-                        }
-                        $ionicLoading.hide();
-                    }, function () {
-                        Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
-                        $scope.showAlert(strError, strFailToGetWeatherInfo);
+                WeatherUtil.getGeoInfoByAddr(result.description)
+                    .then(function (geoInfo) {
+                        geoInfo.name = result.name;
+                        WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+                            if (saveCity(weatherData, geoInfo) == false) {
+                                Util.ga.trackEvent('city', 'add error', result.description, WeatherInfo.getCityCount() - 1);
+                                $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                            }
+                            else {
+                                Util.ga.trackEvent('city', 'add', result.description, WeatherInfo.getCityCount() - 1);
+                                WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
+                                $location.path('/tab/forecast');
+                            }
+                            $ionicLoading.hide();
+                        }, function () {
+                            Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                            $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+                            $ionicLoading.hide();
+                        });
+                    }, function (err) {
+                        Util.ga.trackEvent('weather', 'error', err);
                         $ionicLoading.hide();
                     });
+            }
+            else {
+                console.info("from geoinfo server "+JSON.stringify(result));
+                geoInfo = result;
+                WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+                    if (saveCity(weatherData, geoInfo) == false) {
+                        Util.ga.trackEvent('city', 'add error', geoInfo.address, WeatherInfo.getCityCount() - 1);
+                        $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                    }
+                    else {
+                        Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
+                        WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
+                        $location.path('/tab/forecast');
+                    }
                 }, function (err) {
-                    console.log(err);
-                    Util.ga.trackEvent('weather', 'error', err);
+                    console.error(err);
+                    Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                    $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+                }).finally(function () {
                     $ionicLoading.hide();
                 });
             }
@@ -366,16 +419,61 @@ angular.module('controller.searchctrl', [])
             $location.path('/tab/forecast');
         };
 
+        function updateCurrentPositionWeather() {
+            showLoadingIndicator();
+            updateCurrentPosition().then(function(geoInfo) {
+                console.log('updated current position');
+                WeatherInfo.updateCity(0, geoInfo);
+                updateWeatherData(0).then(function (city) {
+                    index = WeatherInfo.getIndexOfCity(city);
+                    if (index !== -1) {
+                        WeatherInfo.updateCity(index, city);
+
+                        var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                        var todayData = city.currentWeather.today;
+                        var data = $scope.cityList[index];
+                        if (city.name) {
+                            data.address = [];
+                            data.address.push(city.name);
+                        }
+                        else {
+                            data.address = address;
+                        }
+                        data.skyIcon = city.currentWeather.skyIcon;
+                        data.t1h = city.currentWeather.t1h;
+                        data.tmn = todayData.tmn;
+                        data.tmx = todayData.tmx;
+                    }
+                }).finally(function () {
+                    hideLoadingIndicator();
+                });
+            }, function(msg) {
+                console.log('Fail to get current position');
+                hideLoadingIndicator();
+                if (msg !== null) {
+                    $scope.showRetryConfirm(strError, msg, 'search');
+                }
+                else {
+                    $scope.$broadcast('updateCurrentPositionWeatherEvent');
+                }
+            });
+        }
+
         /**
          *
          * @returns {boolean}
          * @constructor
          */
         $scope.OnDisableCity = function() {
-            Util.ga.trackEvent('city', 'disable', $scope.cityList[0].disable, 0);
+            var city = $scope.cityList[0];
+            Util.ga.trackEvent('city', 'disable', city.disable, 0);
 
-            WeatherInfo.disableCity($scope.cityList[0].disable);
+            WeatherInfo.disableCity(city.disable);
 
+            if (city.disable === false && city.t1h === '-') {
+                //it is enable at first time
+                updateCurrentPositionWeather();
+            }
             return false; //OnDisableCity가 호출되지 않도록 이벤트 막음
         };
 
@@ -423,6 +521,10 @@ angular.module('controller.searchctrl', [])
                                     selectedTime.toString());
 
                         Push.updateAlarm(index, WeatherInfo.getCityOfIndex(index).address, selectedTime, function (err, alarmInfo) {
+                            if (err) {
+                                Util.ga.trackEvent('alarm', 'error', err.message, index);
+                                return;
+                            }
                             console.log('alarm='+JSON.stringify(alarmInfo));
                             $scope.cityList[index].alarmInfo = alarmInfo;
                         });
@@ -521,12 +623,16 @@ angular.module('controller.searchctrl', [])
                 if (isLocationAuthorized === true) {
                     WeatherUtil.getCurrentPosition().then(function (data) {
                         Util.ga.trackEvent('position', 'done', data.provider);
-                        var coords = data.coords;
-                        WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                            deferred.resolve(geoInfo);
-                        }, function () {
-                            deferred.reject(strFailToGetAddressInfo);
-                        });
+
+                        var location = WeatherUtil.geolocationNormalize({lat: data.coords.latitude, long: data.coords.longitude});
+                        WeatherUtil.getGeoInfoByLocation(location)
+                            .then(function (geoInfo) {
+                                console.log(geoInfo);
+                                deferred.resolve(geoInfo);
+                            }, function (err) {
+                                console.error(err);
+                                deferred.reject(strFailToGetAddressInfo);
+                            });
                     }, function () {
                         Util.ga.trackEvent('position', 'error', 'all');
                         msg = strFailToGetCurrentPosition;
@@ -633,11 +739,12 @@ angular.module('controller.searchctrl', [])
 
             // 현재 위치는 저장된 위치가 있는 경우에만 날씨 데이터를 업데이트함
             if (cityData.currentPosition === true && cityData.address === null && cityData.location === null) {
+                console.log('city address and location are null');
                 deferred.reject();
             } else {
                 var startTime = new Date().getTime();
 
-                WeatherUtil.getWorldWeatherInfo(cityData).then(function (weatherData) {
+                WeatherUtil.getWeatherByGeoInfo(cityData).then(function (weatherData) {
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
                     Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
@@ -688,5 +795,20 @@ angular.module('controller.searchctrl', [])
             }
         });
 
-        init();
+        $translate(['LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_ERROR',
+            'LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED', 'LOC_CURRENT', 'LOC_LOCATION']).then(function (translations) {
+            strFailToGetAddressInfo = translations.LOC_FAIL_TO_GET_LOCATION_INFORMATION;
+            strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
+            strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
+            strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+            strError = translations.LOC_ERROR;
+            strAlreadyTheSameLocationHasBeenAdded = translations.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED;
+            strCurrent = translations.LOC_CURRENT;
+            strLocation = translations.LOC_LOCATION;
+        }, function (translationIds) {
+            console.log("Fail to translate : " + JSON.stringify(translationIds));
+        }).finally(function () {
+            init();
+        });
     });

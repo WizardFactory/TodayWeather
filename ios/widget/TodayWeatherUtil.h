@@ -27,15 +27,16 @@ extern TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 @interface TodayWeatherUtil : NSObject
 {
-//    NSString *twuCountry;
-
+    NSMutableArray  *nsmaDaumKeys;
+    NSDictionary *jsonUnitsDict;
 }
 
 /********************************************************************
  Declare Class properties
  ********************************************************************/
 @property (retain, nonatomic) NSString *twuCountry;
-//@property (retain, nonatomic) TEMP_UNIT    temperatureUnit;
+@property (retain, nonatomic) NSMutableArray  *nsmaDaumKeys;
+@property (retain, nonatomic) NSDictionary *jsonUnitsDict;
 
 /********************************************************************
  Declare Class functions
@@ -52,7 +53,19 @@ extern TEMP_UNIT    gTemperatureUnit;
 + (void) setTemperatureUnit:(NSString *)nssUnits;
 + (NSString *) processLocationStr:(NSString *)nssSrcStr;
 + (float) convertFromCelsToFahr:(float)cels;
-//+ (void) processKRAddress;
++ (NSMutableArray *) shuffleDatas:(NSMutableArray *)nsaDatas;
+
+/********************************************************************
+ Declare Instance functions
+ ********************************************************************/
+- (NSMutableArray *) getDaumServiceKeys;
+- (void) setDaumServiceKeys:(NSString *)nssDaumKeys;
++ (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets;
+
++ (NSMutableDictionary *) getTodayDictionaryByCoord:(NSDictionary *)jsonDict date:(NSString *)nssDate country:(NSString *)nssCountry;
+- (void) setUnits:(NSString *)nssNewUnits;
+- (NSDictionary *) getUnits;
+
 @end
 
 #endif /* TodayWeatherUtil_h */

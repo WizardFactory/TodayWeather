@@ -11,16 +11,19 @@ var Iconv = require('iconv').Iconv;
 var Buffer = require('buffer').Buffer;
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
-var KmaStnDaily = require('../models/modelKmaStnDaily');
+// var KmaStnDaily = require('../models/modelKmaStnDaily');
 var KmaStnHourly = require('../models/modelKmaStnHourly');
+var KmaStnHourly2 = require('../models/modelKmaStnHourly2');
 var KmaStnMinute = require('../models/modelKmaStnMinute');
+var KmaStnMinute2 = require('../models/modelKmaStnMinute2');
 var KmaStnInfo = require('../models/modelKmaStnInfo');
+var KmaSpecialWeatherSituation = require('../models/modelKmaSpecialWeatherSituation');
 
 var Current = require('../models/modelCurrent');
 var Town = require('../models/town');
 
 var convertGeocode = require('../utils/convertGeocode');
-var convert = require('../utils/coordinate2xy');
+var Convert = require('../utils/coordinate2xy');
 
 /**
  *
@@ -32,9 +35,10 @@ function KmaScraper() {
 
 /**
  * 분당, 시간별 들어오는 AWS weather data parsing
+ * @param pubDate
  * @param $
  * @param callback
- * @returns {KmaScraper}
+ * @returns {*}
  * @private
  */
 KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
@@ -45,9 +49,19 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
     stnWeatherList.pubDate = strAr[strAr.length-1];
 
+    //actually pubDate is ''
+    var err;
+    if (stnWeatherList.pubDate == undefined || stnWeatherList.pubDate == '' || stnWeatherList.pubDate.length < 12) {
+        err =  new Error('Fail to get weather pubdate='+stnWeatherList.pubDate);
+        err.state = 'Retry';
+        log.warn(err.toString());
+        return callback(err);
+    }
+
     if (pubDate) {
         if ((new Date(stnWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
-            var err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+            err =  new Error('Stn Minute info is not updated yet = '+ stnWeatherList.pubDate);
+            err.state = 'Skip';
             return callback(err);
         }
     }
@@ -67,6 +81,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
         }
 
         var stnMinInfo = {};
+        stnMinInfo.date = new Date(stnWeatherList.pubDate);
         var pIndex = 0;
         td.each(function() {
             var tdText = $(this).text().replace(/\s+/, "");
@@ -115,7 +130,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
         });
         //log.info(JSON.stringify(stnMinInfo));
         if (stnMinInfo.t1h === 0 && stnMinInfo.vec === 0 && stnMinInfo.wsd === 0 && stnMinInfo.vec1 === 0) {
-           log.error('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
+           log.warn('stnMinInfo is invalid info'+JSON.stringify(stnMinInfo));
         }
         else {
             stnWeatherList.stnList.push(stnMinInfo);
@@ -130,6 +145,7 @@ KmaScraper.prototype._parseStnMinInfo = function(pubDate, $, callback) {
 
 /**
  *
+ * @param pubDate
  * @param $
  * @param callback
  * @returns {KmaScraper}
@@ -206,6 +222,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
             }
         }
         catch(e) {
+            callback(e);
         }
     });
 
@@ -226,7 +243,6 @@ KmaScraper.prototype._convertKrToEng = function (str) {
  *
  * @param pubDate
  * @param callback
- * @param date
  */
 KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     var self = this;
@@ -402,32 +418,32 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
  * @returns {KmaScraper}
  * @private
  */
-KmaScraper.prototype._checkPubdate = function(date, callback)  {
-    KmaStnHourly.find({}).limit(1).lean().exec(function (err, stnHourlyList) {
-        if (err) {
-            return callback(err);
-        }
-        if (stnHourlyList.length === 0) {
-            return  callback(err, false);
-        }
-
-        for (var i=0; i<stnHourlyList.length; i++) {
-            var hourlyData = stnHourlyList[i].hourlyData;
-            for (var j=0; j<hourlyData.length; j++) {
-                var hourlyObj = hourlyData[j];
-                if (date == hourlyObj.date) {
-                    log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
-                    return  callback(err, true);
-                }
-            }
-        }
-
-        //log.debug('check pub date : kma stn weather already updated');
-        return callback(err, false);
-    });
-
-    return this;
-};
+// KmaScraper.prototype._checkPubdate = function(date, callback)  {
+//     KmaStnHourly.find({}).limit(1).lean().exec(function (err, stnHourlyList) {
+//         if (err) {
+//             return callback(err);
+//         }
+//         if (stnHourlyList.length === 0) {
+//             return  callback(err, false);
+//         }
+//
+//         for (var i=0; i<stnHourlyList.length; i++) {
+//             var hourlyData = stnHourlyList[i].hourlyData;
+//             for (var j=0; j<hourlyData.length; j++) {
+//                 var hourlyObj = hourlyData[j];
+//                 if (date == hourlyObj.date) {
+//                     log.info('stnId=' + stnHourlyList[i].stnId + ' pubDate=' + stnHourlyList[i].pubDate + ' current=' + date);
+//                     return  callback(err, true);
+//                 }
+//             }
+//         }
+//
+//         //log.debug('check pub date : kma stn weather already updated');
+//         return callback(err, false);
+//     });
+//
+//     return this;
+// };
 
 /**
  *
@@ -514,32 +530,51 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
         }
         if (stnList.length > 0) {
             //already saved;
-            return callback(err, stnWeatherInfo.stnId);
-        }
-
-        var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
-
-        self._recursiveConvertGeoCode(addr, 30, function (err, result) {
-            if(err) {
-                return callback(err);
+            if (stnList.length > 1) {
+                log.error({state: 'conflict', stnId:stnWeatherInfo.stnId});
             }
+            var savedStnInfo = stnList[0];
+            if (savedStnInfo.isCityWeather !== stnWeatherInfo.isCityWeather) {
+               savedStnInfo.isCityWeather = stnWeatherInfo.isCityWeather;
+               log.info({state: 'update', kmaStnInfo: savedStnInfo.toString()});
+               savedStnInfo.save(function (err) {
+                   if (err) {
+                       log.error({stnId:savedStnInfo.stnId, action:'save', error:err});
+                   }
+                   return callback(err, stnWeatherInfo.stnId);
+               });
+            }
+            else {
+                return callback(err, stnWeatherInfo.stnId);
+            }
+        }
+        else {
+            var addr = stnWeatherInfo.addr.replace(/\(산간\)/g, '');
 
-            log.info('addr='+addr+' result'+JSON.stringify(result));
-            var kmaStnInfo = new KmaStnInfo({
-                stnId: stnWeatherInfo.stnId,
-                stnName: stnWeatherInfo.stnName,
-                addr: stnWeatherInfo.addr,
-                isCityWeather: stnWeatherInfo.isCityWeather,
-                altitude: stnWeatherInfo.altitude,
-                geo: [result.lon, result.lat]
-            });
-            kmaStnInfo.save(function (err) {
-                if (err) {
+            self._recursiveConvertGeoCode(addr, 30, function (err, result) {
+                if(err) {
                     return callback(err);
                 }
-                callback(err, stnWeatherInfo.stnId);
+
+                log.debug('addr='+addr+' result'+JSON.stringify(result));
+                var kmaStnInfo = new KmaStnInfo({
+                    stnId: stnWeatherInfo.stnId,
+                    stnName: stnWeatherInfo.stnName,
+                    addr: stnWeatherInfo.addr,
+                    isCityWeather: stnWeatherInfo.isCityWeather,
+                    altitude: stnWeatherInfo.altitude,
+                    geo: [result.lon, result.lat]
+                });
+
+                log.info({state: 'new', kmaStnInfo: kmaStnInfo.toString()});
+                kmaStnInfo.save(function (err) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    callback(err, stnWeatherInfo.stnId);
+                });
             });
-        });
+        }
     });
 
     return this;
@@ -593,7 +628,7 @@ KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callbac
             kmaStnMinute.minuteData = kmaStnMinute.minuteData.slice(index, kmaStnMinute.minuteData.length);
         }
 
-        kmaStnMinute.save(function () {
+        kmaStnMinute.save(function (err) {
             if (err) {
                 return callback(err);
             }
@@ -604,12 +639,35 @@ KmaScraper.prototype._saveStnMinute = function (stnWeatherInfo, pubDate, callbac
     return this;
 };
 
-KmaScraper.prototype._saveKmaStnMinuteList = function (weatherList, callback) {
+// KmaScraper.prototype._saveKmaStnMinuteList = function (weatherList, callback) {
+//     var self = this;
+//
+//     async.map(weatherList.stnList,
+//         function (stnWeatherInfo, mapCallback) {
+//             self._saveStnMinute(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+//                 if (err) {
+//                     return mapCallback(err);
+//                 }
+//                 mapCallback(err, savedList);
+//             });
+//         },
+//         function (err, results) {
+//             if (err) {
+//                 return callback(err);
+//             }
+//
+//             callback(err, results);
+//         });
+//
+//     return this;
+// };
+
+KmaScraper.prototype._saveKmaStnMinute2List = function (weatherList, callback) {
     var self = this;
 
     async.map(weatherList.stnList,
         function (stnWeatherInfo, mapCallback) {
-            self._saveStnMinute(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+            self._saveStnMinute2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
                 if (err) {
                     return mapCallback(err);
                 }
@@ -622,6 +680,19 @@ KmaScraper.prototype._saveKmaStnMinuteList = function (weatherList, callback) {
             }
 
             callback(err, results);
+        });
+
+    return this;
+};
+
+KmaScraper.prototype._saveStnHourly2 = function (stnWeatherInfo, pubDate, callback) {
+    KmaStnHourly2.update({stnId:stnWeatherInfo.stnId, date:stnWeatherInfo.date}, stnWeatherInfo, {upsert:true},
+        function (err) {
+            if (err) {
+                log.error(err.message + "in insert DB(KmaStnHourly)");
+                log.warn(JSON.stringify(stnWeatherInfo));
+            }
+            return callback(err);
         });
 
     return this;
@@ -721,45 +792,79 @@ KmaScraper.prototype._saveStnHourly = function (stnWeatherInfo, pubDate, callbac
     return this;
 };
 
+KmaScraper.prototype._saveKmaStnHourly2List = function (weatherList, callback) {
+    var self = this;
+    async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
+
+        async.waterfall([function (wfCallback) {
+            self._saveStnInfo(stnWeatherInfo, function (err) {
+                if (err) {
+                    return wfCallback(err);
+                }
+                wfCallback(err);
+            });
+        }, function (wfCallback) {
+            self._saveStnHourly2(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+                if (err) {
+                    return wfCallback(err);
+                }
+                wfCallback(err, savedList);
+            });
+        }], function (err, savedList) {
+            if (err) {
+                return mapCallback(err);
+            }
+            mapCallback(err, savedList);
+        });
+
+    }, function (err, results) {
+        if (err) {
+            return callback(err);
+        }
+
+        callback(err, results);
+    });
+};
+
 /**
  * stnInfo를 먼저 저장하고, stnHourly 저장한다.
  * @param weatherList
  * @param callback
  * @private
  */
-KmaScraper.prototype._saveKmaStnHourlyList = function (weatherList, callback) {
-    var self = this;
-   async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
-
-       async.waterfall([function (wfCallback) {
-          self._saveStnInfo(stnWeatherInfo, function (err) {
-              if (err) {
-                  return wfCallback(err);
-              }
-              wfCallback(err);
-          });
-       }, function (wfCallback) {
-          self._saveStnHourly(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
-              if (err) {
-                  return wfCallback(err);
-              }
-              wfCallback(err, savedList);
-          });
-       }], function (err, savedList) {
-           if (err) {
-               return mapCallback(err);
-           }
-           mapCallback(err, savedList);
-       });
-
-   }, function (err, results) {
-       if (err) {
-           return callback(err);
-       }
-
-       callback(err, results);
-   });
-};
+// KmaScraper.prototype._saveKmaStnHourlyList = function (weatherList, callback) {
+//     var self = this;
+//    async.map(weatherList.stnList, function (stnWeatherInfo, mapCallback) {
+//
+//        async.waterfall([function (wfCallback) {
+//           self._saveStnInfo(stnWeatherInfo, function (err) {
+//               if (err) {
+//                   return wfCallback(err);
+//               }
+//               wfCallback(err);
+//           });
+//        }, function (wfCallback) {
+//           self._saveStnHourly(stnWeatherInfo, weatherList.pubDate, function (err, savedList) {
+//               if (err) {
+//                   return wfCallback(err);
+//               }
+//               wfCallback(err, savedList);
+//           });
+//        }], function (err, savedList) {
+//            if (err) {
+//                return mapCallback(err);
+//            }
+//            mapCallback(err, savedList);
+//        });
+//
+//    }, function (err, results) {
+//        if (err) {
+//            return callback(err);
+//        }
+//
+//        callback(err, results);
+//    });
+// };
 
 /**
  *
@@ -807,14 +912,29 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
                 return cb(err, {pubDate: weatherList.pubDate, stnList: weatherList.stnList});
             });
         },
+        //function (weatherList, cb) {
+        //    log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //    self._saveKmaStnMinuteList(weatherList, function (err, results) {
+        //        log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        return cb(err, weatherList);
+        //    });
+        //},
         function (weatherList, cb) {
-            log.info('wl stnlist='+weatherList.stnList.length);
-            self._saveKmaStnMinuteList(weatherList, function (err, results) {
+            log.info('save2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+            self._saveKmaStnMinute2List(weatherList, function (err, results) {
+                log.info('done2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
                 if (err) {
                     return cb(err);
                 }
                 return cb(err, results);
             });
+        },
+        function (results, cb) {
+            self._removeBefore10days("Minute");
+            cb(null, results);
         }
     ], function (err, results) {
         if (err) {
@@ -824,6 +944,12 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
     });
 };
 
+/**
+ *
+ * @param days
+ * @param callback
+ * @returns {KmaScraper}
+ */
 KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     var self = this;
     var pubDateCount = days*24;
@@ -852,8 +978,27 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     return this;
 };
 
+
+KmaScraper.prototype._removeBefore10days = function (name, callback) {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+    if (name == 'Hourly') {
+       KmaStnHourly2.remove({"date": {$lt:removeDate} }, function (err) {
+           log.info('removed stn '+name+' date from date : '+removeDate);
+           if (callback)callback(err);
+       });
+    }
+    else {
+       KmaStnMinute2.remove({"date": {$lt:removeDate} }, function(err){
+           log.info('removed stn '+name+' date from date : '+removeDate);
+           if (callback)callback(err);
+       });
+    }
+};
+
 /**
  *
+ * @param day
  * @param callback
  */
 KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
@@ -880,12 +1025,28 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
         //},
         function (cb) {
             log.info('get aws weather');
-            self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
+            //retry
+            async.retry({
+                    times:10,
+                    interval:1000,
+                    errorFilter: function(err) {
+                        return err.state == 'Retry'; // only retry on a specific error
+                    }
+                },
+                function (retryCallback) {
+                self.getAWSWeather('hourly', pubDate, function (err, weatherList) {
+                    if (err)  {
+                        return retryCallback(err);
+                    }
+                    return retryCallback(err, weatherList);
+                });
+            }, function (err, weatherList) {
                 if (err)  {
                     return cb(err);
                 }
                 return cb(err, weatherList);
-            });},
+            });
+        },
         function (awsWeatherList, cb) {
             self.getCityWeather(pubDate, function (err, cityWeatherList) {
                 if (err) {
@@ -902,14 +1063,28 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 //});
                 cb(err, {pubDate: awsWeatherList.pubDate, stnList: weatherList});
             })},
+        //function (weatherList, cb) {
+        //    log.info('save1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //    self._saveKmaStnHourlyList(weatherList, function (err, results) {
+        //        log.info('done1 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+        //        if (err) {
+        //            return cb(err);
+        //        }
+        //        return cb(err, weatherList);
+        //    });},
         function (weatherList, cb) {
-            log.info('wl stnlist='+weatherList.stnList.length+" pubdate="+weatherList.pubDate);
-            self._saveKmaStnHourlyList(weatherList, function (err, results) {
+            log.info('save2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
+            self._saveKmaStnHourly2List(weatherList, function (err, results) {
+                log.info('done2 wl stnlist='+weatherList.stnList.length+' time='+new Date());
                 if (err) {
                     return cb(err);
                 }
                 return cb(err, results);
-            });}
+            });},
+        function (results, cb) {
+            self._removeBefore10days("Hourly");
+            cb(null, results);
+        }
     ], function (err, results) {
         if (err) {
             return callback(err);
@@ -958,7 +1133,7 @@ KmaScraper.prototype._findCurrent = function(mOriCoord, callback) {
 KmaScraper.prototype._updateRnsHitRate = function(stnInfo, callback) {
     var self = this;
     var geocode = {lon:stnInfo.geo[0], lat:stnInfo.geo[1]};
-    var conv = new convert(geocode, {}).toLocation();
+    var conv = new Convert(geocode, {}).toLocation();
     var mCoord = {};
     mCoord.mx = conv.getLocation().x;
     mCoord.my = conv.getLocation().y;
@@ -992,10 +1167,7 @@ KmaScraper.prototype._updateRnsHitRate = function(stnInfo, callback) {
                     var startTime = endTime - 3600000;
                     var minuteList = stnWeatherList[0].minuteData.filter(function (data) {
                         var dataTime = (new Date(data.date)).getTime();
-                        if ( startTime < dataTime && dataTime <= endTime) {
-                            return true;
-                        }
-                        return false;
+                        return startTime < dataTime && dataTime <= endTime;
                     });
 
                     if (minuteList.length < 15)  {
@@ -1191,7 +1363,7 @@ KmaScraper.prototype.addStnAddressToTown = function (callback) {
             function (kmaStn, aCallback) {
                 kmaStn.town = self._parseStnAddress(kmaStn.addr);
                 kmaStn.geocode = {lat:kmaStn.geo[1], lon:kmaStn.geo[0]};
-                var conv = new convert(kmaStn.geocode, {}).toLocation();
+                var conv = new Convert(kmaStn.geocode, {}).toLocation();
                 kmaStn.mCoord = {};
                 kmaStn.mCoord.mx = conv.getLocation().x;
                 kmaStn.mCoord.my = conv.getLocation().y;
@@ -1269,6 +1441,316 @@ KmaScraper.prototype.resetMoutainInfo = function(callback) {
                 callback(err, results) ;
             });
     });
+};
+
+KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callback) {
+
+    KmaStnMinute2.update({stnId:stnWeatherInfo.stnId, date:stnWeatherInfo.date}, stnWeatherInfo, {upsert:true},
+        function (err) {
+            if (err) {
+                log.error(err.message + "in insert DB(KmaStnMinute)");
+                log.warn(JSON.stringify(stnWeatherInfo));
+            }
+            return callback(err);
+        });
+
+    return this;
+};
+
+/**
+ *
+ * @returns {string}
+ * @private
+ */
+KmaScraper.prototype._getKmaDomain = function () {
+ return "http://www.kma.go.kr";
+};
+
+/**
+ * 기상특보 현황 : 2017년 06월 21일 11시 00분 이후 (2017년 06월 21일 10시 00분 발표)
+ * 예비 기상특보 현황 : 2017년 06월 21일 10시 00분 발표
+ * 기상정보 : 2017년 06월 22일 04시 00분 발표
+ * @param html
+ * @private
+ */
+KmaScraper.prototype._getAnnouncement = function (html) {
+    //기상특보 현황 : 2017년 06월 19일 18시 00분
+    var pubDateStr = html.children('dt').text();
+    pubDateStr = pubDateStr.replace(/\t/g, '');
+    pubDateStr = pubDateStr.replace(/\r\n/g, '');
+    if (pubDateStr.indexOf('(') != -1) {
+        pubDateStr = pubDateStr.slice(pubDateStr.indexOf('(')+1, pubDateStr.indexOf('발표')-1);
+    }
+    else {
+        pubDateStr = pubDateStr.slice(pubDateStr.indexOf(':')+2, pubDateStr.indexOf('발표')-1);
+    }
+
+    return kmaTimeLib.convertKoreaStr2Date(pubDateStr);
+};
+
+/**
+ *
+ * @returns {string}
+ */
+KmaScraper.prototype.getSpecialWeatherSituationUrl = function () {
+   return this._getKmaDomain()+"/weather/warning/status.jsp";
+};
+
+/**
+ *
+ * @param specialHtml
+ * @param type
+ * @returns {{}}
+ * @private
+ */
+KmaScraper.prototype._parseSpecialHtml = function (specialHtml, type) {
+
+    var announcement = this._getAnnouncement(specialHtml);
+    var imageUrl = this._getKmaDomain() + specialHtml.find('img').attr('src');
+
+    var body = specialHtml.children('dd').text();
+    body = body.replace(/\t/g, '');
+    body = body.replace(/\r\n/g, '');
+    var bodyArray = body.split('<참고사항>');
+    var situationStr = bodyArray[0];
+    situationStr = situationStr.replace(/\s+/g, '');
+
+    var comment = bodyArray[1];
+
+    var situationList;
+    var situationArray;
+    if (type == KmaSpecialWeatherSituation.TYPE_SPECIAL) {
+        situationArray = situationStr.split('o');
+        situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
+    }
+    else if (type == KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL) {
+        //(1)호우예비특보o06월29일저녁:제주도(제주도산지)o06월29일밤:제주도(제주도남부)
+        var re = new RegExp(/\([0-9]\)/);
+        situationArray = situationStr.split(re);
+        for (var i=0; i<situationArray.length; i++) {
+            // o없음
+            //(1)풍량예비특보o0620일아침:제주도남쪽먼바다
+            if (situationArray[i].indexOf("없음") >= 0) {
+                situationArray[i] = situationArray[i].slice(1);
+            }
+            else {
+                situationArray[i] = situationArray[i].slice(2);
+                situationArray[i] = situationArray[i].replace(/:/g, '-');
+                situationArray[i] = situationArray[i].replace(/o/g, ':');
+            }
+        }
+        //호우예비특보:06월29일저녁-제주도(제주도산지):06월29일밤-제주도(제주도남부)
+        situationList = KmaSpecialWeatherSituation.strArray2SituationList(situationArray);
+    }
+
+    var special = {};
+    special.announcement = announcement;
+    special.type = type;
+    special.imageUrl = imageUrl;
+    special.situationList = situationList;
+    special.comment = comment;
+    return special;
+};
+
+/**
+ *
+ * @param html
+ * @param type
+ * @returns {{}}
+ * @private
+ */
+KmaScraper.prototype._parseWeatherInformationHtml = function (html, type) {
+    var weatherInformation = {};
+    weatherInformation.announcement = this._getAnnouncement(html);
+
+    var body = html.children('dd').children('ul').children('li').text();
+    body = body.replace(/\t/g, '');
+    body = body.replace(/\r\n/g, '');
+    weatherInformation.comment = body;
+    weatherInformation.type = type;
+
+    return weatherInformation;
+};
+
+/**
+ *
+ * @param $
+ * @param callback
+ */
+KmaScraper.prototype.parseSpecialWeatherSituationList = function ($, callback) {
+    var self = this;
+    var specialWeatherSituationList = [];
+
+    log.info("prase kma special weather");
+
+    try {
+        var specialHtml = $('.special_report_list2').eq(0);
+        var preliminarySpecialHtml = $('.special_report_list2').eq(1);
+        var weatherNewsHtml = $('.special_report_list3').eq(0);
+        var weatherNewsHtml2 = $('.special_report_list3').eq(1);
+
+        /**
+         *기상특보 현황 : 2017년 06월 18일 15시 00분 이후 (2017년 06월 18일 15시 00분 발표)
+         */
+        var specialWeatherSituation;
+        specialWeatherSituation = self._parseSpecialHtml(specialHtml, KmaSpecialWeatherSituation.TYPE_SPECIAL);
+        specialWeatherSituationList.push(specialWeatherSituation);
+
+        specialWeatherSituation = {};
+        specialWeatherSituation = self._parseSpecialHtml(preliminarySpecialHtml, KmaSpecialWeatherSituation.TYPE_PRELIMINARY_SPECIAL);
+        specialWeatherSituationList.push(specialWeatherSituation);
+
+        var weatherFlashHtml;
+        var weatherInformationHtml;
+        if (weatherNewsHtml2.length > 0) {
+            weatherFlashHtml = weatherNewsHtml;
+            weatherInformationHtml = weatherNewsHtml2;
+        }
+        else {
+            weatherInformationHtml = weatherNewsHtml;
+        }
+
+        if (weatherFlashHtml && weatherFlashHtml.length > 0) {
+            specialWeatherSituation = {};
+            specialWeatherSituation = self._parseWeatherInformationHtml(weatherFlashHtml, KmaSpecialWeatherSituation.TYPE_WEATHER_FLASH);
+            specialWeatherSituationList.push(specialWeatherSituation);
+        }
+
+        if (weatherFlashHtml && weatherInformationHtml.length > 0) {
+            specialWeatherSituation = {};
+            specialWeatherSituation = self._parseWeatherInformationHtml(weatherInformationHtml, KmaSpecialWeatherSituation.TYPE_WEATHER_INFORMATION);
+            specialWeatherSituationList.push(specialWeatherSituation);
+        }
+    }
+    catch(err) {
+        return callback(err);
+    }
+
+    callback(null, specialWeatherSituationList);
+};
+
+KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
+    var self = this;
+    var url = self.getSpecialWeatherSituationUrl();
+
+    log.info("kma special weather url="+url);
+
+    req(url, {encoding: 'binary'}, function (err, response, body) {
+        if (err) {
+            log.error(err);
+            return callback(err);
+        }
+        try {
+            var strContents = new Buffer(body, 'binary');
+            var iconv = new Iconv('euc-kr', 'UTF8');
+            strContents = iconv.convert(strContents).toString();
+
+            var $ = cheerio.load(strContents);
+        }
+        catch(err) {
+            return callback(err);
+        }
+
+        callback(null, $);
+    });
+};
+
+/**
+ *
+ * @param sws
+ * @param callback
+ */
+KmaScraper.prototype.findSpecialWeatherSituation = function (sws, callback) {
+   KmaSpecialWeatherSituation.find({announcement: sws.announcement, type: sws.type}).limit(1).lean().exec(function (err, result) {
+       if (err) {
+           log.error(err.message + "in find DB(KmaSpecialWeatherSituation)");
+           return callback(err);
+       }
+       return callback(null, result);
+   });
+};
+
+/**
+ *
+ * @param sws
+ * @param callback
+ */
+KmaScraper.prototype.updateSpecialWeatherSituation = function (sws, callback) {
+   KmaSpecialWeatherSituation.update({announcement: sws.announcement, type: sws.type}, sws, {upsert:true}, function (err) {
+       if (err) {
+           log.error(err.message + "in insert DB(KmaSpecialWeatherSituation)");
+           log.warn(JSON.stringify(sws));
+       }
+       return callback(err);
+   });
+};
+
+/**
+ *
+ * @param callback
+ */
+KmaScraper.prototype.gatherSpecialWeatherSituation = function (callback) {
+    var self = this;
+    async.waterfall([
+            function(cb) {
+                self.requestSpecialWeatherSituation(function (err, result) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    return cb(null, result)
+                });
+            },
+            function ($, cb) {
+                self.parseSpecialWeatherSituationList($, function (err, swsList) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    cb(err, swsList);
+                });
+            },
+            function (swsList, cb) {
+                async.map(swsList, function (sws, mCallback) {
+                    self.findSpecialWeatherSituation(sws, function (err, result) {
+                        if (err) {
+                            return mCallback(err);
+                        }
+                        if (result && result.length > 0) {
+                            return mCallback(err);
+                        }
+                        mCallback(err, sws);
+                    });
+                }, function (err, newSwsList) {
+                    if (err) {
+                        return cb(err);
+                    }
+                    if (newSwsList == undefined) {
+                        return cb('skip');
+                    }
+                    newSwsList = newSwsList.filter(function (sws) {
+                        return sws != undefined;
+
+                    });
+                    if (newSwsList.length <= 0) {
+                        return cb('skip');
+                    }
+                    cb(err, newSwsList);
+                });
+            },
+            function (swsList, cb) {
+                async.map(swsList,
+                    function (sws, mCallback) {
+                        self.updateSpecialWeatherSituation(sws, function (err) {
+                            mCallback(err);
+                        });
+                    },
+                    function (err) {
+                       cb(err);
+                    });
+            }
+        ],
+        function (err) {
+            return callback(err);
+        });
 };
 
 module.exports = KmaScraper;

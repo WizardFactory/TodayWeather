@@ -11,14 +11,37 @@ function LifeIndexKmaController() {
 
 }
 
-LifeIndexKmaController.fsnStr = function (grade) {
+LifeIndexKmaController.grade2strAttention = function (grade, translate) {
+    var ts = translate == undefined?global:translate;
     switch(grade) {
-        case 0: return __("LOC_ATTENTION");
-        case 1: return __("LOC_CAUTION");
-        case 2: return __("LOC_WARNING");
-        case 3: return __("LOC_HAZARD");
+        case 0: return ts.__("LOC_ATTENTION");
+        case 1: return ts.__("LOC_CAUTION");
+        case 2: return ts.__("LOC_WARNING");
+        case 3: return ts.__("LOC_HAZARD");
         default: return "";
     }
+};
+
+LifeIndexKmaController.grade2strHighLow = function (grade, translate) {
+    var ts = translate == undefined?global:translate;
+    switch(grade) {
+        case 0: return ts.__("LOC_LOW");
+        case 1: return ts.__("LOC_NORMAL");
+        case 2: return ts.__("LOC_HIGH");
+        case 3: return ts.__("LOC_VERY_HIGH");
+        case 4: return ts.__("LOC_HAZARD");
+        default: return "";
+    }
+};
+
+/**
+ * 식중독지수
+ * @param grade
+ * @param translate
+ * @returns {*}
+ */
+LifeIndexKmaController.fsnStr = function (grade, translate) {
+    return this.grade2strAttention(grade, translate);
 };
 
 LifeIndexKmaController._fsnGrade = function (value) {
@@ -36,16 +59,14 @@ LifeIndexKmaController._fsnGrade = function (value) {
     }
 };
 
+/**
+ * 자외선지수
+ * @param grade
+ * @param translate
+ * @returns {*}
+ */
 LifeIndexKmaController.ultrvStr = function (grade, translate) {
-    var ts = translate == undefined?global:translate;
-    switch(grade) {
-        case 0: return ts.__("LOC_LOW");
-        case 1: return ts.__("LOC_NORMAL");
-        case 2: return ts.__("LOC_HIGH");
-        case 3: return ts.__("LOC_VERY_HIGH");
-        case 4: return ts.__("LOC_HAZARD");
-        default: return "";
-    }
+    return this.grade2strHighLow(grade, translate);
 };
 
 LifeIndexKmaController._ultrvGrade = function (value) {
@@ -274,6 +295,11 @@ LifeIndexKmaController.getDiscomfortIndex = function(temperature, humidity) {
     return Math.round(discomfortIndex);
 };
 
+/**
+ *
+ * @param discomfortIndex
+ * @returns {number}
+ */
 LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortIndex) {
     var discomfortGrade = 0;
 
@@ -285,48 +311,30 @@ LifeIndexKmaController.convertGradeFromDiscomfortIndex = function(discomfortInde
     }
 
     if(discomfortIndex < 68) {
-        discomfortGrade = 1;
+        discomfortGrade = 0;
     } else if(discomfortIndex < 75) {
-        discomfortGrade = 2;
+        discomfortGrade = 1;
     } else if(discomfortIndex < 80) {
-        discomfortGrade = 3;
+        discomfortGrade = 2;
     } else {
-        discomfortGrade = 4;
+        discomfortGrade = 3;
     }
 
     return discomfortGrade;
 };
 
 /**
- * 불쾌지수
- * @param discomfortIndex
- * @returns {*}
+ *
+ * @param grade
+ * @param translate
+ * @returns {string}
  */
-LifeIndexKmaController.convertStringFromDiscomfortIndex = function(discomfortIndex) {
-    if(discomfortIndex === undefined
-        || discomfortIndex < 0)
-    {
-        log.debug('DiscomfortString > invalid parameter');
-        return "";
-    }
-
-    var discomfortString;
-
-    if(discomfortIndex < 68) {
-        discomfortString = __("LOC_LOW");
-    } else if(discomfortIndex < 75) {
-        discomfortString = __("LOC_NORMAL");
-    } else if(discomfortIndex < 80) {
-        discomfortString = __("LOC_HIGH");
-    } else {
-        discomfortString = __("LOC_VERY_HIGH");
-    }
-
-    return discomfortString;
+LifeIndexKmaController.stringFromDiscomfortIndexGrade = function(grade, translate) {
+    return this.grade2strHighLow(grade, translate);
 };
 
 /**
- * 부패지수
+ * 부패지수 (삭제됨)
  * @param temperature
  * @param humidity
  * @returns {number}
@@ -353,27 +361,26 @@ LifeIndexKmaController.getDecompositionIndex = function(temperature, humidity) {
 /**
  *
  * @param DecompositionIndex
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.convertStringFromDecompositionIndex = function(DecompositionIndex) {
-    if(DecompositionIndex === undefined
-        || DecompositionIndex < 0)
-    {
-        log.debug('DecompositionString > invalid parameter');
-        return "";
-    }
-
-    var decompositionString;
-
+LifeIndexKmaController.gradeFromDecompositionIndex = function(DecompositionIndex) {
     if(DecompositionIndex > 7) {
-        decompositionString = __("LOC_HIGH");
+        return 2;
     } else if(DecompositionIndex > 3) {
-        decompositionString = __("LOC_NORMAL");
+        return 1;
     } else {
-        decompositionString = __("LOC_LOW");
+        return 0;
     }
+};
 
-    return decompositionString;
+/**
+ *
+ * @param grade
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.stringFromDecompositionIndexGrade = function(grade, translate) {
+    return this.grade2strHighLow(grade, translate);
 };
 
 /**
@@ -421,88 +428,83 @@ LifeIndexKmaController.getHeatIndex = function(temperature, humidity) {
 /**
  *
  * @param heatIndex
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.convertStringFromHeatIndex = function(heatIndex) {
-    if(heatIndex === undefined
-        || heatIndex < 0) 
-    {
-        log.debug('HeatIndexString > invalid parameter');
-        return "";
-    }
-        
-    var heatIndexString;
-    
-    if(heatIndex >= 54) {
-        heatIndexString = __("LOC_VERY_HIGH");
+LifeIndexKmaController.gradeFromHeatIndex = function(heatIndex) {
+    if (heatIndex >= 66) {
+        return 4;
+    } else if(heatIndex >= 54) {
+        return 3;
     } else if(heatIndex >= 41 && heatIndex < 54) {
-        heatIndexString = __("LOC_HIGH");
+        return 2;
     } else if(heatIndex >= 32 && heatIndex < 41) {
-        heatIndexString = __("LOC_NORMAL");
-    } else {
-        heatIndexString = __("LOC_LOW");
+        return 1;
+    } else if (heatIndex < 32) {
+        return 0;
     }
-    
-    return heatIndexString;
 };
 
 /**
- * 동상가능지수
- * @param temperature
- * @returns {*}
+ *
+ * @param grade
+ * @param translate
+ * @returns {string}
  */
-LifeIndexKmaController.getFrostString = function(temperature) {
-    if(temperature === undefined
-        || temperature < -50)
-    {
-        log.debug('FrostString > invalid parameter.');
-        return -1;
-    }
+LifeIndexKmaController.stringFromHeatIndexGrade = function(grade, translate) {
+    return this.grade2strHighLow(grade, translate);
+};
 
-    var frostString;
-
-    if(temperature < -5) {
-        frostString = __("LOC_HIGH");
+LifeIndexKmaController.getFrostGrade = function(temperature) {
+     if(temperature < -5) {
+         return 2;
     } else if(temperature < -1.5) {
-        frostString = __("LOC_NORMAL");
+         return 1;
     } else {
-        frostString = __("LOC_LOW");
+         return 0;
     }
 
-    return frostString;
+};
+
+/**
+ * 동상가능지수 (삭제됨)
+ * @param grade
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.getFrostString = function(grade, translate) {
+    return this.grade2strHighLow(grade, translate);
 };
 
 /**
  *
  * @param temperature
  * @param yesterMinTemperature
- * @returns {*}
+ * @returns {number}
  */
-LifeIndexKmaController.getFreezeString = function(temperature, yesterMinTemperature) {
-    if(temperature === undefined
-        || temperature < -50)
-    {
-        log.debug('FrostString > invalid parameter.');
-        return -1;
-    }
-
-    var freezeString;
-
+LifeIndexKmaController.getFreezeGrade = function(temperature, yesterMinTemperature) {
     if(temperature <= -10) {
-        freezeString = __("LOC_VERY_HIGH");
+        return 3;
     } else if((temperature <= -5)
                 && (yesterMinTemperature < -5))
     {
-        freezeString = __("LOC_HIGH");
+        return 2;
     } else if((temperature <= -5)
                 && (yesterMinTemperature >= -5))
     {
-        freezeString = __("LOC_NORMAL");
+        return 1;
     } else {
-        freezeString = __("LOC_LOW");
+        return 0;
     }
+};
 
-    return freezeString;
+/**
+ * 동파가능지수
+ * @param grade
+ * @param translate
+ * @returns {string}
+ */
+LifeIndexKmaController.getFreezeString = function(grade, translate) {
+    return this.grade2strHighLow(grade, translate);
 };
 
 module.exports = LifeIndexKmaController;

@@ -1,8 +1,14 @@
-<ion-view title="Units">
-    <ion-header-bar class="bar bar-header bar-light">
-        <button class="button button-icon icon ion-android-arrow-back" ng-click="onClose()"></button>
-        <h1 class="title">{{'LOC_UNITS'|translate}}</h1>
-    </ion-header-bar>
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title">
+            <span style="vertical-align: middle">{{'LOC_UNITS'|translate}}</span>
+        </p>
+    </ion-nav-title>
     <ion-content scroll="false" style="background-color: #F5F5F5;">
         <div class="list">
             <label class="item item-input item-select">
@@ -53,6 +59,17 @@
                 <select ng-model="precipitationUnit" ng-change="setUnit('precipitationUnit', precipitationUnit)">
                     <option value="mm">mm</option>
                     <option value="in">inch</option>
+                </select>
+            </label>
+            <label class="item item-input item-select">
+                <div class="input-label">
+                    {{'LOC_AIR_QUALITY_INDEX_UNIT'|translate}}
+                </div>
+                <select ng-model="airUnit" ng-change="setUnit('airUnit', airUnit)">
+                    <option value="airnow">{{getAirUnitStr('airnow')|translate}}</option>
+                    <option value="aircn">{{getAirUnitStr('aircn')|translate}}</option>
+                    <option value="airkorea">{{getAirUnitStr('airkorea')|translate}}</option>
+                    <option value="airkorea_who">{{getAirUnitStr('airkorea_who')|translate}}</option>
                 </select>
             </label>
         </div>

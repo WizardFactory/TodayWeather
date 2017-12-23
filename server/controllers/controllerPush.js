@@ -265,14 +265,14 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
 
     if (theDay.pmGrade) {
         //미세먼지예보는 grade 값이 다름.
-        dailyArray.push(trans.__("LOC_PM10") + " " + KecoController.grade2str(theDay.pmGrade+1, 'PM', trans));
+        dailyArray.push(trans.__("LOC_PM10") + " " + UnitConverter.airkoreaGrade2str(theDay.pmGrade+1, 'PM', trans));
     }
     if (theDay.ultrvGrade) {
         dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
     }
     //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
     if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
-        dailyArray.push(trans.__("LOC_O3") + " "+ KecoController.grade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
+        dailyArray.push(trans.__("LOC_O3") + " "+ UnitConverter.airkoreaGrade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
     }
 
     //불쾌지수
@@ -296,7 +296,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
     }
 
     if (current.arpltn && current.arpltn.khaiGrade) {
-        hourlyArray.push(trans.__("LOC_AQI")+" "+ KecoController.grade2str(current.arpltn.khaiGrade, "khai", trans));
+        hourlyArray.push(trans.__("LOC_AQI")+" "+ UnitConverter.airkoreaGrade2str(current.arpltn.khaiGrade, "khai", trans));
     }
     if (current.pty && current.pty > 0 && current.rn1 != undefined) {
         current.ptyStr = cTown._convertKmaPtyToStr(current.pty, trans);
@@ -313,7 +313,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
     var apiVersion = "v000803";
-    var url = "http://"+config.ipAddress+":"+config.port+"/"+apiVersion+"/daily/town";
+    var url = config.push.serviceServer+"/"+apiVersion+"/daily/town";
     var town = pushInfo.town;
     if (town.first) {
         url += '/'+ encodeURIComponent(town.first);
@@ -355,7 +355,14 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
             body.units = obj;
         }
 
-        callback(undefined, self._makeKmaPushMessage(pushInfo, body));
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeKmaPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
     });
 
     return this;
@@ -600,7 +607,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
  */
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
-    var url = "http://"+config.ipAddress+":"+config.port+"/ww/010000/current/2";
+    var url = config.push.serviceServer+"/ww/010000/current/2";
     url += "?gcode="+pushInfo.geo[1]+","+pushInfo.geo[0];
 
     log.info('request url='+url);
@@ -633,7 +640,14 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
             body.units = obj;
         }
 
-        callback(undefined, self._makeDsfPushMessage(pushInfo, body));
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeDsfPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
     });
 };
 
@@ -750,14 +764,14 @@ ControllerPush.prototype.sendPush = function (time) {
         function (callback) {
             self.getPushByTime(time, function (err, pushList) {
                 if (err) {
-                    self.requestKeepMessage();
+                    //self.requestKeepMessage();
                     return callback(err);
                 }
                 log.info('get push by time : push list='+JSON.stringify(pushList));
                 callback(undefined, pushList);
             });
         }, function(pushList, callback) {
-            async.map(pushList, function (pushInfo, mCallback) {
+            async.mapSeries(pushList, function (pushInfo, mCallback) {
                 self.sendNotification(pushInfo, function (err, result) {
                     if (err) {
                         return mCallback(err);

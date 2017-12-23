@@ -238,7 +238,7 @@ KmaIndexService.prototype.setNextGetTime = function(indexName, time) {
             l.nextTime.setUTCMonth(l.offerMonth.start);
         }
         else if (l.nextTime.getUTCMonth()> l.offerMonth.end) {
-            l.nextTime.setUTCFullYear(time.getUTCFullYear()+1);
+            l.nextTime.setUTCFullYear(l.nextTime.getUTCFullYear()+1);
             l.nextTime.setUTCMonth(l.offerMonth.start);
             l.nextTime.setUTCDate(0);
             l.nextTime.setUTCHours(0);
@@ -360,6 +360,10 @@ KmaIndexService.prototype._parseHourlyLifeIndex = function (parsedData, indexMod
 /* jshint ignore:end */
 KmaIndexService.prototype.parseLifeIndex = function(indexName, data) {
     var err;
+
+    if (data.LegacyAPIResponse) {
+        data.Response = data.LegacyAPIResponse;
+    }
 
     if (!data.Response || !data.Response.header || !data.Response.header.successYN) {
         err = new Error("Fail to parse LifeList of " + indexName);
@@ -601,7 +605,7 @@ KmaIndexService.prototype._recursiveGetLifeIndex = function (indexName, list, re
                         log.silly(errStr+': There is no result');
                         log.error(err);
                     }
-                    else if (err.returnCode && err.returnCode == 1) {
+                    else if (err.returnCode && (err.returnCode == 1 || err.returnCode == 22)) {
                         log.silly(errStr+': SERVICE REQUESTS EXCEEDS');
                         log.warn(err.message);
                         needChangeServiceKey = true;

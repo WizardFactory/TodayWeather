@@ -5,13 +5,14 @@
     },
     "config_munge": {
         "files": {
-            "*-Info.plist": {
+            "*-Debug.plist": {
                 "parents": {
-                    "NSAppTransportSecurity": [],
-                    "NSLocationWhenInUseUsageDescription": [],
-                    "UIBackgroundModes": [],
-                    "GCM_SENDER_ID": [],
-                    "IS_GCM_ENABLED": []
+                    "com.apple.security.application-groups": []
+                }
+            },
+            "*-Release.plist": {
+                "parents": {
+                    "com.apple.security.application-groups": []
                 }
             },
             "config.xml": {

@@ -12,7 +12,8 @@ TEMP_UNIT    gTemperatureUnit;
 
 @implementation TodayWeatherUtil
 @synthesize twuCountry;
-//@synthesize temperatureUnit;
+@synthesize nsmaDaumKeys;
+@synthesize jsonUnitsDict;
 
 /********************************************************************
  *
@@ -190,7 +191,7 @@ TEMP_UNIT    gTemperatureUnit;
             }
         }
     }
-    else
+    else if(reqType == TYPE_REQUEST_WEATHER_GLOBAL)
     {
         arrDailyData    = [jsonDict  objectForKey:@"daily"];
         cntArrDaily     = (int)[arrDailyData count];
@@ -205,7 +206,21 @@ TEMP_UNIT    gTemperatureUnit;
             if(cntFounded == 6)
                 break;
         }
-
+    }
+    else if (reqType == TYPE_REQUEST_WEATHER_BY_COORD) {
+        arrDailyData    = [jsonDict  objectForKey:@"daily"];
+        cntArrDaily     = (int)[arrDailyData count];
+    
+        for(int i = 0; i < cntArrDaily; i++)
+        {
+            NSDictionary    *nsdDailyData   = [arrDailyData objectAtIndex:i];
+            [arrDaysData addObject:nsdDailyData];
+            
+            cntFounded++;
+            
+            if(cntFounded == 6)
+                break;
+        }
     }
 
     //NSLog(@"arrDaysData : %@", arrDaysData);
@@ -276,7 +291,7 @@ TEMP_UNIT    gTemperatureUnit;
         else
             currentDict         = [arrThisTime objectAtIndex:0];        // process about thisTime
         
-        NSString    *nssTmpDate     = [currentDict objectForKey:@"date"];                   // 2017.02.25 00:00
+        NSString    *nssTmpDate     = [currentDict objectForKey:@"dateObj"];                   // 2017.02.25 00:00
         
         NSArray *arrDate            = [nssTmpDate componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
         NSString *nssSeparatedDate  = [arrDate objectAtIndex:0];                            // "2017.02.25"
@@ -302,7 +317,7 @@ TEMP_UNIT    gTemperatureUnit;
         {
             NSMutableDictionary *dictShort = [arrHourlyData objectAtIndex:i];
             
-            NSString *nssDateTmpHourly = [dictShort objectForKey:@"date"];
+            NSString *nssDateTmpHourly = [dictShort objectForKey:@"dateObj"];
             
             NSArray  *arrDateHourly             = [nssDateTmpHourly componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
             NSString *nssSeparatedDateHourly    = [arrDateHourly objectAtIndex:0];                            // "2017.02.25"
@@ -390,7 +405,15 @@ TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 + (NSMutableDictionary *) getTodayDictionaryInGlobal:(NSDictionary *)jsonDict time:(NSString *)nssTime
 {
-    NSString        *nssCurrentDate        = [nssTime substringToIndex:10];
+    NSString        *nssCurrentDate = nil;
+    if( ( [nssTime length] >= 10 ) || (nssTime == nil) )
+    {
+        nssCurrentDate        = [nssTime substringToIndex:10];
+    }
+    else
+    {
+        nssCurrentDate        = @"";
+    }
     
     NSMutableArray  *dailyDataArr         = [jsonDict objectForKey:@"daily"];
     NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
@@ -439,26 +462,28 @@ TEMP_UNIT    gTemperatureUnit;
     
     NSError *error;
     NSData *tmpUnitData = [nssUnits dataUsingEncoding:NSUTF8StringEncoding];
-    NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
-    NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
-    NSLog(@"nsdTempUnit : %@", nsdTempUnit);
     
-    if([nsdTempUnit isEqualToString:@"F"])
+    if(tmpUnitData)
     {
-        gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+        NSDictionary *jsonUnitDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
+        NSString    *nsdTempUnit    = [jsonUnitDict objectForKey:@"temperatureUnit"];
+        NSLog(@"nsdTempUnit : %@", nsdTempUnit);
+        
+        if([nsdTempUnit isEqualToString:@"F"])
+        {
+            gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
+        }
+        else
+        {
+            gTemperatureUnit = TEMP_UNIT_CELSIUS;
+        }
+        
+        //FIXME
+        //gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
     }
-    else
-    {
-        gTemperatureUnit = TEMP_UNIT_CELSIUS;
-    }
-    
-    //FIXME
-    //gTemperatureUnit = TEMP_UNIT_FAHRENHEIT;
     
     return;
 }
-
-
 
 /********************************************************************
  *
@@ -518,20 +543,228 @@ TEMP_UNIT    gTemperatureUnit;
         return nil;
     }
 
-    //NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
+    NSLog(@"[processLocationStr] nssSrcStr : %@", nssSrcStr);
     
     NSArray *arrSrc     = [nssSrcStr componentsSeparatedByString:@"."];
     NSString *nssFirst  = [arrSrc objectAtIndex:0];
     //NSLog(@"[processLocationStr] nssFirst : %@", nssFirst);
     NSString *nssTmp    = [arrSrc objectAtIndex:1];
-    NSString *nssSecond = [nssTmp substringToIndex:2];
     
-    nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssSecond];
+    NSString *nssSecond = nil;
+    if(nssTmp == nil)
+    {
+        nssDstStr   = [NSString stringWithFormat:@"%@.0", nssFirst];
+    }
+    else
+    {
+        if( [nssTmp length] < 2 )
+        {
+            nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssTmp];
+        }
+        else
+        {
+            nssSecond = [nssTmp substringToIndex:2];
+            nssDstStr   = [NSString stringWithFormat:@"%@.%@", nssFirst, nssSecond];
+        }
+    }
     
-    //NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
+    NSLog(@"[processLocationStr] nssDstStr : %@", nssDstStr);
     
     return nssDstStr;
 }
 
+/********************************************************************
+ *
+ * Name			: shuffleDatas
+ * Description	: shuffle Datas
+ * Returns		: NSString *
+ * Side effects :
+ * Date			: 2017. 5. 25
+ * Author		: SeanKim
+ * History		: 20170525 SeanKim Create function
+ *
+ ********************************************************************/
++ (NSMutableArray *) shuffleDatas:(NSMutableArray *)nsaDatas
+{
+    int count = (int)[nsaDatas count];
+    for (uint i = 0; i < count - 1; ++i)
+    {
+        // Select a random element between i and end of array to swap with.
+        int nElements = count - i;
+        int n = arc4random_uniform(nElements) + i;
+        [nsaDatas exchangeObjectAtIndex:i withObjectAtIndex:n];
+    }
+    
+    return nsaDatas;
+}
+
+/********************************************************************
+ *
+ * Name			: getDaumServiceKeys
+ * Description	: get Daum Service Keys by NSDefaults
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 5. 27
+ * Author		: SeanKim
+ * History		: 20170527 SeanKim Create function
+ *
+ ********************************************************************/
+- (NSMutableArray *) getDaumServiceKeys
+{
+    return nsmaDaumKeys;
+}
+
+/********************************************************************
+ *
+ * Name			: setDaumServiceKeys
+ * Description	: set Daum Service Keys by NSDefaults
+ * Returns		: void
+ * Side effects :
+ * Date			: 2017. 5. 27
+ * Author		: SeanKim
+ * History		: 20170527 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) setDaumServiceKeys:(NSString *)nssDaumKeys
+{
+    NSData *tmpData = nil;
+    NSError *error;
+    NSArray *nsaDaumKeys = nil;
+
+    if(nssDaumKeys == nil)
+    {
+        NSLog(@"nssDaumKeys is null!!!");
+        return;
+    }
+    
+    NSLog(@"nsmaDaumKeys : %@", nssDaumKeys);
+    tmpData = [nssDaumKeys dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if(tmpData)
+    {
+        nsaDaumKeys = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
+        //NSArray  *nsaDaumKeys = [[NSArray alloc] initWithObjects:@"0", @"1", @"2", @"3", nil];
+        
+    #if 0
+        for (int i = 0; i < [nsaDaumKeys count]; i++)
+        {
+            NSLog(@"original %d : %@", i, [nsaDaumKeys objectAtIndex:i]);
+        }
+    #endif
+            
+        nsmaDaumKeys = [[NSMutableArray alloc] initWithArray:nsaDaumKeys];
+        
+    #if 0
+        // Use this code in requesting url to daum
+        NSMutableArray *nsmaShufflKeys= [TodayWeatherUtil shuffleDatas:nsmaDaumKeys];
+        
+        for (int i = 0; i < [nsmaShufflKeys count]; i++)
+        {
+            NSLog(@"shuffled %d : %@", i, [nsmaShufflKeys objectAtIndex:i]);
+        }
+    #endif
+    }
+    
+    return;
+}
+
+/**
+ *
+ * @param nssUnits
+ */
+- (void) setUnits:(NSString *)nssNewUnits
+{
+    NSError *error;
+    NSData *tmpUnitData = [nssNewUnits dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if(tmpUnitData)
+    {
+        jsonUnitsDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
+    }
+    else {
+        NSLog(@"nssNewNnits is null!!!");
+    }
+}
+
+- (NSDictionary *) getUnits
+{
+    return jsonUnitsDict;
+}
+
+/********************************************************************
+ *
+ * Name			: renderImageFromView
+ * Description	: render image from view
+ * Returns		: UIImage
+ * Side effects :
+ * Date			: 2017. 6. 20
+ * Author		: SeanKim
+ * History		: 20170620 SeanKim Create function
+ *
+ ********************************************************************/
++ (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets
+{
+    CGSize imageSizeWithBorder = CGSizeMake(frame.size.width + insets.left + insets.right, frame.size.height + insets.top + insets.bottom);
+    // Create a new context of the desired size to render the image
+    UIGraphicsBeginImageContextWithOptions(imageSizeWithBorder, NO, 0);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    // Clip the context to the portion of the view we will draw
+    CGContextClipToRect(context, (CGRect){{insets.left, insets.top}, frame.size});
+    // Translate it, to the desired position
+    CGContextTranslateCTM(context, -frame.origin.x + insets.left, -frame.origin.y + insets.top);
+    
+    CGContextSetAllowsAntialiasing(context, true);
+    CGContextSetShouldAntialias(context, true);
+    
+    // Render the view as image
+    [view.layer renderInContext:UIGraphicsGetCurrentContext()];
+    
+    // Fetch the image
+    UIImage *renderedImage = UIGraphicsGetImageFromCurrentImageContext();
+    
+    // Cleanup
+    UIGraphicsEndImageContext();
+    
+    return renderedImage;
+}
+
++ (NSMutableDictionary *) getTodayDictionaryByCoord:(NSDictionary *)jsonDict date:(NSString *)nssDate country:(NSString *)nssCountry
+{
+    NSString        *nssCurrentDate = nssDate;
+    
+    NSMutableArray  *dailyDataArr = nil;
+    NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
+    
+    if([nssCountry isEqualToString:@"KR"]) {
+        NSDictionary    *midDict        = [jsonDict objectForKey:@"midData"];
+        dailyDataArr   = [midDict objectForKey:@"dailyData"];
+    }
+    else {
+        dailyDataArr   = [jsonDict objectForKey:@"daily"];
+    }
+    
+    //NSLog(@"[todayDictByCoord] nssCurrentDate : %@", nssCurrentDate);
+    
+    for(int i = 0; i < [dailyDataArr count]; i++)
+    {
+        NSDictionary *dailyDataDict = [dailyDataArr objectAtIndex:i];
+        NSString *nssDate       = [dailyDataDict objectForKey:@"date"];
+        //NSString *nssDailyDate  = [nssDate substringToIndex:10];
+        
+        //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+        if([nssDate isEqualToString:nssCurrentDate])
+        {
+            //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
+            
+            break;
+        }
+    }
+    
+    //NSLog(@"todayDictByCoord: %@", todayDict);
+    
+    return todayDict;
+}
 
 @end

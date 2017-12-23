@@ -1,50 +1,68 @@
 angular.module('controller.settingctrl', [])
-    .controller('SettingCtrl', function($scope, Util, Purchase, $ionicHistory, $translate) {
+    .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
+                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage) {
+
+        var menuContent = null;
+        var settingsInfo = null;
+        var strOkay = "OK";
+        var strCancel = "Cancel";
+        $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
+            strOkay = translations.LOC_OK;
+            strCancel = translations.LOC_CANCEL;
+        }, function (translationIds) {
+            console.log("Fail to translate : "+JSON.stringify(translationIds));
+        });
+
         function init() {
-            $ionicHistory.clearHistory();
-
-            if (ionic.Platform.isAndroid()) {
-                //get interval time;
-                $scope.updateInterval = "0";
-                $scope.widgetOpacity = "69";
-
-                if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                    console.log('appPreferences is undefined');
-                    Util.ga.trackEvent("plugin", "error", "loadAppPreferences");
-                    return;
-                }
-
-                var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-                suitePrefs.fetch(
-                    function (value) {
-                        if (value == null) {
-                            value = "0"
-                        }
-                        $scope.updateInterval = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'updateInterval'
-                );
-
-                suitePrefs.fetch(
-                    function (value) {
-                        if (value == null) {
-                            value = "69"
-                        }
-                        $scope.widgetOpacity = ""+value;
-                        console.log("fetch preference Success: " + value);
-                    }, function (error) {
-                        console.log("fetch preference Error: " + error);
-                    }, 'widgetOpacity'
-                );
+            if (ionic.Platform.isIOS()) {
+                menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
             }
+
+            settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo === null) {
+                settingsInfo = {
+                    startupPage: "0", //시간별날씨
+                    refreshInterval: "0" //수동
+                };
+                TwStorage.set("settingsInfo", settingsInfo);
+            }
+            $scope.startupPage = settingsInfo.startupPage;
+            $scope.refreshInterval = settingsInfo.refreshInterval;
         }
 
-        $scope.version = Util.version;
+        $scope.clickMenu = function (menu) {
+            if (ionic.Platform.isIOS()) {
+                if (menuContent !== null && menuContent.hasClass('keyboard-up')) {
+                    return;
+                }
+            }
 
-        $scope.sendMail = function() {
+            if (menu === 'sendMail') {
+                $ionicSideMenuDelegate.toggleLeft();
+                sendMail();
+            } else if (menu === 'openMarket') {
+                $ionicSideMenuDelegate.toggleLeft();
+                openMarket();
+            } else if (menu === 'openInfo') {
+                openInfo();
+            } else {
+                $ionicSideMenuDelegate.toggleLeft();
+                $location.path('/' + menu);
+            }
+        };
 
+        $scope.setStartupPage = function(startupPage) {
+            settingsInfo.startupPage = startupPage;
+            TwStorage.set("settingsInfo", settingsInfo);
+        };
+
+        $scope.setRefreshInterval = function(refreshInterval) {
+            settingsInfo.refreshInterval = refreshInterval;
+            TwStorage.set("settingsInfo", settingsInfo);
+            $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
+        };
+
+        var sendMail = function() {
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
             var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
@@ -61,7 +79,7 @@ angular.module('controller.settingctrl', [])
             Util.ga.trackEvent('action', 'click', 'send mail');
         };
 
-        $scope.openMarket = function() {
+        var openMarket = function() {
             var src = "";
             if (ionic.Platform.isIOS()) {
                 src = twClientConfig.iOSStoreUrl;
@@ -93,7 +111,7 @@ angular.module('controller.settingctrl', [])
         /**
          * 설정에 정보 팝업으로, 늦게 로딩되어도 상관없고 호출될 가능성이 적으므로 그냥 현상태 유지.
          */
-        $scope.openInfo = function() {
+        var openInfo = function() {
             var strTitle = "TodayWeather";
             var strMsg;
             $translate(['LOC_TODAYWEATHER','LOC_WEATHER_INFORMATION', 'LOC_KOREA_METEOROLOGICAL_ADMINISTRATION', 'LOC_AQI_INFORMATION', 'LOC_KOREA_ENVIRONMENT_CORPORATION', 'LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS']).then(function (translations) {
@@ -111,48 +129,8 @@ angular.module('controller.settingctrl', [])
                 strMsg += "<br>";
                 strMsg += translationIds.LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS;
             }).finally(function () {
-                $scope.showAlert(strTitle, strMsg);
+                $rootScope.showAlert(strTitle, strMsg);
             });
-        };
-
-        $scope.isAndroid = function () {
-            return ionic.Platform.isAndroid();
-        };
-
-        $scope.changeWidgetOpacity = function (val) {
-            console.log("widget opacity ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
-                },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'widgetOpacity', +val
-            );
-        };
-
-        $scope.changeUpdateInterval = function (val) {
-            console.log("update interval ="+ val);
-            if (window.plugins == undefined || plugins.appPreferences == undefined) {
-                console.log('appPreferences is undefined');
-                return;
-            }
-
-            var suitePrefs = plugins.appPreferences.suite(Util.suiteName);
-            suitePrefs.store(
-                function (value) {
-                    console.log("save preference Success: " + value);
-                },
-                function (error) {
-                    console.log("save preference Error: " + error);
-                }, 'updateInterval', +val
-            );
         };
 
         $scope.hasInAppPurchase = function () {
@@ -161,6 +139,56 @@ angular.module('controller.settingctrl', [])
 
         $scope.showAbout = function () {
             return Util.language.indexOf("ko") != -1;
+        };
+
+        $rootScope.isAndroid = function () {
+            return ionic.Platform.isAndroid();
+        };
+
+        $rootScope.isMenuOpen = function() {
+            var isOpen = $ionicSideMenuDelegate.isOpen();
+
+            if (ionic.Platform.isIOS()) {
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+                    if (isOpen) {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(false);
+                    } else {
+                        cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+                    }
+                }
+            }
+            return isOpen;
+        };
+
+        $rootScope.showAlert = function(title, msg, callback) {
+            var alertPopup = $ionicPopup.alert({
+                title: title,
+                template: msg,
+                okText: strOkay
+            });
+            alertPopup.then(function() {
+                console.log("alertPopup close");
+                if (callback != undefined) {
+                    callback();
+                }
+            });
+        };
+
+        $rootScope.showConfirm = function(title, template, callback) {
+            var confirmPopup = $ionicPopup.confirm({
+                title: title,
+                template: template,
+                okText: strOkay,
+                cancelText: strCancel
+            });
+            confirmPopup.then(function (res) {
+                if (res) {
+                    console.log("You are sure");
+                } else {
+                    console.log("You are not sure");
+                }
+                callback(res);
+            });
         };
 
         init();

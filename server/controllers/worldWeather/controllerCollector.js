@@ -1089,6 +1089,16 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
             if(data.hasOwnProperty('offset')){
                 timeOffset = parseInt(data.offset);
             }
+
+            var res = {
+                geocode: geocode,
+                address: {},
+                date: date,
+                dateObj: self._getUtcTime('' + date + '000'),
+                timeOffset: timeOffset,
+                data: weatherData
+            };
+
             if(list.length === 0) {
                 print.info('Dsf> First time : ', self._getUtcTime('' + date + '000').toString());
                 var newItem = new modelDSForecast({
@@ -1107,11 +1117,11 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                     else {
                         log.info('Dsf> First time save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-
-                    if (callback) {
-                        return callback(err, newData);
-                    }
                 });
+
+                if (callback) {
+                    return callback(err, res);
+                }
             }
             else {
                 //print.info('Dsf> add new Item : ', newData);
@@ -1164,16 +1174,16 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, data, callback){
                 //log.info(data);
                 dbData.save(function(err){
                     if(err){
-                        log.error('Dsf> fail to save to DB :', geocode, " date="+newData.current.dateObj.toISOString());
+                        log.error('Dsf> fail to save to DB :', err , geocode, " date="+newData.current.dateObj.toISOString());
                     }
                     else {
                         log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-
-                    if(callback){
-                        return callback(err, newData);
-                    }
                 });
+
+                if(callback){
+                    return callback(err, res);
+                }
             }
         });
     }catch(e){
@@ -1423,7 +1433,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                 requester.getForecast(geocode, date, key, function(err, result){
                     if(err){
                         print.error('Req Dsf> get fail', geocode, date);
-                        log.error('Req Dsf> get fail', geocode, date);
+                        log.warn('Req Dsf> get fail', geocode, date);
                         cb(null);
                         return;
                     }
@@ -1435,7 +1445,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                         //log.info('Req Dsf> cur : ', date.toString());
                     }
                     self.saveDSForecast(geocode, date, result, function(err, savedData){
-                        return cb(null, result);
+                        return cb(null, savedData);
                     });
                 });
             },
@@ -1443,9 +1453,77 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, timeOffset, 
                 if(err){
                     log.error(err);
                 }
+                var res = {
+                    type : 'DSF',
+                    geocode: geocode,
+                    address: {},
+                    date: 0,
+                    dateObj: new Date(0),
+                    timeOffset: timeOffset,
+                    data: []
+                };
+
+                log.info('Dsf> dsf count : ', DsfData.length);
+
+                // For response /////////////////////////////
+                try {
+                    DsfData.forEach(function(item){
+                        if (item == undefined) {
+                            log.warn('Dsf data is undefined');
+                            return;
+                        }
+
+                        res.geocode = item.geocode;
+                        if(res.date === 0 || res.date < item.date){
+                            res.date = item.date;
+                        }
+                        if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
+                            res.dateObj = item.dateObj;
+                        }
+                        res.timeOffset = item.timeOffset;
+
+                        if(res.data.length === 0){
+                            res.data = item.data;
+                        }else{
+                            res.data.forEach(function(dbItem){
+                                var isExist = false;
+                                item.data.forEach(function(newItem){
+                                    if(dbItem.current.dateObj.getTime() === newItem.current.dateObj.getTime()){
+                                        dbItem.current = newItem.current;
+                                        dbItem.hourly = newItem.hourly;
+                                        dbItem.daily = newItem.daily;
+                                        isExist = true;
+                                    }
+
+                                    if(!isExist){
+                                        res.data.push({
+                                            current : newItem.current,
+                                            hourly : newItem.hourly,
+                                            daily: newItem.daily
+                                        });
+                                    }
+                                });
+                            });
+                        }
+
+                        res.data.sort(function(a, b){
+                            if(a.current.date > b.current.date){
+                                return 1;
+                            }
+                            if(a.current.date < b.current.date){
+                                return -1;
+                            }
+                            return 0;
+                        });
+                    });
+                }
+                catch (err) {
+                    return callback(err);
+                }
+                /////////////////////////////////////////////
 
                 if(DsfData){
-                    callback(err, DsfData);
+                    callback(err, res);
                 }else{
                     callback(err);
                 }
