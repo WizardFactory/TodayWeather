@@ -2502,7 +2502,12 @@ static TodayViewController *todayVC = nil;
 {
     NSArray      *thisTimeArr = nil;
     NSDictionary *currentDict = nil;
+    NSDictionary *currentArpltnDict = nil;
     NSDictionary *todayDict = nil;
+    
+    // Dust
+    NSString    *nssAirState = nil;
+    NSMutableAttributedString   *nsmasAirState = nil;
     
     // Date
     NSString        *nssDate = nil;
@@ -2608,6 +2613,12 @@ static TodayViewController *todayVC = nil;
     nssCurIcon          = [currentDict objectForKey:@"skyIcon"];
     nssCurImgName       = [NSString stringWithFormat:@"weatherIcon2-color/%@.png", nssCurIcon];
     
+    currentArpltnDict   = [currentDict objectForKey:@"arpltn"];
+    nssAirState         = [todayWSM getAirState:currentArpltnDict];
+    
+    nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
+    NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
+
     // Processing current temperature
     idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];
     if (idT1h) {
@@ -2681,37 +2692,21 @@ static TodayViewController *todayVC = nil;
             }
         }
         
-        todayMaxMinTempLabel.font   = [UIFont systemFontOfSize:18.0];
+        if(nsmasAirState)
+            //curDustLabel.text       = nssAirState;
+            [curDustLabel setAttributedText:nsmasAirState];
         
         if(nssTodPop)
         {
-            int todPop = [nssTodPop intValue];
-            NSLog(@"todPop : %@ %d", nssTodPop, todPop);
-            
+            int todPop = [nssTodPop intValue]; //todPop = 50;
             if(todPop == 0)
             {
-                curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-                curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
-                
-                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
+                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚", (long)todayMinTemp, (long)todayMaxTemp];
             }
             else
             {
-                curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-                curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
-                
-                todayMaxMinTempLabel.font   = [UIFont systemFontOfSize:16.0];
-                todayMaxMinTempLabel.text   = [NSString stringWithFormat:@"%d˚/ %d˚", todayMinTemp, todayMaxTemp];
+                todayMaxMinTempLabel.text  = [NSString stringWithFormat:@"%ld˚/ %ld˚   %@ %d%%", (long)todayMinTemp, (long)todayMaxTemp, LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
             }
-        }
-        else
-        {
-            int todPop = 0;
-            
-            curDustLabel.font           = [UIFont systemFontOfSize:16.0];
-            curDustLabel.text           = [NSString stringWithFormat:@"%@ %d%%", LSTR_PROBABILITY_OF_PRECIPITATION, todPop];
-            
-            todayMaxMinTempLabel.text = [NSString stringWithFormat:@"%d˚/%d˚", todayMinTemp, todayMaxTemp];
         }
         
         locationView.hidden = false;
