@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 5. 3..
  */
 
+"use strict";
+
 var assert  = require('assert');
 var Logger = require('../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
@@ -49,7 +51,8 @@ describe('unit test - controller push', function() {
             windSpeedUnit: "m/s",
             pressureUnit: "hPa",
             distanceUnit: "km",
-            precipitationUnit: "mm"
+            precipitationUnit: "mm",
+            airUnit: "airkorea"
         }
     };
 
@@ -80,7 +83,7 @@ describe('unit test - controller push', function() {
     //    }
     //};
 
-    //var pushInfo3 = {
+    // var pushInfo3 = {
     //    registrationId: 'asdf',
     //    pushTime: 6900,
     //    cityIndex: 0,
@@ -97,7 +100,7 @@ describe('unit test - controller push', function() {
     //        distanceUnit: "miles",
     //        precipitationUnit: "inch"
     //    }
-    //};
+    // };
 
     it('test update push info', function(done) {
         var PushInfo = require('../models/modelPush');
@@ -141,25 +144,25 @@ describe('unit test - controller push', function() {
         });
     });
 
-    //it('test request daily summary', function(done) {
+    // it('test request daily summary', function(done) {
     //    this.timeout(20*1000);
     //    var co = new ControllerPush();
     //    co.requestDailySummary(pushInfo, function (err, result) {
     //        assert.equal(err, null, err);
     //        console.log(result);
-    //        done();
+    //        //done();
     //    });
     //
-    //    //co.requestDailySummary(pushInfo0, function (err, result) {
-    //    //    if (err) {
-    //    //        console.log(err);
-    //    //    }
-    //    //    else {
-    //    //        console.log(result);
-    //    //    }
-    //    //   //done();
-    //    //});
-    //});
+    //    co.requestDailySummary(pushInfo3, function (err, result) {
+    //       if (err) {
+    //           console.log(err);
+    //       }
+    //       else {
+    //           console.log(result);
+    //       }
+    //      //done();
+    //    });
+    // });
 });
 
 
