@@ -828,6 +828,7 @@ function ControllerTown24h() {
             current.time = parseInt(current.time.slice(0, -2));
             self._convertWeatherData(current, req.query);
             self._convertWeatherData(current.yesterday, req.query);
+            current.yesterday.time = parseInt(current.yesterday.time.slice(0, -2));
 
             req.shortest.forEach(function (value) {
                 value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+value.time);

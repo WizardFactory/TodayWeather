@@ -244,7 +244,7 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
     var self = this;
 
     if (val == undefined) {
-        log.error("val is undefined!!");
+        log.error('Fail to convert from '+from+" to "+to+" value="+val);
         return val;
     }
     if (from == to) {
@@ -310,7 +310,7 @@ UnitConverter.airkoreaGrade2str = function (grade, type, translate) {
         case 4:
             return ts.__("LOC_VERY_UNHEALTHY");
         default :
-            log.error("Unknown grade="+grade+" type="+type);
+            log.warn("Unknown airkorea grade="+grade+" type="+type);
     }
     return "";
 };
@@ -339,7 +339,7 @@ UnitConverter.airGrade2str = function (grade, type, translate) {
         case 6:
             return ts.__("LOC_HAZARDOUS");
         default :
-            log.error("Unknown grade="+grade+" type="+type);
+            log.warn("Unknown air grade="+grade+" type="+type);
     }
     return "";
 };

@@ -174,7 +174,12 @@ ControllerWWUnits.prototype._convertThisTimeWeather = function (wData, query) {
     if (wData.hasOwnProperty('precip')) {
         wData['rn1'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('precipitationUnit'), toPrecipUnit, wData.precip);
     }
-    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    if (wData.hasOwnProperty('windSpd_ms')) {
+        wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    }
+    else {
+        log.warn('windSpd_ms is undefined', JSON.stringify(wData));
+    }
     wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
     wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
     wData['stnDateTime'] = wData.date;
@@ -236,7 +241,9 @@ ControllerWWUnits.prototype._convertDailyWeather = function (wData, query, curre
 
     wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
     wData['hPa'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('pressureUnit'), toPressUnit, wData.press);
-    wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
+    if (wData.hasOwnProperty('vis')) {
+        wData['visibility'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('distanceUnit'), toDistUnit, wData.vis);
+    }
     wData['wdd'] = this._convertWindDirToWdd(wData.windDir);
     wData['dateObj'] = wData.date;
     wData['date'] = kmaTimeLib.convertDateToYYYYMMDD(wData.date);
@@ -262,7 +269,13 @@ ControllerWWUnits.prototype._convertHourlyWeather = function (wData, query, curr
 
     wData['pty'] = wData.precType || 0;
     wData['pop'] = wData.precProb || 0;
-    wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    if (wData.hasOwnProperty('windSpd_ms')) {
+        wData['wsd'] = unitConverter.convertUnits(UnitConverter.getDefaultValue('windSpeedUnit'), toWindUnit, wData.windSpd_ms);
+    }
+    else {
+        log.warn('windSpd_ms is undefined', JSON.stringify(wData));
+    }
+
     if (!wData.hasOwnProperty('humid')) {
         log.error('Invalid humdid '+JSON.stringify(wData));
     }
