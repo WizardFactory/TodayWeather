@@ -541,36 +541,94 @@ function ControllerTown24h() {
         return next();
     };
 
+    /**
+     *
+     * @param dailyList
+     * @param date YYYYMMDD
+     * @param time HHMM
+     * @returns {boolean}
+     * @private
+     */
+    function _isNight(dailyList, date, time) {
+        var dayInfo = dailyList.find(function (data) {
+            return data.date === date;
+        });
+
+        var sunrise = 700;
+        var sunset = 1800;
+
+        if (dayInfo == undefined) {
+            console.error({func:"isnight", msg:"Fail to find date="+date});
+        }
+        else {
+            if (dayInfo.hasOwnProperty('sunrise')) {
+                sunrise = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoHHMM(dayInfo.sunrise);
+            }
+            if (dayInfo.hasOwnProperty('sunset')) {
+                sunset = kmaTimeLib.convertYYYYoMMoDDoHHoMMtoHHMM(dayInfo.sunset);
+            }
+        }
+
+        var isNight = false;
+        if (sunrise <= time && time <= sunset) {
+            isNight = false;
+        }
+        else {
+            isNight = true;
+        }
+
+        //log.verbose({date:date, time:time, sunrise:sunrise, sunset:sunset, night:isNight});
+
+        return isNight;
+    }
+
     this.insertSkyIcon = function (req, res, next) {
-        if(req.short){
-            req.short.forEach(function (data) {
-                var time = parseInt(data.time.substr(0, 2));
-                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
-            });
-        }
-        if(req.shortest){
-            req.shortest.forEach(function (data) {
-                var time = parseInt(data.time.substr(0, 2));
-                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
-            });
-        }
-        if(req.current){
-            var data = req.current;
-            var time = parseInt(data.time.substr(0, 2));
-            data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, time < 7 || time > 18);
-        }
-        if(req.midData){
-            req.midData.dailyData.forEach(function (data) {
-                if (data.sky) {
-                    data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, false);
+        var isNight = false;
+
+        try {
+            if(req.short){
+                req.short.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.shortest){
+                req.shortest.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.current){
+                var data = req.current;
+                var time;
+                if (data.liveTime) {
+                   time = data.liveTime;
                 }
-                if (data.skyAm) {
-                    data.skyAmIcon = self._parseSkyState(data.skyAm, data.ptyAm, data.lgtAm, false);
+                else {
+                    time = data.time;
                 }
-                if (data.skyPm) {
-                    data.skyPmIcon = self._parseSkyState(data.skyPm, data.ptyPm, data.lgtPm, false);
-                }
-            });
+                isNight = _isNight(req.midData.dailyData, data.date, time);
+                data.night = isNight;
+                data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, isNight);
+            }
+            if(req.midData){
+                req.midData.dailyData.forEach(function (data) {
+                    if (data.sky) {
+                        data.skyIcon = self._parseSkyState(data.sky, data.pty, data.lgt, false);
+                    }
+                    if (data.skyAm) {
+                        data.skyAmIcon = self._parseSkyState(data.skyAm, data.ptyAm, data.lgtAm, false);
+                    }
+                    if (data.skyPm) {
+                        data.skyPmIcon = self._parseSkyState(data.skyPm, data.ptyPm, data.lgtPm, false);
+                    }
+                });
+            }
+        }
+        catch(err) {
+            return next(err);
         }
 
         next();
