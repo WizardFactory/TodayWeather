@@ -325,12 +325,24 @@ angular.module('controller.tabctrl', [])
                         });
                     }
 
-                    buttons.push({
-                        text: strSetting,
-                        onTap: function () {
-                            return 'locationSettings';
-                        }
-                    });
+                    if (ionic.Platform.isAndroid()) {
+                        buttons.push({
+                            text: strSetting,
+                            onTap: function () {
+                                return 'locationSettings';
+                            }
+                        });
+                    }
+                    else if (ionic.Platform.isIOS()) {
+                        buttons.push({
+                            text: strSetting,
+                            type: 'button-positive',
+                            onTap: function () {
+                                return 'settings';
+                            }
+                        });
+
+                    }
 
                     buttons.push({
                         text: strOkay,
@@ -400,11 +412,7 @@ angular.module('controller.tabctrl', [])
                         }
                         else if (res == 'locationSettings') {
                             setTimeout(function () {
-                                cordova.plugins.diagnostic.switchToLocationSettings(function () {
-                                    console.log("Successfully switched to location settings app");
-                                }, function (error) {
-                                    console.log("The following error occurred: " + error);
-                                });
+                                cordova.plugins.diagnostic.switchToLocationSettings();
                             }, 0);
                         }
                         else {
