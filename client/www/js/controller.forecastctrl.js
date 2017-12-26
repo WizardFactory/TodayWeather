@@ -627,36 +627,21 @@ angular.module('controller.forecastctrl', [])
             if($scope.forecastType == 'short') {
                 $scope.timeTable = cityData.timeTable;
                 $scope.timeChart = cityData.timeChart;
-
-                // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-                // ios에서 scroll 할때 scroll freeze되는 현상 있음.
-                // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
-                // data binding이 늦어 scroll이 무시되는 경우가 있음
-                setTimeout(function () {
-                    if (ionic.Platform.isAndroid()) {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                    } else {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                    }
-                }, 300);
             }
             else {
                 $scope.dayChart = cityData.dayChart;
-
-                /**
-                 * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
-                 * iOS에서 scroll이 안될때가 있어서 animation 제거함.
-                 */
-                setTimeout(function () {
-                    if (ionic.Platform.isAndroid()) {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
-                    } else {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
-                    }
-                }, 300);
             }
+
+            //많은 이슈가 있음. https://github.com/WizardFactory/TodayWeather/issues/1777
+            setTimeout(function () {
+                var el = document.getElementById('chartScroll');
+                if (el) {
+                    el.scrollLeft = getTodayPosition();
+                }
+                else {
+                    console.error('chart scroll is null');
+                }
+            }, 300);
         }
 
         function showLoadingIndicator() {
