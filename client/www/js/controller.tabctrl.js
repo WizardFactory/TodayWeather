@@ -40,17 +40,36 @@ angular.module('controller.tabctrl', [])
             TwAds.init();
         }
 
+        var lastClickTime = 0;
+
         $scope.doTabForecast = function(forecastType) {
+            var clickTime = new Date().getTime();
+            var gap = clickTime - lastClickTime;
+
+            console.info('do tab forecast gap='+gap);
+            lastClickTime = clickTime;
+
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 $scope.startPopup();
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
-                $scope.$broadcast('reloadEvent');
-                Util.ga.trackEvent('action', 'tab', 'reload');
+                //iPhone6 debuging mode에서 6xx 나옴.
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                    Util.ga.trackEvent('action', 'tab', 'reload');
+                }
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
-                $scope.$broadcast('reloadEvent');
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                }
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {
@@ -169,7 +188,7 @@ angular.module('controller.tabctrl', [])
                         Util.ga.trackEvent('action', 'click', 'auto search');
                         WeatherInfo.disableCity(false);
                         if ($location.path() === '/tab/forecast') {
-                            $scope.$broadcast('reloadEvent');
+                            $scope.$broadcast('reloadEvent', 'startPopup');
                         }
                         else {
                             $location.path('/tab/forecast');
@@ -360,7 +379,7 @@ angular.module('controller.tabctrl', [])
                                     $scope.$broadcast('searchCurrentPositionEvent');
                                 }
                                 else {
-                                    $scope.$broadcast('reloadEvent');
+                                    $scope.$broadcast('reloadEvent', 'retryPopup');
                                 }
                             }, 0);
                         }
