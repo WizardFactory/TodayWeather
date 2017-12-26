@@ -1160,13 +1160,19 @@ angular.module('controller.forecastctrl', [])
 
         $scope.switchToLocationSettings = function () {
             Util.ga.trackEvent('action', 'click', 'toggleLocationEnable');
+
             if (Util.isLocationEnabled() == false && cordova && cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.switchToLocationSettings(function () {
-                    console.log("Successfully switched to location settings app");
-                    WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
-                }, function (error) {
-                    console.log("The following error occurred: " + error);
-                });
+                if (ionic.Platform.isAndroid()) {
+                    cordova.plugins.diagnostic.switchToLocationSettings();
+                }
+                else if (ionic.Platform.isIOS()) {
+                    cordova.plugins.diagnostic.switchToSettings(function () {
+                        console.log("Successfully switched to Settings app");
+                    }, function (error) {
+                        console.log("The following error occurred: " + error);
+                    });
+                }
+                WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             }
         };
 
