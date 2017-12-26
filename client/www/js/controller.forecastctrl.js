@@ -667,7 +667,7 @@ angular.module('controller.forecastctrl', [])
             if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
                     $scope.$broadcast('reloadEvent', 'refreshTimer');
-                }, parseInt(refreshInterval)*60*1000);
+                }, parseInt(settingsInfo.refreshInterval)*60*1000);
             }
         }
 
