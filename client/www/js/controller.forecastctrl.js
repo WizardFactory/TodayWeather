@@ -379,7 +379,6 @@ angular.module('controller.forecastctrl', [])
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
-            applyWeatherData();
             loadWeatherData();
         }
 
@@ -638,25 +637,25 @@ angular.module('controller.forecastctrl', [])
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                     } else {
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                        //$ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
                     }
-                }, 0);
+                }, 300);
             }
             else {
                 $scope.dayChart = cityData.dayChart;
 
                 /**
                  * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
+                 * iOS에서 scroll이 안될때가 있어서 animation 제거함.
                  */
                 setTimeout(function () {
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
                     } else {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
+                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
+                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
                     }
-                }, 0);
+                }, 300);
             }
         }
 
@@ -682,33 +681,33 @@ angular.module('controller.forecastctrl', [])
             var settingsInfo = TwStorage.get("settingsInfo");
             if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
-                    $scope.$broadcast('reloadEvent');
+                    $scope.$broadcast('reloadEvent', 'refreshTimer');
                 }, parseInt(refreshInterval)*60*1000);
             }
         }
 
         function loadWeatherData() {
             setRefreshTimer();
+            applyWeatherData();
 
             var cityIndex = WeatherInfo.getCityIndex();
             if (WeatherInfo.canLoadCity(cityIndex) === true) {
-                showLoadingIndicator();
 
                 var weatherInfo = WeatherInfo.getCityOfIndex(cityIndex);
                 if (!weatherInfo) {
-                    hideLoadingIndicator();
-
                     Util.ga.trackEvent('weather', 'error', 'failToGetCityIndex', cityIndex);
                     return;
                 }
 
+                showLoadingIndicator();
                 updateWeatherData(weatherInfo).then(function () {
                     applyWeatherData();
+                    //data cache된 경우에라도, Loading했다는 느낌을 주기 위해서 최소 지연 시간 설정
                     setTimeout(function () {
+                        console.info('hide loading indicator after update wData');
                         hideLoadingIndicator();
-                    }, ionic.Platform.isAndroid()?0:300);
+                    }, 500);
                 }, function (msg) {
-                    applyWeatherData();
                     hideLoadingIndicator();
                     $scope.showRetryConfirm(strError, msg, 'weather');
                 });
@@ -761,12 +760,7 @@ angular.module('controller.forecastctrl', [])
             }
             else {
                 console.log("Already updated weather data so just apply");
-                showLoadingIndicator();
-                applyWeatherData();
             }
-
-            //permission 조정할때, resume발생하기 때문에 그런 끊어지는 경우를 위해 있음.
-            hideLoadingIndicator();
         }
 
         function updateCurrentPosition(cityInfo) {
@@ -847,7 +841,6 @@ angular.module('controller.forecastctrl', [])
                     deferred.reject(msg);
                 }
                 else if (isLocationAuthorized === undefined) {
-                    hideLoadingIndicator();
                     if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
                         // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
                         // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
@@ -1015,7 +1008,6 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setNextCityIndex();
-            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1025,7 +1017,6 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setPrevCityIndex();
-            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1103,7 +1094,7 @@ angular.module('controller.forecastctrl', [])
                 return;
             }
 
-            console.log('called by update weather event');
+            console.log('called by update weather event by '+sender);
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
         });
