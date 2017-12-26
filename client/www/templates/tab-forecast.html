@@ -39,9 +39,8 @@
         <div class="main-content short-forecast">
             <div class="col extend-content">
                 <div style="position: relative" ng-if="timeWidth">
-                    <ion-scroll delegate-handle="timeChart" direction="x" zooming="false" has-bouncing="false"
-                                scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
-                        <div class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
+                    <div id="chartScroll" style="overflow: auto;white-space: nowrap;">
+                        <div id="chartBox" class="col chartBox" style="margin: auto" ng-style="{'width':timeWidth +'px'}">
                             <div id="shortTable" class="col table-content" ng-if="timeTable">
                                 <div class="row row-no-padding day-title-list">
                                     <!--마지막 0시에 대한 날짜는 표기 하지 않음, 오른쪽에 최소 120px(날짜정보 2칸)이 있을 경우 표시.-->
@@ -59,7 +58,7 @@
                             </div>
                             <div ng-short-chart class="chart-content" ng-style="{'height':chartShortHeight+'px'}"></div>
                         </div>
-                    </ion-scroll>
+                    </div>
                     <div class="label" ng-if="timeChart">
                         <div class="label-yesterday"></div> <span>{{"LOC_PREVIOUS_DAY_TEMP"|translate}}</span><br/>
                         <div class="label-today"></div> <span>{{"LOC_THIS_DAY_TEMP"|translate}}</span>
