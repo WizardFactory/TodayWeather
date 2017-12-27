@@ -252,7 +252,7 @@ angular.module('service.util', [])
         obj.sendMail = function($translate) {
             var to = twClientConfig.mailTo;
             var subject = 'Send feedback';
-            var body = '\n====================\nApp Version : ' + Util.version + '\nUUID : ' + window.device.uuid
+            var body = '\n====================\nApp Version : ' + this.version + '\nUUID : ' + window.device.uuid
                 + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
 
             $translate('LOC_SEND_FEEDBACK').then(function (translations) {
@@ -263,7 +263,7 @@ angular.module('service.util', [])
                 window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
             });
 
-            Util.ga.trackEvent('action', 'click', 'send mail');
+            this.ga.trackEvent('action', 'click', 'send mail');
         };
 
         obj.openMarket = function() {
@@ -282,10 +282,10 @@ angular.module('service.util', [])
 
             if (window.cordova && cordova.InAppBrowser) {
                 cordova.InAppBrowser.open(src, "_system");
-                Util.ga.trackEvent('action', 'click', 'open market');
+                this.ga.trackEvent('action', 'click', 'open market');
             }
             else {
-                Util.ga.trackEvent("inappbrowser", "error", "loadPlugin");
+                this.ga.trackEvent("inappbrowser", "error", "loadPlugin");
                 var options = {
                     location: "yes",
                     clearcache: "yes",
