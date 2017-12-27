@@ -161,7 +161,16 @@ angular.module('service.weatherutil', [])
          */
         obj.getWeatherByGeoInfo = function (geoInfo) {
             var promises = [];
-            var url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
+            var deferred = $q.defer();
+            var url;
+            try{
+                url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
+            }
+            catch(err) {
+                deferred.reject(err);
+                return deferred.promise;
+            }
+
             promises.push(_getHttp(url));
             return $q.all(promises);
         };
@@ -724,6 +733,20 @@ angular.module('service.weatherutil', [])
                 console.log(err);
             }
             return town;
+        };
+
+        /**
+         *
+         * @param {String} fullAddress 대한민국 천하도 강남시 하늘구 가내동 33-2, 대한민국 서울특별시 라임구 마라동
+         * @returns {String[]}
+         */
+        obj.convertAddressArray = function (fullAddress) {
+            var splitAddress = [];
+
+            if (fullAddress && fullAddress.split) {
+                splitAddress = fullAddress.split(" ");
+            }
+            return splitAddress;
         };
 
         /**
