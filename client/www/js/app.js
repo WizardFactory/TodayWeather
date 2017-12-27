@@ -97,6 +97,20 @@ angular.module('starter', [
             );
         }
 
+        if (window.cordova && cordova.getAppVersion) {
+            //정보 가지고 오는 속도가 느림.
+            cordova.getAppVersion.getVersionNumber().then(function (version) {
+                $rootScope.version = version;
+                Util.version = version;
+                Util.ga.trackEvent('app', 'version', Util.version);
+            });
+        }
+        else {
+            //getAppVersion plugin이 없으면 update.info.js 사용함.
+            $rootScope.version = window.appVersion;
+            Util.version = window.appVersion;
+        }
+
         Util.ga.trackEvent('app', 'language', Util.language);
 
         if (window.hasOwnProperty("device")) {
@@ -117,14 +131,6 @@ angular.module('starter', [
         }
 
         Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
-
-        if (window.cordova && cordova.getAppVersion) {
-            cordova.getAppVersion.getVersionNumber().then(function (version) {
-                $rootScope.version = version;
-                Util.version = version;
-                Util.ga.trackEvent('app', 'version', Util.version);
-            });
-        }
 
         window.onerror = function(msg, url, line) {
             var idx = url.lastIndexOf("/");
@@ -291,6 +297,39 @@ angular.module('starter', [
                 $state.go('tab.search');
             } else { //시간별날씨
                 $state.go('tab.forecast');
+            }
+
+            function showUpdateInfo(triggerTime) {
+                var lastAppVersion = TwStorage.get("appVersion");
+                if (lastAppVersion != Util.version) {
+                    var logMsg = 'from '+lastAppVersion+' to '+Util.version;
+                    Util.ga.trackEvent('app', 'update', logMsg);
+                    TwStorage.set('disableUpdateInfo', false);
+                    TwStorage.set('appVersion', Util.version);
+                }
+
+                if (TwStorage.get('disableUpdateInfo') !== true) {
+                    //바로 보내면, tabCtrl에서 못 받음.
+                    setTimeout(function () {
+                        Util.ga.trackEvent('app', 'update', 'triggerShowUpdateInfo');
+                        $rootScope.$broadcast('showUpdateInfo');
+                    }, triggerTime);
+                }
+            }
+
+            if (Util.version) {
+               showUpdateInfo(500);
+            }
+            else {
+                Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
+                $rootScope.$watch('version', function (newValue) {
+                    if(newValue == undefined) {
+                        Util.ga.trackEvent('app', 'error', 'failToLoadAppVersion');
+                        return;
+                    }
+
+                    showUpdateInfo(100);
+                });
             }
         });
     })

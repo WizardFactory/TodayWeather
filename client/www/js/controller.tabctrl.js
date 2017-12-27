@@ -1,6 +1,6 @@
 angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate) {
+                                     $location, TwAds, $rootScope, Util, $translate, TwStorage) {
         var currentTime;
         var strError = "Error";
         var strAddLocation = "Add locations";
@@ -425,6 +425,110 @@ angular.module('controller.tabctrl', [])
                     });
             });
         };
+
+        $scope.$on('showUpdateInfo', function(event) {
+            Util.ga.trackEvent('show', 'popup', 'updateInfo');
+            var strFeedback = "";
+            var strRate = "";
+            var strClose = "";
+            var strDisable = "";
+            var lang = Util.language.split('-')[0];
+
+            var updateInfo = window.updateInfo.find(function (value) {
+                if (value.lang === lang) {
+                    return true;
+                }
+                return false;
+            });
+
+            if (updateInfo == undefined) {
+                //en
+                updateInfo = window.updateInfo[0];
+            }
+
+            console.info(updateInfo);
+
+            var msg = '';
+
+            if (updateInfo) {
+                if (ionic.Platform.isAndroid())  {
+                    updateInfo.android.forEach(function (data) {
+                        msg += data+'<br>';
+                    });
+                }
+                if (ionic.Platform.isIOS()) {
+                    updateInfo.ios.forEach(function (data) {
+                        msg += data+'<br>';
+                    });
+                }
+                //last array has greeting msg
+                updateInfo.all.forEach(function (data) {
+                    msg += data+'<br>';
+                });
+            }
+
+            var version = 'v'+Util.version;
+
+            function setDisableUpdateInfo() {
+                Util.ga.trackEvent('action', 'popup', 'disableUpdateInfo');
+                TwStorage.set('disableUpdateInfo', true);
+            }
+
+            Util.ga.trackEvent('app', 'update', 'showUpdateInfoPopup');
+
+            $translate(['LOC_FEEDBACK', 'LOC_REVIEW', 'LOC_CLOSE', 'LOC_DISABLE_UPDATE_POPUP'])
+                .then(function (translations) {
+                        strFeedback = translations.LOC_FEEDBACK;
+                        strRate = translations.LOC_REVIEW;
+                        strClose = translations.LOC_CLOSE;
+                        strDisable = translations.LOC_DISABLE_UPDATE_POPUP;
+                    },
+                    function (translationIds) {
+                        console.log("Fail to translate : "+JSON.stringify(translationIds));
+                    })
+                .finally(function () {
+
+                    msg += '<div style="margin: 0 2px">' +
+                        '<input type="checkbox" ng-model="data.disable">'+
+                        strDisable +
+                        '</div>';
+
+                    $ionicPopup.show({
+                        template: msg,
+                        title: version,
+                        cssClass: 'update_information_popup',
+                        scope: $scope,
+                        buttons: [
+                            {
+                                text: strFeedback,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                    Util.sendMail($translate);
+                                }
+                            },
+                            {
+                                text: strRate,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                    Util.openMarket();
+                                }
+                            },
+                            {
+                                text: strClose,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                }
+                            }
+                        ]
+                    });
+                });
+        });
 
         init();
     });

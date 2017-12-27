@@ -98,7 +98,7 @@
   "LOC_GUIDE" : "가이드",
   "LOC_REMOVE_ADS" : "광고제거",
   "LOC_SEND_FEEDBACK" : "의견보내기",
-  "LOC_RATE_THIS_APP" : "리뷰쓰기",
+  "LOC_RATE_THIS_APP" : "응원리뷰쓰기",
   "LOC_ABOUT" : "정보",
   "LOC_YESTERDAY" : "어제",
   "LOC_TODAY" : "오늘",
@@ -261,5 +261,8 @@
   "LOC_AIR_QUALITY_INDEX_KR" : "한국환경공단",
   "LOC_AIR_QUALITY_INDEX_KR_WHO" : "WHO",
   "LOC_AIR_QUALITY_INDEX_US" : "미국",
-  "LOC_AIR_QUALITY_INDEX_CN" : "중국"
+  "LOC_AIR_QUALITY_INDEX_CN" : "중국",
+  "LOC_FEEDBACK": "의견보내기",
+  "LOC_REVIEW": "응원리뷰쓰기",
+  "LOC_DISABLE_UPDATE_POPUP":"업데이트까지 닫기"
 }
