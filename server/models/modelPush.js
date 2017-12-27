@@ -22,7 +22,8 @@ var pushSchema = new mongoose.Schema({
         windSpeedUnit: String,  //m/s mph ..
         pressureUnit: String,   //hPa, mbar, ..
         distanceUnit: String,   //km, miles
-        precipitationUnit: String //mm, inches
+        precipitationUnit: String, //mm, inches
+        airUnit: String //airkorea, airkorea_who, airnow, aircn
     }
 });
 

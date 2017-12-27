@@ -143,26 +143,6 @@ describe('unit test - controller push', function() {
             done();
         });
     });
-
-    // it('test request daily summary', function(done) {
-    //    this.timeout(20*1000);
-    //    var co = new ControllerPush();
-    //    co.requestDailySummary(pushInfo, function (err, result) {
-    //        assert.equal(err, null, err);
-    //        console.log(result);
-    //        //done();
-    //    });
-    //
-    //    co.requestDailySummary(pushInfo3, function (err, result) {
-    //       if (err) {
-    //           console.log(err);
-    //       }
-    //       else {
-    //           console.log(result);
-    //       }
-    //      //done();
-    //    });
-    // });
 });
 
 

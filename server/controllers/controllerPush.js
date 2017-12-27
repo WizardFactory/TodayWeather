@@ -356,16 +356,28 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
     var apiVersion = "v000901";
-    var url = config.push.serviceServer+"/"+apiVersion+"/kma/addr";
+    var url;
     var town = pushInfo.town;
-    if (town.first) {
-        url += '/'+ encodeURIComponent(town.first);
+
+    if (pushInfo.geo) {
+        url = config.push.serviceServer+'/weather/coord';
+        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
     }
-    if (town.second) {
-        url += '/' + encodeURIComponent(town.second);
+    else if (pushInfo.town) {
+        url = config.push.serviceServer+"/"+apiVersion+"/kma/addr";
+        if (town.first) {
+            url += '/'+ encodeURIComponent(town.first);
+        }
+        if (town.second) {
+            url += '/' + encodeURIComponent(town.second);
+        }
+        if (town.third) {
+            url += '/' + encodeURIComponent(town.third);
+        }
     }
-    if (town.third) {
-        url += '/' + encodeURIComponent(town.third);
+    else {
+        callback(new Error("Fail to find geo or town info"));
+        return this;
     }
 
     var count = 0;
