@@ -191,6 +191,7 @@ angular.module('service.weatherinfo', [])
         obj.updateCity = function (index, newCityInfo) {
             var that = this;
             var city = cities[index];
+            var updatePush = false;
 
             if (newCityInfo.currentWeather) {
                 city.currentWeather = newCityInfo.currentWeather;
@@ -221,14 +222,21 @@ angular.module('service.weatherinfo', [])
                     city.address = newCityInfo.address;
                 }
                 if (newCityInfo.location) {
+                    if (JSON.stringify(city.location) !== JSON.stringify(newCityInfo.location)) {
+                        updatePush = true;
+                    }
                     city.location = newCityInfo.location;
                 }
-                if (window.push) {
-                    if (window.push.getAlarm(index)) {
-                        window.push.updateAlarm(index, city.address);
-                    }
+            }
+
+            if (updatePush && window.push) {
+                var alarmInfo = window.push.getAlarm(index);
+
+                if (alarmInfo) {
+                    window.push.updateAlarm(index, alarmInfo.time);
                 }
             }
+
             city.loadTime = new Date();
 
             that.saveCities();

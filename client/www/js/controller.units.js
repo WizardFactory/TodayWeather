@@ -148,15 +148,19 @@ angular.module('controller.units', [])
 
         return obj;
     })
-    .controller('UnitsCtrl', function($scope, $translate, $ionicHistory, Units, Util, WeatherInfo) {
+    .controller('UnitsCtrl', function($scope, $translate, $ionicHistory, Units, Util, WeatherInfo, Push) {
         $scope.temperatureUnit = Units.temperatureUnit;
         $scope.windSpeedUnit = Units.windSpeedUnit;
         $scope.pressureUnit = Units.pressureUnit;
         $scope.distanceUnit = Units.distanceUnit;
         $scope.precipitationUnit = Units.precipitationUnit;
         $scope.airUnit = Units.airUnit;
+        var update = false;
 
         $scope.onClose = function() {
+            if(update) {
+               Push.updateUnits();
+            }
             //iOS에서 forecast chart 제대로 안나오는 이슈가 있어서 임시로 무조건 리드로잉한다.
             _resetUpdateTimeCities();
             console.log('close');
@@ -175,6 +179,7 @@ angular.module('controller.units', [])
         $scope.setUnit = function (unit, value) {
             if (Units.setUnit(unit, value)) {
                 Units.saveUnits();
+                update = true;
                 //_resetUpdateTimeCities();
             }
         };

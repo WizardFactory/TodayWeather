@@ -520,7 +520,7 @@ angular.module('controller.searchctrl', [])
                         console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
                                     selectedTime.toString());
 
-                        Push.updateAlarm(index, WeatherInfo.getCityOfIndex(index).address, selectedTime, function (err, alarmInfo) {
+                        Push.updateAlarm(index, selectedTime, function (err, alarmInfo) {
                             if (err) {
                                 Util.ga.trackEvent('alarm', 'error', err.message, index);
                                 return;
