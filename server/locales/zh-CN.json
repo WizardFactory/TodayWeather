@@ -261,5 +261,8 @@
   "LOC_AIR_QUALITY_INDEX_KR" : "韩国",
   "LOC_AIR_QUALITY_INDEX_KR_WHO" : "韩国(WHO)",
   "LOC_AIR_QUALITY_INDEX_US" : "美国",
-  "LOC_AIR_QUALITY_INDEX_CN" : "中国"
+  "LOC_AIR_QUALITY_INDEX_CN" : "中国",
+  "LOC_FEEDBACK": "发送反馈",
+  "LOC_REVIEW": "评论",
+  "LOC_DISABLE_UPDATE_POPUP":"禁用更新信息"
 }
