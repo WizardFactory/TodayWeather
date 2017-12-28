@@ -30,10 +30,11 @@
 #define STR_LATITUDE                    @"&latitude="
 #define STR_INPUT_COORD                 @"&inputCoordSystem=WGS84"
 #define STR_OUTPUT_JSON                 @"&output=json"
-#define API_JUST_TOWN                   @"v000803/town"
+//#define API_JUST_TOWN                   @"v000803/town"
 #define WORLD_API_URL                   @"ww/010000/current/2?gcode="
 //#define TEST_SERVER                     @"https://ry0b7u7o1b.execute-api.ap-northeast-2.amazonaws.com/dev"
 #define COORD_2_WEATHER_API_URL         @"weather/coord"
+#define KMA_ADDR_API_URL                @"v000901/kma/addr"
 
 #define WIDGET_COMPACT_HEIGHT           110.0
 #define WIDGET_PADDING                  215.0
@@ -1542,7 +1543,7 @@ static TodayViewController *todayVC = nil;
 {
     NSString *nssURL = nil;
     NSCharacterSet *set = nil;
-    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, API_JUST_TOWN];
+    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, KMA_ADDR_API_URL];
     if (nssAddr1 != nil) {
         nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr1];
     }

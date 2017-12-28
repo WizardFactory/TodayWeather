@@ -228,6 +228,14 @@ angular.module('service.weatherinfo', [])
                     city.location = newCityInfo.location;
                 }
             }
+            else {
+                //구버전에 저장된 도시정보에는 location이 없는 경우가 있음. #1971
+                //v000901/kma/addr 에서 추가해주어야 함.
+                if (!city.location && newCityInfo.location) {
+                    city.location = newCityInfo.location;
+                    console.info('update location ', city);
+                }
+            }
 
             if (updatePush && window.push) {
                 var alarmInfo = window.push.getAlarm(index);

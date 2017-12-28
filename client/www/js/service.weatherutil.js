@@ -103,6 +103,34 @@ angular.module('service.weatherutil', [])
         }
 
         /**
+         *
+         * @param town {{first: String, second: String, third: String}}
+         * @returns {string|string|string|string}
+         * @private
+         */
+        function _makeQueryUrlWithTown (town) {
+            var url = twClientConfig.serverUrl;
+            url += '/v000901/kma/addr';
+            if (town.first !== '') {
+                url += '/' + town.first;
+            }
+            if (town.second !== '') {
+                url += '/' + town.second;
+            }
+            if (town.third !== '') {
+                url += '/' + town.third;
+            }
+            var units = Units.getAllUnits();
+            var count = 0;
+            for (var key in units) {
+                url += count === 0? "?":"&";
+                url += key+'='+units[key];
+                count++;
+            }
+            return url;
+        }
+
+        /**
          * location -> geoInfo
          * @param location
          */
@@ -156,6 +184,7 @@ angular.module('service.weatherutil', [])
 
         /**
          * geoInfo -> weather data
+         * old city data에 location이 없는 경우가 있음
          * @param geoInfo
          * @returns {Promise}
          */
@@ -164,7 +193,20 @@ angular.module('service.weatherutil', [])
             var deferred = $q.defer();
             var url;
             try{
-                url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
+                if (geoInfo.location && geoInfo.location.lat) {
+                    url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
+                }
+                else if (geoInfo.address) {
+                    var town = this.getTownFromFullAddress(this.convertAddressArray(geoInfo.address));
+
+                    if (town.first=="" && town.second=="" && town.third=="") {
+                        //town invalid
+                        url = _makeQueryUrlWithAddr(geoInfo.address, 'weather');
+                    }
+                    else {
+                        url = _makeQueryUrlWithTown(town);
+                    }
+                }
             }
             catch(err) {
                 deferred.reject(err);
