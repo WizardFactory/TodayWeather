@@ -890,14 +890,23 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
+        /**
+         *
+         * @param geoInfo geoInfo or weatherInfo
+         */
         function updateWeatherData(geoInfo) {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
+            var logLabel = geoInfo.address || geoInfo.name;
+
+            if (!logLabel) {
+               logLabel = JSON.stringify(geoInfo.location);
+            }
 
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                Util.ga.trackEvent('weather', 'get', geoInfo.address +
+                Util.ga.trackEvent('weather', 'get', logLabel +
                     '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherData);
@@ -911,10 +920,10 @@ angular.module('controller.forecastctrl', [])
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
+                    Util.ga.trackEvent('weather', 'error', logLabel +
                         '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
+                    Util.ga.trackEvent('weather', 'error', logLabel +
                         '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                 }
 
