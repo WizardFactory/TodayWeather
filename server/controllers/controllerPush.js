@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 5. 2..
  */
 
+"use strict";
+
 var apn = require('apn');
 var gcm = require('node-gcm');
 var config = require('../config/config');
@@ -183,14 +185,49 @@ ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
     return this;
 };
 
+ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
+    var str;
+    var priorityArray = ['pm25', 'pm10', 'o3', 'khai'].sort(function (a, b) {
+        if (!arpltn.hasOwnProperty(a+'Grade')) {
+            return 1;
+        }
+        if (!arpltn.hasOwnProperty(a+'Grade')) {
+            return -1;
+        }
+
+        if(arpltn[a+'Grade'] < arpltn[b+'Grade']) {
+            return 1;
+        }
+        else if(arpltn[a+'Grade'] > arpltn[b+'Grade']) {
+            return -1;
+        }
+        return 0;
+    });
+
+    if (priorityArray[0] === 'pm25') {
+        str = trans.__("LOC_PM25")+" "+ arpltn.pm25Str;
+    }
+    else if (priorityArray[0] === 'pm10') {
+        str = trans.__("LOC_PM10")+" "+ arpltn.pm10Str;
+    }
+    else if (priorityArray[0] === 'o3') {
+        str = trans.__("LOC_O3")+" "+ arpltn.o3Str;
+    }
+    else if (priorityArray[0] === 'khai') {
+        str = trans.__("LOC_AQI")+" "+ arpltn.khaiStr;
+    }
+
+    return str;
+};
+
 /**
  *
  * @param pushInfo
- * @param dailyInfo
+ * @param weatherInfo
  * @returns {string}
  * @private
  */
-ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
+ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) {
     var pushMsg;
 
     var trans = {};
@@ -209,52 +246,57 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
         location = pushInfo.name + " ";
     }
     else {
-        if (dailyInfo.townName) {
-            location = dailyInfo.townName + ' ';
+        if (weatherInfo.townName) {
+            location = weatherInfo.townName + ' ';
         }
-        else if (dailyInfo.cityName) {
-            location = dailyInfo.cityName + ' ';
+        else if (weatherInfo.cityName) {
+            location = weatherInfo.cityName + ' ';
         }
-        else if (dailyInfo.regionName) {
-            location = dailyInfo.regionName + ' ';
+        else if (weatherInfo.regionName) {
+            location = weatherInfo.regionName + ' ';
         }
     }
 
     var dailyArray = [];
     var dailySummary = "";
-    var current = dailyInfo.dailySummary.current;
+    var current = weatherInfo.current;
 
-    var time = parseInt(current.time.substr(0, 2));
+    var time = current.time;
     var theDay;
+    var today;
+
+    today = weatherInfo.midData.dailyData.find(function (dayInfo) {
+        if (dayInfo.fromToday === 0) {
+            return dayInfo;
+        }
+    });
+
     if (time < 18) {
-        theDay = dailyInfo.dailySummary.today;
+        theDay = today;
         dailySummary += trans.__("LOC_TODAY")+": ";
     }
     else {
-        theDay = dailyInfo.dailySummary.tomorrow;
+        theDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
+            if (dayInfo.fromToday === 1) {
+                return dayInfo;
+            }
+        });
         dailySummary += trans.__("LOC_TOMORROW")+": ";
     }
 
-    if (theDay.skyIconAm && theDay.skyIconPm) {
-        dailyArray.push(cTown._getWeatherEmoji(theDay.skyIconAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyIconPm));
+    if (theDay.skyAm && theDay.skyPm) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyPm));
     }
     else if (theDay.skyIcon) {
         dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
     }
 
-    if (theDay.taMin != undefined && theDay.taMax != undefined) {
-        theDay.taMin = unitConverter.convertUnits(dailyInfo.units.temperatureUnit, pushInfo.units.temperatureUnit, theDay.taMin);
-        theDay.taMax = unitConverter.convertUnits(dailyInfo.units.temperatureUnit, pushInfo.units.temperatureUnit, theDay.taMax);
-        if (pushInfo.units.temperatureUnit == "F") {
-            theDay.taMin = Math.round(theDay.taMin);
-            theDay.taMax = Math.round(theDay.taMax);
-        }
-
-        dailyArray.push(theDay.taMin+"˚/"+theDay.taMax+"˚");
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
+        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
     }
     if (theDay.pty && theDay.pty > 0) {
         if (theDay.pop && current.pty <= 0) {
-            if(theDay.date == dailyInfo.dailySummary.today.date && current.pty <= 0) {
+            if(theDay.date === today.date && current.pty <= 0) {
                //It's raining or snowing so we didn't show pop
             }
             else {
@@ -263,16 +305,18 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
         }
     }
 
-    if (theDay.pmGrade) {
-        //미세먼지예보는 grade 값이 다름.
-        dailyArray.push(trans.__("LOC_PM10") + " " + UnitConverter.airkoreaGrade2str(theDay.pmGrade+1, 'PM', trans));
-    }
-    if (theDay.ultrvGrade) {
-        dailyArray.push(trans.__("LOC_UV") + " "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
-    }
-    //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
-    if (theDay.dustForecast && theDay.dustForecast.O3Grade) {
-        dailyArray.push(trans.__("LOC_O3") + " "+ UnitConverter.airkoreaGrade2str(theDay.dustForecast.O3Grade+1, 'O3', trans));
+    if (theDay.dustForecast) {
+        var df = theDay.dustForecast;
+        if (df.pm25Grade > df.pm10Grade) {
+            dailyArray.push(trans.__("LOC_PM25") + " " + df.pm25Str);
+        }
+        else {
+            dailyArray.push(trans.__("LOC_PM10") + " " + df.pm10Str);
+        }
+
+        if (df.o3Str) {
+            dailyArray.push(trans.__("LOC_O3") + " "+ df.o3Str);
+        }
     }
 
     //불쾌지수
@@ -287,20 +331,19 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
         hourlyArray.push(weather);
     }
     if (current.t1h) {
-        current.t1h = unitConverter.convertUnits(dailyInfo.units.temperatureUnit, pushInfo.units.temperatureUnit, current.t1h);
-        if (pushInfo.units.temperatureUnit == "F") {
-            current.t1h = Math.round(current.t1h);
-        }
         var str = current.t1h+"˚";
         hourlyArray.push(str);
     }
 
-    if (current.arpltn && current.arpltn.khaiGrade) {
-        hourlyArray.push(trans.__("LOC_AQI")+" "+ UnitConverter.airkoreaGrade2str(current.arpltn.khaiGrade, "khai", trans));
+    if (current.arpltn) {
+        var aqiStr = this._getAqiStr(current.arpltn, trans);
+        if (aqiStr) {
+            hourlyArray.push(aqiStr);
+        }
     }
+
     if (current.pty && current.pty > 0 && current.rn1 != undefined) {
         current.ptyStr = cTown._convertKmaPtyToStr(current.pty, trans);
-        current.rn1 = unitConverter.convertUnits(dailyInfo.units.precipitationUnit, pushInfo.units.precipitationUnit, current.rn1);
         hourlyArray.push(current.ptyStr+" "+ current.rn1 + pushInfo.units.precipitationUnit);
     }
     hourlySummary += hourlyArray.toString();
@@ -312,17 +355,37 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, dailyInfo) {
 
 ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
     var self = this;
-    var apiVersion = "v000803";
-    var url = config.push.serviceServer+"/"+apiVersion+"/daily/town";
+    var apiVersion = "v000901";
+    var url;
     var town = pushInfo.town;
-    if (town.first) {
-        url += '/'+ encodeURIComponent(town.first);
+
+    if (pushInfo.geo) {
+        url = config.push.serviceServer+'/weather/coord';
+        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
     }
-    if (town.second) {
-        url += '/' + encodeURIComponent(town.second);
+    else if (pushInfo.town) {
+        url = config.push.serviceServer+"/"+apiVersion+"/kma/addr";
+        if (town.first) {
+            url += '/'+ encodeURIComponent(town.first);
+        }
+        if (town.second) {
+            url += '/' + encodeURIComponent(town.second);
+        }
+        if (town.third) {
+            url += '/' + encodeURIComponent(town.third);
+        }
     }
-    if (town.third) {
-        url += '/' + encodeURIComponent(town.third);
+    else {
+        callback(new Error("Fail to find geo or town info"));
+        return this;
+    }
+
+    var count = 0;
+    var querys = pushInfo.units;
+    for (var key in querys) {
+        url += count === 0? '?':'&';
+        url += key+'='+querys[key];
+        count ++;
     }
 
     log.info('request url='+url);
@@ -352,6 +415,7 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
             obj.pressureUnit = "hPa";
             obj.distanceUnit = "km";
             obj.precipitationUnit = "mm";
+            obj.airUnit = "airkorea";
             body.units = obj;
         }
 
@@ -467,12 +531,11 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     var dailySummary = "";
     var current = worldWeatherData.thisTime[1];
 
-    var currentDate = new Date(current.date);
+    var currentDate = new Date(current.dateObj);
     var time = currentDate.getHours();
 
-    var isNight = false;
     var theDay;
-    var today; //for sunrise, sunset
+    var today;
     var targetDate;
 
     if (time < 18) {
@@ -487,7 +550,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
 
     var dailyList = worldWeatherData.daily;
     for (var i=0; i<dailyList.length-1; i++) {
-        var dailyDate = (new Date(dailyList[i].date)).getDate();
+        var dailyDate = (new Date(dailyList[i].dateObj)).getDate();
 
         if (dailyDate == currentDate.getDate()) {
             today = dailyList[i];
@@ -498,73 +561,32 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
         }
     }
 
-    if (today) {
-        var sunrise = new Date(today.sunrise);
-        var sunset = new Date(today.sunset);
-        if (sunrise.getTime() <= currentDate.getTime() && sunset.getTime() < currentDate.getTime()) {
-            isNight = false;
-        }
-        else {
-            isNight = true;
-        }
-    }
-
-    //make skyIcon
-    theDay.skyIcon = self._parseWorldSkyState(theDay.precType, theDay.cloud, false);
-
-    if (theDay.skyIconAm && theDay.skyIconPm) {
-        dailyArray.push(cTown._getWeatherEmoji(theDay.skyIconAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyIconPm));
+    if (theDay.skyAm && theDay.skyPm) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyPm));
     }
     else if (theDay.skyIcon) {
         dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
     }
 
-    if (pushInfo.units.temperatureUnit == 'C') {
-        theDay.taMin = theDay.tempMin_c;
-        theDay.taMax = theDay.tempMax_c;
-    }
-    else {
-        theDay.taMin = Math.round(theDay.tempMin_f);
-        theDay.taMax = Math.round(theDay.tempMax_f);
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
+        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
     }
 
-    if (!(theDay.taMin == undefined) && !(theDay.taMax == undefined)) {
-        dailyArray.push(theDay.taMin+"˚/"+theDay.taMax+"˚");
-    }
-
-    if (theDay.precType && theDay.precType > 0) {
-        if (theDay.precProb) {
-            if (theDay.date == today.date && current.precType <= 0) {
+    if (theDay.pty && theDay.pty > 0) {
+        if (theDay.pop) {
+            if (theDay.date === today.date && current.pty <= 0) {
                //current is raining or snowing so we didn't pop
             }
             else {
-                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.precProb+"%");
+                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
             }
         }
     }
-
-    //if (theDay.pmGrade && theDay.pmGrade > 1) {
-    //    if (theDay.pmStr) {
-    //        dailyArray.push(trans.__("LOC_PM10") + " " + theDay.pmStr);
-    //    }
-    //}
-
-    //if (theDay.ultrvGrade && theDay.ultrvGrade >= 2) {
-    //    dailyArray.push(trans.__("LOC_UV")+" "+ LifeIndexKmaController.ultrvStr(theDay.ultrvGrade, trans));
-    //}
-
-    //if (theDay.dustForecast && theDay.dustForecast.O3Grade && theDay.dustForecast.O3Grade >= 2) {
-    //    dailyArray.push(trans.__("LOC_O3")+" "+theDay.dustForecast.O3Str);
-    //}
-
-    //불쾌지수
 
     dailySummary += dailyArray.toString();
 
     var hourlyArray = [];
     var hourlySummary = "";
-
-    current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
 
     if (current.skyIcon) {
         var weather = cTown._getWeatherEmoji(current.skyIcon);
@@ -572,24 +594,21 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     }
 
     var str;
-    if ( !(current.temp_c == undefined) && !(current.temp_f == undefined) ) {
-        if (pushInfo.units.temperatureUnit == 'C') {
-            str = current.temp_c+"˚";
-        }
-        else {
-            str = Math.round(current.temp_f)+"˚";
-        }
+    if (current.hasOwnProperty('t1h')) {
+        str = current.t1h+"˚";
         hourlyArray.push(str);
     }
 
-    //if (current.arpltn && current.arpltn.khaiGrade) {
-    //    hourlyArray.push(trans.__("LOC_AQI")+" "+ current.arpltn.khaiStr);
-    //}
+    if (current.arpltn) {
+        var aqiStr = this._getAqiStr(current.arpltn, trans);
+        if (aqiStr) {
+            hourlyArray.push(aqiStr);
+        }
+    }
 
-    if (current.precType && current.precType > 0 && current.precip != undefined) {
-        current.precStr = self._pty2str(current.precType, trans);
-        current.precip = unitConverter.convertUnits(worldWeatherData.units.precipitationUnit, pushInfo.units.precipitationUnit, current.precip);
-        hourlyArray.push(current.precStr+" "+ current.precip + pushInfo.units.precipitationUnit);
+    if (current.pty && current.pty > 0 && current.hasOwnProperty('rn1')) {
+        current.precStr = self._pty2str(current.pty, trans);
+        hourlyArray.push(current.precStr+" "+ current.rn1 + pushInfo.units.precipitationUnit);
     }
 
     hourlySummary += hourlyArray.toString();
@@ -601,14 +620,23 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
 
 /**
  * https://tw-wzdfac.rhcloud.com/ww/010000/current/2?gcode=35.69,139.69
+ * https://tw-wzdfac.rhcloud.com/v000901/dsf/coord/35.69,139.69
  * @param geo
  * @param callback
  * @private
  */
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
-    var url = config.push.serviceServer+"/ww/010000/current/2";
-    url += "?gcode="+pushInfo.geo[1]+","+pushInfo.geo[0];
+    var url = config.push.serviceServer+"/v000901/dsf/coord/";
+    url += pushInfo.geo[1]+","+pushInfo.geo[0];
+
+    var count = 0;
+    var querys = pushInfo.units;
+    for (var key in querys) {
+        url += count === 0? '?':'&';
+        url += key+'='+querys[key];
+        count ++;
+    }
 
     log.info('request url='+url);
     var options = {
@@ -637,6 +665,7 @@ ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback)
             obj.pressureUnit = "hPa";
             obj.distanceUnit = "km";
             obj.precipitationUnit = "mm";
+            obj.airUnit = "airkorea";
             body.units = obj;
         }
 
@@ -671,11 +700,12 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
         obj.pressureUnit = "hPa";
         obj.distanceUnit = "km";
         obj.precipitationUnit = "mm";
+        obj.airUnit = "airkorea";
         pushInfo.units = obj;
     }
 
     //check source
-    if (pushInfo.source == undefined || pushInfo.source == 'KMA') {
+    if (pushInfo.source == undefined || pushInfo.source === 'KMA') {
         self._requestKmaDailySummary(pushInfo, function (err, results) {
             if (err) {
                 return callback(err);

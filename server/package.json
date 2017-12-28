@@ -14,6 +14,7 @@
   "scripts": {
     "start": "node ./bin/www",
     "test": "./node_modules/mocha/bin/mocha",
+    "e2e": "./node_modules/mocha/bin/mocha test/e2e",
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {

@@ -13,6 +13,11 @@ var deleteLines = require('gulp-delete-lines');
 
 var json = JSON.parse(fs.readFileSync('./package.json'));
 
+var BILLING_KEY = process.env.BILLING_KEY || '111';
+var SENDER_ID = process.env.SENDER_ID || '111';
+var FABRIC_API_KEY = process.env.FABRIC_API_KEY || '111';
+var FABRIC_API_SECRET = process.env.FABRIC_API_SECRET || '111';
+
 var paths = {
   sass: ['./scss/**/*.scss']
 };
@@ -44,25 +49,6 @@ gulp.task('install', ['git-check'], function() {
     });
 });
 
-gulp.task('rm-prepare-app-pre', function () {
-  gulp.src('./plugins/cordova-plugin-app-preferences/bin/after_prepare.js')
-      .pipe(deleteLines({
-        'filters': [
-          /platforms\.android/i
-        ]
-      }))
-      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences/bin'));
-
-  gulp.src('./plugins/cordova-plugin-app-preferences/bin/lib/android.js')
-      .pipe(deleteLines({
-        'filters': [
-          /fs.unlink\('platforms/i
-        ]
-      }))
-      .pipe(gulp.dest('./plugins/cordova-plugin-app-preferences/bin/lib'));
-
-});
-
 gulp.task('build', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
@@ -74,11 +60,12 @@ gulp.task('build', shell.task([
 ]));
 
 gulp.task('build_ios', shell.task([
+  'cp package.json import_today_ext/package.json.backup',
+  'cp import_today_ext/empty.package.json package.json',
   'ionic state reset',
-  'gulp rmplugins',
   'cp -a ../ios platforms/',
+  'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
-  'cordova plugin add cordova-plugin-app-preferences',
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'npm install',
@@ -89,8 +76,7 @@ gulp.task('build_ios', shell.task([
 
 gulp.task('build_android', shell.task([
   'ionic state reset',
-  'cordova plugin add cordova-plugin-app-preferences',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="111"',
+  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
   'npm install',
   'bower install',
@@ -98,18 +84,58 @@ gulp.task('build_android', shell.task([
   'ionic build android'
 ]));
 
+gulp.task('release-min20-android-nonpaid', shell.task([
+  'ionic state reset',
+  'cordova platform rm ios',
+  'cordova plugin rm cordova-plugin-console',
+  'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
+  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
+  'npm install',
+  //'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+
+  //'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
+  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
+
+  'cp config-androidsdk20.xml config.xml',
+  'ionic build android --release',
+  'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min20.apk'
+]));
+
+gulp.task('release-min16-android-nonpaid', shell.task([
+  'ionic state reset',
+  'cordova platform rm ios',
+  'cordova plugin rm cordova-plugin-console',
+  'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
+  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
+  'npm install',
+  //'cd node_modules/cordova-uglify/;npm install',
+  'bower install',
+  'gulp sass',
+
+  //'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
+  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
+
+  'cp config-androidsdk16.xml config.xml',
+  'cordova plugin add cordova-plugin-crosswalk-webview',
+  'ionic build android --release',
+  'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min16.apk'
+]));
+
 gulp.task('release-android-nonpaid', shell.task([
   'ionic state reset',
   'cordova plugin rm cordova-plugin-console',
-  'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="111"',
-  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
-  'cordova plugin add cordova-plugin-app-preferences',
-  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="1111"',
+  'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
+  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
   'npm install',
   'bower install',
   'gulp sass',
 
-  'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
+  //'cp ads.playstore.tw.client.config.js www/tw.client.config.js',
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
 
   'cp config-androidsdk20.xml config.xml',
@@ -136,15 +162,14 @@ gulp.task('release-ios-nonpaid', shell.task([
   'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
   'cordova plugin rm cordova-plugin-console',
-  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="1111" --variable FABRIC_API_SECRET="111"',
-  'cordova plugin add cordova-plugin-app-preferences',
+  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="'+SENDER_ID+'"',
+  'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cordova-plugin-inapppurchase',
-  'cordova plugin add phonegap-plugin-push@1.8.4 --variable SENDER_ID="1111"',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
   'npm install',
   'bower install',
   'gulp sass',
-  'cp ads.ios.tw.client.config.js www/tw.client.config.js',
+  //'cp ads.ios.tw.client.config.js www/tw.client.config.js',
   'ionic build ios --release'
   //'xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -configuration Release clean archive'
   //'xcodebuild -exportArchive -archivePath ~/Library/Developer/Xcode/Archives/2016-10-27/TodayWeather\ 2016.\ 10.\ 27.\ 13.48.xcarchive -exportPath TodayWeather.ipa''

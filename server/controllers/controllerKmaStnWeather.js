@@ -84,18 +84,19 @@ controllerKmaStnWeather.updateWeather = function (current) {
     }
     else if (current.pty == 0) {
 
-        switch (current.weatherType) {
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 10:
-            case 11:
-            case 12:
-                current.pty = 4; //안개,황사
-                break;
-        }
+        // icon 준비되면 적용
+        // switch (current.weatherType) {
+        //     case 4:
+        //     case 5:
+        //     case 6:
+        //     case 7:
+        //     case 8:
+        //     case 10:
+        //     case 11:
+        //     case 12:
+        //         current.pty = 4; //안개,황사
+        //         break;
+        // }
     }
 };
 

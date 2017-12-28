@@ -13,6 +13,7 @@ TEMP_UNIT    gTemperatureUnit;
 @implementation TodayWeatherUtil
 @synthesize twuCountry;
 @synthesize nsmaDaumKeys;
+@synthesize jsonUnitsDict;
 
 /********************************************************************
  *
@@ -190,7 +191,7 @@ TEMP_UNIT    gTemperatureUnit;
             }
         }
     }
-    else
+    else if(reqType == TYPE_REQUEST_WEATHER_GLOBAL)
     {
         arrDailyData    = [jsonDict  objectForKey:@"daily"];
         cntArrDaily     = (int)[arrDailyData count];
@@ -205,7 +206,21 @@ TEMP_UNIT    gTemperatureUnit;
             if(cntFounded == 6)
                 break;
         }
-
+    }
+    else if (reqType == TYPE_REQUEST_WEATHER_BY_COORD) {
+        arrDailyData    = [jsonDict  objectForKey:@"daily"];
+        cntArrDaily     = (int)[arrDailyData count];
+    
+        for(int i = 0; i < cntArrDaily; i++)
+        {
+            NSDictionary    *nsdDailyData   = [arrDailyData objectAtIndex:i];
+            [arrDaysData addObject:nsdDailyData];
+            
+            cntFounded++;
+            
+            if(cntFounded == 6)
+                break;
+        }
     }
 
     //NSLog(@"arrDaysData : %@", arrDaysData);
@@ -276,7 +291,7 @@ TEMP_UNIT    gTemperatureUnit;
         else
             currentDict         = [arrThisTime objectAtIndex:0];        // process about thisTime
         
-        NSString    *nssTmpDate     = [currentDict objectForKey:@"date"];                   // 2017.02.25 00:00
+        NSString    *nssTmpDate     = [currentDict objectForKey:@"dateObj"];                   // 2017.02.25 00:00
         
         NSArray *arrDate            = [nssTmpDate componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
         NSString *nssSeparatedDate  = [arrDate objectAtIndex:0];                            // "2017.02.25"
@@ -302,7 +317,7 @@ TEMP_UNIT    gTemperatureUnit;
         {
             NSMutableDictionary *dictShort = [arrHourlyData objectAtIndex:i];
             
-            NSString *nssDateTmpHourly = [dictShort objectForKey:@"date"];
+            NSString *nssDateTmpHourly = [dictShort objectForKey:@"dateObj"];
             
             NSArray  *arrDateHourly             = [nssDateTmpHourly componentsSeparatedByString:@" "];        // "2017.02.25", "00:00"
             NSString *nssSeparatedDateHourly    = [arrDateHourly objectAtIndex:0];                            // "2017.02.25"
@@ -653,6 +668,29 @@ TEMP_UNIT    gTemperatureUnit;
     return;
 }
 
+/**
+ *
+ * @param nssUnits
+ */
+- (void) setUnits:(NSString *)nssNewUnits
+{
+    NSError *error;
+    NSData *tmpUnitData = [nssNewUnits dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if(tmpUnitData)
+    {
+        jsonUnitsDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
+    }
+    else {
+        NSLog(@"nssNewNnits is null!!!");
+    }
+}
+
+- (NSDictionary *) getUnits
+{
+    return jsonUnitsDict;
+}
+
 /********************************************************************
  *
  * Name			: renderImageFromView
@@ -689,6 +727,44 @@ TEMP_UNIT    gTemperatureUnit;
     UIGraphicsEndImageContext();
     
     return renderedImage;
+}
+
++ (NSMutableDictionary *) getTodayDictionaryByCoord:(NSDictionary *)jsonDict date:(NSString *)nssDate country:(NSString *)nssCountry
+{
+    NSString        *nssCurrentDate = nssDate;
+    
+    NSMutableArray  *dailyDataArr = nil;
+    NSMutableDictionary    *todayDict     = [[NSMutableDictionary alloc] init];
+    
+    if([nssCountry isEqualToString:@"KR"]) {
+        NSDictionary    *midDict        = [jsonDict objectForKey:@"midData"];
+        dailyDataArr   = [midDict objectForKey:@"dailyData"];
+    }
+    else {
+        dailyDataArr   = [jsonDict objectForKey:@"daily"];
+    }
+    
+    //NSLog(@"[todayDictByCoord] nssCurrentDate : %@", nssCurrentDate);
+    
+    for(int i = 0; i < [dailyDataArr count]; i++)
+    {
+        NSDictionary *dailyDataDict = [dailyDataArr objectAtIndex:i];
+        NSString *nssDate       = [dailyDataDict objectForKey:@"date"];
+        //NSString *nssDailyDate  = [nssDate substringToIndex:10];
+        
+        //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+        if([nssDate isEqualToString:nssCurrentDate])
+        {
+            //NSLog(@"[todayDictByCoord] nssCurrentDate : %@, nssDailyDate : %@", nssCurrentDate, nssDailyDate);
+            todayDict = [NSMutableDictionary dictionaryWithDictionary:dailyDataDict];
+            
+            break;
+        }
+    }
+    
+    //NSLog(@"todayDictByCoord: %@", todayDict);
+    
+    return todayDict;
 }
 
 @end

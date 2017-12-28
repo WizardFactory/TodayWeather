@@ -34,6 +34,19 @@ angular.module('service.push', [])
         //obj.type; //'ios' or 'android'
         //obj.alarmList = [];
 
+        /**
+         * units 변경시에 push 갱신 #1845
+         */
+        obj.updateUnits = function () {
+            var self = this;
+            if (self.pushData.alarmList.length > 0) {
+                Util.ga.trackEvent('push', 'update', 'units');
+                self.pushData.alarmList.forEach(function (alarmInfo) {
+                    self._postPushInfo(alarmInfo);
+                });
+            }
+        };
+
         obj.loadPushInfo = function () {
             var self = this;
             var pushData = TwStorage.get("pushData");
@@ -227,12 +240,11 @@ angular.module('service.push', [])
             /**
              * WeatherInfo 와 circular dependency 제거용.
              * @param cityIndex
-             * @param address
              * @param time
              * @param callback
              */
-            window.push.updateAlarm = function (cityIndex, address, time, callback) {
-                return self.updateAlarm(cityIndex, address, time, callback);
+            window.push.updateAlarm = function (cityIndex, time, callback) {
+                return self.updateAlarm(cityIndex, time, callback);
             };
 
             window.push.getAlarm = function (cityIndex) {
@@ -253,60 +265,66 @@ angular.module('service.push', [])
             //});
         };
 
-        obj.updateAlarm = function (cityIndex, address, time, callback) {
+        /**
+         * 중복 체크는 함수 호출 전에 체크 #181 #820 #1580 #1757
+         * @param cityIndex
+         * @param time
+         * @param callback
+         * @returns {*}
+         */
+        obj.updateAlarm = function (cityIndex, time, callback) {
             var self = this;
-            var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(address));
-            var alarmInfo = {cityIndex: cityIndex, town: town, time: time};
-
             var city = WeatherInfo.getCityOfIndex(cityIndex);
+            var town;
 
-            alarmInfo = {cityIndex: cityIndex, town: town, time: time,
-                        location: city.location, name: city.name, source: city.source};
+            var params = {index:cityIndex, time: time};
+            Util.ga.trackEvent('push', 'update', JSON.stringify(params));
 
             if (!callback) {
                 callback = function (err) {
                     if (err) {
-                        console.log(err);
+                        Util.ga.trackEvent('push', 'error', err);
                     }
                 };
             }
 
-            if (!time) {
-                var err = new Error("You have to set time for add alarm");
-                return callback(err);
+            if (time == undefined) {
+                return callback(new Error("You have to set time for add alarm"));
             }
 
-            if (town.first=="" && town.second=="" && town.third=="" && city.location == null) {
-                var err = new Error("You have to set location info for add alarm");
-                return callback(err);
+            //이전 버전의 즐겨찾기에 저장된 지역이 location이 없는 경우 town 정보 사용
+            if (!city.hasOwnProperty('location')) {
+                town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
+            }
+
+            var alarmInfo = {cityIndex: cityIndex, time: time, name: city.name, source: city.source};
+
+            if (city.location) {
+                alarmInfo.location = city.location;
+            }
+
+            if (town && !(town.first=="" && town.second=="" && town.third=="")) {
+                alarmInfo.town = town;
+            }
+
+            if (!alarmInfo.hasOwnProperty('location') && !alarmInfo.hasOwnProperty('town')) {
+                return callback(new Error("You have to set location info for add alarm"));
             }
 
             if (self.pushData.alarmList.length == 0) {
                 self.pushData.alarmList.push(alarmInfo);
             }
             else {
-                for (var i=0; i<self.pushData.alarmList.length; i++) {
-                    var a = self.pushData.alarmList[i];
-                    if (a.cityIndex === alarmInfo.cityIndex) {
-                        break;
-                    }
-                }
-                if (i<self.pushData.alarmList.length) {
-                    if (!time) {
-                        alarmInfo.time = self.pushData.alarmList[i].time;
-                    }
+                var i = self.pushData.alarmList.findIndex(function (obj) {
+                    return obj.cityIndex === alarmInfo.cityIndex;
+                });
 
-                    if (alarmInfo.time.getTime() == self.pushData.alarmList[i].time.getTime() &&
-                        JSON.stringify(alarmInfo.town) == JSON.stringify(self.pushData.alarmList[i].town)) {
-                        console.log('alarmInfo is already latest');
-                        return callback(undefined, alarmInfo);
-                    }
-                    self.pushData.alarmList[i] = alarmInfo;
-                }
-                else {
+                if (i < 0) {
                     self.pushData.alarmList.push(alarmInfo);
                 }
-                //check alarm in list
+                else {
+                    self.pushData.alarmList[i] = alarmInfo;
+                }
             }
 
             if (!window.push) {

@@ -707,6 +707,20 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   color: #ffffff;
 }
 
+.update_information_popup .popup {
+  width: 85%;
+  max-width: 600px;
+}
+
+.update_information_popup .button {
+  padding: 0 1px;
+}
+
+.update_information_popup input {
+  width: initial;
+  margin: 3px 0.5ex;
+}
+
 //Dense scripts
 .display4 {
   font-size: 112px;

@@ -1,6 +1,6 @@
 angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate) {
+                                     $location, TwAds, $rootScope, Util, $translate, TwStorage) {
         var currentTime;
         var strError = "Error";
         var strAddLocation = "Add locations";
@@ -40,17 +40,36 @@ angular.module('controller.tabctrl', [])
             TwAds.init();
         }
 
+        var lastClickTime = 0;
+
         $scope.doTabForecast = function(forecastType) {
+            var clickTime = new Date().getTime();
+            var gap = clickTime - lastClickTime;
+
+            console.info('do tab forecast gap='+gap);
+            lastClickTime = clickTime;
+
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 $scope.startPopup();
                 return;
             }
             if ($location.path() === '/tab/forecast' && forecastType === 'forecast') {
-                $scope.$broadcast('reloadEvent');
-                Util.ga.trackEvent('action', 'tab', 'reload');
+                //iPhone6 debuging mode에서 6xx 나옴.
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                    Util.ga.trackEvent('action', 'tab', 'reload');
+                }
             }
             else if ($location.path() === '/tab/dailyforecast' && forecastType === 'dailyforecast') {
-                $scope.$broadcast('reloadEvent');
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                }
                 Util.ga.trackEvent('action', 'tab', 'reload');
             }
             else {
@@ -169,7 +188,7 @@ angular.module('controller.tabctrl', [])
                         Util.ga.trackEvent('action', 'click', 'auto search');
                         WeatherInfo.disableCity(false);
                         if ($location.path() === '/tab/forecast') {
-                            $scope.$broadcast('reloadEvent');
+                            $scope.$broadcast('reloadEvent', 'startPopup');
                         }
                         else {
                             $location.path('/tab/forecast');
@@ -306,12 +325,24 @@ angular.module('controller.tabctrl', [])
                         });
                     }
 
-                    buttons.push({
-                        text: strSetting,
-                        onTap: function () {
-                            return 'locationSettings';
-                        }
-                    });
+                    if (ionic.Platform.isAndroid()) {
+                        buttons.push({
+                            text: strSetting,
+                            onTap: function () {
+                                return 'locationSettings';
+                            }
+                        });
+                    }
+                    else if (ionic.Platform.isIOS()) {
+                        buttons.push({
+                            text: strSetting,
+                            type: 'button-positive',
+                            onTap: function () {
+                                return 'settings';
+                            }
+                        });
+
+                    }
 
                     buttons.push({
                         text: strOkay,
@@ -360,7 +391,7 @@ angular.module('controller.tabctrl', [])
                                     $scope.$broadcast('searchCurrentPositionEvent');
                                 }
                                 else {
-                                    $scope.$broadcast('reloadEvent');
+                                    $scope.$broadcast('reloadEvent', 'retryPopup');
                                 }
                             }, 0);
                         }
@@ -381,11 +412,7 @@ angular.module('controller.tabctrl', [])
                         }
                         else if (res == 'locationSettings') {
                             setTimeout(function () {
-                                cordova.plugins.diagnostic.switchToLocationSettings(function () {
-                                    console.log("Successfully switched to location settings app");
-                                }, function (error) {
-                                    console.log("The following error occurred: " + error);
-                                });
+                                cordova.plugins.diagnostic.switchToLocationSettings();
                             }, 0);
                         }
                         else {
@@ -398,6 +425,110 @@ angular.module('controller.tabctrl', [])
                     });
             });
         };
+
+        $scope.$on('showUpdateInfo', function(event) {
+            Util.ga.trackEvent('show', 'popup', 'updateInfo');
+            var strFeedback = "";
+            var strRate = "";
+            var strClose = "";
+            var strDisable = "";
+            var lang = Util.language.split('-')[0];
+
+            var updateInfo = window.updateInfo.find(function (value) {
+                if (value.lang === lang) {
+                    return true;
+                }
+                return false;
+            });
+
+            if (updateInfo == undefined) {
+                //en
+                updateInfo = window.updateInfo[0];
+            }
+
+            console.info(updateInfo);
+
+            var msg = '';
+
+            if (updateInfo) {
+                if (ionic.Platform.isAndroid())  {
+                    updateInfo.android.forEach(function (data) {
+                        msg += data+'<br>';
+                    });
+                }
+                if (ionic.Platform.isIOS()) {
+                    updateInfo.ios.forEach(function (data) {
+                        msg += data+'<br>';
+                    });
+                }
+                //last array has greeting msg
+                updateInfo.all.forEach(function (data) {
+                    msg += data+'<br>';
+                });
+            }
+
+            var version = 'v'+Util.version;
+
+            function setDisableUpdateInfo() {
+                Util.ga.trackEvent('action', 'popup', 'disableUpdateInfo');
+                TwStorage.set('disableUpdateInfo', true);
+            }
+
+            Util.ga.trackEvent('app', 'update', 'showUpdateInfoPopup');
+
+            $translate(['LOC_FEEDBACK', 'LOC_REVIEW', 'LOC_CLOSE', 'LOC_DISABLE_UPDATE_POPUP'])
+                .then(function (translations) {
+                        strFeedback = translations.LOC_FEEDBACK;
+                        strRate = translations.LOC_REVIEW;
+                        strClose = translations.LOC_CLOSE;
+                        strDisable = translations.LOC_DISABLE_UPDATE_POPUP;
+                    },
+                    function (translationIds) {
+                        console.log("Fail to translate : "+JSON.stringify(translationIds));
+                    })
+                .finally(function () {
+
+                    msg += '<div style="margin: 0 2px">' +
+                        '<input type="checkbox" ng-model="data.disable">'+
+                        strDisable +
+                        '</div>';
+
+                    $ionicPopup.show({
+                        template: msg,
+                        title: version,
+                        cssClass: 'update_information_popup',
+                        scope: $scope,
+                        buttons: [
+                            {
+                                text: strFeedback,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                    Util.sendMail($translate);
+                                }
+                            },
+                            {
+                                text: strRate,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                    Util.openMarket();
+                                }
+                            },
+                            {
+                                text: strClose,
+                                onTap: function() {
+                                    if ($scope.data.disable) {
+                                        setDisableUpdateInfo();
+                                    }
+                                }
+                            }
+                        ]
+                    });
+                });
+        });
 
         init();
     });

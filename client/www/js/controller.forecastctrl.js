@@ -379,7 +379,6 @@ angular.module('controller.forecastctrl', [])
             }
             $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
-            applyWeatherData();
             loadWeatherData();
         }
 
@@ -628,36 +627,21 @@ angular.module('controller.forecastctrl', [])
             if($scope.forecastType == 'short') {
                 $scope.timeTable = cityData.timeTable;
                 $scope.timeChart = cityData.timeChart;
-
-                // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-                // ios에서 scroll 할때 scroll freeze되는 현상 있음.
-                // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
-                // data binding이 늦어 scroll이 무시되는 경우가 있음
-                setTimeout(function () {
-                    if (ionic.Platform.isAndroid()) {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                    } else {
-                        $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
-                        //$ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
-                    }
-                }, 0);
             }
             else {
                 $scope.dayChart = cityData.dayChart;
-
-                /**
-                 * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
-                 */
-                setTimeout(function () {
-                    if (ionic.Platform.isAndroid()) {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
-                    } else {
-                        $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
-                        $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
-                    }
-                }, 0);
             }
+
+            //많은 이슈가 있음. https://github.com/WizardFactory/TodayWeather/issues/1777
+            setTimeout(function () {
+                var el = document.getElementById('chartScroll');
+                if (el) {
+                    el.scrollLeft = getTodayPosition();
+                }
+                else {
+                    console.error('chart scroll is null');
+                }
+            }, 300);
         }
 
         function showLoadingIndicator() {
@@ -682,33 +666,33 @@ angular.module('controller.forecastctrl', [])
             var settingsInfo = TwStorage.get("settingsInfo");
             if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
-                    $scope.$broadcast('reloadEvent');
-                }, parseInt(refreshInterval)*60*1000);
+                    $scope.$broadcast('reloadEvent', 'refreshTimer');
+                }, parseInt(settingsInfo.refreshInterval)*60*1000);
             }
         }
 
         function loadWeatherData() {
             setRefreshTimer();
+            applyWeatherData();
 
             var cityIndex = WeatherInfo.getCityIndex();
             if (WeatherInfo.canLoadCity(cityIndex) === true) {
-                showLoadingIndicator();
 
                 var weatherInfo = WeatherInfo.getCityOfIndex(cityIndex);
                 if (!weatherInfo) {
-                    hideLoadingIndicator();
-
                     Util.ga.trackEvent('weather', 'error', 'failToGetCityIndex', cityIndex);
                     return;
                 }
 
+                showLoadingIndicator();
                 updateWeatherData(weatherInfo).then(function () {
                     applyWeatherData();
+                    //data cache된 경우에라도, Loading했다는 느낌을 주기 위해서 최소 지연 시간 설정
                     setTimeout(function () {
+                        console.info('hide loading indicator after update wData');
                         hideLoadingIndicator();
-                    }, ionic.Platform.isAndroid()?0:300);
+                    }, 500);
                 }, function (msg) {
-                    applyWeatherData();
                     hideLoadingIndicator();
                     $scope.showRetryConfirm(strError, msg, 'weather');
                 });
@@ -761,12 +745,7 @@ angular.module('controller.forecastctrl', [])
             }
             else {
                 console.log("Already updated weather data so just apply");
-                showLoadingIndicator();
-                applyWeatherData();
             }
-
-            //permission 조정할때, resume발생하기 때문에 그런 끊어지는 경우를 위해 있음.
-            hideLoadingIndicator();
         }
 
         function updateCurrentPosition(cityInfo) {
@@ -847,7 +826,6 @@ angular.module('controller.forecastctrl', [])
                     deferred.reject(msg);
                 }
                 else if (isLocationAuthorized === undefined) {
-                    hideLoadingIndicator();
                     if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
                         // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
                         // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
@@ -1015,7 +993,6 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setNextCityIndex();
-            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1025,7 +1002,6 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setPrevCityIndex();
-            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1103,7 +1079,7 @@ angular.module('controller.forecastctrl', [])
                 return;
             }
 
-            console.log('called by update weather event');
+            console.log('called by update weather event by '+sender);
             WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             loadWeatherData();
         });
@@ -1160,13 +1136,19 @@ angular.module('controller.forecastctrl', [])
 
         $scope.switchToLocationSettings = function () {
             Util.ga.trackEvent('action', 'click', 'toggleLocationEnable');
+
             if (Util.isLocationEnabled() == false && cordova && cordova.plugins.diagnostic) {
-                cordova.plugins.diagnostic.switchToLocationSettings(function () {
-                    console.log("Successfully switched to location settings app");
-                    WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
-                }, function (error) {
-                    console.log("The following error occurred: " + error);
-                });
+                if (ionic.Platform.isAndroid()) {
+                    cordova.plugins.diagnostic.switchToLocationSettings();
+                }
+                else if (ionic.Platform.isIOS()) {
+                    cordova.plugins.diagnostic.switchToSettings(function () {
+                        console.log("Successfully switched to Settings app");
+                    }, function (error) {
+                        console.log("The following error occurred: " + error);
+                    });
+                }
+                WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
             }
         };
 

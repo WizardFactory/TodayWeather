@@ -17,7 +17,7 @@ angular.module('service.storage', [])
         function _appPref2localStorage() {
             var deferred = $q.defer();
             var keys = ['cities', 'cityIndex', 'storeReceipt', 'pushData', 'twAdsInfo', 'startVersion', 'settingsInfo',
-                'purchaseInfo', 'units', 'cityList', 'daumServiceKeys'];
+                'purchaseInfo', 'units', 'cityList', 'daumServiceKeys', 'disableUpdateInfo', 'appVersion'];
             var count = keys.length;
 
             keys.forEach(function (key) {

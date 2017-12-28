@@ -175,7 +175,7 @@ KmaScraper.prototype._parseStnDayInfo = function (pubDate, $, callback) {
  */
 KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
     var self = this;
-    var url = 'http://www.kma.go.kr/cgi-bin/aws';
+    var url = this._getKmaDomain()+'/cgi-bin/aws';
     var pubDateTime;
     if (type == 'min') {
         url += '/nph-aws_txt_min';
@@ -246,7 +246,7 @@ KmaScraper.prototype._convertKrToEng = function (str) {
  */
 KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
     var self = this;
-    var url = 'http://www.kma.go.kr/weather/observation/currentweather.jsp';
+    var url = this._getKmaDomain()+'/weather/observation/currentweather.jsp';
     if (pubDate) {
         url += '?tm='+pubDate;
     }
@@ -265,6 +265,8 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
 
             var $ = cheerio.load(strContents);
             cityWeatherList.pubDate = $('.table_topinfo').text();
+            cityWeatherList.pubDate = cityWeatherList.pubDate.replace('기상실황표','');
+
             if ((new Date(cityWeatherList.pubDate)).getTime() < (new Date(pubDate)).getTime()) {
                 err = new Error('city weather is not updated yes pubDate='+cityWeatherList.pubDate);
                 log.warn(err);
@@ -1463,7 +1465,7 @@ KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callba
  * @private
  */
 KmaScraper.prototype._getKmaDomain = function () {
- return "http://www.kma.go.kr";
+ return "http://www.weather.go.kr";
 };
 
 /**

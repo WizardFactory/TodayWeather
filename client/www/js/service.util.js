@@ -249,5 +249,51 @@ angular.module('service.util', [])
             obj.placesUrl += '&key='+twClientConfig.googleapikey;
         }
 
+        obj.sendMail = function($translate) {
+            var to = twClientConfig.mailTo;
+            var subject = 'Send feedback';
+            var body = '\n====================\nApp Version : ' + this.version + '\nUUID : ' + window.device.uuid
+                + '\nUA : ' + ionic.Platform.ua + '\n====================\n';
+
+            $translate('LOC_SEND_FEEDBACK').then(function (translations) {
+                subject = translations;
+            }, function (translationIds) {
+                subject = translationIds;
+            }).finally(function () {
+                window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+            });
+
+            this.ga.trackEvent('action', 'click', 'send mail');
+        };
+
+        obj.openMarket = function() {
+            var src = "";
+            if (ionic.Platform.isIOS()) {
+                src = twClientConfig.iOSStoreUrl;
+            }
+            else if (ionic.Platform.isAndroid()) {
+                src = twClientConfig.androidStoreUrl;
+            }
+            else {
+                src = twClientConfig.etcUrl;
+            }
+
+            console.log('market='+src);
+
+            if (window.cordova && cordova.InAppBrowser) {
+                cordova.InAppBrowser.open(src, "_system");
+                this.ga.trackEvent('action', 'click', 'open market');
+            }
+            else {
+                this.ga.trackEvent("inappbrowser", "error", "loadPlugin");
+                var options = {
+                    location: "yes",
+                    clearcache: "yes",
+                    toolbar: "no"
+                };
+                window.open(src, "_blank", options);
+            }
+        };
+
         return obj;
     });

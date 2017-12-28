@@ -32,7 +32,7 @@ describe('unit test - unit converter', function() {
             }
         };
         var wdd = UnitConverter.wdd2Str('NSSEWNSEW', ts);
-        assert(wdd, '북남남동서북남동서');
+        assert.equal(wdd, '북남남동서북남동서');
     });
 });
 

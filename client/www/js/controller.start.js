@@ -684,12 +684,24 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                 Util.ga.trackEvent('window', 'show', 'deniedPopup');
             }
             else if (Util.isLocationEnabled() == false) {
-                buttons.push({
-                    text: strSetting,
-                    onTap: function () {
-                        return 'locationSettings';
-                    }
-                });
+                if (ionic.Platform.isAndroid()) {
+                    buttons.push({
+                        text: strSetting,
+                        onTap: function () {
+                            return 'locationSettings';
+                        }
+                    });
+                }
+                else if (ionic.Platform.isIOS()) {
+                    buttons.push({
+                        text: strSetting,
+                        type: 'button-positive',
+                        onTap: function () {
+                            return 'settings';
+                        }
+                    });
+
+                }
 
                 Util.ga.trackEvent('window', 'show', 'locationDisabledPopup');
             }
@@ -738,11 +750,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     else if (res == 'locationSettings') {
                         //to turn on location service
                         setTimeout(function () {
-                            cordova.plugins.diagnostic.switchToLocationSettings(function () {
-                                console.log("Successfully switched to location settings app");
-                            }, function (error) {
-                                console.log("The following error occurred: " + error);
-                            });
+                            cordova.plugins.diagnostic.switchToLocationSettings();
                         }, 0);
                     }
                     else {

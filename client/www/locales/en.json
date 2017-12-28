@@ -261,5 +261,8 @@
   "LOC_AIR_QUALITY_INDEX_KR" : "S.Korea",
   "LOC_AIR_QUALITY_INDEX_KR_WHO" : "S.Korea(WHO)",
   "LOC_AIR_QUALITY_INDEX_US" : "USA",
-  "LOC_AIR_QUALITY_INDEX_CN" : "China"
+  "LOC_AIR_QUALITY_INDEX_CN" : "China",
+  "LOC_FEEDBACK": "Feedback",
+  "LOC_REVIEW": "Review",
+  "LOC_DISABLE_UPDATE_POPUP":"Disable update info"
 }

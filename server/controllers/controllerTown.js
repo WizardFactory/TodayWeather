@@ -38,6 +38,8 @@ var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 var GeoController = require('./geo.controller');
 var UnitConverter = require('../lib/unitConverter');
 
+var ControllerWeatherDesc = require('./controller.weather.desc');
+
 var townArray = [
     {db:modelShort, name:'modelShort'},
     {db:modelCurrent, name:'modelCurrent'},
@@ -1581,8 +1583,6 @@ function ControllerTown() {
                                         reqCurrent.rn1 = +(reqCurrent.rn1).toFixed(1);
                                     }
                                 }
-
-                                controllerKmaStnWeather.updateWeather(reqCurrent);
                             }
                             else if (reqCurrent.rns === false) {
                                 //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
@@ -1595,8 +1595,11 @@ function ControllerTown() {
                             else {
                                 log.debug('we did not get rns info');
                             }
+
                         }
 
+                        controllerKmaStnWeather.updateWeather(reqCurrent);
+                        reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
                         self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
                     }
                     catch(e) {

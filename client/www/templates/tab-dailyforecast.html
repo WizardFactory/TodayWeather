@@ -10,7 +10,7 @@
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
         </p>
     </ion-nav-title>
-    <ion-content delegate-handle="body" overflow-scroll="true" direction="y"
+    <ion-content delegate-handle="body" direction="y"
                  zooming="false" scrollbar-y="false" scrollbar-x="false" has-bouncing="false" tabs-shrink>
         <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()"
              class="row row-no-padding" ng-style="{'height':headerHeight+'px'}">
@@ -38,8 +38,7 @@
         </div>
         <div class="main-content mid-forecast">
             <div class="col extend-content">
-                <ion-scroll delegate-handle="weeklyChart" direction="x" zooming="false" has-bouncing="false"
-                            scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
+                <div id="chartScroll" style="overflow: auto;white-space: nowrap;">
                     <div class="col chartBox" style="margin: auto" ng-style="{'width':dayWidth +'px'}">
                         <div id="midTable" class="col table-content" ng-if="dayChart[0].values">
                             <div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">
@@ -52,7 +51,7 @@
                         </div>
                         <div ng-mid-chart class="chart-content" ng-style="{'height':chartMidHeight+'px'}"></div>
                     </div>
-                </ion-scroll>
+                </div>
                 <div class="col" style="margin: 0; padding: 0">
                    <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
                    <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}} ({{getForecastAirUnitStr()|translate}})</p>

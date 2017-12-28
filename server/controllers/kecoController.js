@@ -73,6 +73,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             }else if(aqiUnit == 'aircn'){
                 unit = [0, 50, 150, 250, 350, 420];
             }
+            else if(aqiUnit == 'airkorea'){
+                unit = [0, 30, 80, 150];
+            }
 
             if (v < unit[0]) {
                 return -1;
@@ -114,7 +117,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             }else if(aqiUnit == 'aircn'){
                 unit = [0, 35, 75, 115, 150, 250];
             }
-
+            else if (aqiUnit == 'airkorea') {
+                unit = [0, 15, 50, 100];
+            }
 
             if (v < unit[0]) {
                 return -1;
@@ -162,6 +167,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
                 if(tmpValue > 0){
                     v = tmpValue;
                 }
+            }
+            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
+                unit = [0, 0.03, 0.09, 0.15];
             }
 
             if (v < unit[0]) {
@@ -211,6 +219,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
                     v = tmpValue;
                 }
             }
+            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
+                unit = [0, 0.03, 0.06, 0.2];
+            }
 
             if (v < unit[0]) {
                 return -1;
@@ -255,6 +266,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
                 if(tmpValue > 0){
                     v = tmpValue;
                 }
+            }
+            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
+                unit = [0, 2, 9, 15];
             }
 
             if (v < unit[0]) {
@@ -303,6 +317,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
                     v = tmpValue;
                 }
             }
+            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
+                unit = [0, 0.02, 0.05, 0.15];
+            }
 
             if (v < unit[0]) {
                 return -1;
@@ -340,6 +357,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             if(aqiUnit == 'airnow' || aqiUnit == 'aircn'){
                 unit = [0, 50, 100, 150, 200, 300];
             }
+            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
+                unit = [0, 50, 100, 250];
+            }
 
             if (value < unit[0]) {
                 return -1;
@@ -370,6 +390,14 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
         })(arpltn.khaiValue);
     }
 
+    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2', 'khai'].forEach(function (name) {
+        if (arpltn[name+'Grade'] == -1) {
+            delete  arpltn[name+'Grade'];
+            delete  arpltn[name+'Value'];
+            delete  arpltn[name+'Str'];
+        }
+    });
+
     if (aqiUnit === 'airnow' || aqiUnit === 'aircn') {
         if (arpltn.hasOwnProperty('pm10Grade')) {
             arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
@@ -393,6 +421,30 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             arpltn.khaiStr = UnitConverter.airGrade2str(arpltn.khaiGrade, "khai", ts);
         }
     }
+    else if (aqiUnit === 'airkorea' || aqiUnit === 'airkorea_who') {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airkoreaGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airkoreaGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airkoreaGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airkoreaGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airkoreaGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airkoreaGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airkoreaGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
+    }
+
     return arpltn;
 };
 

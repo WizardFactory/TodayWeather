@@ -1,6 +1,6 @@
 {
   "name": "TodayWeather",
-  "version": "0.9.62",
+  "version": "0.9.65",
   "description": "TodayWeather: Inform how warm or cold it is today than yesterday.",
   "repository": {
     "type": "git",
@@ -69,7 +69,8 @@
     {
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
       "id": "cordova-plugin-todayweather-config"
-    }
+    },
+    "cordova-plugin-app-preferences"
   ],
   "cordovaPlatforms": [
     {
