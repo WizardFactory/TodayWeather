@@ -1,4 +1,4 @@
-window.appVersion = '0.9.67';
+window.appVersion = '0.9.71';
 window.updateInfo = [
     {
         lang: 'en',
