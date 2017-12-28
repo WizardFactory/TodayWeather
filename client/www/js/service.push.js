@@ -302,10 +302,12 @@ angular.module('service.push', [])
             if (city.location) {
                 alarmInfo.location = city.location;
             }
-            else if (town && !(town.first=="" && town.second=="" && town.third=="")) {
+
+            if (town && !(town.first=="" && town.second=="" && town.third=="")) {
                 alarmInfo.town = town;
             }
-            else {
+
+            if (!alarmInfo.hasOwnProperty('location') && !alarmInfo.hasOwnProperty('town')) {
                 return callback(new Error("You have to set location info for add alarm"));
             }
 
@@ -318,10 +320,10 @@ angular.module('service.push', [])
                 });
 
                 if (i < 0) {
-                    self.pushData.alarmList[i] = alarmInfo;
+                    self.pushData.alarmList.push(alarmInfo);
                 }
                 else {
-                    self.pushData.alarmList.push(alarmInfo);
+                    self.pushData.alarmList[i] = alarmInfo;
                 }
             }
 
