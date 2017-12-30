@@ -22,6 +22,21 @@
 		501B5D63D6C3484D95B9B689 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 7E0EC2E0AEEB4104A933D5DD /* ko.lproj */; };
 		535E054C7BA343D78380C310 /* TodayWeatherUtil.h in Sources */ = {isa = PBXBuildFile; fileRef = A82482EEB75141C08E1386EF /* TodayWeatherUtil.h */; };
 		5439BB1B64D24F1C9730BFFE /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = B3DF8CCC99DD4BEFABDF916C /* zh-Hant.lproj */; };
+		5AADD3511FE039CB00CDBBFC /* WatchTWeatherDraw.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AADD3501FE039CB00CDBBFC /* WatchTWeatherDraw.swift */; };
+		5AADD3531FE039F900CDBBFC /* WatchTWeatherRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AADD3521FE039F900CDBBFC /* WatchTWeatherRequest.swift */; };
+		5AADD3551FE03A1700CDBBFC /* WatchTWeatherUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AADD3541FE03A1700CDBBFC /* WatchTWeatherUtil.swift */; };
+		5AADD3571FE03A3700CDBBFC /* WatchTWeatherShowMore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AADD3561FE03A3700CDBBFC /* WatchTWeatherShowMore.swift */; };
+		5AADD3591FE03A7100CDBBFC /* CityInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AADD3581FE03A7100CDBBFC /* CityInfo.swift */; };
+		5AB39B551FE175BA00CE6FE7 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5AB39B571FE175BA00CE6FE7 /* Localizable.strings */; };
+		5AE499771FDEBEDA00C1B0F8 /* Interface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5AE499751FDEBEDA00C1B0F8 /* Interface.storyboard */; };
+		5AE499791FDEBEDA00C1B0F8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE499781FDEBEDA00C1B0F8 /* Assets.xcassets */; };
+		5AE499801FDEBEDA00C1B0F8 /* watch Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 5AE4997F1FDEBEDA00C1B0F8 /* watch Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5AE499851FDEBEDA00C1B0F8 /* InterfaceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE499841FDEBEDA00C1B0F8 /* InterfaceController.swift */; };
+		5AE499871FDEBEDA00C1B0F8 /* ExtensionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE499861FDEBEDA00C1B0F8 /* ExtensionDelegate.swift */; };
+		5AE499891FDEBEDA00C1B0F8 /* WatchTWeatherComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE499881FDEBEDA00C1B0F8 /* WatchTWeatherComplication.swift */; };
+		5AE4998B1FDEBEDA00C1B0F8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5AE4998A1FDEBEDA00C1B0F8 /* Assets.xcassets */; };
+		5AE4998F1FDEBEDA00C1B0F8 /* watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 5AE499731FDEBEDA00C1B0F8 /* watch.app */; };
+		65590C159638492B84125EA1 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = B5A987D07C7646DEBDD8D4A8 /* Settings.bundle */; };
 		6AFF5BF91D6E424B00AB3073 /* CDVLaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */; };
 		751D6E395BCA403F81C35BCD /* TodayViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = BC44C4A97E5D48D58E7307B3 /* TodayViewController.h */; };
 		7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1228418F21A1423CAAA77ABD /* NotificationCenter.framework */; };
@@ -30,7 +45,6 @@
 		88BAFD211373452EA2F56EF0 /* LocalizationDefine.h in Sources */ = {isa = PBXBuildFile; fileRef = 8BABE3FF99E74F10ABB37707 /* LocalizationDefine.h */; };
 		8B95AD50BE5D4C92B741A277 /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = A534E7EBD1F5430189CB635C /* zh-Hans.lproj */; };
 		963317871F7148E18F84774F /* TodayWeatherShowMore.m in Sources */ = {isa = PBXBuildFile; fileRef = 9F3DEF3938024A9FB04386EF /* TodayWeatherShowMore.m */; };
-		C33EC32A1FD173130065E35A /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C33EC3291FD173130065E35A /* StoreKit.framework */; };
 		C33EC3321FD173930065E35A /* ja.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32B1FD173910065E35A /* ja.lproj */; };
 		C33EC3331FD173930065E35A /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32C1FD173910065E35A /* zh-Hans.lproj */; };
 		C33EC3341FD173930065E35A /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32D1FD173910065E35A /* ko.lproj */; };
@@ -41,6 +55,7 @@
 		CE331FBA2CED433989384EA8 /* TodayViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F4CA446AF3042D6987E3BE6 /* TodayViewController.m */; };
 		CF4CFD112AE2467186941E9F /* de.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 1B046CEC8AFE44529FD51CAB /* de.lproj */; };
 		E844F8C7445644B68A7F4720 /* TodayWeatherUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 34F9BCEEF4C243ECBD3C03A8 /* TodayWeatherUtil.m */; };
+		F7D5E4B0E87D4A82AC3CCB2E /* AppPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = 81EC111D125B400B96E0CB7D /* AppPreferences.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +72,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = D2AAC07D0554694100DB518D;
 			remoteInfo = CordovaLib;
+		};
+		5AE499811FDEBEDA00C1B0F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5AE4997E1FDEBEDA00C1B0F8;
+			remoteInfo = "watch Extension";
+		};
+		5AE4998D1FDEBEDA00C1B0F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5AE499721FDEBEDA00C1B0F8;
+			remoteInfo = watch;
 		};
 		9FC91D9BBC4C49349AD2CBAA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -77,6 +106,28 @@
 				1BA7185FD5B64619A04D695D /* widget.appex in Copy Files */,
 			);
 			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE499951FDEBEDA00C1B0F8 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5AE499801FDEBEDA00C1B0F8 /* watch Extension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE499971FDEBEDA00C1B0F8 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				5AE4998F1FDEBEDA00C1B0F8 /* watch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -105,10 +156,36 @@
 		32CA4F630368D1EE00C91783 /* TodayWeather-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TodayWeather-Prefix.pch"; sourceTree = "<group>"; };
 		34F9BCEEF4C243ECBD3C03A8 /* TodayWeatherUtil.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherUtil.m; sourceTree = "<group>"; };
 		46D79271F0EF4D7290FB0F66 /* weatherIcon2-color */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "weatherIcon2-color"; sourceTree = "<group>"; };
+		474B2E29FF5249FFA8449878 /* AppPreferences.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = AppPreferences.h; path = "cordova-plugin-app-preferences/AppPreferences.h"; sourceTree = "<group>"; };
+		5AADD3501FE039CB00CDBBFC /* WatchTWeatherDraw.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTWeatherDraw.swift; sourceTree = "<group>"; };
+		5AADD3521FE039F900CDBBFC /* WatchTWeatherRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTWeatherRequest.swift; sourceTree = "<group>"; };
+		5AADD3541FE03A1700CDBBFC /* WatchTWeatherUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTWeatherUtil.swift; sourceTree = "<group>"; };
+		5AADD3561FE03A3700CDBBFC /* WatchTWeatherShowMore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTWeatherShowMore.swift; sourceTree = "<group>"; };
+		5AADD3581FE03A7100CDBBFC /* CityInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityInfo.swift; sourceTree = "<group>"; };
+		5AB39B561FE175BA00CE6FE7 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AB39B581FE175C500CE6FE7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AB39B591FE176EC00CE6FE7 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AB39B5A1FE176FD00CE6FE7 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AB39B5B1FE1770B00CE6FE7 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		5AB39B5C1FE1771300CE6FE7 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		5AB39B5D1FE1771F00CE6FE7 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
+		5AB39B5E1FE180D700CE6FE7 /* watch.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = watch.entitlements; sourceTree = "<group>"; };
+		5AB39B5F1FE1810400CE6FE7 /* watch Extension.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "watch Extension.entitlements"; sourceTree = "<group>"; };
+		5AE499731FDEBEDA00C1B0F8 /* watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5AE499761FDEBEDA00C1B0F8 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Interface.storyboard; sourceTree = "<group>"; };
+		5AE499781FDEBEDA00C1B0F8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5AE4997A1FDEBEDA00C1B0F8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5AE4997F1FDEBEDA00C1B0F8 /* watch Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "watch Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5AE499841FDEBEDA00C1B0F8 /* InterfaceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterfaceController.swift; sourceTree = "<group>"; };
+		5AE499861FDEBEDA00C1B0F8 /* ExtensionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionDelegate.swift; sourceTree = "<group>"; };
+		5AE499881FDEBEDA00C1B0F8 /* WatchTWeatherComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTWeatherComplication.swift; sourceTree = "<group>"; };
+		5AE4998A1FDEBEDA00C1B0F8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5AE4998C1FDEBEDA00C1B0F8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6AEED57F06F44325936B9079 /* Base.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = Base.lproj; sourceTree = "<group>"; };
 		6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = CDVLaunchScreen.storyboard; path = TodayWeather/CDVLaunchScreen.storyboard; sourceTree = SOURCE_ROOT; };
 		7D4BC5F6FF97470B87EBF412 /* libCordova.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libCordova.a; sourceTree = "<group>"; };
 		7E0EC2E0AEEB4104A933D5DD /* ko.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ko.lproj; sourceTree = "<group>"; };
+		81EC111D125B400B96E0CB7D /* AppPreferences.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; name = AppPreferences.m; path = "cordova-plugin-app-preferences/AppPreferences.m"; sourceTree = "<group>"; };
 		868E93D37533462C94696CE4 /* ja.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ja.lproj; sourceTree = "<group>"; };
 		8BABE3FF99E74F10ABB37707 /* LocalizationDefine.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = LocalizationDefine.h; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* TodayWeather-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "TodayWeather-Info.plist"; path = "TodayWeather/TodayWeather-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = SOURCE_ROOT; };
@@ -116,9 +193,9 @@
 		A534E7EBD1F5430189CB635C /* zh-Hans.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
 		A82482EEB75141C08E1386EF /* TodayWeatherUtil.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayWeatherUtil.h; sourceTree = "<group>"; };
 		B3DF8CCC99DD4BEFABDF916C /* zh-Hant.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "zh-Hant.lproj"; sourceTree = "<group>"; };
+		B5A987D07C7646DEBDD8D4A8 /* Settings.bundle */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = SOURCE_ROOT; };
 		BC44C4A97E5D48D58E7307B3 /* TodayViewController.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayViewController.h; sourceTree = "<group>"; };
 		C33EC3281FD1730F0065E35A /* TodayWeather.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = TodayWeather.entitlements; path = TodayWeather/TodayWeather.entitlements; sourceTree = "<group>"; };
-		C33EC3291FD173130065E35A /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		C33EC32B1FD173910065E35A /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ja.lproj; path = TodayWeather/ja.lproj; sourceTree = "<group>"; };
 		C33EC32C1FD173910065E35A /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "zh-Hans.lproj"; path = "TodayWeather/zh-Hans.lproj"; sourceTree = "<group>"; };
 		C33EC32D1FD173910065E35A /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ko.lproj; path = TodayWeather/ko.lproj; sourceTree = "<group>"; };
@@ -141,7 +218,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
-				C33EC32A1FD173130065E35A /* StoreKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE4997C1FDEBEDA00C1B0F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,6 +258,8 @@
 			children = (
 				1D6058910D05DD3D006BFB54 /* TodayWeather.app */,
 				1D610CD859C94D35AC0694DC /* widget.appex */,
+				5AE499731FDEBEDA00C1B0F8 /* watch.app */,
+				5AE4997F1FDEBEDA00C1B0F8 /* watch Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -198,6 +283,8 @@
 				307C750510C5A3420062BCA9 /* Plugins */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
+				5AE499741FDEBEDA00C1B0F8 /* watch */,
+				5AE499831FDEBEDA00C1B0F8 /* watch Extension */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 				69D64D76312045078827F901 /* Widget */,
@@ -223,6 +310,7 @@
 				3047A50E1AB8057F00498E2A /* config */,
 				8D1107310486CEB800E47090 /* TodayWeather-Info.plist */,
 				6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */,
+				B5A987D07C7646DEBDD8D4A8 /* Settings.bundle */,
 			);
 			name = Resources;
 			path = TodayWeather/Resources;
@@ -231,7 +319,6 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				C33EC3291FD173130065E35A /* StoreKit.framework */,
 				1228418F21A1423CAAA77ABD /* NotificationCenter.framework */,
 				7D4BC5F6FF97470B87EBF412 /* libCordova.a */,
 			);
@@ -259,10 +346,42 @@
 		307C750510C5A3420062BCA9 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
+				81EC111D125B400B96E0CB7D /* AppPreferences.m */,
+				474B2E29FF5249FFA8449878 /* AppPreferences.h */,
 			);
 			name = Plugins;
 			path = TodayWeather/Plugins;
 			sourceTree = SOURCE_ROOT;
+		};
+		5AE499741FDEBEDA00C1B0F8 /* watch */ = {
+			isa = PBXGroup;
+			children = (
+				5AB39B5E1FE180D700CE6FE7 /* watch.entitlements */,
+				5AE499751FDEBEDA00C1B0F8 /* Interface.storyboard */,
+				5AE499781FDEBEDA00C1B0F8 /* Assets.xcassets */,
+				5AE4997A1FDEBEDA00C1B0F8 /* Info.plist */,
+			);
+			path = watch;
+			sourceTree = "<group>";
+		};
+		5AE499831FDEBEDA00C1B0F8 /* watch Extension */ = {
+			isa = PBXGroup;
+			children = (
+				5AB39B5F1FE1810400CE6FE7 /* watch Extension.entitlements */,
+				5AE499841FDEBEDA00C1B0F8 /* InterfaceController.swift */,
+				5AE499861FDEBEDA00C1B0F8 /* ExtensionDelegate.swift */,
+				5AADD3501FE039CB00CDBBFC /* WatchTWeatherDraw.swift */,
+				5AADD3521FE039F900CDBBFC /* WatchTWeatherRequest.swift */,
+				5AADD3541FE03A1700CDBBFC /* WatchTWeatherUtil.swift */,
+				5AADD3561FE03A3700CDBBFC /* WatchTWeatherShowMore.swift */,
+				5AADD3581FE03A7100CDBBFC /* CityInfo.swift */,
+				5AE499881FDEBEDA00C1B0F8 /* WatchTWeatherComplication.swift */,
+				5AE4998A1FDEBEDA00C1B0F8 /* Assets.xcassets */,
+				5AE4998C1FDEBEDA00C1B0F8 /* Info.plist */,
+				5AB39B571FE175BA00CE6FE7 /* Localizable.strings */,
+			);
+			path = "watch Extension";
+			sourceTree = "<group>";
 		};
 		69D64D76312045078827F901 /* Widget */ = {
 			isa = PBXGroup;
@@ -312,17 +431,53 @@
 				1D60588E0D05DD3D006BFB54 /* Sources */,
 				1D60588F0D05DD3D006BFB54 /* Frameworks */,
 				4E719B87BD6C4084AA25E8E7 /* Copy Files */,
+				5AE499971FDEBEDA00C1B0F8 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				301BF551109A68C00062928A /* PBXTargetDependency */,
 				9E019E67A368496EBD128DA4 /* PBXTargetDependency */,
+				5AE4998E1FDEBEDA00C1B0F8 /* PBXTargetDependency */,
 			);
 			name = TodayWeather;
 			productName = TodayWeather;
 			productReference = 1D6058910D05DD3D006BFB54 /* TodayWeather.app */;
 			productType = "com.apple.product-type.application";
+		};
+		5AE499721FDEBEDA00C1B0F8 /* watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5AE499961FDEBEDA00C1B0F8 /* Build configuration list for PBXNativeTarget "watch" */;
+			buildPhases = (
+				5AE499711FDEBEDA00C1B0F8 /* Resources */,
+				5AE499951FDEBEDA00C1B0F8 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5AE499821FDEBEDA00C1B0F8 /* PBXTargetDependency */,
+			);
+			name = watch;
+			productName = watch;
+			productReference = 5AE499731FDEBEDA00C1B0F8 /* watch.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
+		5AE4997E1FDEBEDA00C1B0F8 /* watch Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5AE499941FDEBEDA00C1B0F8 /* Build configuration list for PBXNativeTarget "watch Extension" */;
+			buildPhases = (
+				5AE4997B1FDEBEDA00C1B0F8 /* Sources */,
+				5AE4997C1FDEBEDA00C1B0F8 /* Frameworks */,
+				5AE4997D1FDEBEDA00C1B0F8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "watch Extension";
+			productName = "watch Extension";
+			productReference = 5AE4997F1FDEBEDA00C1B0F8 /* watch Extension.appex */;
+			productType = "com.apple.product-type.watchkit2-extension";
 		};
 		7F14ECE01259429E8AE80AA3 /* widget */ = {
 			isa = PBXNativeTarget;
@@ -347,6 +502,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 900;
 				LastUpgradeCheck = 510;
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
@@ -369,6 +525,16 @@
 							};
 						};
 					};
+					5AE499721FDEBEDA00C1B0F8 = {
+						CreatedOnToolsVersion = 9.0.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
+					};
+					5AE4997E1FDEBEDA00C1B0F8 = {
+						CreatedOnToolsVersion = 9.0.1;
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
+					};
 					7F14ECE01259429E8AE80AA3 = {
 						DevelopmentTeam = T9X5DG29UJ;
 						SystemCapabilities = {
@@ -385,6 +551,12 @@
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				en,
+				Base,
+				ko,
+				ja,
+				"zh-Hans",
+				"zh-Hant",
+				de,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
 			projectDirPath = "";
@@ -398,6 +570,8 @@
 			targets = (
 				1D6058900D05DD3D006BFB54 /* TodayWeather */,
 				7F14ECE01259429E8AE80AA3 /* widget */,
+				5AE499721FDEBEDA00C1B0F8 /* watch */,
+				5AE4997E1FDEBEDA00C1B0F8 /* watch Extension */,
 			);
 		};
 /* End PBXProject section */
@@ -427,6 +601,25 @@
 				C33EC3371FD173930065E35A /* en.lproj in Resources */,
 				C33EC3381FD173930065E35A /* de.lproj in Resources */,
 				C33EC3351FD173930065E35A /* zh-Hant.lproj in Resources */,
+				65590C159638492B84125EA1 /* Settings.bundle in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE499711FDEBEDA00C1B0F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AE499791FDEBEDA00C1B0F8 /* Assets.xcassets in Resources */,
+				5AE499771FDEBEDA00C1B0F8 /* Interface.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE4997D1FDEBEDA00C1B0F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AE4998B1FDEBEDA00C1B0F8 /* Assets.xcassets in Resources */,
+				5AB39B551FE175BA00CE6FE7 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -474,6 +667,22 @@
 				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
 				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
 				302D95F114D2391D003F00A1 /* MainViewController.m in Sources */,
+				F7D5E4B0E87D4A82AC3CCB2E /* AppPreferences.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AE4997B1FDEBEDA00C1B0F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AE499871FDEBEDA00C1B0F8 /* ExtensionDelegate.swift in Sources */,
+				5AADD3571FE03A3700CDBBFC /* WatchTWeatherShowMore.swift in Sources */,
+				5AADD3531FE039F900CDBBFC /* WatchTWeatherRequest.swift in Sources */,
+				5AE499851FDEBEDA00C1B0F8 /* InterfaceController.swift in Sources */,
+				5AE499891FDEBEDA00C1B0F8 /* WatchTWeatherComplication.swift in Sources */,
+				5AADD3511FE039CB00CDBBFC /* WatchTWeatherDraw.swift in Sources */,
+				5AADD3591FE03A7100CDBBFC /* CityInfo.swift in Sources */,
+				5AADD3551FE03A1700CDBBFC /* WatchTWeatherUtil.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -500,12 +709,47 @@
 			name = CordovaLib;
 			targetProxy = 301BF550109A68C00062928A /* PBXContainerItemProxy */;
 		};
+		5AE499821FDEBEDA00C1B0F8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5AE4997E1FDEBEDA00C1B0F8 /* watch Extension */;
+			targetProxy = 5AE499811FDEBEDA00C1B0F8 /* PBXContainerItemProxy */;
+		};
+		5AE4998E1FDEBEDA00C1B0F8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5AE499721FDEBEDA00C1B0F8 /* watch */;
+			targetProxy = 5AE4998D1FDEBEDA00C1B0F8 /* PBXContainerItemProxy */;
+		};
 		9E019E67A368496EBD128DA4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 7F14ECE01259429E8AE80AA3 /* widget */;
 			targetProxy = 9FC91D9BBC4C49349AD2CBAA /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		5AB39B571FE175BA00CE6FE7 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5AB39B561FE175BA00CE6FE7 /* en */,
+				5AB39B581FE175C500CE6FE7 /* Base */,
+				5AB39B591FE176EC00CE6FE7 /* ko */,
+				5AB39B5A1FE176FD00CE6FE7 /* ja */,
+				5AB39B5B1FE1770B00CE6FE7 /* zh-Hans */,
+				5AB39B5C1FE1771300CE6FE7 /* zh-Hant */,
+				5AB39B5D1FE1771F00CE6FE7 /* de */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		5AE499751FDEBEDA00C1B0F8 /* Interface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5AE499761FDEBEDA00C1B0F8 /* Base */,
+			);
+			name = Interface.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		1D6058940D05DD3E006BFB54 /* Debug */ = {
@@ -520,6 +764,10 @@
 				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
 				COPY_PHASE_STRIP = NO;
 				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -529,6 +777,9 @@
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+				);
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -546,6 +797,10 @@
 				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
 				COPY_PHASE_STRIP = YES;
 				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "TodayWeather/TodayWeather-Prefix.pch";
 				GCC_THUMB_SUPPORT = NO;
@@ -553,8 +808,219 @@
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+				);
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5AE499901FDEBEDA00C1B0F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = watch_Extension;
+				INFOPLIST_FILE = watch/Info.plist;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 4.0;
+			};
+			name = Debug;
+		};
+		5AE499911FDEBEDA00C1B0F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				IBSC_MODULE = watch_Extension;
+				INFOPLIST_FILE = watch/Info.plist;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 4.0;
+			};
+			name = Release;
+		};
+		5AE499921FDEBEDA00C1B0F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "watch Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 4.0;
+			};
+			name = Debug;
+		};
+		5AE499931FDEBEDA00C1B0F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_COMPLICATION_NAME = Complication;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INFOPLIST_FILE = "watch Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.watchkitapp.watchkitextension;
+				PRODUCT_NAME = "${TARGET_NAME}";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 4.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 4.0;
 			};
 			name = Release;
 		};
@@ -568,6 +1034,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_NAME = widget;
 				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -575,6 +1042,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -602,6 +1070,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -638,6 +1107,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_NAME = widget;
 				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -658,6 +1128,24 @@
 			buildConfigurations = (
 				EBB468B3343D48E4B0EAEC49 /* Debug */,
 				5BE0F2EE6D204B318F63041C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5AE499941FDEBEDA00C1B0F8 /* Build configuration list for PBXNativeTarget "watch Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5AE499921FDEBEDA00C1B0F8 /* Debug */,
+				5AE499931FDEBEDA00C1B0F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5AE499961FDEBEDA00C1B0F8 /* Build configuration list for PBXNativeTarget "watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5AE499901FDEBEDA00C1B0F8 /* Debug */,
+				5AE499911FDEBEDA00C1B0F8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

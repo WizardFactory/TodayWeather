@@ -1,0 +1,31 @@
+/*
+ Localizable.strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 9. 24..
+ 
+ */
+// Chinese Traditional
+
+// "Key"                    = "Value"
+
+// Watch
+"LOC_UPDATE"                        = "更新";
+
+"LOC_AQI"                           = "空氣指數";
+"LOC_PM10"                          = "細塵";
+"LOC_PM25"                          = "超小細塵";
+
+"LOC_TODAYWEATHER"                  = "今日天氣";
+
+"LOC_HUMIDITY"                      = "濕度";
+
+// AQI
+"LOC_GOOD"                          = "優";
+"LOC_MODERATE"                      = "普通";
+"LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS"= "敏感者註意";
+"LOC_UNHEALTHY"                     = "壞";
+"LOC_VERY_UNHEALTHY"                = "極壞";
+"LOC_HAZARDOUS"                     = "危險";
+
+

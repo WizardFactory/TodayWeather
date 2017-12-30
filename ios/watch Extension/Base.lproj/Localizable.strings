@@ -1,0 +1,30 @@
+/*
+ Localizable.strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 9. 24..
+ 
+ */
+// English
+
+// "Key"                    = "Value"
+
+// Watch
+"LOC_UPDATE"                        = "Update";
+
+"LOC_AQI"                           = "AQI";
+"LOC_PM10"                          = "PM10";
+"LOC_PM25"                          = "PM2.5";
+
+"LOC_TODAYWEATHER"                  = "TodayWeather";
+
+"LOC_HUMIDITY"                      = "Humidity";
+
+// AQI
+"LOC_GOOD"                          = "Good";
+"LOC_MODERATE"                      = "Moderate";
+"LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS"= "Unhealthy for sensitive groups";
+"LOC_UNHEALTHY"                     = "Unhealthy";
+"LOC_VERY_UNHEALTHY"                = "Very unhealthy";
+"LOC_HAZARDOUS"                     = "Hazardous";
+

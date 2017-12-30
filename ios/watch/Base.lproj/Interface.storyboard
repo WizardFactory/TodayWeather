@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder.WatchKit.Storyboard" version="3.0" toolsVersion="13196" targetRuntime="watchKit" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="AgC-eL-Hgc">
+    <device id="watch38" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="watchOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13174"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBWatchKitPlugin" version="13051"/>
+    </dependencies>
+    <scenes>
+        <!--Interface Controller-->
+        <scene sceneID="aou-V4-d1y">
+            <objects>
+                <controller id="AgC-eL-Hgc" customClass="InterfaceController" customModule="watch" customModuleProvider="target">
+                    <items>
+                        <label width="128" alignment="center" text="                " textAlignment="center" id="jPs-gY-NJq" userLabel="Update Date Label">
+                            <fontDescription key="font" type="system" pointSize="14"/>
+                            <variation key="device=watch42mm" width="156">
+                                <fontDescription key="font" type="system" pointSize="16"/>
+                            </variation>
+                        </label>
+                        <group alignment="center" id="kIK-WZ-hfx">
+                            <items>
+                                <label height="23" alignment="left" text="      " textAlignment="center" id="nVW-cL-kjV" userLabel="Address Label">
+                                    <fontDescription key="font" type="system" pointSize="16"/>
+                                    <variation key="device=watch42mm">
+                                        <fontDescription key="font" type="system" pointSize="18"/>
+                                    </variation>
+                                </label>
+                            </items>
+                        </group>
+                        <group width="1" alignment="left" id="rvh-1T-NGh">
+                            <items>
+                                <imageView width="48" height="48" alignment="left" image=" " id="FXG-3B-ZKK">
+                                    <variation key="device=watch42mm" height="50" width="50"/>
+                                </imageView>
+                                <label width="85" height="48" alignment="left" text=" " textAlignment="center" id="Ghm-L3-gJV">
+                                    <fontDescription key="font" type="system" pointSize="37"/>
+                                    <variation key="device=watch42mm" width="104">
+                                        <fontDescription key="font" type="system" pointSize="40"/>
+                                    </variation>
+                                </label>
+                            </items>
+                        </group>
+                        <label width="136" alignment="left" text=" " textAlignment="center" id="OnY-y1-IHr" userLabel="Min Max Label">
+                            <fontDescription key="font" type="system" pointSize="18"/>
+                            <variation key="device=watch42mm" width="155">
+                                <fontDescription key="font" type="system" pointSize="22"/>
+                            </variation>
+                        </label>
+                        <group width="155" alignment="left" id="56H-wj-Lz6">
+                            <items>
+                                <imageView width="18" height="18" alignment="left" verticalAlignment="center" image="Umbrella" id="Yk8-us-Egn">
+                                    <variation key="device=watch42mm" height="20" width="20"/>
+                                </imageView>
+                                <label width="30" height="20" alignment="left" verticalAlignment="center" text=" " textAlignment="left" id="hNk-XN-NZN">
+                                    <fontDescription key="font" type="system" pointSize="11"/>
+                                    <variation key="device=watch42mm" height="30" width="39">
+                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                    </variation>
+                                </label>
+                                <label width="80" height="20" alignment="right" verticalAlignment="center" text=" " textAlignment="right" id="ZYm-Sj-MTb">
+                                    <fontDescription key="font" type="system" pointSize="11"/>
+                                    <variation key="device=watch42mm" height="30" width="88">
+                                        <fontDescription key="font" type="system" pointSize="13"/>
+                                    </variation>
+                                </label>
+                            </items>
+                        </group>
+                    </items>
+                    <connections>
+                        <outlet property="addressLabel" destination="nVW-cL-kjV" id="vYS-df-29p"/>
+                        <outlet property="airAQILabel" destination="ZYm-Sj-MTb" id="8Xh-mI-wOI"/>
+                        <outlet property="curTempLabel" destination="Ghm-L3-gJV" id="AxC-W0-0Ff"/>
+                        <outlet property="curWeatherImage" destination="FXG-3B-ZKK" id="coB-nX-a9h"/>
+                        <outlet property="minMaxLabel" destination="OnY-y1-IHr" id="4p6-9m-kcw"/>
+                        <outlet property="precLabel" destination="hNk-XN-NZN" id="IfV-Gi-iiW"/>
+                        <outlet property="updateDateLabel" destination="jPs-gY-NJq" id="bnE-vP-da5"/>
+                    </connections>
+                </controller>
+            </objects>
+            <point key="canvasLocation" x="110.71794871794873" y="119.00000000000001"/>
+        </scene>
+    </scenes>
+</document>
