@@ -29,8 +29,12 @@ function ControllerTown24h() {
             req.query = {};
         }
 
+        /**
+         * #1978
+         * client에서 airUnit이 없으면 (null)로 전달됨
+         */
         UnitConverter.getUnitList().forEach(function (value) {
-                if (!req.query.hasOwnProperty(value)) {
+                if (!req.query.hasOwnProperty(value) || req.query[value] == '(null)') {
                     req.query[value] = UnitConverter.getDefaultValue(value);
                 }
         });

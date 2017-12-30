@@ -17,7 +17,7 @@ var ControllerWWUnits = require('../controllers/worldWeather/controller.ww.units
 describe('unit test - controller ww units', function() {
 
     var query = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa',
-        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airKorea'};
+        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
 
     var thisTime0 = {"date":"2017.12.13 03:00","desc":"Clear","weatherType":0,
         "temp_c":4.2,"temp_f":39.6,"ftemp_c":4.2,"ftemp_f":39.6,"cloud":9,
