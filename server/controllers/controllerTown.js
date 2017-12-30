@@ -2750,7 +2750,11 @@ function ControllerTown() {
         if(req.current){
             self._makeStrForKma(req.current, res);
             if (req.current.arpltn) {
-                self._makeArpltnStr(req.current.arpltn, res);
+                var airUnit;
+                if (req.query) {
+                   airUnit = req.query.airUnit;
+                }
+                self._makeArpltnStr(req.current.arpltn, airUnit, res);
             }
         }
         if(req.midData){
@@ -3110,34 +3114,61 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
 
 /**
  *
- * @param data
- * @param res
+ * v000901 에서 unitConvert에서 먼저 str을 넣기 때문에 예외처리추가.
+ * @param arpltn
+ * @param airUnit
+ * @param ts
  * @returns {ControllerTown}
  * @private
  */
-ControllerTown.prototype._makeArpltnStr = function (data, res) {
+ControllerTown.prototype._makeArpltnStr = function (arpltn, airUnit, ts) {
+    if (airUnit === 'airnow' || airUnit === 'aircn') {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
+    }
+    else if (airUnit === 'airkorea' || airUnit === 'airkorea_who' || airUnit == undefined) {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airkoreaGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airkoreaGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airkoreaGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airkoreaGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airkoreaGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airkoreaGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airkoreaGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
+    }
 
-    if (data.hasOwnProperty('pm10Grade')) {
-        data.pm10Str = UnitConverter.airkoreaGrade2str(data.pm10Grade, "pm10", res);
-    }
-    if (data.hasOwnProperty('pm25Grade')) {
-        data.pm25Str = UnitConverter.airkoreaGrade2str(data.pm25Grade, "pm25", res);
-    }
-    if (data.hasOwnProperty('o3Grade')) {
-        data.o3Str = UnitConverter.airkoreaGrade2str(data.o3Grade, "o3", res);
-    }
-    if (data.hasOwnProperty('no2Grade')) {
-        data.no2Str = UnitConverter.airkoreaGrade2str(data.no2Grade, "no2", res);
-    }
-    if (data.hasOwnProperty('coGrade')) {
-        data.coStr = UnitConverter.airkoreaGrade2str(data.coGrade, "co", res);
-    }
-    if (data.hasOwnProperty('so2Grade')) {
-        data.so2Str = UnitConverter.airkoreaGrade2str(data.so2Grade, "so2", res);
-    }
-    if (data.hasOwnProperty('khaiGrade')) {
-        data.khaiStr = UnitConverter.airkoreaGrade2str(data.khaiGrade, "khai", res);
-    }
     return this;
 };
 
