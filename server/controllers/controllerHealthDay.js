@@ -3,6 +3,8 @@
  * @brief       보건기상지수 데이터를 처리하는 곳
  */
 
+'use strict';
+
 var async = require('async');
 
 var healthDayKmaDB = require('../models/modelHealthDay');               // 보건지수를 저장할 db
@@ -119,9 +121,8 @@ var insertDB = function(result, callback)  {
     result.forEach(function(data) {
 
         var today = kmaTimeLib.convertStringToDate(data.date.slice(0, 8));
-        if((data.today !== "")
-            && (data.today !== '*'))
-        {
+        if( (data.today !== "") &&
+            (data.today !== '*') ) {
             var healthData = {};
             healthData['areaNo'] = parseInt(data.areaNo);
             healthData['indexType'] = indexType;
@@ -205,7 +206,7 @@ HealthDayController.getData = function(urlList, callback) {
                    }
                    else {
                        returnCode = result.Response.header.returnCode;
-                       if (returnCode == 99) {
+                       if (returnCode === 99) {
                            log.info('This function is not supported in this season. url=' + url);
                        } else {
                            err = new Error('Failed to request, url=' + url + ', errcode=' + returnCode);
