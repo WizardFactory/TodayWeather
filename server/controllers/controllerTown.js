@@ -1888,22 +1888,28 @@ function ControllerTown() {
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
 
-        var locStr = ts.__('LOC_PM25');
-        tmpGrade = airInfo.pm25Grade;
-        str = locStr + " " + airInfo.pm25Str;
-        if (tmpGrade < airInfo.pm10Grade) {
+        var locStr;
+        tmpGrade = 0;
+        if (airInfo.pm25Grade) {
+            locStr = ts.__('LOC_PM25');
+            tmpGrade = airInfo.pm25Grade;
+            str = locStr + " " + airInfo.pm25Str;
+        }
+        if (airInfo.pm10Grade && tmpGrade < airInfo.pm10Grade) {
             locStr = ts.__('LOC_PM10');
             tmpGrade = airInfo.pm10Grade;
             str = locStr + " " + airInfo.pm10Str;
         }
-        if (tmpGrade < (airInfo.aqiGrade)) {
+        if (airInfo.aqiGrade && tmpGrade < (airInfo.aqiGrade)) {
             locStr = ts.__('LOC_AQI');
             tmpGrade = airInfo.aqiGrade;
             str = locStr + " " + airInfo.aqiStr;
         }
 
-        item = {str: str, grade: tmpGrade};
-        itemList.push(item);
+        if (tmpGrade > 0) {
+            item = {str: str, grade: tmpGrade};
+            itemList.push(item);
+        }
 
         if (current.rn1 && current.pty) {
             switch (current.pty) {
