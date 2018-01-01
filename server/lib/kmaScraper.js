@@ -191,7 +191,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
 
     log.info(url);
 
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);
@@ -251,7 +251,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
         url += '?tm='+pubDate;
     }
     log.info(url);
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);
@@ -1637,7 +1637,7 @@ KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
 
     log.info("kma special weather url="+url);
 
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);
