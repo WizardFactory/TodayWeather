@@ -435,7 +435,7 @@ static TodayViewController *todayVC = nil;
     NSLog(@"[svWeatherInfo] nsnIdx: %@ currenPosition: %d", nsnIdx, currentPosition);
     
     if (currentPosition) {
-        nssAddress         = [dict objectForKey:@"name"];
+        nssAddress         = [dict objectForKey:@"address"];
         nssCountry         = [dict objectForKey:@"country"];
         if([nssCountry isEqualToString:@"KR"])
         {
@@ -1205,19 +1205,22 @@ static TodayViewController *todayVC = nil;
     {
         [self parseGlobalGeocode:jsonDict];
     }
+    /*
     else if(type == TYPE_REQUEST_WEATHER_KR)
     {
         [self saveWeatherInfo:jsonDict];
         [self processWeatherResultsWithShowMore:jsonDict];
         [self processRequestIndicator:TRUE];
     }
+     */
     else if(type == TYPE_REQUEST_WEATHER_GLOBAL)
     {
         [self saveWeatherInfo:jsonDict];
         [self processWeatherResultsAboutGlobal:jsonDict];
         [self processRequestIndicator:TRUE];
     }
-    else if (type == TYPE_REQUEST_WEATHER_BY_COORD)
+    else if (type == TYPE_REQUEST_WEATHER_BY_COORD
+             || type == TYPE_REQUEST_WEATHER_KR)
     {
         [self saveWeatherInfo:jsonDict];
         [self processWeatherResultsByCoord:jsonDict];
@@ -1684,7 +1687,7 @@ static TodayViewController *todayVC = nil;
     // Pop
     NSString    *nssTodPop = nil;
     
-    
+
     //NSLog(@"processWeatherResultsWithShowMore : %@", jsonDict);
     if(jsonDict == nil)
     {
@@ -1725,7 +1728,7 @@ static TodayViewController *todayVC = nil;
         nssTime             = [NSString stringWithFormat:@"%@", nssLiveTime];
     else
         nssTime             = [currentDict objectForKey:@"time"];
-    
+
     if(nssTime != nil)
     {
         if([nssTime length] >= 2)
@@ -2328,7 +2331,8 @@ static TodayViewController *todayVC = nil;
     
     if(nsdWeatherInfo != nil)
     {
-        [self processWeatherResultsWithShowMore:nsdWeatherInfo];
+        //[self processWeatherResultsWithShowMore:nsdWeatherInfo];
+        [self processWeatherResultsByCoord:nsdWeatherInfo];
     }
     else
     {
@@ -2516,7 +2520,7 @@ static TodayViewController *todayVC = nil;
     NSString        *nssTime = nil;
     NSString        *nssHourMin = nil;
     
-    // Image∂
+    // Image
     NSString *nssCurIcon = nil;
     NSString *nssCurImgName = nil;
     NSString *nssTodIcon = nil;
@@ -2531,8 +2535,8 @@ static TodayViewController *todayVC = nil;
     id idTaMin  = nil;
     id idTaMax  = nil;
     
-    // Address
-    NSString    *nssAddress = nil;
+    // Name
+    NSString    *nssName = nil;
     
     // Pop
     NSString    *nssTodPop = nil;
@@ -2543,26 +2547,42 @@ static TodayViewController *todayVC = nil;
     // Temperature Unit
     TEMP_UNIT   tempUnit = TEMP_UNIT_CELSIUS;
     
-    //NSLog(@"processWeatherResultsAboutGlobal : %@", jsonDict);
+    BOOL        currentPosition = FALSE;
+    
+    //NSLog(@"ByCoord : %@", jsonDict);
     if(jsonDict == nil)
     {
-        NSLog(@"jsonDict is nil!!!");
+        NSLog(@"[ByCoord] jsonDict is nil!!!");
         return;
     }
     [self setCurJsonDict:jsonDict];
     
-    NSLog(@"mCurrentCityIdx : %d", mCurrentCityIdx);
+    NSLog(@"[ByCoord] current city index=%d, city list count=%lu", mCurrentCityIdx, [mCityDictList count]);
     
-    if (mCurrentCityIdx == 0) {
-        nssAddress         = [jsonDict objectForKey:@"name"];
+    NSString *nssSource = nil;
+    
+    nssSource = [jsonDict objectForKey:@"source"];
+    
+    NSMutableDictionary* nsdCurCity = nil;
+    if (0 <= mCurrentCityIdx && mCurrentCityIdx < [mCityDictList count]) {
+        nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
+        currentPosition = [[nsdCurCity valueForKey:@"currentPosition"] boolValue];
+    }
+    else {
+        NSLog(@"[ByCoord] current city index is invalid index=%d, city list count=%lu", mCurrentCityIdx, [mCityDictList count]);
+        //use response data for view
+        currentPosition = TRUE;
+    }
+    
+    if (currentPosition) {
+        nssName         = [jsonDict objectForKey:@"name"];
         nssCountry         = [jsonDict objectForKey:@"country"];
         [todayWSM setCurCountry:nssCountry];
     }
     else {
-        NSMutableDictionary* nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
-        //NSLog(@"[processWeatherResultsAboutGlobal] nsdCurCity : %@", nsdCurCity);
-        // Address
-        nssAddress = [nsdCurCity objectForKey:@"name"];
+        //NSLog(@"[ByCoord] nsdCurCity : %@", nsdCurCity);
+        //Name
+        nssName = [nsdCurCity objectForKey:@"name"];
         nssCountry = [nsdCurCity objectForKey:@"country"];
         if(nssCountry == nil)
         {
@@ -2570,10 +2590,10 @@ static TodayViewController *todayVC = nil;
         }
     }
     
-    NSLog(@"[ByCoord]nssAddress : %@, nssCountry : %@", nssAddress, nssCountry);
+    NSLog(@"[ByCoord] name : %@, country : %@, source: %@", nssName, nssCountry, nssSource);
     
     // Current
-    if([nssCountry isEqualToString:@"KR"]) {
+    if([nssSource isEqualToString:@"KMA"]) {
         currentDict         = [jsonDict objectForKey:@"current"];
     }
     else {
@@ -2589,25 +2609,16 @@ static TodayViewController *todayVC = nil;
     if (nssTime == nil) {
         nssTime             = [currentDict objectForKey:@"dateObj"];
     }
+    
     if (nssTime != nil) {
         nssHourMin       = [nssTime substringFromIndex:11];
-        NSLog(@"[ByCoord]nssTime : %@, nssHourMin : %@", nssTime, nssHourMin);
+        NSLog(@"[ByCoord] nssTime : %@, nssHourMin : %@", nssTime, nssHourMin);
         nssDateTime         = [NSString stringWithFormat:@"%@ %@", LSTR_UPDATE, nssHourMin];
     }
     else {
         //for KMA
-        nssTime             = [currentDict objectForKey:@"time"];
-        if(nssTime != nil && [nssTime length] >= 2) {
-            NSString        *nssHour = nil;
-            NSString        *nssMinute = nil;
-            
-            nssHour             = [nssTime substringToIndex:2];
-            nssMinute           = [nssTime substringFromIndex:2];
-            nssDateTime         = [NSString stringWithFormat:@"%@ %@:%@", LSTR_UPDATE, nssHour, nssMinute];
-        }
-        else {
-            nssDateTime             = @"";
-        }
+        int nTime           = [[currentDict objectForKey:@"time"] intValue];
+        nssDateTime         = [NSString stringWithFormat:@"%@ %d:00", LSTR_UPDATE, nTime];
     }
     
     nssDate             = [currentDict objectForKey:@"date"];
@@ -2618,7 +2629,7 @@ static TodayViewController *todayVC = nil;
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
     
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
-    NSLog(@"[processWeatherResultsWithShowMore] nsmasAirState : %@",nsmasAirState);
+    NSLog(@"[ByCoord] nsmasAirState : %@",nsmasAirState);
 
     // Processing current temperature
     idT1h    = [NSString stringWithFormat:@"%@", [currentDict valueForKey:@"t1h"]];
@@ -2658,15 +2669,15 @@ static TodayViewController *todayVC = nil;
         if(nssDateTime)
             updateTimeLabel.text    = nssDateTime;
         
-        NSLog(@"=======>  date : %@", nssDateTime);
-        if( (nssAddress == nil) || [nssAddress isEqualToString:@"(null)"])
+        NSLog(@"[ByCoord] =>  date : %@", nssDateTime);
+        if( (nssName == nil) || [nssName isEqualToString:@"(null)"])
         {
             addressLabel.text       = @"";
             //nextCityBtn.hidden      = true;
         }
         else
         {
-            addressLabel.text       = nssAddress;
+            addressLabel.text       = nssName;
             //nextCityBtn.hidden      = false;
         }
         
@@ -2715,7 +2726,7 @@ static TodayViewController *todayVC = nil;
     });
     
     // Draw ShowMore
-    if([nssCountry isEqualToString:@"KR"]) {
+    if([nssSource isEqualToString:@"KMA"]) {
         [todayWSM           processDailyData:jsonDict type:TYPE_REQUEST_WEATHER_KR];
     }
     else {
