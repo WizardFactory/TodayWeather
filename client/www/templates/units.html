@@ -15,7 +15,7 @@
                 <div class="input-label">
                     {{'LOC_TEMPERATURE_UNIT'|translate}}
                 </div>
-                <select ng-model="temperatureUnit" ng-change="setUnit('temperatureUnit', temperatureUnit)">
+                <select ng-model="unit.temperatureUnit" ng-change="setUnit('temperatureUnit', unit.temperatureUnit)">
                     <option value="C">C</option>
                     <option value="F">F</option>
                 </select>
@@ -24,7 +24,7 @@
                 <div class="input-label">
                     {{'LOC_WIND_SPEED_UNIT'|translate}}
                 </div>
-                <select ng-model="windSpeedUnit" ng-change="setUnit('windSpeedUnit', windSpeedUnit)">
+                <select ng-model="unit.windSpeedUnit" ng-change="setUnit('windSpeedUnit', unit.windSpeedUnit)">
                     <option value="mph">mph</option>
                     <option value="km/h">km/h</option>
                     <option value="m/s">m/s</option>
@@ -36,7 +36,7 @@
                 <div class="input-label">
                     {{'LOC_PRESSURE_UNIT'|translate}}
                 </div>
-                <select ng-model="pressureUnit" ng-change="setUnit('pressureUnit', pressureUnit)">
+                <select ng-model="unit.pressureUnit" ng-change="setUnit('pressureUnit', unit.pressureUnit)">
                     <option value="mmHg">mmHg</option>
                     <option value="inHg">inHg</option>
                     <option value="mb">mbar</option>
@@ -47,7 +47,7 @@
                 <div class="input-label">
                     {{'LOC_DISTANCE_UNIT'|translate}}
                 </div>
-                <select ng-model="distanceUnit" ng-change="setUnit('distanceUnit', distanceUnit)">
+                <select ng-model="unit.distanceUnit" ng-change="setUnit('distanceUnit', unit.distanceUnit)">
                     <option value="km">km</option>
                     <option value="mi">miles</option>
                 </select>
@@ -56,7 +56,7 @@
                 <div class="input-label">
                     {{'LOC_PRECIPITATION'|translate}}
                 </div>
-                <select ng-model="precipitationUnit" ng-change="setUnit('precipitationUnit', precipitationUnit)">
+                <select ng-model="unit.precipitationUnit" ng-change="setUnit('precipitationUnit', unit.precipitationUnit)">
                     <option value="mm">mm</option>
                     <option value="in">inch</option>
                 </select>
@@ -65,7 +65,7 @@
                 <div class="input-label">
                     {{'LOC_AIR_QUALITY_INDEX_UNIT'|translate}}
                 </div>
-                <select ng-model="airUnit" ng-change="setUnit('airUnit', airUnit)">
+                <select ng-model="unit.airUnit" ng-change="setUnit('airUnit', unit.airUnit)">
                     <option value="airnow">{{getAirUnitStr('airnow')|translate}}</option>
                     <option value="aircn">{{getAirUnitStr('aircn')|translate}}</option>
                     <option value="airkorea">{{getAirUnitStr('airkorea')|translate}}</option>

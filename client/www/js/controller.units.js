@@ -10,6 +10,7 @@ angular.module('controller.units', [])
         obj.pressureUnit;
         obj.distanceUnit;
         obj.precipitationUnit;
+        obj.airUnit;
 
         function _getDefaultUnits() {
             var units = {};
@@ -72,6 +73,17 @@ angular.module('controller.units', [])
             return units;
         }
 
+        obj.unitList = function () {
+            return  [
+                "temperatureUnit",
+                "windSpeedUnit",
+                "pressureUnit",
+                "distanceUnit",
+                "precipitationUnit",
+                "airUnit"
+            ];
+        };
+
         obj.getAllUnits = function () {
             var self = this;
             return {
@@ -92,14 +104,7 @@ angular.module('controller.units', [])
             var isUpdated = false;
 
             console.log('saved units:',savedUnits);
-            [
-                "temperatureUnit",
-                "windSpeedUnit",
-                "pressureUnit",
-                "distanceUnit",
-                "precipitationUnit",
-                "airUnit"
-            ].forEach(function (value) {
+            self.unitList().forEach(function (value) {
                 if (savedUnits && savedUnits.hasOwnProperty(value)) {
                     self[value] = savedUnits[value]
                 }
@@ -149,21 +154,9 @@ angular.module('controller.units', [])
         return obj;
     })
     .controller('UnitsCtrl', function($scope, $translate, $ionicHistory, Units, Util, WeatherInfo, Push) {
-        $scope.temperatureUnit = Units.temperatureUnit;
-        $scope.windSpeedUnit = Units.windSpeedUnit;
-        $scope.pressureUnit = Units.pressureUnit;
-        $scope.distanceUnit = Units.distanceUnit;
-        $scope.precipitationUnit = Units.precipitationUnit;
-        $scope.airUnit = Units.airUnit;
         var update = false;
 
         $scope.onClose = function() {
-            if(update) {
-               Push.updateUnits();
-            }
-            //iOS에서 forecast chart 제대로 안나오는 이슈가 있어서 임시로 무조건 리드로잉한다.
-            _resetUpdateTimeCities();
-            console.log('close');
             Util.ga.trackEvent('action', 'click', 'units back');
             //convertUnits
             $ionicHistory.goBack();
@@ -180,13 +173,33 @@ angular.module('controller.units', [])
             if (Units.setUnit(unit, value)) {
                 Units.saveUnits();
                 update = true;
-                //_resetUpdateTimeCities();
             }
         };
 
         $scope.getAirUnitStr = function (unit) {
            return Units.getAirUnitStr(unit);
-        }
+        };
+
+        $scope.$on('$ionicView.leave', function() {
+            if(update) {
+                Push.updateUnits();
+            }
+            //iOS에서 forecast chart 제대로 안나오는 이슈가 있어서 임시로 무조건 리드로잉한다.
+            _resetUpdateTimeCities();
+            console.log('close');
+        });
+
+        $scope.$on('$ionicView.enter', function() {
+            if (!$scope.hasOwnProperty('unit')) {
+                $scope.unit = {};
+            }
+
+            Units.unitList().forEach(function (name) {
+                $scope.unit[name] = Units.getUnit(name)
+            });
+            $scope.$apply();
+        });
+
     });
 
 
