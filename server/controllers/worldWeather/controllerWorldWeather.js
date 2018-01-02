@@ -1010,6 +1010,9 @@ function controllerWorldWeather() {
      */
     self.getaddressByGeocode = function(lat, lon, callback){
         var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+ lat + ',' + lon + '&language=en';
+        if (config.keyString.google_key) {
+           url += '&key='+config.keyString.google_key;
+        }
 
         var encodedUrl = encodeURI(url);
         log.info(url);
@@ -1037,7 +1040,7 @@ function controllerWorldWeather() {
                 var result = JSON.parse(body);
                 var address = '';
 
-                log.info(result);
+                log.verbose(result);
                 if(result.hasOwnProperty('results')){
                     if(Array.isArray(result.results)
                         && result.results[0].hasOwnProperty('formatted_address')){
