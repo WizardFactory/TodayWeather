@@ -264,5 +264,11 @@
   "LOC_AIR_QUALITY_INDEX_CN" : "China",
   "LOC_FEEDBACK": "Feedback",
   "LOC_REVIEW": "Rezension",
-  "LOC_DISABLE_UPDATE_POPUP":"Deaktivieren Sie die Update-Info"
+  "LOC_DISABLE_UPDATE_POPUP":"Deaktivieren Sie die Update-Info",
+  "LOC_KOREA": "Korea",
+  "LOC_JAPAN": "Japan",
+  "LOC_CHINA": "China",
+  "LOC_USA": "Vereinigte Staaten",
+  "LOC_UK": "Vereinigtes Königreich",
+  "LOC_NATIONAL_WEATHER": "Nationales Wetter"
 }

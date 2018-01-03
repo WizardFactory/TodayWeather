@@ -15,11 +15,11 @@ angular.module('service.weatherutil', [])
                 if (retryCount > 0) {
                     _retryGetHttp(retryCount, url, callback);
                 }
-            }, 2000);
+            }, 1500);
 
             console.log("retry="+retryCount+" get http");
 
-            var options = {method: 'GET', url: url, timeout: 10000};
+            var options = {method: 'GET', url: url, timeout: 6000};
 
             $http(options)
                 .success(function (data, status, headers, config, statusText) {
@@ -40,7 +40,7 @@ angular.module('service.weatherutil', [])
         }
 
         /**
-         * call retryGetHttp 5 times
+         * call retryGetHttp 3 times, 1.5초마다 호출해서 3회함. 3번째 6초 대기 하면 총 9초 timeout
          * @param url
          * @private
          */
@@ -49,13 +49,30 @@ angular.module('service.weatherutil', [])
 
             console.log({url:url});
 
-            _retryGetHttp(5, url, function (err, data) {
+            _retryGetHttp(3, url, function (err, data) {
                 if (err != undefined) {
                     return deferred.reject(err);
                 }
                 deferred.resolve({data: data});
             });
             return deferred.promise;
+        }
+
+        /**
+         *
+         * @returns {string}
+         * @private
+         */
+        function _getUnitsParams() {
+            var url = "";
+            var units = Units.getAllUnits();
+            var count = 0;
+            for (var key in units) {
+                url += count === 0? "?":"&";
+                url += key+'='+units[key];
+                count++;
+            }
+            return url;
         }
 
         /**
@@ -69,13 +86,7 @@ angular.module('service.weatherutil', [])
             var url = twClientConfig.serverUrl;
             url += '/'+funcName+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
-                var units = Units.getAllUnits();
-                var count = 0;
-                for (var key in units) {
-                    url += count === 0? "?":"&";
-                    url += key+'='+units[key];
-                    count++;
-                }
+                url += _getUnitsParams();
             }
             return url;
         }
@@ -91,13 +102,7 @@ angular.module('service.weatherutil', [])
             var url = twClientConfig.serverUrl;
             url += '/'+funcName+'/addr/'+ addr;
             if (funcName === 'weather') {
-                var units = Units.getAllUnits();
-                var count = 0;
-                for (var key in units) {
-                    url += count === 0? "?":"&";
-                    url += key+'='+units[key];
-                    count++;
-                }
+                url += _getUnitsParams();
             }
             return url;
         }
@@ -120,13 +125,9 @@ angular.module('service.weatherutil', [])
             if (town.third !== '') {
                 url += '/' + town.third;
             }
-            var units = Units.getAllUnits();
-            var count = 0;
-            for (var key in units) {
-                url += count === 0? "?":"&";
-                url += key+'='+units[key];
-                count++;
-            }
+
+            url += _getUnitsParams();
+
             return url;
         }
 
@@ -842,6 +843,34 @@ angular.module('service.weatherutil', [])
             //return {lat: normal_lat, long: normal_lon};
 
             return {lat: parseFloat(coords.lat.toFixed(3)), long: parseFloat(coords.long.toFixed(3))}
+        };
+
+        /**
+         * 현재는 KR하나만 있음.
+         * @param nationCode
+         */
+        obj.getNationWeather = function (nationCode) {
+            var deferred = $q.defer();
+            var url;
+            try{
+                url = twClientConfig.serverUrl;
+                url += '/v000901/nation/'+nationCode;
+                url += _getUnitsParams();
+            }
+            catch(err) {
+                deferred.reject(err);
+                return deferred.promise;
+            }
+
+            _getHttp(url).then(
+                function (data) {
+                    deferred.resolve(data.data);
+                },
+                function (err) {
+                    deferred.reject(err);
+                });
+
+            return deferred.promise;
         };
 
         return obj;
