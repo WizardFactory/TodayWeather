@@ -147,7 +147,7 @@ static TodayViewController *todayVC = nil;
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
+
     //NSLog(@"self : %@", self);
     
     NSString *budleDisplayName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
@@ -371,14 +371,22 @@ static TodayViewController *todayVC = nil;
     }
     
     CityInfo *currentCity = nil;
+    CityInfo *savedCity = nil;
     NSData *archivedObject = [sharedUserDefaults objectForKey:@"currentCity"];
     //NSLog(@"archivedObject : %@", archivedObject);
-    currentCity = (CityInfo *)[NSKeyedUnarchiver unarchiveObjectWithData:archivedObject];
-    if (currentCity == nil) {
+    savedCity = (CityInfo *)[NSKeyedUnarchiver unarchiveObjectWithData:archivedObject];
+    if (savedCity == nil) {
         currentCity = mCityList.firstObject;
     }
     else {
-        NSLog(@"load last city info");
+        if (0 <= savedCity.index && savedCity.index < [mCityList count]) {
+            currentCity = mCityList[savedCity.index];
+            NSLog(@"load last city info index %d",savedCity.index);
+        }
+        else {
+            NSLog(@"invalid index %d, so set first city",savedCity.index);
+            currentCity = mCityList.firstObject;
+        }
     }
     
     //NSLog(@"country : %@", currentCity.country);
@@ -387,7 +395,6 @@ static TodayViewController *todayVC = nil;
     //NSLog(@"name : %@", currentCity.name);
     //NSLog(@"address : %@", currentCity.address);
     
-
     [self setCityInfo:currentCity];
 }
 
@@ -2355,7 +2362,7 @@ static TodayViewController *todayVC = nil;
 {
     if(bIsReqComplete == FALSE)
     {
-        NSLog(@"Still processing...");
+        NSLog(@"[setCity] Still processing...");
         return true;
     }
     
@@ -2363,8 +2370,8 @@ static TodayViewController *todayVC = nil;
     bIsReqComplete = FALSE;
 
     locationView.hidden = true;
-    NSLog(@"[setCityInfo] : index %d, current position %@, address %@ , name : %@, country : %@",
-        nextCity.index, nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.name, nextCity.country);
+    NSLog(@"[setCity] index : %d, current position : %@, address : %@ , name : %@, country : %@, location : %@",
+        nextCity.index, nextCity.currentPosition?@"true":@"false", nextCity.address, nextCity.name, nextCity.country, nextCity.location);
     
     mCurrentCity = nextCity;
     mCurrentCityIdx = nextCity.index;
@@ -2379,10 +2386,15 @@ static TodayViewController *todayVC = nil;
     }
     else
     {
+        float lat = 0;
+        float lng = 0;
+        
         if (nextCity.location) {
-            float lat = [[nextCity.location objectForKey:@"lat"] floatValue];
-            float lng = [[nextCity.location objectForKey:@"long"] floatValue];
-            
+            lat = [[nextCity.location objectForKey:@"lat"] floatValue];
+            lng = [[nextCity.location objectForKey:@"long"] floatValue];
+        }
+
+        if (!(lat == 0 && lng == 0)) {
             [self getWeatherByCoord:lat longitude:lng];
         }
         else if([nextCity.country isEqualToString:@"KR"] ||
@@ -2390,12 +2402,16 @@ static TodayViewController *todayVC = nil;
            (nextCity.country == nil)
            )
         {
-            [self processKRAddress:nextCity.address];
+            if (nextCity.address) {
+                 [self processKRAddress:nextCity.address];
+            }
+            else {
+                NSLog(@"Can't load data!! address: %@, location: %@", nextCity.address, nextCity.location);
+            }
         }
         else
         {
-            NSLog(@"Use Global Address API!!! address : %@, location : %@", nextCity.address, nextCity.location);
-            [self processGlobalAddress:nextCity.location];
+            NSLog(@"Can't load data!! address: %@, location: %@", nextCity.address, nextCity.location);
         }
     }
     
@@ -2409,8 +2425,8 @@ static TodayViewController *todayVC = nil;
 
 /********************************************************************
  *
- * Name			: setCityInfo
- * Description	: set city infomation
+ * Name			: processKRAddress
+ * Description	:
  * Returns		: void
  * Side effects :
  * Date			: 2016. 11. 02
@@ -2465,8 +2481,8 @@ static TodayViewController *todayVC = nil;
 
 /********************************************************************
  *
- * Name			: setCityInfo
- * Description	: set city infomation
+ * Name			: processGlobalAddress
+ * Description	:
  * Returns		: void
  * Side effects :
  * Date			: 2016. 11. 02
@@ -2486,7 +2502,7 @@ static TodayViewController *todayVC = nil;
 - (void) getWeatherByCoord:(float)latitude longitude:(float)longitude
 {
     NSDictionary *nssUnits = [todayUtil getUnits];
-    NSLog(@"[getWeatherByCoord]units: %@", nssUnits);
+    NSLog(@"[getByCoord] units: %@", nssUnits);
     NSString *nssTempUnits = [nssUnits objectForKey:@"temperatureUnit"];
     NSString *nssWindUnits = [nssUnits objectForKey:@"windSpeedUnit"];
     NSString *nssPressUnits = [nssUnits objectForKey:@"pressureUnit"];
@@ -2495,10 +2511,10 @@ static TodayViewController *todayVC = nil;
     NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
     
     NSString *nssQueryParams = [NSString stringWithFormat:@"temperatureUnit=%@&windSpeedUnit=%@&pressureUnit=%@&distanceUnit=%@&precipitationUnit=%@&airUnit=%@", nssTempUnits, nssWindUnits, nssPressUnits, nssDistUnits, nssPrecipUnits, nssAirUnits];
-    
+
     NSString *nssURL = [NSString stringWithFormat:@"%@/%@/%.3f,%.3f?%@", TODAYWEATHER_URL, COORD_2_WEATHER_API_URL, latitude, longitude, nssQueryParams];
     
-    NSLog(@"[getWeatherByCoord]url : %@", nssURL);
+    NSLog(@"[getByCoord] url : %@", nssURL);
     
     [self requestAsyncByURLSession:nssURL reqType:TYPE_REQUEST_WEATHER_BY_COORD];
 }
@@ -2598,7 +2614,10 @@ static TodayViewController *todayVC = nil;
     }
     else {
         thisTimeArr         = [jsonDict objectForKey:@"thisTime"];
-        
+        if([thisTimeArr count] == 0) {
+            NSLog(@"[ByCoord] Fail to load weather data");
+            return;
+        }
         if([thisTimeArr count] == 2)
             currentDict         = [thisTimeArr objectAtIndex:1];        // Use second index; That is current weahter.
         else
