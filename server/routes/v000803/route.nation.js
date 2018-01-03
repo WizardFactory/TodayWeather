@@ -2,6 +2,8 @@
  * Created by aleckim on 2017. 6. 21..
  */
 
+"use strict";
+
 var router = require('express').Router();
 var async = require('async');
 var req = require('request');
@@ -28,7 +30,7 @@ router.use(function timestamp(req, res, next){
 function requestApi(cityName, version, query, lang, callback) {
     var apiEndpoint = '/town';
     if (version === 'v000901') {
-       apiEndpoint = '/kma/addr'
+       apiEndpoint = '/kma/addr';
     }
     var url = config.push.serviceServer+"/"+version+apiEndpoint+"/"+encodeURIComponent(cityName);
 
