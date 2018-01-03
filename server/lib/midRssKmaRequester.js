@@ -2,6 +2,8 @@
  * Created by aleckim on 2015. 12. 26..
  */
 
+"use strict";
+
 var xml2json  = require('xml2js').parseString;
 var async = require('async');
 var req = require('request');
