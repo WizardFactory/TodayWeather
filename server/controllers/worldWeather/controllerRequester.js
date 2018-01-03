@@ -9,6 +9,7 @@ var async = require('async');
 var modelGeocode = require('../../models/worldWeather/modelGeocode');
 var conCollector = require('./controllerCollector');
 var controllerAqi = require('./controllerAqi');
+var config = require('../../config/config');
 
 var commandCategory = ['all','met','owm','wu', 'dsf'];
 var command = ['get_all','get', 'req_add', 'req_two_days', 'add_key'];
@@ -320,6 +321,9 @@ ControllerRequester.prototype.getLocalTimeOffset = function (geocode, callback) 
         timestamp = (new Date()).getTime();
         url = "https://maps.googleapis.com/maps/api/timezone/json";
         url += "?location="+geocode.lat+","+geocode.lon+"&timestamp="+Math.floor(timestamp/1000);
+        if (config.keyString.google_key) {
+            url += '&key='+config.keyString.google_key;
+        }
 
         request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){
             if (err) {
