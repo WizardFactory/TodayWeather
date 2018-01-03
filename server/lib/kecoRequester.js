@@ -15,7 +15,8 @@ var MsrStn = require('../models/modelMsrStnInfo.js');
 var Frcst = require('../models/modelMinuDustFrcst');
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
-var DOMAIN_ARPLTN_KECO = 'http://openapi.airkorea.or.kr/openapi/services/rest';
+var AIRKOREA_DOMAIN = 'openapi.airkorea.or.kr';
+var DOMAIN_ARPLTN_KECO = 'http://'+AIRKOREA_DOMAIN+'/openapi/services/rest';
 
 var PATH_MSRSTN_INFO_INQIRE_SVC = 'MsrstnInfoInqireSvc';
 var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';
@@ -24,6 +25,12 @@ var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';        //미세먼지/오�
 
 var PATH_ARPLTN_INFOR_INQIRE_SVC = 'ArpltnInforInqireSvc';
 var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';  //시도별 실시간 측정정보 조회
+
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
 
 /**
  *
@@ -35,6 +42,16 @@ function Keco() {
     this._sidoList = [];
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
+
+    var domain = AIRKOREA_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('keco cached domain:', domain, ', result:', result);
+        }
+    });
 }
 
 /**

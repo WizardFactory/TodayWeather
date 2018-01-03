@@ -13,14 +13,31 @@ var kmaTownMidRss = require('../models/kma/kma.town.mid.rss.model');
 var collectTown = require('../lib/collectTownForecast');
 var kmaTimelib = require('./kmaTimeLib');
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /**
  *
  * @constructor
  */
 function MidRssKmaRequester() {
+    var WWW_KMA_GO_DOMAIN = 'www.kma.go.kr';
     this._nextGetTime = new Date();
-    this._url = 'http://www.kma.go.kr/weather/forecast/mid-term-rss3.jsp';
+    this._url = 'http://'+WWW_KMA_GO_DOMAIN+'/weather/forecast/mid-term-rss3.jsp';
     this._updateTimeTable =  [9, 21];   //kr 18, 06
+
+    var domain = WWW_KMA_GO_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('midrss cached domain:', domain, ', result:', result);
+        }
+    });
 }
 
 MidRssKmaRequester.prototype.checkGetTime = function(time) {

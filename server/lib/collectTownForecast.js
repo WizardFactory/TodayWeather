@@ -25,6 +25,12 @@ var events = require('events');
 var req = require('request');
 var xml2json  = require('xml2js').parseString;
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /*
 * constructor
 * - Parameter
@@ -34,6 +40,8 @@ var xml2json  = require('xml2js').parseString;
 */
 function CollectData(options, callback){
     var self = this;
+
+    var NEWSKY2_KMA_GO_DOMAIN = "newsky2.kma.go.kr";
 
     self.listPointNumber = Object.freeze(
         [
@@ -127,13 +135,13 @@ function CollectData(options, callback){
     });
 
     self.DATA_URL = Object.freeze({
-        TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
-        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
-        TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
-        MID_FORECAST: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast',
-        MID_LAND: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather',
-        MID_TEMP: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature',
-        MID_SEA: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleSeaWeather'
+        TOWN_CURRENT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
+        TOWN_SHORTEST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
+        TOWN_SHORT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
+        MID_FORECAST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleForecast',
+        MID_LAND: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleLandWeather',
+        MID_TEMP: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleTemperature',
+        MID_SEA: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleSeaWeather'
     });
 
     events.EventEmitter.call(this);
@@ -206,6 +214,15 @@ function CollectData(options, callback){
 
     //log.info('The list was created for the weather data');
 
+    var domain = NEWSKY2_KMA_GO_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('collecttown cached domain:', domain, ', result:', result);
+        }
+    });
     return self;
 }
 
