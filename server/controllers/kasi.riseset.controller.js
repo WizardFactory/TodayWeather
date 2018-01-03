@@ -12,12 +12,27 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 var KasiRiseSet = require('../models/modelKasiRiseSet');
 var Town = require('../models/town');
 
-
-var kasiUrl = 'http://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService';
+var APIS_DATA_GO_DOMAIN = 'apis.data.go.kr';
+var kasiUrl = 'http://'+APIS_DATA_GO_DOMAIN+'/B090041/openapi/service/RiseSetInfoService';
 var apiLocationName = 'getLCRiseSetInfo';
 var apiAreaName = 'getAreaRiseSetInfo';
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 function kasiRiseSet() {
+    var domain = APIS_DATA_GO_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('kasi cached domain:', domain, ', result:', result);
+        }
+    });
 }
 
 kasiRiseSet._makeLocationApiUrl = function (geocode, date) {
