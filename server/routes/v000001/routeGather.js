@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 1. 20..
  */
 
+'use strict';
+
 var router = require('express').Router();
 var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
