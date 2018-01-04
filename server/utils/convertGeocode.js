@@ -102,6 +102,10 @@ function convertGeocodeByGoogle(first, second, third, callback, language) {
     else{
         url += '?address=' + first + second + third;
     }
+    if (keyBox.google_key) {
+        url += '&key='+keyBox.google_key;
+    }
+
     encodedUrl = encodeURI(url);
 
     req.get(encodedUrl, null, function(err, response, body){
