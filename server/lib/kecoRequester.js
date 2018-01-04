@@ -6,7 +6,6 @@
 
 'use strict';
 
-var xml2json  = require('xml2js').parseString;
 var async = require('async');
 var req = require('request');
 
@@ -19,7 +18,7 @@ var AIRKOREA_DOMAIN = 'openapi.airkorea.or.kr';
 var DOMAIN_ARPLTN_KECO = 'http://'+AIRKOREA_DOMAIN+'/openapi/services/rest';
 
 var PATH_MSRSTN_INFO_INQIRE_SVC = 'MsrstnInfoInqireSvc';
-var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';
+var NEAR_BY_MSRSTN_LIST = 'getNearbyMsrstnList';            //근접측정소 목록 조회
 var MSRSTN_LIST = 'getMsrstnList';
 var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';        //미세먼지/오존 예보통보 조회
 
@@ -183,22 +182,6 @@ Keco.prototype.updateTimeGetCtprvn = function() {
     return this;
 };
 
-Keco.prototype._request = function (url, callback) {
-    req(url, function(err, response, body) {
-        if (err) {
-            return callback(err);
-        }
-        if ( response.statusCode >= 400) {
-            err = new Error(response.statusMessage);
-            err.statusCode = response.statusCode;
-            return callback(err);
-        }
-        return callback(err, body);
-    });
-
-    return this;
-};
-
 Keco.prototype._jsonRequest = function (url, callback) {
     log.info({kecoJsonRequestUrl:url});
     req(url, {json:true}, function(err, response, body) {
@@ -353,8 +336,6 @@ Keco.prototype._retryGetMsrstnList = function (index, callback) {
         '&ver=1.0'+
         '&numOfRows='+999 +
         '&_returnType=json';
-
-    log.debug(url);
 
     self._jsonRequest(url, function (err, result) {
         if (self._checkLimit(result)) {
@@ -623,7 +604,7 @@ Keco.prototype._retryGetFrcst = function (index, date, callback) {
         return callback(new Error("EXCEEDS_LIMIT"));
     }
 
-    log.info({index:index});
+    log.info({getFrcstIndex:index});
     var url = self._makeFrcstUrl(self._svcKeys[index], date);
     self._jsonRequest(url, function (err, result) {
         if (self._checkLimit(result)) {
@@ -918,10 +899,10 @@ Keco.prototype._retryGetNearbyMsrStn = function (index, my, mx, callback) {
         '&tmY='+my +
         '&tmX='+mx +
         '&pageNo='+ 1 +
-        '&numOfRows='+999;
+        '&numOfRows='+999 +
+        '&_returnType=json';
 
-    log.debug({url:url});
-    self._request(url, function (err, result) {
+    self._jsonRequest(url, function (err, result) {
         if (self._checkLimit(result)) {
             return self._retryGetNearbyMsrStn(--index, my, mx, callback);
         }
@@ -949,24 +930,20 @@ Keco.prototype.getNearbyMsrstn = function(my, mx, callback)  {
  * @param callback
  */
 Keco.prototype.getStationNameFromMsrstn = function(data, callback) {
-    xml2json(data, function (err, result) {
-        if (err) {
-            return callback(err);
+     if (typeof data === 'string') {
+        if (data.indexOf('xml') !== -1) {
+            callback(new Error(data));
+            return;
         }
-
-        //check header
-        if(parseInt(result.response.header[0].resultCode[0]) !== 0) {
-            err = new Error(result.response.header[0].resultMsg[0]);
-            log.error(err);
-            return callback(err);
-        }
-
-        var stnName = result.response.body[0].items[0].item[0].stationName[0];
-
-        log.silly(stnName);
-
-        return callback(null, stnName);
-    });
+    }
+    var stnName;
+    try {
+        stnName = data.list[0].stationName;
+    }
+    catch (err) {
+        return callback(err);
+    }
+    return callback(null, stnName);
 };
 
 /**
@@ -984,7 +961,6 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
     url += '&y='+y;
     url += '&toCoord=TM';
     url += '&output=json';
-    log.debug(url);
 
     this._jsonRequest(url, function (err, result) {
         callback(err, result);
