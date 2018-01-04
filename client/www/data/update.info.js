@@ -1,4 +1,4 @@
-window.appVersion = '0.9.73';
+window.appVersion = '0.9.74';
 window.updateInfo = [
     {
         lang: 'en',
@@ -8,7 +8,9 @@ window.updateInfo = [
             'have a nice day!'
         ],
         android: [],
-        ios: []
+        ios: [
+            '* Error of Widget has been improved.'
+        ]
     },
     {
         lang: 'ko',
@@ -20,7 +22,8 @@ window.updateInfo = [
         ],
         android: [],
         ios: [
-            '* 데이터 저장소 부족한 경우 앱데이터 초기화 되는 문제 개선하였습니다.'
+            '* 데이터 저장소 부족한 경우 앱데이터 초기화 되는 문제 개선하였습니다.',
+            '* Widget 오류 개선하였습니다.'
         ]
     }
 ];
