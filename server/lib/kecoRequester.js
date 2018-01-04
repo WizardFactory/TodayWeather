@@ -187,7 +187,7 @@ Keco.prototype.getUrlCtprvn = function(sido, key, apiPoint) {
  * @private
  */
 Keco.prototype._jsonRequest = function (url, callback) {
-    log.info({kecoJsonRequestUrl:url});
+    log.debug({kecoJsonRequestUrl:url});
     req(url, {json:true}, function(err, response, body) {
         if (err) {
             return callback(err);
@@ -756,6 +756,17 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
     return this;
 };
 
+Keco.prototype.removeMinuDustFrcst = function (callback) {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+    var strRemoveDataTime = kmaTimeLib.convertDateToYYYY_MM_DD(removeDate);
+
+    Frcst.remove({"informData": {$lt:strRemoveDataTime} }, function (err) {
+        log.info('removed keco frcst from date : ' + strRemoveDataTime);
+        if (callback)callback(err);
+    });
+};
+
 Keco.prototype.getMinuDustFrcstDspth = function(callback) {
     var self = this;
 
@@ -803,6 +814,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
             callback(err, result);
         });
 
+    self.removeMinuDustFrcst();
     return this;
 };
 
@@ -1076,7 +1088,7 @@ Keco.prototype.parseSidoCtprvn = function (data, callback) {
                            log.error("Unknown name ="+name);
                         }
                         if (isNaN(sidoArpltn[name])) {
-                            log.warn('name='+item.sidoName+'/'+item.cityName+' data time='+item.dataTime+' '+name + ' is NaN');
+                            log.debug('name='+item.sidoName+'/'+item.cityName+' data time='+item.dataTime+' '+name + ' is NaN');
                             delete sidoArpltn[name];
                         }
                     }

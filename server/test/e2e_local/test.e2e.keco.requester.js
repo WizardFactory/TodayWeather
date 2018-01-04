@@ -70,6 +70,16 @@ describe('e2e test - keco requester', function() {
         });
     });
 
+    it('remove MD Frcst', function (done) {
+        keco.removeMinuDustFrcst.call(keco, function (err) {
+            if (err) {
+                log.error(err);
+            }
+            console.log('get it done');
+            done();
+        });
+    });
+
     it('get real time ctprvn', function (done) {
         // var async = require('async');
         // async.retry(100,
