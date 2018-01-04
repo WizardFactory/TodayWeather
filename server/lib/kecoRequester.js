@@ -157,8 +157,9 @@ Keco.prototype.getUrlCtprvn = function(sido, key) {
         '?ServiceKey='+key +
         '&sidoName='+sido +
         '&pageNo='+ 1 +
-        '&ver=1.0'+
-        '&numOfRows='+999;
+        '&ver=1.3'+
+        '&numOfRows='+999+
+        '&_returnType=json';
 };
 
 /**
@@ -199,7 +200,7 @@ Keco.prototype._request = function (url, callback) {
 };
 
 Keco.prototype._jsonRequest = function (url, callback) {
-    log.info(url);
+    log.info({kecoJsonRequestUrl:url});
     req(url, {json:true}, function(err, response, body) {
         if (err) {
             return callback(err);
@@ -221,8 +222,7 @@ Keco.prototype._retryGetCtprvn = function (index, sidoName, callback) {
         return callback(new Error("EXCEEDS_LIMIT"));
     }
     var url = this.getUrlCtprvn(sidoName, self._svcKeys[index]);
-    log.info({url:url});
-    self._request(url, function (err, result) {
+    self._jsonRequest(url, function (err, result) {
         if (self._checkLimit(result)) {
             return self._retryGetCtprvn(--index, sidoName, callback);
         }
@@ -245,61 +245,6 @@ Keco.prototype.getCtprvn = function(sidoName, callback)  {
 };
 
 /**
- * refer arpltnKeco.js
- * @param stationName
- * @param dataTime
- * @param so2Value
- * @param coValue
- * @param o3Value
- * @param no2Value
- * @param pm10Value
- * @param pm25Value
- * @param khaiValue
- * @param khaiGrade
- * @param so2Grade
- * @param coGrade
- * @param o3Grade
- * @param no2Grade
- * @param pm10Grade
- * @param pm25Grade
- * @returns {{}}
- */
-Keco.prototype.makeArpltn = function (stationName, dataTime, so2Value, coValue,
-                                      o3Value, no2Value, pm10Value, pm25Value, khaiValue,
-                                      khaiGrade, so2Grade, coGrade, o3Grade,
-                                      no2Grade, pm10Grade, pm25Grade) {
-    var arpltn = {};
-    arpltn.stationName = stationName?stationName:'';
-    arpltn.dataTime = dataTime?dataTime:'';
-    arpltn.so2Value = parseFloat(so2Value);
-    arpltn.coValue = parseFloat(coValue);
-    arpltn.o3Value = parseFloat(o3Value);
-    arpltn.no2Value = parseFloat(no2Value);
-    arpltn.pm10Value = parseInt(pm10Value);
-    arpltn.pm25Value = parseInt(pm25Value);
-    arpltn.khaiValue = parseInt(khaiValue);
-    arpltn.khaiGrade = parseInt(khaiGrade);
-    arpltn.so2Grade = parseInt(so2Grade);
-    arpltn.coGrade = parseInt(coGrade);
-    arpltn.o3Grade = parseInt(o3Grade);
-    arpltn.no2Grade = parseInt(no2Grade);
-    arpltn.pm10Grade = parseInt(pm10Grade);
-    arpltn.pm25Grade = parseInt(pm25Grade);
-    for (var name in arpltn) {
-        if (name == 'stationName' || name == 'dataTime') {
-            continue;
-        }
-
-        if (isNaN(arpltn[name])) {
-            log.verbose('name='+arpltn.stationName+' data time='+arpltn.dataTime+' '+name + ' is NaN');
-            arpltn[name] = -1;
-        }
-    }
-
-    return arpltn;
-};
-
-/**
  *
  * @param data
  * @param callback
@@ -308,33 +253,70 @@ Keco.prototype.parseCtprvn = function (data, callback) {
     log.debug('parse Ctpvrn');
     var self = this;
 
-    xml2json(data, function (err, result) {
-        if (err) {
-            return callback(err);
+    if (typeof data === 'string') {
+        if (data.indexOf('xml') != -1) {
+            callback(new Error(data));
+            return;
         }
-
-        //check header
-        if(parseInt(result.response.header[0].resultCode[0]) !== 0) {
-            err = new Error(result.response.header[0].resultMsg[0]);
-            log.error(err);
-            return callback(err);
-        }
-
-        var arpltnList = [];
-        var itemList = result.response.body[0].items[0].item;
-        log.debug('arpltn list length='+itemList.length);
-        itemList.forEach(function(item) {
+    }
+    var arpltnList = [];
+    try {
+        var list = data.list;
+        list.forEach(function (item) {
             log.debug(JSON.stringify(item));
-            var arpltn = self.makeArpltn(
-                    item.stationName[0], item.dataTime[0], item.so2Value[0], item.coValue[0], item.o3Value[0],
-                    item.no2Value[0], item.pm10Value[0], item.pm25Value[0], item.khaiValue[0], item.khaiGrade[0], item.so2Grade[0],
-                    item.coGrade[0], item.o3Grade[0], item.no2Grade[0], item.pm10Grade[0], item.pm25Grade[0]);
-            //log.info(arpltn);
+            var arpltn = {};
+            Arpltn.getKeyList().forEach(function (name) {
+                if(item.hasOwnProperty(name))   {
+                    if (name === 'stationName' || name === 'mangName' || name === 'dataTime') {
+                       arpltn[name]  = item[name];
+                       if (name === 'dataTime') {
+                           arpltn.date = new Date(item[name]);
+                       }
+                    }
+                    else {
+                        if (name.indexOf('Value') != -1){
+                            arpltn[name] = parseFloat(item[name]);
+                        }
+                        else if (name.indexOf('Grade') != -1){
+                            arpltn[name] = parseInt(item[name]);
+                        }
+                        else {
+                           log.error("Unknown name ="+name);
+                        }
+                        if (isNaN(arpltn[name])) {
+                            log.verbose('name='+item.stationName+' data time='+item.dataTime+' '+name + ' is NaN');
+                            delete arpltn[name];
+                        }
+                    }
+                }
+            });
+
+            //pm10Grade -> pm10Grade24, pm10Grade1h -> pm10Grade,
+            //pm25Grade -> pm25Grade24, pm25Grade1h -> pm25Grade,
+            if (arpltn.hasOwnProperty('pm10Grade')) {
+                arpltn.pm10Grade24 = arpltn.pm10Grade;
+                delete arpltn.pm10Grade;
+            }
+            if(arpltn.hasOwnProperty('pm10Grade1h')) {
+                arpltn.pm10Grade = arpltn.pm10Grade1h;
+                delete arpltn.pm10Grade1h;
+            }
+            if (arpltn.hasOwnProperty('pm25Grade')) {
+                arpltn.pm25Grade24 = arpltn.pm25Grade;
+                delete arpltn.pm25Grade;
+            }
+            if(arpltn.hasOwnProperty('pm25Grade1h')) {
+                arpltn.pm25Grade = arpltn.pm25Grade1h;
+                delete arpltn.pm25Grade1h;
+            }
             arpltnList.push(arpltn);
         });
+    }
+    catch (err) {
+        return callback(err);
+    }
 
-        callback(null, arpltnList);
-    });
+    callback(undefined, arpltnList);
 };
 
 /**

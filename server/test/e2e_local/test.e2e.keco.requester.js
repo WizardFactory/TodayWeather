@@ -134,10 +134,16 @@ describe('e2e test - keco requester', function() {
         var Arpltn = require('../../models/arpltnKeco');
 
         keco.getAllCtprvn(['서울'], null, function(err) {
-            if (err) console.log(err);
+            if (err) {
+                console.log(err);
+                return done();
+            }
 
             Arpltn.find({}, function(err, arpltnList) {
-                if(err) console.log(err);
+                if(err) {
+                    console.log(err);
+                    return done();
+                }
                 console.log(arpltnList);
                 done();
             });

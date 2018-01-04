@@ -151,6 +151,7 @@ describe('unit test - keco requester', function() {
     });
     it('get Ctpvn url', function () {
         var url = keco.getUrlCtprvn(keco._sidoList[0], keco._svcKeys[0]);
+        console.info(url);
         assert.notEqual(url.search('sidoName'), -1, '');
     });
     it('update time to get Ctpvn', function () {
@@ -180,6 +181,104 @@ describe('unit test - keco requester', function() {
             else {
                 assert.equal(result, '옥천동', '');
             }
+            done();
+        });
+    });
+
+    it('parse ctprvn', function (done) {
+        var data = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n<header>\n<resultCode>22</resultCode>\n' +
+            '<resultMsg>LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.</resultMsg>\n</header>\n</response>';
+
+        keco.parseCtprvn(data, function (err, result) {
+            assert.equal(!!err, true);
+            done();
+        });
+    });
+
+    it('parse ctprvn', function (done) {
+        var data = {
+            "list": [
+                {
+                    "_returnType": "json",
+                    "coGrade": "1",
+                    "coValue": "0.5",
+                    "dataTerm": "",
+                    "dataTime": "2018-01-04 08:00",
+                    "khaiGrade": "2",
+                    "khaiValue": "58",
+                    "mangName": "도시대기",
+                    "no2Grade": "2",
+                    "no2Value": "0.035",
+                    "numOfRows": "10",
+                    "o3Grade": "1",
+                    "o3Value": "0.005",
+                    "pageNo": "1",
+                    "pm10Grade": "1",
+                    "pm10Grade1h": "2",
+                    "pm10Value": "28",
+                    "pm10Value24": "28",
+                    "pm25Grade": "2",
+                    "pm25Grade1h": "3",
+                    "pm25Value": "16",
+                    "pm25Value24": "16",
+                    "resultCode": "",
+                    "resultMsg": "",
+                    "rnum": 0,
+                    "serviceKey": "",
+                    "sidoName": "",
+                    "so2Grade": "1",
+                    "so2Value": "0.004",
+                    "stationCode": "",
+                    "stationName": "중구",
+                    "totalCount": "",
+                    "ver": ""
+                },
+                {
+                    "_returnType": "json",
+                    "coGrade": "1",
+                    "coValue": "0.5",
+                    "dataTerm": "",
+                    "dataTime": "2018-01-04 08:00",
+                    "khaiGrade": "2",
+                    "khaiValue": "80",
+                    "mangName": "도로변대기",
+                    "no2Grade": "2",
+                    "no2Value": "0.048",
+                    "numOfRows": "10",
+                    "o3Grade": "1",
+                    "o3Value": "0.004",
+                    "pageNo": "1",
+                    "pm10Grade": "2",
+                    "pm10Grade1h": "1",
+                    "pm10Value": "29",
+                    "pm10Value24": "33",
+                    "pm25Grade": "-",
+                    "pm25Grade1h": "-",
+                    "pm25Value": "-",
+                    "pm25Value24": "-",
+                    "resultCode": "",
+                    "resultMsg": "",
+                    "rnum": 0,
+                    "serviceKey": "",
+                    "sidoName": "",
+                    "so2Grade": "1",
+                    "so2Value": "0.004",
+                    "stationCode": "",
+                    "stationName": "한강대로",
+                    "totalCount": "",
+                    "ver": ""
+                }],
+            "totalCount": 2
+        };
+
+        keco.parseCtprvn(data, function (err, result) {
+            if(err) {
+                console.error(err);
+            }
+            assert.equal(data.list[0].pm10Grade1h, result[0].pm10Grade);
+            assert.equal(data.list[0].pm10Grade, result[0].pm10Grade24);
+            assert.equal(data.list[0].pm25Grade1h, result[0].pm25Grade);
+            assert.equal(data.list[0].pm25Grade, result[0].pm25Grade24);
             done();
         });
     });
