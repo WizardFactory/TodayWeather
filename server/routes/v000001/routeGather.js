@@ -114,6 +114,15 @@ router.get('/keco', function(req, res) {
     });
 });
 
+router.get('/kecoSido', function(req, res) {
+    manager.keco.cbKecoSidoProcess(manager.keco, function (err) {
+        if (err) {
+            log.error(err);
+        }
+        res.send();
+    });
+});
+
 router.get('/kecoForecast', function(req, res) {
     manager.keco.getMinuDustFrcstDspth.call(manager.keco, function (err) {
         if (err !== 'skip') {

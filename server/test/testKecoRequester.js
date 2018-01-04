@@ -145,36 +145,11 @@ describe('unit test - keco requester', function() {
     //    });
     //});
 
-    it('get sido list', function () {
-        list = keco.getCtprvnSidoList();
-        assert.equal(list.length, keco._sidoList.length, '');
-    });
-    it('get Ctpvn url', function () {
-        var url = keco.getUrlCtprvn(keco._sidoList[0], keco._svcKeys[0]);
-        console.info(url);
-        assert.notEqual(url.search('sidoName'), -1, '');
-    });
-    it('update time to get Ctpvn', function () {
-        var time = new Date();
-        time.setHours(time.getHours()+1);
-        keco.updateTimeGetCtprvn();
-        assert.equal(keco._nextGetCtprvnTime.getHours(), time.getHours(), '');
-    });
-
-    it('check time to get Ctpvn', function () {
-        assert.equal(keco.checkGetCtprvnTime(new Date()), false, '');
-    });
-
     it('parse Near By Msrstn', function (done) {
-        var body = '<?xml version="1.0" encoding="UTF-8"?>'+
-            '<response> <header> <resultCode>00</resultCode> <resultMsg>NORMAL SERVICE.</resultMsg> </header>'+
-            '<body> <items> <item> <stationName>옥천동</stationName> <addr>강원 강릉시 옥천동327-2(옥천동주민센터)</addr> '+
-            '<tm>2.1</tm> </item> <item> <stationName>천곡동</stationName> <addr>강원 동해시 천곡동806 (동해시청 4층 옥상)'+
-            '</addr> <tm>32.5</tm> </item> <item> <stationName>남양동1</stationName> '+
-            '<addr>강원 삼척시 남양동339-1 (남양동 주민센터 3층 옥상)</addr> <tm>42.8</tm> </item> </items> '+'' +
-            '<numOfRows>999</numOfRows> <pageNo>1</pageNo> <totalCount>3</totalCount> </body> </response>';
+        var body = {"MsrstnInfoInqireSvrVo":{"_returnType":"json","addr":"","districtNum":"","dmX":"","dmY":"","item":"","mangName":"","map":"","numOfRows":"999","oper":"","pageNo":"1","photo":"","resultCode":"","resultMsg":"","rnum":0,"serviceKey":"IfYrzwwzM4R7/6n5wm/1hGrS4mmny6clwzjgSSoq1E2W8/c/AumCj3LVl7Rggb5e85PlgadzBP3WY5+cMBCb1g==","sggName":"","sidoName":"","stationCode":"","stationName":"","tm":0,"tmX":"369036.86549488344","tmY":"476266.59248414496","totalCount":"","umdName":"","ver":"","vrml":"","year":""},"list":[{"_returnType":"json","addr":"강원 강릉시 옥천동 327-2(옥천동주민센터)옥천동주민센터","districtNum":"","dmX":"","dmY":"","item":"","mangName":"","map":"","numOfRows":"10","oper":"","pageNo":"1","photo":"","resultCode":"","resultMsg":"","rnum":0,"serviceKey":"","sggName":"","sidoName":"","stationCode":"","stationName":"옥천동","tm":2.1,"tmX":"","tmY":"","totalCount":"","umdName":"","ver":"","vrml":"","year":""},{"_returnType":"json","addr":"강원 동해시 천곡동 806 (동해시청 4층 옥상)동해시청 4층 옥상","districtNum":"","dmX":"","dmY":"","item":"","mangName":"","map":"","numOfRows":"10","oper":"","pageNo":"1","photo":"","resultCode":"","resultMsg":"","rnum":0,"serviceKey":"","sggName":"","sidoName":"","stationCode":"","stationName":"천곡동","tm":32.5,"tmX":"","tmY":"","totalCount":"","umdName":"","ver":"","vrml":"","year":""},{"_returnType":"json","addr":"강원 삼척시 남양동 339-1남양동 주민센터 3층 옥상","districtNum":"","dmX":"","dmY":"","item":"","mangName":"","map":"","numOfRows":"10","oper":"","pageNo":"1","photo":"","resultCode":"","resultMsg":"","rnum":0,"serviceKey":"","sggName":"","sidoName":"","stationCode":"","stationName":"남양동1","tm":42.8,"tmX":"","tmY":"","totalCount":"","umdName":"","ver":"","vrml":"","year":""}],"parm":{"_returnType":"json","addr":"","districtNum":"","dmX":"","dmY":"","item":"","mangName":"","map":"","numOfRows":"999","oper":"","pageNo":"1","photo":"","resultCode":"","resultMsg":"","rnum":0,"serviceKey":"IfYrzwwzM4R7/6n5wm/1hGrS4mmny6clwzjgSSoq1E2W8/c/AumCj3LVl7Rggb5e85PlgadzBP3WY5+cMBCb1g==","sggName":"","sidoName":"","stationCode":"","stationName":"","tm":0,"tmX":"369036.86549488344","tmY":"476266.59248414496","totalCount":"","umdName":"","ver":"","vrml":"","year":""},"totalCount":3};
 
         keco.getStationNameFromMsrstn(body, function (err, result) {
+            assert.equal(err, null, '');
             if (err) {
                 console.error(err);
             }
@@ -185,17 +160,27 @@ describe('unit test - keco requester', function() {
         });
     });
 
-    it('parse ctprvn', function (done) {
+    it('get sido list', function () {
+        list = keco.getCtprvnSidoList();
+        assert.equal(list.length, keco._sidoList.length, '');
+    });
+    it('get All Ctpvn url', function () {
+        var url = keco.getUrlCtprvn(keco._sidoList[0], keco._svcKeys[0], 'getCtprvnRltmMesureDnsty');
+        console.info(url);
+        assert.notEqual(url.search('sidoName'), -1, '');
+    });
+
+    it('parse real time ctprvn in error case', function (done) {
         var data = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n<header>\n<resultCode>22</resultCode>\n' +
             '<resultMsg>LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.</resultMsg>\n</header>\n</response>';
 
-        keco.parseCtprvn(data, function (err) {
+        keco.parseRLTMCtprvn(data, function (err) {
             assert.equal(!!err, true);
             done();
         });
     });
 
-    it('parse ctprvn', function (done) {
+    it('parse real time ctprvn in right data', function (done) {
         var data = {
             "list": [
                 {
@@ -271,7 +256,7 @@ describe('unit test - keco requester', function() {
             "totalCount": 2
         };
 
-        keco.parseCtprvn(data, function (err, result) {
+        keco.parseRLTMCtprvn(data, function (err, result) {
             if(err) {
                 console.error(err);
             }
@@ -282,4 +267,36 @@ describe('unit test - keco requester', function() {
             done();
         });
     });
+
+    it('get Sido Ctpvn url', function () {
+        var url = keco.getUrlCtprvn(keco._sidoList[0], keco._svcKeys[0], 'getCtprvnMesureSidoLIst');
+        console.info(url);
+        assert.notEqual(url.search('sidoName'), -1, '');
+    });
+
+    it('parse sido ctprvn in error case', function (done) {
+        var data = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n<header>\n<resultCode>22</resultCode>\n' +
+            '<resultMsg>LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.</resultMsg>\n</header>\n</response>';
+
+        keco.parseSidoCtprvn(data, function (err) {
+            assert.equal(!!err, true);
+            done();
+        });
+    });
+
+    it('parse sido ctprvn in right data', function (done) {
+
+        var data = {"list":[{"_returnType":"json","cityName":"강남구","cityNameEng":"Gangnam-gu","coValue":"0.6","dataGubun":"","dataTime":"2018-01-04 18:00","districtCode":"02","districtNumSeq":"001","itemCode":"","khaiValue":"","no2Value":"0.049","numOfRows":"10","o3Value":"0.002","pageNo":"1","pm10Value":"41","pm25Value":"33","resultCode":"","resultMsg":"","searchCondition":"","serviceKey":"","sidoName":"서울","so2Value":"0.005","totalCount":""},{"_returnType":"json","cityName":"강동구","cityNameEng":"Gangdong-gu","coValue":"0.6","dataGubun":"","dataTime":"2018-01-04 18:00","districtCode":"02","districtNumSeq":"002","itemCode":"","khaiValue":"","no2Value":"0.049","numOfRows":"10","o3Value":"0.002","pageNo":"1","pm10Value":"56","pm25Value":"26","resultCode":"","resultMsg":"","searchCondition":"","serviceKey":"","sidoName":"서울","so2Value":"0.005","totalCount":""}],"parm":{"_returnType":"json","cityName":"","cityNameEng":"","coValue":"","dataGubun":"","dataTime":"","districtCode":"","districtNumSeq":"","itemCode":"","khaiValue":"","no2Value":"","numOfRows":"999","o3Value":"","pageNo":"1","pm10Value":"","pm25Value":"","resultCode":"","resultMsg":"","searchCondition":"HOUR","serviceKey":"pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F/PS1pchRtnCa+SBLwlVt/rHwb44YC4ksQWcdEg==","sidoName":"서울","so2Value":"","totalCount":""},"CtprvnMesureLIstVo2":{"_returnType":"json","cityName":"","cityNameEng":"","coValue":"","dataGubun":"","dataTime":"","districtCode":"","districtNumSeq":"","itemCode":"","khaiValue":"","no2Value":"","numOfRows":"999","o3Value":"","pageNo":"1","pm10Value":"","pm25Value":"","resultCode":"","resultMsg":"","searchCondition":"HOUR","serviceKey":"pJgU9WpeXT9jnlUhdZftdPk53BA68c4inIUi4ycJe4iNHH9F/PS1pchRtnCa+SBLwlVt/rHwb44YC4ksQWcdEg==","sidoName":"서울","so2Value":"","totalCount":""},"totalCount":2};
+
+        keco.parseSidoCtprvn(data, function (err, result) {
+            if(err) {
+                console.error(err);
+            }
+            assert.equal(data.list[0].pm10Value, result[0].pm10Value);
+            assert.equal(data.list[1].cityName, result[1].cityName);
+            assert.equal(result[1].itemCode, null);
+            done();
+        });
+    });
+
 });

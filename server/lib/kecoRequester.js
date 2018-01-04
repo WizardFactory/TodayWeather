@@ -12,6 +12,8 @@ var req = require('request');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
 var Frcst = require('../models/modelMinuDustFrcst');
+var SidoArpltn = require('../models/sido.arpltn.keco.model');
+
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var AIRKOREA_DOMAIN = 'openapi.airkorea.or.kr';
@@ -24,6 +26,7 @@ var MINU_DUST_FRCST_DSPTH = 'getMinuDustFrcstDspth';        //미세먼지/오�
 
 var PATH_ARPLTN_INFOR_INQIRE_SVC = 'ArpltnInforInqireSvc';
 var CTPRVN_RLTM_MESURE_DNSTY = 'getCtprvnRltmMesureDnsty';  //시도별 실시간 측정정보 조회
+var CTPRVN_MESURE_SIDO_LIST = 'getCtprvnMesureSidoLIst'; //시도별 실시간 평균정보 조회
 
 var dnscache = require('dnscache')({
     "enable" : true,
@@ -36,9 +39,9 @@ var dnscache = require('dnscache')({
  * @constructor
  */
 function Keco() {
-    this._nextGetCtprvnTime = new Date();
     this._svcKeys ='';
     this._sidoList = [];
+    this._currentRltmIndex = 0;
     this._currentSidoIndex = 0;
     this._daumApiKeys = '';  //for convert x,y
 
@@ -96,6 +99,11 @@ Keco.prototype.getCtprvnSidoList = function() {
     return this._sidoList;
 };
 
+/**
+ *
+ * @param regionName
+ * @returns {string}
+ */
 Keco.prototype.convertRegionToSido = function(regionName) {
     switch (regionName) {
         case '강원도': case '강원':
@@ -140,9 +148,10 @@ Keco.prototype.convertRegionToSido = function(regionName) {
  *
  * @param sido
  * @param key
+ * @param apiPoint CTPRVN_RLTM_MESURE_DNSTY, CTPRVN_MESURE_SIDO_LIST
  * @returns {string}
  */
-Keco.prototype.getUrlCtprvn = function(sido, key) {
+Keco.prototype.getUrlCtprvn = function(sido, key, apiPoint) {
     if (!key)  {
         key = this._svcKeys[0];
     }
@@ -152,36 +161,31 @@ Keco.prototype.getUrlCtprvn = function(sido, key) {
         return;
     }
     sido = encodeURIComponent(sido);
-    return DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + CTPRVN_RLTM_MESURE_DNSTY +
+    var url = DOMAIN_ARPLTN_KECO + '/' + PATH_ARPLTN_INFOR_INQIRE_SVC + '/' + apiPoint +
         '?ServiceKey='+key +
         '&sidoName='+sido +
         '&pageNo='+ 1 +
-        '&ver=1.3'+
         '&numOfRows='+999+
         '&_returnType=json';
+    if(apiPoint === CTPRVN_RLTM_MESURE_DNSTY) {
+        url += '&ver=1.3';
+    }
+    else if (apiPoint === CTPRVN_MESURE_SIDO_LIST) {
+        url += '&searchCondition=HOUR';
+    }
+    else {
+        log.error('get url ctprn unknown apiPoint='+apiPoint);
+    }
+    return url;
 };
 
 /**
  *
- * @param time
- * @returns {boolean}
- */
-Keco.prototype.checkGetCtprvnTime = function(time) {
-    return time.getTime() >= this._nextGetCtprvnTime.getTime();
-};
-
-/**
- *
+ * @param url
+ * @param callback
  * @returns {Keco}
+ * @private
  */
-Keco.prototype.updateTimeGetCtprvn = function() {
-    this._nextGetCtprvnTime.setHours(this._nextGetCtprvnTime.getHours()+1);
-    this._nextGetCtprvnTime.setMinutes(5);
-    this._nextGetCtprvnTime.setSeconds(0);
-
-    return this;
-};
-
 Keco.prototype._jsonRequest = function (url, callback) {
     log.info({kecoJsonRequestUrl:url});
     req(url, {json:true}, function(err, response, body) {
@@ -199,15 +203,24 @@ Keco.prototype._jsonRequest = function (url, callback) {
     return this;
 };
 
-Keco.prototype._retryGetCtprvn = function (index, sidoName, callback) {
+/**
+ *
+ * @param index
+ * @param sidoName
+ * @param apiPoint CTPRVN_RLTM_MESURE_DNSTY, CTPRVN_MESURE_SIDO_LIST
+ * @param callback
+ * @returns {*}
+ * @private
+ */
+Keco.prototype._retryGetCtprvn = function (index, sidoName, apiPoint, callback) {
     var self = this;
     if (index < 0) {
         return callback(new Error("EXCEEDS_LIMIT"));
     }
-    var url = this.getUrlCtprvn(sidoName, self._svcKeys[index]);
+    var url = this.getUrlCtprvn(sidoName, self._svcKeys[index], apiPoint);
     self._jsonRequest(url, function (err, result) {
         if (self._checkLimit(result)) {
-            return self._retryGetCtprvn(--index, sidoName, callback);
+            return self._retryGetCtprvn(--index, sidoName, apiPoint, callback);
         }
         callback(err, result);
     });
@@ -215,13 +228,20 @@ Keco.prototype._retryGetCtprvn = function (index, sidoName, callback) {
     return this;
 };
 
+Keco.prototype.getRLTMCtprvn = function(sidoName, callback)  {
+    this.getCtprvn(sidoName, CTPRVN_RLTM_MESURE_DNSTY, function (err, result) {
+        callback(err, result);
+    });
+    return this;
+};
+
 /**
- * It hasn't supported json format
  * @param sidoName
+ * @param apiPoint CTPRVN_RLTM_MESURE_DNSTY, CTPRVN_MESURE_SIDO_LIST
  * @param callback
  */
-Keco.prototype.getCtprvn = function(sidoName, callback)  {
-    this._retryGetCtprvn(this._svcKeys.length-1, sidoName, function (err, result) {
+Keco.prototype.getCtprvn = function(sidoName, apiPoint, callback)  {
+    this._retryGetCtprvn(this._svcKeys.length-1, sidoName, apiPoint, function (err, result) {
         callback(err, result);
     });
     return this;
@@ -232,8 +252,8 @@ Keco.prototype.getCtprvn = function(sidoName, callback)  {
  * @param data
  * @param callback
  */
-Keco.prototype.parseCtprvn = function (data, callback) {
-    log.debug('parse Ctpvrn');
+Keco.prototype.parseRLTMCtprvn = function (data, callback) {
+    log.debug('parse real time Ctpvrn');
     var self = this;
 
     if (typeof data === 'string') {
@@ -307,7 +327,7 @@ Keco.prototype.parseCtprvn = function (data, callback) {
  * @param arpltnList
  * @param callback
  */
-Keco.prototype.saveCtprvn = function (arpltnList, callback) {
+Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
     log.debug('save Ctpvrn');
 
     async.map(arpltnList,
@@ -709,7 +729,7 @@ Keco.prototype._saveFrcst = function(frcstList, callback) {
                                             }
                                         }
                                         if (j == shFrcstList[0][name].length) {
-                                            log.warn("_saveFrcst : region is new? name="+informGradeArray[i].region);
+                                            log.warn("save Frcst : region is new? name="+informGradeArray[i].region);
                                             shFrcstList[0][name].push(informGradeArray[i]);
                                         }
                                     }
@@ -802,11 +822,11 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
     }
 
     if (!index) {
-        index = this._currentSidoIndex;
+        index = this._currentRltmIndex;
     }
     if (typeof index === 'function') {
         callback = index;
-        index = this._currentSidoIndex;
+        index = this._currentRltmIndex;
     }
 
     var self = this;
@@ -818,7 +838,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
         function(sido, callback) {
             async.waterfall([
                 function(cb) {
-                    self.getCtprvn(sido, function (err, body) {
+                    self.getCtprvn(sido, CTPRVN_RLTM_MESURE_DNSTY, function (err, body) {
                         if (err) {
                             return cb(err);
                         }
@@ -826,7 +846,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
                     });
                 },
                 function(rcv, cb) {
-                    self.parseCtprvn(rcv, function (err, parsedDataList) {
+                    self.parseRLTMCtprvn(rcv, function (err, parsedDataList) {
                         if (err) {
                             return cb(err);
                         }
@@ -834,7 +854,7 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
                     });
                 },
                 function(parsedDataList, cb) {
-                    self.saveCtprvn(parsedDataList, function(err){
+                    self.saveRLTMCtprvn(parsedDataList, function(err){
                         log.debug(err);
                         return cb(err);
                     });
@@ -851,13 +871,12 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
                 else {
                     log.error(err);
                 }
-                self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
-                log.info('KECO: next index='+self._currentSidoIndex);
+                self._currentRltmIndex = self._sidoList.indexOf(results[results.length-1].sido);
+                log.info('KECO: next index='+self._currentRltmIndex);
                 return callback(err);
             }
 
-            self.updateTimeGetCtprvn();
-            self._currentSidoIndex = 0;
+            self._currentRltmIndex = 0;
 
             if(callback) {
                 callback(err);
@@ -969,13 +988,13 @@ Keco.prototype.getTmPointFromWgs84 = function (key, y, x, callback) {
 
 Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
     if (count <= 0)  {
-        return callback(new Error("KECO: Fail to get all ctpvrn it's stoped index="+self._currentSidoIndex));
+        return callback(new Error("KECO: Fail to get all ctpvrn it's stoped index="+self._currentRltmIndex));
     }
     count--;
 
     self.getAllCtprvn(function (err) {
         if (err) {
-            log.warn('KECO: Stopped index='+self._currentSidoIndex);
+            log.warn('KECO: Stopped index='+self._currentRltmIndex);
             return self.retryGetAllCtprvn(self, count, callback);
         }
         callback(err);
@@ -984,13 +1003,13 @@ Keco.prototype.retryGetAllCtprvn = function (self, count, callback) {
     return this;
 };
 
-Keco.prototype.removeOldData = function (callback) {
+Keco.prototype.removeOldAllCtprvn = function (callback) {
     var removeDate = new Date();
     removeDate.setDate(removeDate.getDate()-10);
     var strRemoveDataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(removeDate);
 
     Arpltn.remove({"dataTime": {$lt:strRemoveDataTime} }, function (err) {
-        log.info('removed keco data from date : ' + strRemoveDataTime);
+        log.info('removed keco all data from date : ' + strRemoveDataTime);
         if (callback)callback(err);
     });
 };
@@ -1007,39 +1026,242 @@ Keco.prototype.cbKecoProcess = function (self, callback) {
 
     self.retryGetAllCtprvn(self, 10, function (err) {
         if (err) {
-            log.warn('KECO: Stopped index='+self._currentSidoIndex);
+            log.warn('KECO: Stopped all index='+self._currentRltmIndex);
             return callback(err);
         }
         callback(err);
     });
 
-    self.removeOldData();
+    self.removeOldAllCtprvn();
+    return this;
+};
+
+/**
+ *
+ * @param data
+ * @param callback
+ */
+Keco.prototype.parseSidoCtprvn = function (data, callback) {
+    log.debug('parse Sido Ctpvrn');
+
+    if (typeof data === 'string') {
+        if (data.indexOf('xml') !== -1) {
+            callback(new Error(data));
+            return;
+        }
+    }
+
+    var sidoArpltnList = [];
+    try {
+        var list = data.list;
+        list.forEach(function (item) {
+            log.debug(JSON.stringify(item));
+            var sidoArpltn = {};
+            SidoArpltn.getKeyList().forEach(function (name) {
+                if(item.hasOwnProperty(name))   {
+                    if (name === 'sidoName' || name === 'cityName' || name === 'cityNameEng' || name === 'dataTime') {
+                       sidoArpltn[name]  = item[name];
+                       if (name === 'dataTime') {
+                           sidoArpltn.date = new Date(item[name]);
+                       }
+                       if (name === 'cityName') {
+                           sidoArpltn.sidocityName = item.sidoName+'/'+item.cityName;
+                       }
+                    }
+                    else {
+                        if (name.indexOf('Value') !== -1){
+                            sidoArpltn[name] = parseFloat(item[name]);
+                        }
+                        else {
+                           log.error("Unknown name ="+name);
+                        }
+                        if (isNaN(sidoArpltn[name])) {
+                            log.warn('name='+item.sidoName+'/'+item.cityName+' data time='+item.dataTime+' '+name + ' is NaN');
+                            delete sidoArpltn[name];
+                        }
+                    }
+                }
+            });
+            sidoArpltnList.push(sidoArpltn);
+        });
+    }
+    catch (err) {
+        return callback(err);
+    }
+
+    callback(undefined, sidoArpltnList);
+};
+
+/**
+ *
+ * @param arpltnList
+ * @param callback
+ */
+Keco.prototype.saveSidoCtprvn = function (arpltnList, callback) {
+    log.debug('save Sido Ctpvrn');
+
+    async.map(arpltnList,
+        function(sidoArpltn, callback) {
+            SidoArpltn.update({sidocityName: sidoArpltn.sidocityName, date: sidoArpltn.date}, sidoArpltn, {upsert:true}, function (err, raw) {
+                if (err) {
+                    log.error(err);
+                    return callback(err);
+                }
+                log.silly('The raw response from Mongo was ', JSON.stringify(raw));
+                callback(err, raw);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            callback(null, results);
+        });
+};
+
+/**
+ * @param list
+ * @param index
+ * @param callback
+ */
+Keco.prototype.getSidoCtprvn = function(list, index, callback) {
+    if (!list) {
+        list = this._sidoList;
+    }
+    if (typeof list === 'function') {
+        callback = list;
+        list = this._sidoList;
+    }
+
+    if (!index) {
+        index = this._currentSidoIndex;
+    }
+    if (typeof index === 'function') {
+        callback = index;
+        index = this._currentSidoIndex;
+    }
+
+    var self = this;
+    list = list.slice(index);
+
+    log.info('get Sido Ctprvn start from '+list[0]);
+
+    async.mapSeries(list,
+        function(sido, callback) {
+            async.waterfall([
+                function(cb) {
+                    self.getCtprvn(sido, CTPRVN_MESURE_SIDO_LIST, function (err, body) {
+                        if (err) {
+                            return cb(err);
+                        }
+                        cb(err, body);
+                    });
+                },
+                function(rcv, cb) {
+                    self.parseSidoCtprvn(rcv, function (err, parsedDataList) {
+                        if (err) {
+                            return cb(err);
+                        }
+                        cb(err, parsedDataList);
+                    });
+                },
+                function(parsedDataList, cb) {
+                    self.saveSidoCtprvn(parsedDataList, function(err){
+                        log.debug(err);
+                        return cb(err);
+                    });
+                }
+            ], function(err) {
+                callback(err, {sido: sido});
+            });
+        },
+        function(err, results) {
+            if(err) {
+                if (err.statusCode == 503) {
+                    log.warn(err);
+                }
+                else {
+                    log.error(err);
+                }
+                self._currentSidoIndex = self._sidoList.indexOf(results[results.length-1].sido);
+                log.info('KECO: next index='+self._currentSidoIndex);
+                return callback(err);
+            }
+
+            self._currentSidoIndex = 0;
+
+            if(callback) {
+                callback(err);
+            }
+        });
+};
+
+Keco.prototype.retryGetSidoCtprvn = function (self, count, callback) {
+    if (count <= 0)  {
+        return callback(new Error("KECO: Fail to get Sido ctpvrn it's stoped index="+self._currentSidoIndex));
+    }
+    count--;
+
+    self.getSidoCtprvn(function (err) {
+        if (err) {
+            log.warn('KECO: Stopped sido index='+self._currentSidoIndex);
+            return self.retryGetSidoCtprvn(self, count, callback);
+        }
+        callback(err);
+    });
+
+    return this;
+};
+
+Keco.prototype.removeOldSidoCtprvn = function (callback) {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+
+    SidoArpltn.remove({"date": {$lt:removeDate} }, function (err) {
+        log.info('removed keco sido data from date : ' + removeDate);
+        if (callback)callback(err);
+    });
+};
+
+Keco.prototype.cbKecoSidoProcess = function (self, callback) {
+
+    callback = callback || function(){};
+
+    self.retryGetSidoCtprvn(self, 10, function (err) {
+        if (err) {
+            log.warn('KECO: Stopped sido index='+self._currentSidoIndex);
+            return callback(err);
+        }
+        callback(err);
+    });
+
+    self.removeOldSidoCtprvn();
     return this;
 };
 
 /**
  * start to get data from Keco
  */
-Keco.prototype.start = function () {
-    log.info('start KECO SERVICE');
-
-    this.getAllMsrStnInfo(function (err) {
-        if (err) {
-            if (err.statusCode == 503) {
-                log.warn(err);
-            }
-            else {
-                log.error(err);
-            }
-        }
-        else {
-            log.info('keco get all msr stn info list');
-        }
-    });
-
-    this.getCtprvnSidoList();
-
-    setInterval(this.cbKecoProcess, 60*1000*10, this); //10min
-};
+// Keco.prototype.start = function () {
+//     log.info('start KECO SERVICE');
+//
+//     this.getAllMsrStnInfo(function (err) {
+//         if (err) {
+//             if (err.statusCode == 503) {
+//                 log.warn(err);
+//             }
+//             else {
+//                 log.error(err);
+//             }
+//         }
+//         else {
+//             log.info('keco get all msr stn info list');
+//         }
+//     });
+//
+//     this.getCtprvnSidoList();
+//
+//     setInterval(this.cbKecoProcess, 60*1000*10, this); //10min
+// };
 
 module.exports = Keco;

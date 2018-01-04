@@ -811,7 +811,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         },
         function(stationName, cb) {
             var sido = keco.convertRegionToSido(town.first);
-            keco.getCtprvn(sido, function (err, body) {
+            keco.getRLTMCtprvn(sido, function (err, body) {
                 if (err) {
                     return cb(err);
                 }
@@ -819,7 +819,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(xmlCtprvn, cb) {
-            keco.parseCtprvn(xmlCtprvn, function (err, parsedDataList) {
+            keco.parseRLTMCtprvn(xmlCtprvn, function (err, parsedDataList) {
                 if (err) {
                     return cb(err);
                 }
@@ -827,7 +827,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(parsedDataList, cb) {
-            keco.saveCtprvn(parsedDataList, function(err){
+            keco.saveRLTMCtprvn(parsedDataList, function(err){
                 if (err) {
                     log.warn(err);
                 }
