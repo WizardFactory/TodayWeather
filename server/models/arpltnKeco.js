@@ -2,6 +2,8 @@
  * Created by aleckim on 2015. 10. 24..
  */
 
+'use strict';
+
 var mongoose = require('mongoose');
 
 var aSchema = new mongoose.Schema({

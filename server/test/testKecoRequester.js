@@ -189,7 +189,7 @@ describe('unit test - keco requester', function() {
         var data = '<?xml version="1.0" encoding="UTF-8"?>\n<response>\n<header>\n<resultCode>22</resultCode>\n' +
             '<resultMsg>LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR.</resultMsg>\n</header>\n</response>';
 
-        keco.parseCtprvn(data, function (err, result) {
+        keco.parseCtprvn(data, function (err) {
             assert.equal(!!err, true);
             done();
         });

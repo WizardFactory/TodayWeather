@@ -254,7 +254,7 @@ Keco.prototype.parseCtprvn = function (data, callback) {
     var self = this;
 
     if (typeof data === 'string') {
-        if (data.indexOf('xml') != -1) {
+        if (data.indexOf('xml') !== -1) {
             callback(new Error(data));
             return;
         }
@@ -274,10 +274,10 @@ Keco.prototype.parseCtprvn = function (data, callback) {
                        }
                     }
                     else {
-                        if (name.indexOf('Value') != -1){
+                        if (name.indexOf('Value') !== -1){
                             arpltn[name] = parseFloat(item[name]);
                         }
-                        else if (name.indexOf('Grade') != -1){
+                        else if (name.indexOf('Grade') !== -1){
                             arpltn[name] = parseInt(item[name]);
                         }
                         else {
@@ -609,7 +609,7 @@ Keco.prototype._makeFrcstUrl = function (key, date) {
 
 Keco.prototype._checkLimit = function (result) {
     if (typeof result === 'string') {
-       if (result.indexOf('LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR') != -1) {
+       if (result.indexOf('LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR') !== -1) {
            return true;
        }
     }
