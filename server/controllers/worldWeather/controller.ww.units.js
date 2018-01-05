@@ -81,7 +81,7 @@ function ControllerWWUnits() {
             current.summary = ctrlTown.makeSummary(current, req.result.thisTime[0], req.query, res);
         }
         catch(err) {
-            log.error(err);
+            return next(err);
         }
         //weatherSummary
         //airSummary
