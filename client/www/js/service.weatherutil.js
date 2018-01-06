@@ -46,6 +46,10 @@ angular.module('service.weatherutil', [])
          */
         function _getHttp (url) {
             var deferred = $q.defer();
+            if (url == undefined || url === "") {
+                deferred.reject(new Error("Invalid url="+url));
+                return deferred.promise;
+            }
 
             console.log({url:url});
 
@@ -193,6 +197,8 @@ angular.module('service.weatherutil', [])
             var deferred = $q.defer();
             var url;
             try{
+                Util.ga.trackEvent('weather', 'param', JSON.stringify(geoInfo));
+
                 if (geoInfo.location && geoInfo.location.lat) {
                     url = _makeQueryUrlWithLocation(geoInfo.location, 'weather');
                 }
@@ -206,6 +212,9 @@ angular.module('service.weatherutil', [])
                     else {
                         url = _makeQueryUrlWithTown(town);
                     }
+                }
+                else {
+                    throw new Error("Need location or address for getting weather geoinfo="+JSON.stringify(geoInfo));
                 }
             }
             catch(err) {
@@ -439,10 +448,12 @@ angular.module('service.weatherutil', [])
                 }];
                 data.source = "KMA";
             }
-            catch(e) {
+            catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseKmaWeather');
-                Util.ga.trackException(e, false);
-                alert(e.message);
+                Util.ga.trackException(err, false);
+                if (twClientConfig && twClientConfig.debug) {
+                    alert(err.message);
+                }
                 return null;
             }
 
@@ -593,10 +604,12 @@ angular.module('service.weatherutil', [])
                     }
                 }
             }
-            catch (e) {
+            catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseWorldWeather');
-                Util.ga.trackException(e, false);
-                alert(e.message);
+                Util.ga.trackException(err, false);
+                if (twClientConfig && twClientConfig.debug) {
+                    alert(err.message);
+                }
                 return null;
             }
 
