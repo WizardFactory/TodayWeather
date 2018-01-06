@@ -197,14 +197,13 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnSelectResult = function(result) {
-        Util.ga.trackEvent('action', 'click', 'OnSelectResult '+ $scope.search.word);
-
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
             if (cordova.plugins.Keyboard.isVisible) {
                 return cordova.plugins.Keyboard.close();
             }
         }
 
+        Util.ga.trackEvent('city', 'select', $scope.search.word);
         result.name = $scope.search.word;
         $scope.search.word = undefined;
         //$scope.searchResults = [];

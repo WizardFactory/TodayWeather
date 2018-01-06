@@ -272,6 +272,7 @@ angular.module('controller.searchctrl', [])
                 }
             }
 
+            Util.ga.trackEvent('city', 'select', $scope.search.word);
             result.name = $scope.search.word;
             $scope.search.word = undefined;
             $scope.searchResults = [];
