@@ -138,7 +138,7 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            if (twClientConfig.debug) {
+            if (twClientConfig && twClientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
             return false; //suppress Error Alert;
@@ -324,7 +324,7 @@ angular.module('starter', [
                 Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
                 $rootScope.$watch('version', function (newValue) {
                     if(newValue == undefined) {
-                        Util.ga.trackEvent('app', 'error', 'failToLoadAppVersion');
+                        console.warn('failToLoadAppVersion');
                         return;
                     }
 
