@@ -29,6 +29,14 @@ function ControllerTown24h() {
             req.query = {};
         }
 
+        if (req.hasOwnProperty('baseUrl')) {
+            // url = /v000901/kma/addr
+            var arrayBaseUrl = req.baseUrl.split('/');
+            if (arrayBaseUrl.length > 1) {
+                req.version = arrayBaseUrl[1];
+            }
+        }
+
         /**
          * #1978
          * client에서 airUnit이 없으면 (null)로 전달됨
@@ -811,61 +819,71 @@ function ControllerTown24h() {
         meta.city = cityName;
         meta.town = townName;
 
-        if (req.result == undefined) {
-            req.result = {};
-        }
-        result = req.result;
-        result.regionName = regionName;
-        result.cityName = cityName;
-        result.townName = townName;
+        try {
+            if (req.result == undefined) {
+                req.result = {};
+            }
+            result = req.result;
+            result.regionName = regionName;
+            result.cityName = cityName;
+            result.townName = townName;
 
-        if(req.shortPubDate) {
-            result.shortPubDate = req.shortPubDate;
-        }
-        if(req.shortRssPubDate) {
-            result.shortRssPubDate = req.shortRssPubDate;
-        }
-        if(req.short) {
-            if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
-                log.error("Short is invalid >sID=",req.sessionID, meta)
+            if(req.shortPubDate) {
+                result.shortPubDate = req.shortPubDate;
             }
-            result.short = req.short;
-        }
-        if (req.shortestPubDate) {
-            result.shortestPubDate = req.shortestPubDate;
-        }
-        if(req.shortest) {
-            result.shortest = req.shortest;
-        }
-        if(req.currentPubDate) {
-            result.currentPubDate = req.currentPubDate;
-        }
-        if(req.current) {
-            if (req.current == undefined || req.current.t1h == undefined || req.current.yesterday == undefined) {
-                log.error("Current is invalid >sID=",req.sessionID, meta)
+            if(req.shortRssPubDate) {
+                result.shortRssPubDate = req.shortRssPubDate;
             }
-            result.current = req.current;
-        }
-        if(req.midData) {
-            if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
-                || req.midData.dailyData.length < 17) {
-                log.error("daily Data is invalid >sID=",req.sessionID, meta)
+            if(req.short) {
+                if (req.short == undefined || req.short.length == undefined || req.short.length < 33) {
+                    log.error("Short is invalid >sID=",req.sessionID, meta)
+                }
+                result.short = req.short;
             }
-            result.midData = req.midData;
-        }
-        if (req.dailySummary) {
-            result.dailySummary = req.dailySummary;
-        }
-        if (req.air_forecast){
-            result.air_forecast = req.air_forecast;
-        }
-        result.source = "KMA";
+            if (req.shortestPubDate) {
+                result.shortestPubDate = req.shortestPubDate;
+            }
+            if(req.shortest) {
+                result.shortest = req.shortest;
+            }
+            if(req.currentPubDate) {
+                result.currentPubDate = req.currentPubDate;
+            }
+            if(req.current) {
+                if (req.current == undefined || req.current.t1h == undefined || req.current.yesterday == undefined) {
+                    log.error("Current is invalid >sID=",req.sessionID, meta)
+                }
+                result.current = req.current;
+            }
+            if(req.midData) {
+                if (req.midData.dailyData == undefined || req.midData.dailyData.length == undefined
+                    || req.midData.dailyData.length < 17) {
+                    log.error("daily Data is invalid >sID=",req.sessionID, meta)
+                }
+                result.midData = req.midData;
+            }
+            if (req.dailySummary) {
+                result.dailySummary = req.dailySummary;
+            }
+            if (req.air_forecast){
+                result.air_forecast = req.air_forecast;
+            }
+            result.source = "KMA";
 
-        var units ={};
-        UnitConverter.getUnitList().forEach(function (value) {
-            units[value] = req.query[value] || UnitConverter.getDefaultValue(value);
-        });
-        result.units = units;
+            var units ={};
+            UnitConverter.getUnitList().forEach(function (value) {
+                units[value] = req.query[value] || UnitConverter.getDefaultValue(value);
+            });
+            result.units = units;
+
+            if (req.gCoord && req.version >= 'v000901') {
+                result.location = {lat: parseFloat(req.gCoord.lat.toFixed(3)), long: parseFloat(req.gCoord.lon.toFixed(3))};
+            }
+        }
+        catch(err) {
+            next(err);
+            return this;
+        }
 
         next();
         return this;
