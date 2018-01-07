@@ -28,10 +28,11 @@ router.use(function timestamp(req, res, next){
  * @param callback
  */
 function requestApi(cityName, version, query, lang, callback) {
-    var apiEndpoint = '/town';
-    if (version === 'v000901') {
-       apiEndpoint = '/kma/addr';
-    }
+    var apiEndpoint;
+
+    version = version || 'v000901';
+    apiEndpoint = version >= 'v000901'? '/kma/addr':'/town';
+
     var url = config.push.serviceServer+"/"+version+apiEndpoint+"/"+encodeURIComponent(cityName);
 
     if (query) {
@@ -94,7 +95,7 @@ router.get('/:nation', [cTown.checkQueryValidation], function(req, res) {
                 log.error(err);
                 return res.status(500).send(err);
             }
-            return res.send({nation:"SouthKorea", weather:weatherList});
+            return res.send({nation:"KR", weather:weatherList});
         });
 
 });
