@@ -29,16 +29,21 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
     };
 
     $scope.cityList = [
-        {name:"서울", top: 75, left: 110},
-        {name:"춘천", top: 40, left: 175},
-        {name:"강릉", top: 50, left: 240},
-        {name:"대전", top: 172, left: 110},
+        {name:"서울", top: 60, left: 100},
+        {name:"춘천", top: 20, left: 160},
+        {name:"강릉", top: 40, left: 230},
+        {name:"대전", top: 155, left: 90},
         {name:"청주", top: 130, left: 164},
-        {name:"전주", top: 252, left: 110},
-        {name:"광주", top: 332, left: 100},
-        {name:"대구", top: 220, left: 215},
+        {name:"전주", top: 240, left: 78},
+        {name:"광주", top: 327, left: 78},
+        {name:"대구", top: 220, left: 190},
         {name:"부산", top: 300, left: 230},
-        {name:"제주", top: 420, left: 70}
+        {name:"제주", top: 420, left: 60},
+        {name:"인천", top: 70, left: 40},
+        {name:"목포", top: 360, left: 5},
+        {name:"여수", top: 320, left: 135},
+        {name:"안동", top: 130, left: 225},
+        {name:"울산", top: 220, left: 270}
     ];
 
     $scope.onClose = function() {
