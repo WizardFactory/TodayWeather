@@ -427,47 +427,60 @@ angular.module('controller.tabctrl', [])
         };
 
         $scope.$on('showUpdateInfo', function(event) {
-            Util.ga.trackEvent('show', 'popup', 'updateInfo');
+            Util.ga.trackEvent('window', 'show', 'updateInfoPopup');
             var strFeedback = "";
             var strRate = "";
             var strClose = "";
             var strDisable = "";
-            var lang = Util.language.split('-')[0];
-
-            var updateInfo = window.updateInfo.find(function (value) {
-                if (value.lang === lang) {
-                    return true;
-                }
-                return false;
-            });
-
-            if (updateInfo == undefined) {
-                //en
-                updateInfo = window.updateInfo[0];
-            }
-
-            console.info(updateInfo);
-
+            var lang;
+            var updateInfo;
             var msg = '';
+            var version = '';
 
-            if (updateInfo) {
-                if (ionic.Platform.isAndroid())  {
-                    updateInfo.android.forEach(function (data) {
-                        msg += data+'<br>';
-                    });
+            try {
+                if (!Array.isArray(window.updateInfo)) {
+                    throw new Error("update info is not array");
                 }
-                if (ionic.Platform.isIOS()) {
-                    updateInfo.ios.forEach(function (data) {
-                        msg += data+'<br>';
-                    });
-                }
-                //last array has greeting msg
-                updateInfo.all.forEach(function (data) {
-                    msg += data+'<br>';
+
+                lang = Util.language.split('-')[0];
+
+                updateInfo = window.updateInfo.find(function (value) {
+                    if (value.lang === lang) {
+                        return true;
+                    }
+                    return false;
                 });
-            }
 
-            var version = 'v'+Util.version;
+                if (updateInfo == undefined) {
+                    //en
+                    updateInfo = window.updateInfo[0];
+                }
+
+                console.info(updateInfo);
+
+                if (updateInfo) {
+                    if (ionic.Platform.isAndroid())  {
+                        updateInfo.android.forEach(function (data) {
+                            msg += data+'<br>';
+                        });
+                    }
+                    if (ionic.Platform.isIOS()) {
+                        updateInfo.ios.forEach(function (data) {
+                            msg += data+'<br>';
+                        });
+                    }
+                    //last array has greeting msg
+                    updateInfo.all.forEach(function (data) {
+                        msg += data+'<br>';
+                    });
+                }
+
+                version = 'v'+Util.version;
+            }
+            catch (err) {
+                Util.ga.trackException(err, false);
+                return;
+            }
 
             function setDisableUpdateInfo() {
                 Util.ga.trackEvent('action', 'popup', 'disableUpdateInfo');
