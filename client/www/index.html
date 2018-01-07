@@ -34,6 +34,7 @@
     <script src="js/controller.tabctrl.js"></script>
     <script src="js/controller.purchase.js"></script>
     <script src="js/controller.units.js"></script>
+    <script src="js/controller.nation.js"></script>
 
     <script src="js/service.twads.js"></script>
     <script src="js/service.weatherinfo.js"></script>
@@ -75,6 +76,12 @@
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
+                <a class="item item-input" ng-if="getRegion() === 'KR'" ng-click="clickMenu('nation')">
+                    <div class="input-label">
+                        {{'LOC_NATIONAL_WEATHER'|translate}}
+                    </div>
+                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
+                </a>
                 <a class="item item-input" ng-click="clickMenu('units')">
                     <div class="input-label">
                         {{'LOC_UNITS'|translate}}

@@ -864,6 +864,27 @@ p small {
   opacity: 0.87;
 }
 
+.nation {
+  position: relative;
+  background: no-repeat top;
+  text-align: center;
+  margin: 4px auto;
+}
+
+.nation-label {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 5%;
+  position: absolute;
+  padding: 0 4px;
+  font-size: 20px;
+  color: whitesmoke;
+}
+
+.nation-label img {
+  height: 36px;
+  margin: -3px  0 -12px;
+}
+
 //iphone 4
 @media only screen and (min-device-width: 320px) and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2) and (device-aspect-ratio: 320/480)
 {

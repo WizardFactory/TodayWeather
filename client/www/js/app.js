@@ -23,7 +23,8 @@ angular.module('starter', [
     'controller.guidectrl',
     'controller.purchase',
     'controller.units',
-    'controller.start'
+    'controller.start',
+    'controller.nation'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -95,6 +96,19 @@ angular.module('starter', [
                     console.log('Error getting locale\n');
                 }
             );
+        }
+        else {
+            if (navigator.languages) {
+               for (var i=0; i<navigator.languages.length; i++)  {
+                   var langArray = navigator.languages[i].split('-');
+                   if (langArray.length > 1) {
+                       Util.region = langArray[langArray.length-1];
+                       break;
+                   }
+               }
+            }
+            Util.region = 'KR';
+            console.log('region: ' + Util.region + '\n');
         }
 
         if (window.cordova && cordova.getAppVersion) {
@@ -1381,6 +1395,12 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('nation', {
+                url: '/nation',
+                cache: false,
+                templateUrl: 'templates/nation.html',
+                controller: 'NationCtrl'
+            })
             .state('start', {
                 url: '/start',
                 cache: false,
