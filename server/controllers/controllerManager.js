@@ -2218,9 +2218,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    /**
-     * setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
-     */
+    //setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
     if (time === 10 || putAll) {
         log.info('push life index');
         self.asyncTasks.push(function LifeIndex(callback) {

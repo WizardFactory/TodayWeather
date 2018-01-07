@@ -1,4 +1,4 @@
-window.appVersion = '0.9.73';
+window.appVersion = '0.9.75';
 window.updateInfo = [
     {
         lang: 'en',
@@ -8,7 +8,9 @@ window.updateInfo = [
             'have a nice day!'
         ],
         android: [],
-        ios: []
+        ios: [
+            '* Fixed loading error'
+        ]
     },
     {
         lang: 'ko',
@@ -20,7 +22,7 @@ window.updateInfo = [
         ],
         android: [],
         ios: [
-            '* 데이터 저장소 부족한 경우 앱데이터 초기화 되는 문제 개선하였습니다.'
+            '* 무한로딩 개선'
         ]
     }
 ];

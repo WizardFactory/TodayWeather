@@ -682,7 +682,7 @@ TEMP_UNIT    gTemperatureUnit;
         jsonUnitsDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpUnitData options:0 error:&error];
     }
     else {
-        NSLog(@"nssNewNnits is null!!!");
+        NSLog(@"nssNewUnits is null!!!");
     }
 }
 

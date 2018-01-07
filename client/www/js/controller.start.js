@@ -197,14 +197,13 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnSelectResult = function(result) {
-        Util.ga.trackEvent('action', 'click', 'OnSelectResult '+ $scope.search.word);
-
         if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
             if (cordova.plugins.Keyboard.isVisible) {
                 return cordova.plugins.Keyboard.close();
             }
         }
 
+        Util.ga.trackEvent('city', 'select', $scope.search.word);
         result.name = $scope.search.word;
         $scope.search.word = undefined;
         //$scope.searchResults = [];
@@ -300,8 +299,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                             close();
                         }
                         $ionicLoading.hide();
-                    }, function () {
-                        Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                    }, function (err) {
+                        Util.ga.trackEvent('weather', 'error', err);
                         $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                         $ionicLoading.hide();
                     });
@@ -323,8 +322,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     close();
                 }
             }, function (err) {
-                console.error(err);
-                Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                Util.ga.trackEvent('weather', 'error', err);
                 $rootScope.showAlert(strError, strFailToGetWeatherInfo);
             }).finally(function () {
                 $ionicLoading.hide();
@@ -530,17 +528,17 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         if (currentPosition) {
             city.currentPosition = true;
             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
-            Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(geoInfo.address), WeatherInfo.getCityCount() - 1);
+            Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
             return true;
         }
         else {
             city.currentPosition = false;
             if (WeatherInfo.addCity(city) === false) {
-                Util.ga.trackEvent('city error', 'add', WeatherUtil.getShortenAddress(geoInfo.address), WeatherInfo.getCityCount() - 1);
+                Util.ga.trackEvent('city error', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
                 return false;
             }
             else {
-                Util.ga.trackEvent('city', 'add', WeatherUtil.getShortenAddress(geoInfo.address), WeatherInfo.getCityCount() - 1);
+                Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
                 return true;
             }
         }
@@ -565,8 +563,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     close();
                 }
                 $ionicLoading.hide();
-            }, function () {
-                Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+            }, function (err) {
+                Util.ga.trackEvent('weather', 'error', err);
                 $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                 $ionicLoading.hide();
             });
@@ -589,8 +587,8 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
                     close();
                 }
                 $ionicLoading.hide();
-            }, function () {
-                Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+            }, function (err) {
+                Util.ga.trackEvent('weather', 'error', err);
                 $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                 $ionicLoading.hide();
             });

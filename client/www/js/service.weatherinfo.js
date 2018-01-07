@@ -183,9 +183,15 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.reloadCity = function (index) {
-            var city = cities[index];
-
-            city.loadTime = null;
+            var city;
+            try {
+                city = cities[index];
+                city.loadTime = null;
+            }
+            catch (err) {
+                Util.ga.trackEvent('city', 'error', 'fail to reload index='+index);
+                Util.ga.trackException(err, false);
+            }
         };
 
         obj.updateCity = function (index, newCityInfo) {

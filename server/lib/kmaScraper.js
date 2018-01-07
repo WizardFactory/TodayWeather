@@ -25,12 +25,29 @@ var Town = require('../models/town');
 var convertGeocode = require('../utils/convertGeocode');
 var Convert = require('../utils/coordinate2xy');
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /**
  *
  * @constructor
  */
 function KmaScraper() {
     this.MAX_HOURLY_COUNT = 192; //8days * 24hours
+    this.domain = "www.weather.go.kr";
+
+    var domain = this.domain;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('kmascrape cached domain:', domain, ', result:', result);
+        }
+    });
 }
 
 /**
@@ -1465,7 +1482,7 @@ KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callba
  * @private
  */
 KmaScraper.prototype._getKmaDomain = function () {
- return "http://www.weather.go.kr";
+ return "http://"+this.domain;
 };
 
 /**
