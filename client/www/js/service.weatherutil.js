@@ -644,11 +644,18 @@ angular.module('service.weatherutil', [])
                 data = _parseWorldWeather(weatherData);
             }
 
-            ['name', 'address', 'country', 'location'].forEach(function (value) {
-                if (weatherData.hasOwnProperty(value)) {
-                    data[value] = weatherData[value];
-                }
-            });
+            if (data) {
+                ['name', 'address', 'country', 'location'].forEach(function (value) {
+                    if (weatherData.hasOwnProperty(value)) {
+                        data[value] = weatherData[value];
+                    }
+                });
+            }
+            else {
+                //log event는 praser 안에서 전달함.
+                console.warn("Fail to parse weather data");
+            }
+
             return data;
         };
 
