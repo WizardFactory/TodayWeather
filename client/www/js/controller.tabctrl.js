@@ -149,7 +149,12 @@ angular.module('controller.tabctrl', [])
             Util.ga.trackEvent('action', 'tab', 'share');
         };
 
+        /**
+         * getEnableCount가 0이면 호출되는데, #2018 이슈에서 enable city가 있는데 불리는 경우가 있어 보임
+         * 기본값은 즐겨찾기 이동으로 변경하여, 사용자가 잘 못 클릭해도 현재위치가 추가되지 않게 방지
+         */
         $scope.startPopup = function startPopup() {
+            Util.ga.trackEvent('show', 'popup', 'startPopup');
             var strOkay;
             var strTodayWeather;
             var strUseYourCurrentLocation;
@@ -166,8 +171,8 @@ angular.module('controller.tabctrl', [])
             }).finally(function () {
                 var popup = $ionicPopup.show({
                     template: '<ion-list>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="true">'+strUseYourCurrentLocation+'</ion-radio>' +
-                    '<ion-radio ng-model="data.autoSearch" ng-value="false">'+strFindLocationByName+'</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="false">'+strUseYourCurrentLocation+'</ion-radio>' +
+                    '<ion-radio ng-model="data.autoSearch" ng-value="true">'+strFindLocationByName+'</ion-radio>' +
                     '</ion-list>',
                     title: strTodayWeather,
                     scope: $scope,
@@ -225,6 +230,7 @@ angular.module('controller.tabctrl', [])
          * @param type forecast, search, weather
          */
         $scope.showRetryConfirm = function showRetryConfirm(title, template, type) {
+            Util.ga.trackEvent('show', 'popup', 'retryConfirm');
             if (confirmPopup) {
                 confirmPopup.close();
             }
