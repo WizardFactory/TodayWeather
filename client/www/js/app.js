@@ -263,8 +263,13 @@ angular.module('starter', [
                 }
             }, function(match) {
                 console.log(match.$route.parent + ', ' + match.$args.fav);
-                Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
-                $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+                if (match.$args.fav) {
+                    Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
+                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+                }
+                else {
+                    Util.ga.trackEvent('plugin', 'info', 'deepLinkNoFav');
+                }
             }, function(nomatch) {
                 console.log('No match', nomatch);
                 Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
