@@ -272,6 +272,7 @@ angular.module('controller.searchctrl', [])
                 }
             }
 
+            Util.ga.trackEvent('city', 'select', $scope.search.word);
             result.name = $scope.search.word;
             $scope.search.word = undefined;
             $scope.searchResults = [];
@@ -371,8 +372,8 @@ angular.module('controller.searchctrl', [])
                                 $location.path('/tab/forecast');
                             }
                             $ionicLoading.hide();
-                        }, function () {
-                            Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                        }, function (err) {
+                            Util.ga.trackEvent('weather', 'error', err);
                             $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                             $ionicLoading.hide();
                         });
@@ -395,8 +396,7 @@ angular.module('controller.searchctrl', [])
                         $location.path('/tab/forecast');
                     }
                 }, function (err) {
-                    console.error(err);
-                    Util.ga.trackEvent('weather', 'error', strFailToGetWeatherInfo);
+                    Util.ga.trackEvent('weather', 'error', err);
                     $rootScope.showAlert(strError, strFailToGetWeatherInfo);
                 }).finally(function () {
                     $ionicLoading.hide();

@@ -7,6 +7,11 @@
 
 var async = require('async');
 var request = require('request');
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
 
 var config = require('../config/config');
 
@@ -14,6 +19,9 @@ var daumKeys = JSON.parse(config.keyString.daum_keys);
 var googleApiKey = config.keyString.google_key;
 
 function GeoController(lat, lon, lang, country) {
+    var API_DAUM_DOMAIN = 'apis.daum.net';
+    var MAPS_GOOGLEAPIS_DOMAIN = 'maps.googleapis.com';
+
     this.lat = lat;
     this.lon = lon;
     this.lang = lang;
@@ -21,6 +29,21 @@ function GeoController(lat, lon, lang, country) {
     this.kmaAddress = null;
     this.address = "";
     this.name = "";
+    this.daumUrl = 'https://'+API_DAUM_DOMAIN;
+    this.googleUrl = 'https://'+MAPS_GOOGLEAPIS_DOMAIN;
+
+    [API_DAUM_DOMAIN, MAPS_GOOGLEAPIS_DOMAIN].forEach(function (value) {
+        var domain = value;
+        dnscache.lookup(domain, function(err, result) {
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.info('geoctrl cached domain:', domain, ', result:', result);
+            }
+        });
+
+    });
 }
 
 GeoController.prototype.setGoogleApiKey = function (key) {
@@ -103,7 +126,7 @@ GeoController.prototype._getAddressFromDaum = function (callback) {
 
     async.retry(daumKeys.length,
         function (cb) {
-            var url = 'https://apis.daum.net/local/geo/coord2addr'+
+            var url = that.daumUrl+'/local/geo/coord2addr'+
                 '?apikey=' + daumKeys[index] +
                 '&longitude='+ that.lon +
                 '&latitude='+that.lat+
@@ -333,7 +356,7 @@ GeoController.prototype._parseGoogleResult = function (data) {
 GeoController.prototype._getAddressFromGoogle = function (callback) {
     var that = this;
     //retry with key
-    var url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=" + that.lat + "," + that.lon;
+    var url = that.googleUrl+"/maps/api/geocode/json?latlng=" + that.lat + "," + that.lon;
     if (that.lang) {
         url += "&language="+that.lang;
     }
@@ -537,7 +560,7 @@ GeoController.prototype.name2address = function(req, callback) {
     var that = this;
     //retry with key
     var address = req.params.region + req.params.city;
-    var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + encodeURIComponent(address);
+    var url = that.googleUrl+"/maps/api/geocode/json?address=" + encodeURIComponent(address);
 
     if (that.lang) {
         url += "&language="+that.lang;
@@ -572,7 +595,19 @@ GeoController.prototype.name2address = function(req, callback) {
                     req.params.city = addressArray[2];
                 }
                 else if (addressArray.length == 4) {
-                    req.params.city = addressArray[2] + addressArray[3];
+                    var lastWord = addressArray[3].substr(-1, 1);
+                    if (lastWord === '읍' || lastWord === '면' || lastWord === '동') {
+                        req.params.city = addressArray[2];
+                        req.params.town =  addressArray[3];
+                    }
+                    else if (lastWord === '시' || lastWord === '군' || lastWord === '구') {
+                        req.params.city = addressArray[2] + addressArray[3];
+                    }
+                    else {
+                        log.error('Unknown structure address='+geoInfo.address);
+                        req.params.city = addressArray[2];
+                        req.params.town =  addressArray[3];
+                    }
                 }
                 else if (addressArray.length == 5) {
                     req.params.city = addressArray[2] + addressArray[3];

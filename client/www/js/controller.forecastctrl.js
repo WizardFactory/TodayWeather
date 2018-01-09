@@ -558,21 +558,35 @@ angular.module('controller.forecastctrl', [])
             $scope.currentPosition = cityData.currentPosition;
 
             $scope.updateTime = (function () {
-               if (cityData.currentWeather) {
-                   if (cityData.currentWeather.stnDateTime) {
-                       return cityData.currentWeather.stnDateTime;
-                   }
-                   else {
-                       var tmpDate = cityData.currentWeather.date;
-                       if (tmpDate instanceof Date) {
-                           return tmpDate.toDateString();
-                       }
-                       else {
-                           return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
-                               " " + cityData.currentWeather.time + ":00";
-                       }
-                   }
-               }
+                try {
+                    if (cityData.currentWeather) {
+                        if (cityData.currentWeather.stnDateTime) {
+                            return cityData.currentWeather.stnDateTime;
+                        }
+                        else {
+                            var tmpDate = cityData.currentWeather.date;
+                            if (tmpDate instanceof Date) {
+                                return tmpDate.toDateString();
+                            }
+                            else {
+                                return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                                    " " + cityData.currentWeather.time + ":00";
+                            }
+                        }
+                    }
+                }
+                catch(err) {
+                    //#2028 이슈 재 발생시 데이터 확인한다.
+                    if (cityData && cityData.currentWeather) {
+                        var errMsg = JSON.stringify({
+                                        stnDateTime: cityData.currentWeather.stnDateTime,
+                                        date: cityData.currentWeather.date,
+                                        time: cityData.currentWeather.time});
+                        Util.ga.trackEvent('weather', 'error', errMsg);
+                    }
+                    Util.ga.trackException(err, false);
+                    return "";
+                }
             })();
 
             // To share weather information for apple watch.

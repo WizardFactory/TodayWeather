@@ -264,5 +264,11 @@
   "LOC_AIR_QUALITY_INDEX_CN" : "中国",
   "LOC_FEEDBACK": "意見を送る",
   "LOC_REVIEW": "レビューを書く",
-  "LOC_DISABLE_UPDATE_POPUP":"更新情報を無効にする"
+  "LOC_DISABLE_UPDATE_POPUP":"更新情報を無効にする",
+  "LOC_KOREA": "韓国",
+  "LOC_JAPAN": "日本",
+  "LOC_CHINA": "中国",
+  "LOC_USA": "米国",
+  "LOC_UK": "英国",
+  "LOC_NATIONAL_WEATHER": "全国の天気"
 }

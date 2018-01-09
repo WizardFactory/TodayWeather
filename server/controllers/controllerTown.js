@@ -63,12 +63,13 @@ function ControllerTown() {
     var self = this;
     this.checkParamValidation = function(req, res, next) {
         var regionName = req.params.region;
+        var cityName = req.params.city;
         var townName = req.params.town;
         if (regionName == '중국' || regionName == '일본' || regionName == '미국' || regionName == '하늘시') {
             log.error('We did not support this region '+regionName);
             res.status(400).send("We didn't support this region");
         }
-        else if (townName == 'KR') {
+        else if (townName == 'KR' || cityName == 'KR') {
             log.error('Invalid params='+JSON.stringify(req.params));
             req.params.region = req.params.city;
             req.params.city= regionName;
@@ -1888,22 +1889,28 @@ function ControllerTown() {
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
 
-        var locStr = ts.__('LOC_PM25');
-        tmpGrade = airInfo.pm25Grade;
-        str = locStr + " " + airInfo.pm25Str;
-        if (tmpGrade < airInfo.pm10Grade) {
+        var locStr;
+        tmpGrade = 0;
+        if (airInfo.pm25Grade) {
+            locStr = ts.__('LOC_PM25');
+            tmpGrade = airInfo.pm25Grade;
+            str = locStr + " " + airInfo.pm25Str;
+        }
+        if (airInfo.pm10Grade && tmpGrade < airInfo.pm10Grade) {
             locStr = ts.__('LOC_PM10');
             tmpGrade = airInfo.pm10Grade;
             str = locStr + " " + airInfo.pm10Str;
         }
-        if (tmpGrade < (airInfo.aqiGrade)) {
+        if (airInfo.aqiGrade && tmpGrade < (airInfo.aqiGrade)) {
             locStr = ts.__('LOC_AQI');
             tmpGrade = airInfo.aqiGrade;
             str = locStr + " " + airInfo.aqiStr;
         }
 
-        item = {str: str, grade: tmpGrade};
-        itemList.push(item);
+        if (tmpGrade > 0) {
+            item = {str: str, grade: tmpGrade};
+            itemList.push(item);
+        }
 
         if (current.rn1 && current.pty) {
             switch (current.pty) {

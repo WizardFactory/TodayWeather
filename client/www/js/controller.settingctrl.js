@@ -95,6 +95,10 @@ angular.module('controller.settingctrl', [])
             return Util.language.indexOf("ko") != -1;
         };
 
+        $scope.getRegion = function () {
+            return Util.region;
+        };
+
         $rootScope.isAndroid = function () {
             return ionic.Platform.isAndroid();
         };

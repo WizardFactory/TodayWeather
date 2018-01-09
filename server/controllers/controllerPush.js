@@ -18,6 +18,12 @@ var unitConverter = new UnitConverter();
 var KecoController = require('../controllers/kecoController');
 var LifeIndexKmaController = require('./lifeIndexKmaController');
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 var apnGateway;
 
 var production = false;
@@ -47,6 +53,21 @@ var i18n = require('i18n');
 
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
+
+    this.domain = config.push.serviceServer.replace('http://', '').replace('https://', '');
+    this.url = config.push.serviceServer;
+
+    [apnGateway, this.domain].forEach(function (value) {
+        var domain = value;
+        dnscache.lookup(domain, function(err, result) {
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.info('pushctrl cached domain:', domain, ', result:', result);
+            }
+        });
+    });
 }
 
 ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
@@ -360,11 +381,11 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
     var town = pushInfo.town;
 
     if (pushInfo.geo) {
-        url = config.push.serviceServer+'/weather/coord';
+        url = self.url+'/weather/coord';
         url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
     }
     else if (pushInfo.town) {
-        url = config.push.serviceServer+"/"+apiVersion+"/kma/addr";
+        url = self.url+"/"+apiVersion+"/kma/addr";
         if (town.first) {
             url += '/'+ encodeURIComponent(town.first);
         }
@@ -627,7 +648,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
  */
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
-    var url = config.push.serviceServer+"/v000901/dsf/coord/";
+    var url = self.url+"/v000901/dsf/coord/";
     url += pushInfo.geo[1]+","+pushInfo.geo[0];
 
     var count = 0;
