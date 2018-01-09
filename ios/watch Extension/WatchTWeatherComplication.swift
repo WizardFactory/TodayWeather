@@ -320,7 +320,6 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
         print("getCurrentTimelineEntryForComplication")
         
         if complication.family == .modularSmall {
-            print("123modularSmall");
             let template = CLKComplicationTemplateCircularSmallRingText()
             template.textProvider = CLKSimpleTextProvider(text: "modularSmall")
             template.fillFraction = Float(getCurrentHealth()) / 10.0
@@ -329,7 +328,6 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
             let timelineEntry = CLKComplicationTimelineEntry(date: NSDate() as Date, complicationTemplate: template)
             handler(timelineEntry)
         } else if complication.family == .modularLarge {
-            print("456modularLarge");
             
             //CLKComplicationTemplateModularLargeStandardBody *t = [[CLKComplicationTemplateModularLargeStandardBody alloc] init];
             //t.headerTextProvider = [CLKSimpleTextProvider textProviderWithText:data[@"Waxing gibbous"]];
@@ -529,10 +527,8 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         //NSDate* eventDate = newLocation.timestamp;
         //NSTimeInterval    howRecent = [eventDate timeIntervalSinceNow];
-        print("111")
         print("location:: \(locations)")
         if locations.first != nil {
-            print("222")
             print("location:: \(locations)")
             
             //if(fabs(howRecent) < 5.0)
@@ -649,6 +645,11 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
         var lastChar : String? = nil;
         
         print("array.count => \(array.count)");
+        
+        if(array.count == 0) {
+            print("address is empty!!!");
+            return
+        }
         
         if (array.count == 2) {
             addr1 = array[1]
@@ -1108,10 +1109,8 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
         
         #if false
             if(tryCount == 0) {
-                print("111");
                 let nsmaDaumKeys : NSMutableArray? = watchTWUtil.getDaumServiceKeys();
                 //if let nsmaDaumKeys : NSMutableArray = watchTWUtil.getDaumServiceKeys() {
-                print("3333");
                 let strFirstKey : String = nsmaDaumKeys!.object(at: 0) as! String
                 
                 if( (nsmaDaumKeys?.count == 0) || (strFirstKey == "0") ) {         // 0, 1(Default)로 들어올때 처리
@@ -1141,16 +1140,12 @@ class WatchTWeatherComplication: NSObject, CLKComplicationDataSource, CLLocation
             }
         #endif
         
-        print("111");
         strDaumKey = watchTWReq.DAUM_SERVICE_KEY;
-        print("222");
         nextTryCount = tryCount + 1;
-        print("333");
+        
         //        let strURL : String = String(format:"%s%s%s%s%f%s%f%s%s", watchTWReq.STR_DAUM_COORD2ADDR_URL, watchTWReq.STR_APIKEY, strDaumKey!, watchTWReq.STR_LONGITUDE, longitude, watchTWReq.STR_LATITUDE, latitude, watchTWReq.STR_INPUT_COORD, watchTWReq.STR_OUTPUT_JSON);
         let strURL : String = watchTWReq.STR_DAUM_COORD2ADDR_URL + watchTWReq.STR_APIKEY + strDaumKey! + watchTWReq.STR_LONGITUDE + String(format:"%f",longitude) + watchTWReq.STR_LATITUDE + String(format:"%f",latitude) + watchTWReq.STR_INPUT_COORD + watchTWReq.STR_OUTPUT_JSON;
         
-        
-        print("444");
         print("url : \(strURL)");
         
         let dictRetryData : NSDictionary = [ Float(latitude): "latitude",

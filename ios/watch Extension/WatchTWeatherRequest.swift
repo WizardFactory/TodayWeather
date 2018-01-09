@@ -111,13 +111,11 @@ class WatchTWeatherRequest {
         
         if( strLatTmp?.characters.count != 2)
         {
-            print("111");
             strProcessedLat   = watchTWUtil.processLocationStr(strSrcStr: strLat);
             strProcessedLong  = watchTWUtil.processLocationStr(strSrcStr: strLong);
         }
         else
         {
-            print("222");
             strProcessedLat   = strLat;
             strProcessedLong  = strLong;
         }

@@ -35,9 +35,7 @@ class CityInfo: NSObject , NSCoding
     }
     
     required init?(coder aDecoder: NSCoder) {
-        print("required init?(coder aDecoder: NSCoder)");
         super.init()
-        print("required init?(coder aDecoder: NSCoder)");
         //self.identifier             = aDecoder.decodeObject(forKey: "id") as! String;
         self.strAddress         = aDecoder.decodeObject(forKey: "address") as? String;
         self.currentPosition    = aDecoder.decodeObject(forKey: "current_position") as? Bool;
@@ -64,28 +62,21 @@ class CityInfo: NSObject , NSCoding
     }
     
     class func loadCurrentCity()  -> CityInfo {
-        print("loadcity 111");
         let defaults = UserDefaults(suiteName: "group.net.wizardfactory.todayweather")
-        print("loadcity 222");
         //if let  archivedObject : NSData? = defaults?.object(forKey:"currentCity") as? NSData{
         var archivedObject : NSData? = nil;
-        print("loadcity 555");
         archivedObject = defaults?.object(forKey:"currentCity") as? NSData
-        print("loadcity 333");
+
         if(archivedObject == nil)
         {
             print("archivedObject is nil!!!");
         }
         else {
-            print("loadcity 666");
-            
             //if let cityInfo  = NSKeyedUnarchiver.unarchiveObject(with: archivedObject! as Data) as? CityInfo {
             var cityInfo : CityInfo? = nil;
-            print("loadcity 777");
             cityInfo = NSKeyedUnarchiver.unarchiveObject(with: archivedObject! as Data) as? CityInfo
-            print("loadcity 888");
+
             if(cityInfo != nil) {
-                print("loadcity 444");
                 return cityInfo!;
             } else {
                 print("cityInfo is nil");

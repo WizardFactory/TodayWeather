@@ -254,7 +254,6 @@ class WatchTWeatherUtil {
     }
     
     func getDaumServiceKeys() -> NSMutableArray {
-        print("444");
         
         if(gArrDaumKeys.count == 0) {
             
@@ -314,7 +313,6 @@ class WatchTWeatherUtil {
         
         if (tmpData != nil) {
             do {
-                print("a22222" )
                 let arrDaumKeys = try JSONSerialization.jsonObject(with: tmpData!, options: JSONSerialization.ReadingOptions.allowFragments) as! [String]
                 
                 //if let arrDaumKeys = try JSONSerialization.jsonObject(with: tmpData!, options: JSONSerialization.ReadingOptions.allowFragments) as! [String] {

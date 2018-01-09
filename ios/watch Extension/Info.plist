@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>kr</string>
 	<key>CFBundleDisplayName</key>
 	<string>watch Extension</string>
 	<key>CFBundleExecutable</key>

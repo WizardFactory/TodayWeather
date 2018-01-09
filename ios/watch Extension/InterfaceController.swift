@@ -112,13 +112,11 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
         print("nextCity : \(String(describing: nextCity))");
         
         currentCity = CityInfo.loadCurrentCity();
-        print("123");
         #if false
             nextCity?.currentPosition = true;
             nextCity?.country = "KR";
             print("nextCity : \(String(describing: nextCity))");
             let archivedObject : NSData = NSKeyedArchiver.archivedData(withRootObject: nextCity!) as NSData;
-            print("123");
             print("archivedObject : \(String(describing: archivedObject))");
             defaults?.set(archivedObject, forKey: "currentCity")
             defaults?.synchronize();
@@ -152,7 +150,6 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
         
         #if true
             if (currentCity.currentPosition == true){
-                print("1111")
                 manager.delegate = self
                 manager.requestLocation()
             }
@@ -178,13 +175,10 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
             }
         #endif
         
-        print("111");
         let archivedObject : NSData = NSKeyedArchiver.archivedData(withRootObject: currentCity) as NSData;
         print("archivedObject : \(String(describing: archivedObject))");
         defaults?.set(archivedObject, forKey: "currentCity")
-        print("222");
         defaults?.synchronize();
-        print("333");
         
         print("defaults : \(String(describing: defaults))")
     }
@@ -205,10 +199,8 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        print("111")
         print("location:: \(locations)")
         if locations.first != nil {
-            print("222")
             print("location:: \(locations)")
             
             //if(fabs(howRecent) < 5.0)
@@ -266,6 +258,11 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
         var lastChar : String? = nil;
         
         print("array.count => \(array.count)");
+        
+        if(array.count == 0) {
+            print("address is empty!!!");
+            return
+        }
         
         if (array.count == 2) {
             addr1 = array[1]
@@ -1111,16 +1108,11 @@ class InterfaceController: WKInterfaceController, WCSessionDelegate, CLLocationM
             }
         #endif
         
-        print("111");
         strDaumKey = watchTWReq.DAUM_SERVICE_KEY;
-        print("222");
         nextTryCount = tryCount + 1;
-        print("333");
         //        let strURL : String = String(format:"%s%s%s%s%f%s%f%s%s", watchTWReq.STR_DAUM_COORD2ADDR_URL, watchTWReq.STR_APIKEY, strDaumKey!, watchTWReq.STR_LONGITUDE, longitude, watchTWReq.STR_LATITUDE, latitude, watchTWReq.STR_INPUT_COORD, watchTWReq.STR_OUTPUT_JSON);
         let strURL : String = watchTWReq.STR_DAUM_COORD2ADDR_URL + watchTWReq.STR_APIKEY + strDaumKey! + watchTWReq.STR_LONGITUDE + String(format:"%f",longitude) + watchTWReq.STR_LATITUDE + String(format:"%f",latitude) + watchTWReq.STR_INPUT_COORD + watchTWReq.STR_OUTPUT_JSON;
         
-        
-        print("444");
         print("url : \(strURL)");
         
         let dictRetryData : NSDictionary = [ Float(latitude): "latitude",

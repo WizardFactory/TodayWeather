@@ -17,13 +17,48 @@
             },
             "config.xml": {
                 "parents": {
-                    "/*": []
+                    "/*": [
+                        {
+                            "xml": "<feature name=\"AppPreferences\"><param name=\"ios-package\" value=\"AppPreferences\" /></feature>",
+                            "count": 1
+                        }
+                    ]
+                }
+            },
+            "*-Info.plist": {
+                "parents": {
+                    "NSLocationWhenInUseUsageDescription": [],
+                    "NSPhotoLibraryAddUsageDescription": [],
+                    "CFBundleURLTypes": [],
+                    "NSLocationAlwaysUsageDescription": [],
+                    "CFBundleDevelopmentRegion": [],
+                    "CFBundleLocalizations": [],
+                    "ITSAppUsesNonExemptEncryption": [],
+                    "NSBluetoothPeripheralUsageDescription": [],
+                    "NSCalendarsUsageDescription": [],
+                    "NSMicrophoneUsageDescription": [],
+                    "NSPhotoLibraryUsageDescription": []
                 }
             }
         }
     },
-    "installed_plugins": {},
+    "installed_plugins": {
+        "cordova-plugin-app-preferences": {
+            "PACKAGE_NAME": "net.wizardfactory.todayweather"
+        }
+    },
     "dependent_plugins": {},
-    "modules": [],
-    "plugin_metadata": {}
+    "modules": [
+        {
+            "id": "cordova-plugin-app-preferences.apppreferences",
+            "file": "plugins/cordova-plugin-app-preferences/www/apppreferences.js",
+            "pluginId": "cordova-plugin-app-preferences",
+            "clobbers": [
+                "plugins.appPreferences"
+            ]
+        }
+    ],
+    "plugin_metadata": {
+        "cordova-plugin-app-preferences": "0.99.3"
+    }
 }

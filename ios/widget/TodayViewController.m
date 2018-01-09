@@ -30,11 +30,8 @@
 #define STR_LATITUDE                    @"&latitude="
 #define STR_INPUT_COORD                 @"&inputCoordSystem=WGS84"
 #define STR_OUTPUT_JSON                 @"&output=json"
-//#define API_JUST_TOWN                   @"v000803/town"
+#define API_JUST_TOWN                   @"v000803/town"
 #define WORLD_API_URL                   @"ww/010000/current/2?gcode="
-//#define TEST_SERVER                     @"https://ry0b7u7o1b.execute-api.ap-northeast-2.amazonaws.com/dev"
-#define COORD_2_WEATHER_API_URL         @"weather/coord"
-#define KMA_ADDR_API_URL                @"v000901/kma/addr"
 
 #define WIDGET_COMPACT_HEIGHT           110.0
 #define WIDGET_PADDING                  215.0
@@ -317,10 +314,9 @@ static TodayViewController *todayVC = nil;
     NSString *nssDaumKeys = [sharedUserDefaults objectForKey:@"daumServiceKeys"];
     
     [TodayWeatherUtil setTemperatureUnit:nssUnits];
-    [todayUtil setUnits:nssUnits];
     [todayUtil setDaumServiceKeys:nssDaumKeys];
     
-    NSLog(@"cityList : %@", cityList);
+    //NSLog(@"cityList : %@", cityList);
     
     if (cityList == nil) {
         //You have to run todayweather for add citylist
@@ -421,7 +417,7 @@ static TodayViewController *todayVC = nil;
     NSString    *nssName = nil;
     NSString    *nssAddress = nil;
     bool        bIsKR = false;
-    BOOL        currentPosition = FALSE;
+    
     
     if(mCityDictList == nil)
     {
@@ -451,79 +447,94 @@ static TodayViewController *todayVC = nil;
         nssName = [dict objectForKey:@"name"];
         nsdLocation = [dict objectForKey:@"location"];
     }
-    else {
-        nssCountry = [nsdCurCity valueForKey:@"country"];
-        if((nssCountry == nil) || [nssCountry isEqualToString:@"KR"])
+    
+    nsdLocation = [nsdCurCity valueForKey:@"location"];
+    if(nsdLocation == nil)
+    {
+        // Needs exception about "KR" and "Global"
+        if(bIsKR == TRUE)
         {
-            nssCountry  = [NSString stringWithFormat:@"KR"];
-            bIsKR       = TRUE;
+            nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                               @"0", @"lat",
+                                               @"0", @"long",
+                                               nil];
         }
-        
-        nsdLocation = [nsdCurCity valueForKey:@"location"];
-        if(nsdLocation == nil)
+        else    // Global
         {
-            // Needs exception about "KR" and "Global"
-            if(bIsKR == TRUE)
-            {
-                nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                               @"0", @"lat",
-                               @"0", @"long",
-                               nil];
-            }
-            else    // Global
-            {
-                nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                               @"0", @"lat",
-                               @"0", @"long",
-                               nil];
-            }
+            nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                           @"0", @"lat",
+                           @"0", @"long",
+                           nil];
         }
-        
-        nssAddress = [nsdCurCity valueForKey:@"address"];
-        if(nssAddress == nil || [nssAddress isEqual:[NSNull null]])
+    }
+//    else
+//    {
+//        NSNumber *nsnLat    = [nsdLocation objectForKey:@"lat"];
+//        NSString *nssLat    = [NSString stringWithFormat:@"%@", nsnLat];
+//        NSLog(@"nssLat : %@", nssLat);
+//        NSArray *arrLat     = [nssLat componentsSeparatedByString:@"."];
+//        NSString *nssLatTmp = [arrLat objectAtIndex:1];
+//        NSLog(@"nssLatTmp : %@", nssLatTmp);
+//        
+//        if( [nssLatTmp length] != 2)
+//        {
+//            NSNumber *nsnLong    = [nsdLocation objectForKey:@"long"];
+//            NSString *nssLong    = [NSString stringWithFormat:@"%@", nsnLong];
+//            NSString *nssProcessedLat   = [TodayWeatherUtil processLocationStr:nssLat];
+//            NSString *nssProcessedLong  = [TodayWeatherUtil processLocationStr:nssLong];
+//            nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+//                           nssProcessedLat, @"lat",
+//                           nssProcessedLong, @"long",
+//                           nil];
+//            NSLog(@"nsdLocation : %@", nsdLocation);
+//        }
+//        
+//    }
+    
+    nssAddress = [nsdCurCity valueForKey:@"address"];
+    if(nssAddress == nil || [nssAddress isEqual:[NSNull null]])
+    {
+        nssAddress = [NSString stringWithFormat:@"AddressEmpty"];
+    }
+    else
+    {
+        if(bIsKR == TRUE)
         {
-            nssAddress = [NSString stringWithFormat:@"AddressEmpty"];
+            NSLog(@"KR is not modified address(%@)!!!", nssAddress);
         }
         else
         {
-            if(bIsKR == TRUE)
+            NSLog(@"[saveWeatherInfo] the other country not KR nssAddress(%@)!!!", nssAddress);
+            nssAddress = [nssAddress stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+            if(nssAddress != nil)
             {
-                NSLog(@"KR is not modified address(%@)!!!", nssAddress);
+                NSArray *chunks = [nssAddress componentsSeparatedByString: @","];
+                nssAddress = [chunks objectAtIndex:0];  // New York or 맨해튼;
             }
             else
             {
-                NSLog(@"[svWeatherInfo] the other country not KR nssAddress(%@)!!!", nssAddress);
-                nssAddress = [nssAddress stringByReplacingOccurrencesOfString:@" " withString:@""];
-                
-                if(nssAddress != nil)
-                {
-                    NSArray *chunks = [nssAddress componentsSeparatedByString: @","];
-                    nssAddress = [chunks objectAtIndex:0];  // New York or 맨해튼;
-                }
-                else
-                {
-                    nssAddress = [NSString stringWithFormat:@"AddressEmpty"];
-                }
-            }
-        }
-        
-        nssName = [nsdCurCity valueForKey:@"name"];
-        if(nssName == nil)
-        {
-            if(bIsKR == TRUE)
-            {
-                nssName = [NSString stringWithFormat:@"NameEmpty"];
-            }
-            else // case Global and name is null
-            {
-                nssName = [NSString stringWithFormat:@"%@", nssAddress];
+                nssAddress = [NSString stringWithFormat:@"AddressEmpty"];
             }
         }
     }
+    
+    nssName = [nsdCurCity valueForKey:@"name"];
+    if(nssName == nil)
+    {
+        if(bIsKR == TRUE)
+        {
+            nssName = [NSString stringWithFormat:@"NameEmpty"];
+        }
+        else // case Global and name is null
+        {
+            nssName = [NSString stringWithFormat:@"%@", nssAddress];
+        }
+    }
 
-    NSLog(@"[svWeatherInfo] nssAddress: %@", nssAddress);
-    NSLog(@"[svWeatherInfo] nssName: %@", nssName);
-    //NSLog(@"[svWeatherInfo] nsdCurCity: %@", nsdCurCity);
+    NSLog(@"[saveWeatherInfo] nssAddress: %@", nssAddress);
+    NSLog(@"[saveWeatherInfo] nssName: %@", nssName);
+    //NSLog(@"[saveWeatherInfo] nsdCurCity: %@", nsdCurCity);
     
     NSMutableDictionary* nsdTmpDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                                        nssAddress, @"address",
@@ -1094,13 +1105,13 @@ static TodayViewController *todayVC = nil;
 #else
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
     
-//    if(type == TYPE_REQUEST_WEATHER_KR)
-//    {
-//        //[request setValue:@"ko-kr,ko;q=0.8,en-us;q=0.5,en;q=0.3" forHTTPHeaderField:@"Accept-Language"];
-//        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
-//
-//        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
-//    }
+    if(type == TYPE_REQUEST_WEATHER_KR)
+    {
+        //[request setValue:@"ko-kr,ko;q=0.8,en-us;q=0.5,en;q=0.3" forHTTPHeaderField:@"Accept-Language"];
+        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
+        
+        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
+    }
 
     NSURLSessionTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request
                                                           completionHandler:
@@ -1137,12 +1148,12 @@ static TodayViewController *todayVC = nil;
 
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
     
-//    if(type == TYPE_REQUEST_WEATHER_KR)
-//    {
-//        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
-//
-//        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
-//    }
+    if(type == TYPE_REQUEST_WEATHER_KR)
+    {
+        [request setValue:@"ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4" forHTTPHeaderField:@"Accept-Language"];
+        
+        NSLog(@"[requestAsyncByURLSession] Accept-Language : ko-KR,ko;q=0.8,en-US;q=0.6,en;q=0.4");
+    }
     
     NSURLSessionTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request
                                                              completionHandler:
@@ -1226,6 +1237,7 @@ static TodayViewController *todayVC = nil;
         [self processWeatherResultsAboutGlobal:jsonDict];
         [self processRequestIndicator:TRUE];
     }
+<<<<<<< Updated upstream
     else if (type == TYPE_REQUEST_WEATHER_BY_COORD
              || type == TYPE_REQUEST_WEATHER_KR)
     {
@@ -1233,6 +1245,8 @@ static TodayViewController *todayVC = nil;
         [self processWeatherResultsByCoord:jsonDict];
         [self processRequestIndicator:TRUE];
     }
+=======
+>>>>>>> Stashed changes
     
     //NSLog(@"request weather result %@", jsonDict);
 }
@@ -1553,7 +1567,7 @@ static TodayViewController *todayVC = nil;
 {
     NSString *nssURL = nil;
     NSCharacterSet *set = nil;
-    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, KMA_ADDR_API_URL];
+    nssURL = [NSString stringWithFormat:@"%@/%@", TODAYWEATHER_URL, API_JUST_TOWN];
     if (nssAddr1 != nil) {
         nssURL = [NSString stringWithFormat:@"%@/%@", nssURL, nssAddr1];
     }
@@ -2244,28 +2258,14 @@ static TodayViewController *todayVC = nil;
     {
         [locationManager stopUpdatingLocation];
         
-#if 1 //GLOBAL_TEST
-        // FIXME - for emulator - delete me
-        //seoul
-        //latitude = 37.567;
-        //longitude = 126.978;
-        
-        //New York
-        //40.7127837, -74.0059413 <- New York
-        
-        // 오사카
-        //latitude = 34.678395;
-        //longitude = 135.4601303;
-#endif
-        
         gMylatitude		= newLocation.coordinate.latitude;
         gMylongitude	= newLocation.coordinate.longitude;
         
-        NSLog(@"[locationManager] latitude : %.3f, longitude : %.3f",
+        NSLog(@"[locationManager] latitude : %f, longitude : %f",
               newLocation.coordinate.latitude,
               newLocation.coordinate.longitude);
         
-        [self getWeatherByCoord:gMylatitude longitude:gMylongitude];
+        [self getAddressFromGoogle:gMylatitude longitude:gMylongitude];
         
     }
 }
@@ -2386,6 +2386,7 @@ static TodayViewController *todayVC = nil;
     }
     else
     {
+<<<<<<< Updated upstream
         float lat = 0;
         float lng = 0;
         
@@ -2398,6 +2399,9 @@ static TodayViewController *todayVC = nil;
             [self getWeatherByCoord:lat longitude:lng];
         }
         else if([nextCity.country isEqualToString:@"KR"] ||
+=======
+        if([nextCity.country isEqualToString:@"KR"] ||
+>>>>>>> Stashed changes
            [nextCity.country isEqualToString:@"(null)"] ||
            (nextCity.country == nil)
            )
@@ -2499,6 +2503,7 @@ static TodayViewController *todayVC = nil;
     NSLog(@"[processGlobalAddress] nssURL : %@", nssURL);
 }
 
+<<<<<<< Updated upstream
 - (void) getWeatherByCoord:(float)latitude longitude:(float)longitude
 {
     NSDictionary *nssUnits = [todayUtil getUnits];
@@ -2753,4 +2758,6 @@ static TodayViewController *todayVC = nil;
     }
 }
 
+=======
+>>>>>>> Stashed changes
 @end
