@@ -1076,8 +1076,6 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                         " city.pubDate=", cityWeatherList.pubDate);
                 }
 
-                //todo merge전에 cityweather에 stnId와 stnAddr추가 필요.
-
                 var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
                 //weatherList.forEach(function (awsInfo) {
                 //   log.info(JSON.stringify(awsInfo)) ;
