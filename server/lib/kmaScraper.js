@@ -539,7 +539,7 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
 
     //AWS가 고장났을때, 도시날씨만 동작하므로 addr이 없음. stnInfo는 skip함.
     if (stnWeatherInfo.stnId == undefined || stnWeatherInfo.addr == undefined) {
-        log.error("stnWeatherInfo don't have stnId or addr, skip save stnInfo");
+        log.warn("stnWeatherInfo don't have stnId or addr, skip save stnInfo name="+stnWeatherInfo.stnName);
         return callback();
     }
 
@@ -1075,6 +1075,8 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                     log.error("pubdate is different aws.pubDate=", awsWeatherList.pubDate,
                         " city.pubDate=", cityWeatherList.pubDate);
                 }
+
+                //todo merge전에 cityweather에 stnId와 stnAddr추가 필요.
 
                 var weatherList = self._mergeAWSandCity(awsWeatherList.stnList, cityWeatherList.cityList);
                 //weatherList.forEach(function (awsInfo) {
