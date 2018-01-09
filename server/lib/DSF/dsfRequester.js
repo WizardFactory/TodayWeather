@@ -19,7 +19,7 @@ function dsfRequester(){
 dsfRequester.prototype.getForecast = function(geocode, date, key, callback){
     var self = this;
 
-    if(!geocode.lat || !geocode.lon){
+    if(geocode == undefined || !geocode.hasOwnProperty('lat') || !geocode.hasOwnProperty('lon')) {
         callback(new Error('DSF> there is no coordinate'), {isSuccess: false});
         return;
     }
