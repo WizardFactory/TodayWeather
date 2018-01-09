@@ -49,7 +49,7 @@ router.get('/', function(req, res) {
  * skyIcon은 convertUnits 전에 불러야 함.
  * insrtStr은 convertUnits 후에 불러야함.
  */
-var routerList = [cTown.checkQueryValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
+var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
     cTown.mergeCurrentByStnHourly, cTown.getKmaStnMinuteWeather, cTown.convert0Hto24H, cTown.mergeShortWithCurrentList,
     cTown.mergeByShortest, cTown.adjustShort, cTown.getMid, cTown.getMidRss, cTown.convertMidKorStrToSkyInfo,

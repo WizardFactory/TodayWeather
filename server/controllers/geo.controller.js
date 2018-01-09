@@ -595,7 +595,19 @@ GeoController.prototype.name2address = function(req, callback) {
                     req.params.city = addressArray[2];
                 }
                 else if (addressArray.length == 4) {
-                    req.params.city = addressArray[2] + addressArray[3];
+                    var lastWord = addressArray[3].substr(-1, 1);
+                    if (lastWord === '읍' || lastWord === '면' || lastWord === '동') {
+                        req.params.city = addressArray[2];
+                        req.params.town =  addressArray[3];
+                    }
+                    else if (lastWord === '시' || lastWord === '군' || lastWord === '구') {
+                        req.params.city = addressArray[2] + addressArray[3];
+                    }
+                    else {
+                        log.error('Unknown structure address='+geoInfo.address);
+                        req.params.city = addressArray[2];
+                        req.params.town =  addressArray[3];
+                    }
                 }
                 else if (addressArray.length == 5) {
                     req.params.city = addressArray[2] + addressArray[3];
