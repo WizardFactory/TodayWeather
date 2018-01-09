@@ -35,6 +35,7 @@
     <script src="js/controller.purchase.js"></script>
     <script src="js/controller.units.js"></script>
     <script src="js/controller.nation.js"></script>
+    <script src="js/controller.setting.radio.js"></script>
 
     <script src="js/service.twads.js"></script>
     <script src="js/service.weatherinfo.js"></script>
@@ -88,28 +89,13 @@
                     </div>
                     <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
                 </a>
-                <label class="item item-input item-select">
-                    <div class="input-label">
+                <label class="item" ng-click="settingRadio('startupPage')">
                         {{'LOC_STARTUP_PAGE'|translate}}
-                    </div>
-                    <select ng-model="startupPage" ng-change="setStartupPage(startupPage)">
-                        <option value="0">{{'LOC_HOURLY_FORECAST'|translate}}</option>
-                        <option value="1">{{'LOC_DAILY_FORECAST'|translate}}</option>
-                        <option value="2">{{'LOC_SAVED_LOCATIONS'|translate}}</option>
-                    </select>
+                        <span style="float: right">{{getStartupPageValueStr(settingsInfo.startupPage)|translate}}</span>
                 </label>
-                <label class="item item-input item-select">
-                    <div class="input-label">
+                <label class="item" ng-click="settingRadio('refreshInterval')">
                         {{'LOC_REFRESH_INTERVAL'|translate}}
-                    </div>
-                    <select ng-model="refreshInterval" ng-change="setRefreshInterval(refreshInterval)">
-                        <option value="0">{{'LOC_MANUAL'|translate}}</option>
-                        <option value="30">{{'LOC_30_MINUTES'|translate}}</option>
-                        <option value="60">{{'LOC_1_HOUR'|translate}}</option>
-                        <option value="180">{{'LOC_3_HOURS'|translate}}</option>
-                        <option value="360">{{'LOC_6_HOURS'|translate}}</option>
-                        <option value="720">{{'LOC_12_HOURS'|translate}}</option>
-                    </select>
+                        <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
                 <a class="item item-input" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
                     <div class="input-label">

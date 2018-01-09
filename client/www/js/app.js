@@ -24,7 +24,8 @@ angular.module('starter', [
     'controller.purchase',
     'controller.units',
     'controller.start',
-    'controller.nation'
+    'controller.nation',
+    'controller.setting.radio'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -1420,8 +1421,15 @@ angular.module('starter', [
             })
             .state('units', {
                 url: '/units',
+                cache: false,
                 templateUrl: 'templates/units.html',
                 controller: 'UnitsCtrl'
+            })
+            .state('setting-radio', {
+                url: '/setting-radio',
+                cache: false,
+                templateUrl: 'templates/setting-radio.html',
+                controller: 'RadioCtrl'
             })
             .state('tab', {
                 url: '/tab',

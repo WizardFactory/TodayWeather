@@ -146,47 +146,104 @@ angular.module('controller.units', [])
             return airUnitStr[unit];
         };
 
+        obj.getSelectList = function (name) {
+            switch (name) {
+                case 'temperatureUnit':
+                    return [{label: 'C', value:'C'},
+                        {label: 'F', value: 'F'}];
+                case 'windSpeedUnit':
+                    return [{label: 'mph', value: 'mph'},
+                        {label: 'km/h', value: 'km/h'},
+                        {label: 'm/s', value: 'm/s'},
+                        {label: 'beaufort', value: 'bft'},
+                        {label: 'knotes', value: 'kt'}];
+                case  'pressureUnit':
+                    return [{label: 'mmHg', value: 'mmHg'},
+                        {label: 'inHg', value: 'inHg'},
+                        {label: 'mbar', value: 'mb'},
+                        {label: 'hPa', value: 'hPa'}];
+                case 'distanceUnit':
+                    return [{label: 'km', value: 'km'},
+                        {label: 'miles', value: 'mi'}];
+                case 'precipitationUnit':
+                    return [{label: 'mm', value: 'mm'},
+                        {label: 'inch', value: 'in'}];
+                case 'airUnit':
+                    return [{label: this.getAirUnitStr('airnow'), value: 'airnow'},
+                        {label: this.getAirUnitStr('aircn'), value: 'aircn'},
+                        {label: this.getAirUnitStr('airkorea'), value: 'airkorea'},
+                        {label: this.getAirUnitStr('airkorea_who'), value: 'airkorea_who'}];
+                default:
+                    return [];
+            }
+        };
+
         return obj;
     })
-    .controller('UnitsCtrl', function($scope, $translate, $ionicHistory, Units, Util, WeatherInfo, Push) {
-        $scope.temperatureUnit = Units.temperatureUnit;
-        $scope.windSpeedUnit = Units.windSpeedUnit;
-        $scope.pressureUnit = Units.pressureUnit;
-        $scope.distanceUnit = Units.distanceUnit;
-        $scope.precipitationUnit = Units.precipitationUnit;
-        $scope.airUnit = Units.airUnit;
-        var update = false;
+    .controller('UnitsCtrl', function($scope, $translate, $ionicHistory, Units, Util, Push, $location, radioList) {
+
+        $scope.$on('$ionicView.enter', function() {
+            var units = [];
+            var data = Units.getAllUnits();
+            for (var name in data) {
+                units.push({name: name, value: data[name]});
+            }
+            $scope.units = units;
+        });
 
         $scope.onClose = function() {
-            if(update) {
-               Push.updateUnits();
-            }
-            //iOS에서 forecast chart 제대로 안나오는 이슈가 있어서 임시로 무조건 리드로잉한다.
-            _resetUpdateTimeCities();
-            console.log('close');
             Util.ga.trackEvent('action', 'click', 'units back');
-            //convertUnits
             $ionicHistory.goBack();
         };
 
-        function _resetUpdateTimeCities() {
-            console.log('reset update time');
-            for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
-                WeatherInfo.reloadCity(i);
-            }
-        }
-
-        $scope.setUnit = function (unit, value) {
-            if (Units.setUnit(unit, value)) {
-                Units.saveUnits();
-                update = true;
-                //_resetUpdateTimeCities();
+        $scope.getUnitNameStr = function (name) {
+            switch (name) {
+                case 'temperatureUnit':
+                    return 'LOC_TEMPERATURE_UNIT';
+                case 'windSpeedUnit':
+                    return 'LOC_WIND_SPEED_UNIT';
+                case  'pressureUnit':
+                    return 'LOC_PRESSURE_UNIT';
+                case 'distanceUnit':
+                    return 'LOC_DISTANCE_UNIT';
+                case 'precipitationUnit':
+                    return 'LOC_PRECIPITATION';
+                case 'airUnit':
+                    return 'LOC_AIR_QUALITY_INDEX_UNIT';
+                default:
+                    return '';
             }
         };
 
-        $scope.getAirUnitStr = function (unit) {
-           return Units.getAirUnitStr(unit);
-        }
+        $scope.getUnitValueStr = function (unit) {
+            if (unit.name === 'airUnit') {
+                return Units.getAirUnitStr(unit.value);
+            }
+            else {
+                switch (unit.value) {
+                    case 'kt':
+                        return 'knotes';
+                    case 'bft':
+                        return 'beaufort';
+                    case 'mb':
+                        return 'mbar';
+                    case 'mi':
+                        return 'miles';
+                    case 'in':
+                        return 'inches';
+                    default:
+                        return unit.value;
+                }
+            }
+        };
+
+        $scope.settingRadio = function (unit) {
+            radioList.type = unit.name;
+            radioList.title = $scope.getUnitNameStr(unit.name);
+            radioList.setValue(unit.value);
+            radioList.importData(Units.getSelectList(unit.name));
+            $location.path('/setting-radio');
+        };
     });
 
 
