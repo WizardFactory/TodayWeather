@@ -63,12 +63,13 @@ function ControllerTown() {
     var self = this;
     this.checkParamValidation = function(req, res, next) {
         var regionName = req.params.region;
+        var cityName = req.params.city;
         var townName = req.params.town;
         if (regionName == '중국' || regionName == '일본' || regionName == '미국' || regionName == '하늘시') {
             log.error('We did not support this region '+regionName);
             res.status(400).send("We didn't support this region");
         }
-        else if (townName == 'KR') {
+        else if (townName == 'KR' || cityName == 'KR') {
             log.error('Invalid params='+JSON.stringify(req.params));
             req.params.region = req.params.city;
             req.params.city= regionName;
