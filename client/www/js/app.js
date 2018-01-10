@@ -1363,6 +1363,10 @@ angular.module('starter', [
                     }
 
                     function onScroll(e) {
+                        if ($scope == undefined || $scope.$root == undefined) {
+                            return;
+                        }
+
                         var scrollTop = e.target.scrollTop;
 
                         if (request === null) {
