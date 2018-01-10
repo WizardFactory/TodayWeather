@@ -719,21 +719,34 @@ angular.module('controller.forecastctrl', [])
                         if (geoInfo) {
                             console.log("current position is updated !!");
                             try {
-                                var savedLocation = WeatherInfo.getCityOfIndex(0).location;
-                                if (geoInfo.location.lat === savedLocation.lat &&
-                                    geoInfo.location.long === savedLocation.long) {
-                                    console.log("already updated this location");
-                                    return;
+                                var cityInfo = WeatherInfo.getCityOfIndex(0);
+                                if (cityInfo)  {
+                                    var savedLocation = cityInfo.location;
+                                    //처음 추가된 경우 savedLocation이 없는 경우가 있음(위젯에서 들어오는 경우)
+                                    if (savedLocation) {
+                                        if (geoInfo.location.lat === savedLocation.lat &&
+                                            geoInfo.location.long === savedLocation.long) {
+                                            console.log("already updated this location");
+                                            return;
+                                        }
+                                        else {
+                                            //current city index가 변경되어도 받아둔 데이터는 메모리에 저장해둠.
+                                            savedLocation.lat = geoInfo.location.lat;
+                                            savedLocation.long = geoInfo.location.long;
+                                        }
+                                    }
                                 }
 
                                 if (WeatherInfo.getCityIndex() != 0) {
                                     console.log("already changed to new location");
                                     return;
                                 }
+
                             }
-                            catch(e) {
-                                Util.ga.trackEvent('position', 'error', 'failToParseGeoInfo');
-                                Util.ga.trackException(e, false);
+                            catch(err) {
+                                Util.ga.trackEvent('position', 'error', 'failToParseCurrentPosition');
+                                Util.ga.trackException(err, false);
+                                return;
                             }
 
                             updateWeatherData(geoInfo).then(function () {
@@ -743,7 +756,7 @@ angular.module('controller.forecastctrl', [])
                             });
                         }
                         else {
-                            Util.ga.trackEvent('position', 'error', 'failToGetGeoInfo');
+                            Util.ga.trackEvent('position', 'error', 'failToGetCurrentPosition');
                         }
                     }, function(msg) {
                         if (msg) {
