@@ -332,7 +332,7 @@ Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
 
     async.map(arpltnList,
         function(arpltn, callback) {
-            Arpltn.update({stationName: arpltn.stationName}, arpltn, {upsert:true}, function (err, raw) {
+            Arpltn.update({stationName: arpltn.stationName, date: arpltn.date}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
                     log.error(err);
                     return callback(err);
