@@ -48,6 +48,7 @@ router.get('/', function(req, res) {
  * 기존의 getSummary를 단위변환때문에 setYesterDay와 getSummaryAfterUnitConverter로 분리함.
  * skyIcon은 convertUnits 전에 불러야 함.
  * insrtStr은 convertUnits 후에 불러야함.
+ * v000901에서는 makeResult에서 location 정보를 추가함.
  */
 var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.getAllDataFromDb, cTown.checkDBValidation, cTown.getShort,
     cTown.getShortRss, cTown.getShortest, cTown.getCurrent, cTown.updateCurrentListForValidation,
