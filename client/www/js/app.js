@@ -146,9 +146,18 @@ angular.module('starter', [
 
         Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
 
+        /**
+         * #2053 url이 undefined일 수 있음.
+         * @param msg
+         * @param url
+         * @param line
+         * @returns {boolean}
+         */
         window.onerror = function(msg, url, line) {
-            var idx = url.lastIndexOf("/");
-            if(idx > -1) {url = url.substring(idx+1);}
+            if (typeof url === 'string') {
+                var idx = url.lastIndexOf("/");
+                if(idx > -1) {url = url.substring(idx+1);}
+            }
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
