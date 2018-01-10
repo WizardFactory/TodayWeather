@@ -28,7 +28,6 @@ extern TEMP_UNIT    gTemperatureUnit;
 @interface TodayWeatherUtil : NSObject
 {
     NSMutableArray  *nsmaDaumKeys;
-    NSDictionary *jsonUnitsDict;
 }
 
 /********************************************************************
@@ -36,7 +35,7 @@ extern TEMP_UNIT    gTemperatureUnit;
  ********************************************************************/
 @property (retain, nonatomic) NSString *twuCountry;
 @property (retain, nonatomic) NSMutableArray  *nsmaDaumKeys;
-@property (retain, nonatomic) NSDictionary *jsonUnitsDict;
+
 
 /********************************************************************
  Declare Class functions
@@ -61,11 +60,6 @@ extern TEMP_UNIT    gTemperatureUnit;
 - (NSMutableArray *) getDaumServiceKeys;
 - (void) setDaumServiceKeys:(NSString *)nssDaumKeys;
 + (UIImage *)renderImageFromView:(UIView *)view withRect:(CGRect)frame transparentInsets:(UIEdgeInsets)insets;
-
-+ (NSMutableDictionary *) getTodayDictionaryByCoord:(NSDictionary *)jsonDict date:(NSString *)nssDate country:(NSString *)nssCountry;
-- (void) setUnits:(NSString *)nssNewUnits;
-- (NSDictionary *) getUnits;
-
 @end
 
 #endif /* TodayWeatherUtil_h */

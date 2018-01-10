@@ -1,0 +1,31 @@
+/*
+ Localizable.strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 9. 24..
+ 
+ */
+// Japanese
+
+// "Key"                    = "Value"
+
+// watch
+"LOC_UPDATE"                        = "更新";
+
+"LOC_AQI"                           = "空気質指数";
+"LOC_PM10"                          = "微細粉塵";
+"LOC_PM25"                          = "PM2.5";
+
+"LOC_TODAYWEATHER"                  = "今日天気";
+
+"LOC_HUMIDITY"                      = "湿度";
+
+// AQI
+"LOC_GOOD"                          = "よい";
+"LOC_MODERATE"                      = "普通";
+"LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS"= "乳幼児やお年寄りは注意";
+"LOC_UNHEALTHY"                     = "悪い";
+"LOC_VERY_UNHEALTHY"                = "非常に悪い";
+"LOC_HAZARDOUS"                     = "危険";
+
+

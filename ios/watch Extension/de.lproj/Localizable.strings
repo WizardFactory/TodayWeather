@@ -1,0 +1,32 @@
+/*
+ Localizable.strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 9. 24..
+ 
+ */
+// German
+
+// "Key"                    = "Value"
+
+// Widget
+"LOC_UPDATE"                        = "Aktualisieren";
+
+"LOC_AQI"                           = "AQI";
+"LOC_PM10"                          = "PM10";
+"LOC_PM25"                          = "PM2.5";
+
+"LOC_TODAYWEATHER"                  = "HeuteWetter";
+
+"LOC_HUMIDITY"                      = "Feuchtigkeit";
+
+// AQI
+"LOC_GOOD"                          = "Gut";
+"LOC_MODERATE"                      = "Mäßig";
+"LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS"= "Ungesund für empfindliche Gruppen";
+"LOC_UNHEALTHY"                     = "Ungesund";
+"LOC_VERY_UNHEALTHY"                = "Sehr ungesund";
+"LOC_HAZARDOUS"                     = "Gefahr";
+
+
+

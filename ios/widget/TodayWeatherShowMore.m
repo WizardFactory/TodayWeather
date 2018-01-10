@@ -49,8 +49,6 @@
     TEMP_UNIT       tempUnit = TEMP_UNIT_CELSIUS;
     NSString        *nssCountry = nil;
     
-    NSLog(@"[proDailyData] reqType : %d", reqType);
-    
     TodayViewController *TVC = [TodayViewController sharedInstance];
 
     arrDaysData         = [TodayWeatherUtil getDaysArray:jsonDict type:reqType];
@@ -58,53 +56,45 @@
     nssCountry          = [self getCurCountry];
     tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     
-    NSLog(@"[proDailyData] country : %@", nssCountry);
-    
     for(int i = 0 ; i < [arrDaysData count]; i++)
     {
+        nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
+        
         if(reqType == TYPE_REQUEST_WEATHER_KR)
         {
-            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
             nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
             nssDay              = [nssDate substringFromIndex:6];
             
-            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
-            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
+            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMin"] intValue];
+            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"taMax"] intValue];
             
-//            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
-//            {
-//                taMin = [TodayWeatherUtil convertFromCelsToFahr:taMin];
-//                taMax = [TodayWeatherUtil convertFromCelsToFahr:taMax];
-//            }
+            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
+            {
+                taMin = [TodayWeatherUtil convertFromCelsToFahr:taMin];
+                taMax = [TodayWeatherUtil convertFromCelsToFahr:taMax];
+            }
         }
-        else if (reqType == TYPE_REQUEST_WEATHER_GLOBAL)
+        else
         {
-            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-            nssDay              = [nssDate substringFromIndex:6];
-            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
-            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
+            nssMonth            = [nssDate substringWithRange:NSMakeRange(5, 2)];
+            nssDay              = [nssDate substringWithRange:NSMakeRange(8, 2)];
             
-//            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-//            nssMonth            = [nssDate substringWithRange:NSMakeRange(5, 2)];
-//            nssDay              = [nssDate substringWithRange:NSMakeRange(8, 2)];
-//
-//            if(tempUnit == TEMP_UNIT_CELSIUS)
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_c"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_c"] intValue];
-//            }
-//            else
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_f"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_f"] intValue];
-//            }
+            if(tempUnit == TEMP_UNIT_CELSIUS)
+            {
+                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_c"] intValue];
+                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_c"] intValue];
+            }
+            else
+            {
+                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_f"] intValue];
+                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_f"] intValue];
+            }
         }
         
         nssTempMaxMin       = [NSString stringWithFormat:@"%d˚/%d˚", taMin, taMax];
         
         nssSkyIcon          = [[arrDaysData objectAtIndex:i] objectForKey:@"skyIcon"];
-        NSLog(@"[proDailyData] nssTempMaxMin : %@", nssTempMaxMin);
+        //NSLog(@"nssTempMaxMin : %@", nssTempMaxMin);
         
         dispatch_async(dispatch_get_main_queue(), ^{
             switch (i) {
@@ -189,31 +179,56 @@
     NSString    *nssHour = nil;
     
     NSString    *nssTempByTime = nil;
-    //TEMP_UNIT tempUnit            = [TodayWeatherUtil getTemperatureUnit];
+    TEMP_UNIT tempUnit            = [TodayWeatherUtil getTemperatureUnit];
     TodayViewController *TVC = [TodayViewController sharedInstance];
     
-    NSLog(@"[proByTimeData] reqType : %d", reqType);
+    NSLog(@"reqType : %d", reqType);
     //NSLog(@"[processByTimeData] dict : %@", dict);
     arrTimeData = [TodayWeatherUtil getByTimeArray:dict type:reqType];
-    NSLog(@"[proByTimeData] arrTimeData count : %lu", (unsigned long)[arrTimeData count]);
+    NSLog(@"[processByTimeData] arrTimeData count : %lu", (unsigned long)[arrTimeData count]);
     
     for(int i = 0 ; i < [arrTimeData count]; i++)
     {
         //NSLog(@"[processByTimeData] i : %d", i);
-        int       temperature     = 0;
-        
-        if(reqType == TYPE_REQUEST_WEATHER_KR) {
-            int       time = 0;
-            time         = [[[arrTimeData objectAtIndex:i] objectForKey:@"time"] intValue];
-            nssHour      = [NSString stringWithFormat:@"%d시", time];
+        if(reqType == TYPE_REQUEST_WEATHER_KR)
+        {
+            int       temperature     = 0;
+            nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"time"];
+            if([nssTime length] >= 2)
+            {
+                nssHour             = [NSString stringWithFormat:@"%@시", [nssTime substringToIndex:2]];
+            }
+            else
+            {
+                nssHour             = [NSString stringWithFormat:@"시"];
+            }
+            
+            temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
+            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
+            {
+                temperature = [TodayWeatherUtil convertFromCelsToFahr:temperature];
+            }
+            
+            nssTempByTime       = [NSString stringWithFormat:@"%d˚", temperature];
         }
-        else {
-            nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"dateObj"];
+        else
+        {
+            float       temperature     = 0;
+            nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"date"];
             nssHour         = [nssTime substringWithRange:NSMakeRange(11, 5)];
+            
+            if(tempUnit == TEMP_UNIT_CELSIUS)
+            {
+                temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"temp_c"] floatValue];
+                nssTempByTime       = [NSString stringWithFormat:@"%.01f˚", temperature];
+            }
+            else
+            {
+                temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"temp_f"] floatValue];
+                nssTempByTime       = [NSString stringWithFormat:@"%d˚", (int)temperature];
+            }
         }
         
-        temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
-        nssTempByTime       = [NSString stringWithFormat:@"%d˚", (int)temperature];
         nssSkyIcon          = [[arrTimeData objectAtIndex:i] objectForKey:@"skyIcon"];
         
         NSLog(@"nssTempMaxMin : %@", nssTempByTime);

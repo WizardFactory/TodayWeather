@@ -2,13 +2,12 @@ angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, $rootScope, $ionicScrollDelegate,
                                           $ionicNavBarDelegate, $q, $timeout, WeatherInfo, WeatherUtil, Util,
                                           Purchase, $stateParams, $location, $ionicHistory, $sce, $ionicLoading,
-                                          $ionicPopup, $translate, Units) {
+                                          $ionicPopup, $translate, Units, TwStorage) {
         var TABLET_WIDTH = 720;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
         var bodyHeight;
         var colWidth;
-        var cityData = null;
         var refreshTimer = null;
 
         $scope.showDetailWeather = false;
@@ -583,7 +582,7 @@ angular.module('controller.forecastctrl', [])
             var dayTable;
 
             console.log('apply weather data');
-            cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
+            var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             if (cityData === null || cityData.address === null) {
                 console.log("fail to getCityOfIndex");
                 return;
@@ -673,33 +672,34 @@ angular.module('controller.forecastctrl', [])
                 var chartMidHeight = mainHeight - (136+padding);
                 $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
             }
-            /**
-             * loading을 분산시켜서 탭 전환을 빠르게 보이도록 함.
-             */
-            setTimeout(function () {
-                $scope.showDetailWeather = true;
-                _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-                _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday);
-                if($scope.forecastType == 'short') {
-                    $scope.timeTable = cityData.timeTable;
-                    $scope.timeChart = cityData.timeChart;
 
-                    // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
-                    // ios에서 scroll 할때 scroll freeze되는 현상 있음.
-                    // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
+            $scope.showDetailWeather = true;
+            _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
+            _makeSummary($scope.currentWeather, $scope.currentWeather.yesterday);
+            if($scope.forecastType == 'short') {
+                $scope.timeTable = cityData.timeTable;
+                $scope.timeChart = cityData.timeChart;
+
+                // ios에서 ionic native scroll 사용시에 화면이 제대로 안그려지는 경우가 있어서 animation 필수.
+                // ios에서 scroll 할때 scroll freeze되는 현상 있음.
+                // iOS 10.2.1에서 animation 없어도 화면이 제대로 안그려지는 이슈 발생하지 않음.
+                // data binding이 늦어 scroll이 무시되는 경우가 있음
+                setTimeout(function () {
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                     } else {
                         $ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, false);
                         //$ionicScrollDelegate.$getByHandle("timeChart").scrollTo(getTodayPosition(), 0, true);
                     }
-                }
-                else {
-                    $scope.dayChart = cityData.dayChart;
+                }, 0);
+            }
+            else {
+                $scope.dayChart = cityData.dayChart;
 
-                    /**
-                     * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
-                     */
+                /**
+                 * iOS에서 short -> mid 로 변경할때, animation이 없으면 매끄럽게 스크롤되지 않음.
+                 */
+                setTimeout(function () {
                     if (ionic.Platform.isAndroid()) {
                         $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, false);
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, false);
@@ -707,8 +707,8 @@ angular.module('controller.forecastctrl', [])
                         $ionicScrollDelegate.$getByHandle("weeklyChart").scrollTo(getTodayPosition(), 0, true);
                         $ionicScrollDelegate.$getByHandle("weeklyTable").scrollTo(300, 0, true);
                     }
-                }
-            }, 0);
+                }, 0);
+            }
         }
 
         function showLoadingIndicator() {
@@ -730,8 +730,8 @@ angular.module('controller.forecastctrl', [])
         function setRefreshTimer() {
             clearTimeout(refreshTimer);
 
-            var refreshInterval = localStorage.getItem("refreshInterval");
-            if (refreshInterval != null && refreshInterval !== "0") {
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo != null && settingsInfo.refreshInterval !== "0") {
                 refreshTimer = setTimeout(function () {
                     $scope.$broadcast('reloadEvent');
                 }, parseInt(refreshInterval)*60*1000);
@@ -741,37 +741,89 @@ angular.module('controller.forecastctrl', [])
         function loadWeatherData() {
             setRefreshTimer();
 
-            if (cityData.address === null || WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === true) {
+            var cityIndex = WeatherInfo.getCityIndex();
+            if (WeatherInfo.canLoadCity(cityIndex) === true) {
                 showLoadingIndicator();
 
-                updateCurrentPosition().then(function() {
-                    updateWeatherData().then(function () {
-                        setTimeout(function () {
-                            hideLoadingIndicator();
-                        }, ionic.Platform.isAndroid()?0:300);
-                    }, function (msg) {
-                        hideLoadingIndicator();
-                        $scope.showRetryConfirm(strError, msg, 'weather');
-                    });
-                }, function(msg) {
+                var weatherInfo = WeatherInfo.getCityOfIndex(cityIndex);
+                if (!weatherInfo) {
                     hideLoadingIndicator();
-                    if (msg !== null) {
-                        $scope.showRetryConfirm(strError, msg, 'forecast');
-                    }
-                    else {
-                        //pass for reload
-                    }
+
+                    Util.ga.trackEvent('weather', 'error', 'failToGetCityIndex', cityIndex);
+                    return;
+                }
+
+                updateWeatherData(weatherInfo).then(function () {
+                    applyWeatherData();
+                    setTimeout(function () {
+                        hideLoadingIndicator();
+                    }, ionic.Platform.isAndroid()?0:300);
+                }, function (msg) {
+                    applyWeatherData();
+                    hideLoadingIndicator();
+                    $scope.showRetryConfirm(strError, msg, 'weather');
                 });
+
+                if (weatherInfo.currentPosition === true) {
+                    /**
+                     * one more update when finished position is updated
+                     */
+                    updateCurrentPosition(weatherInfo).then(function(geoInfo) {
+                        if (geoInfo) {
+                            console.log("current position is updated !!");
+                            try {
+                                var savedLocation = WeatherInfo.getCityOfIndex(0).location;
+                                if (geoInfo.location.lat === savedLocation.lat &&
+                                    geoInfo.location.long === savedLocation.long) {
+                                    console.log("already updated this location");
+                                    return;
+                                }
+
+                                if (WeatherInfo.getCityIndex() != 0) {
+                                    console.log("already changed to new location");
+                                    return;
+                                }
+                            }
+                            catch(e) {
+                                Util.ga.trackEvent('position', 'error', 'failToParseGeoInfo');
+                                Util.ga.trackException(e, false);
+                            }
+
+                            updateWeatherData(geoInfo).then(function () {
+                                applyWeatherData();
+                            }, function (msg) {
+                                console.log(msg);
+                            });
+                        }
+                        else {
+                            Util.ga.trackEvent('position', 'error', 'failToGetGeoInfo');
+                        }
+                    }, function(msg) {
+                        if (msg) {
+                            $scope.showRetryConfirm(strError, msg, 'forecast');
+                        }
+                        else {
+                            //pass
+                        }
+                    });
+                }
+
                 return;
             }
+            else {
+                console.log("Already updated weather data so just apply");
+                showLoadingIndicator();
+                applyWeatherData();
+            }
 
+            //permission 조정할때, resume발생하기 때문에 그런 끊어지는 경우를 위해 있음.
             hideLoadingIndicator();
         }
 
-        function updateCurrentPosition() {
+        function updateCurrentPosition(cityInfo) {
             var deferred = $q.defer();
 
-            if (cityData.currentPosition === false) {
+            if (cityInfo.currentPosition === false) {
                 deferred.resolve();
                 return deferred.promise;
             }
@@ -780,12 +832,12 @@ angular.module('controller.forecastctrl', [])
 
                 if (ionic.Platform.isIOS()) {
                     if (Util.isLocationEnabled()) {
-                        _getCurrentPosition(deferred, true, true);
+                        _getCurrentPosition(deferred, cityInfo, true, true);
                     } else if (Util.locationStatus === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED) {
                         // location service가 off 상태로 시작한 경우에는 denied로 설정되어 있음. on 상태인 경우에 not_requested로 들어옴
-                        _getCurrentPosition(deferred, true, undefined);
+                        _getCurrentPosition(deferred, cityInfo, true, undefined);
                     } else {
-                        _getCurrentPosition(deferred, false, undefined);
+                        _getCurrentPosition(deferred, cityInfo, false, undefined);
                     }
                 }
                 else if (ionic.Platform.isAndroid()) {
@@ -794,29 +846,29 @@ angular.module('controller.forecastctrl', [])
                             console.log('status='+status);
                             $scope.setLocationAuthorizationStatus(status);
                             if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
-                                _getCurrentPosition(deferred, true, true);
+                                _getCurrentPosition(deferred, cityInfo, true, true);
                             } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
-                                _getCurrentPosition(deferred, true, false);
+                                _getCurrentPosition(deferred, cityInfo, true, false);
                             } else if (status === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED
                                 || status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                _getCurrentPosition(deferred, true, undefined);
+                                _getCurrentPosition(deferred, cityInfo, true, undefined);
                             }
                         }, function (error) {
                             console.error("Error getting for location authorization status: " + error);
                         });
                     } else {
-                        _getCurrentPosition(deferred, false, undefined);
+                        _getCurrentPosition(deferred, cityInfo, false, undefined);
                     }
                 }
             }
             else {
-                _getCurrentPosition(deferred, true, true);
+                _getCurrentPosition(deferred, cityInfo, true, true);
             }
 
             return deferred.promise;
         }
 
-        function _getCurrentPosition(deferred, isLocationEnabled, isLocationAuthorized) {
+        function _getCurrentPosition(deferred, cityInfo, isLocationEnabled, isLocationAuthorized) {
             var msg;
             Util.ga.trackEvent('position', 'status', 'enabled', isLocationEnabled?1:0);
             Util.ga.trackEvent('position', 'status', 'authorized', isLocationAuthorized?1:0);
@@ -826,23 +878,16 @@ angular.module('controller.forecastctrl', [])
                         Util.ga.trackEvent('position', 'done', data.provider);
                         var coords = data.coords;
                         WeatherUtil.getGeoInfoFromGeolocation(coords.latitude, coords.longitude).then(function (geoInfo) {
-                            cityData.name = geoInfo.name;
-                            cityData.country = geoInfo.country;
-                            cityData.address = geoInfo.address;
-                            //device location을 사용하기 위해서는 아래 코드 사용하면 됨.
-                            //cityData.location = WeatherUtil.geolocationNormalize({"lat": coords.latitude, "long": coords.longitude});
-                            cityData.location = geoInfo.location;
-                            if (geoInfo.country === "KR") {
-                                cityData.source = "KMA";
-                            } else {
-                                cityData.source = "DSF"; // default source로 설정해야 함
-                            }
-                            WeatherInfo.updateCity(WeatherInfo.getCityIndex(), cityData);
-                            deferred.resolve();
+                            deferred.resolve(geoInfo);
                         }, function () {
                             deferred.reject(strFailToGetAddressInfo);
                         });
-                    }, function () {
+                    }, function (errMsg) {
+                        if (errMsg === 'alreadyCalled') {
+                            Util.ga.trackEvent('position', 'warning', 'already called');
+                            return deferred.reject();
+                        }
+
                         Util.ga.trackEvent('position', 'error', 'all');
                         msg = strFailToGetCurrentPosition;
                         if (ionic.Platform.isAndroid()) {
@@ -893,7 +938,7 @@ angular.module('controller.forecastctrl', [])
                 }
             }
             else if (isLocationEnabled === false) {
-                if (cityData.address === null && cityData.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
+                if (cityInfo.address === null && cityInfo.location === null) { // 현재 위치 정보가 없는 경우 에러 팝업 표시
                     if (window.cordova && cordova.plugins.locationAccuracy) {
                         cordova.plugins.locationAccuracy.request(
                             function (success) {
@@ -921,14 +966,14 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
-        function updateWeatherData() {
+        function updateWeatherData(geoInfo) {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
 
-            WeatherUtil.getWorldWeatherInfo(cityData).then(function (weatherData) {
+            WeatherUtil.getWorldWeatherInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                Util.ga.trackEvent('weather', 'get', geoInfo.address +
                     '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherData);
@@ -937,16 +982,15 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
                 WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);
-                applyWeatherData();
                 deferred.resolve();
             }, function (error) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
                         '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('weather', 'error', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
                         '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                 }
 
@@ -1025,7 +1069,7 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setNextCityIndex();
-            applyWeatherData();
+            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1035,7 +1079,7 @@ angular.module('controller.forecastctrl', [])
             }
 
             WeatherInfo.setPrevCityIndex();
-            applyWeatherData();
+            //applyWeatherData();
             loadWeatherData();
         };
 
@@ -1239,6 +1283,7 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
             } else if (sender === 'locationOn') {
+                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
                 if (cityData && cityData.currentPosition === false) {
                     Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
                     return;
@@ -1246,11 +1291,6 @@ angular.module('controller.forecastctrl', [])
             } else if (sender === 'setRefreshInterval') {
                 setRefreshTimer();
                 return;
-            }
-            else {
-                if (cityData == null) {
-                   applyWeatherData();
-                }
             }
 
             console.log('called by update weather event');

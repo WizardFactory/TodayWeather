@@ -1,0 +1,30 @@
+/*
+ Localizable.strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 9. 24..
+ 
+ */
+// Korean
+
+// "Key"                    = "Value"
+
+// Watch
+"LOC_UPDATE"                        = "업데이트";
+
+"LOC_AQI"                           = "통합대기";
+"LOC_PM10"                          = "미세먼지";
+"LOC_PM25"                          = "초미세먼지";
+
+"LOC_TODAYWEATHER"                  = "오늘날씨";
+
+"LOC_HUMIDITY"                      = "습도";
+
+// AQI
+"LOC_GOOD"                          = "좋음";
+"LOC_MODERATE"                      = "보통";
+"LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS"= "민감군주의";
+"LOC_UNHEALTHY"                     = "나쁨";
+"LOC_VERY_UNHEALTHY"                = "매우나쁨";
+"LOC_HAZARDOUS"                     = "위험";
+
