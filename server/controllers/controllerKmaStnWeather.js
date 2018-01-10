@@ -46,7 +46,7 @@ controllerKmaStnWeather.updateWeather = function (current) {
                }
                else if (current.pty == 3) {
                    current.weather = '눈';
-                   current.weatherType = 65;
+                   current.weatherType = 66;
                }
                break;
            case 17:
@@ -70,7 +70,7 @@ controllerKmaStnWeather.updateWeather = function (current) {
                current.weather = '소낙눈/약';
                break;
            case 41:
-               current.weatherType = 65;
+               current.weatherType = 66;
                current.weather = '눈';
                break;
            case 56:
@@ -97,6 +97,10 @@ controllerKmaStnWeather.updateWeather = function (current) {
         //         current.pty = 4; //안개,황사
         //         break;
         // }
+    }
+
+    if (current.lgt) {
+        //번개문구 추가는 skip
     }
 };
 

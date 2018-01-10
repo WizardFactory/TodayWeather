@@ -938,57 +938,111 @@ function ControllerTown() {
         return this;
     };
 
-    function _convertCloud2SKy(cloud) {
-        if (cloud <= 2) {
-            return 1;
-        }
-        else if (cloud <= 5) {
-            return 2;
-        }
-        else if (cloud <= 8) {
-            return 3;
-        }
-        else {
-            return 4;
+    /**
+     * cloud가 있는 경우만 update sky
+     * @param currentSky
+     * @param cloud
+     * @returns {*}
+     * @private
+     */
+    function _convertCloud2SKy(currentSky, cloud) {
+        var cloudSky;
+        if ( !(cloud == undefined) )  {
+            if (cloud <= 2) {
+                cloudSky = 1;
+            }
+            else if (cloud <= 5) {
+                cloudSky = 2;
+            }
+            else if (cloud <= 8) {
+                cloudSky = 3;
+            }
+            else {
+                cloudSky = 4;
+            }
         }
 
-        return 0;
+        return cloudSky || currentSky;
     }
 
-    function _convertStnWeather2Pty(rns, weather) {
-        if (weather == undefined) {
-            return 0;
+    /**
+     * current.pty -> awsStn.weather -> awsStn.rns(pty가 3(snow)인 경우 rns로 업데이트 하지 않음)
+     * @param currentPty
+     * @param weather
+     * @param rns
+     * @param temp
+     * @returns {number}
+     * @private
+     */
+    function _convertStnWeather2Pty(currentPty, weather, rns, temp) {
+
+        if (weather !== undefined) {
+            var weatherPty;
+
+            if (weather.indexOf("끝") >= 0) {
+                weatherPty = 0;
+            }
+            else if (weather.indexOf("비") >= 0) {
+                weatherPty =  1;
+            }
+            else if (weather.indexOf("진눈깨비") >= 0) {
+                weatherPty =  2;
+            }
+            else if (weather.indexOf("눈") >= 0) {
+                weatherPty =  3;
+            }
+            else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
+                weatherPty =  3;
+            }
+
+            if (weatherPty !== undefined) {
+               currentPty = weatherPty;
+            }
         }
-        if (weather.indexOf("끝") >= 0) {
-            return 0;
+
+        // currentPty가 3(눈)인 경우 rns로 업데이트 하지 않음.
+        if (rns !== undefined && currentPty !== 3) {
+            var rnsPty;
+            if (rns === true) {
+                //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                //0~3도는 눈/비
+                if (temp !== undefined) {
+                    if (temp > 3) {
+                        rnsPty = 1;
+                    }
+                    else if (temp >= 0) {
+                        rnsPty = 2;
+                    }
+                    else {
+                        rnsPty = 3;
+                    }
+                }
+            }
+            else if (rns === false) {
+               rnsPty = 0;
+            }
+
+            if (rnsPty !== undefined) {
+                currentPty = rnsPty;
+            }
         }
-        else if (weather.indexOf("비") >= 0) {
-            return 1;
-        }
-        else if (weather.indexOf("진눈깨비") >= 0) {
-            return 2;
-        }
-        else if (weather.indexOf("눈") >= 0) {
-            return 3;
-        }
-        else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
-            return 3;
-        }
-        else if (rns == true) {
-            return 1;
-        }
-        return 0;
+
+        return currentPty;
     }
 
-    function _convertStnWeather2Lgt(weather) {
-        if (weather == undefined) {
-            return 0;
-        }
+    /**
+     * weather에 lgt에 관한 언급이 없으면 기존 유지
+     * @param currentLgt
+     * @param weather
+     * @returns {*}
+     * @private
+     */
+    function _convertStnWeather2Lgt(currentLgt, weather) {
+        var weatherLgt;
         if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
-           return 1;
+           weatherLgt = 1;
         }
-
-        return 0;
+        return weatherLgt || currentLgt;
     }
 
     this.mergeCurrentByStnHourly = function (req, res, next) {
@@ -1023,10 +1077,10 @@ function ControllerTown() {
                         if (hourlyData.date == stnDateTime)  {
                             current.t1h = hourlyData.t1h;
                             current.rn1 = hourlyData.rs1h;
-                            current.sky = _convertCloud2SKy(hourlyData.cloud);
+                            current.sky = _convertCloud2SKy(current.sky, hourlyData.cloud);
                             current.reh = hourlyData.reh;
-                            current.pty = _convertStnWeather2Pty(hourlyData.rns, hourlyData.weather);
-                            current.lgt = _convertStnWeather2Lgt(hourlyData.weather);
+                            current.pty = _convertStnWeather2Pty(current.pty, hourlyData.weather, hourlyData.rns, hourlyData.t1h);
+                            current.lgt = _convertStnWeather2Lgt(current.lgt, hourlyData.weather);
                             current.vec = hourlyData.vec;
                             current.wsd = hourlyData.wsd;
                             return;
@@ -1034,21 +1088,22 @@ function ControllerTown() {
                     }
                 });
 
-                if (req.current == undefined || req.current.t1h == undefined || req.current.t1h == -50) {
-                    if (!(req.current == undefined)) {
-                        var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(req.current.date+req.current.time);
+                var reqC = req.current;
+                if (reqC == undefined || reqC.t1h == undefined || reqC.t1h == -50) {
+                    if (!(reqC == undefined)) {
+                        var stnDateTime = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM(reqC.date+reqC.time);
 
                         for (var i=hourlyList.length-1; i>=0; i--) {
                             var hourlyData = hourlyList[i];
                             if (hourlyData.date == stnDateTime)  {
-                                req.current.t1h = hourlyData.t1h;
-                                req.current.rn1 = hourlyData.rs1h;
-                                req.current.sky = _convertCloud2SKy(hourlyData.cloud);
-                                req.current.reh = hourlyData.reh;
-                                req.current.pty = _convertStnWeather2Pty(hourlyData.rns, hourlyData.weather);
-                                req.current.lgt = _convertStnWeather2Lgt(hourlyData.weather);
-                                req.current.vec = hourlyData.vec;
-                                req.current.wsd = hourlyData.wsd;
+                                reqC.t1h = hourlyData.t1h;
+                                reqC.rn1 = hourlyData.rs1h;
+                                reqC.sky = _convertCloud2SKy(reqC.sky, hourlyData.cloud);
+                                reqC.reh = hourlyData.reh;
+                                reqC.pty = _convertStnWeather2Pty(reqC.pty, hourlyData.weather, hourlyData.rns, hourlyData.t1h);
+                                reqC.lgt = _convertStnWeather2Lgt(reqC.lgt, hourlyData.weather);
+                                reqC.vec = hourlyData.vec;
+                                reqC.wsd = hourlyData.wsd;
                                 break;
                             }
                         }
@@ -1465,157 +1520,99 @@ function ControllerTown() {
             req.current.date = nowDate.date;
         }
 
-        try {
-            self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+        self._getTownInfo(req.params.region, req.params.city, req.params.town, function (err, townInfo) {
+            if (err) {
+                log.error(err);
+                next();
+                return;
+            }
+
+            var now = new Date();
+            now = kmaTimeLib.toTimeZone(9, now);
+
+            var date = kmaTimeLib.convertDateToYYYYMMDD(now);
+            var time = kmaTimeLib.convertDateToHHMM(now);
+            log.debug(date+time, meta);
+
+            controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
                 if (err) {
                     log.error(err);
                     next();
                     return;
                 }
 
-                var now = new Date();
-                now = kmaTimeLib.toTimeZone(9, now);
-
-                var date = kmaTimeLib.convertDateToYYYYMMDD(now);
-                var time = kmaTimeLib.convertDateToHHMM(now);
-                log.debug(date+time, meta);
-                controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
-                    if (err) {
-                        log.error(err);
-                        next();
-                        return;
-                    }
-
-                    //체크 가능한 값이 아래 3가지뿐임. t1h는 실제로 0도일 수 있지만, 에러인 경우에도 0으로 옴.
-                    if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
-                        log.warn('stnWeatherInfo is invalid!', meta);
-                        next();
-                        return;
-                    }
-
-                    try {
-                        /* 분단위 데이터지만, 분단위 데이터가 없는 경우 시간단위 데이터가 올수 있음. */
-                        /* todo: 분단위 데이터와 시단위 데이터를 분리해서 시단위는 동네예보와 우선순위 선정하는게 더 정확함.
-                         current -> 도시별 날씨 -> AWS 분단위 -> 초단기 */
-
-                        var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
-                        var stnFirst = true;
-                        if (!(req.currentPubDate == undefined)) {
-                            var currentTime = kmaTimeLib.convertStringToDate(req.currentPubDate);
-
-                            if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
-
-                                log.info('>sID=',req.sessionID,
-                                    'use api first, just append new data of stn hourly weather info', meta);
-                                stnFirst = false;
-                            }
-                            else {
-                                log.info('>sID=',req.sessionID, 'overwrite all data', meta);
-                            }
-                        }
-
-                        for (var key in stnWeatherInfo) {
-                            if (stnFirst || req.current[key] == undefined) {
-                                req.current[key] = stnWeatherInfo[key];
-                            }
-                        }
-
-                        var reqCurrent = req.current;
-
-                        if (stnFirst) {
-                            reqCurrent.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
-                            reqCurrent.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
-                        }
-
-                        if (reqCurrent.rn1 == undefined || stnFirst) {
-                            if (!(stnWeatherInfo.rs1h == undefined)) {
-                                reqCurrent.rn1 = stnWeatherInfo.rs1h;
-                            }
-                        }
-                        if (reqCurrent.sky == undefined || stnFirst) {
-                            if (!(stnWeatherInfo.cloud == undefined)) {
-                                reqCurrent.sky = _convertCloud2SKy(stnWeatherInfo.cloud);
-                            }
-                        }
-                        if (reqCurrent.pty == undefined || stnFirst) {
-                            if (!(stnWeatherInfo.weather == undefined) && !(stnWeatherInfo.rns == undefined)) {
-                                reqCurrent.pty = _convertStnWeather2Pty(stnWeatherInfo.rns, stnWeatherInfo.weather);
-                            }
-                        }
-                        if (reqCurrent.lgt == undefined || stnFirst) {
-                            if (!(stnWeatherInfo.weather == undefined)) {
-                                reqCurrent.lgt = _convertStnWeather2Lgt(stnWeatherInfo.weather);
-                            }
-                        }
-
-                        if (stnFirst) {
-                            //24시 01분부터 1시까지 날짜 맞지 않음.
-                            //reqCurrent.date = date;
-                            reqCurrent.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
-
-                            reqCurrent.overwrite = true;
-                            if (reqCurrent.rns === true) {
-                                if (reqCurrent.pty === 0) {
-                                    log.info('change pty to rain or snow by get Kma Stn Hourly Weather town=' +
-                                        req.params.region + req.params.city + req.params.town);
-
-                                    //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
-                                    //0~3도는 눈/비
-                                    if (reqCurrent.t1h > 3) {
-                                        reqCurrent.pty = 1;
-                                    }
-                                    else if (reqCurrent.t1h >= 0) {
-                                        reqCurrent.pty = 2;
-                                    }
-                                    else {
-                                        reqCurrent.pty = 3;
-                                    }
-                                    //if sky is clear change to partly cloud
-                                    if (reqCurrent.sky === 1) {
-                                        reqCurrent.sky = 2;
-                                    }
-                                }
-                                if (reqCurrent.rs1h > 0) {
-                                    reqCurrent.rn1 = reqCurrent.rs1h;
-                                    if (reqCurrent.rn1 > 10) {
-                                        reqCurrent.rn1 = Math.round(reqCurrent.rn1);
-                                    }
-                                    else {
-                                        reqCurrent.rn1 = +(reqCurrent.rn1).toFixed(1);
-                                    }
-                                }
-                            }
-                            else if (reqCurrent.rns === false) {
-                                //눈, 비가 오지 않는다 경우에 대해서는 overwrite하지 않음. 에러가 많음.
-                                //if (reqCurrent.pty != 0) {
-                                //    log.info('change pty to zero by get Kma Stn Hourly Weather town=' +
-                                //        req.params.region + req.params.city + req.params.town);
-                                //    reqCurrent.pty = 0;
-                                //}
-                            }
-                            else {
-                                log.debug('we did not get rns info');
-                            }
-
-                        }
-
-                        controllerKmaStnWeather.updateWeather(reqCurrent);
-                        reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
-                        self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
-                    }
-                    catch(e) {
-                        log.error(e);
-                    }
+                //체크 가능한 값이 아래 3가지뿐임. t1h는 실제로 0도일 수 있지만, 에러인 경우에도 0으로 옴.
+                if (stnWeatherInfo.t1h === 0 && stnWeatherInfo.vec === 0 && stnWeatherInfo.wsd === 0) {
+                    log.warn('stnWeatherInfo is invalid!', meta);
                     next();
-                });
+                    return;
+                }
+
+                try {
+                    var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
+                    var stnFirst = true;
+                    if (!(req.currentPubDate == undefined)) {
+                        var currentTime = kmaTimeLib.convertStringToDate(req.currentPubDate);
+
+                        if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
+
+                            log.info('>sID=',req.sessionID,
+                                'use api first, just append new data of stn hourly weather info', meta);
+                            stnFirst = false;
+                        }
+                        else {
+                            log.info('>sID=',req.sessionID, 'overwrite all data', meta);
+                        }
+                    }
+
+                    for (var key in stnWeatherInfo) {
+                        if (stnFirst || req.current[key] == undefined) {
+                            req.current[key] = stnWeatherInfo[key];
+                        }
+                    }
+
+                    var reqCurrent = req.current;
+
+                    if (stnFirst) {
+                        reqCurrent.overwrite = true;
+                        reqCurrent.date = kmaTimeLib.convertDateToYYYYMMDD(stnWeatherInfoTime);
+                        reqCurrent.time = kmaTimeLib.convertDateToHHZZ(stnWeatherInfoTime);
+                        reqCurrent.liveTime = stnWeatherInfo.stnDateTime.substr(11, 5).replace(":","");
+                    }
+
+                    if (reqCurrent.rn1 == undefined || stnFirst) {
+                        if ( stnWeatherInfo.hasOwnProperty('rs1h') ) {
+                            reqCurrent.rn1 = stnWeatherInfo.rs1h;
+                        }
+                    }
+
+                    //적정한 위치로 이동 필요함. 데이터 가져올때마다 보정하거나, 마지막에 보정하거나
+                    if (reqCurrent.hasOwnProperty('rn1')) {
+                        if (reqCurrent.rn1 > 10) {
+                            reqCurrent.rn1 = Math.round(reqCurrent.rn1);
+                        }
+                        else {
+                            reqCurrent.rn1 = parseFloat( (reqCurrent.rn1).toFixed(1) );
+                        }
+                    }
+
+                    reqCurrent.sky = _convertCloud2SKy(reqCurrent.sky, stnWeatherInfo.cloud);
+
+                    reqCurrent.pty = _convertStnWeather2Pty(reqCurrent.pty, stnWeatherInfo.weather,
+                                        stnWeatherInfo.rns, stnWeatherInfo.t1h);
+
+                    reqCurrent.lgt = _convertStnWeather2Lgt(reqCurrent.lgt, stnWeatherInfo.weather);
+
+                    controllerKmaStnWeather.updateWeather(reqCurrent);
+                    reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
+                    self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
+                }
+                catch(err) {
+                    log.error(err);
+                }
+                next();
             });
-        }
-        catch(e) {
-            if (e) {
-                log.warn(e);
-            }
-            next();
-        }
+        });
     };
 
     /**
