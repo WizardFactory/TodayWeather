@@ -227,7 +227,7 @@ angular.module('service.push', [])
                     Util.ga.trackEvent('action', 'click', 'push url='+url);
                 }
                 else {
-                    Util.ga.trackEvent('action', 'error', 'push data='+data);
+                    Util.ga.trackEvent('action', 'error', 'push data='+JSON.stringify(data));
                 }
             });
 

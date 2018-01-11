@@ -18,8 +18,6 @@ angular.module('controller.forecastctrl', [])
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        var shortenAddress = "";
-
         $scope.imgPath = Util.imgPath;
 
         if ($scope.forecastType == 'mid') {
@@ -527,123 +525,133 @@ angular.module('controller.forecastctrl', [])
 
         function applyWeatherData() {
             var dayTable;
+            var cityIndex;
+            var cityData;
+            var shortenAddress = "";
 
             console.log('apply weather data');
-            var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-            if (cityData === null || cityData.address === null) {
-                console.log("fail to getCityOfIndex");
-                return;
-            }
 
-            if (cityData.source) {
-                $scope.source = cityData.source;
-            }
+            try {
+                cityIndex = WeatherInfo.getCityIndex();
+                cityData = WeatherInfo.getCityOfIndex(cityIndex);
+                if (cityData === null || cityData.address === null || cityData.dayChart == null) {
+                    Util.ga.trackEvent('weather', 'error', 'fail to getCityOfIndex', cityIndex);
+                    console.log("fail to getCityOfIndex");
+                    return;
+                }
 
-            dayTable = cityData.dayChart[0].values;
+                shortenAddress = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
+                console.log(shortenAddress);
 
-            $scope.timeWidth = colWidth * cityData.timeTable.length;
-            $scope.dayWidth = colWidth * dayTable.length;
+                $scope.address = shortenAddress;
 
-            if (cityData.name) {
-                shortenAddress = cityData.name;
-            }
-            else {
-                shortenAddress = WeatherUtil.getShortenAddress(cityData.address);
-            }
+                if (cityData.source) {
+                    $scope.source = cityData.source;
+                }
 
-            $scope.address = shortenAddress;
-            console.log(shortenAddress);
-            $scope.currentWeather = cityData.currentWeather;
+                dayTable = cityData.dayChart[0].values;
 
-            $scope.currentPosition = cityData.currentPosition;
+                $scope.timeWidth = colWidth * cityData.timeTable.length;
+                $scope.dayWidth = colWidth * dayTable.length;
 
-            $scope.updateTime = (function () {
-                try {
-                    if (cityData.currentWeather) {
-                        if (cityData.currentWeather.stnDateTime) {
-                            return cityData.currentWeather.stnDateTime;
-                        }
-                        else {
-                            var tmpDate = cityData.currentWeather.date;
-                            if (tmpDate instanceof Date) {
-                                return tmpDate.toDateString();
+                $scope.currentWeather = cityData.currentWeather;
+
+                $scope.currentPosition = cityData.currentPosition;
+
+                $scope.updateTime = (function () {
+                    try {
+                        if (cityData.currentWeather) {
+                            if (cityData.currentWeather.stnDateTime) {
+                                return cityData.currentWeather.stnDateTime;
                             }
                             else {
-                                return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
-                                    " " + cityData.currentWeather.time + ":00";
+                                var tmpDate = cityData.currentWeather.date;
+                                if (tmpDate instanceof Date) {
+                                    return tmpDate.toDateString();
+                                }
+                                else {
+                                    return tmpDate.substr(0, 4) + "-" + tmpDate.substr(4, 2) + "-" + tmpDate.substr(6, 2) +
+                                        " " + cityData.currentWeather.time + ":00";
+                                }
                             }
                         }
                     }
-                }
-                catch(err) {
-                    //#2028 이슈 재 발생시 데이터 확인한다.
-                    if (cityData && cityData.currentWeather) {
-                        var errMsg = JSON.stringify({
-                                        stnDateTime: cityData.currentWeather.stnDateTime,
-                                        date: cityData.currentWeather.date,
-                                        time: cityData.currentWeather.time});
-                        Util.ga.trackEvent('weather', 'error', errMsg);
+                    catch (err) {
+                        //#2028 이슈 재 발생시 데이터 확인한다.
+                        if (cityData && cityData.currentWeather) {
+                            var errMsg = JSON.stringify({
+                                stnDateTime: cityData.currentWeather.stnDateTime,
+                                date: cityData.currentWeather.date,
+                                time: cityData.currentWeather.time
+                            });
+                            Util.ga.trackEvent('weather', 'error', errMsg);
+                        }
+                        Util.ga.trackException(err, false);
+                        return "";
                     }
-                    Util.ga.trackException(err, false);
-                    return "";
+                })();
+
+                // To share weather information for apple watch.
+                // AppleWatch.setWeatherData(cityData);
+
+                var mainHeight = bodyHeight * contentRatio;
+                var padding = 0;
+
+                //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
+                //광고 제거 버전했을 때, AQI가 보이게 padding맞춤. 나머지 14px는 chart에서 사용됨.
+                if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
+                    padding += 36;
                 }
-            })();
 
-            // To share weather information for apple watch.
-            // AppleWatch.setWeatherData(cityData);
-
-            var mainHeight = bodyHeight * contentRatio;
-            var padding = 0;
-
-            //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
-            //광고 제거 버전했을 때, AQI가 보이게 padding맞춤. 나머지 14px는 chart에서 사용됨.
-            if (Purchase.accountLevel == Purchase.ACCOUNT_LEVEL_FREE) {
-                padding += 36;
-            }
-
-            //16:9 이상의 부분은 padding으로 넘겨 여유 공간으로 사용함
-            if (bodyHeight>0 && bodyWidth>0) {
-                if (bodyHeight / bodyWidth >= 2) {
-                    padding += parseInt((bodyHeight - (bodyWidth*1.77))/2);
+                //16:9 이상의 부분은 padding으로 넘겨 여유 공간으로 사용함
+                if (bodyHeight > 0 && bodyWidth > 0) {
+                    if (bodyHeight / bodyWidth >= 2) {
+                        padding += parseInt((bodyHeight - (bodyWidth * 1.77)) / 2);
+                    }
                 }
-            }
 
-            if (bodyHeight === 480) {
-                //iphone4
-                padding -= 32;
-            }
-            else if (ionic.Platform.isAndroid()) {
-                //status bar
-                padding += 24;
-                if (bodyHeight <= 512) {
-                    //view2 4:3
+                if (bodyHeight === 480) {
+                    //iphone4
                     padding -= 32;
                 }
-            }
+                else if (ionic.Platform.isAndroid()) {
+                    //status bar
+                    padding += 24;
+                    if (bodyHeight <= 512) {
+                        //view2 4:3
+                        padding -= 32;
+                    }
+                }
 
-            if (showAqi) {
-                padding += 36;
-            }
+                if (showAqi) {
+                    padding += 36;
+                }
 
-            if($scope.forecastType == 'short') {
-                var chartShortHeight = mainHeight - (143 + padding);
-                $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
-            }
-            else {
-                var chartMidHeight = mainHeight - (136+padding);
-                $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
-            }
+                if ($scope.forecastType == 'short') {
+                    var chartShortHeight = mainHeight - (143 + padding);
+                    $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
+                }
+                else {
+                    var chartMidHeight = mainHeight - (136 + padding);
+                    $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
+                }
 
-            $scope.showDetailWeather = true;
-            $scope.summary = $scope.currentWeather.summary;
+                $scope.showDetailWeather = true;
+                $scope.summary = $scope.currentWeather.summary;
 
-            _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-            if($scope.forecastType == 'short') {
-                $scope.timeTable = cityData.timeTable;
-                $scope.timeChart = cityData.timeChart;
+                _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
+                if ($scope.forecastType == 'short') {
+                    $scope.timeTable = cityData.timeTable;
+                    $scope.timeChart = cityData.timeChart;
+                }
+                else {
+                    $scope.dayChart = cityData.dayChart;
+                }
             }
-            else {
-                $scope.dayChart = cityData.dayChart;
+            catch(err) {
+                Util.ga.trackEvent('weather', 'error', err.toString());
+                Util.ga.trackException(err, false);
+                return;
             }
 
             //많은 이슈가 있음. https://github.com/WizardFactory/TodayWeather/issues/1777

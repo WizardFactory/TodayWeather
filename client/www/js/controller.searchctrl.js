@@ -747,7 +747,7 @@ angular.module('controller.searchctrl', [])
                 WeatherUtil.getWeatherByGeoInfo(cityData).then(function (weatherData) {
                     var endTime = new Date().getTime();
                     Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                    Util.ga.trackEvent('weather', 'get', WeatherUtil.getShortenAddress(cityData.address) +
+                    Util.ga.trackEvent('weather', 'get', cityData.address || cityData.location +
                         '(' + index + ')', endTime - startTime);
 
                     var city = WeatherUtil.convertWeatherData(weatherData);
