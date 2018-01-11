@@ -123,7 +123,7 @@ function ControllerTown() {
         log.info('>sID=',req.sessionID, meta);
 
         try{
-            self._getCoord(regionName, cityName, townName, function(err, coord) {
+            self._getCoord(regionName, cityName, townName, function(err, coord, gCoord) {
                 if (err) {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
@@ -132,6 +132,9 @@ function ControllerTown() {
                 log.silly('GaD> coord : ', coord);
                 //townInfo를 통째로 달고 싶지만, 아쉽.
                 req.coord = coord;
+                if (gCoord) {
+                    req.gCoord = gCoord;
+                }
 
                 async.parallel([
                     function(callback){
@@ -3870,7 +3873,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                    cb(err);
                 }
                 else {
-                    cb(err, townInfo.mCoord);
+                    cb(err, townInfo.mCoord, townInfo.gCoord);
                 }
 
             });
@@ -3898,7 +3901,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                    if (err)  {
                       return  cb(err);
                    }
-                    return cb(err, townInfo.mCoord);
+                    return cb(err, townInfo.mCoord, townInfo.gCoord);
                 });
             });
             return this;
