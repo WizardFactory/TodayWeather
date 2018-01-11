@@ -1,0 +1,29 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title forecast-header">
+            <span style="vertical-align: middle">{{getNationName()|translate}}</span>
+        </p>
+    </ion-nav-title>
+    <ion-content scroll="false" style="background-color: #F5F5F5">
+        <div class="nation" style="width: 330px; height: 485px;" ng-style="{'background-image':'url(./img/KR.png)'}">
+            <div ng-repeat="city in cityList">
+                <div class="nation-label" ng-style="{'top': city.top+'px', 'left':city.left+'px'}">
+                    <div>{{city.name}}</div>
+                    <div ng-if="getCurrentSkyIcon(city.name)">
+                        <img ng-src="{{::imgPath}}/{{getCurrentSkyIcon(city.name)}}.png">
+                        <div>{{getCurrentTemp(city.name)}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--<div>날씨/기온 강수 풍향/풍속 미세먼지</div>-->
+        <!--<div>현재날씨 오늘,내일예보 레이더 위성</div>-->
+        <!--<div>날씨/기온 강수 미세먼지</div>-->
+        <!--<div>현재날씨 오늘,내일예보 레이더 위성</div>-->
+    </ion-content>
+</ion-view>

@@ -29,13 +29,31 @@ function ControllerTown24h() {
             req.query = {};
         }
 
-        UnitConverter.getUnitList().forEach(function (value) {
-                if (!req.query.hasOwnProperty(value)) {
+        try {
+
+            if (req.baseUrl) {
+                req.version = req.baseUrl.split('/')[1];
+                if (req.version.indexOf('v') !== 0) {
+                    log.warn("Fail to find version base url=",req.baseUrl);
+                    delete req.version;
+                }
+            }
+
+            /**
+             * #1978
+             * client에서 airUnit이 없으면 (null)로 전달됨
+             */
+            UnitConverter.getUnitList().forEach(function (value) {
+                if (!req.query.hasOwnProperty(value) || req.query[value] == '(null)') {
                     req.query[value] = UnitConverter.getDefaultValue(value);
                 }
-        });
+            });
 
-        log.info({sId:req.sessionID, reqQuery: req.query});
+            log.info({sId:req.sessionID, reqQuery: req.query});
+        }
+        catch(err) {
+           log.error(err);
+        }
 
         next();
         return this;

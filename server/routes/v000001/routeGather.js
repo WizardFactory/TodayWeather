@@ -2,6 +2,8 @@
  * Created by aleckim on 2016. 1. 20..
  */
 
+'use strict';
+
 var router = require('express').Router();
 var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
@@ -107,6 +109,15 @@ router.get('/midsea', function(req, res) {
 
 router.get('/keco', function(req, res) {
     manager.keco.cbKecoProcess(manager.keco, function (err) {
+        if (err) {
+            log.error(err);
+        }
+        res.send();
+    });
+});
+
+router.get('/kecoSido', function(req, res) {
+    manager.keco.cbKecoSidoProcess(manager.keco, function (err) {
         if (err) {
             log.error(err);
         }

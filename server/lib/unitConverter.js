@@ -277,7 +277,7 @@ UnitConverter.getUnitList = function () {
 
 UnitConverter.getDefaultValueList = function () {
     return {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa',
-        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airKorea'};
+        distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
 };
 
 UnitConverter.getDefaultValue = function (name) {
@@ -339,7 +339,7 @@ UnitConverter.airGrade2str = function (grade, type, translate) {
         case 6:
             return ts.__("LOC_HAZARDOUS");
         default :
-            log.warn("Unknown air grade="+grade+" type="+type);
+            log.warn("Unknown airnow grade="+grade+" type="+type);
     }
     return "";
 };

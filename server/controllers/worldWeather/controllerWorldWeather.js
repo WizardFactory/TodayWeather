@@ -949,6 +949,9 @@ function controllerWorldWeather() {
      */
     self.getGeocodeByAddr = function(addr, callback){
         var url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+ addr + '&language=en';
+        if (config.keyString.google_key) {
+            url += '&key='+config.keyString.google_key;
+        }
 
         var encodedUrl = encodeURI(url);
         log.info(url);
@@ -1010,6 +1013,9 @@ function controllerWorldWeather() {
      */
     self.getaddressByGeocode = function(lat, lon, callback){
         var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+ lat + ',' + lon + '&language=en';
+        if (config.keyString.google_key) {
+           url += '&key='+config.keyString.google_key;
+        }
 
         var encodedUrl = encodeURI(url);
         log.info(url);
@@ -1037,7 +1043,7 @@ function controllerWorldWeather() {
                 var result = JSON.parse(body);
                 var address = '';
 
-                log.info(result);
+                log.verbose(result);
                 if(result.hasOwnProperty('results')){
                     if(Array.isArray(result.results)
                         && result.results[0].hasOwnProperty('formatted_address')){
@@ -1089,6 +1095,9 @@ function controllerWorldWeather() {
             timestamp = (new Date()).getTime();
             url = "https://maps.googleapis.com/maps/api/timezone/json";
             url += "?location="+lat+","+lon+"&timestamp="+Math.floor(timestamp/1000);
+            if (config.keyString.google_key) {
+                url += '&key='+config.keyString.google_key;
+            }
 
             log.info('Get Timezone url : ', url);
             request.get(url, {json:true, timeout: 1000 * 20}, function(err, response, body){

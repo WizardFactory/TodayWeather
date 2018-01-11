@@ -25,12 +25,29 @@ var Town = require('../models/town');
 var convertGeocode = require('../utils/convertGeocode');
 var Convert = require('../utils/coordinate2xy');
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /**
  *
  * @constructor
  */
 function KmaScraper() {
     this.MAX_HOURLY_COUNT = 192; //8days * 24hours
+    this.domain = "www.weather.go.kr";
+
+    var domain = this.domain;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('kmascrape cached domain:', domain, ', result:', result);
+        }
+    });
 }
 
 /**
@@ -191,7 +208,7 @@ KmaScraper.prototype.getAWSWeather = function (type, dateTime, callback) {
 
     log.info(url);
 
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);
@@ -251,7 +268,7 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
         url += '?tm='+pubDate;
     }
     log.info(url);
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);
@@ -522,7 +539,7 @@ KmaScraper.prototype._saveStnInfo = function (stnWeatherInfo, callback) {
 
     //AWS가 고장났을때, 도시날씨만 동작하므로 addr이 없음. stnInfo는 skip함.
     if (stnWeatherInfo.stnId == undefined || stnWeatherInfo.addr == undefined) {
-        log.error("stnWeatherInfo don't have stnId or addr, skip save stnInfo");
+        log.warn("stnWeatherInfo don't have stnId or addr, skip save stnInfo name="+stnWeatherInfo.stnName);
         return callback();
     }
 
@@ -1465,7 +1482,7 @@ KmaScraper.prototype._saveStnMinute2 = function (stnWeatherInfo, pubDate, callba
  * @private
  */
 KmaScraper.prototype._getKmaDomain = function () {
- return "http://www.weather.go.kr";
+ return "http://"+this.domain;
 };
 
 /**
@@ -1637,7 +1654,7 @@ KmaScraper.prototype.requestSpecialWeatherSituation = function (callback) {
 
     log.info("kma special weather url="+url);
 
-    req(url, {encoding: 'binary'}, function (err, response, body) {
+    req(url, {timeout: 30000, encoding: 'binary'}, function (err, response, body) {
         if (err) {
             log.error(err);
             return callback(err);

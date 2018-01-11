@@ -23,14 +23,22 @@ var town = require('../../models/town');
 var modelKmaTownShortRss = require('../../models/kma/kma.town.short.rss.model.js');
 var kmaTimelib = require('../../lib/kmaTimeLib');
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /*
  *   @constructor
  */
 function TownRss(){
     var self = this;
 
-    self.addrGrid = 'http://www.kma.go.kr/wid/queryDFS.jsp';
-    self.addrZond = 'http://www.kma.go.kr/wid/queryDFSRSS.jsp';
+    var WWW_KMA_GO_DOMAIN = 'www.kma.go.kr';
+
+    self.addrGrid = 'http://'+WWW_KMA_GO_DOMAIN+'/wid/queryDFS.jsp';
+    self.addrZond = 'http://'+WWW_KMA_GO_DOMAIN+'/wid/queryDFSRSS.jsp';
 
     self.TIME_PERIOD_TOWN_RSS = (1000*60*60*3);
     self.MAX_SHORT_COUNT = 60;
@@ -54,6 +62,15 @@ function TownRss(){
         }
     });
 
+    var domain = WWW_KMA_GO_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('shortrss cached domain:', domain, ', result:', result);
+        }
+    });
     return self;
 }
 

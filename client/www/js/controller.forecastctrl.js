@@ -558,21 +558,35 @@ angular.module('controller.forecastctrl', [])
             $scope.currentPosition = cityData.currentPosition;
 
             $scope.updateTime = (function () {
-               if (cityData.currentWeather) {
-                   if (cityData.currentWeather.stnDateTime) {
-                       return cityData.currentWeather.stnDateTime;
-                   }
-                   else {
-                       var tmpDate = cityData.currentWeather.date;
-                       if (tmpDate instanceof Date) {
-                           return tmpDate.toDateString();
-                       }
-                       else {
-                           return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
-                               " " + cityData.currentWeather.time + ":00";
-                       }
-                   }
-               }
+                try {
+                    if (cityData.currentWeather) {
+                        if (cityData.currentWeather.stnDateTime) {
+                            return cityData.currentWeather.stnDateTime;
+                        }
+                        else {
+                            var tmpDate = cityData.currentWeather.date;
+                            if (tmpDate instanceof Date) {
+                                return tmpDate.toDateString();
+                            }
+                            else {
+                                return tmpDate.substr(0,4)+"-"+tmpDate.substr(4,2)+"-" +tmpDate.substr(6,2) +
+                                    " " + cityData.currentWeather.time + ":00";
+                            }
+                        }
+                    }
+                }
+                catch(err) {
+                    //#2028 이슈 재 발생시 데이터 확인한다.
+                    if (cityData && cityData.currentWeather) {
+                        var errMsg = JSON.stringify({
+                                        stnDateTime: cityData.currentWeather.stnDateTime,
+                                        date: cityData.currentWeather.date,
+                                        time: cityData.currentWeather.time});
+                        Util.ga.trackEvent('weather', 'error', errMsg);
+                    }
+                    Util.ga.trackException(err, false);
+                    return "";
+                }
             })();
 
             // To share weather information for apple watch.
@@ -890,14 +904,23 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
+        /**
+         *
+         * @param geoInfo geoInfo or weatherInfo
+         */
         function updateWeatherData(geoInfo) {
             var deferred = $q.defer();
             var startTime = new Date().getTime();
+            var logLabel = geoInfo.address || geoInfo.name;
+
+            if (!logLabel) {
+               logLabel = JSON.stringify(geoInfo.location);
+            }
 
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'get', 'info');
-                Util.ga.trackEvent('weather', 'get', geoInfo.address +
+                Util.ga.trackEvent('weather', 'get', logLabel +
                     '(' + WeatherInfo.getCityIndex() + ')', endTime - startTime);
 
                 var city = WeatherUtil.convertWeatherData(weatherData);
@@ -911,10 +934,10 @@ angular.module('controller.forecastctrl', [])
                 var endTime = new Date().getTime();
                 Util.ga.trackTiming('weather', endTime - startTime, 'error', 'info');
                 if (error instanceof Error) {
-                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
+                    Util.ga.trackEvent('weather', 'error', logLabel +
                         '(' + WeatherInfo.getCityIndex() + ', message:' + error.message + ', code:' + error.code + ')', endTime - startTime);
                 } else {
-                    Util.ga.trackEvent('weather', 'error', geoInfo.address +
+                    Util.ga.trackEvent('weather', 'error', logLabel +
                         '(' + WeatherInfo.getCityIndex() + ', ' + error + ')', endTime - startTime);
                 }
 

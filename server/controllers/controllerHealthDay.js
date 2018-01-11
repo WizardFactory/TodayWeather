@@ -3,6 +3,8 @@
  * @brief       보건기상지수 데이터를 처리하는 곳
  */
 
+'use strict';
+
 var async = require('async');
 
 var healthDayKmaDB = require('../models/modelHealthDay');               // 보건지수를 저장할 db
@@ -119,7 +121,8 @@ var insertDB = function(result, callback)  {
     result.forEach(function(data) {
 
         var today = kmaTimeLib.convertStringToDate(data.date.slice(0, 8));
-        if(data.today !== "") {
+        if( (data.today !== "") &&
+            (data.today !== '*') ) {
             var healthData = {};
             healthData['areaNo'] = parseInt(data.areaNo);
             healthData['indexType'] = indexType;
@@ -175,37 +178,50 @@ var insertDB = function(result, callback)  {
 };
 
 /**
+ * 연속 요청시에 error 응답이 많음 #1982
  * @brief       주어진 url 주소로 데이터를 요청한다
  * @param       url
  */
 HealthDayController.getData = function(urlList, callback) {
 
-    async.map(urlList, function (url, mCallback) {
-        var timeout = 1000*10*60;//1000*60*60*24;
+    async.mapSeries(urlList, function (url, mCallback) {
+        var timeout = 1000*60;//1000*60*60*24;
         log.info('[healthday] get :' + url);
         req(url, {timeout: timeout, json: true}, function(err, response, body) {
             if (err) {
                 return mCallback(err);
             } else if ( response.statusCode >= 400) {
-                var err1 = new Error('response.statusCode(' + url + ')='+response.statusCode);
+                err = new Error('response.statusCode(' + url + ')='+response.statusCode);
 
-                return mCallback(err1);
+                return mCallback(err);
             } else {
                 var result = body;
-                if (result.Response.header.successYN === 'Y') {
-                    // Succeeded
-                    // log.info('Succeeded to request.');
-                    insertDB(result.Response.body.indexModels, mCallback);
-                } else {
-                    var err1;
-
-                    // Failed
-                    if (result.Response.header.returnCode == 99) {
-                        log.info('This function is not supported in this season. url=' + url);
-                    } else {
-                        err1 = new Error('Failed to request, url=' + url + ', errcode=' + result.Response.header.returnCode);
-                    }
-                    mCallback(err1);
+                var successYN;
+                var indexModels;
+                var returnCode;
+                try {
+                   successYN = result.Response.header.successYN;
+                   if (successYN === 'Y') {
+                       indexModels = result.Response.body.indexModels;
+                   }
+                   else {
+                       returnCode = result.Response.header.returnCode;
+                       if (returnCode === 99) {
+                           log.info('This function is not supported in this season. url=' + url);
+                       } else {
+                           err = new Error('Failed to request, url=' + url + ', errcode=' + returnCode);
+                       }
+                   }
+                }
+                catch(err) {
+                    console.warn('[healthday] fail to get : '+url);
+                    return mCallback(err);
+                }
+                if (successYN === 'Y') {
+                    insertDB(indexModels, mCallback);
+                }
+                else {
+                    mCallback(err);
                 }
             }
         });

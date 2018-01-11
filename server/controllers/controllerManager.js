@@ -2209,18 +2209,27 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
         //direct request keco
-        log.info('push keco');
+        log.info('push keco realtime');
         //self.asyncTasks.push(function Keco(callback) {
             self._requestApi("keco", function() {
-                log.info('keco done');
+                log.info('keco realtime done');
         //        callback();
             });
         //});
     }
 
-    /**
-     * setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
-     */
+    if (time === 4 || time === 14 || time === 24 || time === 34 || time === 44 || time === 54 || putAll) {
+        //direct request keco
+        log.info('push keco sido');
+        //self.asyncTasks.push(function Keco(callback) {
+        self._requestApi("kecoSido", function() {
+            log.info('keco sido done');
+            //        callback();
+        });
+        //});
+    }
+
+    //setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
     if (time === 10 || putAll) {
         log.info('push life index');
         self.asyncTasks.push(function LifeIndex(callback) {

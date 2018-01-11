@@ -183,9 +183,15 @@ angular.module('service.weatherinfo', [])
         };
 
         obj.reloadCity = function (index) {
-            var city = cities[index];
-
-            city.loadTime = null;
+            var city;
+            try {
+                city = cities[index];
+                city.loadTime = null;
+            }
+            catch (err) {
+                Util.ga.trackEvent('city', 'error', 'fail to reload index='+index);
+                Util.ga.trackException(err, false);
+            }
         };
 
         obj.updateCity = function (index, newCityInfo) {
@@ -226,6 +232,14 @@ angular.module('service.weatherinfo', [])
                         updatePush = true;
                     }
                     city.location = newCityInfo.location;
+                }
+            }
+            else {
+                //구버전에 저장된 도시정보에는 location이 없는 경우가 있음. #1971
+                //v000901/kma/addr 에서 추가해주어야 함.
+                if (!city.location && newCityInfo.location) {
+                    city.location = newCityInfo.location;
+                    console.info('update location ', city);
                 }
             }
 

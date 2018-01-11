@@ -23,7 +23,8 @@ angular.module('starter', [
     'controller.guidectrl',
     'controller.purchase',
     'controller.units',
-    'controller.start'
+    'controller.start',
+    'controller.nation'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -96,6 +97,19 @@ angular.module('starter', [
                 }
             );
         }
+        else {
+            if (navigator.languages) {
+               for (var i=0; i<navigator.languages.length; i++)  {
+                   var langArray = navigator.languages[i].split('-');
+                   if (langArray.length > 1) {
+                       Util.region = langArray[langArray.length-1];
+                       break;
+                   }
+               }
+            }
+            Util.region = 'KR';
+            console.log('region: ' + Util.region + '\n');
+        }
 
         if (window.cordova && cordova.getAppVersion) {
             //정보 가지고 오는 속도가 느림.
@@ -138,7 +152,7 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            if (twClientConfig.debug) {
+            if (twClientConfig && twClientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
             return false; //suppress Error Alert;
@@ -324,7 +338,7 @@ angular.module('starter', [
                 Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
                 $rootScope.$watch('version', function (newValue) {
                     if(newValue == undefined) {
-                        Util.ga.trackEvent('app', 'error', 'failToLoadAppVersion');
+                        console.warn('failToLoadAppVersion');
                         return;
                     }
 
@@ -1381,6 +1395,12 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('nation', {
+                url: '/nation',
+                cache: false,
+                templateUrl: 'templates/nation.html',
+                controller: 'NationCtrl'
+            })
             .state('start', {
                 url: '/start',
                 cache: false,
