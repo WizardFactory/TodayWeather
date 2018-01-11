@@ -9,17 +9,24 @@ angular.module('service.weatherutil', [])
          * @param callback
          * @private
          */
-        function _retryGetHttp(retryCount, url, callback) {
+        function _retryGetHttp(retryCount, url, timeout, callback) {
+            if (typeof timeout === 'function') {
+                timeout = null;
+                callback = timeout;
+            }
+
             var retryTimeId = setTimeout(function () {
                 retryCount--;
                 if (retryCount > 0) {
-                    _retryGetHttp(retryCount, url, callback);
+                    _retryGetHttp(retryCount, url, timeout, callback);
                 }
             }, 1500);
 
             console.log("retry="+retryCount+" get http");
 
-            var options = {method: 'GET', url: url, timeout: 6000};
+            timeout = timeout || 6000;
+
+            var options = {method: 'GET', url: url, timeout: timeout};
 
             $http(options)
                 .success(function (data, status, headers, config, statusText) {
@@ -42,9 +49,10 @@ angular.module('service.weatherutil', [])
         /**
          * call retryGetHttp 3 times, 1.5초마다 호출해서 3회함. 3번째 6초 대기 하면 총 9초 timeout
          * @param url
+         * @param timeout
          * @private
          */
-        function _getHttp (url) {
+        function _getHttp (url, timeout) {
             var deferred = $q.defer();
             if (url == undefined || url === "") {
                 deferred.reject(new Error("Invalid url="+url));
@@ -53,7 +61,7 @@ angular.module('service.weatherutil', [])
 
             console.log({url:url});
 
-            _retryGetHttp(3, url, function (err, data) {
+            _retryGetHttp(3, url, timeout, function (err, data) {
                 if (err != undefined) {
                     return deferred.reject(err);
                 }
@@ -882,7 +890,7 @@ angular.module('service.weatherutil', [])
                 return deferred.promise;
             }
 
-            _getHttp(url).then(
+            _getHttp(url, 20000).then(
                 function (data) {
                     deferred.resolve(data.data);
                 },

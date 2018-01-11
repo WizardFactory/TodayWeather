@@ -270,5 +270,7 @@
   "LOC_CHINA": "China",
   "LOC_USA": "USA",
   "LOC_UK": "UK",
-  "LOC_NATIONAL_WEATHER": "National Weather"
+  "LOC_NATIONAL_WEATHER": "National Weather",
+  "LOC_WEATHER": "Weather",
+  "LOC_TEMP": "Temp"
 }

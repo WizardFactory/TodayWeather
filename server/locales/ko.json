@@ -270,5 +270,7 @@
   "LOC_CHINA": "중국",
   "LOC_USA": "미국",
   "LOC_UK": "영국",
-  "LOC_NATIONAL_WEATHER": "전국날씨"
+  "LOC_NATIONAL_WEATHER": "전국날씨",
+  "LOC_WEATHER": "날씨",
+  "LOC_TEMP": "기온"
 }
