@@ -33,7 +33,12 @@ function requestApi(cityName, version, query, lang, callback) {
     version = version || 'v000901';
     apiEndpoint = version >= 'v000901'? '/kma/addr':'/town';
 
-    var url = config.push.serviceServer+"/"+version+apiEndpoint+"/"+encodeURIComponent(cityName);
+    var arrayCityName;
+    arrayCityName = cityName.split("/");
+    var url = config.push.serviceServer+"/"+version+apiEndpoint;
+    arrayCityName.forEach(function (name) {
+        url += "/"+encodeURIComponent(name);
+    });
 
     if (query) {
         var count = 0;
