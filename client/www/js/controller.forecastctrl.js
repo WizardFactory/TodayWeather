@@ -373,7 +373,9 @@ angular.module('controller.forecastctrl', [])
                     WeatherInfo.setCityIndex(fav);
                 }
             }
+
             if (WeatherInfo.getEnabledCityCount() === 0) {
+                Util.ga.trackEvent('city', 'error', 'No enabled cities');
                 $scope.startPopup();
                 return;
             }
@@ -1015,6 +1017,8 @@ angular.module('controller.forecastctrl', [])
                 return;
             }
 
+            Util.ga.trackEvent('action', 'click', 'swipeleft');
+
             WeatherInfo.setNextCityIndex();
             loadWeatherData();
         };
@@ -1023,6 +1027,8 @@ angular.module('controller.forecastctrl', [])
             if (WeatherInfo.getEnabledCityCount() === 1) {
                 return;
             }
+
+            Util.ga.trackEvent('action', 'click', 'swiperight');
 
             WeatherInfo.setPrevCityIndex();
             loadWeatherData();
