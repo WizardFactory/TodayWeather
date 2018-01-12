@@ -1042,8 +1042,10 @@ function ControllerTown() {
      */
     function _convertStnWeather2Lgt(currentLgt, weather) {
         var weatherLgt;
-        if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
-           weatherLgt = 1;
+        if (typeof weather === 'string') {
+            if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
+                weatherLgt = 1;
+            }
         }
         return weatherLgt || currentLgt;
     }
