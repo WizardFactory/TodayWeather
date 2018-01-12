@@ -64,6 +64,13 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
         weatherType = type;
     };
 
+    function _findCity(name, list) {
+        return list.find(function (obj) {
+           var str = obj.regionName+"/"+obj.cityName+"/"+obj.townName;
+           return str.indexOf(name) != -1;
+        });
+    }
+
     $scope.getIcon = function (name) {
         var icon;
         var city;
@@ -71,9 +78,7 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
             if (!Array.isArray(weatherDataList)) {
                return icon;
             }
-            city = weatherDataList.find(function (obj) {
-                return obj.regionName.indexOf(name) != -1;
-            });
+            city = _findCity(name, weatherDataList);
             if (city) {
                 if (weatherType === TYPE_SKY_TEMP || weatherType === TYPE_RAIN) {
                     icon = city.current.skyIcon;
@@ -95,9 +100,7 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
             if (!Array.isArray(weatherDataList)) {
                 return text1;
             }
-            city = weatherDataList.find(function (obj) {
-                return obj.regionName.indexOf(name) != -1;
-            });
+            city = _findCity(name, weatherDataList);
             if (city) {
                 if (weatherType === TYPE_SKY_TEMP) {
                     text1 = city.current.t1h;
@@ -124,9 +127,7 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
             if (!Array.isArray(weatherDataList)) {
                 return text2;
             }
-            city = weatherDataList.find(function (obj) {
-                return obj.regionName.indexOf(name) != -1;
-            });
+            city = _findCity(name, weatherDataList);
             if (city) {
                 if (weatherType === TYPE_SKY_TEMP) {
                 }
