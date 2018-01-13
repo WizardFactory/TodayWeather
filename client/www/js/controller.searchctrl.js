@@ -265,6 +265,34 @@ angular.module('controller.searchctrl', [])
             //return false;
         }
 
+        /**
+         *
+         * @param termList Array
+         * @private
+         */
+        function _makeQueryString(termList) {
+            if (!Array.isArray(termList)) {
+                return;
+            }
+            termList.sort(function (a, b) {
+                if (a.offset > b.offset) {
+                    return 1;
+                }
+                else if (a.offset < b.offset) {
+                    return -1;
+                }
+                else {
+                    return 0;
+                }
+            });
+
+            var str =  termList.map(function (term) {
+                return term.value;
+            }).toString();
+
+            return str;
+        }
+
         $scope.OnSelectResult = function(result) {
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) { 
                 if (cordova.plugins.Keyboard.isVisible) {
@@ -347,18 +375,34 @@ angular.module('controller.searchctrl', [])
                 });
             }
             else if (result.hasOwnProperty('matched_substrings')) {
-                console.info("from google "+JSON.stringify(result));
-                if (result.matched_substrings && result.matched_substrings.length > 0) {
-                    var matched_substrings_offset =  result.matched_substrings[0].offset;
-                    for (var i=0; i<result.terms.length; i++) {
-                        if (result.terms[i].offset == matched_substrings_offset) {
-                            result.name = result.terms[i].value;
-                            break;
+                var queryString;
+                try {
+                    console.info("from google "+JSON.stringify(result));
+                    if (result.matched_substrings && result.matched_substrings.length > 0) {
+                        var matched_substrings_offset =  result.matched_substrings[0].offset;
+                        for (var i=0; i<result.terms.length; i++) {
+                            if (result.terms[i].offset == matched_substrings_offset) {
+                                result.name = result.terms[i].value;
+                                break;
+                            }
                         }
                     }
+
+                    queryString = _makeQueryString(result.terms);
+                    if (queryString == undefined) {
+                        Util.ga.trackEvent('city', 'error', 'FailMakeQueryString desc='+result.description);
+                        queryString = result.description;
+                    }
+                }
+                catch (err) {
+                    Util.ga.trackEvent('city', 'error', err);
+                    $ionicLoading.hide();
+                    return;
                 }
 
-                WeatherUtil.getGeoInfoByAddr(result.description)
+                Util.ga.trackEvent('city', 'query', queryString);
+
+                WeatherUtil.getGeoInfoByAddr(queryString)
                     .then(function (geoInfo) {
                         geoInfo.name = result.name;
                         WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
