@@ -250,13 +250,16 @@ TEMP_UNIT    gTemperatureUnit;
     long long currentDateTime       = 0;
     NSMutableArray  *arrHourlyData   = nil;
     int             cntFounded      = 0;
+    int             nTime = 0;
     
     if(reqType == TYPE_REQUEST_WEATHER_KR)
     {
         currentDict    = [jsonDict objectForKey:@"current"];
         nssDate        = [currentDict objectForKey:@"date"];
-        nssTime        = [currentDict objectForKey:@"time"];
-        nssDateTime    = [NSString stringWithFormat:@"%@%@", nssDate, nssTime];
+        //nssTime        = [currentDict objectForKey:@"time"];
+        nTime          = [[currentDict objectForKey:@"time"] intValue];
+        //nssDateTime    = [NSString stringWithFormat:@"%@%@", nssDate, nssTime];
+        nssDateTime    = [NSString stringWithFormat:@"%@%02d", nssDate, nTime];
         
         currentDateTime            = [nssDateTime longLongValue];
         arrHourlyData = [jsonDict objectForKey:@"short"];
@@ -268,10 +271,12 @@ TEMP_UNIT    gTemperatureUnit;
         {
             NSMutableDictionary *dictShort = [arrHourlyData objectAtIndex:i];
             NSString *nssDate = [dictShort objectForKey:@"date"];
-            NSString *nssTime = [dictShort objectForKey:@"time"];
+            //NSString *nssTime = [dictShort objectForKey:@"time"];
+            int nTime = [[dictShort objectForKey:@"time"] intValue];
+            NSString *nssTime = [NSString stringWithFormat:@"%02d", nTime];
             long long hourlyDateTime = [self makeIntTimeWithDate:nssDate time:nssTime];
             
-            if(currentDateTime <= hourlyDateTime)
+            if(currentDateTime < hourlyDateTime)
             {
                 NSLog(@"nssDate : %@, time : %@, currentDateTime: %lld, shortDateTime: %lld", nssDate, nssTime, currentDateTime, hourlyDateTime);
                 [arrByTimeData addObject:dictShort];
