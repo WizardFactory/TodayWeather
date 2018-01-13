@@ -417,6 +417,9 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                     }
                     i++;
                 });
+
+                cityWeather.date = new Date(cityWeatherList.pubDate);
+
                 if (cityWeather.stnId) {
                     //log.info(JSON.stringify(cityWeather));
                     cityWeatherList.cityList.push(cityWeather);
