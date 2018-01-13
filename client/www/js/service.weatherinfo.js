@@ -291,7 +291,7 @@ angular.module('service.weatherinfo', [])
                 that.setFirstCityIndex();
             }
             else {
-                Util.ga.trackEvent('city', 'load', 'index', index);
+                Util.ga.trackEvent('city', 'load', 'index', cityIndex);
             }
         };
 
