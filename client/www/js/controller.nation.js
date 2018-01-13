@@ -4,9 +4,15 @@
 
 var start = angular.module('controller.nation', []);
 
-start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory, $ionicLoading) {
+start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory, $ionicLoading, Units) {
+
+    var TYPE_SKY_TEMP   = 0;
+    var TYPE_RAIN       = 1;
+    var TYPE_WIND       = 2;
 
     var weatherDataList = [];
+    var weatherType = TYPE_SKY_TEMP;
+    //0 = sky/temp, 1 = rain, 2 = wind
 
     $scope.imgPath = Util.imgPath;
 
@@ -35,12 +41,12 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
         {name:"대전", top: 155, left: 90},
         {name:"청주", top: 130, left: 164},
         {name:"전주", top: 240, left: 78},
-        {name:"광주", top: 327, left: 78},
+        {name:"광주", top: 322, left: 74},
         {name:"대구", top: 220, left: 190},
         {name:"부산", top: 300, left: 230},
         {name:"제주", top: 420, left: 60},
-        {name:"인천", top: 70, left: 40},
-        {name:"목포", top: 360, left: 5},
+        {name:"인천", top: 70, left: 36},
+        {name:"목포", top: 360, left: 0},
         {name:"여수", top: 320, left: 135},
         {name:"안동", top: 130, left: 225},
         {name:"울산", top: 220, left: 270}
@@ -54,44 +60,102 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
 
     $scope.region = Util.region;
 
-    $scope.getCurrentSkyIcon = function (name) {
-        var skyIcon;
-        var city;
-        try {
-            if (!Array.isArray(weatherDataList)) {
-               return skyIcon;
-            }
-            city = weatherDataList.find(function (obj) {
-                return obj.regionName.indexOf(name) != -1;
-            });
-            if (city) {
-                skyIcon = city.current.skyIcon;
-            }
-        }
-        catch (err) {
-            Util.ga.trackException(err, false);
-        }
-        return skyIcon;
+    $scope.changeWeatherType = function (type) {
+        weatherType = type;
     };
 
-    $scope.getCurrentTemp = function (name) {
-        var temp = 0;
+    function _findCity(name, list) {
+        return list.find(function (obj) {
+           var str = obj.regionName+"/"+obj.cityName+"/"+obj.townName;
+           return str.indexOf(name) != -1;
+        });
+    }
+
+    $scope.getIcon = function (name) {
+        var icon;
         var city;
         try {
             if (!Array.isArray(weatherDataList)) {
-                return temp;
+               return icon;
             }
-            city = weatherDataList.find(function (obj) {
-                return obj.regionName.indexOf(name) != -1;
-            });
+            city = _findCity(name, weatherDataList);
             if (city) {
-                temp = city.current.t1h;
+                if (weatherType === TYPE_SKY_TEMP || weatherType === TYPE_RAIN) {
+                    icon = city.current.skyIcon;
+                }
+                else if (weatherType === TYPE_WIND) {
+                }
             }
         }
         catch (err) {
             Util.ga.trackException(err, false);
         }
-        return temp;
+        return icon;
+    };
+
+    $scope.getText1 = function (name) {
+        var text1;
+        var city;
+        try {
+            if (!Array.isArray(weatherDataList)) {
+                return text1;
+            }
+            city = _findCity(name, weatherDataList);
+            if (city) {
+                if (weatherType === TYPE_SKY_TEMP) {
+                    text1 = city.current.t1h;
+                }
+                else if (weatherType === TYPE_RAIN) {
+                    text1 = city.current.rn1;
+                }
+                else if (weatherType === TYPE_WIND) {
+                    text1 = city.current.wdd;
+                }
+                $scope.hasText1 = true;
+            }
+        }
+        catch (err) {
+            Util.ga.trackException(err, false);
+        }
+        return text1;
+    };
+
+    $scope.getText2 = function (name) {
+        var text2;
+        var city;
+        try {
+            if (!Array.isArray(weatherDataList)) {
+                return text2;
+            }
+            city = _findCity(name, weatherDataList);
+            if (city) {
+                if (weatherType === TYPE_SKY_TEMP) {
+                }
+                else if (weatherType === TYPE_RAIN) {
+                }
+                else if (weatherType === TYPE_WIND) {
+                    text2 = city.current.wsd;
+                }
+            }
+        }
+        catch (err) {
+            Util.ga.trackException(err, false);
+        }
+        return text2;
+    };
+
+    $scope.getText1Unit = function () {
+        switch (weatherType) {
+            case TYPE_RAIN:
+                return Units.getUnit('precipitationUnit');
+        }
+    };
+
+    $scope.getText2Unit = function () {
+        switch (weatherType) {
+            case TYPE_WIND:
+                return Units.getUnit('windSpeedUnit');
+        }
     };
 
     function init() {

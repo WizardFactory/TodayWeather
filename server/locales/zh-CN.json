@@ -270,5 +270,7 @@
   "LOC_CHINA": "中国",
   "LOC_USA": "美国",
   "LOC_UK": "英国",
-  "LOC_NATIONAL_WEATHER": "国家天气"
+  "LOC_NATIONAL_WEATHER": "国家天气",
+  "LOC_WEATHER": "天气",
+  "LOC_TEMP": "气温"
 }
