@@ -1014,7 +1014,7 @@ function controllerWorldWeather() {
     self.getaddressByGeocode = function(lat, lon, callback){
         var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+ lat + ',' + lon + '&language=en';
         if (config.keyString.google_key) {
-           url += '&key='+config.keyString.google_key;
+            url += '&key='+config.keyString.google_key;
         }
 
         var encodedUrl = encodeURI(url);
@@ -1557,13 +1557,14 @@ function controllerWorldWeather() {
                                 thisTime.so2Grade);
                         }
                         else{
-                            thisTime.aqiGrade = aqiItem.aqi;
-                            thisTime.coGrade = aqiItem.co;
-                            thisTime.no2Grade = aqiItem.no2;
-                            thisTime.o3Grade = aqiItem.o3;
-                            thisTime.pm10Grade = aqiItem.pm10;
-                            thisTime.pm25Grade = aqiItem.pm25;
-                            thisTime.so2Grade = aqiItem.so2;
+                            // In case aqicn : convert IAQI value to grade
+                            thisTime.aqiGrade = self._getAqiGrade(aqiItem.aqi);
+                            thisTime.coGrade = self._getAqiGrade(aqiItem.co);
+                            thisTime.no2Grade = self._getAqiGrade(aqiItem.no2);
+                            thisTime.o3Grade = self._getAqiGrade(aqiItem.o3);
+                            thisTime.pm10Grade = self._getAqiGrade(aqiItem.pm10);
+                            thisTime.pm25Grade = self._getAqiGrade(aqiItem.pm25);
+                            thisTime.so2Grade = self._getAqiGrade(aqiItem.so2);
                         }
 
                         thisTime.t = aqiItem.t;
@@ -1571,7 +1572,7 @@ function controllerWorldWeather() {
                         thisTime.p = aqiItem.p;
 
                         // string
-                        if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who')){
+                        if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who'){
                             thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
                             thisTime.coStr = UnitConverter.airkoreaGrade2str(thisTime.coGrade, 'co2', res);
                             thisTime.no2Str = UnitConverter.airkoreaGrade2str(thisTime.no2Grade, 'no2', res);
@@ -1579,17 +1580,7 @@ function controllerWorldWeather() {
                             thisTime.pm10Str = UnitConverter.airkoreaGrade2str(thisTime.pm10Grade, 'pm10', res);
                             thisTime.pm25Str = UnitConverter.airkoreaGrade2str(thisTime.pm25Grade, 'pm25', res);
                             thisTime.so2Str = UnitConverter.airkoreaGrade2str(thisTime.so2Grade, 'so2', res);
-                            thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
                         }else{
-                            // convert IAQI value to grade
-                            thisTime.aqiGrade = self._getAqiGrade(thisTime.aqiGrade);
-                            thisTime.coGrade = self._getAqiGrade(thisTime.coGrade);
-                            thisTime.no2Grade = self._getAqiGrade(thisTime.no2Grade);
-                            thisTime.o3Grade = self._getAqiGrade(thisTime.o3Grade);
-                            thisTime.pm10Grade = self._getAqiGrade(thisTime.pm10Grade);
-                            thisTime.pm25Grade = self._getAqiGrade(thisTime.pm25Grade);
-                            thisTime.so2Grade = self._getAqiGrade(thisTime.so2Grade);
-
                             thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
                             thisTime.coStr = UnitConverter.airGrade2str(thisTime.coGrade, 'co', res);
                             thisTime.no2Str = UnitConverter.airGrade2str(thisTime.no2Grade, 'no2', res);
