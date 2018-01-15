@@ -866,6 +866,16 @@ function ControllerTown24h() {
                     || req.midData.dailyData.length < 17) {
                     log.error("daily Data is invalid >sID=",req.sessionID, meta)
                 }
+
+                //#2013 check date
+                var daily = req.midData.dailyData;
+                for (var i=0; i<daily.length-1; i++) {
+                    if (daily[i].date === daily[i+1].date) {
+                        var resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
+                        log.error('Same date in dailyData', JSON.stringify(resInfo));
+                    }
+                }
+
                 result.midData = req.midData;
             }
             if (req.dailySummary) {
