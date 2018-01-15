@@ -62,52 +62,52 @@ HealthDayController.makeRequestString = function (operationNumber, areaNumber) {
 };
 
 /**
- * @brief               코드에 대한 보건지수명
- * @param code          기상청에서 전달 받는 보건 코드
- * @returns {string}    보건지수명
+ * indexModes.result[0].code가 맞지 않음
+ * @param url
+ * @returns {string}
+ * @private
  */
-var getCodeString = function(code) {
-    var retStr = "";
+function _getCodeStrFromUrl(url) {
 
-    switch (code) {
-        case '1':
-            retStr = 'asthma-lunt';
-            break;
-        case '2':
-            retStr = 'brain';
-            break;
-        case '4':
-            retStr = 'skin';
-            break;
-        case '5':
-            retStr = 'flowerWoody';
-            break;
-        case '6':
-            retStr = 'flowerPine';
-            break;
-        case '7':
-            retStr = 'flowerWeeds';
-            break;
-        case '8':
-            retStr = 'influenza';
-            break;
-        default:
-            break;
+    if (typeof url !== 'string') {
+        log.error("Invalid url=", url);
+        return;
     }
 
-    return retStr;
-};
+    if (url.indexOf('getAsthmaWhoList') >= 0) {
+        return 'asthma-lunt';
+    }
+    else if (url.indexOf('getBrainWhoList') >= 0) {
+        return 'brain';
+    }
+    else if (url.indexOf('getSkinWhoList') >= 0) {
+        return 'skin';
+    }
+    else if (url.indexOf('getFlowerWoodyWhoList') >= 0) {
+        return 'flowerWoody';
+    }
+    else if (url.indexOf('getFlowerPineWhoList') >= 0) {
+        return 'flowerPine';
+    }
+    else if (url.indexOf('getFlowerWeedsWhoList') >= 0) {
+        return 'flowerWeeds';
+    }
+    else if (url.indexOf('getInflWhoList') >= 0) {
+        return 'influenza';
+    }
+    else {
+        log.error("Fail to find index model of url=", url);
+    }
+}
 
 /**
  * @brief       전송받은 데이터를 DB로 저장한다.
  * @param       result 전달받은 데이터
+ * @param       indexType result의 있는 code는 변경되어서 type 구분에 사용할 수 없음.
  */
-var insertDB = function(result, callback)  {
+var insertDB = function(result, indexType, callback)  {
     // 날짜 확인
     // result[0].date[0];       // 년월일시
-    // 지수코드를 확인
-    // result[0].code[0][2];    // D01, D02, D04, D05, D06, D07, D08
-    var indexType = getCodeString(result[0].code[2]);
 
     log.info("This is result of " + indexType + " length is " + result.length);
 
@@ -198,15 +198,17 @@ HealthDayController.getData = function(urlList, callback) {
                 var result = body;
                 var successYN;
                 var indexModels;
+                var indexType;
                 var returnCode;
                 try {
                    successYN = result.Response.header.successYN;
                    if (successYN === 'Y') {
                        indexModels = result.Response.body.indexModels;
+                       indexType = _getCodeStrFromUrl(url);
                    }
                    else {
                        returnCode = result.Response.header.returnCode;
-                       if (returnCode === 99) {
+                       if (returnCode == 99) {
                            log.info('This function is not supported in this season. url=' + url);
                        } else {
                            err = new Error('Failed to request, url=' + url + ', errcode=' + returnCode);
@@ -218,7 +220,7 @@ HealthDayController.getData = function(urlList, callback) {
                     return mCallback(err);
                 }
                 if (successYN === 'Y') {
-                    insertDB(indexModels, mCallback);
+                    insertDB(indexModels, indexType, mCallback);
                 }
                 else {
                     mCallback(err);
