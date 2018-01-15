@@ -1572,7 +1572,7 @@ function controllerWorldWeather() {
                         thisTime.p = aqiItem.p;
 
                         // string
-                        if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who'){
+                        if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who')) {
                             thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
                             thisTime.coStr = UnitConverter.airkoreaGrade2str(thisTime.coGrade, 'co2', res);
                             thisTime.no2Str = UnitConverter.airkoreaGrade2str(thisTime.no2Grade, 'no2', res);
