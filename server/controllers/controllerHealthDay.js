@@ -189,11 +189,12 @@ HealthDayController.getData = function(urlList, callback) {
         log.info('[healthday] get :' + url);
         req(url, {timeout: timeout, json: true}, function(err, response, body) {
             if (err) {
-                return mCallback(err);
+                log.error(err);
+                return mCallback();
             } else if ( response.statusCode >= 400) {
                 err = new Error('response.statusCode(' + url + ')='+response.statusCode);
-
-                return mCallback(err);
+                log.error(err);
+                return mCallback();
             } else {
                 var result = body;
                 var successYN;
@@ -216,14 +217,17 @@ HealthDayController.getData = function(urlList, callback) {
                    }
                 }
                 catch(err) {
-                    console.warn('[healthday] fail to get : '+url);
-                    return mCallback(err);
+                    log.error(err);
+                    return mCallback();
                 }
                 if (successYN === 'Y') {
                     insertDB(indexModels, indexType, mCallback);
                 }
                 else {
-                    mCallback(err);
+                    if (returnCode != 99) {
+                        log.error(err);
+                    }
+                    mCallback();
                 }
             }
         });
