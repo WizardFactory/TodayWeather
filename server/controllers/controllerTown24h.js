@@ -865,7 +865,7 @@ function ControllerTown24h() {
 
         log.info(JSON.stringify(itemList));
 
-        if (itemList.length == 0) {
+        if (itemList.length === 0) {
             log.error("Fail to make summary");
             return "";
         }
