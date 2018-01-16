@@ -780,6 +780,203 @@ function ControllerTown24h() {
     };
 
     /**
+     * WHO 경계 기준 PM2.5 25㎍/㎥, PM10 50㎍/㎥, O₃ 100㎍/㎥, SO₂ 20㎍/㎥, CO 25ppm, NO₂ 0.10
+     * @param current
+     * @param units
+     * @param res
+     */
+    this.makeSummaryAir = function(current, units, res) {
+        var str = "";
+        var item;
+        var itemList = [];
+        var tmpGrade;
+        var ts = res;
+
+        var airInfo = current.arpltn || current;
+        airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
+        airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
+        airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
+
+        var locStr;
+        tmpGrade = 0;
+        if (airInfo.pm25Value) {
+            locStr = ts.__('LOC_PM25');
+            tmpGrade = airInfo.pm25Value/25;
+            str = locStr + " " + airInfo.pm25Value + " " + airInfo.pm25Str;
+            item = {str: str, grade: tmpGrade};
+            itemList.push(item);
+        }
+        if (airInfo.pm10Value) {
+            locStr = ts.__('LOC_PM10');
+            tmpGrade = airInfo.pm10Value/50;
+            str = locStr + " " + airInfo.pm10Value + " " + airInfo.pm10Str;
+            item = {str: str, grade: tmpGrade};
+            itemList.push(item);
+        }
+        if (airInfo.o3Value) {
+            locStr = ts.__('LOC_O3');
+            tmpGrade = airInfo.o3Value/0.06;
+            str = locStr + " " + airInfo.o3Value + " " + airInfo.o3Str;
+            item = {str: str, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        if (itemList.length === 0) {
+            tmpGrade = 0;
+            if (airInfo.aqiGrade) {
+                locStr = ts.__('LOC_AQI');
+                tmpGrade = airInfo.aqiGrade;
+                str = locStr + " " + airInfo.aqiValue + " " + airInfo.aqiStr;
+                item = {str: str, grade: tmpGrade};
+                itemList.push(item);
+            }
+            else if (airInfo.coGrade && tmpGrade < airInfo.coGrade) {
+                locStr = ts.__('LOC_CO');
+                tmpGrade = airInfo.coGrade;
+                str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
+                item = {str: str, grade: tmpGrade};
+                itemList.push(item);
+            }
+            else if (airInfo.no2Grade && tmpGrade < airInfo.no2Grade) {
+                locStr = ts.__('LOC_NO2');
+                tmpGrade = airInfo.no2Grade;
+                str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
+                item = {str: str, grade: tmpGrade};
+                itemList.push(item);
+            }
+            else if (airInfo.so2Grade && tmpGrade < airInfo.so2Grade) {
+                locStr = ts.__('LOC_SO2');
+                tmpGrade = airInfo.so2Grade;
+                str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
+                item = {str: str, grade: tmpGrade};
+                itemList.push(item);
+            }
+        }
+
+        itemList.sort(function (a, b) {
+            if(a.grade > b.grade){
+                return -1;
+            }
+            if(a.grade < b.grade){
+                return 1;
+            }
+            return 0;
+        });
+
+        log.info(JSON.stringify(itemList));
+
+        if (itemList.length === 0) {
+            log.error("Fail to make summary");
+            return "";
+        }
+        else {
+            return itemList[0].str;
+        }
+    };
+
+    this.makeSummaryWeather = function(current, yesterday, units, res) {
+        var str = "";
+        var item;
+        var itemList = [];
+        var diffTemp;
+        var tmpGrade;
+        var ts = res;
+
+        if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
+            var obj = self._diffTodayYesterday(current, yesterday, ts);
+            item = {str: obj.str, grade: obj.grade};
+            itemList.push(item);
+        }
+
+        if (current.hasOwnProperty('weatherType')) {
+            tmpGrade = 1;
+            if (current.weatherType > 3) {
+                tmpGrade = 3;
+            }
+            item = {str: current.weather, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        if (current.rn1 && current.pty) {
+            switch (current.pty) {
+                case 1:
+                    current.ptyStr = ts.__('LOC_RAINFALL');
+                    break;
+                case 2:
+                    current.ptyStr = ts.__('LOC_PRECIPITATION');
+                    break;
+                case 3:
+                    current.ptyStr = ts.__('LOC_SNOWFALL');
+                    break;
+                default :
+                    current.ptyStr = "";
+            }
+
+            current.rn1Str = current.rn1 + units.precipitationUnit;
+            item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+            itemList.push(item);
+        }
+
+        if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
+            tmpGrade = current.dsplsGrade;
+            str = ts.__('LOC_DISCOMFORT_INDEX') + " " + current.dsplsStr;
+            item = {str:str, grade: tmpGrade};
+            itemList.push(item);
+        }
+
+        if (current.sensorytem && current.sensorytem !== current.t1h) {
+            diffTemp = Math.round(current.sensorytem - current.t1h);
+            str = ts.__('LOC_FEELS_LIKE') + ' ' + current.sensorytem +"˚";
+            item = {str : str, grade: Math.abs(diffTemp)};
+            itemList.push(item);
+        }
+
+        if (current.ultrv && Number(current.time) < 1800) {
+            tmpGrade = current.ultrvGrade;
+            str = ts.__('LOC_UV') +' '+current.ultrvStr;
+            item = {str:str, grade: tmpGrade+1};
+            itemList.push(item);
+        }
+
+        if (current.wsdGrade && current.wsdStr) {
+            //약함(1)을 보통으로 보고 보정 1함.
+            item = {str: current.wsdStr, grade: current.wsdGrade+1};
+            itemList.push(item);
+        }
+
+        if (current.fsnGrade && current.fsnStr) {
+            //주의(1)를 보통으로 보고 보정 1함.
+            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+            item = {str: str, grade: current.fsnGrade+1};
+            itemList.push(item);
+        }
+
+        //감기
+
+        itemList.sort(function (a, b) {
+            if(a.grade > b.grade){
+                return -1;
+            }
+            if(a.grade < b.grade){
+                return 1;
+            }
+            return 0;
+        });
+
+        log.info(JSON.stringify(itemList));
+
+        if (itemList.length === 0) {
+            log.error("Fail to make summary");
+            return "";
+        }
+        else if(itemList.length > 1) {
+            return itemList[0].str+", "+itemList[1].str;
+        } else {
+            return itemList[0].str;
+        }
+    };
+
+    /**
      * getSummary -> setYesterday + getSummaryAfterUnitConverter
      * @param req
      * @param res
@@ -802,6 +999,8 @@ function ControllerTown24h() {
             }
 
             var current = req.current;
+            current.summaryWeather = self.makeSummaryWeather(current, current.yesterday, req.query, res);
+            current.summaryAir = self.makeSummaryAir(current, req.query, res);
             current.summary = self.makeSummary(current, current.yesterday, req.query, res);
         }
         catch (err) {

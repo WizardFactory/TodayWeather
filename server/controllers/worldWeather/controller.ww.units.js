@@ -6,7 +6,7 @@
 'use strict';
 
 var UnitConverter = require('../../lib/unitConverter');
-var ControllerTown = require('../controllerTown');
+var ControllerTown24 = require('../controllerTown24h');
 var kmaTimeLib = require('../../lib/kmaTimeLib');
 
 function ControllerWWUnits() {
@@ -74,10 +74,11 @@ function ControllerWWUnits() {
     };
 
     this.makeSummary = function (req, res, next) {
-        var ctrlTown = new ControllerTown();
-
         try {
+            var ctrlTown = new ControllerTown24();
             var current = req.result.thisTime[1];
+            current.summaryWeather = ctrlTown.makeSummaryWeather(current, req.result.thisTime[0], req.query, res);
+            current.summaryAir = ctrlTown.makeSummaryAir(current, req.query, res);
             current.summary = ctrlTown.makeSummary(current, req.result.thisTime[0], req.query, res);
         }
         catch(err) {
