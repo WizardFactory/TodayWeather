@@ -92,9 +92,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if (v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -136,9 +136,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -187,9 +187,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -238,9 +238,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -286,9 +286,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -336,9 +336,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
@@ -376,9 +376,9 @@ arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
             else if(v > unit[3]) {
 
                 if(unit.length > 4){
-                    if(v <= unit[3]){
+                    if(v <= unit[4]){
                         return 4;
-                    }else if(v <= unit[4]){
+                    }else if(v <= unit[5]){
                         return 5;
                     }else if(v > unit[5]){
                         return 6;
