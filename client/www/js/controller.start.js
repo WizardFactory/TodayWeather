@@ -484,6 +484,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         showLoadingIndicator();
 
         updateCurrentPosition().then(function(geoInfo) {
+            Util.ga.trackEvent('city', 'get', JSON.stringify(geoInfo));
             hideLoadingIndicator();
             //$scope.searchResults = [];
             $scope.searchResults2 = [];
@@ -503,15 +504,16 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.$on('searchCurrentPositionEvent', function(event) {
+        Util.ga.trackEvent('action', 'event', 'searchCurrentPositionEvent');
         _onSearchCurrentPosition();
     });
 
     /**
-     * get geoinfo of current postion
+     * get geoinfo of current position
      * @constructor
      */
     $scope.OnSearchCurrentPosition = function() {
-        Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPostion');
+        Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPosition');
         _onSearchCurrentPosition();
     };
 
@@ -546,12 +548,12 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnGetWeather = function (index) {
-        Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
         if (index == 0) {
             $scope.OnSearchCurrentPosition();
             //get location
         }
         else {
+            Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
             $ionicLoading.show();
             var geoInfo = $scope.favoriteCityList[index];
             WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {

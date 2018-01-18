@@ -332,7 +332,7 @@ Keco.prototype.saveRLTMCtprvn = function (arpltnList, callback) {
 
     async.map(arpltnList,
         function(arpltn, callback) {
-            Arpltn.update({stationName: arpltn.stationName}, arpltn, {upsert:true}, function (err, raw) {
+            Arpltn.update({stationName: arpltn.stationName, date: arpltn.date}, arpltn, {upsert:true}, function (err, raw) {
                 if (err) {
                     log.error(err);
                     return callback(err);
@@ -1096,6 +1096,44 @@ Keco.prototype.parseSidoCtprvn = function (data, callback) {
             });
             sidoArpltnList.push(sidoArpltn);
         });
+
+        if (sidoArpltnList.length == 0) {
+            log.error('sido arpltn length is zero');
+        }
+        else {
+            var avgSidoArpltn = {};
+            avgSidoArpltn.sidocityName = sidoArpltnList[0].sidoName;
+            avgSidoArpltn.sidoName = sidoArpltnList[0].sidoName;
+            avgSidoArpltn.date = sidoArpltnList[0].date;
+            avgSidoArpltn.dataTime = sidoArpltnList[0].dataTime;
+            avgSidoArpltn.cityName = "";
+            avgSidoArpltn.cityNameEng = "";
+
+            SidoArpltn.getKeyList().forEach(function (name) {
+                if (name.indexOf("Value") >= 0) {
+                    avgSidoArpltn[name] = 0;
+                }
+            });
+
+            sidoArpltnList.forEach(function (item) {
+                for (var key in item) {
+                    if (key.indexOf("Value") >= 0) {
+                        avgSidoArpltn[key] += item[key];
+                    }
+                }
+            });
+
+            for (var key in avgSidoArpltn) {
+                if (key.indexOf("Value") >= 0) {
+                    avgSidoArpltn[key] = avgSidoArpltn[key]/sidoArpltnList.length;
+                }
+            }
+            ['pm10Value', 'pm25Value', 'khaiValue'].forEach(function (key) {
+                avgSidoArpltn[key] = parseInt(avgSidoArpltn[key]);
+            });
+
+            sidoArpltnList.push(avgSidoArpltn);
+        }
     }
     catch (err) {
         return callback(err);

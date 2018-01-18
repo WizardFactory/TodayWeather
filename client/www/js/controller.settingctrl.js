@@ -1,9 +1,8 @@
 angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
-                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage) {
+                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList) {
 
         var menuContent = null;
-        var settingsInfo = null;
         var strOkay = "OK";
         var strCancel = "Cancel";
         $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
@@ -18,7 +17,7 @@ angular.module('controller.settingctrl', [])
                 menuContent = angular.element(document.getElementsByClassName('menu-content')[0]);
             }
 
-            settingsInfo = TwStorage.get("settingsInfo");
+            var settingsInfo = TwStorage.get("settingsInfo");
             if (settingsInfo === null) {
                 settingsInfo = {
                     startupPage: "0", //시간별날씨
@@ -26,8 +25,9 @@ angular.module('controller.settingctrl', [])
                 };
                 TwStorage.set("settingsInfo", settingsInfo);
             }
-            $scope.startupPage = settingsInfo.startupPage;
-            $scope.refreshInterval = settingsInfo.refreshInterval;
+
+            console.info(settingsInfo);
+            $rootScope.settingsInfo = settingsInfo;
         }
 
         $scope.clickMenu = function (menu) {
@@ -49,17 +49,6 @@ angular.module('controller.settingctrl', [])
                 $ionicSideMenuDelegate.toggleLeft();
                 $location.path('/' + menu);
             }
-        };
-
-        $scope.setStartupPage = function(startupPage) {
-            settingsInfo.startupPage = startupPage;
-            TwStorage.set("settingsInfo", settingsInfo);
-        };
-
-        $scope.setRefreshInterval = function(refreshInterval) {
-            settingsInfo.refreshInterval = refreshInterval;
-            TwStorage.set("settingsInfo", settingsInfo);
-            $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
         };
 
         /**
@@ -147,6 +136,63 @@ angular.module('controller.settingctrl', [])
                 }
                 callback(res);
             });
+        };
+
+        $scope.settingRadio = function (name) {
+            $ionicSideMenuDelegate.toggleLeft();
+
+            var title;
+            var list;
+            if (name === 'startupPage') {
+                title = 'LOC_STARTUP_PAGE';
+                list = ['0', '1', '2'].map(function (value) {
+                    return {label: $scope.getStartupPageValueStr(value), value: value};
+                });
+            }
+            else if (name === 'refreshInterval') {
+                title = 'LOC_REFRESH_INTERVAL';
+                list = ['0', '30', '60', '180', '360', '720'].map(function (value) {
+                    return {label: $scope.getRefreshIntervalValueStr(value), value: value};
+                });
+            }
+            console.info(JSON.stringify({name: name, title: title, value: $rootScope.settingsInfo[name], list: list}));
+            radioList.type = name;
+            radioList.title = title;
+            radioList.setValue($rootScope.settingsInfo[name]);
+            radioList.importData(list);
+            $location.path('/setting-radio');
+        };
+
+        $scope.getStartupPageValueStr = function (value) {
+            //console.log('getStartupPageValueStr v='+value);
+            switch(value) {
+                case '0':
+                    return 'LOC_HOURLY_FORECAST';
+                case '1':
+                    return 'LOC_DAILY_FORECAST';
+                case '2':
+                    return 'LOC_SAVED_LOCATIONS';
+            }
+            return 'N/A'
+        };
+
+        $scope.getRefreshIntervalValueStr = function (value) {
+            //console.log('getRefreshIntervalValueStr v='+value);
+            switch(value) {
+                case '0':
+                    return 'LOC_MANUAL';
+                case '30':
+                    return 'LOC_30_MINUTES';
+                case '60':
+                    return 'LOC_1_HOUR';
+                case '180':
+                    return 'LOC_3_HOURS';
+                case '360':
+                    return 'LOC_6_HOURS';
+                case '720':
+                    return 'LOC_12_HOURS';
+            }
+            return 'N/A'
         };
 
         init();

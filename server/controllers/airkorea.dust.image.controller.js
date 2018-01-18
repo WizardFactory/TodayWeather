@@ -188,9 +188,9 @@ AirkoreaDustImageController.prototype.getGrade = function(type, aqiUnit, value){
     else if(value > unit[3]) {
 
         if(unit.length > 4){
-            if(value <= unit[3]){
+            if(value <= unit[4]){
                 return 4;
-            }else if(value <= unit[4]){
+            }else if(value <= unit[5]){
                 return 5;
             }else if(value > unit[5]){
                 return 6;

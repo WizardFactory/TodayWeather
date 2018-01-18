@@ -20,7 +20,7 @@ function aqiRequester(){
 aqiRequester.prototype.getAqiData = function(geocode, key, callback){
     var self = this;
 
-    if(!geocode.lat || !geocode.lon){
+    if(!geocode.hasOwnProperty("lat") || !geocode.hasOwnProperty("lon")){
         callback(new Error('AQI> there is no coordinate'), {isSuccess: false});
         return;
     }

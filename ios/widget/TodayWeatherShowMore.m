@@ -201,16 +201,17 @@
     {
         //NSLog(@"[processByTimeData] i : %d", i);
         int       temperature     = 0;
-        
-        if(reqType == TYPE_REQUEST_WEATHER_KR) {
-            int       time = 0;
-            time         = [[[arrTimeData objectAtIndex:i] objectForKey:@"time"] intValue];
-            nssHour      = [NSString stringWithFormat:@"%d시", time];
-        }
-        else {
+
+//        '시'가 아니라 다국어 지원이 필요함
+//        if(reqType == TYPE_REQUEST_WEATHER_KR) {
+//            int       time = 0;
+//            time         = [[[arrTimeData objectAtIndex:i] objectForKey:@"time"] intValue];
+//            nssHour      = [NSString stringWithFormat:@"%d시", time];
+//        }
+//        else {
             nssTime         = [[arrTimeData objectAtIndex:i] objectForKey:@"dateObj"];
             nssHour         = [nssTime substringWithRange:NSMakeRange(11, 5)];
-        }
+//        }
         
         temperature     = [[[arrTimeData objectAtIndex:i] objectForKey:@"t3h"] intValue];
         nssTempByTime       = [NSString stringWithFormat:@"%d˚", (int)temperature];

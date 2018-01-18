@@ -123,7 +123,7 @@ function ControllerTown() {
         log.info('>sID=',req.sessionID, meta);
 
         try{
-            self._getCoord(regionName, cityName, townName, function(err, coord) {
+            self._getCoord(regionName, cityName, townName, function(err, coord, gCoord) {
                 if (err) {
                     log.error(new Error('error to get coord ' + err.message + ' '+ JSON.stringify(meta)));
                     return next();
@@ -132,6 +132,9 @@ function ControllerTown() {
                 log.silly('GaD> coord : ', coord);
                 //townInfo를 통째로 달고 싶지만, 아쉽.
                 req.coord = coord;
+                if (gCoord) {
+                    req.gCoord = gCoord;
+                }
 
                 async.parallel([
                     function(callback){
@@ -1039,8 +1042,10 @@ function ControllerTown() {
      */
     function _convertStnWeather2Lgt(currentLgt, weather) {
         var weatherLgt;
-        if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
-           weatherLgt = 1;
+        if (typeof weather === 'string') {
+            if (weather.indexOf("뇌우") >= 0 || weather.indexOf("번개") >= 0 || weather.indexOf("뇌전") >= 0) {
+                weatherLgt = 1;
+            }
         }
         return weatherLgt || currentLgt;
     }
@@ -3870,7 +3875,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                    cb(err);
                 }
                 else {
-                    cb(err, townInfo.mCoord);
+                    cb(err, townInfo.mCoord, townInfo.gCoord);
                 }
 
             });
@@ -3898,7 +3903,7 @@ ControllerTown.prototype._getCoord = function(region, city, town, cb){
                    if (err)  {
                       return  cb(err);
                    }
-                    return cb(err, townInfo.mCoord);
+                    return cb(err, townInfo.mCoord, townInfo.gCoord);
                 });
             });
             return this;

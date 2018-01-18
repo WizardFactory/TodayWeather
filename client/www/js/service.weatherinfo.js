@@ -87,6 +87,10 @@ angular.module('service.weatherinfo', [])
                 // save current cityIndex
                 TwStorage.set("cityIndex", cityIndex);
                 console.log("cityIndex = " + cityIndex);
+                Util.ga.trackEvent('city', 'set', 'index', index);
+            }
+            else {
+                Util.ga.trackEvent('city', 'error', 'Invalid set index', index);
             }
         };
 
@@ -279,12 +283,15 @@ angular.module('service.weatherinfo', [])
             // load last cityIndex
             cityIndex = TwStorage.get("cityIndex");
             if (cityIndex === null) {
-                Util.ga.trackEvent('app', 'error', 'cityIndexNull');
+                Util.ga.trackEvent('city', 'error', 'loadIndexNull');
                 that.setFirstCityIndex();
             }
             else if (cityIndex >= cities.length) {
-                Util.ga.trackEvent('app', 'error', 'cityIndexOver');
+                Util.ga.trackEvent('city', 'error', 'loadIndexOver');
                 that.setFirstCityIndex();
+            }
+            else {
+                Util.ga.trackEvent('city', 'load', 'index', cityIndex);
             }
         };
 

@@ -868,7 +868,18 @@ p small {
   position: relative;
   background: no-repeat top;
   text-align: center;
-  margin: 4px auto;
+  margin: 2px auto;
+}
+
+.nation-bar {
+  margin-top: 2px;
+}
+
+.nation-bar a {
+  padding: 0 4px;
+  height: 34px;
+  line-height: 32px;
+  min-height: 34px;
 }
 
 .nation-label {
@@ -883,6 +894,10 @@ p small {
 .nation-label img {
   height: 36px;
   margin: -3px  0 -12px;
+}
+
+.nation-label span {
+  font-size:12px;
 }
 
 //iphone 4
