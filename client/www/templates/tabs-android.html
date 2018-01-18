@@ -20,8 +20,9 @@ navigation history that also transitions its views in and out.
         <ion-nav-view name="tab-dailyforecast"></ion-nav-view>
     </ion-tab>
 
-    <!-- Share tab-->
-    <ion-tab title="{{'LOC_SHARE_WEATHER'|translate}}" icon-off="ion-android-share-alt" icon-on="ion-android-share-alt" ng-click="doTabShare()">
+    <!-- AQI tab-->
+    <ion-tab title="{{'LOC_AQI'|translate}}" icon-off="ion-android-cloud-outline" icon-on="ion-android-refresh" ng-click="doTabForecast('air')">
+        <ion-nav-view name="tab-air"></ion-nav-view>
     </ion-tab>
 
 </ion-tabs>

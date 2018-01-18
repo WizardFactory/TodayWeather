@@ -21,6 +21,7 @@ angular.module('starter', [
     'controller.searchctrl',
     'controller.settingctrl',
     'controller.guidectrl',
+    'controller.air',
     'controller.purchase',
     'controller.units',
     'controller.start',
@@ -225,9 +226,11 @@ angular.module('starter', [
             headerbar.removeClass('bar-dailyforecast');
             headerbar.removeClass('bar-clear');
             headerbar.removeClass('bar-dark');
+            headerbar.removeClass('bar-air');
 
             var tabs = angular.element(document.querySelectorAll('ion-side-menu-content'));
             tabs.removeClass('tabs-search');
+            tabs.removeClass('tabs-air');
 
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#F5F5F5';
@@ -247,6 +250,13 @@ angular.module('starter', [
                 headerbar.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
+                }
+            } else if (toState.name === 'tab.air') {
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-air');
+                tabs.addClass('tabs-air');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fff';
@@ -324,6 +334,8 @@ angular.module('starter', [
                 $state.go('tab.dailyforecast');
             } else if (startupPage === "2") { //즐겨찾기
                 $state.go('tab.search');
+            } else if (startupPage === "3") { //미세먼지
+                $state.go('tab.air');
             } else { //시간별날씨
                 $state.go('tab.forecast');
             }
@@ -1489,6 +1501,16 @@ angular.module('starter', [
                     'tab-dailyforecast': {
                         templateUrl: 'templates/tab-dailyforecast.html',
                         controller: 'ForecastCtrl'
+                    }
+                }
+            })
+            .state('tab.air', {
+                url: '/air?fav',
+                cache: false,
+                views: {
+                    'tab-air': {
+                        templateUrl: 'templates/tab-air.html',
+                        controller: 'AirCtrl'
                     }
                 }
             });

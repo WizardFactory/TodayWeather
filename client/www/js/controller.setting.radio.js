@@ -60,7 +60,7 @@ angular.module('controller.setting.radio', [])
 
         return radioList;
     })
-    .controller('RadioCtrl', function($scope, $ionicHistory, Util, radioList, WeatherInfo) {
+    .controller('RadioCtrl', function($rootScope, $scope, $ionicHistory, Util, radioList, WeatherInfo) {
         $scope.onClose = function() {
             Util.ga.trackEvent('action', 'click', 'setting.radio back');
             $ionicHistory.goBack();
@@ -73,6 +73,7 @@ angular.module('controller.setting.radio', [])
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 WeatherInfo.reloadCity(i);
             }
+            $rootScope.$broadcast('reloadEvent', 'resume');
         }
 
         $scope.title = radioList.title;
