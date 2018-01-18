@@ -3,18 +3,6 @@ angular.module('controller.tabctrl', [])
                                      $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Units,
                                     $ionicLoading, $q) {
         var currentTime;
-        var strError = "Error";
-        var strAddLocation = "Add locations";
-        var strOkay = "OK";
-        var strCancel = "Cancel";
-        $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_OK', 'LOC_CANCEL']).then(function (translations) {
-            strError = translations.LOC_ERROR;
-            strAddLocation = translations.LOC_ADD_LOCATIONS;
-            strOkay = translations.LOC_OK;
-            strCancel = translations.LOC_CANCEL;
-        }, function (translationIds) {
-            console.log("Fail to translate : "+JSON.stringify(translationIds));
-        });
 
         $scope.data = { 'autoSearch': false };
 
@@ -1007,6 +995,8 @@ angular.module('controller.tabctrl', [])
             clearTimeout(refreshTimer);
         });
 
+        var strOkay = "OK";
+        var strCancel = "Cancel";
         var strError = "Error";
         var strAddLocation = "Add locations";
         var strClose = "Close";
@@ -1019,7 +1009,7 @@ angular.module('controller.tabctrl', [])
 
         $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
             'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI'])
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL'])
             .then(function (translations) {
                     strError = translations.LOC_ERROR;
                     strAddLocation = translations.LOC_ADD_LOCATIONS;
@@ -1029,6 +1019,8 @@ angular.module('controller.tabctrl', [])
                     strFailToGetCurrentPosition = translations.LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION;
                     strFailToGetWeatherInfo = translations.LOC_FAIL_TO_GET_WEATHER_INFO;
                     strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
+                    strOkay = translations.LOC_OK;
+                    strCancel = translations.LOC_CANCEL;
                     $scope.strHour = translations.LOC_HOUR;
                 },
                 function (translationIds) {
