@@ -10,6 +10,7 @@
   "LOC_AIR_QUALITY_INDEX" : "统计空气指数",
   "LOC_DAILY_AQI_FORECAST" : "每日空气预报",
   "LOC_HOURLY_AQI_FORECAST" : "每时间空气预报",
+  "LOC_AIR_INFORMATION" : "空气指数",
   "LOC_AQI" : "空气指数",
   "LOC_PM10" : "细尘",
   "LOC_PM25" : "超小细尘",

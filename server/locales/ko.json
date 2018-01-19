@@ -10,6 +10,7 @@
   "LOC_AIR_QUALITY_INDEX" : "통합대기지수",
   "LOC_DAILY_AQI_FORECAST" : "일별대기예보",
   "LOC_HOURLY_AQI_FORECAST" : "시간별대기예보",
+  "LOC_AIR_INFORMATION" : "대기정보",
   "LOC_AQI" : "통합대기",
   "LOC_PM10" : "미세먼지",
   "LOC_PM25" : "초미세먼지",

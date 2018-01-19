@@ -145,7 +145,7 @@ angular.module('controller.settingctrl', [])
             var list;
             if (name === 'startupPage') {
                 title = 'LOC_STARTUP_PAGE';
-                list = ['0', '1', '2'].map(function (value) {
+                list = ['0', '1', '2', '3'].map(function (value) {
                     return {label: $scope.getStartupPageValueStr(value), value: value};
                 });
             }
@@ -172,6 +172,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_DAILY_FORECAST';
                 case '2':
                     return 'LOC_SAVED_LOCATIONS';
+                case '3':
+                    return 'LOC_AIR_INFORMATION';
             }
             return 'N/A'
         };

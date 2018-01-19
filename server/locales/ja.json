@@ -10,6 +10,7 @@
   "LOC_AIR_QUALITY_INDEX": "空気質指数",
   "LOC_DAILY_AQI_FORECAST": "日ごとの大気予報",
   "LOC_HOURLY_AQI_FORECAST" : "時間ごとの大気予報",
+  "LOC_AIR_INFORMATION" : "空気質指数",
   "LOC_AQI": "空気質指数",
   "LOC_PM10": "微細粉塵",
   "LOC_PM25": "PM2.5",

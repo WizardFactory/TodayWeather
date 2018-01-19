@@ -10,6 +10,10 @@
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
         </p>
     </ion-nav-title>
+    <ion-nav-buttons side="right">
+        <button class="button button-icon button-positive icon ion-ios-upload-outline" ng-if="!isAndroid()" ng-click="doTabShare()"></button>
+        <button class="button button-icon button-positive icon ion-android-share-alt" ng-if="isAndroid()" ng-click="doTabShare()"></button>
+    </ion-nav-buttons>
     <ion-content delegate-handle="body" direction="y"
                  zooming="false" scrollbar-y="false" scrollbar-x="false" has-bouncing="false" tabs-shrink>
         <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()"
@@ -60,20 +64,9 @@
                            ng-repeat="day in dayChart[0].values">
                            <td style="text-align: center; margin: auto">
                                <p class="body1" style="margin: 0;">{{dayToFullString(day.dayOfWeek)|translate}}</p>
-                               <p class="display1" style="margin: 0; opacity: 0.84">{{day.date.substr(6,2)}}</p>
-                               <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)|translate}}</p>
-                           </td>
-                           <td style="text-align: center; margin: auto">
-                               <p class="body1" style="margin: 0;">{{"LOC_PM10"|translate}}</p>
-                               <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
-                                   <p class="display1" style="margin: 0; opacity: 1">
-                                   <i class="material-icons" style="font-size: 32px;"
-                                      ng-bind-html="getSentimentIcon(day.dustForecast.pm10Grade)"></i>
-                                   </p>
-                               </div>
-                               <div style="border-left: 1px rgba(254, 254, 254, .4) solid;">
-                                   <p class="body2"
-                                      style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
+                               <div style="border-right: 1px rgba(254, 254, 254, .4) solid;">
+                                   <p class="display1" style="margin: 0; opacity: 0.84">{{day.date.substr(6,2)}}</p>
+                                   <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)|translate}}</p>
                                </div>
                            </td>
                            <td style="text-align: center; margin: auto">
@@ -85,6 +78,15 @@
                                </p>
                                <p class="body2"
                                   style="margin: 0 0 5px;">{{day.dustForecast.pm25Str}}</p>
+                           </td>
+                           <td style="text-align: center; margin: auto">
+                               <p class="body1" style="margin: 0;">{{"LOC_PM10"|translate}}</p>
+                               <p class="display1" style="margin: 0; opacity: 1">
+                                   <i class="material-icons" style="font-size: 32px;"
+                                      ng-bind-html="getSentimentIcon(day.dustForecast.pm10Grade)"></i>
+                               </p>
+                               <p class="body2"
+                                  style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
                            </td>
                            <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined">
                                <p class="body1" style="margin: 0;">{{"LOC_O3"|translate}}</p>

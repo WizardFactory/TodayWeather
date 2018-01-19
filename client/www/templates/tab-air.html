@@ -10,6 +10,10 @@
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
         </p>
     </ion-nav-title>
+    <ion-nav-buttons side="right">
+        <button class="button button-icon button-positive icon ion-ios-upload-outline" ng-if="!isAndroid()" ng-click="doTabShare()"></button>
+        <button class="button button-icon button-positive icon ion-android-share-alt" ng-if="isAndroid()" ng-click="doTabShare()"></button>
+    </ion-nav-buttons>
     <ion-content class="air-content" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false" delegate-handle="cityList" tabs-shrink>
         <div class="list card">
             <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()"
