@@ -642,7 +642,7 @@ TEMP_UNIT    gTemperatureUnit;
         return;
     }
     
-    NSLog(@"nsmaDaumKeys : %@", nssDaumKeys);
+    //NSLog(@"nsmaDaumKeys : %@", nssDaumKeys);
     tmpData = [nssDaumKeys dataUsingEncoding:NSUTF8StringEncoding];
     
     if(tmpData)

@@ -136,6 +136,7 @@
 
 - (IBAction)nextCity:(id)sender;
 
+- (void) initWidgetViews;
 - (void) initWidgetDatas;
 - (void) initLocationInfo;
 - (void) refreshDatas;
@@ -157,10 +158,13 @@
 - (void) processPrevData:(int)idx;
 - (void) processRequestIndicator:(BOOL)isComplete;
 - (void) processShowMore;
+- (void) processErrorStatus:(NSError *)error;
 
 - (NSMutableDictionary *) getCurJsonDict;
 - (void) setCurJsonDict:(NSDictionary *)dict;
 - (void) updateCurCityInfo:nssName address:nssAddress country:nssCountryName;
 - (void) updateCurLocation:(NSDictionary *)nsdLocation;
+
+
 
 @end

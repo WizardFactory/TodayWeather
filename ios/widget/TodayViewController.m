@@ -156,6 +156,7 @@ static TodayViewController *todayVC = nil;
     todayVC = self;
     
     [self processRequestIndicator:TRUE];
+    [self initWidgetViews];
     [self initWidgetDatas];
     [self processShowMore];
 }
@@ -281,6 +282,12 @@ static TodayViewController *todayVC = nil;
     [locationManager stopUpdatingLocation];
 }
 
+- (void) initWidgetViews
+{
+    nextCityBtn.hidden = false;
+    addressLabel.hidden = false;
+}
+
 /********************************************************************
  *
  * Name			: initWidgetDatas
@@ -364,6 +371,8 @@ static TodayViewController *todayVC = nil;
         [mCityList addObject:city];
         [mCityDictList addObject:cityDict];
     }
+    
+    NSLog(@"[mCityList count] : %ld", [mCityList count]);
     
     if ([mCityList count] <= 1) {
         NSLog(@"hide next city btn");
@@ -1111,6 +1120,7 @@ static TodayViewController *todayVC = nil;
                                        [self makeJSONWithData:data reqType:type];
                                    } else {
                                        NSLog(@"Failed to fetch %@: %@", url, error);
+                                       [self processErrorStatus:error];
                                    }
                                }];
      
@@ -2689,15 +2699,17 @@ static TodayViewController *todayVC = nil;
             updateTimeLabel.text    = nssDateTime;
         
         NSLog(@"[ByCoord] =>  date : %@", nssDateTime);
+        [self initWidgetViews];
         if( (nssName == nil) || [nssName isEqualToString:@"(null)"])
         {
-            addressLabel.text       = @"";
-            //nextCityBtn.hidden      = true;
+            if(mCurrentCity.address == nil)
+                addressLabel.text       = @"";
+            else
+                addressLabel.text       = mCurrentCity.address;
         }
         else
         {
             addressLabel.text       = nssName;
-            //nextCityBtn.hidden      = false;
         }
         
         if(nssCurImgName)
@@ -2751,6 +2763,21 @@ static TodayViewController *todayVC = nil;
     else {
         [todayWSM           processDailyData:jsonDict type:TYPE_REQUEST_WEATHER_GLOBAL];
     }
+}
+
+- (void) processErrorStatus:(NSError *)error
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSInteger errCode = error.code;
+        updateTimeLabel.text = @"";
+        curDustLabel.text = [NSString stringWithFormat:@"Server Error %ld", errCode];
+        todayMaxMinTempLabel.text = @"";
+        curTempLabel.text = @"";
+        curWTIconIV.image = [UIImage imageNamed:@"empty"];
+        
+        [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
+        showMoreView.hidden = YES;
+    });
 }
 
 @end
