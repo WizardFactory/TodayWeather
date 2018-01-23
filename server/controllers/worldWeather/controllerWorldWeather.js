@@ -1653,6 +1653,22 @@ function controllerWorldWeather() {
         next();
     };
 
+    self.makeAirInfo = function (req, res, next) {
+        try {
+            var result = req.result;
+            var current = result.thisTime[result.thisTime.length-1];
+            if ( current.hasOwnProperty('arpltn') ) {
+                result.airInfo = {source: "aqicn"};
+                result.airInfo.last = current.arpltn;
+            }
+        }
+        catch (err) {
+            log.error(err);
+        }
+
+        next();
+    };
+
     self.dataSort = function(req, res, next){
         var meta = {};
         meta.sID = req.sessionID;

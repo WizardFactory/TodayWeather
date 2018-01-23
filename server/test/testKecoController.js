@@ -113,9 +113,9 @@ describe('unit test - keco controller', function() {
                         "coValue" : 0.9, "so2Value" : 0.005, "dataTime" : "2017-12-22 20:00" };
 
         kecoController.recalculateValue(testData, 'airkorea');
-        assert.equal(testData.pm25Grade, 3);
-        assert.equal(testData.khaiGrade, undefined);
         log.info('airkorea : ', testData);
+        assert.equal(testData.pm25Grade, 3);
+        assert.equal(testData.aqiGrade, 3);
     });
 });
 

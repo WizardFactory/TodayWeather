@@ -14,390 +14,73 @@ var Frcst = require('../models/modelMinuDustFrcst');
 var keco = new (require('../lib/kecoRequester.js'))();
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
-var UnitConverter = require('../lib/unitConverter');
+var AqiConverter = require('../lib/aqi.converter');
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
 
 }
 
-/**
- *
- * @param Mal
- *           so2 분자량 : 15.99 + 15.99 + 32.07 = 64.05
- *           no2 분자량 : 15.99 + 15.99 + 14.01 = 45.99
- *           O3 분자량 : 15.99 + 15.99 + 15.99 = 47.97
- *           CO 분자량 : 15.99 + 12.01 = 28
- * @param value
- * @returns {Number}
- * @private
- */
-arpltnController._convertPpmToUm = function (Mol, value){
-    var ppb = parseFloat(value * 1000);
-    var molList = {
-        so2: 64.05,
-        no2: 45.99,
-        o3: 47.97,
-        co: 28.00
-    };
-
-    if(molList[Mol] == undefined){
-        return -1;
-    }
-
-    return parseFloat(ppb * molList[Mol] / 22.4);
-};
 
 /**
  * pm10, pm25는 넘어오는 grade값은 24h기준으로 오기 때문에, 1h로 변경함.
  * @param arpltn
  * @private
  */
-arpltnController.recalculateValue = function (arpltn, aqiUnit, ts) {
-    var self = this;
+arpltnController.recalculateValue = function (arpltn, airUnit) {
 
     if (arpltn == undefined) {
         return arpltn;
     }
 
-    log.info('aqiUnit : ', aqiUnit);
+    log.info('airUnit : ', airUnit);
 
-    if (arpltn.hasOwnProperty("pm10Value")) {
-        arpltn.pm10Grade = (function (v, aqiUnit) {
-            var unit = [0, 30, 80, 150];
-
-            if(aqiUnit == 'airkorea_who'){
-                unit = [0, 30, 50, 100];
-            }else if(aqiUnit == 'airnow'){
-                unit = [0, 54, 154, 254, 354, 424];
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 50, 150, 250, 350, 420];
+    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+        if (arpltn.hasOwnProperty(name+'Value')) {
+            if (airUnit === 'airkorea' && arpltn.hasOwnProperty(name+'Grade') && arpltn[name+'Grade'] !== -1) {
+                //skip for using data from airkorea server
+                log.info('skip name:'+name);
             }
-            else if(aqiUnit == 'airkorea'){
-                unit = [0, 30, 80, 150];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if (v <= unit[2]) {
-                return 2;
-            }
-            else if (v <= unit[3]) {
-                return 3;
-            }
-            else if (v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.pm10Value, aqiUnit);
-    }
-
-    if (arpltn.hasOwnProperty("pm25Value")) {
-        arpltn.pm25Grade = (function (v, aqiUnit) {
-            var unit = [0, 15, 50, 100];
-
-            if(aqiUnit == 'airkorea_who'){
-                unit = [0, 15, 25, 50];
-            }else if(aqiUnit == 'airnow'){
-                unit = [0, 12.0, 35.4, 55.4, 150.4, 250.4];
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 35, 75, 115, 150, 250];
-            }
-            else if (aqiUnit == 'airkorea') {
-                unit = [0, 15, 50, 100];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v<=unit[2]) {
-                return 2;
-            }
-            else if(v<=unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.pm25Value, aqiUnit);
-    }
-
-    if (arpltn.hasOwnProperty("o3Value")) {
-        arpltn.o3Grade = (function (v) {
-            var unit = [0,0.03, 0.09, 0.15];
-            var tmpValue = 0;
-            if(aqiUnit == 'airnow'){
-                unit = [0, 54, 124, 164, 204, 404];
-
-                v = v * 1000;   // ppm -> ppb
-
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 160, 200, 300, 400, 800];
-
-                // ppm -> ug/m3
-                tmpValue = self._convertPpmToUm('o3', arpltn.o3Value);
-                if(tmpValue > 0){
-                    v = tmpValue;
+            else {
+                arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
+                arpltn[name+'Grade'] = AqiConverter.value2grade(airUnit, name, arpltn[name+'Value']);
+                if (arpltn[name+'Grade'] === -1) {
+                    delete  arpltn[name+'Grade'];
+                    delete  arpltn[name+'Value'];
+                    delete  arpltn[name+'Str'];
                 }
             }
-            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
-                unit = [0, 0.03, 0.09, 0.15];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v <= unit[2]) {
-                return 2;
-            }
-            else if(v <= unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.o3Value);
-    }
-
-    if (arpltn.hasOwnProperty("no2Value")) {
-        arpltn.no2Grade = (function (v) {
-            var unit = [0, 0.03, 0.06, 0.2];
-            var tmpValue = 0;
-            if(aqiUnit == 'airnow'){
-                unit = [0, 53, 100, 360, 649, 1249];
-
-                v = v * 1000;    // ppm -> ppb
-
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 100, 200, 700, 1200, 2340];
-
-                // ppm --> ug/m3
-                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
-                if(tmpValue > 0){
-                    v = tmpValue;
-                }
-            }
-            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
-                unit = [0, 0.03, 0.06, 0.2];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v <= unit[2]) {
-                return 2;
-            }
-            else if(v <= unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.no2Value);
-    }
-
-    if (arpltn.hasOwnProperty("coValue")) {
-        arpltn.coGrade = (function (v) {
-            var unit = [0, 2, 9, 15];
-            var tmpValue = 0;
-            if(aqiUnit == 'airnow'){
-                unit = [0, 4.4, 9.4, 12.4, 15.4, 30.4];
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 5, 10, 35, 60, 90];
-
-                // ppm --> mg/m3
-                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value) * 1000;
-                if(tmpValue > 0){
-                    v = tmpValue;
-                }
-            }
-            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
-                unit = [0, 2, 9, 15];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v <= unit[2]) {
-                return 2;
-            }
-            else if(v <= unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.coValue);
-    }
-
-    if (arpltn.hasOwnProperty("so2Value")) {
-        arpltn.so2Grade = (function (v) {
-            var unit = [0, 0.02, 0.05, 0.15];
-            var tmpValue = 0;
-            if(aqiUnit == 'airnow'){
-                unit = [0, 35, 75, 185, 304, 604];
-
-                v = v * 1000;   // ppm -> ppb
-            }else if(aqiUnit == 'aircn'){
-                unit = [0, 150, 500, 650, 800, 1600];
-
-                // ppm --> ug/m3
-                tmpValue = self._convertPpmToUm('no2', arpltn.no2Value);
-                if(tmpValue > 0){
-                    v = tmpValue;
-                }
-            }
-            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
-                unit = [0, 0.02, 0.05, 0.15];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v <= unit[2]) {
-                return 2;
-            }
-            else if(v <= unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.so2Value);
-    }
-
-    if (arpltn.hasOwnProperty("khaiValue")) {
-        arpltn.khaiGrade = (function (v) {
-            var unit = [0, 50, 100, 250];
-
-            if(aqiUnit == 'airnow' || aqiUnit == 'aircn'){
-                unit = [0, 50, 100, 150, 200, 300];
-            }
-            else if (aqiUnit == 'airkorea' || aqiUnit == 'airkorea_who') {
-                unit = [0, 50, 100, 250];
-            }
-
-            if (v < unit[0]) {
-                return -1;
-            }
-            else if (v <= unit[1]) {
-                return 1;
-            }
-            else if(v <= unit[2]) {
-                return 2;
-            }
-            else if(v <= unit[3]) {
-                return 3;
-            }
-            else if(v > unit[3]) {
-
-                if(unit.length > 4){
-                    if(v <= unit[4]){
-                        return 4;
-                    }else if(v <= unit[5]){
-                        return 5;
-                    }else if(v > unit[5]){
-                        return 6;
-                    }
-                }
-
-                return 4;
-            }
-        })(arpltn.khaiValue);
-    }
-
-    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2', 'khai'].forEach(function (name) {
-        if (arpltn[name+'Grade'] == -1) {
-            delete  arpltn[name+'Grade'];
-            delete  arpltn[name+'Value'];
-            delete  arpltn[name+'Str'];
         }
     });
 
+    if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
+        arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
+        arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
+    }
+    else {
+        //aqicn은 가산점 줘야 하는지 확인 필요.
+        var aqiValue = -1;
+        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+            if (arpltn.hasOwnProperty(name+'Index')) {
+                if (arpltn[name+'Index'] > aqiValue) {
+                    aqiValue = arpltn[name+'Index'];
+                }
+            }
+        });
+        arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
+        arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
+    }
+
+    if (arpltn.aqiGrade === -1) {
+        delete  arpltn.aqiGrade;
+        delete  arpltn.aqiValue;
+        delete  arpltn.aqiStr;
+    }
+    if (arpltn.khaiGrade === -1) {
+        delete  arpltn.khaiGrade;
+        delete  arpltn.khaiValue;
+        delete  arpltn.khaiStr;
+    }
     //xxxStr은 insertStrForData에서 진행
 
     return arpltn;
@@ -435,25 +118,31 @@ arpltnController._mregeData = function(town, current, arpltnDataList, callback){
  * @returns {arpltnController}
  * @private
  */
-arpltnController._getArpLtnList = function (msrStnList, callback) {
+arpltnController._getArpLtnList = function (msrStnList, dateTime, callback) {
     if (!Array.isArray(msrStnList)) {
         callback(new Error("mstStnList is not array"));
         return this;
     }
 
+    var limitTime = new Date(dateTime);
+    limitTime.setHours(limitTime.getHours()-24);
+
     //순서를 위해서 mapSeries를 사용
     async.mapSeries(msrStnList,
         function(msrStn, cb) {
-            Arpltn.find({stationName: msrStn.stationName}, {_id: 0}).sort({date:-1}).limit(1).lean().exec(function (err, arpltnList) {
-                if (err) {
-                    log.error(err);
-                }
-                if (arpltnList.length === 0) {
-                    log.warn("Fail to find arpltn stationName="+msrStn.stationName);
-                    return cb();
-                }
-                cb(err, arpltnList[0]);
-            });
+            Arpltn.find({stationName: msrStn.stationName, date: {$gt:limitTime}}, {_id: 0})
+                .sort({date:-1})
+                .lean()
+                .exec(function (err, arpltnList) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    if (arpltnList.length === 0) {
+                        log.warn("Fail to find arpltn stationName="+msrStn.stationName);
+                        return cb();
+                    }
+                    cb(err, arpltnList);
+                });
         },
         function(err, results) {
             if (err) {
@@ -512,8 +201,8 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
 };
 
 /**
- *
- * @param arpltnList
+ * 가장 가까운 10개중에 가장 최근 것을 합침
+ * @param arpltnList [가장 가까운 10개][최근 24시간]
  * @param currentTime
  * @returns {*}
  * @private
@@ -529,7 +218,7 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
     }
 
     for (var i=0; i<arpltnList.length; i++) {
-        var src = arpltnList[i];
+        var src = arpltnList[i][0];
 
         if(self._checkDateTime(src, currentTime)) {
             if (arpltn === undefined) {
@@ -596,6 +285,12 @@ arpltnController._convertDustFrcstRegion = function (region, city) {
     return sido;
 };
 
+/**
+ * convertUnits에서 grade값을 1증가시켜 실황 grade와 맞추고 있음
+ * @param str
+ * @returns {*}
+ * @private
+ */
 arpltnController._convertDustForecastStrToGrade = function (str) {
     switch (str) {
         case "좋음":
@@ -701,7 +396,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 });
             },
             function (msrStnList, cb) {
-                self._getArpLtnList(msrStnList, function (err, arpltnList) {
+                self._getArpLtnList(msrStnList, dateTime, function (err, arpltnList) {
                     if (err) {
                         return cb(err);
                     }
@@ -709,14 +404,15 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 });
             },
             function (arpltnList, cb) {
+                //arpltn = [가장 가까운 10개][최근 24시간]
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
-                return cb(undefined, arpltn);
+                return cb(undefined, {arpltn:arpltn, list: arpltnList[0]});
             }],
-        function(err, arpltn) {
+        function(err, arpltnObj) {
             if (err)  {
                 return callback(err);
             }
-            callback(err, arpltn);
+            callback(err, arpltnObj);
         });
 
     return this;

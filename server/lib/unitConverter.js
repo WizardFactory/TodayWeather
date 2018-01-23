@@ -244,7 +244,7 @@ UnitConverter.prototype.convertUnits = function (from, to, val) {
     var self = this;
 
     if (val == undefined) {
-        log.error('Fail to convert from '+from+" to "+to+" value="+val);
+        log.warn('Fail to convert from '+from+" to "+to+" value="+val);
         return val;
     }
     if (from == to) {
