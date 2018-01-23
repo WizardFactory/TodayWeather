@@ -722,7 +722,7 @@ function ControllerTown24h() {
 
                 pollutant.hourly.push(hourlyData);
 
-                var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val)
+                var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val);
                 var aqiData = {date: forecast.date, code: code,
                                 val: aqiVal,
                                 grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
