@@ -34,6 +34,6 @@ router.get('/:loc', ctrlUnits.checkQueryValidation, convertParamAndQuery,
     worldWeather.queryTwoDaysWeather, worldWeather.convertDsfLocalTime,
     worldWeather.mergeDsfDailyData, worldWeather.mergeDsfCurrentData,
     worldWeather.mergeDsfHourlyData, worldWeather.mergeAqi, worldWeather.dataSort,
-    ctrlUnits.convertUnits, ctrlUnits.makeSummary, worldWeather.sendResult);
+    ctrlUnits.convertUnits, worldWeather.makeAirInfo, ctrlUnits.makeSummary, worldWeather.sendResult);
 
 module.exports = router;

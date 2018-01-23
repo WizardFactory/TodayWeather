@@ -1517,12 +1517,12 @@ function controllerWorldWeather() {
                         log.info('Aqi Unit : ', req.query.aqi);
                         // grade
                         if(req.query.aqi != undefined && req.query.aqi == 'airnow'){
-                            thisTime.coGrade = self._calculateAirnowValue('co', thisTime.coValue);
-                            thisTime.no2Grade = self._calculateAirnowValue('no2', thisTime.no2Value);
-                            thisTime.o3Grade = self._calculateAirnowValue('o3', thisTime.o3Value);
-                            thisTime.pm10Grade = self._calculateAirnowValue('pm10', thisTime.pm10Value);
-                            thisTime.pm25Grade = self._calculateAirnowValue('pm25', thisTime.pm25Value);
-                            thisTime.so2Grade = self._calculateAirnowValue('so2', thisTime.so2Value);
+                            thisTime.coGrade = self._getAqiGrade( self._calculateAirnowValue('co', thisTime.coValue) );
+                            thisTime.no2Grade = self._getAqiGrade( self._calculateAirnowValue('no2', thisTime.no2Value) );
+                            thisTime.o3Grade = self._getAqiGrade( self._calculateAirnowValue('o3', thisTime.o3Value) );
+                            thisTime.pm10Grade = self._getAqiGrade( self._calculateAirnowValue('pm10', thisTime.pm10Value) );
+                            thisTime.pm25Grade = self._getAqiGrade( self._calculateAirnowValue('pm25', thisTime.pm25Value) );
+                            thisTime.so2Grade = self._getAqiGrade( self._calculateAirnowValue('so2', thisTime.so2Value) );
                             thisTime.aqiGrade = Math.max(thisTime.coGrade,
                                 thisTime.no2Grade,
                                 thisTime.o3Grade,
@@ -1648,6 +1648,22 @@ function controllerWorldWeather() {
                     }
                 });
             });
+        }
+
+        next();
+    };
+
+    self.makeAirInfo = function (req, res, next) {
+        try {
+            var result = req.result;
+            var current = result.thisTime[result.thisTime.length-1];
+            if ( current.hasOwnProperty('arpltn') ) {
+                result.airInfo = {source: "aqicn"};
+                result.airInfo.last = current.arpltn;
+            }
+        }
+        catch (err) {
+            log.error(err);
         }
 
         next();

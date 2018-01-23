@@ -455,6 +455,9 @@ angular.module('service.weatherutil', [])
                     temp: currentForecast.t1h,
                     displayItemCount: midTownWeather.displayItemCount
                 }];
+                if (weatherData.air_forecast) {
+                    data.air_forecast = weatherData.air_forecast;
+                }
                 data.source = "KMA";
             }
             catch (err) {

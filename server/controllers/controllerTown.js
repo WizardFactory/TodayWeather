@@ -2172,11 +2172,12 @@ function ControllerTown() {
                     next();
                     return;
                 }
-                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltn) {
+                KecoController.getArpLtnInfo(townInfo, new Date(), function (err, arpltnObj) {
                     if (err) {
                         log.error(err);
                     }
-                    req.current.arpltn = arpltn;
+                    req.current.arpltn = arpltnObj.arpltn;
+                    req.arpltnList = arpltnObj.list;
                     next();
                 });
             });
@@ -2772,6 +2773,39 @@ function ControllerTown() {
             });
         }
 
+        if (req.airInfo) {
+            if (req.airInfo.pollutants) {
+                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                    var pollutant = req.airInfo.pollutants[propertyName];
+                    if (pollutant) {
+                        if (pollutant.hourly) {
+                            pollutant.hourly.forEach(function (item) {
+                                if (item.hasOwnProperty('grade')) {
+                                    if (airUnit === 'airnow' || airUnit === 'aqicn') {
+                                        item.str = UnitConverter.airGrade2str(item.grade, pollutant.code, res);
+                                    }
+                                    else {
+                                        item.str = UnitConverter.airkoreaGrade2str(item.grade, pollutant.code, res);
+                                    }
+                                }
+                            });
+                        }
+
+                        if (pollutant.daily) {
+                            pollutant.daily.forEach(function (item) {
+                                if (item.hasOwnProperty('minGrade')) {
+                                    item.minStr = UnitConverter.airkoreaGrade2str(item.minGrade, pollutant.code, res);
+                                }
+                                if (item.hasOwnProperty('maxGrade')) {
+                                    item.maxStr = UnitConverter.airkoreaGrade2str(item.maxGrade, pollutant.code, res);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        }
+
         next();
         return this;
     };
@@ -3131,7 +3165,7 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
  * @private
  */
 ControllerTown.prototype._makeArpltnStr = function (arpltn, airUnit, ts) {
-    if (airUnit === 'airnow' || airUnit === 'aircn') {
+    if (airUnit === 'airnow' || airUnit === 'aqicn') {
         if (arpltn.hasOwnProperty('pm10Grade')) {
             arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
         }

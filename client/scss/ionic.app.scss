@@ -431,6 +431,12 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background-color: #FFFFFF;
 }
 
+.tabs-air .tabs {
+  color: #000000;
+  background-image: linear-gradient(0deg, #b2b2b2, #b2b2b2 50%, transparent 70%);
+  background-color: #FFFFFF;
+}
+
 .pane, .view {
   background-color: transparent;
 }
@@ -585,6 +591,212 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   left: auto;
   right: 25px;
 }
+
+.air-content {
+  color: #444;
+  font-size: 17px;
+}
+
+.air-content [md-page-header] {
+  color: #444;
+}
+
+.air-content .main-icon {
+  text-align: left;
+  margin: auto;
+}
+
+.air-content .main-icon i {
+  font-size: 64px;
+}
+
+.air-content .main-text {
+  margin: -2px 0;
+  font-weight:300;
+  font-size: 64px;
+  line-height: 64px;
+}
+
+.air-content [md-page-header] .textFont {
+  margin: 0;
+  font-size: 20px;
+}
+
+.air-content .button {
+  color: #444;
+  font-size: 17px;
+  line-height: initial;
+}
+
+.air-label {
+  border-radius: 10%;
+  position: absolute;
+  padding: 0;
+  top: 0;
+  height: 24px;
+  font-size: 14px;
+  width: 52px;
+}
+
+.air-label .outline {
+  font-size:17px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid #444;
+  opacity: 0.87;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.air-label .line {
+  height: 8px;
+  border-right: 1px solid #444;
+  opacity: 0.87;
+}
+
+.air-outline {
+  font-size:17px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid #444;
+  opacity: 0.87;
+  font-weight: 700;
+  margin: 2px auto;
+  padding: 0 12px;
+  width: fit-content;
+}
+
+.air-main-std {
+  padding: 1px;
+}
+
+.air-main-std div {
+  text-overflow:ellipsis;
+  overflow:hidden;
+  white-space:nowrap;
+}
+
+.air-main-std-box {
+  width: 100%;
+  height: 2px;
+}
+
+.air-hourly p {
+  margin: 5px;
+}
+
+.air-hourly div {
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.air-hourly .hourly-box {
+  text-align: center;
+  margin: auto;
+}
+
+.air-hourly .body1 {
+  margin: 0;
+}
+
+.air-hourly .display1 {
+  margin: 0 0 -14px;
+  opacity: 1;
+}
+
+.air-hourly i {
+  font-size: 32px;
+}
+
+.air-daily p {
+  margin: 5px;
+}
+
+.air-daily i {
+  font-size: 32px;
+}
+
+.air-daily .air-outline {
+  width: 80%;
+}
+
+.air-daily table {
+  width: 100%;
+}
+
+.air-daily .daily-box {
+  text-align: center;
+  margin: auto;
+}
+
+.air-daily .daily-border {
+  border-left: 1px rgba(254, 254, 254, .4) solid;
+}
+
+.air-daily .daily-box .display1 {
+  margin: -2px 0;
+  opacity: 1;
+}
+
+.air-daily .daily-box .body2 {
+  margin: -8px 0 5px;
+}
+
+.air-items p {
+  margin: 5px;
+}
+
+.air-items table {
+  width: 100%;
+}
+
+.air-items div {
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.air-items button {
+  width: 100px;
+}
+
+.air-items i {
+  font-size: 32px;
+}
+
+.air-detail table {
+  margin: 0 auto;
+}
+
+.air-detail i {
+  font-size: 22px;
+  margin: 0 11px;
+}
+
+.air-detail .material-icons {
+  margin: 0 10px;
+}
+
+.air-detail .ion-ios-arrow-right {
+  font-size: 100%;
+  margin: 0;
+}
+
+.card {
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  margin: 5px 10px;
+}
+
+.list:last-child.card {
+  margin-bottom: 10px;
+}
+
+.bar.bar-air {
+  border-color: #444;
+  background-color: #444;
+  background-image: linear-gradient(0deg,#444,#444 50%,transparent 50%);
+  color: #fff;
+ }
 
 .bar.bar-search {
   border-color: #444;

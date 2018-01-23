@@ -23,7 +23,7 @@ var pushSchema = new mongoose.Schema({
         pressureUnit: String,   //hPa, mbar, ..
         distanceUnit: String,   //km, miles
         precipitationUnit: String, //mm, inches
-        airUnit: String //airkorea, airkorea_who, airnow, aircn
+        airUnit: String //airkorea, airkorea_who, airnow, aqicn
     }
 });
 
