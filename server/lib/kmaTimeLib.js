@@ -224,6 +224,7 @@ kmaTimeLib.convertYYYYoMMoDDoHHoMMtoYYYYoMMoDD_HHoMM = function(dateStr) {
 
 /**
  * for kma scraper
+ * Date -> 2018.12.31.23:00
  * @param date
  * @returns {string}
  */
@@ -239,6 +240,11 @@ kmaTimeLib.convertDateToYYYYoMMoDDoHHoZZ = function (date) {
         ':00';
 };
 
+/**
+ * Date -> 2018.12.31.23:59
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM = function (date) {
     if (date == undefined) {
         date = kmaTimeLib.toTimeZone(9);
@@ -251,6 +257,11 @@ kmaTimeLib.convertDateToYYYYoMMoDDoHHoMM = function (date) {
         ':'+manager.leadingZeros(date.getMinutes(), 2);
 };
 
+/**
+ * Date -> 2018.12.31 23:00
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToYYYYoMMoDD_HHoZZ = function (date) {
     if (date == undefined) {
         date = kmaTimeLib.toTimeZone(9);
@@ -263,6 +274,11 @@ kmaTimeLib.convertDateToYYYYoMMoDD_HHoZZ = function (date) {
         ':00';
 };
 
+/**
+ * Date -> 2018.12.31 23:59
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToYYYYoMMoDD_HHoMM = function (date) {
     if (date == undefined) {
         date = kmaTimeLib.toTimeZone(9);
@@ -275,6 +291,11 @@ kmaTimeLib.convertDateToYYYYoMMoDD_HHoMM = function (date) {
         ':'+manager.leadingZeros(date.getMinutes(), 2);
 };
 
+/**
+ * Date -> 2018-12-31 23:59
+ * @param date
+ * @returns {string}
+ */
 kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM = function (date) {
     if (date == undefined) {
         date = kmaTimeLib.toTimeZone(9);
@@ -370,11 +391,21 @@ kmaTimeLib.getPast8DaysTime = function(curTime){
     return now;
 };
 
+/**
+ * 201812312300 -> Date(Timezone +9)
+ * @param curTime
+ * @returns {Date}
+ */
 kmaTimeLib.getKoreaDateObj = function(curTime){
     return new Date(curTime.slice(0,4)+ '-' + curTime.slice(4,6) + '-' + curTime.slice(6,8) + 'T' + curTime.slice(8,10) + ':' + curTime.slice(10,12) + ':00+09:00');
 };
 
 
+/**
+ * Date + 9 -> 201812312300
+ * @param curTime
+ * @returns {*}
+ */
 kmaTimeLib.getKoreaTimeString = function(curTime){
     var now = new Date(curTime.getTime());
     var tz = now.getTime() + (9 * 3600000);
@@ -406,6 +437,14 @@ kmaTimeLib.getDiffDays = function(target, current) {
     var targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
     var date = new Date(current.getFullYear(), current.getMonth(), current.getDate());
     return Math.ceil((targetDay - date) / (1000 * 3600 * 24));
+};
+
+/**
+ * 2018-01-21 11시 발표 -> 2018-01-21 11:00
+ * @param str
+ */
+kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ = function (str) {
+    return str.substr(0, 13) + ":00";
 };
 
 module.exports = kmaTimeLib;

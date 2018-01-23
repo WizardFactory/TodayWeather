@@ -8,6 +8,7 @@ var async = require('async');
 var kmaTimelib = require('../lib/kmaTimeLib');
 var libAirkoreaImageParser = require('../lib/airkorea.finedust.image.parser.js');
 var modelMinuDustFrcst = require('../models/modelMinuDustFrcst');
+var AqiConverter = require('../lib/aqi.converter');
 
 function AirkoreaDustImageController(){
     // image default geocode
@@ -18,8 +19,8 @@ function AirkoreaDustImageController(){
         bottom_right: {lat: 32.6942, lon: 130.6741}
     };
     this.colorTable_pm10 = [
-        {"r":104,"g":0,"b":0,"val":999},    {"r":142,"g":0,"b":0,"val":320},
-        {"r":179,"g":0,"b":0,"val":280},    {"r":179,"g":0,"b":0,"val":260},
+        {"r":104,"g":0,"b":0,"val":600},    {"r":142,"g":0,"b":0,"val":320},
+        {"r":153,"g":0,"b":0,"val":280},    {"r":179,"g":0,"b":0,"val":260},
         {"r":205,"g":0,"b":0,"val":240},    {"r":242,"g":0,"b":0,"val":220},
         {"r":242,"g":0,"b":0,"val":200},    {"r":255,"g":59,"b":59,"val":190},
         {"r":255,"g":90,"b":90,"val":180},  {"r":255,"g":120,"b":120,"val":170},
@@ -41,9 +42,9 @@ function AirkoreaDustImageController(){
     ];
 
     this.colorTable_pm25 = [
-        {"r":104,"g":0,"b":0,"val":999},
+        {"r":104,"g":0,"b":0,"val":500},
         {"r":142,"g":0,"b":0,"val":200},
-        {"r":179,"g":0,"b":0,"val":190},
+        {"r":153,"g":0,"b":0,"val":190},
         {"r":179,"g":0,"b":0,"val":180},
         {"r":205,"g":0,"b":0,"val":170},
         {"r":230,"g":0,"b":0,"val":160},
@@ -61,8 +62,7 @@ function AirkoreaDustImageController(){
         {"r":193,"g":193,"b":0,"val":75},
         {"r":201,"g":201,"b":0,"val":70},
         {"r":207,"g":207,"b":0,"val":65}, {"r":208,"g":208,"b":0,"val":65},{"r":209,"g":209,"b":48,"val":65},
-        {"r":211,"g":211,"b":0,"val":60},{"r":211,"g":211,"b":23,"val":60}, {"r":224,"g":224,"b":0,"val":60},
-        {"r":220,"g":220,"b":1,"val":60},
+        {"r":211,"g":211,"b":0,"val":60},{"r":211,"g":211,"b":23,"val":60}, {"r":224,"g":224,"b":0,"val":60}, {"r":220,"g":220,"b":1,"val":60},
         {"r":232,"g":232,"b":0,"val":55},{"r":232,"g":232,"b":25,"val":55},{"r":240,"g":240,"b":0,"val":55},
         {"r":0,"g":119,"b":0,"val":50},
         {"r":0,"g":138,"b":0,"val":46},
@@ -146,63 +146,6 @@ AirkoreaDustImageController.prototype.parseMapImage = function(path, type, callb
     });
 };
 
-AirkoreaDustImageController.prototype.getGrade = function(type, aqiUnit, value){
-    var unit = [];
-
-    if(type === 'PM10'){
-        unit = [0, 30, 80, 150];
-
-        if(aqiUnit === 'airkorea_who'){
-            unit = [0, 30, 50, 100];
-        }else if(aqiUnit === 'airnow'){
-            unit = [0, 54, 154, 254, 354, 424];
-        }else if(aqiUnit === 'aircn'){
-            unit = [0, 50, 150, 250, 350, 420];
-        }
-    }else
-    {
-        // PM 25
-        unit = [0, 15, 50, 100];
-
-        if(aqiUnit === 'airkorea_who'){
-            unit = [0, 15, 25, 50];
-        }else if(aqiUnit === 'airnow'){
-            unit = [0, 12.0, 35.4, 55.4, 150.4, 250.4];
-        }else if(aqiUnit === 'aircn'){
-            unit = [0, 35, 75, 115, 150, 250];
-        }
-    }
-
-    if (value < unit[0]) {
-        return -1;
-    }
-    else if (value <= unit[1]) {
-        return 1;
-    }
-    else if(value<=unit[2]) {
-        return 2;
-    }
-    else if(value<=unit[3]) {
-        return 3;
-    }
-    else if(value > unit[3]) {
-
-        if(unit.length > 4){
-            if(value <= unit[4]){
-                return 4;
-            }else if(value <= unit[5]){
-                return 5;
-            }else if(value > unit[5]){
-                return 6;
-            }
-        }
-
-        return 4;
-    }
-
-    return -1;
-};
-
 AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqiUnit, callback){
     var self = this;
 
@@ -260,7 +203,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
             // 보정된 좌표 64개 모두 invalid한 색이 나올 경우 error 처리 한다
             log.warn('Airkorea Image > Fail to find color value : ', i, type);
             log.warn('Airkorea Image > Need to Add it to table : ', JSON.stringify(err_rgb));
-            result.push(6);
+            result.push(-1);
         }
     }
     var forecastDate = kmaTimelib.toTimeZone(9);
@@ -272,14 +215,16 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
         }
         forecastDate.setHours(i%24);
         forecastDate.setMinutes(0);
-        item.date = kmaTimelib.convertDateToYYYYoMMoDD_HHoMM(forecastDate);
-        item.grade = self.getGrade(type, aqiUnit, result[i]);
-        item.value = result[i];
+        item.date = kmaTimelib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
+        if (result[i] !== -1) {
+            item.val = result[i];
+            item.grade = AqiConverter.value2grade(aqiUnit, type.toLowerCase(), result[i]);
+        }
 
         forecast.push(item);
     }
 
-    log.info('Airkorea Image > result = ', JSON.stringify(forecast));
+    log.debug('Airkorea Image > result = ', JSON.stringify(forecast));
 
     if(callback){
         callback(null, {pubDate: self.imagePixels[type].pubDate, hourly: forecast});

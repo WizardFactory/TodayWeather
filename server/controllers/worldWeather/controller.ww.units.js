@@ -16,7 +16,7 @@ function ControllerWWUnits() {
         /**
          *
          * temperatureUnit(C,F), windSpeedUnit(mph,km/h,m/s,bft,kr), pressureUnit(mmHg,inHg,hPa,mb),
-         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aircn)
+         * distanceUnit(km,mi), precipitationUnit(mm,in), airUnit(airkorea,airkorea_who,airnow,aqicn)
          */
         if(!req.hasOwnProperty('query')) {
             req.query = {};

@@ -12,26 +12,26 @@ angular.module('controller.air', [])
                     "color": ['blue', 'green', '#FFD600', 'red'],
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
                     "value": {
-                        "pm25": [0, 15, 50, 100],
-                        "pm10": [0, 30, 80, 150],
-                        "o3": [0, 0.03, 0.09, 0.15],
-                        "no2": [0, 0.03, 0.06, 0.2],
-                        "co": [0, 2, 9, 15],
-                        "so2": [0, 0.02, 0.05, 0.15],
-                        "aqi": [0, 50, 100, 250]
+                        "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
+                        "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
+                        "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
+                        "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
+                        "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
+                        "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
+                        "aqi" : [0, 50, 100, 250, 500]      //index
                     }
                 },
                 "airkorea_who": {
                     "color": ['blue', 'green', '#FFD600', 'red'],
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
                     "value": {
-                        "pm25": [0, 15, 25, 50],
-                        "pm10": [0, 30, 50, 100],
-                        "o3": [0, 0.03, 0.09, 0.15],
-                        "no2": [0, 0.03, 0.06, 0.2],
-                        "co": [0, 2, 9, 15],
-                        "so2": [0, 0.02, 0.05, 0.15],
-                        "aqi": [0, 50, 100, 250]
+                        "pm25" : [0, 15, 25, 50, 500],      //ug/m3
+                        "pm10" : [0, 30, 50, 100, 600],     //ug/m3
+                        "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm
+                        "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm
+                        "co" : [0, 2, 9, 15, 50],           //ppm
+                        "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
+                        "aqi" : [0, 50, 100, 250, 500]      //ppm
                     }
                 },
                 "airnow": {
@@ -39,27 +39,27 @@ angular.module('controller.air', [])
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
                         'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
                     "value": {
-                        "pm25": [0, 12, 35.4, 55.4, 150.4, 250.4],
-                        "pm10": [0, 54, 154, 254, 354, 424],
-                        "o3": [0, 0.054, 0.124, 0.164, 0.204, 0.404],
-                        "no2": [0, 0.053, 0.1, 0.36, 0.649, 0.1249],
-                        "co": [0, 4.4, 9.4, 12.4, 15.4, 30.4],
-                        "so2": [0, 0.035, 0.075, 0.185, 0.304, 0.604],
-                        "aqi": [0, 50, 100, 150, 200, 300]
+                        "pm25" : [0, 12.0, 35.4, 55.4, 150.4, 250.4, 500.4],    //ug/m3 (avg 24h)
+                        "pm10" : [0, 54, 154, 254, 354, 424, 604],              //ug/m3 (avg 24h)
+                        "o3" : [0, 54, 124, 164, 204, 404, 604],                //ppb (avg 8h, 1h)
+                        "no2" : [0, 53, 100, 360, 649, 1249, 2049],             //ppb (avg 1h)
+                        "co" : [0, 4.4, 9.4, 12.4, 15.4, 30.4, 50.4],           //ppm (avg 8h)
+                        "so2" : [0, 35, 75, 185, 304, 604, 1004],               //ppb (avg 1h, 24h)
+                        "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
                     }
                 },
-                "aircn": {
+                "aqicn": {
                     "color": ['green', '#FFD600', 'orange', 'red', 'purple', 'maroon'],
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
                         'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
                     "value": {
-                        "pm25": [0, 35, 75, 115, 150, 250],
-                        "pm10": [0, 50, 150, 250, 350, 420],
-                        "o3": [0, 0.16, 0.2, 0.3, 0.4, 0.8], //다시 구해야 함.
-                        "no2": [0, 0.1, 0.2, 0.7, 1.2, 2.34], //다시 구해야 함.
-                        "co": [0, 5, 10, 35, 60, 90], //다시 구해야 함.
-                        "so2": [0, 0.15, 0.5, 0.65, 0.8, 1.6], //다시 구해야 함.
-                        "aqi": [0, 50, 100, 150, 200, 300]
+                        "pm25" : [0, 35, 75, 115, 150, 250, 500],    //ug/m3 (avg 1h)
+                        "pm10" : [0, 50, 150, 250, 350, 420, 600],   //ug/m3 (avg 1h)
+                        "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
+                        "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
+                        "co" : [0, 5, 10, 35, 60, 90, 150],          //ug/m3 (avg 1h)
+                        "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
+                        "aqi" : [0, 50, 100, 150, 200, 300, 500]
                     }
                 }
             };
@@ -98,13 +98,7 @@ angular.module('controller.air', [])
                 else {
                     startV = 0;
                 }
-                //grade가 마지막 단계에는 end value가 없으므로, 그냥 두배로 한다.
-                if (grade < $scope.aqiStandard.length) {
-                    endV = $scope.aqiStandard[grade-1].value;
-                }
-                else {
-                    endV = startV*2;
-                }
+                endV = $scope.aqiStandard[grade-1].value;
 
                 diff = (val - startV)/(endV-startV);
                 gradeD = diff*gradeW;

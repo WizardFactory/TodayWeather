@@ -142,7 +142,7 @@ angular.module('controller.units', [])
             var airUnitStr = {"airkorea": "LOC_AIR_QUALITY_INDEX_KR",
                 "airkorea_who": "LOC_AIR_QUALITY_INDEX_KR_WHO",
                 "airnow": "LOC_AIR_QUALITY_INDEX_US",
-                "aircn": "LOC_AIR_QUALITY_INDEX_CN"};
+                "aqicn": "LOC_AIR_QUALITY_INDEX_CN"};
             return airUnitStr[unit];
         };
 
@@ -170,7 +170,7 @@ angular.module('controller.units', [])
                         {label: 'inch', value: 'in'}];
                 case 'airUnit':
                     return [{label: this.getAirUnitStr('airnow'), value: 'airnow'},
-                        {label: this.getAirUnitStr('aircn'), value: 'aircn'},
+                        {label: this.getAirUnitStr('aqicn'), value: 'aqicn'},
                         {label: this.getAirUnitStr('airkorea'), value: 'airkorea'},
                         {label: this.getAirUnitStr('airkorea_who'), value: 'airkorea_who'}];
                 default:
