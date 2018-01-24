@@ -6,6 +6,8 @@
 
 var async = require('async');
 
+var SidoArpltn = require('../models/sido.arpltn.keco.model');
+
 //var Town = require('../models/town');
 var arpltnTown = require('../models/arpltnTownKeco');
 var Arpltn = require('../models/arpltnKeco.js');
@@ -566,6 +568,25 @@ arpltnController.appendData = function(town, current, callback) {
             return self._appendFromKeco(town, current, callback);
         }
         return callback(err, arpltn);
+    });
+};
+
+arpltnController.getSidoArpltn = function (callback) {
+    SidoArpltn.find({"cityName" : ""}).sort({date:-1}).limit(20).lean().exec(function (err, list) {
+        if (err) {
+            return callback(err);
+        }
+        if (list.length === 0) {
+            return callback(new Error("Fail to find sido arpltn"));
+        }
+        var last = list[0].date;
+        list = list.filter(function (obj) {
+            return obj.date.getTime() == last.getTime();
+        });
+        if (list.length < 17) {
+            log.error("Fail to get full sido arpltn");
+        }
+        callback(null, list);
     });
 };
 
