@@ -295,8 +295,6 @@ describe('unit test - keco requester', function() {
             assert.equal(result[0].pm10Value, data.list[0].pm10Value);
             assert.equal(result[1].cityName, data.list[1].cityName);
             assert.equal(result[1].itemCode, null);
-            assert.equal(result[2].cityName, "");
-            assert.equal(result[2].pm10Value, 48);
             //console.info(JSON.stringify(result));
             done();
         });

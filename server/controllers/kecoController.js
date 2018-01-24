@@ -581,7 +581,7 @@ arpltnController.getSidoArpltn = function (callback) {
         }
         var last = list[0].date;
         list = list.filter(function (obj) {
-            return obj.date.getTime() == last.getTime();
+            return obj.date.getTime() === last.getTime();
         });
         if (list.length < 17) {
             log.error("Fail to get full sido arpltn");

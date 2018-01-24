@@ -820,7 +820,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
 
 Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
 
-    if (rltmArpltnList.length == 0) {
+    if (rltmArpltnList.length === 0) {
         log.error('rltm arpltn length is zero');
     }
     else {
@@ -879,12 +879,18 @@ Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
             }
         });
 
-        SidoArpltn.update({sidocityName: avgSidoArpltn.sidocityName, date: avgSidoArpltn.date}, avgSidoArpltn, {upsert:true}, function (err, raw) {
-            if (err) {
-                log.error(err);
-            }
-            log.silly('The raw response from Mongo was ', JSON.stringify(raw));
-        });
+        SidoArpltn.update(
+            {
+                sidocityName: avgSidoArpltn.sidocityName,
+                date: avgSidoArpltn.date},
+            avgSidoArpltn,
+            {upsert:true},
+            function (err, raw) {
+                if (err) {
+                    log.error(err);
+                }
+                log.silly('The raw response from Mongo was ', JSON.stringify(raw));
+            });
     }
 };
 
