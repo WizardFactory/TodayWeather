@@ -648,6 +648,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
  */
 ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
     var self = this;
+    //v000902로 업데이트 하는 경우 _getWeatherEmoji 수정해야 함.
     var url = self.url+"/v000901/dsf/coord/";
     url += pushInfo.geo[1]+","+pushInfo.geo[0];
 
