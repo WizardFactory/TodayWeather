@@ -212,7 +212,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     var pubDate = new Date(pubDateStr);
     var forecastDate = kmaTimeLib.toTimeZone(9);
     //17시, 23시 데이터는 다음날 부터 시작하고, 그 다음날 5시까지 사용되어야 하므로, 현재 시간도 함께 비교
-    if (pubDate.getHours() >== 17 && pubDate.getDate() === forecastDate.getDate()) {
+    if (pubDate.getHours() >= 17 && pubDate.getDate() === forecastDate.getDate()) {
         forecastDate.setDate(forecastDate.getDate()+1);
     }
 
