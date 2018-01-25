@@ -818,7 +818,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                             imagePaths.pm10 = obj.imageUrl[6];
                             findCount++;
                         }
-                        else if (!imagePaths.hasOwnProperty('pm25') && obj.informCode == 'PM25') {
+                        else if (!imagePaths.hasOwnProperty('pm25') && obj.informCode === 'PM25') {
                             imagePaths.pm25 = obj.imageUrl[7];
                             findCount++;
                         }
