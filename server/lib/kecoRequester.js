@@ -818,6 +818,82 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
     return this;
 };
 
+Keco.prototype.saveAvgSidoArpltn = function (sido, rltmArpltnList) {
+
+    if (rltmArpltnList.length === 0) {
+        log.error('rltm arpltn length is zero');
+    }
+    else {
+        var latestDataTime = "";
+        //부산의 경우 6:56분에 7시 데이터 "도로변대기"가 올라온적이 있음
+        rltmArpltnList.forEach(function (item) {
+            if (item.dataTime > latestDataTime && item.mangName === '도시대기') {
+                latestDataTime = item.dataTime;
+            }
+        });
+
+        var sidoArpltnList = rltmArpltnList.filter(function (item) {
+            return item.dataTime === latestDataTime && item.mangName === '도시대기';
+        });
+
+        if (sidoArpltnList.length === 0) {
+            log.info('sido arpltn list length is 0 so stop save avg sigo arpltn');
+            return;
+        }
+        var avgSidoArpltn = {};
+        var avgSidoArpltnCount={};
+
+        avgSidoArpltn.sidocityName = sido;
+        avgSidoArpltn.sidoName = sido;
+        avgSidoArpltn.date = sidoArpltnList[0].date;
+        avgSidoArpltn.dataTime = sidoArpltnList[0].dataTime;
+        avgSidoArpltn.cityName = "";
+        avgSidoArpltn.cityNameEng = "";
+
+        sidoArpltnList.forEach(function (item) {
+            for (var key in item) {
+                if (key.indexOf("Value") >= 0) {
+                    if (avgSidoArpltn[key] === undefined) {
+                        avgSidoArpltn[key] = 0;
+                        avgSidoArpltnCount[key]  = 0;
+                    }
+                    avgSidoArpltn[key] += item[key];
+                    avgSidoArpltnCount[key]++;
+                }
+            }
+        });
+
+        for (var key in avgSidoArpltn) {
+            if (key.indexOf("Value") >= 0) {
+                avgSidoArpltn[key] = avgSidoArpltn[key]/avgSidoArpltnCount[key];
+            }
+        }
+        ['pm10Value', 'pm25Value', 'khaiValue', 'pm10Value24', 'pm25Value24'].forEach(function (key) {
+            if (avgSidoArpltn.hasOwnProperty(key)) {
+                avgSidoArpltn[key] = Math.round(avgSidoArpltn[key]);
+            }
+        });
+        ['no2Value', 'o3Value', 'coValue', 'so2Value'].forEach(function (key) {
+            if (avgSidoArpltn.hasOwnProperty(key)) {
+                avgSidoArpltn[key] = Math.round(avgSidoArpltn[key]*1000)/1000;
+            }
+        });
+
+        SidoArpltn.update(
+            {
+                sidocityName: avgSidoArpltn.sidocityName,
+                date: avgSidoArpltn.date},
+            avgSidoArpltn,
+            {upsert:true},
+            function (err, raw) {
+                if (err) {
+                    log.error(err);
+                }
+                log.silly('The raw response from Mongo was ', JSON.stringify(raw));
+            });
+    }
+};
+
 /**
  *
  * @param list
@@ -870,6 +946,8 @@ Keco.prototype.getAllCtprvn = function(list, index, callback) {
                         log.debug(err);
                         return cb(err);
                     });
+                    //save avgSido
+                    self.saveAvgSidoArpltn(sido, parsedDataList);
                 }
             ], function(err) {
                 callback(err, {sido: sido});
@@ -1096,44 +1174,6 @@ Keco.prototype.parseSidoCtprvn = function (data, callback) {
             });
             sidoArpltnList.push(sidoArpltn);
         });
-
-        if (sidoArpltnList.length == 0) {
-            log.error('sido arpltn length is zero');
-        }
-        else {
-            var avgSidoArpltn = {};
-            avgSidoArpltn.sidocityName = sidoArpltnList[0].sidoName;
-            avgSidoArpltn.sidoName = sidoArpltnList[0].sidoName;
-            avgSidoArpltn.date = sidoArpltnList[0].date;
-            avgSidoArpltn.dataTime = sidoArpltnList[0].dataTime;
-            avgSidoArpltn.cityName = "";
-            avgSidoArpltn.cityNameEng = "";
-
-            SidoArpltn.getKeyList().forEach(function (name) {
-                if (name.indexOf("Value") >= 0) {
-                    avgSidoArpltn[name] = 0;
-                }
-            });
-
-            sidoArpltnList.forEach(function (item) {
-                for (var key in item) {
-                    if (key.indexOf("Value") >= 0) {
-                        avgSidoArpltn[key] += item[key];
-                    }
-                }
-            });
-
-            for (var key in avgSidoArpltn) {
-                if (key.indexOf("Value") >= 0) {
-                    avgSidoArpltn[key] = avgSidoArpltn[key]/sidoArpltnList.length;
-                }
-            }
-            ['pm10Value', 'pm25Value', 'khaiValue'].forEach(function (key) {
-                avgSidoArpltn[key] = parseInt(avgSidoArpltn[key]);
-            });
-
-            sidoArpltnList.push(avgSidoArpltn);
-        }
     }
     catch (err) {
         return callback(err);
