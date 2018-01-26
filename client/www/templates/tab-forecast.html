@@ -87,13 +87,13 @@
                             <p class="body2" style="margin: 0 0 2px;">{{currentWeather.arpltn.pm10Str}}</p>
                             <p class="caption" style="margin: 0 0 5px;">{{currentWeather.arpltn.pm10Value.toFixed(0)}}<small>㎍/㎥</small></p>
                         </div>
-                        <div class="col" style="text-align: center" ng-if="currentWeather.arpltn.khaiValue">
+                        <div class="col" style="text-align: center" ng-if="currentWeather.arpltn.aqiValue">
                             <p class="body1" style="margin: 0 0 5px;">{{"LOC_AQI"|translate}}</p>
                             <i class="material-icons" style="font-size: 32px"
-                               ng-bind-html="getSentimentIcon(currentWeather.arpltn.khaiGrade)">
+                               ng-bind-html="getSentimentIcon(currentWeather.arpltn.aqiGrade)">
                             </i>
-                            <p class="body2" style="margin: 0 0 2px;">{{currentWeather.arpltn.khaiStr}}</p>
-                            <p class="caption" style="margin: 0 0 5px;">{{currentWeather.arpltn.khaiValue.toFixed(0)}}</p>
+                            <p class="body2" style="margin: 0 0 2px;">{{currentWeather.arpltn.aqiStr}}</p>
+                            <p class="caption" style="margin: 0 0 5px;">{{currentWeather.arpltn.aqiValue.toFixed(0)}}</p>
                         </div>
                     </div>
                     <hr style="margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);">
@@ -205,13 +205,13 @@
                                 {{currentWeather.arpltn.so2Str}}<span class="caption">({{currentWeather.arpltn.so2Value.toFixed(3)}}ppm{{currentWeather.arpltn.so2StationName?" "+currentWeather.arpltn.so2StationName:""}})</span>
                             </td>
                         </tr>
-                        <tr ng-if="currentWeather.arpltn.khaiValue">
+                        <tr ng-if="currentWeather.arpltn.aqiValue">
                             <td>{{"LOC_AQI"|translate}}</td>
                             <td>
-                                <i class="material-icons img-detail-aqi" ng-bind-html="getSentimentIcon(currentWeather.arpltn.khaiGrade)">
+                                <i class="material-icons img-detail-aqi" ng-bind-html="getSentimentIcon(currentWeather.arpltn.aqiGrade)">
                                 </i>
-                                {{currentWeather.arpltn.khaiStr}}<span class="caption"
-                                                                                          ng-if="currentWeather.arpltn.khaiValue && currentWeather.arpltn.khaiValue != -1">({{currentWeather.arpltn.khaiValue.toFixed(0)}})</span>
+                                {{currentWeather.arpltn.aqiStr}}<span class="caption"
+                                                                                          ng-if="currentWeather.arpltn.aqiValue && currentWeather.arpltn.aqiValue != -1">({{currentWeather.arpltn.aqiValue.toFixed(0)}})</span>
                             </td>
                         </tr>
                         <tr ng-if="currentWeather.arpltn.stationName">
