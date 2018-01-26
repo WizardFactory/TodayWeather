@@ -5,7 +5,7 @@
 //var fs = require('fs');
 var url = require('url');
 var async = require('async');
-var kmaTimelib = require('../lib/kmaTimeLib');
+var kmaTimeLib = require('../lib/kmaTimeLib');
 var libAirkoreaImageParser = require('../lib/airkorea.finedust.image.parser.js');
 var modelMinuDustFrcst = require('../models/modelMinuDustFrcst');
 var AqiConverter = require('../lib/aqi.converter');
@@ -157,6 +157,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     var x = parseInt((lon - self.coordinate.top_left.lon) / pixels.map_pixel_distance_width) + pixels.map_area.left;
     var y = parseInt((self.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height) + pixels.map_area.top;
 
+    log.info('Airkorea Image > lat: ', lat, 'lon: ', lon);
     log.info('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
     log.info('Airkorea Image > x: ', x, 'y: ',y);
 
@@ -206,7 +207,15 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
             result.push(-1);
         }
     }
-    var forecastDate = kmaTimelib.toTimeZone(9);
+
+    var pubDateStr = kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(self.imagePixels[type].pubDate);
+    var pubDate = new Date(pubDateStr);
+    var forecastDate = kmaTimeLib.toTimeZone(9);
+    //17시, 23시 데이터는 다음날 부터 시작하고, 그 다음날 5시까지 사용되어야 하므로, 현재 시간도 함께 비교
+    if (pubDate.getHours() >= 17 && pubDate.getDate() === forecastDate.getDate()) {
+        forecastDate.setDate(forecastDate.getDate()+1);
+    }
+
     var forecast = [];
     for(i=0 ; i<48 ; i++){
         var item = {};
@@ -215,7 +224,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
         }
         forecastDate.setHours(i%24);
         forecastDate.setMinutes(0);
-        item.date = kmaTimelib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
+        item.date = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
         if (result[i] !== -1) {
             item.val = result[i];
             item.grade = AqiConverter.value2grade(aqiUnit, type.toLowerCase(), result[i]);
@@ -227,7 +236,7 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     log.debug('Airkorea Image > result = ', JSON.stringify(forecast));
 
     if(callback){
-        callback(null, {pubDate: self.imagePixels[type].pubDate, hourly: forecast});
+        callback(null, {pubDate: pubDateStr, hourly: forecast});
     }
 
     return result;
@@ -243,7 +252,7 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
     */
     // TODO: getMinuDustFrcstDspth module의 version이 1.1로 업데이트되면 아래 내용 확인 및 테스트 필요.
     var dataDate;
-    var now = kmaTimelib.toTimeZone(9);
+    var now = kmaTimeLib.toTimeZone(9);
 
     var dataHours;
     var currentHours = now.getHours();
@@ -265,7 +274,7 @@ AirkoreaDustImageController.prototype.getImaggPath = function(type, callback){
         dataHours = '23시 발표';
     }
 
-    dataDate = kmaTimelib.convertDateToYYYY_MM_DD(now);
+    dataDate = kmaTimeLib.convertDateToYYYY_MM_DD(now);
 
     log.info('Airkorea Image > latest image time = '+dataDate+' '+dataHours);
 
@@ -385,6 +394,58 @@ AirkoreaDustImageController.prototype.stopDustImageMgr = function(){
         clearInterval(self.task);
         self.task = undefined;
     }
+};
+
+AirkoreaDustImageController.prototype.getDustImage = function (imgPaths, callback) {
+    var self = this;
+
+    log.info('get dust image -----------');
+    async.applyEach(
+        [
+            function(cb){
+                if (imgPaths.pm10 == undefined) {
+                    return cb();
+                }
+                log.info("pm10 path: "+imgPaths.pm10);
+                self.parseMapImage(imgPaths.pm10, 'image/gif', function(err, pixelMap){
+                    if(err){
+                        return cb(err);
+                    }
+
+                    log.info('Airkorea Image > Got pixel info for PM10');
+                    self.imagePixels.PM10 = {};
+                    self.imagePixels.PM10.pubDate = imgPaths.pubDate;
+                    self.imagePixels.PM10.data = pixelMap;
+                    return cb();
+                });
+            },
+            function(cb){
+                if (imgPaths.pm25 == undefined) {
+                    return cb();
+                }
+                log.info("pm25 path: "+imgPaths.pm25);
+                self.parseMapImage(imgPaths.pm25, 'image/gif', function(err, pixelMap){
+                    if(err){
+                        return cb(err);
+                    }
+                    log.info('Airkorea Image > Got pixel info for PM25');
+                    self.imagePixels.PM25 = {};
+                    self.imagePixels.PM25.pubDate = imgPaths.pubDate;
+                    self.imagePixels.PM25.data = pixelMap;
+                    return cb();
+                });
+            }
+        ],
+        function(err){
+            if(err){
+                log.error('Airkorea Image > fail to load image');
+            }
+
+            if(callback){
+                callback(err, self.imagePixels);
+            }
+        }
+    );
 };
 
 module.exports = AirkoreaDustImageController;

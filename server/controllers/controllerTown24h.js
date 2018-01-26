@@ -12,6 +12,7 @@ var kmaTimeLib = require('../lib/kmaTimeLib');
 var UnitConverter = require('../lib/unitConverter');
 var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
+var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
 
 /**
  *
@@ -656,6 +657,59 @@ function ControllerTown24h() {
         return this;
     };
 
+    this.insertSkyIconLowCase = function (req, res, next) {
+        var isNight = false;
+
+        try {
+            if(req.short){
+                req.short.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.shortest){
+                req.shortest.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.current){
+                var data = req.current;
+                var time;
+                if (data.liveTime) {
+                   time = data.liveTime;
+                }
+                else {
+                    time = data.time;
+                }
+                isNight = _isNight(req.midData.dailyData, data.date, time);
+                data.night = isNight;
+                data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+            }
+            if(req.midData){
+                req.midData.dailyData.forEach(function (data) {
+                    if (data.sky) {
+                        data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, false);
+                    }
+                    if (data.skyAm) {
+                        data.skyAmIcon = self._parseSkyStateLowCase(data.skyAm, data.ptyAm, data.lgtAm, false);
+                    }
+                    if (data.skyPm) {
+                        data.skyPmIcon = self._parseSkyStateLowCase(data.skyPm, data.ptyPm, data.lgtPm, false);
+                    }
+                });
+            }
+        }
+        catch(err) {
+            return next(err);
+        }
+
+        next();
+        return this;
+    };
+
     function _getHourlyAqiData(airInfo, date) {
        var obj;
        obj = airInfo.pollutants.aqi.hourly.find(function (aqiHourlyObj) {
@@ -681,53 +735,51 @@ function ControllerTown24h() {
        return true;
     }
 
-    this._insertForecastPollutants = function (req, hourlyForecasts, airUnit) {
+    this._insertForecastPollutants = function (req, hourlyForecasts, source, airUnit) {
 
-        hourlyForecasts.forEach(function (hourlyForecast) {
-            if (hourlyForecast == null) {
+        var airInfo = self._getAirInfo(req);
+        var latestPastDate = {};
+
+        hourlyForecasts.forEach(function (forecast) {
+            if (forecast == null) {
                 return;
             }
 
-            var airInfo = self._getAirInfo(req);
+            var code = forecast.code;
+            var pollutant = airInfo.pollutants[code];
+            if (pollutant == undefined) {
+                pollutant = airInfo.pollutants[code] = {};
+            }
+            if (airInfo.forecastSource == undefined) {
+                airInfo.forecastSource = source;
+            }
+            if (airInfo.forecastPubDate == undefined) {
+                airInfo.forecastPubDate = forecast.pubDate;
+            }
 
-            var latestPastDate = {};
-            var code = hourlyForecast.code;
+            //copy latest past data time
+            if (latestPastDate[code] == undefined && pollutant.hourly.length) {
+                latestPastDate[code] = pollutant.hourly[pollutant.hourly.length-1].date;
+            }
 
-            hourlyForecast.hourly.forEach(function (forecast) {
-                var pollutant = airInfo.pollutants[code];
-                if (pollutant == undefined) {
-                    pollutant = airInfo.pollutants[code] = {};
-                }
-                if (airInfo.forecastSource == undefined) {
-                    airInfo.forecastSource = hourlyForecast.source;
-                }
-                if (airInfo.forecastPubDate == undefined) {
-                    airInfo.forecastPubDate = kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(hourlyForecast.pubDate);
-                }
-
-                //copy latest past data time
-                if (latestPastDate[code] == undefined && pollutant.hourly.length) {
-                    latestPastDate[code] = pollutant.hourly[pollutant.hourly.length-1].date;
-                }
-
-                var hourlyData = pollutant.hourly.find(function (hourlyObj) {
-                    return hourlyObj.date == forecast.date || forecast.date <= latestPastDate[code];
-                });
-
-                if (hourlyData) {
-                    //skip past data
-                    return;
-                }
-                hourlyData = {date: forecast.date, val: forecast.val, grade: forecast.grade};
-
-                pollutant.hourly.push(hourlyData);
-
-                var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val);
-                var aqiData = {date: forecast.date, code: code,
-                                val: aqiVal,
-                                grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
-                _insertHourlyAqiData(airInfo, aqiData);
+            var hourlyData = pollutant.hourly.find(function (hourlyObj) {
+                return hourlyObj.date == forecast.date || forecast.date <= latestPastDate[code];
             });
+
+            if (hourlyData) {
+                //skip past data
+                return;
+            }
+            forecast.grade = AqiConverter.value2grade(airUnit, code, forecast.val);
+            hourlyData = {date: forecast.dataTime, val: forecast.val, grade: forecast.grade};
+
+            pollutant.hourly.push(hourlyData);
+
+            var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val);
+            var aqiData = {date: forecast.dataTime, code: code,
+                val: aqiVal,
+                grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
+            _insertHourlyAqiData(airInfo, aqiData);
         });
     };
 
@@ -902,74 +954,30 @@ function ControllerTown24h() {
         return this;
     };
 
-    this.AirkoreaForecast = function (req, res, next){
-        var meta = {};
-
-        var regionName = req.params.region;
-        var cityName = req.params.city;
-        var townName = req.params.town;
-
-        meta.method = '/:region/:city/:town';
-        meta.region = regionName;
-        meta.city = cityName;
-        meta.town = townName;
-
-        if (global.airkoreaDustImageMgr == undefined || req.geocode == undefined) {
-            log.error("Fail to find airkoreaDustImageMgr or req.geocode");
-            next();
-            return this;
+    this.AirkoreaForecast = function (req, res, next) {
+        var ctrl;
+        var stnName;
+        try {
+            stnName = req.airInfo.last.stationName;
+            ctrl = new AirkoreaHourlyForecastCtrl();
         }
-
-        async.applyEachSeries([
-                function (callback) {
-                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM10', req.query.airUnit, function(err, pm10) {
-                        if (err) {
-                            log.info('Fail to get PM 10 info');
-                            log.error(err);
-                            return callback();
-                        }
-                        var pm10Forecast = {
-                            source: 'airkorea',
-                            code: 'pm10',
-                            pubDate: pm10.pubDate,
-                            hourly: pm10.hourly
-                        };
-                        callback(null, pm10Forecast);
-                    });
-                },
-                function (callback) {
-                    airkoreaDustImageMgr.getDustInfo(req.geocode.lat, req.geocode.lon, 'PM25', req.query.airUnit, function(err, pm25){
-                        if(err){
-                            log.info('Fail to get PM 25 info');
-                            log.error(err);
-                            return callback();
-                        }
-                        var pm25Forecast = {
-                            source: 'airkorea',
-                            code: 'pm25',
-                            pubDate: pm25.pubDate,
-                            hourly: pm25.hourly
-                        };
-                        callback(null, pm25Forecast);
-                    });
-                }
-            ],
-            function (err, results) {
-                if (results == undefined || results.length <= 0) {
-                    log.warn("Fail to dust forecast");
-                }
-                else {
-                    try {
-                        self._insertForecastPollutants(req, results, req.query.airUnit);
-                    }
-                    catch(err) {
-                        log.error(err);
-                    }
-                }
-                next();
-            });
-
-        return this;
+        catch (err) {
+            log.error(err);
+            return next();
+        }
+        ctrl.getForecast(stnName, function (err, results) {
+            if (err) {
+                log.error(err);
+                return next();
+            }
+            try {
+                self._insertForecastPollutants(req, results, "airkorea", req.query.airUnit);
+            }
+            catch(err) {
+                log.error(err);
+            }
+            next();
+        });
     };
 
     this.sendDailySummaryResult = function (req, res) {
@@ -1518,6 +1526,59 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
 
     if (lgt === 1) {
         skyIconName += "Lightning";
+    }
+
+    return skyIconName;
+};
+
+ControllerTown24h.prototype._parseSkyStateLowCase = function (sky, pty, lgt, isNight) {
+    var skyIconName = "";
+
+    if (isNight) {
+        skyIconName = "moon";
+    }
+    else {
+        skyIconName = "sun";
+    }
+
+    switch (sky) {
+        case 1:
+            skyIconName;
+            break;
+        case 2:
+            skyIconName += "_smallcloud";
+            break;
+        case 3:
+            skyIconName += "_bigcloud"; //Todo need new icon
+            break;
+        case 4:
+            skyIconName = "cloud"; //overwrite Moon/Sun
+            break;
+        default:
+            log.error('Fail to parse sky='+sky);
+            break;
+    }
+
+    switch (pty) {
+        case 0:
+            //nothing
+            break;
+        case 1:
+            skyIconName += "_rain";
+            break;
+        case 2:
+            skyIconName += "_rainsnow"; //Todo need RainWithSnow icon";
+            break;
+        case 3:
+            skyIconName += "_snow";
+            break;
+        default:
+            log.error('Fail to parse pty='+pty);
+            break;
+    }
+
+    if (lgt === 1) {
+        skyIconName += "_lightning";
     }
 
     return skyIconName;

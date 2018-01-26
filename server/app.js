@@ -90,6 +90,7 @@ app.use('/v000001', require('./routes/v000001'));
 app.use('/v000705', require('./routes/v000705'));
 app.use('/v000803', require('./routes/v000803'));
 app.use('/v000901', require('./routes/v000901'));
+app.use('/v000902', require('./routes/v000902'));
 app.use('/ww', require('./routes/worldweather/routeWeather'));
 app.use('/req', require('./routes/worldweather/routeRequester'));
 app.get('/health', function (req, res) {
@@ -127,17 +128,6 @@ if (config.mode === 'push') {
 
 if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
-}
-
-if (config.mode === 'service'){
-    global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
-    global.airkoreaDustImageMgr.startDustImageMgr(function(err){
-        if(err){
-            log.error('Fail to start image mgr');
-            return;
-        }
-        log.info('Start Image Mgr');
-    });
 }
 
 // catch 404 and forward to error handler
