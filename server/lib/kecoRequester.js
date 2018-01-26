@@ -13,6 +13,7 @@ var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
 var Frcst = require('../models/modelMinuDustFrcst');
 var SidoArpltn = require('../models/sido.arpltn.keco.model');
+var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -470,7 +471,15 @@ Keco.prototype.completeGeoMsrStnInfo = function(list, callback) {
     var self = this;
     async.map(list,
         function (msrStn, cb) {
+
             if (msrStn.dmY !== '' && msrStn.dmX !== '') {
+                if (msrStn.dmX > 100) {
+                    //18-1-25 6개 정보의 측정소 위치 정보가 잘 못 전달되고 있음.
+                    log.warn("invalid geoinfo from airkorea", msrStn.stationName, 'dmX=', msrStn.dmX, 'dmY=', msrStn.dmY);
+                    var tmpX = msrStn.dmX;
+                    msrStn.dmX = msrStn.dmY;
+                    msrStn.dmY = tmpX;
+                }
                 return cb(undefined, msrStn);
             }
 
@@ -797,6 +806,27 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                     return cb(new Error("Fail to parse minu dust frcst dspth"));
                 }
                 return cb(undefined, parsedList);
+            },
+            function (parsedFrcstList, cb) {
+                if(parsedFrcstList.length > 0) {
+                    var imagePaths = {pubDate: kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(parsedFrcstList[0].dataTime)};
+                    var findCount = 0;
+
+                    for (var i=0; i<parsedFrcstList.length && findCount<2; i++) {
+                        var obj = parsedFrcstList[i];
+                        if (!imagePaths.hasOwnProperty('pm10') && obj.informCode === 'PM10')  {
+                            imagePaths.pm10 = obj.imageUrl[6];
+                            findCount++;
+                        }
+                        else if (!imagePaths.hasOwnProperty('pm25') && obj.informCode === 'PM25') {
+                            imagePaths.pm25 = obj.imageUrl[7];
+                            findCount++;
+                        }
+                    }
+
+                    (new AirkoreaHourlyForecastCtrl(imagePaths)).do();
+                }
+                return cb(undefined, parsedFrcstList);
             },
             function (parsedFrcstList, cb) {
                 self._saveFrcst(parsedFrcstList, function (err, result) {

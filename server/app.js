@@ -130,17 +130,6 @@ if (config.mode === 'scrape' || config.mode === 'local') {
     manager.startScrape();
 }
 
-if (config.mode === 'service'){
-    global.airkoreaDustImageMgr = new controllerAirkoreaDustImage();
-    global.airkoreaDustImageMgr.startDustImageMgr(function(err){
-        if(err){
-            log.error('Fail to start image mgr');
-            return;
-        }
-        log.info('Start Image Mgr');
-    });
-}
-
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found url='+req.originalUrl);
