@@ -526,7 +526,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         city.name = geoInfo.name;
         city.address = geoInfo.address;
         city.location = geoInfo.location;
-        city.country = geoInfo.country; //"KR"
+        city.country = geoInfo.country;
         if (currentPosition) {
             city.currentPosition = true;
             WeatherInfo.updateCity(WeatherInfo.getCityIndex(), city);

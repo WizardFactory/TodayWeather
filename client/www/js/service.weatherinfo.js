@@ -21,9 +21,6 @@ angular.module('service.weatherinfo', [])
                 city.disable = true; // 현재 위치 off
             } else {
                 city = item;
-                if (item.country == undefined) {
-                    city.country = "KR";
-                }
                 city.disable = item.disable === undefined ? false : item.disable;
             }
             city.loadTime = null;
