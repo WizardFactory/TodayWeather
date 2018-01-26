@@ -317,7 +317,7 @@ class AqiConverter {
         var unit = {};
         var value = parseFloat(Cp);
 
-        if(airnowUnit[type] == undefined){
+        if(airnowUnit[type] === undefined){
             log.warn('extractValueFromAqicn : There is no unit value from aqicn : ', type);
             return -1;
         }
@@ -347,7 +347,7 @@ class AqiConverter {
         }
         log.info('Extra type: ', type, 'Value :', result, ' index : ', Cp);
         return result;
-    };
+    }
 
     /**
      *
@@ -356,14 +356,14 @@ class AqiConverter {
      * @param index
      */
     static index2Grade(airUnit, index){
-        if(index == undefined) {
+        if(index === undefined) {
             log.warn('_getAqiGrade : invalid parameter');
             return -1;
         }
 
         var aqi = parseInt(index);
         var aqiUnit = air_pollutants_breakpoints[[airUnit]].aqi;
-        if (aqiUnit == undefined) {
+        if (aqiUnit === undefined) {
             log.error(airUnit, code, v);
             return -1;
         }

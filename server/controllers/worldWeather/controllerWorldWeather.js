@@ -15,7 +15,7 @@ var config = require('../../config/config');
 var controllerRequester = require('./controllerRequester');
 var ControllerWeatherDesc = require('../controller.weather.desc');
 var UnitConverter = require('../../lib/unitConverter');
-var aqiConverter = require('../../lib/aqi.converter')
+var aqiConverter = require('../../lib/aqi.converter');
 
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['forecast', 'current'];
