@@ -136,7 +136,7 @@ ControllerWWUnits.prototype._convertWindDirToWdd = function (windDir) {
 };
 
 ControllerWWUnits.prototype._decideHumidityIcon = function(reh) {
-    var tempIconName = "Humidity-";
+    var tempIconName = "humidity_";
 
     if (reh === 100) {
         tempIconName += "90";

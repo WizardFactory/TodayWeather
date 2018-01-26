@@ -656,6 +656,59 @@ function ControllerTown24h() {
         return this;
     };
 
+    this.insertSkyIconLowCase = function (req, res, next) {
+        var isNight = false;
+
+        try {
+            if(req.short){
+                req.short.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.shortest){
+                req.shortest.forEach(function (data) {
+                    isNight = _isNight(req.midData.dailyData, data.date, data.time);
+                    data.night = isNight;
+                    data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+                });
+            }
+            if(req.current){
+                var data = req.current;
+                var time;
+                if (data.liveTime) {
+                   time = data.liveTime;
+                }
+                else {
+                    time = data.time;
+                }
+                isNight = _isNight(req.midData.dailyData, data.date, time);
+                data.night = isNight;
+                data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, isNight);
+            }
+            if(req.midData){
+                req.midData.dailyData.forEach(function (data) {
+                    if (data.sky) {
+                        data.skyIcon = self._parseSkyStateLowCase(data.sky, data.pty, data.lgt, false);
+                    }
+                    if (data.skyAm) {
+                        data.skyAmIcon = self._parseSkyStateLowCase(data.skyAm, data.ptyAm, data.lgtAm, false);
+                    }
+                    if (data.skyPm) {
+                        data.skyPmIcon = self._parseSkyStateLowCase(data.skyPm, data.ptyPm, data.lgtPm, false);
+                    }
+                });
+            }
+        }
+        catch(err) {
+            return next(err);
+        }
+
+        next();
+        return this;
+    };
+
     function _getHourlyAqiData(airInfo, date) {
        var obj;
        obj = airInfo.pollutants.aqi.hourly.find(function (aqiHourlyObj) {
@@ -1518,6 +1571,59 @@ ControllerTown24h.prototype._parseSkyState = function (sky, pty, lgt, isNight) {
 
     if (lgt === 1) {
         skyIconName += "Lightning";
+    }
+
+    return skyIconName;
+};
+
+ControllerTown24h.prototype._parseSkyStateLowCase = function (sky, pty, lgt, isNight) {
+    var skyIconName = "";
+
+    if (isNight) {
+        skyIconName = "moon";
+    }
+    else {
+        skyIconName = "sun";
+    }
+
+    switch (sky) {
+        case 1:
+            skyIconName;
+            break;
+        case 2:
+            skyIconName += "_smallcloud";
+            break;
+        case 3:
+            skyIconName += "_bigcloud"; //Todo need new icon
+            break;
+        case 4:
+            skyIconName = "cloud"; //overwrite Moon/Sun
+            break;
+        default:
+            log.error('Fail to parse sky='+sky);
+            break;
+    }
+
+    switch (pty) {
+        case 0:
+            //nothing
+            break;
+        case 1:
+            skyIconName += "_rain";
+            break;
+        case 2:
+            skyIconName += "_rainsnow"; //Todo need RainWithSnow icon";
+            break;
+        case 3:
+            skyIconName += "_snow";
+            break;
+        default:
+            log.error('Fail to parse pty='+pty);
+            break;
+    }
+
+    if (lgt === 1) {
+        skyIconName += "_lightning";
     }
 
     return skyIconName;
