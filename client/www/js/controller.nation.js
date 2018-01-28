@@ -14,8 +14,6 @@ start.controller('NationCtrl', function($scope, Util, WeatherUtil, $ionicHistory
     var weatherType = TYPE_SKY_TEMP;
     //0 = sky/temp, 1 = rain, 2 = wind
 
-    $scope.imgPath = Util.imgPath;
-
     $scope.getNationName = function () {
         if (Util.region === 'KR') {
             return 'LOC_KOREA';

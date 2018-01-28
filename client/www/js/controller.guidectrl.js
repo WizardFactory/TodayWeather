@@ -162,7 +162,7 @@ angular.module('controller.guidectrl', [])
                 imgPath = "img/guide_android_0";
             }
             else {
-                imgPath = "img/guide-0";
+                imgPath = "img/guide_0";
             }
             imgPath += ""+number+".png";
             console.log(imgPath);

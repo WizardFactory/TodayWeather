@@ -305,6 +305,9 @@ angular.module('starter', [
                 navigator.splashscreen.hide();
             }
 
+            $rootScope.iconsImgPath = window.theme.icons;
+            $rootScope.weatherImgPath = window.theme.weather;
+
             WeatherInfo.loadCities();
             Push.init();
             Purchase.init();
@@ -589,7 +592,7 @@ angular.module('starter', [
                         hourObject.append("svg:image")
                             .attr('class', 'weatherIcon')
                             .attr("xlink:href", function (d) {
-                               return "img/weatherIcon2-color/"+ d.value.skyIcon+".png";
+                               return scope.weatherImgPath + "/" + d.value.skyIcon + ".png";
                             })
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i - scope.smallImageSize/2;
@@ -1079,7 +1082,7 @@ angular.module('starter', [
                         dayObject.append("svg:image")
                             .attr('class', 'skyAm')
                             .attr("xlink:href", function (d) {
-                                return "img/weatherIcon2-color/" + d.skyAm + ".png";
+                                return scope.weatherImgPath + "/" + d.skyAm + ".png";
                             })
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
@@ -1100,7 +1103,7 @@ angular.module('starter', [
                         dayObject.append("svg:image")
                             .attr('class', 'skyPm')
                             .attr("xlink:href", function (d) {
-                                return "img/weatherIcon2-color/" + d.skyPm + ".png";
+                                return scope.weatherImgPath + "/" + d.skyPm + ".png";
                             })
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
