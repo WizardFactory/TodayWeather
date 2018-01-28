@@ -252,7 +252,7 @@ angular.module('controller.searchctrl', [])
             city.currentPosition = false;
             city.address = geoInfo.address;
             city.location = geoInfo.location;
-            city.country = geoInfo.country; //"KR"
+            city.country = geoInfo.country;
 
             if (WeatherInfo.addCity(city) === false) {
                 Util.ga.trackEvent('city error', 'add', WeatherUtil.getShortenAddress(geoInfo.address), WeatherInfo.getCityCount() - 1);

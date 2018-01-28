@@ -109,7 +109,7 @@ angular.module('starter', [
                    }
                }
             }
-            Util.region = 'KR';
+            Util.region = Util.region || 'KR';
             console.log('region: ' + Util.region + '\n');
         }
 
