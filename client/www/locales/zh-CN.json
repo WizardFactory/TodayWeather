@@ -274,11 +274,5 @@
   "LOC_UK": "英国",
   "LOC_NATIONAL_WEATHER": "国家天气",
   "LOC_WEATHER": "天气",
-  "LOC_TEMP": "气温",
-  "LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES": "不用担心户外活动。",
-  "LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL": "敏感的人外出时要小心。",
-  "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "出门时戴上防尘面具！",
-  "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "敏感的人戴黄沙面罩！",
-  "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "不要对敏感的人出去！",
-  "LOC_DO_NOT_GO_OUT": "不要出去！"
+  "LOC_TEMP": "气温"
 }

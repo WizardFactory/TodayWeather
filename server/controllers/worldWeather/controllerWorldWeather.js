@@ -15,7 +15,7 @@ var config = require('../../config/config');
 var controllerRequester = require('./controllerRequester');
 var ControllerWeatherDesc = require('../controller.weather.desc');
 var UnitConverter = require('../../lib/unitConverter');
-
+var aqiConverter = require('../../lib/aqi.converter');
 
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['forecast', 'current'];
@@ -1477,6 +1477,14 @@ function controllerWorldWeather() {
      AQI
      **********************************************************
      **********************************************************/
+
+    /**
+     *
+     * @param req
+     * @param res
+     * @param next
+     * @returns {*}
+     */
     self.mergeAqi = function(req, res, next) {
         var meta = {};
         meta.sID = req.sessionID;
@@ -1487,8 +1495,8 @@ function controllerWorldWeather() {
             }
             var aqi = req.AQI.data;
 
-            req.result.thisTime.forEach(function(thisTime) {
-                aqi.forEach(function(aqiItem){
+            req.result.thisTime.forEach((thisTime) => {
+                aqi.forEach((aqiItem) => {
                     var time = new Date();
                     time.setTime(new Date(aqiItem.dateObj).getTime() + req.result.timezone.ms);
                     aqiItem.date = self._convertTimeString(time);
@@ -1496,144 +1504,100 @@ function controllerWorldWeather() {
                     if (thisTime.date != undefined
                         && self._compareDateString(thisTime.date, aqiItem.date)){
 
-                        // value
-                        thisTime.aqiValue = aqiItem.aqi;
-                        thisTime.coValue = self._extractValueFromAqicn('co', aqiItem.co);
-                        thisTime.no2Value = self._extractValueFromAqicn('no2', aqiItem.no2);
-                        thisTime.o3Value = self._extractValueFromAqicn('o3', aqiItem.o3);
-                        thisTime.so2Value = self._extractValueFromAqicn('so2', aqiItem.so2);
-                        thisTime.pm10Value = self._extractValueFromAqicn('pm10', aqiItem.pm10);
-                        thisTime.pm25Value = self._extractValueFromAqicn('pm25', aqiItem.pm25);
-
-                        if(aqiItem.mTime != undefined){
-                            thisTime.mTime = aqiItem.mTime;
-                            log.info('AQI Measuring Time : ', thisTime.mTime);
-                        }
-                        if(aqiItem.mCity != undefined){
-                            thisTime.mCity = aqiItem.mCity;
-                            log.info('AQI Measuring City : ', thisTime.mCity);
-                        }
-
-                        log.info('Aqi Unit : ', req.query.aqi);
-                        // grade
-                        if(req.query.aqi != undefined && req.query.aqi == 'airnow'){
-                            thisTime.coGrade = self._getAqiGrade( self._calculateAirnowValue('co', thisTime.coValue) );
-                            thisTime.no2Grade = self._getAqiGrade( self._calculateAirnowValue('no2', thisTime.no2Value) );
-                            thisTime.o3Grade = self._getAqiGrade( self._calculateAirnowValue('o3', thisTime.o3Value) );
-                            thisTime.pm10Grade = self._getAqiGrade( self._calculateAirnowValue('pm10', thisTime.pm10Value) );
-                            thisTime.pm25Grade = self._getAqiGrade( self._calculateAirnowValue('pm25', thisTime.pm25Value) );
-                            thisTime.so2Grade = self._getAqiGrade( self._calculateAirnowValue('so2', thisTime.so2Value) );
-                            thisTime.aqiGrade = Math.max(thisTime.coGrade,
-                                thisTime.no2Grade,
-                                thisTime.o3Grade,
-                                thisTime.pm10Grade,
-                                thisTime.pm25Grade,
-                                thisTime.so2Grade);
-                        }else if(req.query.aqi != undefined && req.query.aqi == 'airkorea'){
-                            thisTime.coGrade = self._calculateAirkoreaGrade('co', thisTime.coValue);
-                            thisTime.no2Grade = self._calculateAirkoreaGrade('no2', thisTime.no2Value);
-                            thisTime.o3Grade = self._calculateAirkoreaGrade('o3', thisTime.o3Value);
-                            thisTime.pm10Grade = self._calculateAirkoreaGrade('pm10', thisTime.pm10Value);
-                            thisTime.pm25Grade = self._calculateAirkoreaGrade('pm25', thisTime.pm25Value);
-                            thisTime.so2Grade = self._calculateAirkoreaGrade('so2', thisTime.so2Value);
-                            thisTime.aqiGrade = Math.max(thisTime.coGrade,
-                                thisTime.no2Grade,
-                                thisTime.o3Grade,
-                                thisTime.pm10Grade,
-                                thisTime.pm25Grade,
-                                thisTime.so2Grade);
-                        }else if(req.query.aqi != undefined && req.query.aqi == 'airkorea_who'){
-                            thisTime.coGrade = self._calculateAirkoreaWhoGrade('co', thisTime.coValue);
-                            thisTime.no2Grade = self._calculateAirkoreaWhoGrade('no2', thisTime.no2Value);
-                            thisTime.o3Grade = self._calculateAirkoreaWhoGrade('o3', thisTime.o3Value);
-                            thisTime.pm10Grade = self._calculateAirkoreaWhoGrade('pm10', thisTime.pm10Value);
-                            thisTime.pm25Grade = self._calculateAirkoreaWhoGrade('pm25', thisTime.pm25Value);
-                            thisTime.so2Grade = self._calculateAirkoreaWhoGrade('so2', thisTime.so2Value);
-                            thisTime.aqiGrade = Math.max(thisTime.coGrade,
-                                thisTime.no2Grade,
-                                thisTime.o3Grade,
-                                thisTime.pm10Grade,
-                                thisTime.pm25Grade,
-                                thisTime.so2Grade);
-                        }
-                        else{
-                            // In case aqicn : convert IAQI value to grade
-                            thisTime.aqiGrade = self._getAqiGrade(aqiItem.aqi);
-                            thisTime.coGrade = self._getAqiGrade(aqiItem.co);
-                            thisTime.no2Grade = self._getAqiGrade(aqiItem.no2);
-                            thisTime.o3Grade = self._getAqiGrade(aqiItem.o3);
-                            thisTime.pm10Grade = self._getAqiGrade(aqiItem.pm10);
-                            thisTime.pm25Grade = self._getAqiGrade(aqiItem.pm25);
-                            thisTime.so2Grade = self._getAqiGrade(aqiItem.so2);
-                        }
-
+                        thisTime.mTime = aqiItem.mTime || undefined;
+                        thisTime.mCity = aqiItem.mCity || undefined;
                         thisTime.t = aqiItem.t;
                         thisTime.h = aqiItem.h;
                         thisTime.p = aqiItem.p;
+                        log.info('Aqi Unit : ', req.query.airUnit);
 
-                        var airUnit = req.query.aqi;
-                        thisTime.aqiStr = UnitConverter.airGrade2Str(airUnit, thisTime.aqiGrade, res);
-                        thisTime.coStr = UnitConverter.airGrade2Str(airUnit, thisTime.coGrade, res);
-                        thisTime.no2Str = UnitConverter.airGrade2Str(airUnit, thisTime.no2Grade, res);
-                        thisTime.o3Str = UnitConverter.airGrade2Str(airUnit, thisTime.o3Grade, res);
-                        thisTime.pm10Str = UnitConverter.airGrade2Str(airUnit, thisTime.pm10Grade, res);
-                        thisTime.pm25Str = UnitConverter.airGrade2Str(airUnit, thisTime.pm25Grade, res);
-                        thisTime.so2Str = UnitConverter.airGrade2Str(airUnit, thisTime.so2Grade, res);
+                        var indexList = [];
+                        var iaqiCode = '';
+                        var iaqiValue = 0;
+                        var gradeList = [];
+                        ['pm10', 'pm25', 'co', 'so2', 'no2', 'o3'].forEach((code, index) => {
+                            if(aqiItem[code] == undefined || aqiItem[code] === -100){
+                                return;
+                            }
 
-                        // unit conversion
-                        thisTime.coValue = self._convertUmtoPpm('co', thisTime.coValue);
-                        thisTime.no2Value = self._convertUmtoPpm('no2', thisTime.no2Value);
-                        thisTime.o3Value = self._convertUmtoPpm('o3', thisTime.o3Value);
-                        thisTime.so2Value = self._convertUmtoPpm('so2', thisTime.so2Value);
-                        thisTime.pm10Value = Math.round(thisTime.pm10Value);
-                        thisTime.pm25Value = Math.round(thisTime.pm25Value);
-                        log.info('AQI info > co :', thisTime.coValue);
-                        log.info('AQI info > no2 :', thisTime.no2Value);
-                        log.info('AQI info > o3 :', thisTime.o3Value);
-                        log.info('AQI info > so2 :', thisTime.so2Value);
-                        log.info('AQI info > pm10 :', thisTime.pm10Value);
-                        log.info('AQI info > pm25 :', thisTime.pm25Value);
+                            // find max index for calculate iaqi value
+                            if(iaqiValue < aqiItem[code]){
+                                iaqiCode = code;
+                            }
+                            // value
+                            thisTime[code + 'Value'] = aqiConverter.extractValue(code, aqiItem[code]);
+                            if(index > 2){
+                                // 'so2', 'no2', 'o3' need to change unit
+                                thisTime[code + 'Value'] = aqiConverter.ppb2ppm(thisTime[code + 'Value']);
+                            }
 
-                        // check valid data
-                        if(aqiItem.aqi == undefined || aqiItem.aqi === -100){
-                            delete thisTime.aqiValue;
-                            delete thisTime.aqiStr;
-                            delete thisTime.aqiGrade;
-                        }
+                            // Grade & string
+                            if(req.query.airUnit === 'airnow'){
+                                thisTime[code + 'Grade'] = aqiConverter.index2Grade(req.query.airUnit, aqiItem[code]);
+                                thisTime[code + 'Str'] = UnitConverter.airGrade2str(thisTime[code + 'Grade'], code, res);
+                            }else if(req.query.airUnit === 'airkorea' || req.query.airUnit === 'airkorea_who'){
+                                thisTime[code + 'Grade'] = aqiConverter.value2grade(req.query.airUnit, code, thisTime[code + 'Value']);
+                                thisTime[code + 'Str'] = UnitConverter.airkoreaGrade2str(thisTime[code + 'Grade'], code, res);
 
-                        if(aqiItem.co == undefined || aqiItem.co === -100){
-                            delete thisTime.coValue;
-                            delete thisTime.coStr;
-                            delete thisTime.coGrade;
-                        }
-                        if(aqiItem.no2 == undefined || aqiItem.no2 === -100){
-                            delete thisTime.no2Value;
-                            delete thisTime.no2Str;
-                            delete thisTime.no2Grade;
-                        }
+                                // stor index for calculating iaqi
+                                indexList.push(aqiConverter.value2index(req.query.airUnit, code, thisTime[code + 'Value']));
+                            }else{
+                                var index = aqiConverter.value2index('aqicn', code, thisTime[code + 'Value']);
+                                indexList.push(index);
+                                thisTime[code + 'Grade'] = aqiConverter.index2Grade('aqicn', index);
+                                thisTime[code + 'Str'] = UnitConverter.airGrade2str(thisTime[code + 'Grade'], code, res);
 
-                        if(aqiItem.o3 == undefined || aqiItem.o3 === -100){
-                            delete thisTime.o3Value;
-                            delete thisTime.o3Str;
-                            delete thisTime.o3Grade;
-                        }
+                            }
+                            //
+                            gradeList.push(thisTime[code + 'Grade']);
+                        });
 
-                        if(aqiItem.pm10 == undefined || aqiItem.pm10 === -100){
-                            delete thisTime.pm10Value;
-                            delete thisTime.pm10Str;
-                            delete thisTime.pm10Grade;
-                        }
+                        log.info('Grade List :', JSON.stringify(gradeList));
+                        log.info('Index List :', JSON.stringify(indexList));
 
-                        if(aqiItem.pm25 == undefined || aqiItem.pm25 === -100){
-                            delete thisTime.pm25Value;
-                            delete thisTime.pm25Str;
-                            delete thisTime.pm25Grade;
-                        }
+                        // IAQI
+                        if(req.query.airUnit === 'airnow') {
+                            thisTime.aqiValue = aqiItem.aqi;
+                            // find max grade
+                            if(gradeList.length){
+                                thisTime.aqiGrade = Math.max(...gradeList);
+                                thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            }
+                        }else if(req.query.airUnit == 'airkorea_who'){
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
+                            // find max grade
+                            if(gradeList.length){
+                                thisTime.aqiGrade = Math.max(...gradeList);
+                                thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            }
+                        }else if(req.query.airUnit == 'airkorea'){
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
 
-                        if(aqiItem.so2 == undefined || aqiItem.so2 === -100){
-                            delete thisTime.so2Value;
-                            delete thisTime.so2Str;
-                            delete thisTime.so2Grade;
+                            // Add extra point if it's necessary.
+                            var additionalPoint = indexList.filter((v)=>v>100).length;
+                            if(additionalPoint >= 3){
+                                thisTime.aqiValue += 75;
+                            }else if(additionalPoint >= 2){
+                                thisTime.aqiValue += 50;
+                            }
+                            log.info('additionalPoint : ', additionalPoint);
+                            // get grade as index.
+                            thisTime.aqiGrade = aqiConverter.index2Grade(req.query.airUnit, thisTime.aqiValue);
+                            thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                        }else{
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
+
+                            thisTime.aqiGrade = aqiConverter.index2Grade('aqicn', thisTime.aqiValue);
+                            thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
                         }
                     }
                 });
@@ -1642,6 +1606,7 @@ function controllerWorldWeather() {
 
         next();
     };
+
 
     self.makeAirInfo = function (req, res, next) {
         try {
@@ -1717,119 +1682,6 @@ function controllerWorldWeather() {
      *  Start AQI functions
      **************************************************************/
 
-    var airnowUnit = {
-        pm25:{
-            good : {Clo:0, Chi:12.0, Ilo:0, Ihi:50},
-            moderate : {Clo:12.1, Chi:35.4, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:35.5, Chi:55.4, Ilo:101, Ihi:150},
-            unhealthy : {Clo:55.5, Chi:150.4, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:150.5, Chi:250.4, Ilo:201, Ihi:300},
-            hazardous:{Clo:250.5, Chi:350.4, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:350.5, Chi:500.4, Ilo:401, Ihi:500}
-        },
-        pm10:{
-            good : {Clo:0, Chi:54, Ilo:0, Ihi:50},
-            moderate : {Clo:55, Chi:154, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:155, Chi:254, Ilo:101, Ihi:150},
-            unhealthy : {Clo:255, Chi:354, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:355, Chi:424, Ilo:201, Ihi:300},
-            hazardous:{Clo:425, Chi:504, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:505, Chi:604, Ilo:401, Ihi:500}
-        },
-        o3:{
-            good : {Clo:0, Chi:74, Ilo:0, Ihi:50},
-            moderate : {Clo:75, Chi:124, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:125, Chi:164, Ilo:101, Ihi:150},
-            unhealthy : {Clo:165, Chi:204, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:205, Chi:404, Ilo:201, Ihi:300},
-            hazardous:{Clo:405, Chi:504, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:505, Chi:604, Ilo:401, Ihi:500}
-        },
-        co:{
-            good : {Clo:0, Chi:4.4, Ilo:0, Ihi:50},
-            moderate : {Clo:4.5, Chi:9.4, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:9.5, Chi:12.4, Ilo:101, Ihi:150},
-            unhealthy : {Clo:12.5, Chi:15.4, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:15.5, Chi:30.4, Ilo:201, Ihi:300},
-            hazardous:{Clo:30.5, Chi:40.4, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:40.5, Chi:50.4, Ilo:401, Ihi:500}
-        },
-        no2:{
-            good : {Clo:0, Chi:53, Ilo:0, Ihi:50},
-            moderate : {Clo:54, Chi:100, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:101, Chi:360, Ilo:101, Ihi:150},
-            unhealthy : {Clo:361, Chi:649, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:650, Chi:1249, Ilo:201, Ihi:300},
-            hazardous:{Clo:1250, Chi:1649, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:1650, Chi:2049, Ilo:401, Ihi:500}
-        },
-        so2:{
-            good : {Clo:0, Chi:35, Ilo:0, Ihi:50},
-            moderate : {Clo:36, Chi:75, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {Clo:76, Chi:185, Ilo:101, Ihi:150},
-            unhealthy : {Clo:186, Chi:304, Ilo:151, Ihi:200},
-            very_unhealthy:{Clo:305, Chi:604, Ilo:201, Ihi:300},
-            hazardous:{Clo:605, Chi:1004, Ilo:301, Ihi:400},
-            extra_hazardous:{Clo:605, Chi:1004, Ilo:401, Ihi:500}
-        }
-    };
-
-    var aqicnUnit = {
-        pm25:{
-            good : {BPlo:0, BPhi:35, Ilo:0, Ihi:50},
-            moderate : {BPlo:35, BPhi:75, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:75, BPhi:115, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:115, BPhi:150, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:150, BPhi:250, Ilo:201, Ihi:300},
-            hazardous:{BPlo:250, BPhi:350, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:350, BPhi:500, Ilo:401, Ihi:500}
-        },
-        pm10:{
-            good : {BPlo:0, BPhi:50, Ilo:0, Ihi:50},
-            moderate : {BPlo:50, BPhi:150, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:150, BPhi:250, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:250, BPhi:350, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:350, BPhi:420, Ilo:201, Ihi:300},
-            hazardous:{BPlo:420, BPhi:500, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:500, BPhi:600, Ilo:401, Ihi:500}
-        },
-        o3:{
-            good : {BPlo:0, BPhi:160, Ilo:0, Ihi:50},
-            moderate : {BPlo:160, BPhi:200, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:200, BPhi:300, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:300, BPhi:400, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:400, BPhi:800, Ilo:201, Ihi:300},
-            hazardous:{BPlo:800, BPhi:1000, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:1000, BPhi:1200, Ilo:401, Ihi:500}
-        },
-        co:{
-            good : {BPlo:0, BPhi:5, Ilo:0, Ihi:50},
-            moderate : {BPlo:5, BPhi:10, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:10, BPhi:35, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:35, BPhi:60, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:60, BPhi:90, Ilo:201, Ihi:300},
-            hazardous:{BPlo:90, BPhi:120, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:120, BPhi:150, Ilo:401, Ihi:500}
-        },
-        no2:{
-            good : {BPlo:0, BPhi:100, Ilo:0, Ihi:50},
-            moderate : {BPlo:100, BPhi:200, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:200, BPhi:700, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:700, BPhi:1200, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:1200, BPhi:2340, Ilo:201, Ihi:300},
-            hazardous:{BPlo:2340, BPhi:3090, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:3090, BPhi:3840, Ilo:401, Ihi:500}
-        },
-        so2:{
-            good : {BPlo:0, BPhi:150, Ilo:0, Ihi:50},
-            moderate : {BPlo:150, BPhi:500, Ilo:51, Ihi:100},
-            unhealthy_sensitive : {BPlo:500, BPhi:650, Ilo:101, Ihi:150},
-            unhealthy : {BPlo:650, BPhi:800, Ilo:151, Ihi:200},
-            very_unhealthy:{BPlo:800, BPhi:1600, Ilo:201, Ihi:300},
-            hazardous:{BPlo:1600, BPhi:2100, Ilo:301, Ihi:400},
-            extra_hazardous:{BPlo:2100, BPhi:2620, Ilo:401, Ihi:500}
-        }
-    };
 
     var airkoreaUnit = {
         pm25: [0, 15, 50, 100],
@@ -1928,68 +1780,6 @@ function controllerWorldWeather() {
         }
 
         return 0;
-    };
-
-    self._calculateAirnowValue = function(type, Cp){
-        var unit = {};
-        var value = parseFloat(Cp);
-
-        if(airnowUnit[type] == undefined){
-            log.warn('_calculateAirnowValue : There is no unit value from airnowUnit : ', type);
-            return 0;
-        }
-
-        if(value <= parseFloat(airnowUnit[type].good.Chi)){
-            unit = airnowUnit[type].good;
-        }else if(value <= parseFloat(airnowUnit[type].moderate.Chi)){
-            unit = airnowUnit[type].moderate;
-        }else if(value <= parseFloat(airnowUnit[type].unhealthy_sensitive.Chi)){
-            unit = airnowUnit[type].unhealthy_sensitive;
-        }else if(value <= parseFloat(airnowUnit[type].unhealthy.Chi)){
-            unit = airnowUnit[type].unhealthy;
-        }else if(value <= parseFloat(airnowUnit[type].very_unhealthy.Chi)){
-            unit = airnowUnit[type].very_unhealthy;
-        }else if(value <= parseFloat(airnowUnit[type].hazardous.Chi)){
-            unit = airnowUnit[type].hazardous;
-        }else{
-            unit = airnowUnit[type].extra_hazardous;
-        }
-
-        var result = parseInt((unit.Ihi - unit.Ilo) / (unit.Chi - unit.Clo) * (value - unit.Clo) + unit.Ilo);
-        log.info('Airnow Grade Type : ', type, 'Grade : ', result);
-
-        return result;
-    };
-
-    self._extractValueFromAqicn = function(type, Cp){
-        var unit = {};
-        var value = parseFloat(Cp);
-
-        if(airnowUnit[type] == undefined){
-            log.warn('_extractValueFromAqicn : There is no unit value from aqicn : ', type);
-            return 0;
-        }
-
-        if(value <= parseFloat(aqicnUnit[type].good.Ihi)){
-            unit = aqicnUnit[type].good;
-        }else if(value <= parseFloat(aqicnUnit[type].moderate.Ihi)){
-            unit = aqicnUnit[type].moderate;
-        }else if(value <= parseFloat(aqicnUnit[type].unhealthy_sensitive.Ihi)){
-            unit = aqicnUnit[type].unhealthy_sensitive;
-        }else if(value <= parseFloat(aqicnUnit[type].unhealthy.Ihi)){
-            unit = aqicnUnit[type].unhealthy;
-        }else if(value <= parseFloat(aqicnUnit[type].very_unhealthy.Ihi)){
-            unit = aqicnUnit[type].very_unhealthy;
-        }else if(value <= parseFloat(aqicnUnit[type].hazardous.Ihi)){
-            unit = aqicnUnit[type].hazardous;
-        }else{
-            unit = aqicnUnit[type].extra_hazardous;
-        }
-
-        var result = (value - unit.Ilo) * (unit.BPhi - unit.BPlo) / (unit.Ihi - unit.Ilo) + unit.BPlo;
-        log.info('Extra type: ', type, 'Value :', result, ' aqi : ', Cp);
-        return result;
-
     };
 
     self._getAqiGrade = function(value){

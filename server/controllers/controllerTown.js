@@ -37,7 +37,6 @@ var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 var GeoController = require('./geo.controller');
 var UnitConverter = require('../lib/unitConverter');
-var AqiConverter = require('../lib/aqi.converter');
 
 var ControllerWeatherDesc = require('./controller.weather.desc');
 
@@ -2775,12 +2774,6 @@ function ControllerTown() {
         }
 
         if (req.airInfo) {
-            if (req.airInfo.last) {
-                var last = req.airInfo.last;
-                if (last.hasOwnProperty('aqiGrade')) {
-                    last.actionGuide = AqiConverter.getActionGuide(airUnit, last.aqiGrade, res);
-                }
-            }
             if (req.airInfo.pollutants) {
                 ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
                     var pollutant = req.airInfo.pollutants[propertyName];
@@ -2788,7 +2781,12 @@ function ControllerTown() {
                         if (pollutant.hourly) {
                             pollutant.hourly.forEach(function (item) {
                                 if (item.hasOwnProperty('grade')) {
-                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                                    if (airUnit === 'airnow' || airUnit === 'aqicn') {
+                                        item.str = UnitConverter.airGrade2str(item.grade, pollutant.code, res);
+                                    }
+                                    else {
+                                        item.str = UnitConverter.airkoreaGrade2str(item.grade, pollutant.code, res);
+                                    }
                                 }
                             });
                         }
@@ -2796,10 +2794,10 @@ function ControllerTown() {
                         if (pollutant.daily) {
                             pollutant.daily.forEach(function (item) {
                                 if (item.hasOwnProperty('minGrade')) {
-                                    item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
+                                    item.minStr = UnitConverter.airkoreaGrade2str(item.minGrade, pollutant.code, res);
                                 }
                                 if (item.hasOwnProperty('maxGrade')) {
-                                    item.maxStr = UnitConverter.airGrade2Str(airUnit, item.maxGrade, res);
+                                    item.maxStr = UnitConverter.airkoreaGrade2str(item.maxGrade, pollutant.code, res);
                                 }
                             });
                         }
@@ -3167,29 +3165,51 @@ ControllerTown.prototype._convertKmaRxxToStr = function(pty, rXX) {
  * @private
  */
 ControllerTown.prototype._makeArpltnStr = function (arpltn, airUnit, ts) {
-    if (arpltn.hasOwnProperty('pm10Grade')) {
-        arpltn.pm10Str = UnitConverter.airGrade2Str(airUnit, arpltn.pm10Grade, ts);
+    if (airUnit === 'airnow' || airUnit === 'aqicn') {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
     }
-    if (arpltn.hasOwnProperty('pm25Grade')) {
-        arpltn.pm25Str = UnitConverter.airGrade2Str(airUnit, arpltn.pm25Grade, ts);
-    }
-    if (arpltn.hasOwnProperty('o3Grade')) {
-        arpltn.o3Str = UnitConverter.airGrade2Str(airUnit, arpltn.o3Grade, ts);
-    }
-    if (arpltn.hasOwnProperty('no2Grade')) {
-        arpltn.no2Str = UnitConverter.airGrade2Str(airUnit, arpltn.no2Grade, ts);
-    }
-    if (arpltn.hasOwnProperty('coGrade')) {
-        arpltn.coStr = UnitConverter.airGrade2Str(airUnit, arpltn.coGrade, ts);
-    }
-    if (arpltn.hasOwnProperty('so2Grade')) {
-        arpltn.so2Str = UnitConverter.airGrade2Str(airUnit, arpltn.so2Grade, ts);
-    }
-    if (arpltn.hasOwnProperty('khaiGrade')) {
-        arpltn.khaiStr = UnitConverter.airGrade2Str(airUnit, arpltn.khaiGrade, ts);
-    }
-    if (arpltn.hasOwnProperty('aqiGrade')) {
-        arpltn.aqiStr = UnitConverter.airGrade2Str(airUnit, arpltn.aqiGrade, ts);
+    else if (airUnit === 'airkorea' || airUnit === 'airkorea_who' || airUnit == undefined) {
+        if (arpltn.hasOwnProperty('pm10Grade')) {
+            arpltn.pm10Str = UnitConverter.airkoreaGrade2str(arpltn.pm10Grade, "pm10", ts);
+        }
+        if (arpltn.hasOwnProperty('pm25Grade')) {
+            arpltn.pm25Str = UnitConverter.airkoreaGrade2str(arpltn.pm25Grade, "pm25", ts);
+        }
+        if (arpltn.hasOwnProperty('o3Grade')) {
+            arpltn.o3Str = UnitConverter.airkoreaGrade2str(arpltn.o3Grade, "o3", ts);
+        }
+        if (arpltn.hasOwnProperty('no2Grade')) {
+            arpltn.no2Str = UnitConverter.airkoreaGrade2str(arpltn.no2Grade, "no2", ts);
+        }
+        if (arpltn.hasOwnProperty('coGrade')) {
+            arpltn.coStr = UnitConverter.airkoreaGrade2str(arpltn.coGrade, "co", ts);
+        }
+        if (arpltn.hasOwnProperty('so2Grade')) {
+            arpltn.so2Str = UnitConverter.airkoreaGrade2str(arpltn.so2Grade, "so2", ts);
+        }
+        if (arpltn.hasOwnProperty('khaiGrade')) {
+            arpltn.khaiStr = UnitConverter.airkoreaGrade2str(arpltn.khaiGrade, "khai", ts);
+        }
     }
 
     return this;

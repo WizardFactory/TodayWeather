@@ -23,7 +23,7 @@ function ControllerWWUnits() {
         }
 
         UnitConverter.getUnitList().forEach(function (value) {
-            if (!req.query.hasOwnProperty(value) || req.query[value] == '(null)') {
+            if (!req.query.hasOwnProperty(value)) {
                 req.query[value] = UnitConverter.getDefaultValue(value);
             }
         });

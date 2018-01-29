@@ -35,13 +35,13 @@ arpltnController.recalculateValue = function (arpltn, airUnit) {
         return arpltn;
     }
 
-    log.debug('airUnit : ', airUnit);
+    log.info('airUnit : ', airUnit);
 
     ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
         if (arpltn.hasOwnProperty(name+'Value')) {
             if (airUnit === 'airkorea' && arpltn.hasOwnProperty(name+'Grade') && arpltn[name+'Grade'] !== -1) {
                 //skip for using data from airkorea server
-                log.debug('skip name:'+name);
+                log.info('skip name:'+name);
             }
             else {
                 arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);

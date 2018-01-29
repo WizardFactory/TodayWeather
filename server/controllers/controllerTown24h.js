@@ -763,7 +763,7 @@ function ControllerTown24h() {
             }
 
             var hourlyData = pollutant.hourly.find(function (hourlyObj) {
-                return hourlyObj.date === forecast.dataTime || forecast.dataTime <= latestPastDate[code];
+                return hourlyObj.date == forecast.date || forecast.date <= latestPastDate[code];
             });
 
             if (hourlyData) {
@@ -812,9 +812,6 @@ function ControllerTown24h() {
         arpltnList.forEach(function (arpltn) {
 
             arpltn = KecoController.recalculateValue(arpltn, airUnit);
-            if (arpltn.dataTime.indexOf("24:00") > 0) {
-                arpltn.dataTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(new Date(arpltn.dataTime));
-            }
 
             ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
                 if (arpltn[propertyName+"Value"] == undefined)  {
@@ -1468,17 +1465,6 @@ function ControllerTown24h() {
             });
             if (req.current.hasOwnProperty('arpltn')) {
                 KecoController.recalculateValue(req.current.arpltn, req.query.airUnit);
-            }
-            if (req.hasOwnProperty('airInfo') && req.airInfo.hasOwnProperty('pollutants')) {
-                var pollutants = req.airInfo.pollutants;
-                for (var pollutantName in pollutants) {
-                    if (pollutants[pollutantName].hasOwnProperty('daily')) {
-                        pollutants[pollutantName].daily.forEach(function (value) {
-                            value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
-                            value.dayOfWeek = (new Date(value.date)).getDay();
-                        });
-                    }
-                }
             }
         }
         catch (err) {
