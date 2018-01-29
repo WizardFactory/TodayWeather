@@ -322,7 +322,7 @@ UnitConverter.airkoreaGrade2str = function (grade, type, translate) {
  * @param translate
  * @returns {*}
  */
-UnitConverter.airGrade2str = function (grade, type, translate) {
+UnitConverter.airnowGrade2str = function (grade, type, translate) {
     var ts = translate == undefined?global:translate;
 
     switch (grade) {
@@ -342,6 +342,15 @@ UnitConverter.airGrade2str = function (grade, type, translate) {
             log.warn("Unknown airnow grade="+grade+" type="+type);
     }
     return "";
+};
+
+UnitConverter.airGrade2Str = function (airUnit, grade, translate) {
+    if (airUnit === 'airnow' || airUnit === 'aqicn') {
+        return this.airnowGrade2str(grade, undefined, translate);
+    }
+    else {
+        return this.airkoreaGrade2str(grade, undefined, translate);
+    }
 };
 
 module.exports = UnitConverter;

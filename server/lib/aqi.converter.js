@@ -56,7 +56,36 @@ class AqiConverter {
      */
     static grade2minMaxValue(airUnit, code, grade) {
         let pollutants = air_pollutants_breakpoints[airUnit];
-        return {min: pollutants[code][grade-1], max: pollutants[code][grade]};
+        var min = pollutants[code][grade-1];
+        if (code === 'aqi') {
+            min += 1;
+        }
+        else if (airUnit === 'aqicn') {
+            min += 0.1;
+        }
+        else if (airUnit === 'airkorea' || airUnit === 'airkorea_who') {
+            if (code === 'pm10' || code === 'pm25' || code === 'co') {
+                min += 0.1;
+            }
+            else if (code === 'o3' || code === 'no2' || code === 'so2') {
+                min += 0.001;
+            }
+            else {
+                log.error('Unknown code:'+code, ' unit:'+airUnit);
+            }
+        }
+        else if (airUnit === 'airnow') {
+            if (code === 'co' || code === 'pm25')  {
+                min += 0.01;
+            }
+            else {
+                min += 0.1;
+            }
+        }
+        else {
+            log.error('Unknown code:'+code, ' unit:'+airUnit);
+        }
+        return {min: min, max: pollutants[code][grade]};
     }
 
     static ppm2ppb(value) {
