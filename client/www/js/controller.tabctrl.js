@@ -618,7 +618,7 @@ angular.module('controller.tabctrl', [])
 
         $scope.convertMMDD = function (value) {
             if (typeof value == 'string') {
-                return value.substr(4,2)+'/'+value.substr(6,2);
+                return value.substr(5,2)+'/'+value.substr(8,2);
             }
             return value;
         };
@@ -994,6 +994,15 @@ angular.module('controller.tabctrl', [])
         $scope.$on('$destroy',function(){
             clearTimeout(refreshTimer);
         });
+
+        $scope.goAirInfoPage = function(code) {
+            console.log('go air info page code='+code);
+            var path = '/tab/air';
+            if (code) {
+               path += '?code='+code;
+            }
+            $location.url(path);
+        };
 
         var strOkay = "OK";
         var strCancel = "Cancel";

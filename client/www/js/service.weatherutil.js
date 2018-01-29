@@ -96,7 +96,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithLocation (location, funcName) {
             var url = twClientConfig.serverUrl;
-            url += '/'+funcName+'/coord/'+ location.lat + ','+location.long;
+            url += '/'+funcName+'/v000901'+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -112,7 +112,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithAddr (addr, funcName) {
             var url = twClientConfig.serverUrl;
-            url += '/'+funcName+'/addr/'+ addr;
+            url += '/'+funcName+'/v000901'+'/addr/'+ addr;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -455,8 +455,8 @@ angular.module('service.weatherutil', [])
                     temp: currentForecast.t1h,
                     displayItemCount: midTownWeather.displayItemCount
                 }];
-                if (weatherData.air_forecast) {
-                    data.air_forecast = weatherData.air_forecast;
+                if (weatherData.airInfo) {
+                    data.airInfo = weatherData.airInfo;
                 }
                 data.source = "KMA";
             }
@@ -614,6 +614,10 @@ angular.module('service.weatherutil', [])
                     if (weatherData.pubDate.hasOwnProperty('DSF')) {
                        data.source = "DSF";
                     }
+                }
+
+                if (weatherData.airInfo) {
+                    data.airInfo = weatherData.airInfo;
                 }
             }
             catch (err) {

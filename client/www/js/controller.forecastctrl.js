@@ -466,6 +466,20 @@ angular.module('controller.forecastctrl', [])
                 $scope.dayWidth = colWidth * dayTable.length;
 
                 $scope.currentWeather = cityData.currentWeather;
+                if (cityData.airInfo
+                    && cityData.airInfo.pollutants
+                    && cityData.airInfo.pollutants.aqi) {
+
+                    var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
+                    if (cityData.airInfo.pollutants.aqi.hourly) {
+                        $scope.hourlyAqiForecast = cityData.airInfo.pollutants.aqi.hourly.filter(function (obj) {
+                            return obj.date >= latestAirInfo.dataTime;
+                        }).slice(0, 4);
+                    }
+                    if (cityData.airInfo.pollutants.aqi.daily) {
+                        $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                    }
+                }
 
                 $scope.currentPosition = cityData.currentPosition;
 
