@@ -217,29 +217,54 @@ class AqiConverter {
     }
 }
 
-function _getAirKoreaActionGudie(grade, ts) {
-    switch (grade) {
-        case 1:
-            return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
-        case 2:
-            return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
-        case 3:
-            return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
-        case 4:
-            return ts.__("LOC_DO_NOT_GO_OUT");
-    }
+function _getAirKoreaActionGuide(pollutant, grade, ts) {
+        switch (grade) {
+            case 1:
+                return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
+            case 2:
+                if (pollutant === 'pm25' || pollutant === 'pm10' || pollutant === 'aqi' || pollutant === 'o3') {
+                    return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+                }
+                else {
+                    return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
+                }
+            case 3:
+                if (pollutant === 'pm25' || pollutant === 'pm10' || pollutant === 'aqi') {
+                    return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
+                }
+                else {
+                    return ts.__("LOC_BE_CAREFUL_OUTDOOR_ACTIVITIES");
+                }
+            case 4:
+                return ts.__("LOC_DO_NOT_GO_OUT");
+        }
 }
 
-function _getAirNowActionGudie(grade, ts) {
+function _getAirNowActionGuide(pollutant, grade, ts) {
     switch (grade) {
         case 1:
             return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
         case 2:
-            return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+            if (pollutant === 'pm25' || pollutant === 'pm10' || pollutant === 'aqi' || pollutant === 'o3') {
+                return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+            }
+            else {
+                return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+            }
         case 3:
-            return ts.__("LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK");
+            if (pollutant === 'pm25' || pollutant === 'pm10' || pollutant === 'aqi') {
+                return ts.__("LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK");
+            }
+            else  {
+                return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+            }
         case 4:
-            return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
+            if (pollutant === 'pm25' || pollutant === 'pm10' || pollutant === 'aqi') {
+                return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
+            }
+            else {
+                return ts.__("LOC_BE_CAREFUL_OUTDOOR_ACTIVITIES");
+            }
         case 5:
             return ts.__("LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE");
         case 6:
@@ -247,14 +272,22 @@ function _getAirNowActionGudie(grade, ts) {
     }
 }
 
-AqiConverter.getActionGuide = function (airUnit, grade, translate) {
+/**
+ * aqi, pm10, pm25
+ * so2, no2, co, o3
+ * @param airUnit
+ * @param grade
+ * @param translate
+ * @returns {*}
+ */
+AqiConverter.getActionGuide = function (airUnit, pollutant, grade, translate) {
     var ts = translate == undefined?global:translate;
 
     if (airUnit === 'aqicn' || airUnit === 'airnow') {
-        return _getAirNowActionGudie(grade, ts);
+        return _getAirNowActionGuide(pollutant, grade, ts);
     }
     else {
-        return _getAirKoreaActionGudie(grade, ts);
+        return _getAirKoreaActionGuide(pollutant, grade, ts);
     }
     return "";
 };
