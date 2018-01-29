@@ -274,5 +274,11 @@
   "LOC_UK": "영국",
   "LOC_NATIONAL_WEATHER": "전국날씨",
   "LOC_WEATHER": "날씨",
-  "LOC_TEMP": "기온"
+  "LOC_TEMP": "기온",
+  "LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES": "실외활동 걱정 없어요",
+  "LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL": "민감군 주의하세요",
+  "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "외출시 황사마스크를 착용하세요!",
+  "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "민감군 황사마스크 착용하세요!",
+  "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "민감군 외출 자제하세요!",
+  "LOC_DO_NOT_GO_OUT": "외출을 자제하세요!"
 }
