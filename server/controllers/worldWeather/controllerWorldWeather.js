@@ -1511,9 +1511,18 @@ function controllerWorldWeather() {
                         thisTime.p = aqiItem.p;
                         log.info('Aqi Unit : ', req.query.airUnit);
 
+                        var indexList = [];
+                        var iaqiCode = '';
+                        var iaqiValue = 0;
+                        var gradeList = [];
                         ['pm10', 'pm25', 'co', 'so2', 'no2', 'o3'].forEach((code, index) => {
                             if(aqiItem[code] == undefined || aqiItem[code] === -100){
                                 return;
+                            }
+
+                            // find max index for calculate iaqi value
+                            if(iaqiValue < aqiItem[code]){
+                                iaqiCode = code;
                             }
                             // value
                             thisTime[code + 'Value'] = aqiConverter.extractValue(code, aqiItem[code]);
@@ -1529,23 +1538,64 @@ function controllerWorldWeather() {
                             }else if(req.query.airUnit === 'airkorea' || req.query.airUnit === 'airkorea_who'){
                                 thisTime[code + 'Grade'] = aqiConverter.value2grade(req.query.airUnit, code, thisTime[code + 'Value']);
                                 thisTime[code + 'Str'] = UnitConverter.airkoreaGrade2str(thisTime[code + 'Grade'], code, res);
+
+                                // stor index for calculating iaqi
+                                indexList.push(aqiConverter.value2index(req.query.airUnit, code, thisTime[code + 'Value']));
                             }else{
-                                thisTime[code + 'Grade'] = aqiConverter.index2Grade('aqicn', aqiItem[code]);
+                                var index = aqiConverter.value2index('aqicn', code, thisTime[code + 'Value']);
+                                indexList.push(index);
+                                thisTime[code + 'Grade'] = aqiConverter.index2Grade('aqicn', index);
                                 thisTime[code + 'Str'] = UnitConverter.airGrade2str(thisTime[code + 'Grade'], code, res);
+
                             }
+                            //
+                            gradeList.push(thisTime[code + 'Grade']);
                         });
 
+                        log.info('Grade List :', JSON.stringify(gradeList));
+                        log.info('Index List :', JSON.stringify(indexList));
+
                         // IAQI
-                        thisTime.aqiValue = aqiItem.aqi;
-                        if(req.query.airUnit === 'airnow' || (req.query.airUnit == 'airkorea' || req.query.airUnit == 'airkorea_who')) {
-                            thisTime.aqiGrade = Math.max(thisTime.coGrade,
-                                thisTime.no2Grade,
-                                thisTime.o3Grade,
-                                thisTime.pm10Grade,
-                                thisTime.pm25Grade,
-                                thisTime.so2Grade);
+                        if(req.query.airUnit === 'airnow') {
+                            thisTime.aqiValue = aqiItem.aqi;
+                            // find max grade
+                            if(gradeList.length){
+                                thisTime.aqiGrade = Math.max(...gradeList);
+                                thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            }
+                        }else if(req.query.airUnit == 'airkorea_who'){
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
+                            // find max grade
+                            if(gradeList.length){
+                                thisTime.aqiGrade = Math.max(...gradeList);
+                                thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            }
+                        }else if(req.query.airUnit == 'airkorea'){
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
+
+                            // Add extra point if it's necessary.
+                            var additionalPoint = indexList.filter((v)=>v>100).length;
+                            if(additionalPoint >= 3){
+                                thisTime.aqiValue += 75;
+                            }else if(additionalPoint >= 2){
+                                thisTime.aqiValue += 50;
+                            }
+                            log.info('additionalPoint : ', additionalPoint);
+                            // get grade as index.
+                            thisTime.aqiGrade = aqiConverter.index2Grade(req.query.airUnit, thisTime.aqiValue);
                             thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
                         }else{
+                            // find max index
+                            if(indexList.length){
+                                thisTime.aqiValue = Math.max(...indexList);
+                            }
+
                             thisTime.aqiGrade = aqiConverter.index2Grade('aqicn', thisTime.aqiValue);
                             thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
                         }

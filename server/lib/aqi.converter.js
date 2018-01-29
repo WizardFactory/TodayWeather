@@ -37,7 +37,7 @@ const air_pollutants_breakpoints = {
         "pm10" : [0, 50, 150, 250, 350, 420, 600],   //ug/m3 (avg 1h)
         "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
         "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
-        "co" : [0, 5, 10, 35, 60, 90, 150],          //ug/m3 (avg 1h)
+        "co" : [0, 5, 10, 35, 60, 90, 150],          //mg/m3 (avg 1h)
         "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
         "aqi" : [0, 50, 100, 150, 200, 300, 500]
     }
@@ -225,7 +225,7 @@ class AqiConverter {
         }
         else if (code === 'co') {
             if (airUnit == 'aqicn') {
-                v = this.ppm2um(code, v);
+                v = this.ppm2um(code, v) / 1000;
                 if (isNaN(v) || v < 0) {
                     v = 0;
                 }
@@ -296,7 +296,7 @@ class AqiConverter {
         }
         else if (code === 'co') {
             if (airUnit == 'aqicn') {
-                value = this.ppm2um(code, value) * 1000;
+                value = this.ppm2um(code, value) / 1000;
                 if (isNaN(value) || value < 0) {
                     value = 0;
                 }
