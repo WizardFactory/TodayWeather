@@ -816,7 +816,7 @@ function ControllerTown24h() {
      * @param airUnit
      * @private
      */
-    this._insertHourlyPollutants = function (pollutants, arpltnList, airUnit) {
+    this._insertHourlyPollutants = function (pollutants, arpltnList, airUnit, lastDataTime) {
         arpltnList.forEach(function (arpltn) {
 
             arpltn = KecoController.recalculateValue(arpltn, airUnit);
@@ -835,7 +835,7 @@ function ControllerTown24h() {
                     pollutant = pollutants[propertyName] = {};
                 }
                 if (!Array.isArray(pollutant.hourly)) {
-                    pollutant.hourly = self._insertEmptyPollutantHourlyObj(arpltn.dataTime);
+                    pollutant.hourly = self._insertEmptyPollutantHourlyObj(lastDataTime);
                     //insert empty object
                 }
 
@@ -945,7 +945,7 @@ function ControllerTown24h() {
                 }
                 airInfo.last = req.arpltnList[0];
                 airInfo.pollutants = {};
-                self._insertHourlyPollutants(airInfo.pollutants, req.arpltnList, airUnit);
+                self._insertHourlyPollutants(airInfo.pollutants, req.arpltnList, airUnit, airInfo.last.dataTime);
             }
             if ( req.midData && Array.isArray(req.midData.dailyData) ) {
                 var dailyList = req.midData.dailyData.filter(function (value) {
