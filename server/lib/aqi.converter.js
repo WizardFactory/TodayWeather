@@ -188,4 +188,46 @@ class AqiConverter {
     }
 }
 
+function _getAirKoreaActionGudie(grade, ts) {
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
+        case 2:
+            return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+        case 3:
+            return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
+        case 4:
+            return ts.__("LOC_DO_NOT_GO_OUT");
+    }
+}
+
+function _getAirNowActionGudie(grade, ts) {
+    switch (grade) {
+        case 1:
+            return ts.__("LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES");
+        case 2:
+            return ts.__("LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL");
+        case 3:
+            return ts.__("LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK");
+        case 4:
+            return ts.__("LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT");
+        case 5:
+            return ts.__("LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE");
+        case 6:
+            return ts.__("LOC_DO_NOT_GO_OUT");
+    }
+}
+
+AqiConverter.getActionGuide = function (airUnit, grade, translate) {
+    var ts = translate == undefined?global:translate;
+
+    if (airUnit === 'aqicn' || airUnit === 'airnow') {
+        return _getAirNowActionGudie(grade, ts);
+    }
+    else {
+        return _getAirKoreaActionGudie(grade, ts);
+    }
+    return "";
+};
+
 module.exports = AqiConverter;

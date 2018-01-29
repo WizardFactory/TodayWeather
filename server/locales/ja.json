@@ -274,5 +274,11 @@
   "LOC_UK": "英国",
   "LOC_NATIONAL_WEATHER": "全国の天気",
   "LOC_WEATHER": "天気",
-  "LOC_TEMP": "気温"
+  "LOC_TEMP": "気温",
+  "LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES": "屋外活動心配ありません。",
+  "LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL": "敏感な人は、外出時に注意してください。",
+  "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "外出時黄砂マスクを着用してください！",
+  "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "敏感な人は、黄砂マスクの着用してください！",
+  "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "敏感な人は、外出自粛してください！",
+  "LOC_DO_NOT_GO_OUT": "外出を控えるください！"
 }

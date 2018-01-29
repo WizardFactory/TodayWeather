@@ -274,5 +274,12 @@
   "LOC_UK": "UK",
   "LOC_NATIONAL_WEATHER": "National Weather",
   "LOC_WEATHER": "Weather",
-  "LOC_TEMP": "Temp"
+  "LOC_TEMP": "Temp",
+  "LOC_NO_WORRIES_ABOUT_OUTDOOR_ACTIVITIES": "No worries about outdoor activities",
+  "LOC_SENSITIVE_PEOPLE_SHOULD_BE_CAREFUL": "Sensitive people should be careful",
+  "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "Wear a dust mask when you go out!",
+  "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "Sensitive people wear dust mask!",
+  "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "Do not go out on sensitive people!",
+  "LOC_DO_NOT_GO_OUT": "Do not go out!"
+
 }

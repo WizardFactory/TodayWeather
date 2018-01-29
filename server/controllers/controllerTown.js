@@ -37,6 +37,7 @@ var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
 var GeoController = require('./geo.controller');
 var UnitConverter = require('../lib/unitConverter');
+var AqiConverter = require('../lib/aqi.converter');
 
 var ControllerWeatherDesc = require('./controller.weather.desc');
 
@@ -2774,6 +2775,12 @@ function ControllerTown() {
         }
 
         if (req.airInfo) {
+            if (req.airInfo.last) {
+                var last = req.airInfo.last;
+                if (last.hasOwnProperty('aqiGrade')) {
+                    last.actionGuide = AqiConverter.getActionGuide(airUnit, last.aqiGrade, res);
+                }
+            }
             if (req.airInfo.pollutants) {
                 ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
                     var pollutant = req.airInfo.pollutants[propertyName];
