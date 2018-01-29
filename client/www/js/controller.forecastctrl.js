@@ -466,9 +466,9 @@ angular.module('controller.forecastctrl', [])
                 $scope.dayWidth = colWidth * dayTable.length;
 
                 $scope.currentWeather = cityData.currentWeather;
-                if (cityData.airInfo
-                    && cityData.airInfo.pollutants
-                    && cityData.airInfo.pollutants.aqi) {
+                if (cityData.airInfo &&
+                    cityData.airInfo.pollutants &&
+                    cityData.airInfo.pollutants.aqi) {
 
                     var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
                     if (cityData.airInfo.pollutants.aqi.hourly) {

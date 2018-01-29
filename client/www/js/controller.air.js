@@ -283,8 +283,8 @@ angular.module('controller.air', [])
             var list = [];
             try {
                 ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                    var obj = {};
                     if (airInfo.hasOwnProperty(propertyName+'Value')) {
-                        var obj = {};
                         obj.name = _getAQIname(propertyName);
                         obj.value = airInfo[propertyName+'Value'];
                         obj.grade = airInfo[propertyName+'Grade'];
@@ -293,7 +293,6 @@ angular.module('controller.air', [])
                         list.push(obj);
                     }
                     else if (pollutants.hasOwnProperty(propertyName)) {
-                        var obj = {};
                         obj.name = _getAQIname(propertyName);
                         obj.code = propertyName;
                         obj.value = '-';
