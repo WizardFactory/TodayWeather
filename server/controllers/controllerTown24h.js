@@ -1469,6 +1469,17 @@ function ControllerTown24h() {
             if (req.current.hasOwnProperty('arpltn')) {
                 KecoController.recalculateValue(req.current.arpltn, req.query.airUnit);
             }
+            if (req.hasOwnProperty('airInfo') && req.airInfo.hasOwnProperty('pollutants')) {
+                var pollutants = req.airInfo.pollutants;
+                for (var pollutantName in pollutants) {
+                    if (pollutants[pollutantName].hasOwnProperty('daily')) {
+                        pollutants[pollutantName].daily.forEach(function (value) {
+                            value.fromToday = kmaTimeLib.getDiffDays(value.date, currentDate);
+                            value.dayOfWeek = (new Date(value.date)).getDay();
+                        });
+                    }
+                }
+            }
         }
         catch (err) {
             log.error(err);

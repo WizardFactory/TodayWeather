@@ -1571,24 +1571,14 @@ function controllerWorldWeather() {
                         thisTime.h = aqiItem.h;
                         thisTime.p = aqiItem.p;
 
-                        // string
-                        if(req.query.aqi != undefined && (req.query.aqi == 'airkorea' || req.query.aqi == 'airkorea_who')) {
-                            thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
-                            thisTime.coStr = UnitConverter.airkoreaGrade2str(thisTime.coGrade, 'co2', res);
-                            thisTime.no2Str = UnitConverter.airkoreaGrade2str(thisTime.no2Grade, 'no2', res);
-                            thisTime.o3Str = UnitConverter.airkoreaGrade2str(thisTime.o3Grade, 'o3', res);
-                            thisTime.pm10Str = UnitConverter.airkoreaGrade2str(thisTime.pm10Grade, 'pm10', res);
-                            thisTime.pm25Str = UnitConverter.airkoreaGrade2str(thisTime.pm25Grade, 'pm25', res);
-                            thisTime.so2Str = UnitConverter.airkoreaGrade2str(thisTime.so2Grade, 'so2', res);
-                        }else{
-                            thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
-                            thisTime.coStr = UnitConverter.airGrade2str(thisTime.coGrade, 'co', res);
-                            thisTime.no2Str = UnitConverter.airGrade2str(thisTime.no2Grade, 'no2', res);
-                            thisTime.o3Str = UnitConverter.airGrade2str(thisTime.o3Grade, 'o3', res);
-                            thisTime.pm10Str = UnitConverter.airGrade2str(thisTime.pm10Grade, 'pm10', res);
-                            thisTime.pm25Str = UnitConverter.airGrade2str(thisTime.pm25Grade, 'pm25', res);
-                            thisTime.so2Str = UnitConverter.airGrade2str(thisTime.so2Grade, 'so2', res);
-                        }
+                        var airUnit = req.query.aqi;
+                        thisTime.aqiStr = UnitConverter.airGrade2Str(airUnit, thisTime.aqiGrade, res);
+                        thisTime.coStr = UnitConverter.airGrade2Str(airUnit, thisTime.coGrade, res);
+                        thisTime.no2Str = UnitConverter.airGrade2Str(airUnit, thisTime.no2Grade, res);
+                        thisTime.o3Str = UnitConverter.airGrade2Str(airUnit, thisTime.o3Grade, res);
+                        thisTime.pm10Str = UnitConverter.airGrade2Str(airUnit, thisTime.pm10Grade, res);
+                        thisTime.pm25Str = UnitConverter.airGrade2Str(airUnit, thisTime.pm25Grade, res);
+                        thisTime.so2Str = UnitConverter.airGrade2Str(airUnit, thisTime.so2Grade, res);
 
                         // unit conversion
                         thisTime.coValue = self._convertUmtoPpm('co', thisTime.coValue);
