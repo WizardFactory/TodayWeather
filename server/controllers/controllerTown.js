@@ -242,10 +242,8 @@ function ControllerTown() {
                         });
                     },
                     function (callback) {
-                        var dateList = [];
-                        dateList.push(self._getCurrentTimeValue(+9).date); //today
-                        dateList.push(self._getCurrentTimeValue(+33).date); //tomorrow
-                        KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
+                        var date = self._getCurrentTimeValue(+9).date;
+                        KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, date, function (err, results) {
                             if (err) {
                                 return callback(err);
                             }
@@ -2224,10 +2222,8 @@ function ControllerTown() {
             return this;
         }
         try {
-            var dateList = [];
-            dateList.push(self._getCurrentTimeValue(+9).date); //today
-            dateList.push(self._getCurrentTimeValue(+33).date); //tomorrow
-            KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, dateList, function (err, results) {
+            var date = self._getCurrentTimeValue(+9).date;
+            KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, date, function (err, results) {
                 if (err) {
                     log.error(err);
                     next();
@@ -2777,6 +2773,7 @@ function ControllerTown() {
         if (req.airInfo) {
             if (req.airInfo.last) {
                 var last = req.airInfo.last;
+                self._makeArpltnStr(last, airUnit, res);
                 ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
                     if (last.hasOwnProperty(propertyName+'Grade')) {
                         last[propertyName+'ActionGuide'] =
