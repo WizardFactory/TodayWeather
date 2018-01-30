@@ -518,10 +518,10 @@ angular.module('controller.tabctrl', [])
                     })
                 .finally(function () {
 
-                    msg += '<div style="margin: 0 2px">' +
-                        '<input type="checkbox" ng-model="data.disable">'+
+                    msg += '<div style="margin: 2px">' +
+                        '<input type="checkbox" style="" ng-model="data.disable"><span class="checkbox-text">'+
                         strDisable +
-                        '</div>';
+                        '</span></div>';
 
                     $ionicPopup.show({
                         template: msg,
