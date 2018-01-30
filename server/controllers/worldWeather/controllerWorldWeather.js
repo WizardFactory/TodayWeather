@@ -1534,7 +1534,7 @@ function controllerWorldWeather() {
                             // Grade & string
                             if(req.query.airUnit === 'airnow'){
                                 thisTime[code + 'Grade'] = aqiConverter.index2Grade(req.query.airUnit, aqiItem[code]);
-                                thisTime[code + 'Str'] = UnitConverter.airGrade2str(thisTime[code + 'Grade'], code, res);
+                                thisTime[code + 'Str'] = UnitConverter.airGrade2Str(thisTime[code + 'Grade'], code, res);
                             }else if(req.query.airUnit === 'airkorea' || req.query.airUnit === 'airkorea_who'){
                                 thisTime[code + 'Grade'] = aqiConverter.value2grade(req.query.airUnit, code, thisTime[code + 'Value']);
                                 thisTime[code + 'Str'] = UnitConverter.airkoreaGrade2str(thisTime[code + 'Grade'], code, res);
@@ -1545,7 +1545,7 @@ function controllerWorldWeather() {
                                 var index = aqiConverter.value2index('aqicn', code, thisTime[code + 'Value']);
                                 indexList.push(index);
                                 thisTime[code + 'Grade'] = aqiConverter.index2Grade('aqicn', index);
-                                thisTime[code + 'Str'] = UnitConverter.airGrade2str(thisTime[code + 'Grade'], code, res);
+                                thisTime[code + 'Str'] = UnitConverter.airGrade2Str(thisTime[code + 'Grade'], code, res);
 
                             }
                             //
@@ -1597,7 +1597,7 @@ function controllerWorldWeather() {
                             }
 
                             thisTime.aqiGrade = aqiConverter.index2Grade('aqicn', thisTime.aqiValue);
-                            thisTime.aqiStr = UnitConverter.airGrade2str(thisTime.aqiGrade, 'aqi', res);
+                            thisTime.aqiStr = UnitConverter.airGrade2Str(thisTime.aqiGrade, 'aqi', res);
                         }
                     }
                 });

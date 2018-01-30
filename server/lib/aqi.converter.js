@@ -208,6 +208,10 @@ class AqiConverter {
         return value*1000;
     }
 
+    static ppb2ppm(value){
+        return parseFloat((value / 1000).toFixed(3));
+    }
+
     /**
      * @param Mal
      *           so2 분자량 : 15.99 + 15.99 + 32.07 = 64.05
