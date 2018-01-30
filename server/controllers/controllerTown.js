@@ -2774,9 +2774,12 @@ function ControllerTown() {
             if (req.airInfo.last) {
                 var last = req.airInfo.last;
                 self._makeArpltnStr(last, airUnit, res);
-                if (last.hasOwnProperty('aqiGrade')) {
-                    last.actionGuide = AqiConverter.getActionGuide(airUnit, last.aqiGrade, res);
-                }
+                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                    if (last.hasOwnProperty(propertyName+'Grade')) {
+                        last[propertyName+'ActionGuide'] =
+                            AqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
+                    }
+                });
             }
             if (req.airInfo.pollutants) {
                 ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
