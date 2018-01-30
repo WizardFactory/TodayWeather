@@ -362,7 +362,7 @@ arpltnController.getDustFrcst = function (town, date, callback) {
         });
 
         if (resultList.length == 0) {
-            err = new Error("dust forecast length is zero query="+JSON.stringify(query));
+            err = new Error("dust forecast length is zero region:"+region+" informDate:"+informDate);
             return callback(err);
         }
 
