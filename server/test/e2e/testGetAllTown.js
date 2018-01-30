@@ -86,16 +86,16 @@ describe('Routing kma', function() {
 
         it('test v000901 ' + town[0] + town[1] + town[2], function () {
             this.timeout(20 * 1000);
-            var path = '/v000901/kma/addr/' + town[0];
+            var path = '/v000901/kma/addr/' + encodeURIComponent(town[0]);
             if (town[1]) {
-                path += '/' + town[1];
+                path += '/' + encodeURIComponent(town[1]);
             }
             if (town[2]) {
-                path += '/' + town[2];
+                path += '/' + encodeURIComponent(town[2]);
             }
 
             return request(url)
-                .get(encodeURI(path))
+                .get(path)
                 .set('Accept', 'application/json')
                 .expect(200)
                 .then(function (res) {
@@ -108,7 +108,7 @@ describe('Routing kma', function() {
                     assert(body.hasOwnProperty('midData'));
                     assert(body.hasOwnProperty('units'));
                     assert(body.hasOwnProperty('source'));
-                    assert(body.hasOwnProperty('air_forecast'));
+                    assert(body.hasOwnProperty('airInfo'));
 
                     var current = body.current;
                     current.should.have.property('arpltn');
@@ -128,14 +128,14 @@ describe('Routing kma', function() {
                     var arpltn = current.arpltn;
                     arpltn.should.have.property('pm10Grade');
                     arpltn.should.have.property('pm25Grade');
-                    arpltn.should.have.property('khaiGrade');
+                    arpltn.should.have.property('aqiGrade');
                     arpltn.pm10Grade.should.not.be.exactly(-1);
                     arpltn.pm25Grade.should.not.be.exactly(-1);
                     arpltn.khaiGrade.should.not.be.exactly(-1);
 
                     arpltn.should.have.property('pm10Value');
                     arpltn.should.have.property('pm25Value');
-                    arpltn.should.have.property('khaiValue');
+                    arpltn.should.have.property('aqiValue');
                     arpltn.pm10Value.should.not.be.exactly(-1);
                     arpltn.pm25Value.should.not.be.exactly(-1);
                     arpltn.khaiValue.should.not.be.exactly(-1);
@@ -172,6 +172,16 @@ describe('Routing kma', function() {
                         daily.should.have.property('wfAm');
                         daily.should.have.property('wfPm');
                     });
+
+                    var airInfo = body.airInfo;
+
+                    airInfo.should.have.property('pollutants');
+                    airInfo.pollutants.should.have.property('pm10');
+                    airInfo.pollutants.should.have.property('pm25');
+                    airInfo.pollutants.should.have.property('aqi');
+                    assert.equal(airInfo.pollutants.pm10.hourly.length > 26, true);
+                    assert.equal(airInfo.pollutants.pm25.hourly.length > 26, true);
+                    assert.equal(airInfo.pollutants.aqi.hourly.length > 26, true);
                 });
         });
 
