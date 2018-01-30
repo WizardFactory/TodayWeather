@@ -484,13 +484,19 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         showLoadingIndicator();
 
         updateCurrentPosition().then(function(geoInfo) {
-            Util.ga.trackEvent('city', 'get', JSON.stringify(geoInfo));
-            hideLoadingIndicator();
-            //$scope.searchResults = [];
-            $scope.searchResults2 = [];
-            $scope.search.word = geoInfo.name;
-            geoInfo.description = geoInfo.address;
-            $scope.searchResults2.push(geoInfo);
+            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+                if (saveCity(weatherData, geoInfo, false) == false) {
+                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+                }
+                else {
+                    close();
+                }
+                $ionicLoading.hide();
+            }, function (err) {
+                Util.ga.trackEvent('weather', 'error', err);
+                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+                $ionicLoading.hide();
+            });
 
         }, function(msg) {
             hideLoadingIndicator();
