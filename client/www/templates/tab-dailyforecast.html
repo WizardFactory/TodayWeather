@@ -58,8 +58,22 @@
                 </div>
                 <div class="col" style="margin: 0; padding: 0">
                    <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                   <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}} ({{getForecastAirUnitStr()|translate}})</p>
-                   <table style="width: 100%">
+                   <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}}</p>
+
+                    <table style="width: 100%" ng-if="dailyAqiForecast && dailyAqiForecast.length" ng-click="goAirInfoPage('aqi')">
+                        <tr>
+                            <td style="text-align: center; margin: auto" ng-repeat="day in dailyAqiForecast">
+                                <p class="body1" style="margin: 0;">{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                                <p class="display1" style="margin: 0; opacity: 1">
+                                    <i class="material-icons" style="font-size: 32px;"
+                                       ng-bind-html="getSentimentIcon(day.maxGrade)">
+                                    </i>
+                                </p>
+                                <p class="body2" style="margin: 0;">{{day.maxStr}}</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <table style="width: 100%" ng-if="dailyAqiForecast == undefined && dayChart[0].values">
                        <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
                            ng-repeat="day in dayChart[0].values">
                            <td style="text-align: center; margin: auto">
@@ -69,7 +83,7 @@
                                    <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)|translate}}</p>
                                </div>
                            </td>
-                           <td style="text-align: center; margin: auto">
+                           <td style="text-align: center; margin: auto" ng-click="goAirInfoPage('pm25')">
                                <p class="body1" style="margin: 0;">{{"LOC_PM25"|translate}}</p>
                                <p class="display1" style="margin: 0; opacity: 1">
                                    <i class="material-icons" style="font-size: 32px"
@@ -79,7 +93,7 @@
                                <p class="body2"
                                   style="margin: 0 0 5px;">{{day.dustForecast.pm25Str}}</p>
                            </td>
-                           <td style="text-align: center; margin: auto">
+                           <td style="text-align: center; margin: auto" ng-click="goAirInfoPage('pm10')">
                                <p class="body1" style="margin: 0;">{{"LOC_PM10"|translate}}</p>
                                <p class="display1" style="margin: 0; opacity: 1">
                                    <i class="material-icons" style="font-size: 32px;"
@@ -88,7 +102,7 @@
                                <p class="body2"
                                   style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
                            </td>
-                           <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined">
+                           <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined" ng-click="goAirInfoPage('o3')">
                                <p class="body1" style="margin: 0;">{{"LOC_O3"|translate}}</p>
                                <p class="display1" style="margin: 0; opacity: 1">
                                    <i class="material-icons" style="font-size: 32px"
@@ -107,7 +121,7 @@
                        <div class="row" style="margin: auto;">
                            <div style="margin: 0 auto; min-width: 132px" ng-if="checkDailyDetailWeather(day)" ng-repeat="day in dayChart[0].values">
                                <div class="row" style="margin: 0">
-                                   <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
+                                   <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.dateObj)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
                                </div>
                                <div class="row" style="margin: 0" ng-if="day.reh">
                                    <img ng-src="img/Humidity-{{day.reh?day.reh - day.reh%10:'00'}}.png" style="height: 24px; margin: auto 0;">

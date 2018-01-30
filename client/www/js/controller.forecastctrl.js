@@ -434,6 +434,13 @@ angular.module('controller.forecastctrl', [])
 
         $scope.getMidTableHeight = getMidTableHeight;
 
+        $scope.showHourlyAqiForecast = function () {
+           if ($scope.hourlyAqiForecast && $scope.hourlyAqiForecast.length > 1)  {
+               return true;
+           }
+           return false;
+        };
+
         function applyWeatherData() {
             var dayTable;
             var cityIndex;
@@ -466,6 +473,20 @@ angular.module('controller.forecastctrl', [])
                 $scope.dayWidth = colWidth * dayTable.length;
 
                 $scope.currentWeather = cityData.currentWeather;
+                if (cityData.airInfo &&
+                    cityData.airInfo.pollutants &&
+                    cityData.airInfo.pollutants.aqi) {
+
+                    var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
+                    if (cityData.airInfo.pollutants.aqi.hourly) {
+                        $scope.hourlyAqiForecast = cityData.airInfo.pollutants.aqi.hourly.filter(function (obj) {
+                            return obj.date >= latestAirInfo.dataTime;
+                        }).slice(0, 4);
+                    }
+                    if (cityData.airInfo.pollutants.aqi.daily) {
+                        $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                    }
+                }
 
                 $scope.currentPosition = cityData.currentPosition;
 

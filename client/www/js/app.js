@@ -1505,7 +1505,7 @@ angular.module('starter', [
                 }
             })
             .state('tab.air', {
-                url: '/air?fav',
+                url: '/air?fav&code',
                 cache: false,
                 views: {
                     'tab-air': {
