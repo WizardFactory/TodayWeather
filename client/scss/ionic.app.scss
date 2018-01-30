@@ -468,6 +468,15 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background: transparent;
 }
 
+.short-forecast .air-info-box {
+  margin: 0;
+  padding: 0;
+}
+
+.short-forecast .air-info-box hr {
+  margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);
+}
+
 .start-content .item-input {
   padding-right: 16px;
   display: flex !important;
@@ -597,6 +606,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   font-size: 17px;
 }
 
+.air-content .card {
+  margin: 0 0 9px 0;
+}
+
 .air-content [md-page-header] {
   color: #444;
 }
@@ -606,26 +619,35 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
-.air-content .main-icon i {
+.air-content .main-text {
+  margin: -2px 0;
   font-size: 64px;
 }
 
-.air-content .main-text {
-  margin: -2px 0;
-  font-weight:300;
-  font-size: 64px;
-  line-height: 64px;
+.air-content .main-text span {
+  font-size: 32px;
+}
+
+.air-content [md-page-header] i {
+  font-size: 24px;
+  vertical-align: bottom;
 }
 
 .air-content [md-page-header] .textFont {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 24px;
 }
 
 .air-content .button {
   color: #444;
   font-size: 17px;
   line-height: initial;
+}
+
+.air-std-table {
+  position: relative;
+  margin: 0 4px;
 }
 
 .air-label {
@@ -696,7 +718,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
-.air-hourly .body1 {
+.air-hourly .hourly-box .body1 {
   margin: 0;
 }
 
@@ -728,6 +750,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .air-daily .daily-box {
   text-align: center;
   margin: auto;
+}
+
+.air-daily .daily-box a {
+  color: inherit;
 }
 
 .air-daily .daily-border {
@@ -783,7 +809,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .card {
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   margin: 5px 10px;
 }
 
