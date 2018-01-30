@@ -770,6 +770,14 @@ function ControllerTown24h() {
                 pollutant = airInfo.pollutants[code] = {};
             }
 
+            //과거 데이터가 없으므로 빈껍데기 추가하고, 예보정보 추가함.
+            if (pollutant.hourly == undefined) {
+                var hourlyObj = {date: latestPastDate};
+                pollutant.hourly = [];
+                pollutant.hourly.push(hourlyObj);
+                return;
+            }
+
             var hourlyData = pollutant.hourly.find(function (hourlyObj) {
                 return hourlyObj.date === forecast.dataTime || forecast.dataTime <= latestPastDate;
             });
