@@ -3,227 +3,189 @@
  */
 
 angular.module('service.twads', [])
-    .factory('TwAds', function($rootScope, $cordovaNetwork) {
+    .factory('TwAds', function(TwStorage, Util) {
         var obj = {};
-        //상태 천이 변경 개선 필요
-        obj.enableAds;
-        obj.showAds;
-        obj.requestEnable;
-        obj.requestShow;
-        obj.loaded = false;
+        obj.enableAds = null;
+        obj.showAds = null;
+        obj.requestEnable = null;
+        obj.requestShow = null;
         obj.ready = false;
         obj.bannerAdUnit = '';
         obj.interstitialAdUnit = '';
-        obj.bannerCreated = false;
 
         obj.loadTwAdsInfo = function () {
-            var twAdsInfo = JSON.parse(localStorage.getItem("twAdsInfo"));
+            var self = this;
+            var twAdsInfo = TwStorage.get("twAdsInfo");
             console.log('load TwAdsInfo='+JSON.stringify(twAdsInfo)+
-                        ' request enable='+obj.requestEnable+' show='+obj.requestShow);
+                        ' request enable='+self.requestEnable+' show='+self.requestShow);
 
-            obj.ready = true;
+            self.ready = true;
 
-            if (obj.requestEnable != undefined) {
-                obj.setEnableAds(obj.requestEnable);
+            if (self.requestEnable != undefined) {
+                self.setEnableAds(self.requestEnable);
             }
             else {
                 if (twAdsInfo == undefined || twAdsInfo.enable == undefined) {
-                    obj.setEnableAds(true);
+                    self.setEnableAds(true);
                 }
                 else {
-                    obj.setEnableAds(twAdsInfo.enable);
+                    self.setEnableAds(twAdsInfo.enable);
                 }
             }
         };
 
         obj.saveTwAdsInfo = function (enable) {
             var twAdsInfo = {enable: enable};
-            localStorage.setItem("twAdsInfo", JSON.stringify(twAdsInfo));
+            TwStorage.set("twAdsInfo", twAdsInfo);
         };
 
-        function _setLayout(enable) {
-            //close bottom box
-            $rootScope.viewAdsBanner = enable;
-            $rootScope.contentBottom = enable?100:50;
-            angular.element(document.getElementsByClassName('tabs')).css('margin-bottom', enable?'50px':'0px');
-        }
-
         obj._admobCreateBanner = function() {
-            AdMob.createBanner({
-                    adId: obj.bannerAdUnit,
-                    autoShow: false
-                },
+            var self = this;
+            admob.createBannerView(
                 function () {
                     console.log('create banner view');
-                    obj.bannerCreated = true;
-                    if (obj.requestShow != undefined) {
-                        obj.setShowAds(obj.requestShow);
+                    if (self.requestShow != undefined) {
+                        self.setShowAds(self.requestShow);
                     }
                     else {
-                        obj.setShowAds(obj.enableAds);
+                        self.setShowAds(self.enableAds);
                     }
 
                 },
                 function (e) {
                     console.log('Fail to create banner view');
-                    console.log(e);
+                    Util.ga.trackEvent('plugin', 'error', 'admobCreateBanner');
+                    Util.ga.trackException(e, false);
                 });
         };
 
         obj.setEnableAds = function (enable) {
+            var self = this;
             console.log('set enable ads enable='+enable);
-            if (enable == obj.enableAds)  {
+            if (enable == self.enableAds)  {
                 console.log('already TwAds is enable='+enable);
                 return;
             }
 
-            if (obj.ready != true) {
+            if (self.ready != true) {
                 console.log('set enable ads called before ready');
-                obj.requestEnable = enable;
+                self.requestEnable = enable;
                 return;
             }
 
             if (enable === false) {
-                obj.setShowAds(false);
-                AdMob.removeBanner(function () {
+                self.setShowAds(false);
+
+                admob.destroyBannerView(function () {
                     console.log('destroy banner view');
                 }, function (e) {
-                    console.log('Fail to destroy banner');
-                    console.log(e);
+                    Util.ga.trackEvent('plugin', 'error', 'admobDestroyBanner');
+                    Util.ga.trackException(e, false);
                 });
 
-                obj.enableAds = enable;
-                obj.bannerCreated = false;
-                _setLayout(enable);
+                self.enableAds = enable;
+                Util.ga.trackEvent('app', 'account', 'premium');
             }
             else {
-                obj.enableAds = enable;
-                _setLayout(enable);
-                //hangup on android sdk 4.4.x
-                if ($cordovaNetwork.isOnline()) {
-                   obj._admobCreateBanner();
-                }
+                self.enableAds = enable;
+                self._admobCreateBanner();
+                Util.ga.trackEvent('app', 'account', 'free');
             }
         };
 
         obj.setShowAds = function(show) {
+            var self = this;
             console.log('set show ads show='+show);
-            if(obj.showAds === show) {
+
+            if(self.showAds === show) {
                 console.log('already TwAds is show='+show);
                 return;
             }
-            if (obj.ready != true) {
+            if (self.ready != true) {
                 console.log('set show ads called before ready');
-                obj.requestShow = show;
+                self.requestShow = show;
                 return;
             }
 
-            if (obj.enableAds === false && show === true) {
+            if (self.enableAds === false && show === true) {
                console.log('TwAds is not enabled');
                 return;
             }
 
-            obj.showAds = show;
-            obj._setAdMobShowAd(show);
+            self.showAds = show;
+            self._setAdMobShowAd(show);
         };
 
         obj._setAdMobShowAd = function(show) {
             console.log('set ad mob show ='+show);
 
-            if ( !(window.AdMob) ) {
+            if ( !(window.admob) ) {
                 console.log('Admob plugin not ready : set Enable Ads');
                 return;
             }
 
-            if (show === true) {
-                AdMob.showBanner(AdMob.AD_POSITION.BOTTOM_CENTER, function () {
-                    console.log('show about ad mob show='+show);
-                }, function (e) {
-                    console.log('fail to show about ad mob show='+show);
-                    console.log(JSON.stringify(e));
-                });
-            }
-            else {
-                AdMob.hideBanner(function () {
-                    console.log('hide about ad mob show='+show);
-                }, function (e) {
-                    console.log('fail to hide about ad mob show='+show);
-                    console.log(JSON.stringify(e));
-                });
-            }
+            admob.showBannerAd(show, function () {
+                console.log('show/hide about ad mob show='+show);
+            }, function (e) {
+                Util.ga.trackEvent('plugin', 'error', 'admobShowBanner');
+                Util.ga.trackException(e, false);
+            });
         };
 
-        return obj;
-    })
-    .run(function($ionicPlatform, TwAds, Util) {
-
-        $ionicPlatform.ready(function() {
-            var runAdmob = true;
-
-            if (!runAdmob) {
-                console.log('Ad mob is unused');
-                return;
-            }
-
-            if ( !(window.AdMob) ) {
+        obj.init = function () {
+            var self = this;
+            if ( !(window.admob) ) {
                 console.log('ad mob plugin not ready');
+                //for ads app without inapp and paid app
+                if (self.requestEnable != undefined) {
+                    console.log('set requestEnable='+self.requestEnable);
+                    self.setShowAds(self.requestEnable);
+                }
+                Util.ga.trackEvent('plugin', 'error', 'loadAdmob');
                 return;
             }
-
-            if (TwAds.loaded == true) {
-                console.log('TwAds is already loaded');
-                return;
-            }
-            TwAds.loaded = true;
 
             if (ionic.Platform.isIOS()) {
-                TwAds.bannerAdUnit = Util.admobIOSBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobIOSInterstitialAdUnit;
+                self.bannerAdUnit = twClientConfig.admobIOSBannerAdUnit;
+                self.interstitialAdUnit = twClientConfig.admobIOSInterstitialAdUnit;
             }
             else if (ionic.Platform.isAndroid()) {
-                TwAds.bannerAdUnit = Util.admobAndroidBannerAdUnit;
-                TwAds.interstitialAdUnit = Util.admobAndroidInterstitialAdUnit;
+                self.bannerAdUnit = twClientConfig.admobAndroidBannerAdUnit;
+                self.interstitialAdUnit = twClientConfig.admobAndroidInterstitialAdUnit;
             }
 
-            AdMob.setOptions({
-                adSize:         'BANNER',
-                overlap:        true,
-                isTesting:      Util.isDebug(),
-                autoShow:       false,
+            var adSize = ionic.Platform.isIOS()?admob.AD_SIZE.SMART_BANNER:admob.AD_SIZE.BANNER;
+
+            admob.setOptions({
+                publisherId:    self.bannerAdUnit,
+                interstitialAdId: self.interstitialAdUnit,
+                adSize:         adSize,
+                bannerAtTop:    false,
+                overlap:        false,
+                offsetStatusBar:    false,
+                isTesting:  twClientConfig.debug,
+                adExtras :  {},
+                autoShowBanner: false,
+                autoShowInterstitial:   false
             }, function () {
                 console.log('Set options of Ad mob');
-                TwAds.loadTwAdsInfo();
+                self.loadTwAdsInfo();
             }, function (e) {
-                console.log('Fail to set options of Ad mob');
-                console.log(e);
+                Util.ga.trackException('setAdmobOptions', 'error', e);
+                Util.ga.trackException(e, false);
             });
 
-            document.addEventListener('onAdFailLoad',function(data){
-                console.log('on Failed Load Ad msg='+JSON.stringify(data));
-                //if(data.adType == 'banner') AdMob.hideBanner();
-                //else if(data.adType == 'interstitial') interstitialIsReady = false;
+            document.addEventListener(admob.events.onAdFailedToLoad,function(message){
+                console.log('on banner Failed Receive Ad');
+                Util.ga.trackEvent('plugin', 'error', 'admobReceiveAd '+message);
             });
 
-            document.addEventListener('onAdLoaded',function(data){
-                if(data.adType == 'banner')  {
-                    if (TwAds.showAds === true) {
-                       TwAds._setAdMobShowAd(true);
-                    }
-                }
-                else if(data.adType == 'interstitial') {
-                    //interstitialIsReady = true;
-                }
+            /**
+             * param message
+             */
+            document.addEventListener(admob.events.onAdLoaded,function(){
+                console.log('on banner receive Ad');
             });
-
-            document.addEventListener('onAdPresent',function(data){
-                console.log('on Ad present msg='+JSON.stringify(data));
-            });
-
-            document.addEventListener("online", function () {
-                if (TwAds.enableAds === true && TwAds.bannerCreated === false) {
-                    TwAds._admobCreateBanner();
-                }
-            }, false);
-        });
+        };
+        return obj;
     });
-

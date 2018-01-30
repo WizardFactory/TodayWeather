@@ -25,6 +25,12 @@ var events = require('events');
 var req = require('request');
 var xml2json  = require('xml2js').parseString;
 
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
+
 /*
 * constructor
 * - Parameter
@@ -34,6 +40,8 @@ var xml2json  = require('xml2js').parseString;
 */
 function CollectData(options, callback){
     var self = this;
+
+    var NEWSKY2_KMA_GO_DOMAIN = "newsky2.kma.go.kr";
 
     self.listPointNumber = Object.freeze(
         [
@@ -127,13 +135,13 @@ function CollectData(options, callback){
     });
 
     self.DATA_URL = Object.freeze({
-        TOWN_CURRENT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
-        TOWN_SHORTEST: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
-        TOWN_SHORT: 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
-        MID_FORECAST: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleForecast',
-        MID_LAND: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleLandWeather',
-        MID_TEMP: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleTemperature',
-        MID_SEA: 'http://newsky2.kma.go.kr/service/MiddleFrcstInfoService/getMiddleSeaWeather'
+        TOWN_CURRENT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastGrib',
+        TOWN_SHORTEST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastTimeData',
+        TOWN_SHORT: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData',
+        MID_FORECAST: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleForecast',
+        MID_LAND: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleLandWeather',
+        MID_TEMP: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleTemperature',
+        MID_SEA: 'http://'+NEWSKY2_KMA_GO_DOMAIN+'/service/MiddleFrcstInfoService/getMiddleSeaWeather'
     });
 
     events.EventEmitter.call(this);
@@ -206,6 +214,15 @@ function CollectData(options, callback){
 
     //log.info('The list was created for the weather data');
 
+    var domain = NEWSKY2_KMA_GO_DOMAIN;
+    dnscache.lookup(domain, function(err, result) {
+        if (err) {
+            console.error(err);
+        }
+        else {
+            console.info('collecttown cached domain:', domain, ', result:', result);
+        }
+    });
     return self;
 }
 
@@ -313,7 +330,12 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            log.warn(err);
+            if (err.code == "ETIMEDOUT") {
+                log.debug(err);
+            }
+            else {
+                log.warn(err);
+            }
             //log.error('#', meta);
 
             self.emit('recvFail', index);
@@ -353,8 +375,8 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
                 if(err || (result.response.header[0].resultCode[0] !== '0000') ||
                     (result.response.body[0].totalCount[0] === '0')) {
                     // there is error code or totalcount is zero as no valid data.
-                    log.error('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
-                    log.error(meta);
+                    log.warn('There are no data', result.response.header[0].resultCode[0], result.response.body[0].totalCount[0]);
+                    log.warn(meta);
                     self.emit('recvFail', index);
                 }
                 else{
@@ -503,6 +525,18 @@ CollectData.prototype.organizeShortData = function(index, listData){
             }
         }
 
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t3h === template.t3h) {
+            log.error('Fail get full short data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.vec === template.vec ||
+            data.wsd === template.wsd) {
+            log.warn('Fail get full short data -'+JSON.stringify(data));
+        }
+
         listResult.sort(self._sortByDateTime);
 
         //log.info('result count : ', listResult.length);
@@ -530,7 +564,13 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
         pty: -1, /* 강수 형태 : 1%, invalid : -1 */
         rn1: -1, /* 1시간 강수량 : ~1mm(1) 1~4(5) 5~9(10) 10~19(20) 20~39(40) 40~69(70) 70~(100), invalid : -1 */
         sky: -1, /* 하늘상태 : 맑음(1) 구름조금(2) 구름많음(3) 흐림(4) , invalid : -1*/
-        lgt: -1 /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+        lgt: -1, /* 낙뢰 : 확률없음(0) 낮음(1) 보통(2) 높음(3), invalid : -1 */
+        t1h: -50,
+        reh: -1,
+        uuu: -100,
+        vvv: -100,
+        vec: -1,
+        wsd: -1
     };
 
     //log.info('shortestData count : ' + listItem.length);
@@ -563,18 +603,36 @@ CollectData.prototype.organizeShortestData = function(index, listData) {
                 result.my = parseInt(item.ny[0]);
 
                 var val = parseFloat(item.fcstValue[0]);
-                if (val < 0) {
-                    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
-                }
+                //if (val < 0) {
+                //    log.error('organize Shortest Get invalid data '+ item.category[0]+ ' result'+ JSON.stringify(result));
+                //}
 
                 if(item.category[0] === 'PTY') {result.pty = val;}
                 else if(item.category[0] === 'RN1') {result.rn1 = val;}
                 else if(item.category[0] === 'SKY') {result.sky = val;}
                 else if(item.category[0] === 'LGT') {result.lgt = val;}
+                else if(item.category[0] === 'T1H') {result.t1h = val;}
+                else if(item.category[0] === 'REH') {result.reh = val;}
+                else if(item.category[0] === 'UUU') {result.uuu = val;}
+                else if(item.category[0] === 'VVV') {result.vvv = val;}
+                else if(item.category[0] === 'VEC') {result.vec = val;}
+                else if(item.category[0] === 'WSD') {result.wsd = val;}
                 else{
                     log.error(new Error('Known property '+item.category[0]));
                 }
             }
+        }
+
+        var data = listResult[0];
+        if (data.sky === template.sky || data.reh === template.reh || data.pty === template.pty ||
+            data.t1h === template.t1h) {
+            log.error('Fail get full shortest data -'+JSON.stringify(data));
+            self.emit('recvFail', index);
+            return;
+        }
+        if (data.uuu === template.uuu || data.vvv === template.vvv || data.lgt === template.lgt ||
+            data.vec === template.vec || data.wsd === template.wsd) {
+            log.warn('Fail get full shortest data -'+JSON.stringify(data));
         }
 
         listResult.sort(self._sortByDateTime);
@@ -662,7 +720,7 @@ CollectData.prototype.organizeCurrentData = function(index, listData) {
         //check data complete
         result = listResult[0];
         if (result.rn1 === template.rn1 || result.sky === template.sky || result.reh === template.reh ||
-            result.pty === template.pty) {
+            result.pty === template.pty || result.t1h === template.t1h) {
             log.error('Fail get full current data -'+JSON.stringify(result));
             self.emit('recvFail', index);
             return;
@@ -815,28 +873,35 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
     try{
         var result = {};
+        var itemNameList = ['taMin3', 'taMax3', 'taMin4', 'taMax4','taMin5', 'taMax5', 'taMin6', 'taMax6','taMin7', 'taMax7',
+           'taMin8', 'taMax8', 'taMin9', 'taMax9','taMin10', 'taMax10'];
+
         var template = {
             pubDate: options.date + options.time,
             date: options.date,
             time: options.time,
-            regId: 0, /* 예보 구역 코드 */
-            taMin3: -100, /* 3일 후 예상 최저 기온 */
-            taMax3: -100, /* 3일 후 예상 최고 기온 */
-            taMin4: -100, /* 4일 후 예상 최저 기온 */
-            taMax4: -100, /* 4일 후 예상 최고 기온 */
-            taMin5: -100, /* 5일 후 예상 최저 기온 */
-            taMax5: -100, /* 5일 후 예상 최고 기온 */
-            taMin6: -100, /* 6일 후 예상 최저 기온 */
-            taMax6: -100, /* 6일 후 예상 최고 기온 */
-            taMin7: -100, /* 7일 후 예상 최저 기온 */
-            taMax7: -100, /* 7일 후 예상 최고 기온 */
-            taMin8: -100, /* 8일 후 예상 최저 기온 */
-            taMax8: -100, /* 8일 후 예상 최고 기온 */
-            taMin9: -100, /* 9일 후 예상 최저 기온 */
-            taMax9: -100, /* 9일 후 예상 최고 기온 */
-            taMin10: -100, /* 10일 후 예상 최저 기온 */
-            taMax10: -100 /* 10일 후 예상 최고 기온 */
+            regId: 0 /* 예보 구역 코드 */
+            //taMin3: -100, /* 3일 후 예상 최저 기온 */
+            //taMax3: -100, /* 3일 후 예상 최고 기온 */
+            //taMin4: -100, /* 4일 후 예상 최저 기온 */
+            //taMax4: -100, /* 4일 후 예상 최고 기온 */
+            //taMin5: -100, /* 5일 후 예상 최저 기온 */
+            //taMax5: -100, /* 5일 후 예상 최고 기온 */
+            //taMin6: -100, /* 6일 후 예상 최저 기온 */
+            //taMax6: -100, /* 6일 후 예상 최고 기온 */
+            //taMin7: -100, /* 7일 후 예상 최저 기온 */
+            //taMax7: -100, /* 7일 후 예상 최고 기온 */
+            //taMin8: -100, /* 8일 후 예상 최저 기온 */
+            //taMax8: -100, /* 8일 후 예상 최고 기온 */
+            //taMin9: -100, /* 9일 후 예상 최저 기온 */
+            //taMax9: -100, /* 9일 후 예상 최고 기온 */
+            //taMin10: -100, /* 10일 후 예상 최저 기온 */
+            //taMax10: -100 /* 10일 후 예상 최고 기온 */
         };
+
+        itemNameList.forEach(function (name) {
+            template[name] = -100;
+        });
 
         listItem.forEach(function(item){
             if(item.regId === undefined){
@@ -846,22 +911,12 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
 
             result = template;
             result.regId = item.regId[0];
-            result.taMin3 = parseFloat(item.taMin3[0]);
-            result.taMax3 = parseFloat(item.taMax3[0]);
-            result.taMin4 = parseFloat(item.taMin4[0]);
-            result.taMax4 = parseFloat(item.taMax4[0]);
-            result.taMin5 = parseFloat(item.taMin5[0]);
-            result.taMax5 = parseFloat(item.taMax5[0]);
-            result.taMin6 = parseFloat(item.taMin6[0]);
-            result.taMax6 = parseFloat(item.taMax6[0]);
-            result.taMin7 = parseFloat(item.taMin7[0]);
-            result.taMax7 = parseFloat(item.taMax7[0]);
-            result.taMin8 = parseFloat(item.taMin8[0]);
-            result.taMax8 = parseFloat(item.taMax8[0]);
-            result.taMin9 = parseFloat(item.taMin9[0]);
-            result.taMax9 = parseFloat(item.taMax9[0]);
-            result.taMin10 = parseFloat(item.taMin10[0]);
-            result.taMax10 = parseFloat(item.taMax10[0]);
+
+            itemNameList.forEach(function (name) {
+                if(item[name] && item[name][0]) {
+                    result[name] = parseFloat(item[name][0]);
+                }
+            });
 
             var insertItem = JSON.parse(JSON.stringify(result));
             listResult.push(insertItem);
@@ -877,6 +932,7 @@ CollectData.prototype.organizeTempData = function(index, listData, options){
     }
     catch(e){
         log.error('Error!! organizeTempData : failed data organized');
+        log.error(e.toString());
         self.emit('recvFail', index);
     }
 };

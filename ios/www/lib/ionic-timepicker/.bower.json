@@ -26,12 +26,12 @@
   "dependencies": {
     "ionic": ">=0.9.27"
   },
-  "_release": "cb42d5a",
+  "_release": "e2d5cd3",
   "_resolution": {
     "type": "commit",
-    "commit": "cb42d5a"
+    "commit": "e2d5cd3"
   },
   "_source": "https://github.com/WizardFactory/ionic-timepicker.git",
-  "_target": "cb42d5a",
+  "_target": "e2d5cd3",
   "_originalSource": "https://github.com/WizardFactory/ionic-timepicker.git"
 }

@@ -1,5 +1,29 @@
 sudo: required
 language: node_js
 node_js:
-  - "0.10"
+  - "6.12"
 script: cd server && npm install && npm test
+
+services:
+  - docker
+
+before_deploy:
+  - pip install --user awscli
+  - aws s3 cp s3://tw-config/config.js ./config/config.js --region ap-northeast-2
+  - git add config/config.js
+  - git commit -m "update release-config.js"
+
+after_deploy:
+  - echo "done deploying"
+
+deploy:
+  - provider: elasticbeanstalk
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key:
+      secure: "$AWS_SECRET_ACCESS_KEY"
+    region: "us-east-1"
+    app: "tw-service"
+    env: "tw-test2"
+    bucket_name: "elasticbeanstalk-us-east-1-141248341265"
+    on:
+      branch: master

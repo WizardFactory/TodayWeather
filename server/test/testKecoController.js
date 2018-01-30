@@ -23,6 +23,10 @@ describe('unit test - keco controller', function() {
     //    console.error('MongoDB connection error: ' + err);
     //});
 
+    global.__ = function (val) {
+        return val;
+    };
+
     it('test _convertDustFrcstRegion', function () {
         var controllerManager = require('../controllers/controllerManager');
         global.manager = new controllerManager();
@@ -78,6 +82,41 @@ describe('unit test - keco controller', function() {
     //        done();
     //    });
     //});
+
+    it('test getting aqi grade', function(done){
+        var testData = {
+            pm10Value: 55,
+            pm25Value: 65,
+            o3Value: 0.02,
+            no2Value: 0.10,
+            coValue: 7,
+            so2Value: 0.08,
+            khaiValue: 100
+        };
+
+        kecoController.recalculateValue(testData, 'airkorea');
+        log.info('airkorea : ', testData);
+        kecoController.recalculateValue(testData, 'airkorea_who');
+        log.info('airkorea_who : ', testData);
+        kecoController.recalculateValue(testData, 'airnow');
+        log.info('airnow : ', testData);
+        kecoController.recalculateValue(testData, 'aqicn');
+        log.info('aqicn : ', testData);
+        done();
+    });
+
+    it('test getting aqi grade', function(){
+        var testData = { "stationName" : "상대원동", "pm25Grade" : -1, "pm10Grade" : 2,
+                        "no2Grade" : 3, "o3Grade" : 1, "coGrade" : 1, "so2Grade" : 1,
+                        "khaiGrade" : -1, "khaiValue" : -1, "pm25Value" : 80,
+                        "pm10Value" : 80, "no2Value" : 0.064, "o3Value" : 0.003,
+                        "coValue" : 0.9, "so2Value" : 0.005, "dataTime" : "2017-12-22 20:00" };
+
+        kecoController.recalculateValue(testData, 'airkorea');
+        log.info('airkorea : ', testData);
+        assert.equal(testData.pm25Grade, 3);
+        assert.equal(testData.aqiGrade, 3);
+    });
 });
 
 

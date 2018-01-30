@@ -2,11 +2,27 @@
  * Created by aleckim on 2016. 5. 2..
  */
 
+"use strict";
+
 var apn = require('apn');
 var gcm = require('node-gcm');
 var config = require('../config/config');
 var PushInfo = require('../models/modelPush');
 var async = require('async');
+var req = require('request');
+var ControllerTown24h = require('./controllerTown24h');
+var cTown = new ControllerTown24h();
+var UnitConverter = require('../lib/unitConverter');
+var unitConverter = new UnitConverter();
+
+var KecoController = require('../controllers/kecoController');
+var LifeIndexKmaController = require('./lifeIndexKmaController');
+
+var dnscache = require('dnscache')({
+    "enable" : true,
+    "ttl" : 300,
+    "cachesize" : 1000
+});
 
 var apnGateway;
 
@@ -33,11 +49,28 @@ var server_access_key = config.push.gcmAccessKey;
 var apnConnection = new apn.Connection(apnOptions);
 var sender = new gcm.Sender(server_access_key);
 
-function controllerPush() {
+var i18n = require('i18n');
+
+function ControllerPush() {
     this.timeInterval = 60*1000; //1min
+
+    this.domain = config.push.serviceServer.replace('http://', '').replace('https://', '');
+    this.url = config.push.serviceServer;
+
+    [apnGateway, this.domain].forEach(function (value) {
+        var domain = value;
+        dnscache.lookup(domain, function(err, result) {
+            if (err) {
+                console.error(err);
+            }
+            else {
+                console.info('pushctrl cached domain:', domain, ', result:', result);
+            }
+        });
+    });
 }
 
-controllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
+ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback) {
     PushInfo.find({registrationId: oldId}, function (err, pushList) {
         if (err) {
             return callback(err);
@@ -64,7 +97,7 @@ controllerPush.prototype.updateRegistrationId = function (newId, oldId, callback
 /**
  * save push info
  */
-controllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
+ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     PushInfo.update(
         {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
         pushInfo,
@@ -79,7 +112,7 @@ controllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     return this;
 };
 
-controllerPush.prototype.removePushInfo = function (pushInfo, callback) {
+ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
     PushInfo.remove({
             registrationId: pushInfo.registrationId,
             type:pushInfo.type,
@@ -98,7 +131,7 @@ controllerPush.prototype.removePushInfo = function (pushInfo, callback) {
     return this;
 };
 
-controllerPush.prototype.getPushByTime = function (time, callback) {
+ControllerPush.prototype.getPushByTime = function (time, callback) {
     PushInfo.find({pushTime: time}).lean().exec(function (err, pushList) {
         if (err) {
             return callback(err);
@@ -117,9 +150,9 @@ controllerPush.prototype.getPushByTime = function (time, callback) {
  * @param pushInfo
  * @param notification
  * @param callback
- * @returns {controllerPush}
+ * @returns {ControllerPush}
  */
-controllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
+ControllerPush.prototype.sendAndroidNotification = function (pushInfo, notification, callback) {
     log.info('send android notification pushInfo='+JSON.stringify(pushInfo)+
                 ' notification='+JSON.stringify(notification));
 
@@ -157,7 +190,7 @@ controllerPush.prototype.sendAndroidNotification = function (pushInfo, notificat
  * @param notification title, text
  * @param callback
  */
-controllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
+ControllerPush.prototype.sendIOSNotification = function (pushInfo, notification, callback) {
     log.info('send ios notification pushInfo='+JSON.stringify(pushInfo)+ ' notification='+JSON.stringify(notification));
     var myDevice = new apn.Device(pushInfo.registrationId);
 
@@ -173,54 +206,580 @@ controllerPush.prototype.sendIOSNotification = function (pushInfo, notification,
     return this;
 };
 
+ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
+    var str;
+    var priorityArray = ['pm25', 'pm10', 'o3', 'khai'].sort(function (a, b) {
+        if (!arpltn.hasOwnProperty(a+'Grade')) {
+            return 1;
+        }
+        if (!arpltn.hasOwnProperty(a+'Grade')) {
+            return -1;
+        }
+
+        if(arpltn[a+'Grade'] < arpltn[b+'Grade']) {
+            return 1;
+        }
+        else if(arpltn[a+'Grade'] > arpltn[b+'Grade']) {
+            return -1;
+        }
+        return 0;
+    });
+
+    if (priorityArray[0] === 'pm25') {
+        str = trans.__("LOC_PM25")+" "+ arpltn.pm25Str;
+    }
+    else if (priorityArray[0] === 'pm10') {
+        str = trans.__("LOC_PM10")+" "+ arpltn.pm10Str;
+    }
+    else if (priorityArray[0] === 'o3') {
+        str = trans.__("LOC_O3")+" "+ arpltn.o3Str;
+    }
+    else if (priorityArray[0] === 'khai') {
+        str = trans.__("LOC_AQI")+" "+ arpltn.khaiStr;
+    }
+
+    return str;
+};
+
 /**
- * convert rest api to function call
- * @param town
- * @param callback
+ *
+ * @param pushInfo
+ * @param weatherInfo
+ * @returns {string}
+ * @private
  */
-controllerPush.prototype.requestDailySummary = function (town, callback) {
-    var req = require('request');
-    var url = "http://"+config.ipAddress+":"+config.port+"/v000705/daily/town";
-    if (town.first) {
-        url += '/'+ encodeURIComponent(town.first);
+ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) {
+    var pushMsg;
+
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+
+    trans.setLocale(pushInfo.lang);
+
+    var location = "";
+    if (pushInfo.name) {
+        location = pushInfo.name + " ";
     }
-    if (town.second) {
-        url += '/' + encodeURIComponent(town.second);
+    else {
+        if (weatherInfo.townName) {
+            location = weatherInfo.townName + ' ';
+        }
+        else if (weatherInfo.cityName) {
+            location = weatherInfo.cityName + ' ';
+        }
+        else if (weatherInfo.regionName) {
+            location = weatherInfo.regionName + ' ';
+        }
     }
-    if (town.third) {
-        url += '/' + encodeURIComponent(town.third);
+
+    var dailyArray = [];
+    var dailySummary = "";
+    var current = weatherInfo.current;
+
+    var time = current.time;
+    var theDay;
+    var today;
+
+    today = weatherInfo.midData.dailyData.find(function (dayInfo) {
+        if (dayInfo.fromToday === 0) {
+            return dayInfo;
+        }
+    });
+
+    if (time < 18) {
+        theDay = today;
+        dailySummary += trans.__("LOC_TODAY")+": ";
+    }
+    else {
+        theDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
+            if (dayInfo.fromToday === 1) {
+                return dayInfo;
+            }
+        });
+        dailySummary += trans.__("LOC_TOMORROW")+": ";
+    }
+
+    if (theDay.skyAm && theDay.skyPm) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyPm));
+    }
+    else if (theDay.skyIcon) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
+    }
+
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
+        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
+    }
+    if (theDay.pty && theDay.pty > 0) {
+        if (theDay.pop && current.pty <= 0) {
+            if(theDay.date === today.date && current.pty <= 0) {
+               //It's raining or snowing so we didn't show pop
+            }
+            else {
+                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
+            }
+        }
+    }
+
+    if (theDay.dustForecast) {
+        var df = theDay.dustForecast;
+        if (df.pm25Grade > df.pm10Grade) {
+            dailyArray.push(trans.__("LOC_PM25") + " " + df.pm25Str);
+        }
+        else {
+            dailyArray.push(trans.__("LOC_PM10") + " " + df.pm10Str);
+        }
+
+        if (df.o3Str) {
+            dailyArray.push(trans.__("LOC_O3") + " "+ df.o3Str);
+        }
+    }
+
+    //불쾌지수
+
+    dailySummary += dailyArray.toString();
+
+    var hourlyArray = [];
+    var hourlySummary = "";
+
+    if (current.skyIcon) {
+        var weather = cTown._getWeatherEmoji(current.skyIcon);
+        hourlyArray.push(weather);
+    }
+    if (current.t1h) {
+        var str = current.t1h+"˚";
+        hourlyArray.push(str);
+    }
+
+    if (current.arpltn) {
+        var aqiStr = this._getAqiStr(current.arpltn, trans);
+        if (aqiStr) {
+            hourlyArray.push(aqiStr);
+        }
+    }
+
+    if (current.pty && current.pty > 0 && current.rn1 != undefined) {
+        current.ptyStr = cTown._convertKmaPtyToStr(current.pty, trans);
+        hourlyArray.push(current.ptyStr+" "+ current.rn1 + pushInfo.units.precipitationUnit);
+    }
+    hourlySummary += hourlyArray.toString();
+    //불쾌지수
+
+    pushMsg = {title: location+hourlySummary, text: dailySummary};
+    return pushMsg;
+};
+
+ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback) {
+    var self = this;
+    var apiVersion = "v000901";
+    var url;
+    var town = pushInfo.town;
+
+    if (pushInfo.geo) {
+        url = self.url+'/weather/coord';
+        url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
+    }
+    else if (pushInfo.town) {
+        url = self.url+"/"+apiVersion+"/kma/addr";
+        if (town.first) {
+            url += '/'+ encodeURIComponent(town.first);
+        }
+        if (town.second) {
+            url += '/' + encodeURIComponent(town.second);
+        }
+        if (town.third) {
+            url += '/' + encodeURIComponent(town.third);
+        }
+    }
+    else {
+        callback(new Error("Fail to find geo or town info"));
+        return this;
+    }
+
+    var count = 0;
+    var querys = pushInfo.units;
+    for (var key in querys) {
+        url += count === 0? '?':'&';
+        url += key+'='+querys[key];
+        count ++;
     }
 
     log.info('request url='+url);
-    req(url, {json:true}, function(err, response, body) {
+    var options = {
+        url : url,
+        headers: {
+            'Accept-Language': pushInfo.lang
+        },
+        json:true
+    };
+
+    req(options, function(err, response, body) {
         log.info('Finished '+ url +' '+new Date());
         if (err) {
             return callback(err);
         }
+
         if ( response.statusCode >= 400) {
             err = new Error("response.statusCode="+response.statusCode);
             return callback(err)
         }
-        callback(undefined, body.dailySummary);
+
+        if (body.units == undefined) {
+            var obj = {};
+            obj.temperatureUnit = "C";
+            obj.windSpeedUnit = "m/s";
+            obj.pressureUnit = "hPa";
+            obj.distanceUnit = "km";
+            obj.precipitationUnit = "mm";
+            obj.airUnit = "airkorea";
+            body.units = obj;
+        }
+
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeKmaPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
     });
 
     return this;
 };
 
-controllerPush.prototype.convertToNotification = function(dailySummary) {
+ControllerPush.prototype._pty2str = function (pty, translate) {
+    if (pty === 1) {
+        return translate.__("LOC_PRECIPITATION");
+    }
+    else if (pty === 2) {
+        return translate.__("LOC_SNOWFALL");
+    }
+    else if (pty === 3) {
+        //return "강수/적설량"
+        return translate.__("LOC_PRECIPITATION");
+    }
+    else if (pty === 4) {
+        return translate.__("LOC_HAIL");
+    }
+
+    return "";
+};
+
+ControllerPush.prototype._parseWorldSkyState = function(precType, cloud, isNight) {
+    var skyIconName = "";
+
+    if (isNight) {
+        skyIconName = "Moon";
+    }
+    else {
+        skyIconName = "Sun";
+    }
+
+    if (!(cloud == undefined)) {
+        if (cloud <= 20) {
+            skyIconName += "";
+        }
+        else if (cloud <= 50) {
+            skyIconName += "SmallCloud";
+        }
+        else if (cloud <= 80) {
+            skyIconName += "BigCloud";
+        }
+        else {
+            skyIconName = "Cloud";
+        }
+    }
+    else {
+        if (precType > 0)  {
+            skyIconName = "Cloud";
+        }
+    }
+
+    switch (precType) {
+        case 0:
+            skyIconName += "";
+            break;
+        case 1:
+            skyIconName += "Rain";
+            break;
+        case 2:
+            skyIconName += "Snow";
+            break;
+        case 3:
+            skyIconName += "RainSnow";
+            break;
+        case 4: //우박
+            skyIconName += "RainSnow";
+            break;
+        default:
+            console.log('Fail to parse precType='+precType);
+            break;
+    }
+
+    //if (lgt === 1) {
+    //    skyIconName += "Lightning";
+    //}
+
+    return skyIconName;
+};
+
+
+ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherData) {
+    var self = this;
+    var pushMsg;
+    var trans = {};
+    i18n.configure({
+        // setup some locales - other locales default to en silently
+        locales: ['en', 'ko', 'ja', 'zh-CN', 'de', 'zh-TW'],
+        // where to store json files - defaults to './locales'
+        directory: __dirname + '/../locales',
+        register: trans
+    });
+    trans.setLocale(pushInfo.lang);
+
+    var location = "";
+    if (pushInfo.name) {
+        location = pushInfo.name + " ";
+    }
+
+    var dailyArray = [];
+    var dailySummary = "";
+    var current = worldWeatherData.thisTime[1];
+
+    var currentDate = new Date(current.dateObj);
+    var time = currentDate.getHours();
+
+    var theDay;
+    var today;
+    var targetDate;
+
+    if (time < 18) {
+        targetDate = currentDate.getDate();
+        dailySummary += trans.__("LOC_TODAY")+": ";
+    }
+    else {
+        currentDate.setDate(currentDate.getDate()+1);
+        targetDate = currentDate.getDate();
+        dailySummary += trans.__("LOC_TOMORROW")+": ";
+    }
+
+    var dailyList = worldWeatherData.daily;
+    for (var i=0; i<dailyList.length-1; i++) {
+        var dailyDate = (new Date(dailyList[i].dateObj)).getDate();
+
+        if (dailyDate == currentDate.getDate()) {
+            today = dailyList[i];
+        }
+        if (dailyDate == targetDate) {
+            theDay = dailyList[i];
+            break;
+        }
+    }
+
+    if (theDay.skyAm && theDay.skyPm) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyPm));
+    }
+    else if (theDay.skyIcon) {
+        dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
+    }
+
+    if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
+        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
+    }
+
+    if (theDay.pty && theDay.pty > 0) {
+        if (theDay.pop) {
+            if (theDay.date === today.date && current.pty <= 0) {
+               //current is raining or snowing so we didn't pop
+            }
+            else {
+                dailyArray.push(trans.__("LOC_PROBABILITY_OF_PRECIPITATION")+" "+theDay.pop+"%");
+            }
+        }
+    }
+
+    dailySummary += dailyArray.toString();
+
+    var hourlyArray = [];
+    var hourlySummary = "";
+
+    if (current.skyIcon) {
+        var weather = cTown._getWeatherEmoji(current.skyIcon);
+        hourlyArray.push(weather);
+    }
+
+    var str;
+    if (current.hasOwnProperty('t1h')) {
+        str = current.t1h+"˚";
+        hourlyArray.push(str);
+    }
+
+    if (current.arpltn) {
+        var aqiStr = this._getAqiStr(current.arpltn, trans);
+        if (aqiStr) {
+            hourlyArray.push(aqiStr);
+        }
+    }
+
+    if (current.pty && current.pty > 0 && current.hasOwnProperty('rn1')) {
+        current.precStr = self._pty2str(current.pty, trans);
+        hourlyArray.push(current.precStr+" "+ current.rn1 + pushInfo.units.precipitationUnit);
+    }
+
+    hourlySummary += hourlyArray.toString();
+
+    pushMsg = {title: location+hourlySummary, text: dailySummary};
+
+    return pushMsg;
+};
+
+/**
+ * https://tw-wzdfac.rhcloud.com/ww/010000/current/2?gcode=35.69,139.69
+ * https://tw-wzdfac.rhcloud.com/v000901/dsf/coord/35.69,139.69
+ * @param geo
+ * @param callback
+ * @private
+ */
+ControllerPush.prototype._requestDsfDailySummary = function (pushInfo, callback) {
+    var self = this;
+    //v000902로 업데이트 하는 경우 _getWeatherEmoji 수정해야 함.
+    var url = self.url+"/v000901/dsf/coord/";
+    url += pushInfo.geo[1]+","+pushInfo.geo[0];
+
+    var count = 0;
+    var querys = pushInfo.units;
+    for (var key in querys) {
+        url += count === 0? '?':'&';
+        url += key+'='+querys[key];
+        count ++;
+    }
+
+    log.info('request url='+url);
+    var options = {
+        url : url,
+        headers: {
+            'Accept-Language': pushInfo.lang
+        },
+        json:true
+    };
+
+    req(options, function(err, response, body) {
+        log.info('Finished '+ url +' '+new Date());
+        if (err) {
+            return callback(err);
+        }
+
+        if ( response.statusCode >= 400) {
+            err = new Error("response.statusCode="+response.statusCode);
+            return callback(err)
+        }
+
+        if (body.units == undefined) {
+            var obj = {};
+            obj.temperatureUnit = "C";
+            obj.windSpeedUnit = "m/s";
+            obj.pressureUnit = "hPa";
+            obj.distanceUnit = "km";
+            obj.precipitationUnit = "mm";
+            obj.airUnit = "airkorea";
+            body.units = obj;
+        }
+
+        var pushMsg = "";
+        try {
+           pushMsg =  self._makeDsfPushMessage(pushInfo, body);
+        }
+        catch(e) {
+           return callback(e);
+        }
+        callback(undefined, pushMsg);
+    });
+};
+
+/**
+ * convert rest api to function call
+ * use default for old push db
+ * @param town
+ * @param callback
+ */
+ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
+    var self = this;
+
+    if (pushInfo.lang == undefined) {
+        pushInfo.lang = 'ko';
+    }
+
+    if (pushInfo.units == undefined) {
+        var obj = {};
+        obj.temperatureUnit = "C";
+        obj.windSpeedUnit = "m/s";
+        obj.pressureUnit = "hPa";
+        obj.distanceUnit = "km";
+        obj.precipitationUnit = "mm";
+        obj.airUnit = "airkorea";
+        pushInfo.units = obj;
+    }
+
+    //check source
+    if (pushInfo.source == undefined || pushInfo.source === 'KMA') {
+        self._requestKmaDailySummary(pushInfo, function (err, results) {
+            if (err) {
+                return callback(err);
+            }
+            return callback(undefined, results);
+        });
+    }
+    else if (pushInfo.source == 'DSF') {
+       self._requestDsfDailySummary(pushInfo, function (err, results) {
+           if (err)  {
+               return callback(err);
+           }
+           return callback(undefined, results);
+       });
+    }
+
+    return this;
+};
+
+/**
+ * push가 오랫동안 없을때, server가 내려가는 것을 방지하기 위한 것임.
+ */
+ControllerPush.prototype.requestKeepMessage = function () {
+
+    var url = "http://"+config.ipAddress+":"+config.port+"/v000705/town";
+    log.info('request url='+url);
+    req(url, {json:true}, function(err) {
+        if (err) {
+            log.info(err);
+        }
+        else {
+            log.info('Finished '+ url +' '+new Date());
+        }
+    });
+};
+
+ControllerPush.prototype.convertToNotification = function(dailySummary) {
     return {title: dailySummary.title, text: dailySummary.text, icon: dailySummary.icon}
 };
 
-controllerPush.prototype.sendNotification = function (pushInfo, callback) {
+ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
     var self = this;
 
     //make title, message
     log.info('send notification push info='+JSON.stringify(pushInfo));
 
-    self.requestDailySummary(pushInfo.town, function (err, dailySummary) {
+    self.requestDailySummary(pushInfo, function (err, dailySummary) {
         if (err) {
             return callback(err);
         }
+
+        //convert lang and units
         //convert daily summary to notification
         log.info('get daily summary ='+JSON.stringify(dailySummary));
 
@@ -249,7 +808,7 @@ controllerPush.prototype.sendNotification = function (pushInfo, callback) {
     });
 };
 
-controllerPush.prototype.sendPush = function (time) {
+ControllerPush.prototype.sendPush = function (time) {
     var self = this;
 
     log.info('send push tim='+time);
@@ -257,13 +816,14 @@ controllerPush.prototype.sendPush = function (time) {
         function (callback) {
             self.getPushByTime(time, function (err, pushList) {
                 if (err) {
+                    //self.requestKeepMessage();
                     return callback(err);
                 }
                 log.info('get push by time : push list='+JSON.stringify(pushList));
                 callback(undefined, pushList);
             });
         }, function(pushList, callback) {
-            async.map(pushList, function (pushInfo, mCallback) {
+            async.mapSeries(pushList, function (pushInfo, mCallback) {
                 self.sendNotification(pushInfo, function (err, result) {
                     if (err) {
                         return mCallback(err);
@@ -276,7 +836,7 @@ controllerPush.prototype.sendPush = function (time) {
                 }
                 if (pushList.length != results.length) {
                     //some push are failed
-                    return callback(new Error('Fail push='+pushList.length+' sccuess='+results.length));
+                    return callback(new Error('Fail push='+pushList.length+' success='+results.length));
                 }
                 callback(undefined, 'success push count='+pushList.length);
             });
@@ -289,7 +849,7 @@ controllerPush.prototype.sendPush = function (time) {
     });
 };
 
-controllerPush.prototype.start = function () {
+ControllerPush.prototype.start = function () {
     var self = this;
 
     setInterval(function () {
@@ -299,7 +859,7 @@ controllerPush.prototype.start = function () {
     }, self.timeInterval);
 };
 
-controllerPush.prototype.apnFeedback = function () {
+ControllerPush.prototype.apnFeedback = function () {
     //var options = {
     //    "batchFeedback": true,
     //    "interval": 300 //seconds
@@ -314,4 +874,4 @@ controllerPush.prototype.apnFeedback = function () {
     });
 };
 
-module.exports = controllerPush;
+module.exports = ControllerPush;

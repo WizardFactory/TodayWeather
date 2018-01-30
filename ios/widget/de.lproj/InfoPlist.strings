@@ -1,0 +1,8 @@
+/* 
+  InfoPlist.strings
+  TodayWeather
+
+  Created by KwangHo Kim on 2017. 8. 14..
+
+*/
+CFBundleDisplayName = "HeuteWetter";

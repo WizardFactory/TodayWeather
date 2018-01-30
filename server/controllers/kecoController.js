@@ -6,7 +6,9 @@
 
 var async = require('async');
 
-var Town = require('../models/town');
+var SidoArpltn = require('../models/sido.arpltn.keco.model');
+
+//var Town = require('../models/town');
 var arpltnTown = require('../models/arpltnTownKeco');
 var Arpltn = require('../models/arpltnKeco.js');
 var MsrStn = require('../models/modelMsrStnInfo.js');
@@ -14,275 +16,74 @@ var Frcst = require('../models/modelMinuDustFrcst');
 var keco = new (require('../lib/kecoRequester.js'))();
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
+var AqiConverter = require('../lib/aqi.converter');
 var convertGeocode = require('../utils/convertGeocode');
 
 function arpltnController() {
 
 }
 
-arpltnController.parseSo2Info = function (so2Grade) {
-    switch (so2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown so2Grade="+so2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseCoInfo = function (coGrade) {
-    switch (coGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown coGrade="+coGrade);
-    }
-    return "";
-};
-
-arpltnController.parseNo2Info = function (no2Grade) {
-    switch (no2Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown no2Grade="+no2Grade);
-    }
-    return "";
-};
-
-arpltnController.parseO3Info = function (o3Grade) {
-    switch (o3Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown o3Grade="+o3Grade);
-    }
-    return "";
-};
-
-arpltnController.parseKhaiInfo = function (khaiGrade) {
-    switch (khaiGrade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown khaiGrade="+khaiGrade);
-    }
-    return "";
-};
-
-/**
- *
- * @param pm10Grade
- * @returns {*}
- */
-arpltnController.parsePm10Info = function(pm10Grade) {
-    switch (pm10Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown pm10Grade="+pm10Grade);
-    }
-    return "";
-};
-
-arpltnController.parsePm25Info = function (pm25Grade) {
-    switch (pm25Grade) {
-        case 1:
-            return "좋음";
-        case 2:
-            return "보통";
-        case 3:
-            return "나쁨";
-        case 4:
-            return "매우나쁨";
-        default :
-            log.error("Unknown pm25Grade="+pm25Grade);
-    }
-    return "";
-};
 
 /**
  * pm10, pm25는 넘어오는 grade값은 24h기준으로 오기 때문에, 1h로 변경함.
  * @param arpltn
  * @private
  */
-arpltnController._recalculateValue = function (arpltn) {
+arpltnController.recalculateValue = function (arpltn, airUnit) {
 
-    if (arpltn.hasOwnProperty("pm10Value")) {
-        arpltn.pm10Grade = (function (v) {
-            if (v < 0) {
-                return -1;
-            }
-            else if (v <= 30) {
-                return 1;
-            }
-            else if (v <= 80) {
-                return 2;
-            }
-            else if (v <= 150) {
-                return 3;
-            }
-            else if (v > 150) {
-                return 4;
-            }
-        })(arpltn.pm10Value);
+    if (arpltn == undefined) {
+        return arpltn;
     }
 
-    if (arpltn.hasOwnProperty("pm25Value")) {
-        arpltn.pm25Grade = (function (v) {
-            if (v < 0) {
-                return -1;
+    log.debug('airUnit : ', airUnit);
+
+    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+        if (arpltn.hasOwnProperty(name+'Value')) {
+            if (airUnit === 'airkorea' && arpltn.hasOwnProperty(name+'Grade') && arpltn[name+'Grade'] !== -1) {
+                //skip for using data from airkorea server
+                log.debug('skip name:'+name);
             }
-            else if (v <=15) {
-                return 1;
+            else {
+                arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
+                arpltn[name+'Grade'] = AqiConverter.value2grade(airUnit, name, arpltn[name+'Value']);
+                if (arpltn[name+'Grade'] === -1) {
+                    delete  arpltn[name+'Grade'];
+                    delete  arpltn[name+'Value'];
+                    delete  arpltn[name+'Str'];
+                }
             }
-            else if(v<=50) {
-                return 2;
+        }
+    });
+
+    if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
+        arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
+        arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
+    }
+    else {
+        //aqicn은 가산점 줘야 하는지 확인 필요.
+        var aqiValue = -1;
+        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+            if (arpltn.hasOwnProperty(name+'Index')) {
+                if (arpltn[name+'Index'] > aqiValue) {
+                    aqiValue = arpltn[name+'Index'];
+                }
             }
-            else if(v<=100) {
-                return 3;
-            }
-            else if(v > 100) {
-                return 4;
-            }
-        })(arpltn.pm25Value);
+        });
+        arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
+        arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
     }
 
-    if (arpltn.hasOwnProperty("o3Value")) {
-        arpltn.o3Grade = (function (v) {
-            if (v < 0) {
-                return -1;
-            }
-            else if (v <= 0.03) {
-                return 1;
-            }
-            else if(v <= 0.09) {
-                return 2;
-            }
-            else if(v <= 0.15) {
-                return 3;
-            }
-            else if(v > 0.15) {
-                return 4;
-            }
-        })(arpltn.o3Value);
+    if (arpltn.aqiGrade === -1) {
+        delete  arpltn.aqiGrade;
+        delete  arpltn.aqiValue;
+        delete  arpltn.aqiStr;
     }
-
-    if (arpltn.hasOwnProperty("no2Value")) {
-        arpltn.no2Grade = (function (v) {
-            if (v < 0) {
-                return -1;
-            }
-            else if (v <= 0.03) {
-                return 1;
-            }
-            else if(v <= 0.06) {
-                return 2;
-            }
-            else if(v <= 0.2) {
-                return 3;
-            }
-            else if(v > 0.2) {
-                return 4;
-            }
-        })(arpltn.no2Value);
+    if (arpltn.khaiGrade === -1) {
+        delete  arpltn.khaiGrade;
+        delete  arpltn.khaiValue;
+        delete  arpltn.khaiStr;
     }
-
-    if (arpltn.hasOwnProperty("coValue")) {
-        arpltn.coGrade = (function (v) {
-            if (v < 0) {
-                return -1;
-            }
-            else if (v <= 2) {
-                return 1;
-            }
-            else if(v <= 9) {
-                return 2;
-            }
-            else if(v <= 15) {
-                return 3;
-            }
-            else if(v > 15) {
-                return 4;
-            }
-        })(arpltn.coValue);
-    }
-
-    if (arpltn.hasOwnProperty("so2Value")) {
-        arpltn.so2Grade = (function (v) {
-            if (v < 0) {
-                return -1;
-            }
-            else if (v <= 0.02) {
-                return 1;
-            }
-            else if(v <= 0.05) {
-                return 2;
-            }
-            else if(v <= 0.15) {
-                return 3;
-            }
-            else if(v > 0.15) {
-                return 4;
-            }
-        })(arpltn.so2Value);
-    }
-
-    if (arpltn.hasOwnProperty("khaiValue")) {
-        arpltn.khaiGrade = (function (value) {
-            if (value < 0) {
-                return -1;
-            }
-            else if (value <= 50) {
-                return 1;
-            }
-            else if(value <= 100) {
-                return 2;
-            }
-            else if(value <= 250) {
-                return 3;
-            }
-            else if(value > 250) {
-                return 4;
-            }
-        })(arpltn.khaiValue);
-    }
+    //xxxStr은 insertStrForData에서 진행
 
     return arpltn;
 };
@@ -319,25 +120,31 @@ arpltnController._mregeData = function(town, current, arpltnDataList, callback){
  * @returns {arpltnController}
  * @private
  */
-arpltnController._getArpLtnList = function (msrStnList, callback) {
+arpltnController._getArpLtnList = function (msrStnList, dateTime, callback) {
     if (!Array.isArray(msrStnList)) {
         callback(new Error("mstStnList is not array"));
         return this;
     }
 
+    var limitTime = new Date(dateTime);
+    limitTime.setHours(limitTime.getHours()-24);
+
     //순서를 위해서 mapSeries를 사용
     async.mapSeries(msrStnList,
         function(msrStn, cb) {
-            Arpltn.find({stationName: msrStn.stationName}, {_id: 0}).limit(1).lean().exec(function (err, arpltnList) {
-                if (err) {
-                    log.error(err);
-                }
-                if (arpltnList.length === 0) {
-                    log.warn("Fail to find arpltn stationName="+msrStn.stationName);
-                    return cb();
-                }
-                cb(err, arpltnList[0]);
-            });
+            Arpltn.find({stationName: msrStn.stationName, date: {$gt:limitTime}}, {_id: 0})
+                .sort({date:-1})
+                .lean()
+                .exec(function (err, arpltnList) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    if (arpltnList.length === 0) {
+                        log.warn("Fail to find arpltn stationName="+msrStn.stationName);
+                        return cb();
+                    }
+                    cb(err, arpltnList);
+                });
         },
         function(err, results) {
             if (err) {
@@ -391,15 +198,14 @@ arpltnController._checkDateTime = function(arpltn, dateTime) {
     }
 
     dateTime.setHours(dateTime.getHours()-8);
-    if (dateTime.getTime() < arpltnTime.getTime()) {
-        return true;
-    }
-    return false;
+
+    return dateTime.getTime() < arpltnTime.getTime();
 };
 
 /**
- *
- * @param arpltnList
+ * 가장 가까운 10개중에 가장 최근 것을 합침
+ * @param arpltnList [가장 가까운 10개][최근 24시간]
+ * @param currentTime
  * @returns {*}
  * @private
  */
@@ -410,11 +216,11 @@ arpltnController._mergeArpltnList = function (arpltnList, currentTime) {
 
     if (!Array.isArray(arpltnList)) {
         log.error(new Error("arpltn is not array"));
-        return arpltn;
+        return;
     }
 
     for (var i=0; i<arpltnList.length; i++) {
-        var src = arpltnList[i];
+        var src = arpltnList[i][0];
 
         if(self._checkDateTime(src, currentTime)) {
             if (arpltn === undefined) {
@@ -481,6 +287,12 @@ arpltnController._convertDustFrcstRegion = function (region, city) {
     return sido;
 };
 
+/**
+ * convertUnits에서 grade값을 1증가시켜 실황 grade와 맞추고 있음
+ * @param str
+ * @returns {*}
+ * @private
+ */
 arpltnController._convertDustForecastStrToGrade = function (str) {
     switch (str) {
         case "좋음":
@@ -504,57 +316,62 @@ arpltnController._convertDustForecastStrToGrade = function (str) {
 
 arpltnController.getDustFrcst = function (town, dateList, callback) {
     var region = this._convertDustFrcstRegion(town.region, town.city);
-    var informDataList = [];
     var self = this;
 
+    var query;
+    var array = [];
     dateList.forEach(function (date) {
-        informDataList.push(kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date));
+        var q = {informData: kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date)};
+        array.push(q);
     });
-
-    async.map(informDataList, function (informData, cb) {
-        Frcst.find({informData: informData}, {_id:0}).lean().exec(function (err, dustFrcstList) {
-            if (err) {
-                return cb(err)
-            }
-
-            if (dustFrcstList.length === 0) {
-                return cb(err);
-            }
-
-            var result = {};
-            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(informData);
-
-            dustFrcstList.forEach(function (dustFrcst) {
-                for (var i=0; i<dustFrcst.informGrade.length;i++) {
-                    if (dustFrcst.informGrade[i].region === region)  {
-                        if (dustFrcst.informGrade[i].grade != '예보없음') {
-                            if (result.dustForecast === undefined) {
-                                result.dustForecast = {};
-                            }
-                            var keyGradeStr = dustFrcst.informCode+"Grade";
-                            var keyStrStr = dustFrcst.informCode+"Str";
-                            result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
-                            result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
-                        }
-                        return;
-                    }
-                }
-            });
-
-            if (result.dustForecast == undefined) {
-                return cb(err);
-            }
-            result.dustForecast.sido = region;
-            cb(err, result);
-        });
-    }, function (err, results) {
+    query = {$or: array};
+    Frcst.find(query, {_id:0}).lean().exec(function (err, dustFrcstList) {
         if (err) {
             return callback(err);
         }
-        results = results.filter(function (result) {
-            return !!result;
+        if (dustFrcstList.length == 0) {
+            err = new Error("Fail to find dust forecast query="+JSON.stringify(query));
+            return callback(err);
+        }
+
+        var resultList = [];
+
+        dustFrcstList.forEach(function (dustFrcst) {
+            for (var i=0; i<dustFrcst.informGrade.length;i++) {
+                if (dustFrcst.informGrade[i].region === region)  {
+                    if (dustFrcst.informGrade[i].grade != '예보없음') {
+
+                        var result = resultList.filter(function (r) {
+                            if (r.date == kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData)) {
+                                return true;
+                            }
+                            return false;
+                        })[0];
+
+                        if (result == null) {
+                            result = {};
+                            result.date = kmaTimeLib.convertYYYY_MM_DDtoYYYYMMDD(dustFrcst.informData);
+                            result.dustForecast = {};
+                            result.dustForecast.sido = region;
+                            resultList.push(result);
+                        }
+
+                        var keyGradeStr = dustFrcst.informCode+"Grade";
+                        var keyStrStr = dustFrcst.informCode+"Str";
+                        result.dustForecast[keyGradeStr] = self._convertDustForecastStrToGrade(dustFrcst.informGrade[i].grade);
+                        result.dustForecast[keyStrStr] = dustFrcst.informGrade[i].grade;
+                    }
+                    return;
+                }
+            }
         });
-        return callback(err, results);
+
+        if (resultList.length == 0) {
+            err = new Error("dust forecast length is zero query="+JSON.stringify(query));
+            return callback(err);
+        }
+
+        callback(err, resultList);
     });
 
     return this;
@@ -581,7 +398,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 });
             },
             function (msrStnList, cb) {
-                self._getArpLtnList(msrStnList, function (err, arpltnList) {
+                self._getArpLtnList(msrStnList, dateTime, function (err, arpltnList) {
                     if (err) {
                         return cb(err);
                     }
@@ -589,17 +406,15 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                 });
             },
             function (arpltnList, cb) {
+                //arpltn = [가장 가까운 10개][최근 24시간]
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
-                return cb(undefined, arpltn);
-            },
-            function (arpltn, cb) {
-                return cb(undefined, self._recalculateValue(arpltn));
+                return cb(undefined, {arpltn:arpltn, list: arpltnList[0]});
             }],
-        function(err, arpltn) {
+        function(err, arpltnObj) {
             if (err)  {
                 return callback(err);
             }
-            callback(err, arpltn);
+            callback(err, arpltnObj);
         });
 
     return this;
@@ -651,8 +466,8 @@ arpltnController._appendFromDb = function(town, current, callback) {
 arpltnController._appendFromKeco = function(town, current, callback) {
 
     var keyBox = require('../config/config').keyString;
-    keco.setServiceKey(keyBox.normal);
-    keco.setDaumApiKey(keyBox.daum_key);
+    keco.setServiceKeys(JSON.parse(keyBox.airkorea_keys));
+    keco.setDaumApiKeys(JSON.parse(keyBox.daum_keys));
 
     async.waterfall([
         function(cb) {
@@ -676,7 +491,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
                 });
         },
         function(tmCoord, cb) {
-            keco.getNearbyMsrstn(keco.getServiceKey(), tmCoord.y, tmCoord.x, function(err, result) {
+            keco.getNearbyMsrstn(tmCoord.y, tmCoord.x, function(err, result) {
                 if (err) {
                     return cb(err);}
                 log.debug(result);
@@ -694,7 +509,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
         },
         function(stationName, cb) {
             var sido = keco.convertRegionToSido(town.first);
-            keco.getCtprvn(keco.getServiceKey(), sido, function (err, body) {
+            keco.getRLTMCtprvn(sido, function (err, body) {
                 if (err) {
                     return cb(err);
                 }
@@ -702,7 +517,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(xmlCtprvn, cb) {
-            keco.parseCtprvn(xmlCtprvn, function (err, parsedDataList) {
+            keco.parseRLTMCtprvn(xmlCtprvn, function (err, parsedDataList) {
                 if (err) {
                     return cb(err);
                 }
@@ -710,7 +525,7 @@ arpltnController._appendFromKeco = function(town, current, callback) {
             });
         },
         function(parsedDataList, cb) {
-            keco.saveCtprvn(parsedDataList, function(err){
+            keco.saveRLTMCtprvn(parsedDataList, function(err){
                 if (err) {
                     log.warn(err);
                 }
@@ -753,6 +568,25 @@ arpltnController.appendData = function(town, current, callback) {
             return self._appendFromKeco(town, current, callback);
         }
         return callback(err, arpltn);
+    });
+};
+
+arpltnController.getSidoArpltn = function (callback) {
+    SidoArpltn.find({"cityName" : ""}).sort({date:-1}).limit(20).lean().exec(function (err, list) {
+        if (err) {
+            return callback(err);
+        }
+        if (list.length === 0) {
+            return callback(new Error("Fail to find sido arpltn"));
+        }
+        var last = list[0].date;
+        list = list.filter(function (obj) {
+            return obj.date.getTime() === last.getTime();
+        });
+        if (list.length < 17) {
+            log.error("Fail to get full sido arpltn");
+        }
+        callback(null, list);
     });
 };
 

@@ -3,100 +3,404 @@
 // angular.module is a global place for creating, registering and retrieving Angular modules
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
-// 'starter.services' is found in services.js
-// 'starter.controllers' is found in controllers.js
+// 'starter.services' is found in service.run.js
+// 'starter.controllers' is found in controller.forecastctrl.js
 angular.module('starter', [
     'ionic',
-    'ionic.service.core',
-    'ionic.service.analytics',
-    'starter.controllers',
-    'starter.services',
-    'controller.purchase',
+    'pascalprecht.translate',
+    'oc.lazyLoad',
+    'ionic-timepicker',
+    'service.weatherinfo',
+    'service.weatherutil',
+    'service.util',
     'service.twads',
     'service.push',
-    'ionic-timepicker',
-    'ngCordova'
+    'service.storage',
+    'controller.tabctrl',
+    'controller.forecastctrl',
+    'controller.searchctrl',
+    'controller.settingctrl',
+    'controller.guidectrl',
+    'controller.air',
+    'controller.purchase',
+    'controller.units',
+    'controller.start',
+    'controller.nation',
+    'controller.setting.radio'
 ])
-    .run(function($ionicPlatform, Util, $rootScope, $location, WeatherInfo) {
-        $ionicPlatform.ready(function() {
-
-            if (navigator.splashscreen) {
-                navigator.splashscreen.hide();
-            }
-
-            if (Util.isDebug()) {
-                Util.ga.debugMode();
-            }
-
-            if (ionic.Platform.isIOS()) {
-                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_IOS_KEY]');
-                if (window.applewatch) {
-                    applewatch.init(function () {
-                        console.log('Succeeded to initialize for apple-watch');
-                    }, function (err) {
-                        console.log('Failed to initialize apple-watch', err);
-                    }, 'group.net.wizardfactory.todayweather');
+    .factory('$exceptionHandler', function (Util) {
+        return function (exception, cause) {
+            console.log(exception, cause);
+            if (Util && Util.ga) {
+                if (exception) {
+                    Util.ga.trackEvent('angular', 'error', exception.message);
+                    Util.ga.trackException(exception.stack, true);
                 }
-            } else if (ionic.Platform.isAndroid()) {
-                Util.ga.startTrackerWithId('[GOOGLE_ANALYTICS_ANDROID_KEY]');
+                else {
+                    Util.ga.trackEvent('angular', 'error', 'execption is null');
+                }
             }
+            else {
+                console.log('util or util.ga is undefined');
+            }
+            if (twClientConfig && twClientConfig.debug) {
+                alert("ERROR in " + exception);
+            }
+        }
+    })
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase) {
+        if (twClientConfig.debug) {
+            Util.ga.debugMode();
+        }
 
-            // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
-            // for form inputs)
-            if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
-                cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
-                cordova.plugins.Keyboard.disableScroll(true);
+        if (ionic.Platform.isIOS()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+
+            // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.isLocationEnabled(function (enabled) {
+                    console.log("Location setting is " + (enabled ? "enabled" : "disabled"));
+                }, function (error) {
+                    console.error("Error getting for location enabled status: " + error);
+                });
             }
+        } else if (ionic.Platform.isAndroid()) {
+            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
+
+            // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
+            if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                cordova.plugins.diagnostic.getLocationMode(function(locationMode) {
+                    Util.locationStatus = locationMode;
+                }, function(error) {
+                    console.error("Error getting for location mode: " + error);
+                });
+            }
+        }
+        else {
+            console.log("Error : Unknown platform");
+        }
+        Util.ga.platformReady();
+
+        Util.ga.enableUncaughtExceptionReporting(true);
+        Util.ga.setAllowIDFACollection(true);
+
+        Util.language = navigator.userLanguage || navigator.language;
+        if (navigator.globalization) {
+            navigator.globalization.getLocaleName(
+                function (locale) {
+                    console.log(locale);
+                    //"ko-Kore-KR"
+                    var valueArray = locale.value.split('-');
+                    Util.region = valueArray[valueArray.length-1];
+                    console.log('region: ' + Util.region + '\n');
+                },
+                function () {
+                    console.log('Error getting locale\n');
+                }
+            );
+        }
+        else {
+            if (navigator.languages) {
+               for (var i=0; i<navigator.languages.length; i++)  {
+                   var langArray = navigator.languages[i].split('-');
+                   if (langArray.length > 1) {
+                       Util.region = langArray[langArray.length-1];
+                       break;
+                   }
+               }
+            }
+            Util.region = Util.region || 'KR';
+            console.log('region: ' + Util.region + '\n');
+        }
+
+        if (window.cordova && cordova.getAppVersion) {
+            //정보 가지고 오는 속도가 느림.
+            cordova.getAppVersion.getVersionNumber().then(function (version) {
+                $rootScope.version = version;
+                Util.version = version;
+                Util.ga.trackEvent('app', 'version', Util.version);
+            });
+        }
+        else {
+            //getAppVersion plugin이 없으면 update.info.js 사용함.
+            $rootScope.version = window.appVersion;
+            Util.version = window.appVersion;
+        }
+
+        Util.ga.trackEvent('app', 'language', Util.language);
+
+        if (window.hasOwnProperty("device")) {
+            Util.uuid = window.device.uuid;
+            Util.ga.trackEvent('app', 'uuid', window.device.uuid);
+        }
+
+        if (window.screen) {
+            Util.ga.trackEvent('app', 'screen width', window.screen.width);
+            Util.ga.trackEvent('app', 'screen height', window.screen.height);
+        }
+        else if (window.outerHeight) {
+            Util.ga.trackEvent('app', 'outer width', window.outerWidth);
+            Util.ga.trackEvent('app', 'outer height', window.outerHeight);
+        }
+        else {
+            console.log("Height:" + window.innerHeight + ", Width:" + window.innerWidth + ", PixelRatio:" + window.devicePixelRatio);
+        }
+
+        Util.ga.trackEvent('app', 'ua', ionic.Platform.ua);
+
+        /**
+         * #2053 url이 undefined일 수 있음.
+         * @param msg
+         * @param url
+         * @param line
+         * @returns {boolean}
+         */
+        window.onerror = function(msg, url, line) {
+            if (typeof url === 'string') {
+                var idx = url.lastIndexOf("/");
+                if(idx > -1) {url = url.substring(idx+1);}
+            }
+            var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
+            Util.ga.trackEvent('window', 'error', errorMsg);
+            Util.ga.trackException(errorMsg, true);
+            if (twClientConfig && twClientConfig.debug) {
+                alert("ERROR in " + url + " (line #" + line + "): " + msg);
+            }
+            return false; //suppress Error Alert;
+        };
+
+        document.addEventListener("resume", function() {
+            Util.ga.trackEvent('app', 'status', 'resume');
+        }, false);
+        document.addEventListener("pause", function() {
+            Util.ga.trackEvent('app', 'status', 'pause');
+        }, false);
+
+        WeatherInfo.loadTowns();
+        $ionicPlatform.on('resume', function(){
+            $rootScope.$broadcast('reloadEvent', 'resume');
         });
 
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+            // ios는 실행 시 registerLocationStateChangeHandler 호출되어 locationStatus가 설정됨
+            cordova.plugins.diagnostic.registerLocationStateChangeHandler(function (state) {
+                var oldLocationEnabled = Util.isLocationEnabled();
+
+                console.log("Location state changed to: " + state);
+                Util.locationStatus = state;
+
+                Util.ga.trackEvent('position', 'status', state);
+
+                if (oldLocationEnabled === false && Util.isLocationEnabled()) {
+                    $rootScope.$broadcast('reloadEvent', 'locationOn');
+                }
+            }, function (error) {
+                console.error("Error registering for location state changes: " + error);
+                Util.ga.trackEvent('position', 'error', 'registerLocationStateChange');
+            });
+        }
+        else {
+            Util.ga.trackEvent('plugin', 'error', 'loadDiagnostic')
+        }
+
+        if (ionic.Platform.isIOS()) {
+           //
+        } else if (ionic.Platform.isAndroid()) {
+            if(window.MobileAccessibility){
+                console.log("set usePreferredTextZoom to false");
+                window.MobileAccessibility.usePreferredTextZoom(false);
+            }
+        }
+
+        // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+        // for form inputs)
+        if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
+            cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+            cordova.plugins.Keyboard.disableScroll(true);
+        }
+
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
+            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbar.removeClass('bar-search');
+            headerbar.removeClass('bar-forecast');
+            headerbar.removeClass('bar-dailyforecast');
+            headerbar.removeClass('bar-clear');
+            headerbar.removeClass('bar-dark');
+            headerbar.removeClass('bar-air');
+
+            var tabs = angular.element(document.querySelectorAll('ion-side-menu-content'));
+            tabs.removeClass('tabs-search');
+            tabs.removeClass('tabs-air');
+
             if (toState.name === 'tab.search') {
-                $rootScope.viewColor = '#ec72a8';
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-search');
+                tabs.addClass('tabs-search');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#EC407A');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
             } else if (toState.name === 'tab.forecast') {
-                if (fromState.name === '') {
-                    var guideVersion = localStorage.getItem('guideVersion');
-                    if (guideVersion === null || Util.guideVersion > Number(guideVersion)) {
-                        $location.path('/guide');
-                        return;
-                    } else if (WeatherInfo.getEnabledCityCount() === 0) {
-                        $location.path('/tab/search');
-                        return;
-                    }
-                }
-
                 $rootScope.viewColor = '#03A9F4';
+                headerbar.addClass('bar-forecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0288D1');
                 }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#00BCD4';
+                headerbar.addClass('bar-dailyforecast');
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#0097A7');
                 }
-            } else if (toState.name === 'tab.setting') {
-                $rootScope.viewColor = '#FFA726';
+            } else if (toState.name === 'tab.air') {
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-air');
+                tabs.addClass('tabs-air');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#FB8C00');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
-            } else if (toState.name === 'guide') {
+            } else if (toState.name === 'start') {
+                $rootScope.viewColor = '#fff';
+                headerbar.addClass('bar-clear');
                 if (window.StatusBar) {
-                    StatusBar.backgroundColorByHexString('#0288D1');
+                    StatusBar.backgroundColorByHexString('#111');
                 }
+            } else {
+                $rootScope.viewColor = '#444';
+                headerbar.addClass('bar-dark');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#111');
+                }
+            }
+
+            Util.ga.trackView(toState.name);
+        });
+
+        if (window.IonicDeeplink) {
+            IonicDeeplink.route({
+                '/:fav': {
+                    target: 'tab.forecast',
+                    parent: 'tab.forecast'
+                }
+            }, function(match) {
+                console.log(match.$route.parent + ', ' + match.$args.fav);
+                if (match.$args.fav) {
+                    Util.ga.trackEvent('plugin', 'info', 'deepLinkMatch '+match.$args.fav);
+                    $state.transitionTo(match.$route.parent, match.$args, { reload: true });
+                }
+                else {
+                    Util.ga.trackEvent('plugin', 'info', 'deepLinkNoFav');
+                }
+            }, function(nomatch) {
+                console.log('No match', nomatch);
+                Util.ga.trackEvent('plugin', 'info', 'deepLinkNoMatch');
+            });
+        }
+        else {
+            Util.ga.trackException('Fail to find ionic deep link plugin', false);
+        }
+
+        TwStorage.init().finally(function() {
+            if (navigator.splashscreen) {
+                console.log('splash screen hide!!!');
+                navigator.splashscreen.hide();
+            }
+
+            WeatherInfo.loadCities();
+            Push.init();
+            Purchase.init();
+            Units.loadUnits();
+
+            var daumServiceKeys = TwStorage.get("daumServiceKeys");
+            if (daumServiceKeys == undefined || daumServiceKeys.length != twClientConfig.daumServiceKeys.length) {
+                TwStorage.set("daumServiceKeys", twClientConfig.daumServiceKeys);
+            }
+
+            var startVersion = TwStorage.get("startVersion");
+            if (startVersion === null || Util.startVersion > Number(startVersion)) {
+                Util.ga.trackEvent('app', 'startupPage', 'start');
+                $location.path('/start');
+                return;
+            }
+
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            Util.ga.trackEvent('app', 'startupPage', startupPage);
+
+            if (startupPage === "1") { //일별날씨
+                $state.go('tab.dailyforecast');
+            } else if (startupPage === "2") { //즐겨찾기
+                $state.go('tab.search');
+            } else if (startupPage === "3") { //미세먼지
+                $state.go('tab.air');
+            } else { //시간별날씨
+                $state.go('tab.forecast');
+            }
+
+            function showUpdateInfo(triggerTime) {
+                var lastAppVersion = TwStorage.get("appVersion");
+                if (lastAppVersion != Util.version) {
+                    var logMsg = 'from '+lastAppVersion+' to '+Util.version;
+                    Util.ga.trackEvent('app', 'update', logMsg);
+                    TwStorage.set('disableUpdateInfo', false);
+                    TwStorage.set('appVersion', Util.version);
+                }
+
+                if (TwStorage.get('disableUpdateInfo') !== true) {
+                    //바로 보내면, tabCtrl에서 못 받음.
+                    setTimeout(function () {
+                        Util.ga.trackEvent('app', 'update', 'triggerShowUpdateInfo');
+                        $rootScope.$broadcast('showUpdateInfo');
+                    }, triggerTime);
+                }
+            }
+
+            if (Util.version) {
+               showUpdateInfo(500);
+            }
+            else {
+                Util.ga.trackEvent('app', 'update', 'waitGetAppVersion');
+                $rootScope.$watch('version', function (newValue) {
+                    if(newValue == undefined) {
+                        console.warn('failToLoadAppVersion');
+                        return;
+                    }
+
+                    showUpdateInfo(100);
+                });
             }
         });
     })
+    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider,
+                     ionicTimePickerProvider, $translateProvider) {
 
-    .config(function($stateProvider, $urlRouterProvider, $ionicConfigProvider, $compileProvider, ionicTimePickerProvider) {
+        $translateProvider
+            .useStaticFilesLoader({
+                prefix: 'locales/',
+                suffix: '.json'
+            })
+            .registerAvailableLanguageKeys(['en', 'de', 'ko', 'ja', 'zh-CN', 'zh-TW'], {
+                'en_*': 'en',
+                'de_*': 'de',
+                'ko_*': 'ko',
+                'ja_*': 'ja',
+                'zh_HK': 'zh-TW',
+                'zh_TW': 'zh-TW',
+                'zh_*': 'zh-CN'
+            })
+            .preferredLanguage('en')
+            .fallbackLanguage('en')
+            .determinePreferredLanguage()
+            .useSanitizeValueStrategy('escapeParameters');
 
-        //$compileProvider.debugInfoEnabled(Util.isDebug());
+        //$compileProvider.debugInfoEnabled(twClientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
-        //add chrome-extension for chrome extension
-        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
-        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto|chrome-extension|blob:chrome-extension):/);
+        $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
+        $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
 
         $compileProvider.directive('ngShortChart', function() {
             return {
@@ -109,19 +413,9 @@ angular.module('starter', [
                     var width, height, x, y;
                     var svg, initLine, line;
                     var displayItemCount = 0;
+                    var sharp = false; //3시간 단위의 정각
 
-                    //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
-                    //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
-                    //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
-                    scope.$watch(function () {
-                        return iElement[0].getBoundingClientRect().height;
-                    }, function(newValue) {
-                        if (newValue === 0 || newValue === height) {
-                            return;
-                        }
-                        width = iElement[0].getBoundingClientRect().width;
-                        height = iElement[0].getBoundingClientRect().height;
-
+                    function initSvg() {
                         //0.9.1까지 displayItemCount가 없음.
                         displayItemCount = scope.timeChart[1].displayItemCount;
                         if (displayItemCount == undefined || displayItemCount == 0) {
@@ -138,7 +432,8 @@ angular.module('starter', [
 
                         if (svg != undefined) {
                             svg.selectAll("*").remove();
-                            svg.attr('height', height);
+                            svg.attr('width', width)
+                               .attr('height', height);
                         }
                         else {
                             svg = d3.select(iElement[0]).append('svg')
@@ -149,6 +444,16 @@ angular.module('starter', [
                         initLine = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
+                                if (sharp === false) {
+                                    //timeChart[0] -> yesterday, timeChart[1] -> today
+                                    if (i === scope.timeChart[1].currentIndex + 1) {
+                                        return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                    }
+                                    //현재 시간이 hour % 3 != 0인 경우, 현재 시간 이후의 데이터의 x위치는 i - 1에 위치 설정
+                                    else if (i > scope.timeChart[1].currentIndex + 1) {
+                                        return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                    }
+                                }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .y(height);
@@ -156,33 +461,38 @@ angular.module('starter', [
                         line = d3.svg.line()
                             .interpolate('linear')
                             .x(function (d, i) {
+                                if (sharp === false) {
+                                    if (i === scope.timeChart[1].currentIndex + 1) {
+                                        return (x.rangeBand() * i - x.rangeBand() / 2) + x.rangeBand() / 2;
+                                    }
+                                    else if (i > scope.timeChart[1].currentIndex + 1) {
+                                        return x.rangeBand() * (i - 1) + x.rangeBand() / 2;
+                                    }
+                                }
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
                             .y(function (d) {
                                 return y(d.value.t3h);
                             });
-
-                        chart();
-                    });
-
-                    /**
-                     * 24시일때, 0으로 변경해야 하고, -1로 인해 한자리 밀리므로 오늘은 3시부터 표시되어야 함.
-                     * @param currentTime
-                     * @param shortList
-                     * @returns {{cx1: *, cx2: *}}
-                     */
-                    function getCx(currentTime, shortList) {
-                        var cx1;
-                        var cx2;
-                        for (var i = 0; i < shortList.length; i = i + 1) {
-                            if (shortList[i].value.day === '오늘') {
-                                cx1 = i + Math.floor(currentTime / 3) - 1;
-                                cx2 = currentTime % 3;
-                                break;
-                            }
-                        }
-                        return {cx1: cx1, cx2: cx2};
                     }
+
+                    //parent element의 heigt가 변경되면, svg에 있는 모든 element를 지우고, height를 변경 다시 그림.
+                    //chart가 나오지 않는 경우에는 height가 0이므로 그때는 동작하지 않음.
+                    //element height는 광고 제거,추가 그리고 시간별,요일별 로 변경될때 변경됨.
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || newValue === height) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+
+                        if (!(scope.timeChart == undefined)) {
+                            initSvg();
+                            chart();
+                        }
+                    });
 
                     var chart = function () {
                         var data = scope.timeChart;
@@ -192,18 +502,27 @@ angular.module('starter', [
                         }
 
                         var currentTime = scope.currentWeather.time;
+                        var currentTemp = scope.currentWeather.t1h;
+
+                        if ((scope.currentWeather.liveTime === null || currentTime+'00' == scope.currentWeather.liveTime) && (currentTime % 3 == 0)) {
+                            sharp = true;
+                        } else {
+                            sharp = false;
+                        }
 
                         x.domain(d3.range(data[0].values.length));
                         y.domain([
                             d3.min(data, function (c) {
-                                return d3.min(c.values, function (v) {
+                                var minT3h = d3.min(c.values, function (v) {
                                     return v.value.t3h;
                                 });
+                                return minT3h<currentTemp?minT3h:currentTemp;
                             }),
                             d3.max(data, function (c) {
-                                return d3.max(c.values, function (v) {
+                                var maxT3h =d3.max(c.values, function (v) {
                                     return v.value.t3h;
                                 });
+                                return maxT3h>currentTemp?maxT3h:currentTemp;
                             })
                         ]).nice();
 
@@ -320,30 +639,25 @@ angular.module('starter', [
                                 if (d.value.rn1) {
                                     return d.value.rn1>=10?Math.round(d.value.rn1):d.value.rn1;
                                 }
-                                else if (d.value.r06) {
-                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.r06;
-                                }
                                 else if (d.value.s06) {
                                     return d.value.s06>=10?Math.round(d.value.s06):d.value.s06;
+                                }
+                                else if (d.value.r06) {
+                                    return d.value.r06>=10?Math.round(d.value.r06):d.value.r06;
                                 }
                                 return '';
                             })
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.value.rn1 || d.value.r06) {
-                                    return 'mm';
+                                if (d.value.rn1 || d.value.s06 || d.value.r06) {
+                                    return scope.getPrecipUnit(d.value);
                                 }
-                                else if (d.value.s06) {
-                                    return 'cm';
-                                }
+                                return '';
                             });
 
                         hourObject.filter(function(d, i) {
-                           if (i == 0) {
-                               return true;
-                           }
-                            return false;
+                           return i == 0;
                         }).remove();
 
                         var lineGroups = svg.selectAll('.line-group')
@@ -356,7 +670,20 @@ angular.module('starter', [
                         // draw line
                         var lines = lineGroups.selectAll('.line')
                             .data(function(d) {
-                                return [d];
+                                var cloneData = JSON.parse(JSON.stringify(d));
+                                if (sharp === false) {
+                                    var currentWeather = {name: d.name};
+                                    if (d.name == "today") {
+                                        currentWeather.value = scope.currentWeather;
+                                        currentWeather.value.t3h = currentWeather.value.t1h;
+                                    }
+                                    else if (d.name == 'yesterday') {
+                                        currentWeather.value = scope.currentWeather.yesterday;
+                                        currentWeather.value.t3h = currentWeather.value.t1h;
+                                    }
+                                    cloneData.values.splice(data[1].currentIndex+1, 0, currentWeather);
+                                }
+                                return [cloneData];
                             })
                             .attr('d', function (d) {
                                 return initLine(d.values);
@@ -415,18 +742,19 @@ angular.module('starter', [
                                 return [d];
                             })
                             .attr('r', function () {
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
+                                if (sharp === true) {
+                                    return 11;
+                                } else {
                                     return 5;
                                 }
-                                else {
-                                    return currentTime % 3 == 0 ? 11:5;
-                                }
                             })
-                            .attr('cx', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var x1 = cx.cx1 + cx.cx2 / 3;
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 1 / 6;
+                            .attr('cx', function () {
+                                var x1 = data[1].currentIndex;
+                                if (sharp === true) {
+                                    x1 += 0;
+                                }
+                                else {
+                                    x1 += 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
@@ -438,44 +766,42 @@ angular.module('starter', [
                                 return 'point circle-' + d.name + '-current';
                             })
                             .attr('r', function () {
-                                return currentTime % 3 == 0 ? 11:5;
+                                if (sharp === true) {
+                                    return 11;
+                                } else {
+                                    return 5;
+                                }
                             })
-                            .attr('cx', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var x1 = cx.cx1 + cx.cx2 / 3;
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    x1 += 1 / 6;
+                            .attr('cx', function () {
+                                var x1 = data[1].currentIndex;
+                                if (sharp === true) {
+                                    x1 += 0;
+                                }
+                                else {
+                                    x1 += 0.5;
                                 }
                                 return x.rangeBand() * x1 + x.rangeBand() / 2;
                             })
                             .attr('cy', height);
 
-                        point.attr('cx', function (d) {
-                            var cx = getCx(currentTime, d.values);
-                            var x1 = cx.cx1 + cx.cx2 / 3;
-                            if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                x1 += 1 / 6;
+                        point.attr('cx', function () {
+                            var x1 = data[1].currentIndex;
+                            if (sharp === true) {
+                                x1 += 0;
+                            }
+                            else {
+                                x1 += 0.5;
                             }
                             return x.rangeBand() * x1 + x.rangeBand() / 2;
                         })
-                            .attr('cy', function (d) {
-                                var cx = getCx(currentTime, d.values);
-                                var cy1 = d.values[cx.cx1].value.t3h;
-                                var cy2 = d.values[cx.cx1+1].value.t3h;
-
-                                var y1 = cy1;
-                                if (cx.cx2 === 1) {
-                                    y1 = cy1 + (cy2 - cy1) / 3;
-                                }
-                                else if (cx.cx2 === 2) {
-                                    y1 = cy1 + (cy2 - cy1) / 3 * 2;
-                                }
-
-                                if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                    y1 += (cy2-cy1)/6;
-                                }
-                                return y(y1);
-                            });
+                        .attr('cy', function (d) {
+                            if (d.name === "today") {
+                                return y(scope.currentWeather.t1h);
+                            }
+                            else if (d.name === "yesterday") {
+                                return  y(scope.currentWeather.yesterday.t1h);
+                            }
+                        });
 
                         point.exit()
                             .remove();
@@ -496,12 +822,12 @@ angular.module('starter', [
                             })
                             .style("fill", function (d) {
                                 if (d.name == "today") {
-                                    if (d.value.time  === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                            return '#0288D1';
+                                    if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
+                                        if (sharp === true) {
+                                            return '#fefefe';
                                         }
                                         else {
-                                            return '#fefefe';
+                                            return '#0288D1';
                                         }
                                     }
                                 }
@@ -520,11 +846,11 @@ angular.module('starter', [
                             .style("fill", function (d) {
                                 if (d.name == "today") {
                                     if (d.value.time === currentTime && d.value.date === scope.currentWeather.date) {
-                                        if (scope.currentWeather.liveTime && currentTime+'00' != scope.currentWeather.liveTime) {
-                                            return '#0288D1';
+                                        if (sharp === true) {
+                                            return '#fefefe';
                                         }
                                         else {
-                                            return '#fefefe';
+                                            return '#0288D1';
                                         }
                                     }
                                 }
@@ -549,54 +875,52 @@ angular.module('starter', [
                     };
 
                     scope.$watch('timeWidth', function(newValue) {
-                        console.log('timeWidth='+newValue);
                         //guide에서 나올때, 점들이 모이는 증상이 있음.
                         if (newValue == undefined || newValue == width) {
                             console.log('new value is undefined or already set same width='+width);
                             return;
                         }
 
+                        console.log('update timeWidth='+newValue);
                         width = newValue;
-                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
 
-                        if (svg) {
-                            svg.attr('width', width);
-                            svg.selectAll("*").remove();
-
-                            initLine = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(height);
-
-                            line = d3.svg.line()
-                                .interpolate('linear')
-                                .x(function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .y(function (d) {
-                                    return y(d.value.t3h);
-                                });
-
-                            chart();
-                        }
+                        return;
+                        //if (scope.timeChart == undefined) {
+                        //    console.log('time chart is undefined in timeWidth');
+                        //    return;
+                        //}
+                        //
+                        //if (svg == undefined) {
+                        //    console.log('svg is undefined in timeWidth');
+                        //    initSvg();
+                        //}
+                        //else {
+                        //    x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        //    svg.attr('width', width);
+                        //    svg.selectAll("*").remove();
+                        //}
+                        //chart();
                     });
 
                     scope.$watch('timeChart', function (newVal) {
                         if (newVal) {
                             console.log("update timeChart");
-                            var shortTableHeight = scope.getShortTableHeight(displayItemCount);
-                            margin.top = marginTop + shortTableHeight;
-                            margin.textTop = textTop - shortTableHeight;
-                            y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-                            chart();
-                        }
-                    });
-
-                    scope.$watch('forecastType', function (newVal) {
-                        if (newVal === true) {
-                            console.log("change forecastType");
+                            if (scope.timeChart == undefined) {
+                                console.log("time chart is undefined");
+                                return;
+                            }
+                            //if (svg == undefined) {
+                            //    initSvg();
+                            //    console.log('svg is undefined in timeChart');
+                            //}
+                            //else {
+                            //    var shortTableHeight = scope.getShortTableHeight(displayItemCount);
+                            //    margin.top = marginTop + shortTableHeight;
+                            //    margin.textTop = textTop - shortTableHeight;
+                            //    y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+                            //    svg.selectAll('.hourly-table').remove();
+                            //}
+                            initSvg();
                             chart();
                         }
                     });
@@ -610,10 +934,29 @@ angular.module('starter', [
                 transclude: true,
                 link: function (scope, iElement) {
                     var marginTop = 18;
-                    var displayItemCount = scope.dayChart[0].displayItemCount;
+                    var displayItemCount = 0;
                     var margin = {top: marginTop, right: 0, bottom: 18, left: 0, textTop: 5};
                     var width, height, x, y;
                     var svg;
+
+                    function initSvg() {
+                        displayItemCount = scope.dayChart[0].displayItemCount;
+                        margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
+
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('width', width)
+                               .attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+                    }
 
                     //shortChart 주석 참고.
                     scope.$watch(function () {
@@ -626,21 +969,11 @@ angular.module('starter', [
                         height = iElement[0].getBoundingClientRect().height;
 
                         console.log("mid scope watch");
-                        margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
 
-                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-
-                        if (svg != undefined) {
-                            svg.selectAll("*").remove();
-                            svg.attr('height', height);
+                        if (!(scope.dayChart == undefined)) {
+                            initSvg();
+                            chart();
                         }
-                        else {
-                            svg = d3.select(iElement[0]).append('svg')
-                                .attr('width', width)
-                                .attr('height', height);
-                        }
-                        chart();
                     });
 
                     var chart = function () {
@@ -683,7 +1016,7 @@ angular.module('starter', [
                             .attr('y', function () {
                                 return 0;
                             })
-                            .attr('width', x.rangeBand()-0.5)
+                            .attr('width', x.rangeBand() - 0.5)
                             .attr('height', height);
 
                         currentRect.exit().remove();
@@ -708,10 +1041,10 @@ angular.module('starter', [
 
                         guideLines
                             .attr('x1', function (d, i) {
-                                return x.rangeBand() * i+0.5;
+                                return x.rangeBand() * i + 0.5;
                             })
                             .attr('x2', function (d, i) {
-                                return (x.rangeBand()) * i+0.5;
+                                return (x.rangeBand()) * i + 0.5;
                             })
                             .attr('y1', 0)
                             .attr('y2', height)
@@ -729,69 +1062,63 @@ angular.module('starter', [
                             .attr('class', 'day-table');
 
                         dayObject.append("text")
-                                .attr('class', 'subheading')
-                                .attr('fill', 'white')
-                                .attr("text-anchor", "middle")
-                                .attr("x", function (d, i) {
-                                    return x.rangeBand() * i + x.rangeBand() / 2;
-                                })
-                                .attr("y", function(){
-                                    //0이 아닌 18이어야 하는 것이 이상함.
-                                    return marginTop;
-                                })
-                                .text(function (d) {
-                                    return d.date.substr(6,2);
-                                });
+                            .attr('class', 'subheading')
+                            .attr('fill', 'white')
+                            .attr("text-anchor", "middle")
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2;
+                            })
+                            .attr("y", function () {
+                                //0이 아닌 18이어야 하는 것이 이상함.
+                                return marginTop;
+                            })
+                            .text(function (d) {
+                                return d.date.substr(6, 2);
+                            });
 
                         dayObject.append("svg:image")
-                                .attr('class', 'skyAm')
-                                .attr("xlink:href", function (d) {
-                                    return "img/weatherIcon2-color/"+ d.skyAm+".png";
-                                })
-                                .attr("x", function (d, i) {
-                                    return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
-                                })
-                                .attr("y", function (d) {
-                                    var y = 17 + 2;
-                                    if (d.skyAm == d.skyPm || d.skyPm == undefined) {
-                                        y += scope.smallImageSize*0.8/3;
-                                    }
-                                    return y;
-                                })
-                                .attr("width", scope.smallImageSize*0.8)
-                                .attr("height", scope.smallImageSize*0.8)
-                                .filter(function (d) {
-                                    if (d.skyAm == undefined) {
-                                        return true;
-                                    }
-                                    return false;
-                                }).remove();
+                            .attr('class', 'skyAm')
+                            .attr("xlink:href", function (d) {
+                                return "img/weatherIcon2-color/" + d.skyAm + ".png";
+                            })
+                            .attr("x", function (d, i) {
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
+                            })
+                            .attr("y", function (d) {
+                                var y = 17 + 2;
+                                if (d.skyAm == d.skyPm || d.skyPm == undefined) {
+                                    y += scope.smallImageSize / 3;
+                                }
+                                return y;
+                            })
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize)
+                            .filter(function (d) {
+                                return d.skyAm == undefined;
+                            }).remove();
 
                         dayObject.append("svg:image")
                             .attr('class', 'skyPm')
                             .attr("xlink:href", function (d) {
-                               return "img/weatherIcon2-color/"+ d.skyPm+".png";
+                                return "img/weatherIcon2-color/" + d.skyPm + ".png";
                             })
                             .attr("x", function (d, i) {
-                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize*0.8)/2;
+                                return x.rangeBand() * i + (x.rangeBand() - scope.smallImageSize) / 2;
                             })
                             .attr("y", function (d) {
                                 var y = 17;
                                 if (d.skyAm == undefined) {
-                                    y += 2 + scope.smallImageSize*0.8/3;
+                                    y += 2 + scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize*0.8
+                                    y += scope.smallImageSize
                                 }
                                 return y;
                             })
-                            .attr("width", scope.smallImageSize*0.8)
-                            .attr("height", scope.smallImageSize*0.8)
-                            .filter(function(d) {
-                                if (d.skyAm == d.skyPm || d.skyPm == undefined) {
-                                    return true;
-                                }
-                                return false;
+                            .attr("width", scope.smallImageSize)
+                            .attr("height", scope.smallImageSize)
+                            .filter(function (d) {
+                                return d.skyAm == d.skyPm || d.skyPm == undefined;
                             }).remove();
 
                         dayObject.append("text")
@@ -801,19 +1128,19 @@ angular.module('starter', [
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr("y", function(d){
-                                var y = 17+ scope.smallImageSize*0.8 ;
+                            .attr("y", function (d) {
+                                var y = 17 + scope.smallImageSize;
                                 if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
-                                    y += scope.smallImageSize*0.8/3;
+                                    y += scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize*0.8 ;
+                                    y += scope.smallImageSize;
                                 }
                                 y += 14;
                                 return y;
                             })
                             .text(function (d) {
-                                if (d.fromToday >=0 && d.pop) {
+                                if (d.fromToday >= 0 && d.pop) {
                                     return d.pop;
                                 }
                                 return "";
@@ -821,8 +1148,8 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.fromToday >=0 && d.pop) {
-                                   return "%";
+                                if (d.fromToday >= 0 && d.pop) {
+                                    return "%";
                                 }
                                 return "";
                             });
@@ -835,19 +1162,19 @@ angular.module('starter', [
                             .attr("x", function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2;
                             })
-                            .attr("y", function(d){
-                                var y = 17 + scope.smallImageSize*0.8;
+                            .attr("y", function (d) {
+                                var y = 17 + scope.smallImageSize;
                                 if (d.skyAm == d.skyPm || d.skyAm == undefined || d.skyPm == undefined) {
-                                    y += scope.smallImageSize*0.8/3;
+                                    y += scope.smallImageSize / 3;
                                 }
                                 else {
-                                    y += scope.smallImageSize*0.8;
+                                    y += scope.smallImageSize;
                                 }
                                 y += 2; //margin
                                 if (d.pop && d.fromToday >= 0) {
                                     y += 15;
                                 }
-                                y+=10;
+                                y += 10;
                                 return y;
                             })
                             .text(function (d) {
@@ -855,11 +1182,11 @@ angular.module('starter', [
                                 if (d.rn1) {
                                     value = d.rn1;
                                 }
-                                else if (d.r06) {
-                                    value = d.r06;
-                                }
                                 else if (d.s06) {
                                     value = d.s06;
+                                }
+                                else if (d.r06) {
+                                    value = d.r06;
                                 }
                                 else {
                                     return '';
@@ -872,13 +1199,10 @@ angular.module('starter', [
                             .append('tspan')
                             .attr('font-size', '10px')
                             .text(function (d) {
-                                if (d.rn1 || d.r06) {
-                                    return 'mm';
+                                if (d.rn1 || d.s06 || d.r06) {
+                                    return scope.getPrecipUnit(d);
                                 }
-                                else if (d.s06) {
-                                   return 'cm';
-                                }
-                                return "";
+                                return '';
                             });
 
                         var rects = group.selectAll('.rect')
@@ -1002,38 +1326,118 @@ angular.module('starter', [
                             console.log('new value is undefined or already set same width='+width);
                             return;
                         }
-
+                        console.log('update dayWidth='+newValue);
                         width = newValue;
-                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
-                        if (svg) {
-                            svg.attr('width', width);
-                        }
+                        return;
+                        // if (scope.dayChart == undefined) {
+                        //     console.log('day chart is undefined in dayWidth');
+                        //     return;
+                        // }
+                        // if (svg == undefined) {
+                        //     initSvg();
+                        // }
+                        // else {
+                        //     x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        //     svg.attr('width', width);
+                        // }
                     });
 
                     scope.$watch('dayChart', function (newVal) {
-                        if (newVal) {
-                            console.log("update dayChart");
-                            margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
-                            y = d3.scale.linear().range([height - margin.bottom, margin.top]);
-                            chart();
+                        if (newVal == undefined) {
+                            return;
                         }
-                    });
-
-                    scope.$watch('forecastType', function (newVal) {
-                        if (newVal === false) {
-                            console.log("change forecastType");
-                            chart();
-                        }
+                        console.log("update dayChart");
+                        // if (svg == undefined) {
+                        //     initSvg();
+                        // }
+                        // else {
+                        //     margin.top = marginTop + scope.getMidTableHeight(displayItemCount);
+                        //     y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+                        //     svg.selectAll('.day-table').remove();
+                        // }
+                        initSvg();
+                        chart();
                     });
                 }
             };
         });
 
+        $compileProvider.directive('tabsShrink', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    var tabs = $document[0].body.querySelector('.tab-nav');
+                    var tabsHeight = 50;
+                    var prevTop = 0;
+                    var request = null;
+
+                    function shrinkTabs(y, amount) {
+                        if ($scope.$root === null) {
+                            return;
+                        }
+
+                        var top = y + amount;
+                        tabs.style[ionic.CSS.TRANSFORM] = 'translate3d(0, ' + top + 'px, 0)';
+
+                        $scope.$root.tabsTop = top;
+                        $scope.$root.$apply();
+
+                        if (top !== 0 && top !== tabsHeight) {
+                            request = ionic.requestAnimationFrame(function() {
+                                shrinkTabs(top, amount);
+                            });
+                        }
+                    }
+
+                    function onScroll(e) {
+                        if ($scope == undefined || $scope.$root == undefined) {
+                            return;
+                        }
+
+                        var scrollTop = e.target.scrollTop;
+
+                        if (request === null) {
+                            if(scrollTop > prevTop && $scope.$root.tabsTop === 0) {
+                                request = ionic.requestAnimationFrame(function() {
+                                    shrinkTabs(0, 5);
+                                });
+                            } else if(scrollTop < prevTop && $scope.$root.tabsTop === tabsHeight) {
+                                request = ionic.requestAnimationFrame(function() {
+                                    shrinkTabs(tabsHeight, -5);
+                                });
+                            }
+                        } else {
+                            if($scope.$root.tabsTop === 0 || $scope.$root.tabsTop === tabsHeight) {
+                                request = null;
+                            }
+                        }
+                        prevTop = scrollTop;
+                    }
+
+                    if (ionic.Platform.isAndroid()) {
+                        $element.bind('scroll', onScroll);
+                    }
+                }
+            }
+        });
+
         // Ionic uses AngularUI Router which uses the concept of states
         // Learn more here: https://github.com/angular-ui/ui-router
         // Set up the various states which the app can be in.
-        // Each state's controller can be found in controllers.js
+        // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('nation', {
+                url: '/nation',
+                cache: false,
+                templateUrl: 'templates/nation.html',
+                controller: 'NationCtrl'
+            })
+            .state('start', {
+                url: '/start',
+                cache: false,
+                templateUrl: 'templates/start.html',
+                controller: 'StartCtrl'
+            })
             .state('guide', {
                 url: '/guide',
                 cache: false,
@@ -1045,11 +1449,27 @@ angular.module('starter', [
                 templateUrl: 'templates/purchase.html',
                 controller: "PurchaseCtrl"
             })
-            // setup an abstract state for the tabs directive
+            .state('units', {
+                url: '/units',
+                cache: false,
+                templateUrl: 'templates/units.html',
+                controller: 'UnitsCtrl'
+            })
+            .state('setting-radio', {
+                url: '/setting-radio',
+                cache: false,
+                templateUrl: 'templates/setting-radio.html',
+                controller: 'RadioCtrl'
+            })
             .state('tab', {
                 url: '/tab',
                 abstract: true,
-                templateUrl: 'templates/tabs.html',
+                templateUrl: function () {
+                    if (ionic.Platform.isAndroid()) {
+                        return  'templates/tabs-android.html';
+                    }
+                    return 'templates/tabs.html';
+                },
                 controller: 'TabCtrl'
             })
 
@@ -1084,19 +1504,16 @@ angular.module('starter', [
                     }
                 }
             })
-            .state('tab.setting', {
-                url: '/setting',
-                cache: true,
+            .state('tab.air', {
+                url: '/air?fav',
+                cache: false,
                 views: {
-                    'tab-setting': {
-                        templateUrl: 'templates/tab-setting.html',
-                        controller: 'SettingCtrl'
+                    'tab-air': {
+                        templateUrl: 'templates/tab-air.html',
+                        controller: 'AirCtrl'
                     }
                 }
             });
-
-        // if none of the above states are matched, use this as the fallback
-        $urlRouterProvider.otherwise('tab/forecast');
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');
@@ -1107,15 +1524,11 @@ angular.module('starter', [
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
         $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
 
-        var timePickerObj = {
+        ionicTimePickerProvider.configTimePicker({
             format: 12,
             step: 5,
-            setLabel: '설정',
-            cancelLabel: '삭제',
-            closeLabel: '닫기',
             buttons: 3
-        };
-        ionicTimePickerProvider.configTimePicker(timePickerObj);
+        });
     })
     .constant('$ionicLoadingConfig', {
         template: '<ion-spinner icon="bubbles" class="spinner-stable"></ion-spinner>'
