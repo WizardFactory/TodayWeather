@@ -434,6 +434,13 @@ angular.module('controller.forecastctrl', [])
 
         $scope.getMidTableHeight = getMidTableHeight;
 
+        $scope.showHourlyAqiForecast = function () {
+           if ($scope.hourlyAqiForecast && $scope.hourlyAqiForecast.length > 1)  {
+               return true;
+           }
+           return false;
+        };
+
         function applyWeatherData() {
             var dayTable;
             var cityIndex;

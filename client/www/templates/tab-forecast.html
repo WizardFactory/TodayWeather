@@ -70,8 +70,8 @@
                 </div>
                 <div class="col air-info-box" ng-if="showDetailWeather">
                     <hr ng-if="currentWeather.arpltn">
-                    <p ng-if="hourlyAqiForecast && hourlyAqiForecast.length" class="caption">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</p>
-                    <div ng-if="hourlyAqiForecast && hourlyAqiForecast.length" class="row row-no-padding" ng-click="goAirInfoPage('aqi')">
+                    <p ng-if="showHourlyAqiForecast()" class="caption">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</p>
+                    <div ng-if="showHourlyAqiForecast()" class="row row-no-padding" ng-click="goAirInfoPage('aqi')">
                         <div class="col" style="text-align: center" ng-repeat="obj in hourlyAqiForecast">
                             <p class="body1" style="margin: 0 0 5px;">{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
                             <i class="material-icons" style="font-size: 32px"
@@ -80,7 +80,7 @@
                             <p class="body2" style="margin: 0 0 2px;">{{obj.str == undefined?"-":obj.str}}</p>
                         </div>
                     </div>
-                    <div ng-if="hourlyAqiForecast == undefined && currentWeather.arpltn" class="row row-no-padding" style="margin-top: 8px">
+                    <div ng-if="!showHourlyAqiForecast() && currentWeather.arpltn" class="row row-no-padding" style="margin-top: 8px">
                         <div class="col" style="text-align: center" ng-if="currentWeather.arpltn.pm25Value" ng-click="goAirInfoPage('pm25')">
                             <p class="body1" style="margin: 0 0 5px;">{{"LOC_PM25"|translate}}</p>
                             <i class="material-icons" style="font-size: 32px"
