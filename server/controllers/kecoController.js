@@ -63,10 +63,11 @@ arpltnController.recalculateValue = function (arpltn, airUnit) {
         //aqicn은 가산점 줘야 하는지 확인 필요.
         var aqiValue = -1;
         ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
-            if (arpltn.hasOwnProperty(name+'Index')) {
-                if (arpltn[name+'Index'] > aqiValue) {
-                    aqiValue = arpltn[name+'Index'];
-                }
+            if (!arpltn.hasOwnProperty(name+'Index')) {
+                arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
+            }
+            if (arpltn[name+'Index'] > aqiValue) {
+                aqiValue = arpltn[name+'Index'];
             }
         });
         arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
@@ -314,18 +315,12 @@ arpltnController._convertDustForecastStrToGrade = function (str) {
     return "";
 };
 
-arpltnController.getDustFrcst = function (town, dateList, callback) {
+arpltnController.getDustFrcst = function (town, date, callback) {
     var region = this._convertDustFrcstRegion(town.region, town.city);
     var self = this;
+    var informDate = kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date);
 
-    var query;
-    var array = [];
-    dateList.forEach(function (date) {
-        var q = {informData: kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date)};
-        array.push(q);
-    });
-    query = {$or: array};
-    Frcst.find(query, {_id:0}).lean().exec(function (err, dustFrcstList) {
+    Frcst.find({"informData": {$gte:informDate}}, {_id:0}).lean().exec(function (err, dustFrcstList) {
         if (err) {
             return callback(err);
         }
