@@ -951,8 +951,18 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .update_information_popup input {
-  width: initial;
+  width: 18px;
+  height: 18px;
   margin: 3px 0.5ex;
+  vertical-align: bottom;
+}
+
+.update_information_popup span {
+  font-size: 16px;
+}
+
+.update_information_popup .checkbox-text {
+  font-size: 18px;
 }
 
 //Dense scripts
