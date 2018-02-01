@@ -36,7 +36,7 @@ angular.module('controller.air', [])
                     }
                 },
                 "airnow": {
-                    "color": ['#00eb00', '#d2d211',
+                    "color": ['#00c73c', '#d2d211',
                         '#ff6f00', '#FF0000',
                         '#b4004b', '#940021'],
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
@@ -44,15 +44,18 @@ angular.module('controller.air', [])
                     "value": {
                         "pm25" : [0, 12.0, 35.4, 55.4, 150.4, 250.4, 500.4],    //ug/m3 (avg 24h)
                         "pm10" : [0, 54, 154, 254, 354, 424, 604],              //ug/m3 (avg 24h)
-                        "o3" : [0, 54, 124, 164, 204, 404, 604],                //ppb (avg 8h, 1h)
-                        "no2" : [0, 53, 100, 360, 649, 1249, 2049],             //ppb (avg 1h)
+                        "o3" : [0, 0.054, 0.124, 0.164, 0.204, 0.404, 0.604],   //ppm (avg 8h, 1h)
+                        "no2" : [0, 0.053, 0.1, 0.36, 0.649, 1.249, 2.049],     //ppm (avg 1h)
                         "co" : [0, 4.4, 9.4, 12.4, 15.4, 30.4, 50.4],           //ppm (avg 8h)
-                        "so2" : [0, 35, 75, 185, 304, 604, 1004],               //ppb (avg 1h, 24h)
+                        "so2" : [0, 0.035, 0.75, 0.185, 0.304, 0.604, 1.004],   //ppm (avg 1h, 24h)
                         "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
+                        //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
+                        //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
+                        //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
                     }
                 },
                 "aqicn": {
-                    "color": ['#00eb00', '#d2d211',
+                    "color": ['#00c73c', '#d2d211',
                         '#ff6f00', '#FF0000',
                         '#b4004b', '#940021'],
                     "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
@@ -334,7 +337,6 @@ angular.module('controller.air', [])
             Util.ga.trackEvent('air', 'setMainAqiCode', code);
             $scope.aqiCode = aqiCode = code;
             $scope.airCodeName = _getAQIname(aqiCode);
-            $scope.dayForecastStandard = aqiStandard.airkorea.color;
         }
 
         function _applyWeatherData(data) {
