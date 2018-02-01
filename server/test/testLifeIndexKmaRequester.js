@@ -168,6 +168,23 @@ describe('unit test - requester of kma index service class', function() {
         assert.equal(result.data.ultrv.data[0].date, '20151029', '');
     });
 
+    it ('parse daily life index 2', function () {
+        var data = {"Response": {
+            "header": {"successYN":"Y","returnCode":"00","errMsg":""},
+            "body":{
+                "indexModels":[
+                    {"code":"A01_2","areaNo":"1100000000","date":"2018020106",
+                        "today":"56","tomorrow":"53","theDayAfterTomorrow":"55"},
+                    {"code":"A01_2","areaNo":"1111000000","date":"2018020106",
+                        "today":"56","tomorrow":"53","theDayAfterTomorrow":"55"},
+                    {"code":"A01_2","areaNo":"1111051500","date":"2018020106",
+                        "today":"56","tomorrow":"53","theDayAfterTomorrow":"55"},
+                    {"code":"A01_2","areaNo":"5019099000","date":"2018020106",
+                        "today":"58","tomorrow":"57","theDayAfterTomorrow":"55"}]}}};
+        var results = reqLifeIndex.parseLifeIndex2('fsn', data);
+        console.log(JSON.stringify(results));
+    });
+
     it ('update or add life index', function () {
         var ultraIndex = { lastUpdateDate: '2015102819', data: []};
         var data = { data: [{ date: '20151029', value: 2}, { date: '20151030', value: 3}],

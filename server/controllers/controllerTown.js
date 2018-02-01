@@ -2079,6 +2079,7 @@ function ControllerTown() {
                     current.fsnGrade = dailyData[i].fsnGrade;
                     current.fsnStr = dailyData[i].fsnStr;
                 }
+                break;
             }
         }
     };

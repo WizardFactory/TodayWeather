@@ -14,6 +14,8 @@ var async = require('async');
 
 var Town = require('../models/town');
 var LifeIndexKma = require('../models/lifeIndexKma');
+var LifeIndexKma2 = require('../models/kma/kma.lifeindex.model');
+
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
 //var config = require('../config/config');
@@ -277,7 +279,9 @@ KmaIndexService.prototype.getUrl = function (indexName, areaNo, svcKey) {
     var url = DOMAIN_KMA_INDEX_SERVICE + "/" + PATH_RETRIEVE_LIFE_INDEX_SERVICE;
     url += "/" + lifeIndex.urlPath;
     url += "?serviceKey="+svcKey;
-    url += "&AreaNo="+areaNo;
+    if (areaNo) {
+        url += "&AreaNo="+areaNo;
+    }
     url += "&_type=json";
 
     return url;
@@ -830,7 +834,7 @@ KmaIndexService.prototype.cbKmaIndexProcess = function(self, callback) {
     var list = ['ultrv', 'fsn'];
     async.mapSeries(list,
         function(indexName, cb) {
-            self.taskLifeIndex(indexName, function (err) {
+            self.taskLifeIndex2(indexName, function (err) {
                 if(err) {
                     log.error(err);
                 }
@@ -864,6 +868,218 @@ KmaIndexService.prototype.start = function() {
     this.setNextGetTime('fsn', new Date());
     this.setNextGetTime('ultrv', new Date());
     setTimeout(this.cbKmaIndexProcess, 3*1000, this); //start after 3secs
+};
+
+
+KmaIndexService.prototype.getLifeIndex2 = function (indexName, callback) {
+    var url = this.getUrl(indexName, undefined, this.serviceKey);
+
+    log.info(url);
+    if (this.requestCount[indexName] == undefined) {
+        this.requestCount[indexName] = 0;
+    }
+    else {
+        this.requestCount[indexName]++;
+    }
+
+    log.silly(indexName+" request count="+this.requestCount[indexName]);
+
+    req(url, {timeout: 1000*30, json:true}, function (err, response, body) {
+        if (err) {
+            return callback(err);
+        }
+        if (response.statusCode >= 400) {
+            err = new Error("response status Code="+response.statusCode);
+            err.statusCode = response.statusCode;
+           return callback(err);
+        }
+        callback(undefined, body);
+    });
+};
+
+/**
+ "indexModel": {
+    "code": "A01_2", "areaNo": 5013062000, "date": 2015101818, "today": "", "tomorrow": 55,"theDayAfterTomorrow": 55
+  }
+ * @param parsedData
+ * @param indexModel
+ * @private
+ */
+KmaIndexService.prototype._parseDailyLifeIndex2 = function (indexModel) {
+
+    var lastUpdateDate = ''+indexModel.date;
+
+    var today = kmaTimeLib.convertStringToDate(lastUpdateDate);
+    var tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate()+1);
+    var tdat = new Date(tomorrow);
+    tdat.setDate(tdat.getDate()+1);
+
+    var data = [];
+    if (indexModel.today !== "") {
+        data.push({date: today, index: indexModel.today});
+    }
+    else {
+        log.silly('skip invalid data of today');
+    }
+    data.push({date: tomorrow, index: indexModel.tomorrow});
+    data.push({date: tdat, index: indexModel.theDayAfterTomorrow});
+
+    return data;
+};
+
+/* jshint ignore:start */
+/**
+ *
+     "Response": {
+        "header": {
+            "successYN": "Y", "returnCode": "00","errMsg": "" },
+        "body": {
+            "indexModels": [
+                {"code":"A01_2","areaNo":"1100000000","date":"2018020106",
+                    "today":"56","tomorrow":"53","theDayAfterTomorrow":"55"},
+                {"code":"A01_2","areaNo":"1111000000","date":"2018020106",
+                     "today":"56","tomorrow":"53","theDayAfterTomorrow":"55"}
+            ]}
+    return - {*|{error: Error, data: {areaNo: String, $indexName: {}}}
+
+ * @param indexName
+ * @param data
+ * @returns {*}
+ */
+/* jshint ignore:end */
+KmaIndexService.prototype.parseLifeIndex2 = function(indexName, data) {
+    var err;
+    var self = this;
+
+    if (data.LegacyAPIResponse) {
+        data.Response = data.LegacyAPIResponse;
+    }
+
+    if (!data.Response || !data.Response.header || !data.Response.header.successYN) {
+        err = new Error("Fail to parse LifeList of " + indexName);
+        log.error(err);
+        return {error: err};
+    }
+
+    var header = data.Response.header;
+    if (header.successYN === 'N') {
+        if (header.returnCode == 99) {
+            log.warn("Search result is nothing but continue getting data index="+indexName+" errMsg="+header.errMsg);
+            log.debug(data);
+            return {};
+        }
+        else {
+            err = new Error("ReturnCode="+header.returnCode+" errMsg="+header.errMsg);
+            err.returnCode = header.returnCode;
+            return {error: err};
+        }
+    }
+
+    if (!data.Response.body || !data.Response.body.indexModels) {
+        err = new Error("We get success but, Fail to parse LifeList of " + indexName);
+        log.error(err);
+        return {error: err};
+    }
+
+    var indexModels = data.Response.body.indexModels;
+    var results = [];
+    indexModels.forEach(function (indexModel) {
+        var data = self._parseDailyLifeIndex2(indexModel);
+        data.forEach(function (obj) {
+           obj.areaNo = parseInt(indexModel.areaNo);
+           obj.lastUpdateDate = ''+indexModel.date;
+           obj.indexType = indexName;
+           results.push(obj);
+        });
+    });
+
+    return {error: undefined, data: results};
+};
+
+/**
+ * results = [
+        {"areaNo": "1100000000",
+            "fsn": {
+                "lastUpdateDate": "2018020106",
+                "data": [{"date": "20180201", "value": "56"},
+                    {"date": "20180202", "value": "53"},
+                    {"date": "20180203", "value": "55"}]
+            }
+        },
+        {"areaNo": "5019099000",
+            "fsn": {
+                "lastUpdateDate": "2018020106",
+                "data": [{"date": "20180201", "value": "58"},
+                    {"date": "20180202", "value": "57"},
+                    {"date": "20180203", "value": "55"}]
+            }
+        }];
+ * @param indexName
+ * @param results
+ * @param callback
+ * @returns {KmaIndexService}
+ */
+KmaIndexService.prototype.saveLifeIndex2 = function(indexName, results, callback) {
+    async.map(results,
+        function (result, callback) {
+            var query = {date: result.date, areaNo: result.areaNo, indexType: result.indexType};
+            LifeIndexKma2.update(query, result, {upsert:true}, function (err) {
+                if(err) {
+                    log.error(err.message + "in insert DB(healthData)");
+                    log.info(JSON.stringify(result));
+                }
+                callback();
+            });
+        },
+        function (err, result) {
+            callback(err, result.length);
+        });
+    return this;
+};
+
+KmaIndexService.prototype._removeOldData = function () {
+    var removeDate = new Date();
+    removeDate.setDate(removeDate.getDate()-10);
+
+    LifeIndexKma2.remove({"date": {$lt:removeDate} }, function (err) {
+        log.info('removed kma life index from date : ' + removeDate.toString());
+    });
+};
+
+KmaIndexService.prototype.taskLifeIndex2 = function (indexName, callback) {
+    var self = this;
+    var time = new Date();
+
+    if (!this.checkGetTime(indexName, time)) {
+        log.info('skip '+indexName+' nextTime='+ this[indexName].nextTime);
+        return callback();
+    }
+
+    async.waterfall([
+        function(cb) {
+            self.getLifeIndex2(indexName, function(err, body){
+                if (err) {
+                    return cb(err, undefined);
+                }
+                cb(err, body);
+            });
+        },
+        function(rcv, cb) {
+            var ret = self.parseLifeIndex2(indexName, rcv);
+            cb(ret.error, ret.data);
+        },
+        function(data, cb) {
+            self.saveLifeIndex2(indexName, data, function (err, savedCount) {
+                cb(err, savedCount);
+            });
+        }
+    ], function(err, result) {
+        return callback(err, result);
+    });
+
+    this._removeOldData();
+    return this;
 };
 
 module.exports = KmaIndexService;
