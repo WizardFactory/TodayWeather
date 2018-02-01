@@ -1534,7 +1534,7 @@ function controllerWorldWeather() {
                             // Grade & string
                             if(req.query.airUnit === 'airnow'){
                                 thisTime[code + 'Grade'] = aqiConverter.index2Grade(req.query.airUnit, aqiItem[code]);
-                                thisTime[code + 'Str'] = UnitConverter.airGrade2Str(thisTime[code + 'Grade'], code, res);
+                                thisTime[code + 'Str'] = UnitConverter.airnowGrade2str(thisTime[code + 'Grade'], code, res);
                             }else if(req.query.airUnit === 'airkorea' || req.query.airUnit === 'airkorea_who'){
                                 thisTime[code + 'Grade'] = aqiConverter.value2grade(req.query.airUnit, code, thisTime[code + 'Value']);
                                 thisTime[code + 'Str'] = UnitConverter.airkoreaGrade2str(thisTime[code + 'Grade'], code, res);
@@ -1545,7 +1545,7 @@ function controllerWorldWeather() {
                                 var index = aqiConverter.value2index('aqicn', code, thisTime[code + 'Value']);
                                 indexList.push(index);
                                 thisTime[code + 'Grade'] = aqiConverter.index2Grade('aqicn', index);
-                                thisTime[code + 'Str'] = UnitConverter.airGrade2Str(thisTime[code + 'Grade'], code, res);
+                                thisTime[code + 'Str'] = UnitConverter.airnowGrade2str(thisTime[code + 'Grade'], code, res);
 
                             }
                             //
@@ -1561,7 +1561,7 @@ function controllerWorldWeather() {
                             // find max grade
                             if(gradeList.length){
                                 thisTime.aqiGrade = Math.max(...gradeList);
-                                thisTime.aqiStr = UnitConverter.airkoreaGrade2str(thisTime.aqiGrade, 'aqi', res);
+                                thisTime.aqiStr = UnitConverter.airnowGrade2str(thisTime.aqiGrade, 'aqi', res);
                             }
                         }else if(req.query.airUnit == 'airkorea_who'){
                             // find max index
@@ -1580,6 +1580,7 @@ function controllerWorldWeather() {
                             }
 
                             // Add extra point if it's necessary.
+                            // khai에서 index가 100 이상인경우 '나쁨'으로 구분되고 전체 '나쁨'의 누적 개수에 따라 extra point가 추가됨.
                             var additionalPoint = indexList.filter((v)=>v>100).length;
                             if(additionalPoint >= 3){
                                 thisTime.aqiValue += 75;
