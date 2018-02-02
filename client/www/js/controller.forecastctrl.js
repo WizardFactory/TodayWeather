@@ -15,8 +15,6 @@ angular.module('controller.forecastctrl', [])
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        $scope.imgPath = Util.imgPath;
-
         if ($scope.forecastType == 'mid') {
             $scope.hasDustForecast = function () {
                 if ($scope.dayChart == undefined) {

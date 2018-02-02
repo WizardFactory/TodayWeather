@@ -205,7 +205,6 @@ angular.module('service.util', [])
 
         //endregion
 
-        obj.imgPath = 'img/weatherIcon2-color';
         obj.version = '';
         obj.startVersion = 1.0;
         obj.language;

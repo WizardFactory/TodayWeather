@@ -52,7 +52,7 @@
                         <i ng-if="city.currentPosition" class="material-icons">&#xE0C8;</i>{{city.address[0]}}<br ng-if="city.address[1]">{{city.address[1]}}
                     </div>
                     <div class="search-item" ng-if="city.t1h != '-'" style="margin: auto 0" ng-click="OnSelectCity($index)">
-                        <img ng-src="{{::imgPath}}/{{city.skyIcon}}.png">
+                        <img ng-src="{{::weatherImgPath}}/{{city.skyIcon}}.png">
                     </div>
                     <div class="search-item" ng-if="city.t1h != '-'" style="text-align: center;" ng-click="OnSelectCity($index)">
                         <span>{{city.t1h.toFixed(0)}}˚</span><br>
