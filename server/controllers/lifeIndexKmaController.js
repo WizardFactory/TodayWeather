@@ -5,6 +5,9 @@
 'use strict';
 
 var LifeIndexKma = require('../models/lifeIndexKma');
+var LifeIndexKma2 = require('../models/kma/kma.lifeindex.model');
+var kmaTimeLib = require('../lib/kmaTimeLib');
+
 var async = require('async');
 
 function LifeIndexKmaController() {
@@ -257,6 +260,75 @@ LifeIndexKmaController.needToUpdate = function(indexData) {
 
 /**
  *
+ * @param areaNo
+ * @param callback
+ * @private
+ */
+LifeIndexKmaController._fromLifeIndexDb2 = function (areaNo, callback) {
+    LifeIndexKma2.find({'areaNo':areaNo}).lean().exec(function (err, indexDataList) {
+        if (err || indexDataList.length === 0 || !(indexDataList[0].lastUpdateDate)) {
+            err = new Error("it is not invalid areaNo="+areaNo);
+            return callback(err);
+        }
+        callback(null, indexDataList);
+    });
+};
+
+LifeIndexKmaController._addIndexData2 = function (midList, lifeIndexList) {
+    var self = this;
+
+    midList.forEach(function (dayObj) {
+        var list = lifeIndexList.filter(function (indexObj) {
+            var indexDate = kmaTimeLib.convertDateToYYYYMMDD(indexObj.date);
+            return indexDate === dayObj.date;
+        });
+
+        if (list.length <= 0) {
+            return;
+        }
+
+        list.forEach(function (indexObj) {
+            var indexType = indexObj.indexType;
+            dayObj[indexType] = indexObj.index;
+            if (indexType === 'fsn') {
+                dayObj['fsnGrade'] = self._fsnGrade(indexObj.index);
+            }
+            else if (indexType === 'ultrv') {
+                dayObj['ultrvGrade'] = self._ultrvGrade(indexObj.index);
+            }
+        });
+    });
+};
+
+LifeIndexKmaController.appendData2 = function (areaNo, midList, callback) {
+    var self = this;
+
+    async.waterfall(
+        [
+            function (callback) {
+                self._fromLifeIndexDb2(parseInt(areaNo), function (err, lifeIndexList) {
+                    callback(err, lifeIndexList);
+                });
+            },
+            function (lifeIndexList, callback) {
+                try {
+                    self._addIndexData2(midList, lifeIndexList);
+                }
+                catch (err) {
+                    return callback(err);
+                }
+                callback();
+            }
+        ],
+        function (err, result) {
+            callback(err, result);
+        });
+
+    return this;
+};
+
+/**
+ *
  * @param town
  * @param shortList
  * @param midList
@@ -264,14 +336,31 @@ LifeIndexKmaController.needToUpdate = function(indexData) {
  */
 LifeIndexKmaController.appendData = function (town, shortList, midList, callback) {
     var self = this;
-    this._appendFromDb(town, function(err, indexData) {
-        if (err || self.needToUpdate(indexData)) {
-            return callback(err);
-        }
-        else {
-            self._addIndexData(indexData, shortList, midList, callback);
-        }
-    });
+
+    async.tryEach(
+        [
+            function (callback) {
+                self.appendData2(town.areaNo, midList, function (err, result) {
+                    if (err) {
+                        log.warn(err);
+                    }
+                    callback(err, result);
+                });
+            },
+            function (callback) {
+                self._appendFromDb(town, function(err, indexData) {
+                    if (err || self.needToUpdate(indexData)) {
+                        return callback(err);
+                    }
+                    else {
+                        self._addIndexData(indexData, shortList, midList, callback);
+                    }
+                });
+            }
+        ],
+        function (err, result) {
+            callback(err, result);
+        });
 };
 
 /**

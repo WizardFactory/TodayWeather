@@ -2349,21 +2349,6 @@ Manager.prototype.startManager = function(){
                 }
                 callback();
             });
-        },
-        function (callback) {
-            taskKmaIndexService.loadAreaList(function () {
-                log.info('KmaIndex> complete loadAreaList for KMA Index.');
-                callback();
-            });
-        },
-        function (callback) {
-            taskKmaIndexService.updateLifeIndexDbFromTowns(function (err) {
-                if (err) {
-                    log.error(err);
-                }
-                log.info('Finish updating life index db from towns');
-                callback();
-            });
         }
     ], function () {
 
