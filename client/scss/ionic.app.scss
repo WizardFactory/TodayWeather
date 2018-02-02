@@ -604,6 +604,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .air-content {
   color: #444;
   font-size: 17px;
+  width: 100%;
 }
 
 .air-content .card {
@@ -704,11 +705,16 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   height: 2px;
 }
 
+.air-hourly {
+  width: 100%;
+}
+
 .air-hourly p {
   margin: 5px;
 }
 
-.air-hourly div {
+.air-hourly #hourlyBox {
+  width: 100%;
   overflow: auto;
   white-space: nowrap;
 }
@@ -777,7 +783,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   width: 100%;
 }
 
-.air-items div {
+.air-items #itemsBox {
   overflow: auto;
   white-space: nowrap;
 }
@@ -892,6 +898,22 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .bar.bar-search .dailyforecast-header,
 .bar.bar-dailyforecast .search-header {
   display: none !important;
+}
+
+.dailyforecast-header span,
+.forecast-header span {
+  vertical-align: middle;
+}
+
+.dailyforecast-header i,
+.forecast-header i {
+  font-size: 100%;
+  vertical-align: middle;
+}
+
+.dailyforecast-header ion-spinner,
+.forecast-header ion-spinner {
+  vertical-align: middle;
 }
 
 .menu-content.overflow-scroll {
@@ -1146,6 +1168,13 @@ p small {
 
 .nation-label span {
   font-size:12px;
+}
+
+.spinner svg {
+  width: 14px;
+  height: 14px;
+  stroke: #fff;
+  fill: #fff;
 }
 
 //iphone 4

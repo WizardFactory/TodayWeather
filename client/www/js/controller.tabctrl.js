@@ -1,7 +1,6 @@
 angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Units,
-                                    $ionicLoading, $q) {
+                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Units, $q) {
         var currentTime;
 
         $scope.data = { 'autoSearch': false };
@@ -27,6 +26,8 @@ angular.module('controller.tabctrl', [])
             //}, 1000);
 
             TwAds.init();
+
+            $scope.$broadcast('reloadEvent', 'init');
         }
 
         var lastClickTime = 0;
@@ -695,16 +696,19 @@ angular.module('controller.tabctrl', [])
                     return;
                 }
 
+                $scope.currentPosition = weatherInfo.currentPosition;
+
                 showLoadingIndicator();
                 updateWeatherData(weatherInfo).then(function () {
                     $scope.$broadcast('applyEvent', 'updateWeatherData');
                     //data cache된 경우에라도, Loading했다는 느낌을 주기 위해서 최소 지연 시간 설정
-                    setTimeout(function () {
-                        console.info('hide loading indicator after update wData');
+                    if (!weatherInfo.currentPosition) {
                         hideLoadingIndicator();
-                    }, 500);
+                    }
                 }, function (msg) {
-                    hideLoadingIndicator();
+                    if (!weatherInfo.currentPosition) {
+                        hideLoadingIndicator();
+                    }
                     $scope.showRetryConfirm(strError, msg, 'weather');
                 });
 
@@ -713,6 +717,7 @@ angular.module('controller.tabctrl', [])
                      * one more update when finished position is updated
                      */
                     updateCurrentPosition(weatherInfo).then(function(geoInfo) {
+                        hideLoadingIndicator();
                         if (geoInfo) {
                             console.log("current position is updated !!");
                             try {
@@ -756,6 +761,7 @@ angular.module('controller.tabctrl', [])
                             Util.ga.trackEvent('position', 'error', 'failToGetCurrentPosition');
                         }
                     }, function(msg) {
+                        hideLoadingIndicator();
                         if (msg) {
                             $scope.showRetryConfirm(strError, msg, 'forecast');
                         }
@@ -772,23 +778,12 @@ angular.module('controller.tabctrl', [])
             }
         }
 
-        // retry popup이 없는 경우 항상 undefined여야 함.
-        var isLoadingIndicator = false;
-
         function showLoadingIndicator() {
-            $ionicLoading.show().then(function() {
-                // retry 시에 show 후에 바로 hide를 할 때 hide의 resolve가 먼저 처리되어 LoadingIndicator가 보여지는 경우가 있음
-                // 실제로 show가 되면 상태를 체크하여 hide를 다시 요청함
-                if (isLoadingIndicator == false) {
-                    $ionicLoading.hide();
-                }
-            });
-            isLoadingIndicator = true;
+            $scope.showLoadingIndicator = true;
         }
 
         function hideLoadingIndicator() {
-            $ionicLoading.hide();
-            isLoadingIndicator = false;
+            $scope.showLoadingIndicator = false;
         }
 
         var refreshTimer = null;
@@ -1002,6 +997,10 @@ angular.module('controller.tabctrl', [])
                path += '?code='+code;
             }
             $location.url(path);
+        };
+
+        $scope.isLocationEnabled = function () {
+            return Util.isLocationEnabled();
         };
 
         var strOkay = "OK";
