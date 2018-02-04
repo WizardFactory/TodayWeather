@@ -5,6 +5,9 @@
 "use strict";
 
 var assert  = require('assert');
+
+var mongoose = require('mongoose');
+
 var Logger = require('../../lib/log');
 global.log  = new Logger(__dirname + "/debug.log");
 
@@ -35,7 +38,7 @@ describe('e2e local test - controller push', function() {
         "geo" : [ 127.37, 36.3 ],
         "name" : "정림동" };
 
-    var pushInfo2 = { "cityIndex" : 1,
+    var pushInfo2 = { "cityIndex" : 2,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
         "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
         "pushTime" : 82800,
@@ -61,6 +64,59 @@ describe('e2e local test - controller push', function() {
             assert.equal(err, null, err);
             console.log(result);
             done();
+        });
+    });
+
+    before(function (done) {
+        this.timeout(10*1000);
+        mongoose.Promise = global.Promise;
+        mongoose.connect('mongodb://localhost/todayweather', function(err) {
+            if (err) {
+                console.error('Could not connect to MongoDB!');
+            }
+            done();
+        });
+        mongoose.connection.on('error', function(err) {
+            if (err) {
+                console.error('MongoDB connection error: ' + err);
+                done();
+            }
+        });
+    });
+
+    it ('test remove old list', function (done) {
+        var ctrl = new ControllerPush();
+
+        var pushList = [];
+        pushList.push(pushInfo1);
+        pushList.push(pushInfo2);
+
+        ctrl._getCurrentTime = function () {
+            var current = new Date();
+            current.setDate(current.getDate()-100);
+            return current;
+        };
+
+        ctrl.sendNotification = function (pushInfo, callback) {
+            callback(undefined, pushInfo);
+        };
+
+        ctrl.updatePushInfoList('ko', pushList, function (err, result) {
+            if (err) {
+                log.error(err);
+            }
+            assert.equal(err, undefined);
+
+            ctrl.sendPush(pushInfo1.pushTime, function (err, result) {
+                if (err)  {
+                    log.error(err);
+                }
+                else {
+                    log.info(result);
+                }
+                assert.equal(err, undefined);
+                done();
+            });
         });
     });
 });

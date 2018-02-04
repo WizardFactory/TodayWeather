@@ -24,11 +24,12 @@ var pushSchema = new mongoose.Schema({
         distanceUnit: String,   //km, miles
         precipitationUnit: String, //mm, inches
         airUnit: String //airkorea, airkorea_who, airnow, aqicn
-    }
+    },
+    updatedAt: Date
 });
 
 pushSchema.index({alarmTime:1});
 pushSchema.index({cityIndex:1});
-pushSchema.index({registrationId: 'text'}, { default_language: 'none' });
+pushSchema.index({registrationId: "hashed"});
 
 module.exports = mongoose.model('push', pushSchema);

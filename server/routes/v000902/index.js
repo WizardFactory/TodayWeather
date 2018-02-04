@@ -26,6 +26,7 @@ router.use('/gather', require('../v000001/routeGather'));
 router.use('/daily', require('../v000705/dailySummary'));
 router.use('/check-purchase', require('../v000705/receiptValidation'));
 router.use('/push', require('../v000705/routePushNotification'));
+router.use('/push-list', require('./route.push.update.list'));
 router.use('/nation', require('../v000803/route.nation'));
 
 router.use('/kma/addr', require('./route.kma.addr.v000902'));
