@@ -486,8 +486,6 @@ angular.module('controller.forecastctrl', [])
                     }
                 }
 
-                $scope.currentPosition = cityData.currentPosition;
-
                 $scope.updateTime = (function () {
                     try {
                         if (cityData.currentWeather) {
@@ -738,10 +736,6 @@ angular.module('controller.forecastctrl', [])
             else {
                 return temp;
             }
-        };
-
-        $scope.isLocationEnabled = function () {
-            return Util.isLocationEnabled();
         };
 
         $scope.switchToLocationSettings = function () {

@@ -4,10 +4,10 @@
     </ion-nav-buttons>
     <ion-nav-title>
         <p class="title dailyforecast-header">
-            <span style="vertical-align: middle">{{address}}</span>
-            <!--location_on, location_off-->
-            <i ng-if="currentPosition" class="material-icons" style="vertical-align: middle; font-size: 100%"
+            <span>{{address}}</span>
+            <i ng-if="currentPosition && showLoadingIndicator != true" class="material-icons"
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
+            <ion-spinner ng-if="showLoadingIndicator" icon="bubbles"></ion-spinner>
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">

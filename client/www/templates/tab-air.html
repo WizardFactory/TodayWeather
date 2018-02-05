@@ -4,10 +4,10 @@
     </ion-nav-buttons>
     <ion-nav-title>
         <p class="title forecast-header">
-            <span style="vertical-align: middle">{{address}}</span>
-            <!--location_on, location_off-->
-            <i ng-if="currentPosition" class="material-icons" style="vertical-align: middle; font-size: 100%"
+            <span>{{address}}</span>
+            <i ng-if="currentPosition && showLoadingIndicator != true" class="material-icons"
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
+            <ion-spinner ng-if="showLoadingIndicator" icon="bubbles"></ion-spinner>
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
@@ -70,7 +70,7 @@
         </div>
         <div class="list card air-hourly" ng-if="hourlyForecast && hourlyForecast.length > 1">
             <p class="body1">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</p>
-            <div>
+            <div id="hourlyBox">
                 <table ng-style="{'width':hourlyForecast.length*48+'px'}">
                     <tr>
                         <td class="hourly-box" ng-repeat="obj in hourlyForecast">
@@ -102,7 +102,7 @@
         </div>
         <div class="list card air-items" ng-if="aqiList.length>1">
             <p class="body1">{{"LOC_DETAIL_AQI"|translate}}</p>
-            <div ng-if="aqiList.length > 1">
+            <div id="itemsBox" ng-if="aqiList.length > 1">
                 <div class="row" ng-style="{'width':aqiList.length*110+'px'}">
                     <button class="button button-stable item-center"
                             ng-click="setMainAqiCode(obj.code)"
