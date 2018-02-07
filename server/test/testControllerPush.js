@@ -53,7 +53,9 @@ describe('unit test - controller push', function() {
             distanceUnit: "km",
             precipitationUnit: "mm",
             airUnit: "airkorea"
-        }
+        },
+        dayOfWeeks: [1,5],
+        timezoneOffset: 540
     };
 
     //var pushInfo0 = {
@@ -99,7 +101,9 @@ describe('unit test - controller push', function() {
            pressureUnit: "mbar",
            distanceUnit: "miles",
            precipitationUnit: "inch"
-       }
+       },
+        dayOfWeeks: [1,2,3,4,5],
+        timezoneOffset: 540
     };
 
     it('test update push list', function(done) {

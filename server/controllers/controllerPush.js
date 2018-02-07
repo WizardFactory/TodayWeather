@@ -13,6 +13,8 @@ var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
 var cTown = new ControllerTown24h();
 
+var kmaTimeLib = require('../lib/kmaTimeLib');
+
 var dnscache = require('dnscache')({
     "enable" : true,
     "ttl" : 300,
@@ -858,6 +860,36 @@ ControllerPush.prototype._removeOldList = function (pushList, callback) {
     return this;
 };
 
+/**
+ *
+ * @param pushList
+ * @param current server time (utc)
+ * @private
+ */
+ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
+    var filteredList = pushList.filter(function (pushInfo) {
+        if (pushInfo.hasOwnProperty('dayOfWeeks')) {
+            if (!pushInfo.hasOwnProperty('timezoneOffset')) {
+                log.error("timezone offset is undefined pushInfo:"+JSON.stringify(pushInfo));
+                return false;
+            }
+            //convert clientLocalTime
+            var localCurrent = kmaTimeLib.toLocalTime(pushInfo.timezoneOffset, current);
+            var day = localCurrent.getDay();
+
+            var findIt = pushInfo.dayOfWeeks.find(function (value) {
+                return day === value;
+            });
+            return findIt != undefined;
+        }
+        else {
+            return true;
+        }
+    });
+
+    return filteredList;
+};
+
 ControllerPush.prototype.sendPush = function (time, callback) {
     var self = this;
 
@@ -871,6 +903,19 @@ ControllerPush.prototype.sendPush = function (time, callback) {
                     log.info('get push by time : push list='+JSON.stringify(pushList));
                     callback(undefined, pushList);
                 });
+            },
+            function (pushList, callback) {
+                //filter day of week
+                var filteredList;
+                try {
+                    var current = new Date();
+                    filteredList = self._filterByDayOfWeek(pushList, current);
+                }
+                catch (err) {
+                    log.error(err);
+                    return callback(err);
+                }
+                callback(filteredList);
             },
             function(pushList, callback) {
                 async.mapSeries(pushList, function (pushInfo, mCallback) {

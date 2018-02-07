@@ -49,5 +49,17 @@ describe('unit test - kma time lib', function() {
         var date = kmaTimeLib.convertStringToDate('201603160010');
         assert(date.getMinutes()==10, true, 'Fail to convert string to date')
     });
-});
 
+    it('test toLocalTime ', function () {
+        var current = new Date();
+        var local = kmaTimeLib.toLocalTime(9*60, new Date(current));
+        assert.equal(current.toISOString(), local.toISOString());
+    });
+
+    it('test toLocalTime ', function () {
+        var current = new Date();
+        var local = kmaTimeLib.toLocalTime(8*60, new Date(current));
+        current.setMinutes(current.getMinutes()-60);
+        assert.equal(current.toISOString(), local.toISOString());
+    });
+});

@@ -36,7 +36,7 @@ describe('e2e local test - controller push', function() {
         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
         "geo" : [ 127.37, 36.3 ],
-        "name" : "정림동" };
+        "name" : "정림동1", "dayOfWeeks":[1,3,5], "timezoneOffset":540 };
 
     var pushInfo2 = { "cityIndex" : 2,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
@@ -45,7 +45,7 @@ describe('e2e local test - controller push', function() {
         "type" : "ios", "source" : "KMA", "lang" : "ko",
         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-        "name" : "정림동" };
+        "name" : "정림동2", "dayOfWeeks":[1,3,5], "timezoneOffset":-540};
 
     it('test request daily summary without town', function(done) {
         this.timeout(20*1000);
@@ -118,6 +118,18 @@ describe('e2e local test - controller push', function() {
                 done();
             });
         });
+    });
+
+    it('test filter day of week', function() {
+        var pushList = [];
+        pushList.push(pushInfo1);
+        pushList.push(pushInfo2);
+        var date = new Date();
+        console.log("day="+date.getDay());
+
+        var co = new ControllerPush();
+        var filteredList = co._filterByDayOfWeek(pushList, date);
+        console.log(filteredList);
     });
 });
 
