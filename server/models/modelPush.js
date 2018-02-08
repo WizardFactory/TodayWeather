@@ -25,7 +25,9 @@ var pushSchema = new mongoose.Schema({
         precipitationUnit: String, //mm, inches
         airUnit: String //airkorea, airkorea_who, airnow, aqicn
     },
-    updatedAt: Date
+    updatedAt: Date,
+    timezoneOffset: Number, //mins +9h -> +540
+    dayOfWeeks: [Number], // Sunday - Saturday : 0 - 6
 });
 
 pushSchema.index({alarmTime:1});
