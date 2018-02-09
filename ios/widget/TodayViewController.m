@@ -2767,16 +2767,25 @@ static TodayViewController *todayVC = nil;
 
 - (void) processErrorStatus:(NSError *)error
 {
+    NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    NSLog(@"version : %ld.%ld.%ld", (long)nsOSVer.majorVersion, (long)nsOSVer.minorVersion, (long)nsOSVer.patchVersion);
+
     dispatch_async(dispatch_get_main_queue(), ^{
         NSInteger errCode = error.code;
         updateTimeLabel.text = @"";
-        curDustLabel.text = [NSString stringWithFormat:@"Server Error %ld", errCode];
+        curDustLabel.text = [NSString stringWithFormat:@"Server Error %ld", (long)errCode];
         todayMaxMinTempLabel.text = @"";
         curTempLabel.text = @"";
+        addressLabel.text = @"Error";
         curWTIconIV.image = [UIImage imageNamed:@"empty"];
         
-        [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
+        if(nsOSVer.majorVersion >= 10)
+        {
+            [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
+        }
+    
         showMoreView.hidden = YES;
+        locationView.hidden = false;
     });
 }
 
