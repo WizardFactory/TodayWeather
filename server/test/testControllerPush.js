@@ -53,7 +53,9 @@ describe('unit test - controller push', function() {
             distanceUnit: "km",
             precipitationUnit: "mm",
             airUnit: "airkorea"
-        }
+        },
+        dayOfWeeks: [1,5],
+        timezoneOffset: 540
     };
 
     //var pushInfo0 = {
@@ -83,24 +85,47 @@ describe('unit test - controller push', function() {
     //    }
     //};
 
-    // var pushInfo3 = {
-    //    registrationId: 'asdf',
-    //    pushTime: 6900,
-    //    cityIndex: 0,
-    //    type: 'ios',
-    //    town: {first: '', second: '', third: ''},
-    //    geo: [139.6917064, 35.6894875],
-    //    lang: 'en',
-    //    name: 'Tokyo',
-    //    source: 'DSF',
-    //    units: {
-    //        temperatureUnit: "F",
-    //        windSpeedUnit: "mph",
-    //        pressureUnit: "mbar",
-    //        distanceUnit: "miles",
-    //        precipitationUnit: "inch"
-    //    }
-    // };
+    var pushInfo3 = {
+       registrationId: 'asdf',
+       pushTime: 6900,
+       cityIndex: 1,
+       type: 'ios',
+       town: {first: '', second: '', third: ''},
+       geo: [139.6917064, 35.6894875],
+       lang: 'en',
+       name: 'Tokyo',
+       source: 'DSF',
+       units: {
+           temperatureUnit: "F",
+           windSpeedUnit: "mph",
+           pressureUnit: "mbar",
+           distanceUnit: "miles",
+           precipitationUnit: "inch"
+       },
+        dayOfWeeks: [1,2,3,4,5],
+        timezoneOffset: 540
+    };
+
+    it('test update push list', function(done) {
+        var PushInfo = require('../models/modelPush');
+
+        PushInfo.update = function(condition, push, options, callback) {
+            console.log('update');
+            assert.equal(push.registrationId, pushInfo.registrationId, 'error');
+            return callback();
+        };
+
+        var pushList = [];
+        pushList.push(pushInfo);
+        pushList.push(pushInfo3);
+
+        var co = new ControllerPush();
+        co.updatePushInfoList(pushInfo.lang, pushList, function (err, result) {
+            assert.equal(err, undefined, 'error');
+            assert.equal(result.length, 2, 'error');
+            done();
+        });
+    });
 
     it('test update push info', function(done) {
         var PushInfo = require('../models/modelPush');

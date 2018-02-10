@@ -6,7 +6,6 @@ angular.module('controller.searchctrl', [])
         $scope.searchResults = [];
         $scope.searchResults2 = [];
         $scope.cityList = [];
-        $scope.imgPath = Util.imgPath;
         $scope.isEditing = false;
         $scope.isSearching = false;
 

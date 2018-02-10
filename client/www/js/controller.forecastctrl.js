@@ -15,8 +15,6 @@ angular.module('controller.forecastctrl', [])
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        $scope.imgPath = Util.imgPath;
-
         if ($scope.forecastType == 'mid') {
             $scope.hasDustForecast = function () {
                 if ($scope.dayChart == undefined) {
@@ -434,6 +432,13 @@ angular.module('controller.forecastctrl', [])
 
         $scope.getMidTableHeight = getMidTableHeight;
 
+        $scope.showHourlyAqiForecast = function () {
+           if ($scope.hourlyAqiForecast && $scope.hourlyAqiForecast.length > 1)  {
+               return true;
+           }
+           return false;
+        };
+
         function applyWeatherData() {
             var dayTable;
             var cityIndex;
@@ -466,8 +471,20 @@ angular.module('controller.forecastctrl', [])
                 $scope.dayWidth = colWidth * dayTable.length;
 
                 $scope.currentWeather = cityData.currentWeather;
+                if (cityData.airInfo &&
+                    cityData.airInfo.pollutants &&
+                    cityData.airInfo.pollutants.aqi) {
 
-                $scope.currentPosition = cityData.currentPosition;
+                    var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
+                    if (cityData.airInfo.pollutants.aqi.hourly) {
+                        $scope.hourlyAqiForecast = cityData.airInfo.pollutants.aqi.hourly.filter(function (obj) {
+                            return obj.date >= latestAirInfo.dataTime;
+                        }).slice(0, 4);
+                    }
+                    if (cityData.airInfo.pollutants.aqi.daily) {
+                        $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                    }
+                }
 
                 $scope.updateTime = (function () {
                     try {
@@ -719,10 +736,6 @@ angular.module('controller.forecastctrl', [])
             else {
                 return temp;
             }
-        };
-
-        $scope.isLocationEnabled = function () {
-            return Util.isLocationEnabled();
         };
 
         $scope.switchToLocationSettings = function () {

@@ -18,12 +18,12 @@
             <!--<a class="button" style="padding: 0 4px">미세먼지</a>-->
         </div>
         <p></p>
-        <div class="nation" style="width: 330px; height: 485px;" ng-style="{'background-image':'url(./img/KR.png)'}">
+        <div class="nation" style="width: 330px; height: 485px;" ng-style="{'background-image':'url(./img/kr.png)'}">
             <div ng-repeat="city in cityList">
                 <div class="nation-label" ng-style="{'top': city.top+'px', 'left':city.left+'px'}">
                     <div>{{city.name}}</div>
                     <div>
-                        <img ng-if="getIcon(city.name) !== undefined" ng-src="{{::imgPath}}/{{getIcon(city.name)}}.png">
+                        <img ng-if="getIcon(city.name) !== undefined" ng-src="{{::weatherImgPath}}/{{getIcon(city.name)}}.png">
                         <div ng-if="getText1(city.name) !== undefined">{{getText1(city.name)}}<span>{{getText1Unit()}}</span></div>
                         <div ng-if="getText2(city.name) !== undefined">{{getText2(city.name)}}<span>{{getText2Unit()}}</span></div>
                     </div>

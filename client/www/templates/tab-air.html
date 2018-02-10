@@ -4,10 +4,10 @@
     </ion-nav-buttons>
     <ion-nav-title>
         <p class="title forecast-header">
-            <span style="vertical-align: middle">{{address}}</span>
-            <!--location_on, location_off-->
-            <i ng-if="currentPosition" class="material-icons" style="vertical-align: middle; font-size: 100%"
+            <span>{{address}}</span>
+            <i ng-if="currentPosition && showLoadingIndicator != true" class="material-icons"
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
+            <ion-spinner ng-if="showLoadingIndicator" icon="bubbles"></ion-spinner>
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
@@ -25,26 +25,28 @@
                     <div class="air-outline" ng-style="{'border-color': grade2Color(airCodeGrade)}">
                         {{airCodeName|translate}}
                     </div>
-                    <div class="row row-no-padding" style="margin-top: 8px">
+                    <div class="row row-no-padding">
+                        <div style="margin: auto">
+                            <p class="main-text">{{airCodeValue}}<span>{{getAirCodeUnit(aqiCode)}}</span></p>
+                        </div>
+                    </div>
+                    <div class="row row-no-padding">
                         <div style="margin: auto">
                             <div class="row row-no-padding">
-                                <div class="main-icon">
-                                    <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)">
-                                    </i>
-                                </div>
-                                <p class="main-text">{{airCodeValue}}
+                                <p class="textFont">
+                                    {{airCodeStr}}
+                                    <i class="material-icons" ng-bind-html="getSentimentIcon(airCodeGrade)"></i>
+                                    <span ng-if="airCodeActionGuide">{{airCodeActionGuide}}</span>
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <p class="textFont">
-                        {{airCodeStr}}<span ng-if="airCodeActionGuide">:{{airCodeActionGuide}}</span></p>
                 </div>
                 <div class="cityArrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
                     <span class="icon-right ion-chevron-right"></span>
                 </div>
             </div>
-            <div style="position: relative">
+            <div class="air-std-table">
                 <div class="air-label"
                      ng-style="{'left':getLabelPosition(airCodeGrade, airCodeValue)+'px'}">
                     <div class="outline"
@@ -66,38 +68,33 @@
                 </div>
             </div>
         </div>
-        <div class="list card air-hourly" ng-if="hourlyForecast && hourlyForecast.length">
-            <p class="body1">{{'LOC_HOURLY_AQI_FORECAST'|translate}}</p>
-            <div>
+        <div class="list card air-hourly" ng-if="hourlyForecast && hourlyForecast.length > 1">
+            <p class="body1">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</p>
+            <div id="hourlyBox">
                 <table ng-style="{'width':hourlyForecast.length*48+'px'}">
                     <tr>
-                        <td class="hourly-box" ng-repeat="obj in hourlyForecast" ng-style="{'color': grade2Color(obj.grade)}">
-                            <p class="body1">{{obj.time}}{{'LOC_HOUR'|translate}}</p>
-                            <p class="display1">
+                        <td class="hourly-box" ng-repeat="obj in hourlyForecast">
+                            <p class="body1">{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
+                            <p class="display1" ng-style="{'color': mainGrade2Color(obj.grade)}">
                                 <i class="material-icons" ng-bind-html="getSentimentIcon(obj.grade)"></i>
                             </p>
-                            <span class="body2">{{obj.value}}</span>
+                            <span class="body2" ng-style="{'color': mainGrade2Color(obj.grade)}">{{obj.val == undefined?"-":obj.val}}</span>
                         </td>
                     </tr>
                 </table>
             </div>
         </div>
         <div class="list card air-daily" ng-if="dayForecast && dayForecast.length">
-            <p class="body1">{{"LOC_DAILY_AQI_FORECAST"|translate}} ({{getForecastAirUnitStr()|translate}})</p>
+            <p class="body1">{{"LOC_DAILY_AQI_FORECAST"|translate}}</p>
             <table>
                 <tr>
                     <td class="daily-box" ng-repeat="day in dayForecast">
-                        <div class="air-outline"
-                             ng-style="{'border-color': airkoreaGrade2Color(day.grade), 'color': airkoreaGrade2Color(day.grade)}">
-                            <a class="icon ion-calendar"
-                               ng-style="{'color': airkoreaGrade2Color(day.grade)}"
-                            >{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
-                            <div class="daily-border">
-                                <p class="display1">
-                                    <i class="material-icons" ng-bind-html="getSentimentIcon(day.grade)"></i>
-                                </p>
-                                <p class="body2">{{day.str}}</p>
-                            </div>
+                        <p class="body1">{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <div class="daily-border" ng-style="{'color': grade2Color(day.maxGrade)}">
+                            <p class="display1">
+                                <i class="material-icons" ng-bind-html="getSentimentIcon(day.maxGrade)"></i>
+                            </p>
+                            <p class="body2">{{day.maxStr}}</p>
                         </div>
                     </td>
                 </tr>
@@ -105,15 +102,16 @@
         </div>
         <div class="list card air-items" ng-if="aqiList.length>1">
             <p class="body1">{{"LOC_DETAIL_AQI"|translate}}</p>
-            <div ng-if="aqiList.length > 1">
+            <div id="itemsBox" ng-if="aqiList.length > 1">
                 <div class="row" ng-style="{'width':aqiList.length*110+'px'}">
-                    <button class="button button-outline button-dark item-center"
-                            ng-style="{'border-color': grade2Color(obj.grade), 'color': grade2Color(obj.grade)}"
+                    <button class="button button-stable item-center"
                             ng-click="setMainAqiCode(obj.code)"
-                            ng-repeat="obj in aqiList">
-                        <span>{{obj.name|translate}}</span><br>
-                        <i class="material-icons" ng-bind-html="getSentimentIcon(obj.grade)"></i><br>
-                        {{obj.value}}
+                            ng-repeat="obj in aqiList" style="background-color: #f4f4f4">
+                        <span style="font-weight: normal">{{obj.name|translate}}</span><br>
+                        <div ng-style="{'color': mainGrade2Color(obj.grade)}">
+                            <i class="material-icons" ng-bind-html="getSentimentIcon(obj.grade)"></i><br>
+                            {{obj.value}}
+                        </div>
                     </button>
                 </div>
             </div>

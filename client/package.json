@@ -70,7 +70,8 @@
       "locator": "https://github.com/WizardFactory/cordova-plugin-todayweather-config.git",
       "id": "cordova-plugin-todayweather-config"
     },
-    "cordova-plugin-app-preferences"
+    "cordova-plugin-app-preferences",
+    "cordova-plugin-ionic-webview"
   ],
   "cordovaPlatforms": [
     {

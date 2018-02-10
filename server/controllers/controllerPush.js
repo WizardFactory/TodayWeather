@@ -12,11 +12,8 @@ var async = require('async');
 var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
 var cTown = new ControllerTown24h();
-var UnitConverter = require('../lib/unitConverter');
-var unitConverter = new UnitConverter();
 
-var KecoController = require('../controllers/kecoController');
-var LifeIndexKmaController = require('./lifeIndexKmaController');
+var kmaTimeLib = require('../lib/kmaTimeLib');
 
 var dnscache = require('dnscache')({
     "enable" : true,
@@ -94,10 +91,30 @@ ControllerPush.prototype.updateRegistrationId = function (newId, oldId, callback
     return this;
 };
 
+ControllerPush.prototype._getCurrentTime = function () {
+   return new Date();
+};
+
 /**
  * save push info
  */
 ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
+    pushInfo.updatedAt = this._getCurrentTime();
+
+    if (pushInfo.hasOwnProperty('geo')) {
+       if (typeof pushInfo.geo[0] !== 'number' || typeof pushInfo.geo[1] !== 'number')  {
+           return callback(new Error('invalid geo info pushInfo:'+JSON.stringify(pushInfo)));
+       }
+    }
+    else if (pushInfo.hasOwnProperty('town')) {
+        if (!pushInfo.town.hasOwnProperty('first')) {
+            return callback(new Error('invalid town info pushInfo:'+JSON.stringify(pushInfo)));
+        }
+    }
+    else {
+        return callback(new Error('invalid info pushInfo:'+JSON.stringify(pushInfo)));
+    }
+
     PushInfo.update(
         {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
         pushInfo,
@@ -747,23 +764,6 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
     return this;
 };
 
-/**
- * push가 오랫동안 없을때, server가 내려가는 것을 방지하기 위한 것임.
- */
-ControllerPush.prototype.requestKeepMessage = function () {
-
-    var url = "http://"+config.ipAddress+":"+config.port+"/v000705/town";
-    log.info('request url='+url);
-    req(url, {json:true}, function(err) {
-        if (err) {
-            log.info(err);
-        }
-        else {
-            log.info('Finished '+ url +' '+new Date());
-        }
-    });
-};
-
 ControllerPush.prototype.convertToNotification = function(dailySummary) {
     return {title: dailySummary.title, text: dailySummary.text, icon: dailySummary.icon}
 };
@@ -808,45 +808,147 @@ ControllerPush.prototype.sendNotification = function (pushInfo, callback) {
     });
 };
 
-ControllerPush.prototype.sendPush = function (time) {
+/**
+ * 갱신한지 180이 지난 경우 삭제, updatedAt이 없는 경우 정보추가
+ * @param pushList
+ * @param callback
+ * @private
+ */
+ControllerPush.prototype._removeOldList = function (pushList, callback) {
+    var self = this;
+    var updatedCount=0;
+
+    async.map(pushList,
+        function (pushInfo, mCallback) {
+            if (pushInfo.updatedAt) {
+                var current = new Date();
+                current.setDate(current.getDate()-180);
+                if (pushInfo.updatedAt.getTime() < current.getTime()) {
+                    updatedCount++;
+                    //remove
+                    log.info('remove pushInfo:'+JSON.stringify(pushInfo));
+                    self.removePushInfo(pushInfo, function (err, result) {
+                        if (err) {
+                            log.error(err);
+                        }
+                        mCallback(undefined, result) ;
+                    });
+                }
+                else {
+                    mCallback(undefined, {result:'ok'});
+                }
+            }
+            else {
+                updatedCount++;
+                log.info('add updatedAt pushInfo:'+JSON.stringify(pushInfo));
+                //updatedAt이 없는 경우 지정해줌.
+                self.updatePushInfo(pushInfo, function (err, result) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    mCallback(undefined, result) ;
+                });
+            }
+        },
+        function (err) {
+            if (err) {
+                log.error(err);
+            }
+            callback(undefined, 'pushlist send length:'+pushList.length+' updated count='+updatedCount);
+        });
+
+    return this;
+};
+
+/**
+ *
+ * @param pushList
+ * @param current server time (utc)
+ * @private
+ */
+ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
+    var filteredList = pushList.filter(function (pushInfo) {
+        if (pushInfo.hasOwnProperty('dayOfWeeks')) {
+            if (!pushInfo.hasOwnProperty('timezoneOffset')) {
+                log.error("timezone offset is undefined pushInfo:"+JSON.stringify(pushInfo));
+                return false;
+            }
+            //convert clientLocalTime
+            var localCurrent = kmaTimeLib.toLocalTime(pushInfo.timezoneOffset, current);
+            var day = localCurrent.getDay();
+
+            var findIt = pushInfo.dayOfWeeks.find(function (value) {
+                return day === value;
+            });
+            return findIt != undefined;
+        }
+        else {
+            return true;
+        }
+    });
+
+    return filteredList;
+};
+
+ControllerPush.prototype.sendPush = function (time, callback) {
     var self = this;
 
-    log.info('send push tim='+time);
+    log.info('send push time='+time);
     async.waterfall([
-        function (callback) {
-            self.getPushByTime(time, function (err, pushList) {
-                if (err) {
-                    //self.requestKeepMessage();
-                    return callback(err);
-                }
-                log.info('get push by time : push list='+JSON.stringify(pushList));
-                callback(undefined, pushList);
-            });
-        }, function(pushList, callback) {
-            async.mapSeries(pushList, function (pushInfo, mCallback) {
-                self.sendNotification(pushInfo, function (err, result) {
+            function (callback) {
+                self.getPushByTime(time, function (err, pushList) {
                     if (err) {
-                        return mCallback(err);
+                        return callback(err);
                     }
-                    mCallback(undefined, result);
+                    log.info('get push by time : push list='+JSON.stringify(pushList));
+                    callback(undefined, pushList);
                 });
-            }, function (err, results) {
-                if (err) {
+            },
+            function (pushList, callback) {
+                //filter day of week
+                var filteredList;
+                try {
+                    var current = new Date();
+                    filteredList = self._filterByDayOfWeek(pushList, current);
+                }
+                catch (err) {
+                    log.error(err);
                     return callback(err);
                 }
-                if (pushList.length != results.length) {
-                    //some push are failed
-                    return callback(new Error('Fail push='+pushList.length+' success='+results.length));
-                }
-                callback(undefined, 'success push count='+pushList.length);
-            });
-        }
-    ], function(err, result) {
-        if (err) {
-            return log.warn(err);
-        }
-        log.info(result);
-    });
+                callback(filteredList);
+            },
+            function(pushList, callback) {
+                async.mapSeries(pushList, function (pushInfo, mCallback) {
+                    self.sendNotification(pushInfo, function (err, result) {
+                        if (err) {
+                            return mCallback(err);
+                        }
+                        mCallback(undefined, result);
+                    });
+                }, function (err, results) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    if (pushList.length != results.length) {
+                        //some push are failed
+                        return callback(new Error('Fail push='+pushList.length+' success='+results.length));
+                    }
+                    callback(undefined, pushList);
+                });
+            },
+            function (pushList, callback) {
+                self._removeOldList(pushList, callback);
+            }
+        ],
+        function(err, result) {
+            if (err) {
+                return log.warn(err);
+            }
+            log.info(result);
+            if (callback) {
+                callback(err, result);
+            }
+        });
 };
 
 ControllerPush.prototype.start = function () {
@@ -872,6 +974,45 @@ ControllerPush.prototype.apnFeedback = function () {
             // Do something with item.device and item.time;
         });
     });
+};
+
+ControllerPush.prototype.updatePushInfoList = function (language, pushList, callback) {
+    var self = this;
+
+    if (!Array.isArray(pushList)) {
+        var err = new Error('Invalid push info list');
+        err.statusCode = 403;
+        return callback(err);
+    }
+
+    async.map(pushList,
+        function (pushInfo, callback) {
+            try {
+                pushInfo.lang = language;
+                if (pushInfo.location) {
+                    pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
+                }
+                if (pushInfo.source == undefined) {
+                    pushInfo.source = "KMA"
+                }
+
+                log.info('pushInfo : '+ JSON.stringify(pushInfo));
+            }
+            catch (err) {
+                return callback (err);
+            }
+
+            self.updatePushInfo(pushInfo, function (err, result) {
+                callback(err, result);
+            });
+        },
+        function (err, results) {
+            if (err) {
+                err.statusCode = 500;
+                return callback(err);
+            }
+            callback(null, results);
+        });
 };
 
 module.exports = ControllerPush;

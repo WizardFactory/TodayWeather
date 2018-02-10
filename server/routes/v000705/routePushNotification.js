@@ -41,9 +41,10 @@ router.post('/', function(req, res) {
     }
 
     pushInfo.lang = language;
-    if (pushInfo.location) {
+    if (pushInfo.location && pushInfo.location.hasOwnProperty('long') && pushInfo.location.hasOwnProperty('lat')) {
         pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
     }
+
     if (pushInfo.source == undefined) {
         pushInfo.source = "KMA"
     }

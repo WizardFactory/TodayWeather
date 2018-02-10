@@ -447,4 +447,11 @@ kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ = function (str) {
     return str.substr(0, 13) + ":00";
 };
 
+kmaTimeLib.toLocalTime = function (offset, date) {
+    date = date || new Date();
+    date.setMinutes(date.getMinutes()+date.getTimezoneOffset()); //to utc time
+    date.setMinutes(date.getMinutes()+offset);
+    return date;
+};
+
 module.exports = kmaTimeLib;

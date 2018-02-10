@@ -468,6 +468,15 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   background: transparent;
 }
 
+.short-forecast .air-info-box {
+  margin: 0;
+  padding: 0;
+}
+
+.short-forecast .air-info-box hr {
+  margin: 0; border: 0; border-top:1px solid rgba(255,255,255,0.6);
+}
+
 .start-content .item-input {
   padding-right: 16px;
   display: flex !important;
@@ -595,6 +604,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 .air-content {
   color: #444;
   font-size: 17px;
+  width: 100%;
+}
+
+.air-content .card {
+  margin: 0 0 9px 0;
 }
 
 .air-content [md-page-header] {
@@ -606,26 +620,35 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
-.air-content .main-icon i {
+.air-content .main-text {
+  margin: -2px 0;
   font-size: 64px;
 }
 
-.air-content .main-text {
-  margin: -2px 0;
-  font-weight:300;
-  font-size: 64px;
-  line-height: 64px;
+.air-content .main-text span {
+  font-size: 32px;
+}
+
+.air-content [md-page-header] i {
+  font-size: 24px;
+  vertical-align: bottom;
 }
 
 .air-content [md-page-header] .textFont {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 24px;
 }
 
 .air-content .button {
   color: #444;
   font-size: 17px;
   line-height: initial;
+}
+
+.air-std-table {
+  position: relative;
+  margin: 0 4px;
 }
 
 .air-label {
@@ -682,11 +705,16 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   height: 2px;
 }
 
+.air-hourly {
+  width: 100%;
+}
+
 .air-hourly p {
   margin: 5px;
 }
 
-.air-hourly div {
+.air-hourly #hourlyBox {
+  width: 100%;
   overflow: auto;
   white-space: nowrap;
 }
@@ -696,7 +724,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
-.air-hourly .body1 {
+.air-hourly .hourly-box .body1 {
   margin: 0;
 }
 
@@ -730,6 +758,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   margin: auto;
 }
 
+.air-daily .daily-box a {
+  color: inherit;
+}
+
 .air-daily .daily-border {
   border-left: 1px rgba(254, 254, 254, .4) solid;
 }
@@ -751,7 +783,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   width: 100%;
 }
 
-.air-items div {
+.air-items #itemsBox {
   overflow: auto;
   white-space: nowrap;
 }
@@ -783,7 +815,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .card {
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   margin: 5px 10px;
 }
 
@@ -868,6 +900,22 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   display: none !important;
 }
 
+.dailyforecast-header span,
+.forecast-header span {
+  vertical-align: middle;
+}
+
+.dailyforecast-header i,
+.forecast-header i {
+  font-size: 100%;
+  vertical-align: middle;
+}
+
+.dailyforecast-header ion-spinner,
+.forecast-header ion-spinner {
+  vertical-align: middle;
+}
+
 .menu-content.overflow-scroll {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: auto !important;
@@ -925,8 +973,18 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 .update_information_popup input {
-  width: initial;
+  width: 18px;
+  height: 18px;
   margin: 3px 0.5ex;
+  vertical-align: bottom;
+}
+
+.update_information_popup span {
+  font-size: 16px;
+}
+
+.update_information_popup .checkbox-text {
+  font-size: 18px;
 }
 
 //Dense scripts
@@ -1110,6 +1168,13 @@ p small {
 
 .nation-label span {
   font-size:12px;
+}
+
+.spinner svg {
+  width: 14px;
+  height: 14px;
+  stroke: #fff;
+  fill: #fff;
 }
 
 //iphone 4
