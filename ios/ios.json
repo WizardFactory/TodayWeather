@@ -19,6 +19,21 @@
                 "parents": {
                     "/*": []
                 }
+            },
+            "*-Info.plist": {
+                "parents": {
+                    "NSPhotoLibraryAddUsageDescription": [],
+                    "CFBundleURLTypes": [],
+                    "NSLocationAlwaysUsageDescription": [],
+                    "NSLocationWhenInUseUsageDescription": [],
+                    "CFBundleDevelopmentRegion": [],
+                    "CFBundleLocalizations": [],
+                    "ITSAppUsesNonExemptEncryption": [],
+                    "NSBluetoothPeripheralUsageDescription": [],
+                    "NSCalendarsUsageDescription": [],
+                    "NSMicrophoneUsageDescription": [],
+                    "NSPhotoLibraryUsageDescription": []
+                }
             }
         }
     },

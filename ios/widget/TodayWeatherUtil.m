@@ -12,7 +12,6 @@ TEMP_UNIT    gTemperatureUnit;
 
 @implementation TodayWeatherUtil
 @synthesize twuCountry;
-@synthesize nsmaDaumKeys;
 @synthesize jsonUnitsDict;
 
 /********************************************************************
@@ -601,76 +600,6 @@ TEMP_UNIT    gTemperatureUnit;
     }
     
     return nsaDatas;
-}
-
-/********************************************************************
- *
- * Name			: getDaumServiceKeys
- * Description	: get Daum Service Keys by NSDefaults
- * Returns		: void
- * Side effects :
- * Date			: 2017. 5. 27
- * Author		: SeanKim
- * History		: 20170527 SeanKim Create function
- *
- ********************************************************************/
-- (NSMutableArray *) getDaumServiceKeys
-{
-    return nsmaDaumKeys;
-}
-
-/********************************************************************
- *
- * Name			: setDaumServiceKeys
- * Description	: set Daum Service Keys by NSDefaults
- * Returns		: void
- * Side effects :
- * Date			: 2017. 5. 27
- * Author		: SeanKim
- * History		: 20170527 SeanKim Create function
- *
- ********************************************************************/
-- (void) setDaumServiceKeys:(NSString *)nssDaumKeys
-{
-    NSData *tmpData = nil;
-    NSError *error;
-    NSArray *nsaDaumKeys = nil;
-
-    if(nssDaumKeys == nil)
-    {
-        NSLog(@"nssDaumKeys is null!!!");
-        return;
-    }
-    
-    //NSLog(@"nsmaDaumKeys : %@", nssDaumKeys);
-    tmpData = [nssDaumKeys dataUsingEncoding:NSUTF8StringEncoding];
-    
-    if(tmpData)
-    {
-        nsaDaumKeys = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
-        //NSArray  *nsaDaumKeys = [[NSArray alloc] initWithObjects:@"0", @"1", @"2", @"3", nil];
-        
-    #if 0
-        for (int i = 0; i < [nsaDaumKeys count]; i++)
-        {
-            NSLog(@"original %d : %@", i, [nsaDaumKeys objectAtIndex:i]);
-        }
-    #endif
-            
-        nsmaDaumKeys = [[NSMutableArray alloc] initWithArray:nsaDaumKeys];
-        
-    #if 0
-        // Use this code in requesting url to daum
-        NSMutableArray *nsmaShufflKeys= [TodayWeatherUtil shuffleDatas:nsmaDaumKeys];
-        
-        for (int i = 0; i < [nsmaShufflKeys count]; i++)
-        {
-            NSLog(@"shuffled %d : %@", i, [nsmaShufflKeys objectAtIndex:i]);
-        }
-    #endif
-    }
-    
-    return;
 }
 
 /**

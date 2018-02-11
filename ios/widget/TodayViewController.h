@@ -25,7 +25,6 @@
 @property (nonatomic) NSString *address;
 @property (nonatomic) BOOL currentPosition;
 @property (nonatomic) int index;
-@property (nonatomic) NSDictionary *weatherData;
 @property (nonatomic) NSString *name;
 @property (nonatomic) NSString *country;
 @property (nonatomic) NSDictionary *location;
@@ -67,7 +66,8 @@
     
 
     NSMutableArray          *mCityList;
-    NSMutableArray          *mCityDictList;                 // for sealization을 위한 
+    NSMutableArray          *mCityDictList;                 // for sealization을 위한
+    NSMutableArray          *mWeatherDataList;
     CityInfo                *mCurrentCity;
     int                     mCurrentCityIdx;
     BOOL                    bIsReqComplete;
@@ -88,7 +88,6 @@
     TodayWeatherShowMore        *todayWSM;
     TodayWeatherUtil            *todayUtil;
     NSMutableDictionary                *curJsonDict;
-    NSMutableArray              *shuffledDaumKeys;
     
 @public
     __weak IBOutlet UILabel *time1Label;
@@ -119,7 +118,6 @@
 @property (retain, nonatomic) CLLocationManager					*locationManager;
 @property (retain, nonatomic) CLLocation						*startingPoint;
 @property (retain, nonatomic) NSMutableData						*responseData;
-@property (retain, nonatomic) NSMutableArray                    *shuffledDaumKeys;
 @property (retain, nonatomic) IBOutlet UIActivityIndicatorView    *loadingIV;
 
 
@@ -140,11 +138,9 @@
 - (void) initWidgetDatas;
 - (void) initLocationInfo;
 - (void) refreshDatas;
-- (void) getAddressFromDaum:(float)latitude longitude:(float)longitude count:(int)tryCount;
 - (void) getAddressFromGoogle:(float)latitude longitude:(float)longitude;
 
 - (void) requestAsyncByURLSession:(NSString *)nssURL reqType:(NSUInteger)type;
-- (void) requestAsyncByURLSessionForRetry:(NSString *)nssURL reqType:(NSUInteger)type data:(NSDictionary *)nsdData;
 
 - (void) makeJSONWithData:(NSData *)jsonData reqType:(NSUInteger)type;
 - (void) parseKRAddress:(NSDictionary *)jsonDict;
