@@ -417,14 +417,8 @@ static TodayViewController *todayVC = nil;
     mWeatherDataList    = [NSMutableArray array];
     for (NSDictionary *weatherDict in jsonDictWD[@"weatherDataList"]) {
         
-        NSNumber *nsnIdx = weatherDict[@"index"];
         //NSLog(@"[loadWeatherData] nsnIdx : %@, weatherDict : %@", nsnIdx, weatherDict);
-        NSMutableDictionary* nsdTmpDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                                           nsnIdx, @"index",
-                                           weatherDict, @"weatherData",
-                                           nil];
-        
-        [mWeatherDataList addObject:nsdTmpDict];
+    	[mWeatherDataList addObject:weatherDict];
     }
     
     NSLog(@"[mWeatherDataList count] : %ld, cityCount : %d", (unsigned long)[mWeatherDataList count], cityCount);
