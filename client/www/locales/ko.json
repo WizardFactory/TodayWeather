@@ -281,5 +281,13 @@
   "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "외출시 황사마스크를 착용하세요!",
   "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "민감군 황사마스크 착용하세요!",
   "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "민감군 외출 자제하세요!",
-  "LOC_DO_NOT_GO_OUT": "외출을 자제하세요!"
+  "LOC_DO_NOT_GO_OUT": "외출을 자제하세요!",
+  "LOC_IT_IS_RAINING": "비가 내리고 있습니다.",
+  "LOC_IT_IS_SNOWING": "눈이 내리고 있습니다.",
+  "LOC_IT_IS_SLEETING": "진눈깨비가 내리고 있습니다.",
+  "LOC_IT_WILL_BE_RAINY_FROM_H": "%d시부터 비가 내릴 예정입니다.",
+  "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d시부터 눈이 내릴 예정입니다.",
+  "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d시부터 눈 또는 비가 내릴 예정입니다.",
+  "LOC_H_POLLUTANT_IS_GRADE": "%d시 %s가 %s입니다.",
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d시부터 %s가 %s 수준을 나타낼 것으로 예상됩니다."
 }

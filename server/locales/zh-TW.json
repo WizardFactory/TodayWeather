@@ -281,6 +281,14 @@
   "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "出門時戴上防塵面具！",
   "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "敏感的人戴黃沙面罩！",
   "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "不要對敏感的人出去！",
-  "LOC_DO_NOT_GO_OUT": "不要出去！"
+  "LOC_DO_NOT_GO_OUT": "不要出去！",
+  "LOC_IT_IS_RAINING": "正在下雨。",
+  "LOC_IT_IS_SNOWING": "正在下雪。",
+  "LOC_IT_IS_SLEETING": "正在下雨夾雪。",
+  "LOC_IT_WILL_BE_RAINY_FROM_H": "預計%d點開始下雨。",
+  "LOC_IT_WILL_BE_SNOWY_FROM_H": "預計%d點開始下雪。",
+  "LOC_IT_WILL_BE_SLEETING_FROM_H": "預計%d點開始會下雪或雨。",
+  "LOC_H_POLLUTANT_IS_GRADE": "%d點 %s是%s.",
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "預計%d點開始%s‘%s’程度。"
 }
 

@@ -426,6 +426,39 @@ class AqiConverter {
         }
         return -1;
     }
+
+    static sortByGrade(list) {
+        return list.sort(function (a, b) {
+            if (a.grade > b.grade)  {
+                return -1;
+            }
+            else if (a.grade < b.grade) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        });
+    }
+
+    static name2string(name) {
+        switch (name) {
+            case 'pm10':
+                return 'LOC_PM10';
+            case 'pm25':
+                return 'LOC_PM25';
+            case 'o3':
+                return 'LOC_O3';
+            case 'co':
+                return 'LOC_CO';
+            case 'so2':
+                return 'LOC_SO2';
+            case 'no2':
+                return 'LOC_NO2';
+            case 'aqi':
+                return 'LOC_AQI';
+        }
+    }
 }
 
 
