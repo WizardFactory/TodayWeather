@@ -281,5 +281,13 @@
   "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "外出時黄砂マスクを着用してください！",
   "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "敏感な人は、黄砂マスクの着用してください！",
   "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "敏感な人は、外出自粛してください！",
-  "LOC_DO_NOT_GO_OUT": "外出を控えるください！"
+  "LOC_DO_NOT_GO_OUT": "外出を控えるください！",
+  "LOC_IT_IS_RAINING": "雨が降っています。",
+  "LOC_IT_IS_SNOWING": "雪が降っています。",
+  "LOC_IT_IS_SLEETING": "霙が降っています。",
+  "LOC_IT_WILL_BE_RAINY_FROM_H": "%d時から雨が降る予定です。",
+  "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d時から雪が降る予定です。",
+  "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d時から雪または雨が降る予定です。",
+  "LOC_H_POLLUTANT_IS_GRADE": "%d時 %sが %sです。",
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d時から%sの「%s」レベルが予想されます。"
 }
