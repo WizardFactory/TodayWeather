@@ -706,7 +706,9 @@ class AlertPushController {
         }
 
         /**
-         * 기준시(time)보다 시작시작인 작아야 하고, 기준시보다 종료가 커야 함.
+         * 기준시(time)보다 시작시간이 작아야 하고, 기준시보다 종료가 커야 함.
+         * |--------|-----------|-------------|-------|
+         * 0시  startTime     {time}       endtime   24시
          * @type {{reverseTime: boolean, startTime: {$lte: *}, endTime: {$gte: *}}}
          */
         let queryN = {reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
