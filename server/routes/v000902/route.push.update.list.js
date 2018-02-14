@@ -58,7 +58,8 @@ router.post('/', function(req, res) {
     log.info('post : '+ JSON.stringify(req.body));
     log.info('accept-language:'+req.headers['accept-language']);
 
-    var language = req.headers['accept-language'];
+    var language = req.headers['accept-language'] || req.headers['Accept-Language'];
+
     if (language == undefined) {
         log.warn("accept-language is undefined");
         language = 'en';
@@ -66,7 +67,13 @@ router.post('/', function(req, res) {
     else {
         language = language.split(',')[0];
         if (language) {
-            language = language.substr(0, language.length-3);
+            if ( language.indexOf('ko') >= 0 ||
+                language.indexOf('en') >= 0 ||
+                language.indexOf('ja') >= 0 ||
+                language.indexOf('de') >= 0 )
+            {
+                language = language.substr(0, 2);
+            }
         }
         else {
             log.error("Fail to parse language="+req.headers['accept-language']);
@@ -75,6 +82,29 @@ router.post('/', function(req, res) {
     }
 
     var pushList = req.body;
+    try {
+        pushList.forEach(function (obj) {
+           if (!obj.hasOwnProperty('registrationId') ||
+               !obj.hasOwnProperty('type') )
+           {
+               throw new Error('invalid push info registrationId/type');
+           }
+
+           if (obj.registrationId.length === 0 ||
+               obj.type.length === 0)
+           {
+               throw new Error('invalid push info registrationId/type');
+           }
+
+           if (!obj.hasOwnProperty('location') && !obj.hasOwnProperty('town')) {
+               throw new Error('invalid push info location or town is empty');
+           }
+        });
+    }
+    catch (err) {
+        log.error(err);
+        return res.status(403).send(err.message);
+    }
 
     updatePushInfoList(language, pushList, function (err, result) {
         if (err) {

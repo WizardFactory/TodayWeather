@@ -709,8 +709,8 @@ class AlertPushController {
          * 기준시(time)보다 시작시작인 작아야 하고, 기준시보다 종료가 커야 함.
          * @type {{reverseTime: boolean, startTime: {$lte: *}, endTime: {$gte: *}}}
          */
-        let queryN = {reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
-        let queryR = {reverseTime: true, $or: [{startTime: {$lte:time}}, {endTime: {$gte:time}}]};
+        let queryN = {enable: true, reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
+        let queryR = {enable: true, reverseTime: true, $or: [{startTime: {$lte:time}}, {endTime: {$gte:time}}]};
         let queryList = [];
         queryList.push(queryN);
         queryList.push(queryR);

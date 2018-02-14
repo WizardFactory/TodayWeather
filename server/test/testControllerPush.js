@@ -54,7 +54,7 @@ describe('unit test - controller push', function() {
             precipitationUnit: "mm",
             airUnit: "airkorea"
         },
-        dayOfWeeks: [1,5],
+        dayOfWeek: [false, true, false, false, false, true, false],
         timezoneOffset: 540
     };
 
@@ -102,7 +102,7 @@ describe('unit test - controller push', function() {
            distanceUnit: "miles",
            precipitationUnit: "inch"
        },
-        dayOfWeeks: [1,2,3,4,5],
+        dayOfWeek: [false, true, true, true, true, true, false],
         timezoneOffset: 540
     };
 
@@ -156,18 +156,6 @@ describe('unit test - controller push', function() {
         });
     });
 
-    it('test get push info by time', function(done) {
-        var PushInfo = require('../models/modelPush');
-        PushInfo.find = function(getInfo) {
-            assert.equal(getInfo.pushTime, pushInfo.pushTime, 'error');
-            return {lean: function() { return {exec: function(callback) {return callback(undefined, [pushInfo]);}}}};
-        };
-
-        var co = new ControllerPush();
-        co.getPushByTime(pushInfo.pushTime, function () {
-            done();
-        });
-    });
 });
 
 
