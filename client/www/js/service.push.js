@@ -462,7 +462,7 @@ angular.module('service.push', [])
         obj.updateCityInfo = function (cityIndex) {
             var pushList = this.pushData.pushList;
             var list = pushList.filter(function (obj) {
-               obj.cityIndex == cityIndex;
+               return obj.cityIndex === cityIndex;
             });
 
             list.forEach(function (pushInfo) {
@@ -485,7 +485,7 @@ angular.module('service.push', [])
             console.log("updatePushListByCityIndex : "+JSON.stringify({list:list, cityIndex:cityIndex}));
             var pushList = this.pushData.pushList;
             var listWithOutCity = pushList.filter(function (obj) {
-                obj.cityIndex !== cityIndex;
+                return obj.cityIndex !== cityIndex;
             });
 
             this.pushData.pushList = listWithOutCity.concat(list);
