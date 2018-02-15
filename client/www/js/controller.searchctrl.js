@@ -113,7 +113,7 @@ angular.module('controller.searchctrl', [])
                     t1h: city.currentWeather.t1h,
                     tmn: todayData.tmn,
                     tmx: todayData.tmx,
-                    alarmInfo: Push.getAlarm(i)
+                    hasPush: Push.hasPushInfo(i)
                 };
                 $scope.cityList.push(data);
                 loadWeatherData(i);
@@ -529,8 +529,8 @@ angular.module('controller.searchctrl', [])
         $scope.OnDeleteCity = function(index) {
             Util.ga.trackEvent('city', 'delete', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
 
-            if ($scope.cityList[index].alarmInfo != undefined) {
-                Push.removeAlarm($scope.cityList[index].alarmInfo);
+            if ($scope.cityList[index].hasPush) {
+                Push.removePushListByCityIndex(index);
             }
             $scope.cityList.splice(index, 1);
             WeatherInfo.removeCity(index);
@@ -538,67 +538,13 @@ angular.module('controller.searchctrl', [])
             return false; //OnSelectCity가 호출되지 않도록 이벤트 막음
         };
 
-        $scope.OnOpenTimePicker = function (index) {
-            Util.ga.trackEvent('alarm', 'open', 'timePicker');
-            var ipObj1 = {
-                callback: function (val) {      //Mandatory
-                    if (typeof(val) === 'undefined') {
-                        Util.ga.trackEvent('alarm', 'close', 'timePicker');
-                        console.log('closed');
-                    } else if (val == 0) {
-                        Util.ga.trackEvent('alarm', 'cancel', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
-
-                        console.log('cityIndex='+index+' alarm canceled');
-                        if ($scope.cityList[index].alarmInfo != undefined) {
-                            Push.removeAlarm($scope.cityList[index].alarmInfo);
-                            $scope.cityList[index].alarmInfo = undefined;
-                        }
-                    } else {
-                        Util.ga.trackEvent('alarm', 'set', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
-
-                        var selectedTime = new Date();
-                        selectedTime.setHours(0,0,0,0);
-                        selectedTime.setSeconds(val);
-
-                        console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
-                                    selectedTime.toString());
-
-                        Push.updateAlarm(index, selectedTime, function (err, alarmInfo) {
-                            if (err) {
-                                Util.ga.trackEvent('alarm', 'error', err.message, index);
-                                return;
-                            }
-                            console.log('alarm='+JSON.stringify(alarmInfo));
-                            $scope.cityList[index].alarmInfo = alarmInfo;
-                        });
-                    }
-                }
-            };
-            if ($scope.cityList[index].alarmInfo != undefined) {
-                var date = new Date($scope.cityList[index].alarmInfo.time);
-                console.log(date);
-                ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
-                console.log('inputTime='+ipObj1.inputTime);
+        $scope.OnOpenSettingPush = function (index) {
+            console.log('go setting-push fav index='+index);
+            var path = '/setting-push';
+            if (index != undefined) {
+                path += '?fav='+index;
             }
-            else {
-                ipObj1.inputTime = 8*60*60; //AM 8:00
-            }
-
-            var strSetting = "Setting";
-            var strDelete = "Delete";
-            var strClose = "Close";
-            $translate(['LOC_SETTING', 'LOC_DELETE', 'LOC_CLOSE']).then(function (translations) {
-                strSetting = translations.LOC_SETTING;
-                strDelete = translations.LOC_DELETE;
-                strClose = translations.LOC_CLOSE;
-            }, function (translationIds) {
-                console.log("Fail to translate "+ JSON.stringify(translationIds));
-            }).finally(function () {
-                ipObj1.setLabel = strSetting;
-                ipObj1.cancelLabel = strDelete;
-                ipObj1.closeLabel = strClose;
-                ionicTimePicker.openTimePicker(ipObj1);
-            });
+            $location.url(path);
         };
 
         function showLoadingIndicator() {

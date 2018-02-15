@@ -1,0 +1,56 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title forecast-header">
+            <span>{{address}}</span>
+        </p>
+    </ion-nav-title>
+    <ion-content class="setting-push" zooming="false" direction="y" has-bouncing="false" scrollbar-y="false">
+        <div class="list card">
+            <li class="item item-toggle push-type-title">
+                Weather alert
+                <label class="toggle toggle-search">
+                    <input type="checkbox" ng-model="alert.enable" ng-true-value="true" ng-false-value="false"
+                           ng-change="onToggleEnableAlert()">
+                    <div class="track">
+                        <div class="handle"></div>
+                    </div>
+                </label>
+            </li>
+            <div class="light-padding push-desc">
+                날씨알림은 눈/비가 오거나, 미세먼지가 나빠지면 알려줍니다. 혹은 가까운 시간에 눈/비 예보, 미세먼지 나쁨 예보가 있는 경우에도 알려줍니다.
+            </div>
+            <li class="item range-slider light-padding" ng-hide="alert.enable === false">
+                <input type="text" id="example_id" name="example_name" value="" />
+            </li>
+        </div>
+        <div class="list card">
+            <li class="item light-padding push-type-title">
+                {{"LOC_WEATHER_ALARM"|translate}}
+            </li>
+            <div class="light-padding push-desc">
+                날씨알람은 사용자가 직접 설정한 시간에 날씨정보를 전달해드립니다.
+            </div>
+            <li class="item row">
+                <div class="col push-day-button" ng-class="{'push-activated': dayOfWeek[value] == true}"
+                        ng-repeat="value in [0,1,2,3,4,5,6]" ng-click="toggleEnableDay(value)">
+                    {{dayToString(value)|translate}}</div>
+            </li>
+            <li class="item item-icon-right light-padding" ng-if="value.enable" ng-repeat="value in alarmList" ng-click="onOpenTimePicker($index)">
+                {{secs2dateStr(value.time)}}
+                <i class="icon ion-ios-gear-outline"></i>
+            </li>
+            <li class="item item-icon-right light-padding" ng-click="onOpenTimePicker(alarmList.length)">
+                -:--
+                <i class="icon ion-ios-plus-empty"></i>
+            </li>
+        </div>
+        <button class="button button-full button-dark" ng-click="onOkay()">
+           {{'LOC_OK'|translate}}
+        </button>
+    </ion-content>
+</ion-view>

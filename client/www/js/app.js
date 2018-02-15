@@ -26,7 +26,8 @@ angular.module('starter', [
     'controller.units',
     'controller.start',
     'controller.nation',
-    'controller.setting.radio'
+    'controller.setting.radio',
+    'controller.push'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -264,7 +265,15 @@ angular.module('starter', [
                 if (window.StatusBar) {
                     StatusBar.backgroundColorByHexString('#111');
                 }
-            } else {
+            }
+            else if (toState.name === 'setting-push') {
+                $rootScope.viewColor = '#F5F5F5';
+                headerbar.addClass('bar-dark');
+                if (window.StatusBar) {
+                    StatusBar.backgroundColorByHexString('#111');
+                }
+            }
+            else {
                 $rootScope.viewColor = '#444';
                 headerbar.addClass('bar-dark');
                 if (window.StatusBar) {
@@ -1429,6 +1438,12 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('setting-push', {
+                url: '/setting-push?fav',
+                cache: false,
+                templateUrl: 'templates/setting-push.html',
+                controller: 'PushCtrl'
+            })
             .state('nation', {
                 url: '/nation',
                 cache: false,

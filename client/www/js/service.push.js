@@ -1,7 +1,5 @@
 /**
  * Created by aleckim on 2016. 5. 1..
- * alarmInfo(pushInfo)를 구분하는 것은 cityIndex보다는 town object가 적합하지만, string의 부담때문에 cityIndex를 구분으로 쓰고 있음.
- * city의 index가 변경가능하게 수정되면 이부분도 꼭 수정되어야 함 backend도 수정필요함.
  */
 
 angular.module('service.push', [])
@@ -23,47 +21,46 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/v000705'+'/push';
+        obj.pushUrl = twClientConfig.serverUrl + '/v000902'+'/push';
+        obj.pushListUrl = twClientConfig.serverUrl + '/v000902'+'/push-list';
 
-        //attach push object to the window object for android event
-        //obj.push;
-
-        //obj.alarmInfo = {'time': new Date(0), 'cityIndex': -1, 'town': {'first':'','second':'', 'third':'}};
-        obj.pushData = {registrationId: '', type: '', alarmList: []};
-        //obj.registrationId;
-        //obj.type; //'ios' or 'android'
-        //obj.alarmList = [];
+        /**
+         *
+         * @type {{registrationId: string, type: string, category: string, pushList: Array}}
+         */
+        obj.pushData = {registrationId: '', type: '', category:'', pushList: []};
 
         /**
          * units 변경시에 push 갱신 #1845
          */
         obj.updateUnits = function () {
             var self = this;
-            if (self.pushData.alarmList.length > 0) {
+            if (self.pushData.pushList.length > 0) {
                 Util.ga.trackEvent('push', 'update', 'units');
-                self.pushData.alarmList.forEach(function (alarmInfo) {
-                    self._postPushInfo(alarmInfo);
-                });
+                self._postPushList(self.pushData.pushList);
             }
         };
 
-        obj.loadPushInfo = function () {
+        /**
+         * alert 들어오기 전 format
+         */
+        obj.loadOldPushInfo = function () {
             var self = this;
             var pushData = TwStorage.get("pushData");
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
-                self.pushData.alarmList = pushData.alarmList;
-                self.pushData.alarmList.forEach(function (alarmInfo) {
-                    alarmInfo.time = new Date(alarmInfo.time);
+                self.pushData.pushList = pushData.alarmList;
+                self.pushData.pushList.forEach(function (pushInfo) {
+                    pushInfo.time = new Date(pushInfo.time);
+                    pushInfo.category = 'alarm';
+                    pushInfo.id = pushInfo.cityIndex;
                 });
 
                 //update alarmInfo to server for sync
-                if (self.pushData.alarmList.length > 0) {
+                if (self.pushData.pushList.length > 0) {
                     setTimeout(function() {
-                        self.pushData.alarmList.forEach(function (alarmInfo) {
-                            self._postPushInfo(alarmInfo);
-                        });
+                        self._postPushList(self.pushData.pushList);
                     }, 3000);
                 }
             }
@@ -71,37 +68,117 @@ angular.module('service.push', [])
             console.log(self);
         };
 
+        /**
+         * alert, alarm이 함께 pushList에 들어감
+         */
+        obj.loadPushInfo = function () {
+            var self = this;
+            var pushData = TwStorage.get("pushData2");
+            if (pushData != null) {
+                self.pushData.registrationId = pushData.registrationId;
+                self.pushData.type = pushData.type;
+                self.pushData.pushList = pushData.pushList;
+                self.pushData.pushList.forEach(function (pushInfo) {
+                    if (pushInfo.category === 'alarm') {
+                        pushInfo.time = new Date(pushInfo.time);
+                    }
+                    else if (pushInfo.category === 'alert') {
+                        pushInfo.startTime = new Date(pushInfo.startTime);
+                        pushInfo.endTime = new Date(pushInfo.endTime);
+                    }
+                });
+
+                //update alarmInfo to server for sync
+                if (self.pushData.pushList.length > 0) {
+                    setTimeout(function() {
+                        self._postPushList(self.pushData.pushList);
+                    }, 3000);
+                }
+            }
+            console.log('load push data2');
+            console.log(JSON.stringify({pushList:self.pushData.pushList}));
+
+            return pushData;
+        };
+
         obj.savePushInfo = function () {
             var self = this;
             console.log('save push data');
-            TwStorage.set("pushData", self.pushData);
+            TwStorage.set("pushData2", self.pushData);
         };
 
         /**
-         * loadPushInfo로 데이터를 읽어온 경우 time은 string임.
-         * controllers에서 localTime으로 설정한 후, 여기서 UTC기준으로 전달함.
-         * @param alarmInfo
+         *
+         * @param {{id:number, name:string, location: number[], town: {}, source: string, time: date, startTime: date, endTime: date}} pushInfo
+         * @returns {{registrationId: string, type: string, cityIndex: number, id: number, name: string, location: number[], town: object, source: string, units: {temperatureUnit, windSpeedUnit, pressureUnit, distanceUnit, precipitationUnit, airUnit}}}
+         * @private
          */
-        obj._postPushInfo  = function postPushInfo(alarmInfo) {
-            var self = this;
-            var time = alarmInfo.time;
-            var pushTime = time.getUTCHours() * 60 * 60 + time.getUTCMinutes() * 60;
-            var pushInfo = { registrationId: self.pushData.registrationId,
-                type: self.pushData.type,
-                pushTime: pushTime,
-                cityIndex: alarmInfo.cityIndex,
-                town: alarmInfo.town,               //first, second, third
-                name: alarmInfo.name,
-                location: alarmInfo.location,       //lat, long
-                source: alarmInfo.source,           //KMA or DSF, ...
-                units: Units.getAllUnits()
+        obj._makePostObj = function (pushInfo) {
+            var postObj;
+
+            console.log(pushInfo);
+            /**
+             * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
+             */
+            postObj  = { registrationId: this.pushData.registrationId,
+                id: pushInfo.id,
+                type: this.pushData.type,
+                category: pushInfo.category,
+                enable: pushInfo.enable,
+                cityIndex: pushInfo.cityIndex,
+                name: pushInfo.name,
+                location: pushInfo.location,       //lat, long
+                town: pushInfo.town,               //first, second, third
+                source: pushInfo.source,           //KMA or DSF, ...
+                units: Units.getAllUnits(),
+                timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
             };
-            //name, units
+
+            if (pushInfo.category === 'alarm') {
+                postObj.pushTime = this.date2utcSecs(pushInfo.time);
+                postObj.dayOfWeek = pushInfo.dayOfWeek;
+            }
+            else if (pushInfo.category === 'alert') {
+                postObj.startTime = this.date2utcSecs(pushInfo.startTime);
+                postObj.endTime = this.date2utcSecs(pushInfo.endTime) ;
+                //set unhealthy
+                if (postObj.units.airUnit === 'airkorea' || postObj.units.airUnit === 'airkorea_who') {
+                    postObj.airAlertsBreakPoint = 3;
+                }
+                else {
+                    postObj.airAlertsBreakPoint = 4;
+                }
+            }
+            return postObj;
+        };
+
+        /**
+         *
+         * @param {object[]} pushList
+         * @private
+         */
+        obj._postPushList = function (pushList) {
+            var self = this;
+            var postList = [];
+
+            try {
+                if (this.pushData.registrationId == undefined || this.pushData.registrationId.length == 0) {
+                    throw new Error("You have to register before post");
+                }
+                pushList.forEach(function (pushInfo) {
+                    postList.push(self._makePostObj(pushInfo));
+                });
+            }
+            catch(err) {
+                console.log(err);
+                return;
+            }
+
             $http({
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'Accept-Language': Util.language, 'Device-Id': Util.uuid},
-                url: self.pushUrl,
-                data: pushInfo,
+                url: self.pushListUrl,
+                data: postList,
                 timeout: 10*1000
             })
                 .success(function (data) {
@@ -119,12 +196,17 @@ angular.module('service.push', [])
                 });
         };
 
-        obj._deletePushInfo = function deletePushInfo(alarmInfo) {
+        /**
+         *
+         * @param {{}} pushInfo
+         * @private
+         */
+        obj._deletePushInfo = function (pushInfo) {
             var self = this;
             var pushInfo = { registrationId: self.pushData.registrationId,
                 type: self.pushData.type,
-                cityIndex: alarmInfo.cityIndex,
-                town: alarmInfo.town };
+                cityIndex: pushInfo.cityIndex,
+                id: pushInfo.id };
 
             $http({
                 method: 'DELETE',
@@ -148,7 +230,12 @@ angular.module('service.push', [])
                 });
         };
 
-        obj._updateRegistrationId = function updateRegistrationId( registrationId) {
+        /**
+         *
+         * @param {string} registrationId
+         * @private
+         */
+        obj._updateRegistrationId = function (registrationId) {
             var self = this;
             //update registration id on server
             $http({
@@ -173,6 +260,10 @@ angular.module('service.push', [])
             self.pushData.registrationId = registrationId;
         };
 
+        /**
+         *
+         * @param {function} callback
+         */
         obj.register = function (callback) {
             var self = this;
 
@@ -184,11 +275,19 @@ angular.module('service.push', [])
             window.push = PushNotification.init(self.config);
 
             window.push.on('registration', function(data) {
-                console.log(JSON.stringify(data));
+                console.log(JSON.stringify({"push-registration":data}));
                 if (self.pushData.registrationId != data.registrationId) {
                     self._updateRegistrationId(data.registrationId);
                 }
-                return callback(data.registrationId);
+
+                PushNotification.hasPermission(function(data) {
+                    self.isEnabled = data.isEnabled;
+                    console.log('Push.isEnabled'+self.isEnabled);
+                });
+
+                if (callback) {
+                    callback(undefined, data.registrationId);
+                }
             });
 
             //android에서는 background->foreground 넘어올 때 event 발생하지 않음
@@ -234,22 +333,15 @@ angular.module('service.push', [])
             window.push.on('error', function(e) {
                 console.log('notification error='+e.message);
                 Util.ga.trackEvent('plugin', 'error', 'push '+ e.message);
-                // e.message
             });
 
             /**
              * WeatherInfo 와 circular dependency 제거용.
-             * @param cityIndex
-             * @param time
-             * @param callback
+             * @param {number} cityIndex
              */
-            window.push.updateAlarm = function (cityIndex, time, callback) {
-                return self.updateAlarm(cityIndex, time, callback);
-            };
-
-            window.push.getAlarm = function (cityIndex) {
-                return self.getAlarm(cityIndex);
-            };
+            window.push.updateCityInfo = function (cityIndex) {
+                return self.updateCityInfo(cityIndex);
+            }
         };
 
         obj.unregister = function () {
@@ -266,119 +358,227 @@ angular.module('service.push', [])
         };
 
         /**
-         * 중복 체크는 함수 호출 전에 체크 #181 #820 #1580 #1757
+         *
          * @param cityIndex
-         * @param time
-         * @param callback
-         * @returns {*}
+         * @returns {{name, source, (location|town)}|*}
+         * @private
          */
-        obj.updateAlarm = function (cityIndex, time, callback) {
-            var self = this;
+        obj._getSimpleCityInfo = function (cityIndex) {
+            var simpleInfo;
             var city = WeatherInfo.getCityOfIndex(cityIndex);
-            var town;
-
-            var params = {index:cityIndex, time: time};
-            Util.ga.trackEvent('push', 'update', JSON.stringify(params));
-
-            if (!callback) {
-                callback = function (err) {
-                    if (err) {
-                        Util.ga.trackEvent('push', 'error', err);
-                    }
-                };
-            }
-
-            if (time == undefined) {
-                return callback(new Error("You have to set time for add alarm"));
-            }
-
-            //이전 버전의 즐겨찾기에 저장된 지역이 location이 없는 경우 town 정보 사용
-            if (!city.hasOwnProperty('location')) {
-                town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
-            }
-
-            var alarmInfo = {cityIndex: cityIndex, time: time, name: city.name, source: city.source};
-
-            if (city.location) {
-                alarmInfo.location = city.location;
-            }
-
-            if (town && !(town.first=="" && town.second=="" && town.third=="")) {
-                alarmInfo.town = town;
-            }
-
-            if (!alarmInfo.hasOwnProperty('location') && !alarmInfo.hasOwnProperty('town')) {
-                return callback(new Error("You have to set location info for add alarm"));
-            }
-
-            if (self.pushData.alarmList.length == 0) {
-                self.pushData.alarmList.push(alarmInfo);
-            }
-            else {
-                var i = self.pushData.alarmList.findIndex(function (obj) {
-                    return obj.cityIndex === alarmInfo.cityIndex;
-                });
-
-                if (i < 0) {
-                    self.pushData.alarmList.push(alarmInfo);
-                }
-                else {
-                    self.pushData.alarmList[i] = alarmInfo;
-                }
-            }
-
-            if (!window.push) {
-                self.register(function () {
-                    self._postPushInfo(alarmInfo);
-                    self.savePushInfo();
-                    return callback(undefined, alarmInfo);
-                });
-            }
-            else {
-                self._postPushInfo(alarmInfo);
-                self.savePushInfo();
-                return callback(undefined, alarmInfo);
-            }
-        };
-
-        obj.removeAlarm = function (alarmInfo) {
-            var self = this;
-            console.log('remove alarm='+JSON.stringify(alarmInfo));
-            for (var i=0; i<self.pushData.alarmList.length; i++) {
-                var a = self.pushData.alarmList[i];
-                if (a.cityIndex === alarmInfo.cityIndex) {
-                    break;
-                }
-            }
-            if (i == self.pushData.alarmList.length) {
-                console.log('error fail to find alarm='+JSON.stringify(alarmInfo));
+            if (city == undefined) {
+                console.log("Fail to find city cityIndex="+cityIndex);
                 return;
             }
 
-            self.pushData.alarmList.splice(i, 1);
-            self._deletePushInfo(alarmInfo);
-
-            if (self.pushData.alarmList.length == 0) {
-                self.unregister();
+            simpleInfo = {name: city.name, source: city.source};
+            if (city.location) {
+                simpleInfo.location = city.location;
             }
-            self.savePushInfo();
-        };
-
-        obj.getAlarm = function (cityIndex) {
-            var self = this;
-            for (var i=0; i<self.pushData.alarmList.length; i++) {
-                var a = self.pushData.alarmList[i];
-                if (a.cityIndex === cityIndex) {
-                    return self.pushData.alarmList[i];
+            else if (city.address) {
+                var town = WeatherUtil.getTownFromFullAddress(WeatherUtil.convertAddressArray(city.address));
+                if (town && !(town.first=="" && town.second=="" && town.third=="")) {
+                    simpleInfo.town = town;
+                }
+                else {
+                    console.log("Fail to get town info city:"+JSON.stringify((city)));
+                    return;
                 }
             }
-            console.log('fail to find cityIndex='+cityIndex);
+            else {
+                console.log("Fail to find location or address city:"+JSON.stringify((city)));
+                return;
+            }
+
+            return simpleInfo;
+        };
+
+        /**
+         *
+         * @param {number} id
+         * @param {number} cityIndex
+         * @param {number} startTime
+         * @param {number} endTime
+         * @returns {{id: number, cityIndex: number, startTime: date, endTime: date, enable: boolean, category: string}}
+         */
+        obj.newPushAlert = function (id, cityIndex, startTime, endTime) {
+            var pushInfo = {
+                id: id,
+                cityIndex: cityIndex,
+                startTime: this.secs2date(startTime*3600),
+                endTime: this.secs2date(endTime*3600),
+                enable: true,
+                category: 'alert'
+            };
+
+            var city = this._getSimpleCityInfo(cityIndex);
+            if (city == undefined) {
+                console.log(new Error("Fail to get city information index: "+cityIndex));
+            }
+            else {
+                for (var key in city) {
+                    pushInfo[key] = city[key];
+                }
+            }
+
+            return pushInfo;
+        };
+
+        /**
+         *
+         * @param {number} id
+         * @param {number} cityIndex
+         * @param {number} secs
+         * @param {boolean[]} dayOfWeek
+         * @returns {{id: *, cityIndex: *, time, dayOfWeek: *, enable: boolean, category: string}}
+         */
+        obj.newPushAlarm = function (id, cityIndex, secs, dayOfWeek) {
+            var pushInfo = {
+                id: id,
+                cityIndex: cityIndex,
+                time: this.secs2date(secs),
+                dayOfWeek: dayOfWeek,
+                enable: true,
+                category: 'alarm'
+            };
+
+            var city = this._getSimpleCityInfo(cityIndex);
+            if (city == undefined) {
+                console.log(new Error("Fail to get city information index: "+cityIndex));
+            }
+            else {
+                for (var key in city) {
+                    pushInfo[key] = city[key];
+                }
+            }
+
+            return pushInfo;
+        };
+
+        /**
+         * update location information
+         * @param {number} cityIndex
+         */
+        obj.updateCityInfo = function (cityIndex) {
+            var pushList = this.pushData.pushList;
+            var list = pushList.filter(function (obj) {
+               obj.cityIndex == cityIndex;
+            });
+
+            list.forEach(function (pushInfo) {
+               var city  = this._getSimpleCityInfo(cityIndex);
+                for (var key in city) {
+                    pushInfo[key] = city[key];
+                }
+            });
+
+            this._postPushList(list);
+            this.savePushInfo();
+        };
+
+        /**
+         *
+         * @param {object[]} list
+         * @param {number} cityIndex
+         */
+        obj.updatePushListByCityIndex = function (list, cityIndex) {
+            console.log("updatePushListByCityIndex : "+JSON.stringify({list:list, cityIndex:cityIndex}));
+            var pushList = this.pushData.pushList;
+            var listWithOutCity = pushList.filter(function (obj) {
+                obj.cityIndex !== cityIndex;
+            });
+
+            this.pushData.pushList = listWithOutCity.concat(list);
+
+            this._postPushList(list);
+            this.savePushInfo();
+        };
+
+        /**
+         * 도시 삭제 케이스
+         * @param {number} cityIndex
+         */
+        obj.removePushListByCityIndex = function (cityIndex) {
+            var self = this;
+            var pushList = this.pushData.pushList;
+            var removeList = pushList.filter(function (value) {
+                return value.cityIndex === cityIndex;
+            });
+            removeList.forEach(function (obj) {
+                self._deletePushInfo(obj);
+            });
+
+            //remove object list
+            this.pushData.pushList = pushList.filter(function (value) {
+                return value.cityIndex !== cityIndex;
+            });
+        };
+
+        obj.getPushListByCityIndex = function (cityIndex) {
+            var list = this.pushData.pushList.filter(function (value) {
+                return value.cityIndex === cityIndex;
+            });
+            if (list.length <= 0) {
+                console.log('fail to find cityIndex='+cityIndex);
+            }
+            return list;
+        };
+
+        obj.hasPushInfo = function (cityIndex) {
+            var list = this.pushData.pushList.filter(function (value) {
+                return value.cityIndex === cityIndex && value.enable;
+            });
+            return list.length > 0;
+        };
+
+        /**
+         *
+         * @param {Date} date
+         * @returns {number}
+         */
+        obj.date2localSecs = function (date) {
+            if (date instanceof Date) {
+                return date.getHours() * 60 * 60 + date.getMinutes() * 60;
+            }
+            else {
+                console.error("It is not Date date:"+date);
+                return 0;
+            }
+        };
+
+        /**
+         *
+         * @param {Date} date
+         * @returns {number}
+         */
+        obj.date2utcSecs = function (date) {
+            if (date instanceof Date) {
+                return date.getUTCHours() * 60 * 60 + date.getUTCMinutes() * 60;
+            }
+            else {
+                console.error("It is not Date date:"+date);
+                return 0;
+            }
+        };
+
+        /**
+         *
+         * @param secs
+         * @returns {Date}
+         */
+        obj.secs2date = function (secs) {
+            var time = new Date();
+            time.setHours(0,0,0,0);
+            time.setSeconds(secs);
+            return time;
         };
 
         obj.init = function () {
             var self = this;
 
-            self.loadPushInfo();
+            if (self.loadPushInfo() == null) {
+                self.loadOldPushInfo();
+            }
 
             if (!window.PushNotification) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
@@ -393,22 +593,17 @@ angular.module('service.push', [])
             }
 
             //if push is on, call register
-            if (self.pushData.alarmList.length > 0) {
+            if (self.pushData.pushList.length > 0) {
                 PushNotification.hasPermission(function(data) {
-                    if (data.isEnabled) {
-                        console.log('isEnabled');
-                    }
-                    else {
-                        console.log('isEnabled is false');
-                        //alert('you have to set notification permission');
-                    }
+                    self.isEnabled = data.isEnabled;
+                    console.log('Push.isEnabled:'+self.isEnabled);
                 });
 
                 if (window.push) {
                     console.log('Already set push notification');
                     return;
                 }
-                self.register(function (registrationId) {
+                self.register(function (err, registrationId) {
                     console.log('start push registrationId='+registrationId);
                 });
             }

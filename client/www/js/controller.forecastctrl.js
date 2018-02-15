@@ -761,5 +761,15 @@ angular.module('controller.forecastctrl', [])
             applyWeatherData();
         });
 
-        init();
+        var strOkay = "OK";
+        $translate(['LOC_OK'])
+            .then(function (translations) {
+                    strOkay = translations.LOC_OK;
+                },
+                function (translationIds) {
+                    console.log("Fail to translate : " + JSON.stringify(translationIds));
+                })
+            .finally(function () {
+                init();
+            });
     });

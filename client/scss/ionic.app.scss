@@ -560,10 +560,6 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   color: #444;
 }
 
-.search-item .toggle, .search-item .track {
-  width: 100%;
-}
-
 .search-item .ion-ios-close-outline:before {
   font-weight: 700;
 }
@@ -577,6 +573,7 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   border: 0;
   border-radius: 8px;
   margin: auto 0;
+  width: 100%;
   background-color: rgba(158,158,158,0.8);
 }
 
@@ -1175,6 +1172,59 @@ p small {
   height: 14px;
   stroke: #fff;
   fill: #fff;
+}
+
+.setting-push {
+  color: #444;
+  font-size: 17px;
+  width: 100%;
+}
+
+.setting-push .toggle-search {
+  width: 48px;
+}
+
+.setting-push .card {
+  margin: 0 0 9px 0;
+}
+
+.setting-push .card .light-padding {
+  padding: 8px 16px;
+}
+
+.setting-push .push-day-button {
+  margin: 4px;
+  line-height: 32px;
+  font-size: 15px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background-color: #f8f8f8;
+  color: #444;
+  position: relative;
+  border-radius: 4px;
+  vertical-align: top;
+  text-align: center;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.push-day-button.push-activated {
+  border-color: #a2a2a2;
+  background-color: #e5e5e5;
+}
+
+.setting-push .push-type-title {
+  border-width: 0;
+  padding-bottom: 8px;
+}
+
+.setting-push .push-desc {
+  font-size: 14px;
+  background-color: #f4f4f4;
+}
+
+.setting-push button {
+  color: white;
 }
 
 //iphone 4

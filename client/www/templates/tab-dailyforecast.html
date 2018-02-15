@@ -11,6 +11,14 @@
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
+        <!--<button class="button button-icon button-positive icon"-->
+                <!--ng-class="city.hasPush?'ion-ios-bell':'ion-ios-bell-outline'"-->
+                <!--ng-if="!isAndroid()"-->
+                <!--ng-click="doTabShare()"></button>-->
+        <!--<button class="button button-icon button-positive icon"-->
+                <!--ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"-->
+                <!--ng-if="isAndroid()" -->
+                <!--ng-click="doTabShare()"></button>-->
         <button class="button button-icon button-positive icon ion-ios-upload-outline" ng-if="!isAndroid()" ng-click="doTabShare()"></button>
         <button class="button button-icon button-positive icon ion-android-share-alt" ng-if="isAndroid()" ng-click="doTabShare()"></button>
     </ion-nav-buttons>
