@@ -115,8 +115,12 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
         return callback(new Error('invalid info pushInfo:'+JSON.stringify(pushInfo)));
     }
 
+    if (pushInfo.id == undefined) {
+        pushInfo.id = pushInfo.cityIndex;
+    }
+
     PushInfo.update(
-        {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
+        {registrationId: pushInfo.registrationId, id: pushInfo.id},
         pushInfo,
         {upsert : true},
         function (err, result) {
@@ -149,10 +153,17 @@ ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.getPushByTime = function (time, callback) {
-    PushInfo.find({pushTime: time}).lean().exec(function (err, pushList) {
+
+    function enable() {
+        //enable이 없거나, true이면 true
+        return this.enable !== false;
+    }
+
+    PushInfo.find({pushTime: time}).$where(enable).lean().exec(function (err, pushList) {
         if (err) {
             return callback(err);
         }
+
         if (pushList.length == 0) {
             return callback('No push info time='+time);
         }
@@ -868,7 +879,7 @@ ControllerPush.prototype._removeOldList = function (pushList, callback) {
  */
 ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
     var filteredList = pushList.filter(function (pushInfo) {
-        if (pushInfo.hasOwnProperty('dayOfWeeks')) {
+        if (pushInfo.dayOfWeek && pushInfo.dayOfWeek.length > 0) {
             if (!pushInfo.hasOwnProperty('timezoneOffset')) {
                 log.error("timezone offset is undefined pushInfo:"+JSON.stringify(pushInfo));
                 return false;
@@ -877,10 +888,7 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
             var localCurrent = kmaTimeLib.toLocalTime(pushInfo.timezoneOffset, current);
             var day = localCurrent.getDay();
 
-            var findIt = pushInfo.dayOfWeeks.find(function (value) {
-                return day === value;
-            });
-            return findIt != undefined;
+            return pushInfo.dayOfWeek[day];
         }
         else {
             return true;
@@ -915,7 +923,7 @@ ControllerPush.prototype.sendPush = function (time, callback) {
                     log.error(err);
                     return callback(err);
                 }
-                callback(filteredList);
+                callback(undefined, filteredList);
             },
             function(pushList, callback) {
                 async.mapSeries(pushList, function (pushInfo, mCallback) {
@@ -942,7 +950,7 @@ ControllerPush.prototype.sendPush = function (time, callback) {
         ],
         function(err, result) {
             if (err) {
-                return log.warn(err);
+                log.warn(err);
             }
             log.info(result);
             if (callback) {
