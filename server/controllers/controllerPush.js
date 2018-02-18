@@ -120,7 +120,7 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     }
 
     PushInfo.update(
-        {registrationId: pushInfo.registrationId, id: pushInfo.id},
+        {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
         pushInfo,
         {upsert : true},
         function (err, result) {
