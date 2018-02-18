@@ -300,7 +300,8 @@ class AlertPushController {
     _updateDb(alertPush, callback) {
         log.info(JSON.stringify({alertPush: alertPush}));
         AlertPush.update(
-            {registrationId: alertPush.registrationId, cityIndex: alertPush.cityIndex},
+            {type: alertPush.type, registrationId: alertPush.registrationId,
+                cityIndex: alertPush.cityIndex, id: alertPush.id},
             alertPush,
             {upsert : true},
             function (err, result) {
@@ -791,7 +792,9 @@ class AlertPushController {
     updateAlertPush(alertPush, callback) {
         alertPush.updatedAt = new Date();
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
-        AlertPush.find({registrationId: alertPush.registrationId, cityIndex: alertPush.cityIndex})
+        AlertPush.find({
+            type: alertPush.type, registrationId: alertPush.registrationId,
+            cityIndex: alertPush.cityIndex, id: alertPush.id})
             .exec((err, list) => {
                 if (err) {
                     return callback(err);
@@ -815,9 +818,10 @@ class AlertPushController {
 
     removeAlertPush(pushInfo, callback) {
         AlertPush.remove({
-                registrationId: pushInfo.registrationId,
                 type:pushInfo.type,
-                cityIndex: pushInfo.cityIndex},
+                registrationId: pushInfo.registrationId,
+                cityIndex: pushInfo.cityIndex,
+                id: pushInfo.id},
             function (err, result) {
                 if (err) {
                     return callback(err);

@@ -6,13 +6,13 @@
 var mongoose = require("mongoose");
 
 var alertPushSchema = new mongoose.Schema({
+    type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    cityIndex: Number, //index of city in client
+    id: Number,                 //city안의 id임
     startTime: Number,          //UTChours*60*60 + UTCMinutes*60
     endTime: Number,            //UTChours*60*60 + UTCMinutes*60
     reverseTime: {type: Boolean, default: false}, //true when startTime > endTime
-    id: Number,
-    cityIndex: Number, //index of city in client
-    type: String, //ios, android, windows, amazon ..
     enable: {type: Boolean, default: true},
     town: {first: String, second: String, third: String},
     geo: {
