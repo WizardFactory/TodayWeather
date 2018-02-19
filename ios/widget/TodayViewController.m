@@ -1272,15 +1272,8 @@ static TodayViewController *todayVC = nil;
     
     [self updateCurCityInfo:nssName address:nssAddress country:nssCountryName];
 
-    if([nssCountryName isEqualToString:@"KR"])
-    {
-        //[self getAddressFromDaum:gMylatitude longitude:gMylongitude count:0];
-    }
-    else
-    {
-        NSLog(@"[parseGlobalAddress] Get locations by using name!!! nssAddress : %@", nssAddress);
-        [self getGeocodeFromGoogle:nssAddress];
-    }
+    NSLog(@"[parseGlobalAddress] Get locations by using name!!! nssAddress : %@", nssAddress);
+    [self getGeocodeFromGoogle:nssAddress];
 }
 
 
