@@ -5,10 +5,12 @@
 var mongoose = require("mongoose");
 
 var pushSchema = new mongoose.Schema({
-    registrationId: String,
-    pushTime: Number, //UTChours*60*60 + UTCMinutes*60
-    cityIndex: Number, //index of city in client
     type: String, //ios, android, windows, amazon ..
+    registrationId: String,
+    cityIndex: Number, //index of city in client
+    id: Number,         //이미 등록된 요청은 id가 없음 18.2.14, city안의 id임
+    pushTime: Number, //UTChours*60*60 + UTCMinutes*60
+    enable: {type: Boolean, default: true},        //이미 등록된 요청은 없음, 도시가 유지된 채, 알람만 제거하면 false가 됨.
     town: {first: String, second: String, third: String},
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
@@ -27,7 +29,7 @@ var pushSchema = new mongoose.Schema({
     },
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540
-    dayOfWeeks: [Number], // Sunday - Saturday : 0 - 6
+    dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
 });
 
 pushSchema.index({alarmTime:1});

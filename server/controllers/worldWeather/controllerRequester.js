@@ -546,7 +546,6 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
     var meta = {};
     meta.sID = req.sessionID;
 
-    req.weather = {};
     var collector;
     if(global.collector === undefined){
         collector = new conCollector;
@@ -554,15 +553,15 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
         collector = global.collector;
     }
 
-    if(!self.parseGeocode(req)) {
-        log.error('There are no geocode : reqDataForTwoDays()', meta);
-        callback('err_no_geocode');
-        return;
-    }
+    //if(!self.parseGeocode(req)) {
+    //    log.error('There are no geocode : reqDataForTwoDays()', meta);
+    //    callback('err_no_geocode');
+    //    return;
+    //}
 
-    if(!self.parseTimezone(req)){
-        req.timezone = 0;
-    }
+    //if(!self.parseTimezone(req)){
+    //    req.timezone = 0;
+    //}
 
     async.parallel([
             /*
@@ -579,12 +578,23 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
             },
             */
             function(cb){
-                collector.requestDsfData(req.geocode, 0, 2, req.timezone, function(err, dsfData){
+                collector.requestDsfData(req.geocode, 0, 2, function(err, dsfData, timeoffset){
                     if(err){
                         log.error('RQ> Fail to requestDsfData', meta);
                         cb('Fail to requestDsfData');
                         return;
                     }
+
+                    if(req.hasOwnProperty('result') === false){
+                        req.result = {};
+                    }
+                    if(req.result.hasOwnProperty('timezone') === false){
+                        req.result.timezone = {};
+                    }
+                    req.result.timezone.min = timeoffset;
+                    req.result.timezone.ms = timeoffset * 60 * 1000;
+
+                    //log.info('==> DSF RESULT:', JSON.stringify(dsfData));
 
                     cb(null, dsfData);
                 });

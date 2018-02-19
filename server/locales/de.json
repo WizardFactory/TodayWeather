@@ -281,5 +281,13 @@
   "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "Tragen Sie eine Staubmaske, wenn Sie ausgehen!",
   "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "Empfindliche Menschen tragen Staubmaske!",
   "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "Geh nicht auf empfindliche Leute hinaus!",
-  "LOC_DO_NOT_GO_OUT": "Geh nicht raus!"
+  "LOC_DO_NOT_GO_OUT": "Geh nicht raus!",
+  "LOC_IT_IS_RAINING": "Es regnet.",
+  "LOC_IT_IS_SNOWING": "Es schneit.",
+  "LOC_IT_IS_SLEETING": "Es fällt Schneeregen.",
+  "LOC_IT_WILL_BE_RAINY_FROM_H": "Ab %d Uhr wird es Regen geben.",
+  "LOC_IT_WILL_BE_SNOWY_FROM_H": "Ab %d Uhr wird es Schnee geben.",
+  "LOC_IT_WILL_BE_SLEETING_FROM_H": "Ab %d Uhr wird es Schnee oder Regen geben.",
+  "LOC_H_POLLUTANT_IS_GRADE": "%d Uhr %s ist %s.",
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "Ab %d Uhr %s für Luftqualität %s werden."
 }

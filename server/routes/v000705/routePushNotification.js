@@ -6,6 +6,7 @@ var express = require('express');
 var router = express.Router();
 var config = require('../../config/config');
 var ControllerPush = require('../../controllers/controllerPush');
+var CtrlAlertPush = require('../../controllers/alert.push.controller');
 
 /**
  * pushTime은 UTC 기준으로 전달됨.
@@ -23,8 +24,8 @@ router.post('/', function(req, res) {
 
     //update modelPush
     //return _id
-    var pushInfo = req.body;
-    var language = req.headers['accept-language'];
+
+    var language = req.headers['accept-language'] || req.headers['Accept-Language'];
     if (language == undefined) {
         log.warn("accept-language is undefined");
         language = 'en';
@@ -32,7 +33,13 @@ router.post('/', function(req, res) {
     else {
         language = language.split(',')[0];
         if (language) {
-            language = language.substr(0, language.length-3);
+            if ( language.indexOf('ko') >= 0 ||
+                language.indexOf('en') >= 0 ||
+                language.indexOf('ja') >= 0 ||
+                language.indexOf('de') >= 0 )
+            {
+                language = language.substr(0, 2);
+            }
         }
         else {
             log.error("Fail to parse language="+req.headers['accept-language']);
@@ -40,16 +47,40 @@ router.post('/', function(req, res) {
         }
     }
 
-    pushInfo.lang = language;
-    if (pushInfo.location && pushInfo.location.hasOwnProperty('long') && pushInfo.location.hasOwnProperty('lat')) {
-        pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
+    var pushInfo;
+
+    try {
+        pushInfo = req.body;
+
+        if (!pushInfo.hasOwnProperty('registrationId') ||
+            !pushInfo.hasOwnProperty('type') )
+        {
+            throw new Error('invalid push info registrationId/type');
+        }
+        if (pushInfo.registrationId.length === 0 ||
+            pushInfo.type.length === 0)
+        {
+            throw new Error('invalid push info registrationId/type');
+        }
+        if (!pushInfo.hasOwnProperty('location') && !pushInfo.hasOwnProperty('town')) {
+            throw new Error('invalid push info location or town is empty');
+        }
+
+        pushInfo.lang = language;
+        if (pushInfo.location && pushInfo.location.hasOwnProperty('long') && pushInfo.location.hasOwnProperty('lat')) {
+            pushInfo.geo = [pushInfo.location.long, pushInfo.location.lat];
+        }
+
+        if (pushInfo.source == undefined) {
+            pushInfo.source = "KMA"
+        }
+
+        log.info('pushInfo : '+ JSON.stringify(pushInfo));
+    }
+    catch (err) {
+        return res.status(403).send(err.message);
     }
 
-    if (pushInfo.source == undefined) {
-        pushInfo.source = "KMA"
-    }
-
-    log.info('pushInfo : '+ JSON.stringify(pushInfo));
     var co = new ControllerPush();
     co.updatePushInfo(pushInfo, function (err, result) {
         if (err) {
@@ -83,15 +114,33 @@ router.put('/', function(req, res) {
 router.delete('/', function(req, res) {
     log.info('delete : '+ JSON.stringify(req.body));
 
-    var co = new ControllerPush();
-    co.removePushInfo(req.body, function (err, result) {
-        if (err) {
-            log.error(err);
-            //return  res error
-            return res.status(500).send(err.message);
-        }
-        return res.send(result.toString());
-    });
+    var pushInfo = req.body;
+
+    if (pushInfo.category === 'alert') {
+        var ctrlAlertPush = new CtrlAlertPush();
+        ctrlAlertPush.removeAlertPush(pushInfo, function (err, result) {
+            if (err) {
+                log.error(err);
+                //return  res error
+                return res.status(500).send(err.message);
+            }
+            return res.send(result.toString());
+        });
+    }
+    else if (pushInfo.category === 'alarm') {
+        var co = new ControllerPush();
+        co.removePushInfo(pushInfo, function (err, result) {
+            if (err) {
+                log.error(err);
+                //return  res error
+                return res.status(500).send(err.message);
+            }
+            return res.send(result.toString());
+        });
+    }
+    else {
+        log.error('unknown category, pushInfo:'+JSON.stringify(pushInfo));
+    }
 });
 
 module.exports = router;

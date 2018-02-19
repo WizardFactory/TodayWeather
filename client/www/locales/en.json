@@ -183,7 +183,7 @@
   "LOC_THURSDAY" : "Thursday",
   "LOC_FRIDAY" : "Friday",
   "LOC_SATURDAY" : "Saturday",
-  "LOC_FORECAST" : "forecast",
+  "LOC_FORECAST" : "Forecast",
   "LOC_WEATHER" : "Weather",
   "LOC_PUBLIC" : "Public",
   "LOC_LOCATION" : "Location",
@@ -281,6 +281,13 @@
   "LOC_WEAR_A_DUST_MASK_WHEN_YOU_GO_OUT": "Wear a dust mask when you go out!",
   "LOC_SENSITIVE_PEOPLE_WEAR_DUST_MASK": "Sensitive people wear dust mask!",
   "LOC_DO_NOT_GO_OUT_ON_SENSITIVE_PEOPLE": "Do not go out on sensitive people!",
-  "LOC_DO_NOT_GO_OUT": "Do not go out!"
-
+  "LOC_DO_NOT_GO_OUT": "Do not go out!",
+  "LOC_IT_IS_RAINING": "It is raining",
+  "LOC_IT_IS_SNOWING": "It is snowing",
+  "LOC_IT_IS_SLEETING": "It is sleeting",
+  "LOC_IT_WILL_BE_RAINY_FROM_H": "It's expected to rain from %dh.",
+  "LOC_IT_WILL_BE_SNOWY_FROM_H": "It's expected to snow from %dh.",
+  "LOC_IT_WILL_BE_SLEETING_FROM_H": "It's expected to snow or rain from %dh.",
+  "LOC_H_POLLUTANT_IS_GRADE": "%dh %s is %s.",
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "From %dh %s is expected to be at %s."
 }
