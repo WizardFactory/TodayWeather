@@ -6,6 +6,7 @@ var express = require('express');
 var router = express.Router();
 var config = require('../../config/config');
 var ControllerPush = require('../../controllers/controllerPush');
+var CtrlAlertPush = require('../../controllers/alert.push.controller');
 
 /**
  * pushTime은 UTC 기준으로 전달됨.
@@ -113,15 +114,33 @@ router.put('/', function(req, res) {
 router.delete('/', function(req, res) {
     log.info('delete : '+ JSON.stringify(req.body));
 
-    var co = new ControllerPush();
-    co.removePushInfo(req.body, function (err, result) {
-        if (err) {
-            log.error(err);
-            //return  res error
-            return res.status(500).send(err.message);
-        }
-        return res.send(result.toString());
-    });
+    var pushInfo = req.body;
+
+    if (pushInfo.category === 'alert') {
+        var ctrlAlertPush = new CtrlAlertPush();
+        ctrlAlertPush.removeAlertPush(pushInfo, function (err, result) {
+            if (err) {
+                log.error(err);
+                //return  res error
+                return res.status(500).send(err.message);
+            }
+            return res.send(result.toString());
+        });
+    }
+    else if (pushInfo.category === 'alarm') {
+        var co = new ControllerPush();
+        co.removePushInfo(pushInfo, function (err, result) {
+            if (err) {
+                log.error(err);
+                //return  res error
+                return res.status(500).send(err.message);
+            }
+            return res.send(result.toString());
+        });
+    }
+    else {
+        log.error('unknown category, pushInfo:'+JSON.stringify(pushInfo));
+    }
 });
 
 module.exports = router;

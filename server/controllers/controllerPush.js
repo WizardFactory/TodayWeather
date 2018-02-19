@@ -120,7 +120,8 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
     }
 
     PushInfo.update(
-        {registrationId: pushInfo.registrationId, type:pushInfo.type, id: pushInfo.id},
+        {type:pushInfo.type, registrationId: pushInfo.registrationId,
+            cityIndex:pushInfo.cityIndex, id: pushInfo.id},
         pushInfo,
         {upsert : true},
         function (err, result) {
@@ -134,10 +135,12 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
-    PushInfo.remove({
-            registrationId: pushInfo.registrationId,
-            type:pushInfo.type,
-            id: pushInfo.id},
+    var query = {type:pushInfo.type, registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex};
+    if (pushInfo.id) {
+        query.id = pushInfo.id;
+    }
+
+    PushInfo.remove(query,
         function (err, result) {
             if (err) {
                 return callback(err);
