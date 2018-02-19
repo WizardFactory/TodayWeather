@@ -90,6 +90,9 @@ class AirkoreaHourlyForecastController {
                             code.toUpperCase(),
                             'airkorea',
                             function (err, hourlyForecastObj) {
+                                if(err){
+                                    log.warn('Invalid geocode for dust forecast:', stn.geo[1], stn.geo[0]);
+                                }
                                 hourlyForecastObj.stationName = stn.stationName;
                                 hourlyForecastObj.code = code;
                                 callback(err, hourlyForecastObj);
