@@ -393,6 +393,7 @@ function controllerWorldWeather() {
         log.info('TWW> geocode : ', req.geocode, meta);
 
         async.waterfall([
+                /*
                 function(callback){
                     self.getLocalTimezone(req, req.geocode, function(err){
                         if(err){
@@ -425,6 +426,7 @@ function controllerWorldWeather() {
                         }
                     });
                 },
+                */
                 /*
                 * No use WU data.
                 function(callback){
@@ -525,25 +527,25 @@ function controllerWorldWeather() {
                                  Direct function call
                                 */
                                 var requester = new controllerRequester;
-                                var info = {
-                                    sessionID: req.sessionID,
-                                    query:{}
-                                };
+                                //var info = {
+                                //    sessionID: req.sessionID,
+                                //    query:{}
+                                //};
 
-                                if(req.geocode){
-                                    info.query.gcode = '' + req.geocode.lat + ',' + req.geocode.lon;
-                                }
+                                //if(req.geocode){
+                                //    info.query.gcode = '' + req.geocode.lat + ',' + req.geocode.lon;
+                                //}
 
-                                if(req.hasOwnProperty('result') &&
-                                    req.result.hasOwnProperty('timezone') &&
-                                    req.result.timezone.min != (100 * 60)){
-                                    info.query.timezone = req.result.timezone.min / 60;
-                                }else{
-                                    info.query.timezone = 0;
-                                }
+                                //if(req.hasOwnProperty('result') &&
+                                //    req.result.hasOwnProperty('timezone') &&
+                                //    req.result.timezone.min != (100 * 60)){
+                                //    info.query.timezone = req.result.timezone.min / 60;
+                                //}else{
+                                //    info.query.timezone = 0;
+                                //}
 
-                                log.info('Query : ', info);
-                                requester.reqDataForTwoDays(info, function(err, response){
+                                //log.info('Query : ', info);
+                                requester.reqDataForTwoDays(req, function(err, response){
                                     if(err){
                                         log.error('TWW> fail to request', meta);
                                         req.error = {res: 'fail', msg:'Fail to request Two days data'};
@@ -1140,13 +1142,13 @@ function controllerWorldWeather() {
         var meta = {};
         meta.sID = req.sessionID;
 
-        if(req.DSF && req.result.timezone){
+        if(req.DSF && req.result.hasOwnProperty('timezone')){
             var dsf = req.DSF;
 
             dsf.data.forEach(function(dsfItem){
                 if(dsfItem.current){
                     var time = new Date();
-                    log.info('convert DSF LocalTime > current', meta, dsfItem.current.dateObj);
+                    log.info('convert DSF LocalTime > current', meta, dsfItem.current.dateObj.toString());
                     time.setTime(new Date(dsfItem.current.dateObj).getTime() + req.result.timezone.ms);
                     dsfItem.current.dateObj = self._convertTimeString(time);
                 }
@@ -2807,6 +2809,17 @@ function controllerWorldWeather() {
                 log.warn('gDSF> There is no DSF data for ', geocode, meta);
                 callback('No Data');
                 return;
+            }
+
+            if(list[0].hasOwnProperty('timeOffset')){
+                if(!req.hasOwnProperty('result')){
+                    req.result = {};
+                }
+                if(!req.result.hasOwnProperty('timezone')){
+                    req.result.timezone = {};
+                }
+                req.result.timezone.min = list[0].timeOffset * 60;
+                req.result.timezone.ms = req.result.timezone.min * 60 * 1000;
             }
 
             req.DSF = list[0];

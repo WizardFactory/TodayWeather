@@ -29,23 +29,38 @@ global.i18n = i18n;
 
 describe('e2e local test - controller push', function() {
 
-    var pushInfo1 = { "cityIndex" : 1,
+    var pushInfo1 = { "id":1, "cityIndex" : 1,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
         "pushTime" : 82800,
+        "enable" : true,
+        "category" : "alarm",
         "type" : "ios", "source" : "KMA", "lang" : "ko",
         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
         "geo" : [ 127.37, 36.3 ],
-        "name" : "정림동1", "dayOfWeeks":[1,3,5], "timezoneOffset":540 };
+        "name" : "정림동1", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540 };
 
-    var pushInfo2 = { "cityIndex" : 2,
+    var pushInfo2 = { "id":2, "cityIndex" : 2,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
         "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
         "pushTime" : 82800,
+        "enable" : true,
+        "category" : "alarm",
         "type" : "ios", "source" : "KMA", "lang" : "ko",
         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
             "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-        "name" : "정림동2", "dayOfWeeks":[1,3,5], "timezoneOffset":-540};
+        "name" : "정림동2", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+
+    var pushInfo3 = { "id":3, "cityIndex" : 2,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
+        "pushTime" : 82900,
+        "enable" : false,
+        "category" : "alarm",
+        "type" : "ios", "source" : "KMA", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "name" : "정림동3", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
 
     it('test request daily summary without town', function(done) {
         this.timeout(20*1000);
@@ -90,6 +105,7 @@ describe('e2e local test - controller push', function() {
         var pushList = [];
         pushList.push(pushInfo1);
         pushList.push(pushInfo2);
+        pushList.push(pushInfo3);
 
         ctrl._getCurrentTime = function () {
             var current = new Date();
@@ -130,6 +146,17 @@ describe('e2e local test - controller push', function() {
         var co = new ControllerPush();
         var filteredList = co._filterByDayOfWeek(pushList, date);
         console.log(filteredList);
+    });
+
+    it('test get push info by time', function(done) {
+        var co = new ControllerPush();
+        co.getPushByTime(pushInfo3.pushTime, function (err, result) {
+            if (err) {
+                console.error(err);
+            }
+            assert.equal(result, undefined);
+            done();
+        });
     });
 });
 
