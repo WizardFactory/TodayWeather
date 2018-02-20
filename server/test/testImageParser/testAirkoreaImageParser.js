@@ -158,7 +158,7 @@ describe('Test - Airkorea Image parser ', function(){
                 //log.info(JSON.stringify(result));
                 log.info('PM10 pubDate : ', result.pubDate);
                 for(var i = 0 ; i<expectedColorValue_pm10.length ; i++){
-                    assert.equal(result.hourly[i].value, expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
+                    assert.equal(result.hourly[i].val, expectedColorValue_pm10[i], '1 No matched PM10 color value : '+i);
                 }
                 controller.getDustInfo(geocode.lat, geocode.lon, 'PM25', 'airkorea', function(err, result){
                     if(err){
@@ -169,7 +169,7 @@ describe('Test - Airkorea Image parser ', function(){
                     //log.info(JSON.stringify(result));
                     log.info('PM25 pubDate : ', result.pubDate);
                     for(var i = 0 ; i<expectedColorValue_pm25.length ; i++){
-                        assert.equal(result.hourly[i].value, expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
+                        assert.equal(result.hourly[i].val, expectedColorValue_pm25[i], '2 No matched PM 25 color value : '+i);
                     }
                     done();
                 });
@@ -320,6 +320,40 @@ describe('Test - Airkorea Image parser ', function(){
                 assert.equal(result[i].val, expectedRes_pm25[i].val, 'No matched dust value : '+i);
             }
             done();
+        });
+    });
+
+    it('invalid area', function(done){
+        var controller = new (require('../../controllers/airkorea.dust.image.controller'))();
+        var image_pm10_url = './image_pm10.gif';
+        var image_pm25_url = './image_pm25.gif';
+        var geocode = {lat: 37.5081798, lon : 130.8217127}; // 경상북도 울릉군 서면태하
+
+        var controllerManager = require('../../controllers/controllerManager');
+        global.manager = new controllerManager();
+        controller.getImaggPath = function(type, callback){
+            if(type === 'PM10'){
+                return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm10_url});
+            }
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: image_pm25_url});
+        };
+
+        controller.startDustImageMgr(function(err, pixel){
+            if(err){
+                log.info('1. ERROR!!!');
+                assert.fail();
+                return done();
+            }
+            log.info(pixel.PM10.data.image_count);
+            controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', 'airkorea', function(err, result){
+                if(err){
+                    log.info('2. ERROR!!!!', err);
+                    return done();
+                }
+
+                assert.fail();
+                done();
+            });
         });
     });
 });
