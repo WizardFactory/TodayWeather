@@ -120,12 +120,13 @@ angular.module('service.push', [])
             /**
              * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
              */
-            postObj  = { registrationId: this.pushData.registrationId,
-                id: pushInfo.id,
+            postObj  = {
                 type: this.pushData.type,
+                registrationId: this.pushData.registrationId,
+                cityIndex: pushInfo.cityIndex,
+                id: pushInfo.id,
                 category: pushInfo.category,
                 enable: pushInfo.enable,
-                cityIndex: pushInfo.cityIndex,
                 name: pushInfo.name,
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
@@ -203,10 +204,12 @@ angular.module('service.push', [])
          */
         obj._deletePushInfo = function (pushInfo) {
             var self = this;
-            var pushInfo = { registrationId: self.pushData.registrationId,
+            var pushInfo = {
                 type: self.pushData.type,
+                registrationId: self.pushData.registrationId,
                 cityIndex: pushInfo.cityIndex,
-                id: pushInfo.id };
+                id: pushInfo.id,
+                category: pushInfo.category };
 
             $http({
                 method: 'DELETE',
@@ -403,8 +406,8 @@ angular.module('service.push', [])
          */
         obj.newPushAlert = function (id, cityIndex, startTime, endTime) {
             var pushInfo = {
-                id: id,
                 cityIndex: cityIndex,
+                id: id,
                 startTime: this.secs2date(startTime*3600),
                 endTime: this.secs2date(endTime*3600),
                 enable: true,
@@ -434,8 +437,8 @@ angular.module('service.push', [])
          */
         obj.newPushAlarm = function (id, cityIndex, secs, dayOfWeek) {
             var pushInfo = {
-                id: id,
                 cityIndex: cityIndex,
+                id: id,
                 time: this.secs2date(secs),
                 dayOfWeek: dayOfWeek,
                 enable: true,
@@ -512,6 +515,7 @@ angular.module('service.push', [])
             this.pushData.pushList = pushList.filter(function (value) {
                 return value.cityIndex !== cityIndex;
             });
+            this.savePushInfo();
         };
 
         obj.getPushListByCityIndex = function (cityIndex) {
