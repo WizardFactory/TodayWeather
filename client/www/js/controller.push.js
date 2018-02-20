@@ -1,6 +1,6 @@
 angular.module('controller.push', [])
     .controller('PushCtrl', function ($scope, $stateParams, WeatherInfo, WeatherUtil, Units, Util,
-                                     $ionicHistory, Push, $translate, ionicTimePicker) {
+                                     $ionicHistory, Push, $translate, ionicTimePicker, $ionicPopup) {
 
         var pushInfo;
         var startTime;
@@ -74,8 +74,22 @@ angular.module('controller.push', [])
             $scope.alarmList = pushInfo.alarmList;
             $scope.dayOfWeek = pushInfo.dayOfWeek;
 
+            if (!window.PushNotification) {
+                Util.ga.trackEvent('push', 'error', 'loadPlugin');
+                return;
+            }
+
             if (!window.push) {
                 Push.register();
+            }
+            else {
+                PushNotification.hasPermission(function(data) {
+                    console.log('Push.isEnabled:'+data.isEnabled);
+                    Push.isEnabled = data.isEnabled;
+                    if (data.isEnabled === false) {
+                        _showPermissionPopUp();
+                    }
+                });
             }
         }
 
@@ -150,6 +164,63 @@ angular.module('controller.push', [])
             }
         }
 
+        function _showPermissionPopUp() {
+
+            var strClose;
+            var strSetting;
+            var strNotiDesc;
+
+            $translate(['LOC_CLOSE', 'LOC_SETTING', 'LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP']).then(function (translations) {
+                strClose = translations.LOC_CLOSE;
+                strSetting = translations.LOC_SETTING;
+                strNotiDesc = translations.LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP;
+            }, function (translationIds) {
+                console.log("Fail to translate : " + JSON.stringify(translationIds));
+                Util.ga.trackEvent("translate", "error", "showRetryConfirm");
+            }).finally(function () {
+                var buttons = [];
+                buttons.push({
+                    text: strClose,
+                    onTap: function () {
+                        return 'close';
+                    }
+                });
+                buttons.push({
+                    text: strSetting,
+                    type: 'button-dark',
+                    onTap: function () {
+                        return 'settings';
+                    }
+                });
+
+                var confirmPopup = $ionicPopup.show({
+                    title: "Permission",
+                    template: strNotiDesc,
+                    buttons: buttons
+                });
+
+                confirmPopup
+                    .then(function (res) {
+                        if (res == 'settings') {
+                            Util.ga.trackEvent('action', 'click', 'settings');
+                            setTimeout(function () {
+                                cordova.plugins.diagnostic.switchToSettings(function () {
+                                    console.log("Successfully switched to Settings app");
+                                }, function (error) {
+                                    console.log("The following error occurred: " + error);
+                                });
+                            }, 0);
+                        }
+                        else {
+                            Util.ga.trackEvent('action', 'click', 'close');
+                        }
+                    })
+                    .finally(function () {
+                        console.log('called finally');
+                    });
+            });
+        }
+
         /**
          * tabCtrl에 동일한 함수 있음.
          * @param day
@@ -180,13 +251,22 @@ angular.module('controller.push', [])
         };
 
         $scope.onOkay = function () {
-            if (!Push.isEnabled) {
-                console.log('Push.isenabled:'+Push.isEnabled);
-                //show pop up for getting permission
+            if (!window.PushNotification) {
+                Util.ga.trackEvent('push', 'error', 'loadPlugin');
                 return;
             }
-            _savePushInfo();
-            $ionicHistory.goBack();
+
+            PushNotification.hasPermission(function(data) {
+                console.log('Push.isEnabled:'+data.isEnabled);
+                Push.isEnabled = data.isEnabled;
+                if (data.isEnabled) {
+                    _savePushInfo();
+                    $ionicHistory.goBack();
+                }
+                else {
+                    _showPermissionPopUp();
+                }
+            });
         };
 
         /**

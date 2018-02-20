@@ -289,5 +289,9 @@
   "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d時から雪が降る予定です。",
   "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d時から雪または雨が降る予定です。",
   "LOC_H_POLLUTANT_IS_GRADE": "%d時 %sが %sです。",
-  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d時から%sの「%s」レベルが予想されます。"
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d時から%sの「%s」レベルが予想されます。",
+  "LOC_WEATHER_ALERT": "天気予報",
+  "LOC_ALERT_DESCRIPTION": "天気のお知らせは雪/雨が降ったり、pm2.5が悪化する時教えてくれます。あるいは近いうちに雪/雨の予報、pm2.5の段階が悪いと予報がある場合にも教えてくれます。",
+  "LOC_ALARM_DESCRIPTION": "天気アラームは使用者が直接設定した時間に天気情報をお伝えします。",
+  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "お知らせが消しております。このアプリに対するお知らせを許容してください。"
 }

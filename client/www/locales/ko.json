@@ -289,5 +289,9 @@
   "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d시부터 눈이 내릴 예정입니다.",
   "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d시부터 눈 또는 비가 내릴 예정입니다.",
   "LOC_H_POLLUTANT_IS_GRADE": "%d시 %s가 %s입니다.",
-  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d시부터 %s가 %s 수준을 나타낼 것으로 예상됩니다."
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d시부터 %s가 %s 수준을 나타낼 것으로 예상됩니다.",
+  "LOC_WEATHER_ALERT": "날씨알림",
+  "LOC_ALERT_DESCRIPTION": "날씨알림은 눈/비가 오거나, 미세먼지가 나빠지면 알려줍니다. 혹은 가까운 시간에 눈/비 예보, 미세먼지 나쁨 예보가 있는 경우에도 알려줍니다.",
+  "LOC_ALARM_DESCRIPTION": "날씨알람은 사용자가 직접 설정한 시간에 날씨정보를 전달해드립니다.",
+  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP" : "알림이 꺼져있습니다. 이 앱에 대한 알림을 허용해주세요."
 }

@@ -204,7 +204,7 @@ angular.module('service.push', [])
          */
         obj._deletePushInfo = function (pushInfo) {
             var self = this;
-            var pushInfo = {
+            var pushObj = {
                 type: self.pushData.type,
                 registrationId: self.pushData.registrationId,
                 cityIndex: pushInfo.cityIndex,
@@ -215,7 +215,7 @@ angular.module('service.push', [])
                 method: 'DELETE',
                 headers: {'Content-Type': 'application/json', 'Device-Id': Util.uuid},
                 url: self.pushUrl,
-                data: pushInfo,
+                data: pushObj,
                 timeout: 10*1000
             })
                 .success(function (data) {
