@@ -320,12 +320,14 @@ arpltnController.getDustFrcst = function (town, date, callback) {
     var self = this;
     var informDate = kmaTimeLib.convertYYYYMMDDtoYYYY_MM_DD(date);
 
-    Frcst.find({"informData": {$gte:informDate}}, {_id:0}).lean().exec(function (err, dustFrcstList) {
+    var query = {"informData": {$gte:informDate}};
+
+    Frcst.find(query, {_id:0}).lean().exec(function (err, dustFrcstList) {
         if (err) {
             return callback(err);
         }
         if (dustFrcstList.length == 0) {
-            err = new Error("Fail to find dust forecast query="+JSON.stringify(query));
+            err = new Error("Fail to find dust forecast "+JSON.stringify(query));
             return callback(err);
         }
 

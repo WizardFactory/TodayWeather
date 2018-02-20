@@ -2114,6 +2114,11 @@ function ControllerTown() {
                     next();
                     return;
                 }
+
+                if (!townInfo.hasOwnProperty('areaNo')) {
+                    throw new Error('There is not areaNo '+JSON.stringify(townInfo));
+                }
+
                 req.params.areaNo = townInfo.areaNo;
                 req.geocode = {
                     lat: townInfo.gCoord.lat,
