@@ -344,6 +344,17 @@ function controllerWorldWeather() {
         return false;
     };
 
+    self._getUntil1Hour = function(current, target){
+        log.info('Compare Date', current, target);
+        var currentDate = new Date(current);
+        var targetDate = new Date(target);
+        var MS_1H = 1000*60*60;
+
+        if (currentDate.getTime()-MS_1H < targetDate.getTime()) {
+            return true;
+        }
+        return false;
+    };
 
     self._checkHour = function(date, hourList){
         // YYYY.mm.dd HH:MM
@@ -1455,7 +1466,7 @@ function controllerWorldWeather() {
 
             dsf.data.forEach(function (item) {
                 var isExist = false;
-                if(self._compareDateString(curDate, item.current.dateObj)){
+                if(self._getUntil1Hour(curDate, item.current.dateObj)){
                     req.result.thisTime.forEach(function(thisTime, index) {
                         if (thisTime.date != undefined &&
                             self._compareDateString(curDate, thisTime.date)) {
