@@ -64,7 +64,7 @@ controllerAqi.prototype._getDiffDate = function (utcTime, localTime) {
             }
         }
     }
-    log.error("controllerAqi : Invalid time");
+    log.warn("controllerAqi : Invalid time");
     return 0;
 };
 /**
