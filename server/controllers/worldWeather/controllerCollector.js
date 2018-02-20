@@ -1133,11 +1133,11 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     else {
                         log.info('Dsf> First time save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-                });
 
-                if (callback) {
-                    return callback(err, res);
-                }
+                    if (callback) {
+                        return callback(err, res);
+                    }
+                });
             }
             else {
                 //print.info('Dsf> add new Item : ', newData);
@@ -1203,11 +1203,11 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     else {
                         log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-                });
 
-                if(callback){
-                    return callback(err, res);
-                }
+                    if(callback){
+                        return callback(err, res);
+                    }
+                });
             }
         });
     }catch(e){
