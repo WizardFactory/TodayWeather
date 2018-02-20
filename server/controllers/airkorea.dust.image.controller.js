@@ -146,11 +146,23 @@ AirkoreaDustImageController.prototype.parseMapImage = function(path, type, callb
     });
 };
 
+AirkoreaDustImageController.prototype._isValidGeocode = function(lat, lon){
+    if(lat > this.coordinate.top_left.lat) return false;
+    if(lat < this.coordinate.bottom_left.lat) return false;
+    if(lon < this.coordinate.top_left.lon) return false;
+    if(lon > this.coordinate.top_right.lon) return false;
+    return true;
+};
+
 AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqiUnit, callback){
     var self = this;
 
     if(self.imagePixels[type] === undefined){
         return callback(new Error('1. There is no image information : ', type));
+    }
+
+    if(!self._isValidGeocode(lat, lon)){
+        return callback(new Error('2. Invalid geocode :', lat, lon));
     }
 
     var pixels = self.imagePixels[type].data;

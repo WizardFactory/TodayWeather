@@ -1359,6 +1359,7 @@ function controllerWorldWeather() {
 
             //log.info("hourly list = "+hourlyList.length);
 
+            var foundYesterday = false;
             hourlyList.forEach(function(dbItem, dataIndex) {
                 var isExist = false;
                 if(self._compareDateString(yesterdayDate, dbItem.dateObj)) {
@@ -1374,6 +1375,7 @@ function controllerWorldWeather() {
                         log.info('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
                         req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem, res));
                     }
+                    foundYesterday = true;
                 }
 
                 isExist = false;
@@ -1399,6 +1401,12 @@ function controllerWorldWeather() {
                     }
                 }
             });
+
+            if (!foundYesterday) {
+                log.error("Fail to find yesterday data!");
+                var yesterdayObj = {date: yesterdayDate};
+                req.result.thisTime.push(yesterdayObj);
+            }
         }
         next();
     };

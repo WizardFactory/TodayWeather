@@ -712,12 +712,22 @@ function ControllerTown24h() {
 
     function _getHourlyAqiData(airInfo, date) {
        var obj;
-       obj = airInfo.pollutants.aqi.hourly.find(function (aqiHourlyObj) {
+       var pollutants = airInfo.pollutants;
+       if (!pollutants.hasOwnProperty('aqi')) {
+           pollutants.aqi = {};
+       }
+       if (!pollutants.aqi.hasOwnProperty('hourly')) {
+           pollutants.aqi.hourly = [];
+       }
+
+       var hourly = pollutants.aqi.hourly;
+
+       obj = hourly.find(function (aqiHourlyObj) {
           return aqiHourlyObj.date === date;
        });
        if (obj == undefined)  {
            obj = {date: date};
-           airInfo.pollutants.aqi.hourly.push(obj);
+           hourly.push(obj);
        }
        return obj;
     }
@@ -862,6 +872,9 @@ function ControllerTown24h() {
 
     function _getDailyAqiData(airInfo, date) {
         var obj;
+        if (!airInfo.pollutants.hasOwnProperty('aqi')) {
+            airInfo.pollutants.aqi = {};
+        }
         if (!airInfo.pollutants.aqi.hasOwnProperty('daily')) {
             airInfo.pollutants.aqi.daily = [];
         }
@@ -993,6 +1006,10 @@ function ControllerTown24h() {
                 return next();
             }
             try {
+                if (results.length <= 0) {
+                    log.warn("Fail to get forecast stnName="+stnName);
+                    return next();
+                }
                 self._insertForecastPollutants(req, results, "airkorea", req.query.airUnit);
             }
             catch(err) {

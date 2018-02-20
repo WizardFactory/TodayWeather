@@ -1133,11 +1133,11 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     else {
                         log.info('Dsf> First time save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-                });
 
-                if (callback) {
-                    return callback(err, res);
-                }
+                    if (callback) {
+                        return callback(err, res);
+                    }
+                });
             }
             else {
                 //print.info('Dsf> add new Item : ', newData);
@@ -1203,11 +1203,11 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     else {
                         log.info('Dsf> save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
                     }
-                });
 
-                if(callback){
-                    return callback(err, res);
-                }
+                    if(callback){
+                        return callback(err, res);
+                    }
+                });
             }
         });
     }catch(e){
@@ -1339,7 +1339,7 @@ ConCollector.prototype.processDSForecast = function(self, list, date, isRetry, c
 };
 
 ConCollector.prototype.removeAllDsfDb = function(geocode, callback){
-    modelDSForecast.remove({geocode:geocode}).lean().exec(function(err, list){
+    modelDSForecast.remove({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}).lean().exec(function(err, list){
         if(err){
             log.error('Dsf DB> fail to get db data', err);
             return callback(err);
@@ -1528,85 +1528,91 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     var dateList = [];
     var timeoffset = undefined;
 
-    async.waterfall([
-            function(cb1){
-                // 1. get today's weather
-                requester.getForecast(geocode, undefined, key, function(err, result){
-                    if(err){
-                        log.warn('Req Dsf> Failed to get today weather', geocode);
-                        return cb1('1. GET FAIL!!_');
-                    }
-
-                    //log.info(result);
-                    var curTime = new Date();
-                    var date = parseInt(curTime.getTime() / 1000);
-                    //log.info('Req Dsf> cur : ', date.toString());
-                    self.saveDSForecast(geocode, date, undefined, result, function(err, savedData){
-                        return cb1(null, savedData);
-                    });
-                });
-            },
-            function(todayData, cb2){
-                // 2. try to get time offset
-                if(todayData.address.country === undefined){
-                    log.warn('Req Dsf> There is no timezone string');
-                    if(todayData.timeOffset === 100){
-                        return cb2('2. No TIME ZONE');
-                    }
-                    // use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
-                    return cb2(null, todayData);
-                }
-
-                self.getTimeoffset(geocode, todayData.address.country, function(err, result){
-                    if(err && todayData.timeOffset === 100){
-                        log.warn('Req Dsf> Failt to get timeoffset : ', err);
-                        return cb2('3. GET FAIL TIMEOFFSET');
-                    }
-                    // if result is undefined, it would use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
-                    if(result){
-                        todayData.timeOffset = result / 60; // hour
-                        timeoffset = result; // min
-                    }
-
-                    //log.info('Req Dsf> Timezone Offset :', timeoffset);
-                    return cb2(null, todayData);
-                });
-            },
-            function(todayData, cb3){
-                // 3. try to get past-data
-                var reqTime = self._getLocalLast0H(todayData.timeOffset*60);
-                //day light saving위해 1시간 margin을 둠.
-                reqTime.setUTCHours(reqTime.getUTCHours()+1);
-                for(var i=From ; i<To ; i++){
-                    reqTime.setUTCDate(reqTime.getUTCDate()-i);
-                    //log.info("reqTime="+reqTime.toISOString());
-                    var nTime = parseInt(reqTime.getTime()/1000);
-                    dateList.push(nTime);
-                }
-
-                log.info(JSON.stringify(dateList), todayData.timeOffset);
-
-                self.getPastDsfData(geocode, dateList, todayData.timeOffset, function(err, results){
-                    if(err){
-                        log.warn('Req Dsf> Fail to get past-data');
-                        return cb3('4. GET FAIL PAST-DATA');
-                    }
-                    results.push(todayData);
-                    return cb3(null, results);
-                });
-            }
-        ],
-        function(err, results){
-            if(err){
-                return callback(err);
-            }
-            //log.info('Req Dsf> Final Data :', results.length);
-            //log.info('Req Dsf> Timeoffset :', timeoffset);
-            //log.info('Req Dsf> geocode :', geocode);
-
-            return callback(err, self.arrangDsfData(geocode, timeoffset/60, results), timeoffset);
+    self.removeAllDsfDb(geocode, function(err) {
+        if (err) {
+            log.error('Req Dsf> fail to delete all data');
+            return callback(err);
         }
-    )
+        async.waterfall([
+                function (cb1) {
+                    // 1. get today's weather
+                    requester.getForecast(geocode, undefined, key, function (err, result) {
+                        if (err) {
+                            log.warn('Req Dsf> Failed to get today weather', geocode);
+                            return cb1('1. GET FAIL!!_');
+                        }
+
+                        //log.info(result);
+                        var curTime = new Date();
+                        var date = parseInt(curTime.getTime() / 1000);
+                        //log.info('Req Dsf> cur : ', date.toString());
+                        self.saveDSForecast(geocode, date, undefined, result, function (err, savedData) {
+                            return cb1(null, savedData);
+                        });
+                    });
+                },
+                function (todayData, cb2) {
+                    // 2. try to get time offset
+                    if (todayData.address.country === undefined) {
+                        log.warn('Req Dsf> There is no timezone string');
+                        if (todayData.timeOffset === 100) {
+                            return cb2('2. No TIME ZONE');
+                        }
+                        // use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
+                        return cb2(null, todayData);
+                    }
+
+                    self.getTimeoffset(geocode, todayData.address.country, function (err, result) {
+                        if (err && todayData.timeOffset === 100) {
+                            log.warn('Req Dsf> Failt to get timeoffset : ', err);
+                            return cb2('3. GET FAIL TIMEOFFSET');
+                        }
+                        // if result is undefined, it would use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
+                        if (result) {
+                            todayData.timeOffset = result / 60; // hour
+                            timeoffset = result; // min
+                        }
+
+                        //log.info('Req Dsf> Timezone Offset :', timeoffset);
+                        return cb2(null, todayData);
+                    });
+                },
+                function (todayData, cb3) {
+                    // 3. try to get past-data
+                    var reqTime = self._getLocalLast0H(todayData.timeOffset * 60);
+                    //day light saving위해 1시간 margin을 둠.
+                    reqTime.setUTCHours(reqTime.getUTCHours() + 1);
+                    for (var i = From; i < To; i++) {
+                        reqTime.setUTCDate(reqTime.getUTCDate() - i);
+                        //log.info("reqTime="+reqTime.toISOString());
+                        var nTime = parseInt(reqTime.getTime() / 1000);
+                        dateList.push(nTime);
+                    }
+
+                    log.info(JSON.stringify(dateList), todayData.timeOffset);
+
+                    self.getPastDsfData(geocode, dateList, todayData.timeOffset, function (err, results) {
+                        if (err) {
+                            log.warn('Req Dsf> Fail to get past-data');
+                            return cb3('4. GET FAIL PAST-DATA');
+                        }
+                        results.push(todayData);
+                        return cb3(null, results);
+                    });
+                }
+            ],
+            function (err, results) {
+                if (err) {
+                    return callback(err);
+                }
+                //log.info('Req Dsf> Final Data :', results.length);
+                //log.info('Req Dsf> Timeoffset :', timeoffset);
+                //log.info('Req Dsf> geocode :', geocode);
+
+                return callback(err, self.arrangDsfData(geocode, timeoffset / 60, results), timeoffset);
+            }
+        );
+    });
 };
 
 /**
