@@ -1006,6 +1006,10 @@ function ControllerTown24h() {
                 return next();
             }
             try {
+                if (results.length <= 0) {
+                    log.warn("Fail to get forecast stnName="+stnName);
+                    return next();
+                }
                 self._insertForecastPollutants(req, results, "airkorea", req.query.airUnit);
             }
             catch(err) {
