@@ -560,6 +560,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   color: #444;
 }
 
+.search-item .toggle, .search-item .track {
+  width: 100%;
+}
+
 .search-item .ion-ios-close-outline:before {
   font-weight: 700;
 }

@@ -63,7 +63,7 @@
                     </div>
                     <div class="search-item last-item" ng-show="isEditing && city.currentPosition">
                         <label class="toggle toggle-search">
-                            <input type="checkbox" ng-model="city.disable" ng-true-value="false" ng-false-value="true">
+                            <input type="checkbox" ng-model="city.disable" ng-true-value="false" ng-false-value="true" ng-change="OnDisableCity()">
                             <div class="track">
                                 <div class="handle"></div>
                             </div>
