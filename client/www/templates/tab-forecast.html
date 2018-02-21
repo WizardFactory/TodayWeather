@@ -34,7 +34,8 @@
                         </div>
                     </div>
                 </div>
-                <p class="textFont" ng-style="::{'font-size':regionSumSize+'px'}" style="margin: 0;">{{summary}}</p>
+                <p class="textFont" style="margin: 0; font-size: 17px;">{{summary}}
+                    <br ng-if="summaryAir"><span ng-if="summaryAir" ng-click="goAirInfoPage('aqi')">{{summaryAir}}</span></p>
             </div>
             <div class="cityArrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
                 <span class="icon-right ion-chevron-right"></span>
