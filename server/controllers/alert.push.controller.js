@@ -727,6 +727,7 @@ class AlertPushController {
     }
 
     sendAlertPushList(time, callback) {
+        log.info('try to send alert push list time:'+time);
         this.time = time;
 
         async.waterfall([
