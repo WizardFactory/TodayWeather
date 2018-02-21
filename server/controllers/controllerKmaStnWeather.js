@@ -1052,7 +1052,7 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                stnWeather.weatherType =  ControllerWeatherDesc.makeWeatherType(stnWeather.weather);
             }
 
-            log.info("stnWeather="+JSON.stringify(stnWeather));
+            log.debug("stnWeather="+JSON.stringify(stnWeather));
             callback(err, stnWeather);
         });
 
