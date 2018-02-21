@@ -1536,9 +1536,13 @@ function ControllerTown() {
 
             var date = kmaTimeLib.convertDateToYYYYMMDD(now);
             var time = kmaTimeLib.convertDateToHHMM(now);
-            log.debug(date+time, meta);
+            log.info('>sID=', req.sessionID, 'dateTime:', date+time);
 
-            controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
+            var reqCurrent = req.current;
+
+            log.info('>sID=', req.sessionID, 'req.current:', JSON.stringify(reqCurrent));
+
+            controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, reqCurrent, function (err, stnWeatherInfo) {
                 if (err) {
                     log.error(err);
                     next();
@@ -1552,6 +1556,8 @@ function ControllerTown() {
                     return;
                 }
 
+                log.info('>sID=', req.sessionID, 'stnWeatherInfo:', JSON.stringify(stnWeatherInfo));
+
                 try {
                     var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
                     var stnFirst = true;
@@ -1561,21 +1567,19 @@ function ControllerTown() {
                         if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
 
                             log.info('>sID=',req.sessionID,
-                                'use api first, just append new data of stn hourly weather info', meta);
+                                'use api first, just append new data of stn hourly weather info');
                             stnFirst = false;
                         }
                         else {
-                            log.info('>sID=',req.sessionID, 'overwrite all data', meta);
+                            log.debug('>sID=',req.sessionID, 'overwrite all data');
                         }
                     }
 
                     for (var key in stnWeatherInfo) {
-                        if (stnFirst || req.current[key] == undefined) {
-                            req.current[key] = stnWeatherInfo[key];
+                        if (stnFirst || reqCurrent[key] == undefined) {
+                            reqCurrent[key] = stnWeatherInfo[key];
                         }
                     }
-
-                    var reqCurrent = req.current;
 
                     if (stnFirst) {
                         reqCurrent.overwrite = true;
@@ -1610,6 +1614,8 @@ function ControllerTown() {
                     controllerKmaStnWeather.updateWeather(reqCurrent);
                     reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
                     self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
+
+                    log.info('>sID=', req.sessionID, 'reqCurrent:', JSON.stringify(reqCurrent));
                 }
                 catch(err) {
                     log.error(err);
