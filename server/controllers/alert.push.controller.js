@@ -398,7 +398,7 @@ class AlertPushController {
      *
      * @param alertPush
      * @param infoObj
-     * @returns {string} weather|air|''
+     * @returns {string} weather|air|all|none
      * @private
      */
     _compareWithLastInfo(alertPush, infoObj) {
@@ -681,25 +681,22 @@ class AlertPushController {
 
         /**
          * 둘다 push한 시간이 6시간 이내여만 추가로 검토하지 않음.
+         * 아래 function이 mongodb 내부에서 도는지 es6를 지원하지 않는 경우도 있음.
          * @returns {boolean}
          */
         function checkUpdateInterval() {
-            let limitPushTime = new Date();
+            var limitPushTime = new Date();
             limitPushTime.setHours(limitPushTime.getHours()-6);
-            let needToCheck = true;
+            var needToCheck = true;
             if (this.precipAlerts) {
-                if (this.precipAlerts.hasOwnProperty('pushTime')) {
                    if (this.precipAlerts.pushTime >= limitPushTime) {
                        needToCheck = false;
                    }
-                }
             }
 
             if (this.airAlerts) {
-                if (this.airAlerts.hasOwnProperty('pushTime')) {
-                    if (this.airAlerts.pushTime >= limitPushTime) {
-                        needToCheck = false;
-                    }
+                if (this.airAlerts.pushTime >= limitPushTime) {
+                    needToCheck = false;
                 }
             }
 
@@ -782,7 +779,7 @@ class AlertPushController {
             let date = new Date();
             let min = date.getUTCMinutes();
             if (min === 0 || min === 15 || min === 30 || min === 45) {
-                let timeUTC = date.getUTCHours() * 60 * 60 + date.getUTCMinutes() * 60;
+                let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
                 this.sendAlertPushList(timeUTC);
                 this._removeOldList();
             }
