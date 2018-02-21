@@ -55,6 +55,8 @@ angular.module('service.push', [])
                     pushInfo.time = new Date(pushInfo.time);
                     pushInfo.category = 'alarm';
                     pushInfo.id = pushInfo.cityIndex;
+                    pushInfo.enable = true;
+                    pushInfo.dayOfWeek = [true, true, true, true, true, true, true];
                 });
 
                 //update alarmInfo to server for sync
