@@ -1568,7 +1568,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                             return cb2('3. GET FAIL TIMEOFFSET');
                         }
                         // if result is undefined, it would use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
-                        if (result) {
+                        if (result != undefined) {
                             todayData.timeOffset = result / 60; // hour
                             timeoffset = result; // min
                         }
