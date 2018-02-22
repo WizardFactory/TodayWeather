@@ -96,7 +96,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithLocation (location, funcName) {
             var url = twClientConfig.serverUrl;
-            url += '/'+funcName+'/v000901'+'/coord/'+ location.lat + ','+location.long;
+            url += '/'+funcName+'/v000902'+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -112,7 +112,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithAddr (addr, funcName) {
             var url = twClientConfig.serverUrl;
-            url += '/'+funcName+'/v000901'+'/addr/'+ addr;
+            url += '/'+funcName+'/v000902'+'/addr/'+ addr;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -127,7 +127,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithTown (town) {
             var url = twClientConfig.serverUrl;
-            url += '/v000901/kma/addr';
+            url += '/v000902/kma/addr';
             if (town.first !== '') {
                 url += '/' + town.first;
             }
@@ -889,7 +889,7 @@ angular.module('service.weatherutil', [])
             var url;
             try{
                 url = twClientConfig.serverUrl;
-                url += '/v000901/nation/'+nationCode;
+                url += '/v000902/nation/'+nationCode;
                 url += _getUnitsParams();
             }
             catch(err) {
