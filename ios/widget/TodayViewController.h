@@ -137,6 +137,7 @@
 - (void) initWidgetViews;
 - (void) initWidgetDatas;
 - (void) initLocationInfo;
+- (void) processAnalytics;
 - (void) refreshDatas;
 - (void) getAddressFromGoogle:(float)latitude longitude:(float)longitude;
 

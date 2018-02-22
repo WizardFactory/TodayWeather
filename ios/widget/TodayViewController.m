@@ -12,6 +12,9 @@
 #import "WidgetConfig.h"
 #import "TodayWeatherUtil.h"
 #import "LocalizationDefine.h"
+#import "TodayWeatherAnalytics.h"
+
+
 
 /********************************************************************
  Enumration
@@ -154,6 +157,26 @@ static TodayViewController *todayVC = nil;
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
     [self processShowMore];
+    [self processAnalytics];
+}
+
+/********************************************************************
+ *
+ * Name            : processGoogleAnalytics
+ * Description    : process ShowMore feature
+ * Returns        : void
+ * Side effects :
+ * Date            : 2018. 2. 21
+ * Author        : SeanKim
+ * History        : 20180221 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) processAnalytics
+{
+    TodayWeatherAnalytics *TWA = [[TodayWeatherAnalytics alloc] init];
+    [TWA initTracker];
+    
+    [TWA addScreenTracking:@"iOSWidget"];
 }
 
 /********************************************************************
@@ -412,13 +435,20 @@ static TodayViewController *todayVC = nil;
     tmpDataWD = [nssWeatherList dataUsingEncoding:NSUTF8StringEncoding];
     if(tmpDataWD)
         jsonDictWD = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpDataWD options:0 error:&errorWD];
-    NSLog(@"User Default WD: %@", jsonDictWD);
+    //NSLog(@"User Default WD: %@", jsonDictWD);
     
     mWeatherDataList    = [NSMutableArray array];
     for (NSDictionary *weatherDict in jsonDictWD[@"weatherDataList"]) {
         
+        //NSNumber *nsnIdx = weatherDict[@"index"];
         //NSLog(@"[loadWeatherData] nsnIdx : %@, weatherDict : %@", nsnIdx, weatherDict);
-    	[mWeatherDataList addObject:weatherDict];
+        //NSMutableDictionary* nsdTmpDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+        //                                   nsnIdx, @"index",
+        //                                   weatherDict, @"weatherData",
+        //                                   nil];
+        
+        //[mWeatherDataList addObject:nsdTmpDict];
+        [mWeatherDataList addObject:weatherDict];
     }
     
     NSLog(@"[mWeatherDataList count] : %ld, cityCount : %d", (unsigned long)[mWeatherDataList count], cityCount);
@@ -437,7 +467,7 @@ static TodayViewController *todayVC = nil;
         }
     }
     
-    NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
+    //NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
 }
 
 /********************************************************************
@@ -2147,7 +2177,7 @@ static TodayViewController *todayVC = nil;
     // idx가 count보다 높은 경우는 return함. mWeatherDataList가 null일때도 리턴함. 근본 원인을 밝혀야함
     NSMutableDictionary *nsdWeatherInfo    = [mWeatherDataList objectAtIndex:idx];
     NSMutableDictionary *nsdWeatherData    = [nsdWeatherInfo objectForKey:@"weatherData"];
-    NSLog(@"nsdWeatherData : %@", nsdWeatherData);
+    //NSLog(@"nsdWeatherData : %@", nsdWeatherData);
     if( (nsdWeatherData == nil) || ([nsdWeatherData isEqual:@""]) )
     {
         NSLog(@"nsdWeatherData is NULL!!!");
