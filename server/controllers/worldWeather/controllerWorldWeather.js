@@ -2839,6 +2839,8 @@ function controllerWorldWeather() {
                 }
                 req.result.timezone.min = list[0].timeOffset * 60;
                 req.result.timezone.ms = req.result.timezone.min * 60 * 1000;
+            }else{
+                log.error('gDSF> There is no timeOffset value in the DB!!!', geocode);
             }
 
             req.DSF = list[0];

@@ -591,8 +591,12 @@ ControllerRequester.prototype.reqDataForTwoDays = function(req, callback){
                     if(req.result.hasOwnProperty('timezone') === false){
                         req.result.timezone = {};
                     }
-                    req.result.timezone.min = timeoffset;
-                    req.result.timezone.ms = timeoffset * 60 * 1000;
+                    if(timeoffset != undefined){
+                        req.result.timezone.min = timeoffset;
+                        req.result.timezone.ms = timeoffset * 60 * 1000;
+                    }else{
+                        log.error('RQ> No Timeoffset in DSF data!!, ', req.geocode);
+                    }
 
                     //log.info('==> DSF RESULT:', JSON.stringify(dsfData));
 
