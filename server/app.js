@@ -124,6 +124,10 @@ if (config.mode === 'push') {
     var co = new ControllerPush();
     co.start();
     co.apnFeedback();
+
+    var AlertPush = require('./controllers/alert.push.controller');
+    var ctrlAlert = new AlertPush();
+    ctrlAlert.start();
 }
 
 if (config.mode === 'scrape' || config.mode === 'local') {

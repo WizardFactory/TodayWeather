@@ -128,15 +128,25 @@ angular.module('controller.tabctrl', [])
             else {
                 cityName = WeatherUtil.getShortenAddress(cityData.address);
             }
-            var t1h = cityData.currentWeather.t1h;
-            var emoji = WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon);
+            var currentWeather = cityData.currentWeather;
+            var t1h = currentWeather.t1h;
+            var emoji = WeatherUtil.getWeatherEmoji(currentWeather.skyIcon);
             var tmx;
             var tmn;
-            var summary = $rootScope.summary;
+            var summary;
             var shareUrl = 'http://abr.ge/mxld';
-            if (cityData.currentWeather.today) {
-                tmx = cityData.currentWeather.today.tmx;
-                tmn = cityData.currentWeather.today.tmn;
+            if (currentWeather.today) {
+                tmx = currentWeather.today.tmx;
+                tmn = currentWeather.today.tmn;
+            }
+            if (currentWeather.hasOwnProperty('summaryWeather')) {
+               summary =  currentWeather.summaryWeather;
+               if (currentWeather.hasOwnProperty('summaryAir')) {
+                   summary += " " + currentWeather.summaryAir;
+               }
+            }
+            else if (currentWeather.hasOwnProperty('summary')) {
+                summary = currentWeather.summary;
             }
 
             var message = '';
@@ -145,15 +155,13 @@ angular.module('controller.tabctrl', [])
                 message += translations.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
                 message += translations.LOC_HIGHEST+' '+tmx+'˚, '+translations.LOC_LOWEST+' '+tmn+'˚\n';
-                message += summary+'\n\n';
+                if (summary) {
+                    message += summary+'\n';
+                }
+                message += '\n';
                 message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
             }, function (translationIds) {
-                message += cityName+'\n';
-                message += translationIds.LOC_CURRENT+' '+t1h+'˚ ';
-                message += emoji+'\n';
-                message += translationIds.LOC_HIGHEST+' '+tmx+'˚, '+translationIds.LOC_LOWEST+' '+tmn+'˚\n';
-                message += summary+'\n\n';
-                message += translationIds.LOC_TODAYWEATHER + ' ' + shareUrl;
+                Util.ga.trackEvent('action', 'error', 'fail to translate for sharing');
             }).finally(function () {
                 window.plugins.socialsharing.share(message, null, null, null);
             });
