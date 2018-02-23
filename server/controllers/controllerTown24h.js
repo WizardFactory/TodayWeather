@@ -6,6 +6,7 @@
 'use strict';
 
 var async = require('async');
+var request = require('request');
 
 var ControllerTown = require('../controllers/controllerTown');
 var kmaTimeLib = require('../lib/kmaTimeLib');
@@ -13,6 +14,8 @@ var UnitConverter = require('../lib/unitConverter');
 var AqiConverter = require('../lib/aqi.converter');
 var KecoController = require('../controllers/kecoController');
 var AirkoreaHourlyForecastCtrl = require('../controllers/airkorea.hourly.forecast.controller');
+
+var config = require('../config/config');
 
 /**
  *
@@ -1528,6 +1531,65 @@ function ControllerTown24h() {
         }
         return next();
     };
+
+    function _request(url, callback) {
+        console.info({_request:{url:url}});
+        request(url, {json: true, timeout: 3000}, (err, response, body) => {
+            if (err) {
+                return callback(err);
+            }
+            if (response.statusCode >= 400) {
+                err = new Error("url=" + url + " statusCode=" + response.statusCode);
+                return callback(err);
+            }
+            callback(err, body);
+        });
+    }
+
+    function _retryRequest(url, callback) {
+        async.retry(3,
+            (cb) => {
+                _request(url, (err, result) => {
+                    if (err) {
+                        return cb(err);
+                    }
+                    cb(null, result);
+                });
+            },
+            (err, result) => {
+                if (err) {
+                    return callback(err);
+                }
+                callback(null, result);
+            });
+    }
+
+    this.coord2addr = function (req, res, next) {
+        var loc = req.params.loc;
+        if (loc == undefined) {
+           throw new Error("Invalid loc");
+        }
+
+        var url = config.apiServer.url + '/geocode/coord/'+loc;
+        _retryRequest(url, (err, geoInfo)=> {
+            if (err) {
+                return next(err);
+            }
+            if (!geoInfo.kmaAddress) {
+                return next(new Error('Fail to get kma address loc:'+loc));
+            }
+
+            var kmaAddress = geoInfo.kmaAddress;
+            req.params.region = kmaAddress.name1;
+            if (kmaAddress.name2) {
+                req.params.city = kmaAddress.name2;
+            }
+            if (kmaAddress.name3) {
+                req.params.town = kmaAddress.name3;
+            }
+            next();
+        });
+    }
 }
 
 // subclass extends superclass

@@ -29,8 +29,7 @@ router.use('/push', require('../v000705/routePushNotification'));
 router.use('/push-list', require('./route.push.update.list'));
 router.use('/nation', require('../v000803/route.nation'));
 
-router.use('/kma/addr', require('./route.kma.addr.v000902'));
-//router.use('/kma/coord', require('./route.kma.coord'));
+router.use('/kma', require('./route.kma.v000902'));
 //router.use('/dsf/addr', require('./route.dsf.addr'));
 router.use('/dsf/coord', require('./route.dsf.coord.v000902'));
 

@@ -51,8 +51,8 @@ var i18n = require('i18n');
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
 
-    this.domain = config.push.serviceServer.replace('http://', '').replace('https://', '');
-    this.url = config.push.serviceServer;
+    this.domain = config.apiServer.url.replace('http://', '').replace('https://', '');
+    this.url = config.apiServer.url;
 
     [apnGateway, this.domain].forEach(function (value) {
         var domain = value;
