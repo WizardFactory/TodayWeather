@@ -353,6 +353,7 @@ angular.module('controller.air', [])
                     _setMainAqiCode(newAqiCode);
                 }
 
+                $scope.currentPosition = cityData.currentPosition;
                 $scope.airInfo = latestAirInfo;
                 $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
                 $scope.airCodeGrade = latestAirInfo[aqiCode+'Grade'];

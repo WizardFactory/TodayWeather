@@ -704,8 +704,6 @@ angular.module('controller.tabctrl', [])
                     return;
                 }
 
-                $scope.currentPosition = weatherInfo.currentPosition;
-
                 showLoadingIndicator();
                 updateWeatherData(weatherInfo).then(function () {
                     $scope.$broadcast('applyEvent', 'updateWeatherData');
