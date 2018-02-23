@@ -456,6 +456,8 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
 
+                $scope.currentPosition = cityData.currentPosition;
+
                 shortenAddress = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
                 console.log(shortenAddress);
 
