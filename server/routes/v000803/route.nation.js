@@ -37,7 +37,7 @@ function requestApi(cityName, version, query, lang, callback) {
 
     var arrayCityName;
     arrayCityName = cityName.split("/");
-    var url = config.push.serviceServer+"/"+version+apiEndpoint;
+    var url = config.apiServer.url+'/'+version+apiEndpoint;
     arrayCityName.forEach(function (name) {
         url += "/"+encodeURIComponent(name);
     });

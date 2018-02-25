@@ -59,10 +59,14 @@ var routerList = [cTown.checkQueryValidation, cTown.checkParamValidation, cTown.
     cTown.setYesterday, cTown.convertUnits, cTown.insertStrForData, cTown.getSummaryAfterUnitConverter,
     cTown.makeResult, cTown.sendResult];
 
-router.get('/:region', routerList);
+router.get('/addr/:region', routerList);
 
-router.get('/:region/:city', routerList);
+router.get('/addr/:region/:city', routerList);
 
-router.get('/:region/:city/:town', routerList);
+router.get('/addr/:region/:city/:town', routerList);
+
+routerList.unshift(cTown.coord2addr);
+
+router.get('/coord/:loc', routerList);
 
 module.exports = router;
