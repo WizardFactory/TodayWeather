@@ -44,7 +44,7 @@
                 {{secs2dateStr(value.time)}}
                 <i class="icon ion-ios-gear-outline"></i>
             </li>
-            <li class="item item-icon-right light-padding" ng-click="onOpenTimePicker(alarmList.length)">
+            <li class="item item-icon-right light-padding" ng-if="canMakeNewAlarm()" ng-click="onOpenTimePicker(alarmList.length)">
                 -:--
                 <i class="icon ion-ios-plus-empty"></i>
             </li>

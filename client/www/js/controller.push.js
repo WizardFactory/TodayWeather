@@ -269,6 +269,13 @@ angular.module('controller.push', [])
             });
         };
 
+        $scope.canMakeNewAlarm = function () {
+            var enableList = pushInfo.alarmList.filter(function (value) {
+               return value.enable;
+            });
+            return enableList.length < 5;
+        };
+
         /**
          *
          * @param index

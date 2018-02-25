@@ -1003,6 +1003,20 @@ angular.module('controller.tabctrl', [])
             return Util.isLocationEnabled();
         };
 
+        $scope.$on('notificationEvent', function(event, data) {
+            console.log('got notification event');
+            var template = data.title+'<br>'+data.message;
+            $ionicPopup.show({
+                title: strWeather||'Notification',
+                template: template,
+                buttons: [{
+                    text: strOkay||'OK',
+                    type: 'button-dark'
+                }]
+            });
+        });
+
+        var strWeather = "Weather";
         var strOkay = "OK";
         var strCancel = "Cancel";
         var strError = "Error";
@@ -1017,7 +1031,7 @@ angular.module('controller.tabctrl', [])
 
         $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
             'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL'])
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL', 'LOC_WEATHER'])
             .then(function (translations) {
                     strError = translations.LOC_ERROR;
                     strAddLocation = translations.LOC_ADD_LOCATIONS;
@@ -1029,6 +1043,7 @@ angular.module('controller.tabctrl', [])
                     strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
                     strOkay = translations.LOC_OK;
                     strCancel = translations.LOC_CANCEL;
+                    strWeather = translations.LOC_WEATHER;
                     $scope.strHour = translations.LOC_HOUR;
                 },
                 function (translationIds) {

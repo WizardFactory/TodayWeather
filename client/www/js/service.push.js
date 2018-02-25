@@ -3,7 +3,7 @@
  */
 
 angular.module('service.push', [])
-    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units) {
+    .factory('Push', function($http, TwStorage, Util, WeatherUtil, WeatherInfo, $location, Units, $rootScope) {
         var obj = {};
         obj.config = {
             "android": {
@@ -306,29 +306,35 @@ angular.module('service.push', [])
                 // data.additionalData.foreground
                 // data.additionalData.coldstart
                 // data.additionalData.cityIndex
-                if (data && data.additionalData && data.additionalData.foreground === false) {
-                    //clicked 인지 아닌지 구분 필요.
-                    //ios의 경우 badge 업데이트
-                    //현재위치의 경우 데이타 업데이트 가능? 체크
+                if (data && data.additionalData) {
+                    if (data.additionalData.foreground === false) {
+                        //clicked 인지 아닌지 구분 필요.
+                        //ios의 경우 badge 업데이트
+                        //현재위치의 경우 데이타 업데이트 가능? 체크
 
 
-                    //if have additionalData go to index page
-                    var url = '/tab/forecast?fav='+data.additionalData.cityIndex;
-                    //setCityIndex 와 url fav 까지 해야 이동됨 on ios
-                    var fav = parseInt(data.additionalData.cityIndex);
-                    if (!isNaN(fav)) {
-                        if (fav === 0) {
-                            var city = WeatherInfo.getCityOfIndex(0);
-                            if (city !== null && !city.disable) {
+                        //if have additionalData go to index page
+                        var url = '/tab/forecast?fav=' + data.additionalData.cityIndex;
+                        //setCityIndex 와 url fav 까지 해야 이동됨 on ios
+                        var fav = parseInt(data.additionalData.cityIndex);
+                        if (!isNaN(fav)) {
+                            if (fav === 0) {
+                                var city = WeatherInfo.getCityOfIndex(0);
+                                if (city !== null && !city.disable) {
+                                    WeatherInfo.setCityIndex(fav);
+                                }
+                            } else {
                                 WeatherInfo.setCityIndex(fav);
                             }
-                        } else {
-                            WeatherInfo.setCityIndex(fav);
                         }
+                        console.log('clicked: ' + data.additionalData.cityIndex + ' url=' + url);
+                        $location.url(url);
+                        Util.ga.trackEvent('action', 'click', 'push url=' + url);
                     }
-                    console.log('clicked: ' + data.additionalData.cityIndex + ' url='+url);
-                    $location.url(url);
-                    Util.ga.trackEvent('action', 'click', 'push url='+url);
+                    else if (data.additionalData.foreground === true) {
+                        $rootScope.$broadcast('notificationEvent', data);
+                        Util.ga.trackEvent('action', 'broadcast', 'notificationEvent');
+                    }
                 }
                 else {
                     Util.ga.trackEvent('action', 'error', 'push data='+JSON.stringify(data));
