@@ -6,7 +6,7 @@
 module.exports = {
     ipAddress: (process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'),
     port: (process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000'),
-    mode: (process.env.SERVER_MODE || 'service'), //local, gather, service, push
+    mode: (process.env.SERVER_MODE || 'service'), //local, gather, service, push, scrape
     db: {
         version: (process.env.DB_DATA_VERSION || '1.0'),
         path: (process.env.MONGOLAB_MONGODB_URL || 'mongodb://localhost/todayweather')
@@ -61,11 +61,17 @@ module.exports = {
         googleClientSecret: (process.env.PLAY_STORE_API_CLIENT_SECRET || "PLAY_STORE_API_CLIENT_SECRET")
     },
     push: {
-        serviceServer : (process.env.SERVICE_SERVER || 'http://localhost:3000'),
         gcmAccessKey: (process.env.GCM_ACCESS_KEY || 'Your gcm access key')
     },
     url: {
         requester: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/'),
         weather: ('http://'+(process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1')+':'+(process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || '3000')+'/')
+    },
+    serviceServer: {
+        url: (process.env.SERVICE_SERVER || 'http://localhost'),
+        version:  (process.env.SERVICE_VERSION || 'v000901')
+    },
+    apiServer: {
+        url: (process.env.API_SERVER || 'http://localhost')
     }
 };

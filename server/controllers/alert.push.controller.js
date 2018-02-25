@@ -69,12 +69,13 @@ class AlertPushController {
             pushInfo.units = obj;
         }
 
-        let apiVersion = "v000901";
-        let url = config.push.serviceServer;
+        let apiVersion = 'v000902';
+        let url = config.serviceServer.url;
         let town = pushInfo.town;
+        let source = pushInfo.source.toLowerCase();
 
         if (pushInfo.geo) {
-            url += '/weather/coord';
+            url += '/'+apiVersion+'/'+source+'/coord';
             url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
         }
         else if (pushInfo.town) {
