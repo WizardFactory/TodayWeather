@@ -1,6 +1,6 @@
 angular.module('controller.air', [])
     .controller('AirCtrl', function ($scope, $stateParams, $sce, WeatherInfo, WeatherUtil, Units, Util,
-                                     $ionicScrollDelegate) {
+                                     $ionicScrollDelegate, $ionicHistory) {
 
         var TABLET_WIDTH = 640;
 
@@ -398,6 +398,8 @@ angular.module('controller.air', [])
         }
 
         function init() {
+            $ionicHistory.clearHistory();
+
             var fav = parseInt($stateParams.fav);
             if (!isNaN(fav)) {
                 if (fav === 0) {
