@@ -1471,6 +1471,9 @@ ConCollector.prototype.arrangDsfData = function(geocode, timeOffset, DsfData){
             if(res.date === 0 || res.date < item.date){
                 res.date = item.date;
             }
+            if(item.address != undefined){
+                res.address = item.address;
+            }
             if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
                 res.dateObj = item.dateObj;
             }

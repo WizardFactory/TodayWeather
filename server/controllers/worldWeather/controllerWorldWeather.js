@@ -2830,10 +2830,18 @@ function controllerWorldWeather() {
                 return;
             }
 
-            if(list[0].hasOwnProperty('timeOffset')){
-                if(!req.hasOwnProperty('result')){
-                    req.result = {};
+            if(!req.hasOwnProperty('result')){
+                req.result = {};
+            }
+            // timezoneId
+            if(list[0].hasOwnProperty('address') && list[0].hasOwnProperty('country')){
+                if(!req.result.hasOwnProperty('timezone')){
+                    req.result.timezone = {};
                 }
+                req.result.timezone.timezoneId = list[0].address.country;
+            }
+            // timezone offset
+            if(list[0].hasOwnProperty('timeOffset')){
                 if(!req.result.hasOwnProperty('timezone')){
                     req.result.timezone = {};
                 }
