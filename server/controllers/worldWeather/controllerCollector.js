@@ -1075,7 +1075,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                 return;
             }
             var newData = self._parseDSForecast(data);
-            var dsfTimeOffset = 100;
+            var dsfTimeOffset = 100; // Timezone offset can be -12 ~ 12 including 0, so I set 100 as invalid value for detecting error case.
             var weatherData = [];
             weatherData.push({
                 current : newData.current,
@@ -1563,7 +1563,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                     }
 
                     self.getTimeoffset(geocode, todayData.address.country, function (err, result) {
-                        if (err && todayData.timeOffset === 100) {
+                        if (err && todayData.timeOffset === 100/*invalid timezone offset value*/) {
                             log.warn('Req Dsf> Failt to get timeoffset : ', err);
                             timeoffset = 0;
                             return cb2('3. GET FAIL TIMEOFFSET');
@@ -1573,7 +1573,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                             todayData.timeOffset = result / 60; // hour
                             timeoffset = result; // min
                         }else{
-                            // If todayData.timeOffset is not 100,
+                            // If todayData.timeOffset is not 100(invalid timezone offset value),
                             // it would use value which is from DSF' offset value,
                             // if not, it would use zero.
                             timeoffset = todayData.timeOffset;
