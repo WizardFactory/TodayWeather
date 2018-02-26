@@ -136,7 +136,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
     function _makeFavoriteList() {
         var favoriteList1 = [
-            {name: $translate.instant("LOC_FIND_BY_LOCATION")},
             {name: "서울", country: "KR", address: "대한민국 서울특별시", location: {lat: 37.567, long: 126.978}},
             {name: "New York", country: "US", address: "New York, NY, United States", location: {lat: 43.299, long: -74.218}},
             {name: "東京", country: "JP", address: "日本 東京", location: {lat: 35.709, long: 139.732}},
@@ -477,52 +476,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
         }
     }
 
-    function _onSearchCurrentPosition() {
-        Util.ga.trackEvent('position', 'get', 'OnSearch');
-        //$scope.isEditing = false;
-
-        showLoadingIndicator();
-
-        updateCurrentPosition().then(function(geoInfo) {
-            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
-                if (saveCity(weatherData, geoInfo, false) == false) {
-                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                }
-                else {
-                    close();
-                }
-                $ionicLoading.hide();
-            }, function (err) {
-                Util.ga.trackEvent('weather', 'error', err);
-                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
-                $ionicLoading.hide();
-            });
-
-        }, function(msg) {
-            hideLoadingIndicator();
-            if (msg !== null) {
-                $scope.showRetryConfirm(strError, msg, 'search');
-            }
-            else {
-                $scope.$broadcast('searchCurrentPositionEvent');
-            }
-        });
-    }
-
-    $scope.$on('searchCurrentPositionEvent', function(event) {
-        Util.ga.trackEvent('action', 'event', 'searchCurrentPositionEvent');
-        _onSearchCurrentPosition();
-    });
-
-    /**
-     * get geoinfo of current position
-     * @constructor
-     */
-    $scope.OnSearchCurrentPosition = function() {
-        Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPosition');
-        _onSearchCurrentPosition();
-    };
-
     function saveCity(weatherData, geoInfo, currentPosition) {
         var city = WeatherUtil.convertWeatherData(weatherData);
         if (city == undefined) {
@@ -554,29 +507,23 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnGetWeather = function (index) {
-        if (index == 0) {
-            $scope.OnSearchCurrentPosition();
-            //get location
-        }
-        else {
-            Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
-            $ionicLoading.show();
-            var geoInfo = $scope.favoriteCityList[index];
-            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+        Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
+        $ionicLoading.show();
+        var geoInfo = $scope.favoriteCityList[index];
+        WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
 
-                if (saveCity(weatherData, geoInfo) == false) {
-                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                }
-                else {
-                    close();
-                }
-                $ionicLoading.hide();
-            }, function (err) {
-                Util.ga.trackEvent('weather', 'error', err);
-                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
-                $ionicLoading.hide();
-            });
-        }
+            if (saveCity(weatherData, geoInfo) == false) {
+                $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+            }
+            else {
+                close();
+            }
+            $ionicLoading.hide();
+        }, function (err) {
+            Util.ga.trackEvent('weather', 'error', err);
+            $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+            $ionicLoading.hide();
+        });
     };
 
     function _onUseLocationService() {
