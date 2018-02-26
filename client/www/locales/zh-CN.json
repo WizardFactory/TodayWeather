@@ -293,5 +293,6 @@
   "LOC_WEATHER_ALERT": "天气警报",
   "LOC_ALERT_DESCRIPTION": "天气通知会在下雪/雨或雾霾严重时发出通知。或者近期有雪/雨预报，雾霾预警时发出通知。",
   "LOC_ALARM_DESCRIPTION": "天气提醒会在用户设置的时间发送天气信息。",
-  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "Notification is off. Please allow the use of notification on this app."
+  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "关掉了通知。请允许有关App的通知。",
+  "LOC_SAVE" : "商店"
 }

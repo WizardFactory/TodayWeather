@@ -49,8 +49,13 @@
                 <i class="icon ion-ios-plus-empty"></i>
             </li>
         </div>
-        <button class="button button-full button-dark" ng-click="onOkay()">
-           {{'LOC_OK'|translate}}
-        </button>
+        <div class="row row-no-padding">
+            <button class="col-50 button button-clear button-dark" ng-click="onClose()">
+                {{'LOC_CANCEL'|translate}}
+            </button>
+            <button class="col-50 button button-clear button-assertive" ng-click="onOkay()">
+                {{'LOC_SAVE'|translate}}
+            </button>
+        </div>
     </ion-content>
 </ion-view>
