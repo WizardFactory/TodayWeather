@@ -12,7 +12,6 @@
 #import "WidgetConfig.h"
 #import "TodayWeatherUtil.h"
 #import "LocalizationDefine.h"
-//#import "TodayWeatherAnalytics.h"
 
 /********************************************************************
  Enumration
@@ -155,31 +154,7 @@ static TodayViewController *todayVC = nil;
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
     [self processShowMore];
-    //[self processAnalytics];
 }
-
-
-
-/********************************************************************
- *
- * Name            : processGoogleAnalytics
- * Description    : process ShowMore feature
- * Returns        : void
- * Side effects :
- * Date            : 2018. 2. 21
- * Author        : SeanKim
- * History        : 20180221 SeanKim Create function
- *
- ********************************************************************/
-#if 0
-- (void) processAnalytics
-{
-    TodayWeatherAnalytics *TWA = [[TodayWeatherAnalytics alloc] init];
-    [TWA initTracker];
-    
-    [TWA addScreenTracking:@"iOSWidget"];
-}
-#endif
 
 /********************************************************************
  *
