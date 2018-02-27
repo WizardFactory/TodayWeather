@@ -25,13 +25,6 @@
 		5439BB1B64D24F1C9730BFFE /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = B3DF8CCC99DD4BEFABDF916C /* zh-Hant.lproj */; };
 		5A0A9BE12031C2F200D310E7 /* TodayWeatherAnalytics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A0A9BE02031C2F200D310E7 /* TodayWeatherAnalytics.m */; };
 		5A852BDF203068A900D9A0D5 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A852BDE203068A800D9A0D5 /* libsqlite3.tbd */; };
-		5AC4B787203EDE0A00455CB8 /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B786203EDE0A00455CB8 /* CoreData.framework */; };
-		5AC4B789203EDE1300455CB8 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B788203EDE1300455CB8 /* SystemConfiguration.framework */; };
-		5AC4B78B203EDE1F00455CB8 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B78A203EDE1E00455CB8 /* libz.tbd */; };
-		5AC4B78D203EDE4C00455CB8 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B78C203EDE4C00455CB8 /* MessageUI.framework */; };
-		5AC4B78F203EDE5400455CB8 /* AdSupport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B78E203EDE5400455CB8 /* AdSupport.framework */; };
-		5AC4B791203EDE6200455CB8 /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AC4B790203EDE6200455CB8 /* CoreTelephony.framework */; };
-		5AC4B792203EE0D100455CB8 /* libGoogleAnalyticsServices.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A852BE520306BC000D9A0D5 /* libGoogleAnalyticsServices.a */; };
 		6AFF5BF91D6E424B00AB3073 /* CDVLaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */; };
 		751D6E395BCA403F81C35BCD /* TodayViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = BC44C4A97E5D48D58E7307B3 /* TodayViewController.h */; };
 		7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1228418F21A1423CAAA77ABD /* NotificationCenter.framework */; };
@@ -118,16 +111,6 @@
 		5A0A9BE22031C33500D310E7 /* TodayWeatherAnalytics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TodayWeatherAnalytics.h; sourceTree = "<group>"; };
 		5A852BDE203068A800D9A0D5 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		5A852BE520306BC000D9A0D5 /* libGoogleAnalyticsServices.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGoogleAnalyticsServices.a; path = widget/libGoogleAnalyticsServices.a; sourceTree = "<group>"; };
-		5A852BE82030776300D9A0D5 /* GAI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAI.h; sourceTree = "<group>"; };
-		5A852BE92030776300D9A0D5 /* GAIDictionaryBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIDictionaryBuilder.h; sourceTree = "<group>"; };
-		5A852BEA2030776300D9A0D5 /* GAIEcommerceFields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIEcommerceFields.h; sourceTree = "<group>"; };
-		5A852BEB2030776300D9A0D5 /* GAIEcommerceProduct.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIEcommerceProduct.h; sourceTree = "<group>"; };
-		5A852BEC2030776300D9A0D5 /* GAIEcommerceProductAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIEcommerceProductAction.h; sourceTree = "<group>"; };
-		5A852BED2030776300D9A0D5 /* GAIEcommercePromotion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIEcommercePromotion.h; sourceTree = "<group>"; };
-		5A852BEE2030776300D9A0D5 /* GAIFields.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAIFields.h; sourceTree = "<group>"; };
-		5A852BEF2030776300D9A0D5 /* GAILogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAILogger.h; sourceTree = "<group>"; };
-		5A852BF02030776300D9A0D5 /* GAITrackedViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAITrackedViewController.h; sourceTree = "<group>"; };
-		5A852BF12030776300D9A0D5 /* GAITracker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GAITracker.h; sourceTree = "<group>"; };
 		5AC4B786203EDE0A00455CB8 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		5AC4B788203EDE1300455CB8 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		5AC4B78A203EDE1E00455CB8 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -177,13 +160,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5AC4B792203EE0D100455CB8 /* libGoogleAnalyticsServices.a in Frameworks */,
-				5AC4B791203EDE6200455CB8 /* CoreTelephony.framework in Frameworks */,
-				5AC4B78F203EDE5400455CB8 /* AdSupport.framework in Frameworks */,
-				5AC4B78D203EDE4C00455CB8 /* MessageUI.framework in Frameworks */,
-				5AC4B78B203EDE1F00455CB8 /* libz.tbd in Frameworks */,
-				5AC4B789203EDE1300455CB8 /* SystemConfiguration.framework in Frameworks */,
-				5AC4B787203EDE0A00455CB8 /* CoreData.framework in Frameworks */,
 				5A852BDF203068A900D9A0D5 /* libsqlite3.tbd in Frameworks */,
 				7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */,
 				840BA9FC7D974B7EA7E367A1 /* libCordova.a in Frameworks */,
@@ -308,27 +284,9 @@
 			path = TodayWeather/Plugins;
 			sourceTree = SOURCE_ROOT;
 		};
-		5A852BE72030776300D9A0D5 /* GA */ = {
-			isa = PBXGroup;
-			children = (
-				5A852BE82030776300D9A0D5 /* GAI.h */,
-				5A852BE92030776300D9A0D5 /* GAIDictionaryBuilder.h */,
-				5A852BEA2030776300D9A0D5 /* GAIEcommerceFields.h */,
-				5A852BEB2030776300D9A0D5 /* GAIEcommerceProduct.h */,
-				5A852BEC2030776300D9A0D5 /* GAIEcommerceProductAction.h */,
-				5A852BED2030776300D9A0D5 /* GAIEcommercePromotion.h */,
-				5A852BEE2030776300D9A0D5 /* GAIFields.h */,
-				5A852BEF2030776300D9A0D5 /* GAILogger.h */,
-				5A852BF02030776300D9A0D5 /* GAITrackedViewController.h */,
-				5A852BF12030776300D9A0D5 /* GAITracker.h */,
-			);
-			path = GA;
-			sourceTree = "<group>";
-		};
 		69D64D76312045078827F901 /* Widget */ = {
 			isa = PBXGroup;
 			children = (
-				5A852BE72030776300D9A0D5 /* GA */,
 				EB116F5F130B4A05B89653C8 /* widget-Info.plist */,
 				164E45E0EBE54CFC9E7FDF29 /* widget.entitlements */,
 				8BABE3FF99E74F10ABB37707 /* LocalizationDefine.h */,
