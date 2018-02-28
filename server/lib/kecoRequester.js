@@ -779,12 +779,16 @@ Keco.prototype.removeMinuDustFrcst = function (callback) {
 Keco.prototype.getMinuDustFrcstDspth = function(callback) {
     var self = this;
 
+    var dataTime;
+
     async.waterfall([
             function (cb) {
                 self._checkDataTime(function (err, result) {
                     if (err) {
                         return cb(err);
                     }
+                    dataTime = result.dataTime;
+
                     if (result.isLatest) {
                         log.info('minu dust forecast is already latest');
                         return cb('skip');
@@ -808,27 +812,6 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
                 return cb(undefined, parsedList);
             },
             function (parsedFrcstList, cb) {
-                if(parsedFrcstList.length > 0) {
-                    var imagePaths = {pubDate: kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(parsedFrcstList[0].dataTime)};
-                    var findCount = 0;
-
-                    for (var i=0; i<parsedFrcstList.length && findCount<2; i++) {
-                        var obj = parsedFrcstList[i];
-                        if (!imagePaths.hasOwnProperty('pm10') && obj.informCode === 'PM10')  {
-                            imagePaths.pm10 = obj.imageUrl[6];
-                            findCount++;
-                        }
-                        else if (!imagePaths.hasOwnProperty('pm25') && obj.informCode === 'PM25') {
-                            imagePaths.pm25 = obj.imageUrl[7];
-                            findCount++;
-                        }
-                    }
-
-                    (new AirkoreaHourlyForecastCtrl(imagePaths)).do();
-                }
-                return cb(undefined, parsedFrcstList);
-            },
-            function (parsedFrcstList, cb) {
                 self._saveFrcst(parsedFrcstList, function (err, result) {
                     if (err) {
                         return cb(err);
@@ -838,6 +821,7 @@ Keco.prototype.getMinuDustFrcstDspth = function(callback) {
             }
         ],
         function (err, result) {
+            (new AirkoreaHourlyForecastCtrl()).do(dataTime.dataDate+' '+dataTime.dataHours);
             if (err) {
                 return callback(err);
             }
