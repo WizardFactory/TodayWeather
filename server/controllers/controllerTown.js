@@ -981,14 +981,15 @@ function ControllerTown() {
         if (weather !== undefined) {
             var weatherPty;
 
+            //순서 중요함.
             if (weather.indexOf("끝") >= 0) {
                 weatherPty = 0;
             }
-            else if (weather.indexOf("비") >= 0) {
-                weatherPty =  1;
-            }
             else if (weather.indexOf("진눈깨비") >= 0) {
                 weatherPty =  2;
+            }
+            else if (weather.indexOf("비") >= 0) {
+                weatherPty =  1;
             }
             else if (weather.indexOf("눈") >= 0) {
                 weatherPty =  3;
