@@ -1002,8 +1002,8 @@ function ControllerTown() {
             }
         }
 
-        // currentPty가 3(눈)인 경우 rns로 업데이트 하지 않음.
-        if (rns !== undefined && currentPty !== 3) {
+        // currentPty가 0인 경우만 rns로 업데이트 함.
+        if (rns !== undefined && currentPty === 0) {
             var rnsPty;
             if (rns === true) {
                 //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
