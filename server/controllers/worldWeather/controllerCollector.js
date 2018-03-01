@@ -1075,7 +1075,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                 return;
             }
             var newData = self._parseDSForecast(data);
-            var dsfTimeOffset = 100;
+            var dsfTimeOffset = 100; // Timezone offset can be -12 ~ 12 including 0, so I set 100 as invalid value for detecting error case.
             var weatherData = [];
             weatherData.push({
                 current : newData.current,
@@ -1471,6 +1471,9 @@ ConCollector.prototype.arrangDsfData = function(geocode, timeOffset, DsfData){
             if(res.date === 0 || res.date < item.date){
                 res.date = item.date;
             }
+            if(item.address != undefined){
+                res.address = item.address;
+            }
             if(res.dateObj === 0 || res.dateObj.getTime() < item.dateObj.getTime()){
                 res.dateObj = item.dateObj;
             }
@@ -1542,7 +1545,7 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                             return cb1('1. GET FAIL!!_');
                         }
 
-                        //log.info(result);
+                        //log.info(JSON.stringify(result));
                         var curTime = new Date();
                         var date = parseInt(curTime.getTime() / 1000);
                         //log.info('Req Dsf> cur : ', date.toString());
@@ -1563,8 +1566,9 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                     }
 
                     self.getTimeoffset(geocode, todayData.address.country, function (err, result) {
-                        if (err && todayData.timeOffset === 100) {
+                        if (err && todayData.timeOffset === 100/*invalid timezone offset value*/) {
                             log.warn('Req Dsf> Failt to get timeoffset : ', err);
+                            timeoffset = 0;
                             return cb2('3. GET FAIL TIMEOFFSET');
                         }
                         // if result is undefined, it would use deault timeoffset which is provided by DSF. It's not considered to daylightsaving
@@ -1572,6 +1576,10 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                             todayData.timeOffset = result / 60; // hour
                             timeoffset = result; // min
                         }else{
+                            // If todayData.timeOffset is not 100(invalid timezone offset value),
+                            // it would use value which is from DSF' offset value,
+                            // if not, it would use zero.
+                            timeoffset = todayData.timeOffset;
                             log.error('Req Dsf> result of timezoneoffset is undefined!!', geocode);
                         }
 

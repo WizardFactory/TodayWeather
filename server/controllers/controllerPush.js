@@ -881,7 +881,7 @@ ControllerPush.prototype._removeOldList = function (pushList, callback) {
  * @private
  */
 ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
-    var filteredList = pushList.filter(function (pushInfo) {
+    return pushList.filter(function (pushInfo) {
         if (pushInfo.dayOfWeek && pushInfo.dayOfWeek.length > 0) {
             if (!pushInfo.hasOwnProperty('timezoneOffset')) {
                 log.error("timezone offset is undefined pushInfo:"+JSON.stringify(pushInfo));
@@ -891,14 +891,17 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
             var localCurrent = kmaTimeLib.toLocalTime(pushInfo.timezoneOffset, current);
             var day = localCurrent.getDay();
 
-            return pushInfo.dayOfWeek[day];
+            var send = pushInfo.dayOfWeek[day];
+            if (send === false) {
+               log.info('skip day:', day, ', pushInfo:', pushInfo);
+            }
+            return send;
         }
         else {
+            log.info('there is not dayOfWeek');
             return true;
         }
     });
-
-    return filteredList;
 };
 
 ControllerPush.prototype.sendPush = function (time, callback) {

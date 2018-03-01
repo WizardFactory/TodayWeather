@@ -66,6 +66,7 @@ class WeatherDescription {
             case '약한비단속': return 18;
             case 'possible light rain':
             case 'light rain':
+            case '약한언비':
             case '약한비계속': return 19;
             case 'rain at times':
             case '보통비단속': return 20;

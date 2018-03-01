@@ -150,7 +150,7 @@ static TodayViewController *todayVC = nil;
     NSLog(@"Localized Bundle Display Nmae : %@ ", budleDisplayName);
     
     todayVC = self;
-    
+     
     [self processRequestIndicator:TRUE];
     [self initWidgetDatas];
     [self processShowMore];
@@ -180,26 +180,37 @@ static TodayViewController *todayVC = nil;
         // Add the iOS 10 Show More ability
         NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
         NSString *cityList = [sharedUserDefaults objectForKey:@"cityList"];
-        
+
+                dispatch_async(dispatch_get_main_queue(), ^{
         if(cityList == nil)
         {
             NSLog(@"Widget Mode is Compact!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
-            showMoreView.hidden = YES;
+            //showMoreView.hidden = YES;
         }
         else
         {
             NSLog(@"Widget Mode is Expanded!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeExpanded];
-            showMoreView.hidden = NO;
+            //showMoreView.hidden = NO;
         }
-        
+                    });
     }
     else
     {
-        addressLabel.textColor  = [UIColor lightGrayColor];
-        curTempLabel.textColor  = [UIColor lightGrayColor];
-        showMoreView.hidden = YES;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            addressLabel.textColor  = [UIColor lightGrayColor];
+            curTempLabel.textColor  = [UIColor lightGrayColor];
+            curDustLabel.textColor  = [UIColor lightGrayColor];
+            todayMaxMinTempLabel.textColor = [UIColor lightGrayColor];
+            noLocationLabel.textColor = [UIColor lightGrayColor];
+            showMoreView.hidden = YES;
+            
+            CGSize currentSize = self.preferredContentSize;
+            currentSize.height = WIDGET_COMPACT_HEIGHT;
+            self.preferredContentSize = currentSize;
+        });
+
         NSLog(@"This OSVersion can't use Show More feature!!!");
     }
     
@@ -225,7 +236,9 @@ static TodayViewController *todayVC = nil;
 //        [todayWSM transitView:showMoreView
 //                   transition:UIViewAnimationTransitionFlipFromLeft
 //                     duration:0.75f];
+
         showMoreView.hidden         = true;
+            
         NSLog(@"NCWidgetDisplayModeCompact width : %f, height : %f", self.preferredContentSize.width, self.preferredContentSize.height);
     }
     else
@@ -243,6 +256,38 @@ static TodayViewController *todayVC = nil;
 
 /********************************************************************
  *
+ * Name            : viewWillAppear
+ * Description    : process when view(widget) is appear
+ * Returns        : void
+ * Side effects :
+ * Date            : 2018. 02. 24
+ * Author        : SeanKim
+ * History        : 20180224 SeanKim Create function
+ *
+ ********************************************************************/
+#if 0
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    
+    NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    if(nsOSVer.majorVersion >= 10)
+    {
+        NSLog(@"[viewWillAppear] os version is 10 more.");
+    }
+    else
+    {
+        NSLog(@"[viewWillAppear] preffered content size have to be changed");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            CGSize currentSize = self.preferredContentSize;
+            currentSize.height = WIDGET_COMPACT_HEIGHT;
+            self.preferredContentSize = currentSize;
+        });
+    }
+}
+#endif
+/********************************************************************
+ *
  * Name			: viewDidAppear
  * Description	: process when view(widget) is appear
  * Returns		: void
@@ -256,7 +301,7 @@ static TodayViewController *todayVC = nil;
 {
     [super viewDidAppear:animated];
     
-     [self processRequestIndicator:TRUE];
+    [self processRequestIndicator:TRUE];
 }
 
 /********************************************************************
@@ -455,8 +500,6 @@ static TodayViewController *todayVC = nil;
 {
     NSError *error = nil;
     NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather.weatherdata"];
-    NSString *weatherDataList = [sharedUserDefaults objectForKey:@"weatherDataList"];
-    //NSLog(@"[saveWeatherInfo] weatherDataList : %@", weatherDataList);
     
     NSNumber    *nsnIdx = nil;
     

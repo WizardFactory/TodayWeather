@@ -169,9 +169,9 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
     var x = parseInt((lon - self.coordinate.top_left.lon) / pixels.map_pixel_distance_width) + pixels.map_area.left;
     var y = parseInt((self.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height) + pixels.map_area.top;
 
-    log.info('Airkorea Image > lat: ', lat, 'lon: ', lon);
-    log.info('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
-    log.info('Airkorea Image > x: ', x, 'y: ',y);
+    log.debug('Airkorea Image > lat: ', lat, 'lon: ', lon);
+    log.debug('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
+    log.debug('Airkorea Image > x: ', x, 'y: ',y);
 
     var result = [];
     var colorTable = self.colorTable_pm10;
