@@ -80,14 +80,14 @@ controllerAqi.prototype._getLocalLast0H = function (timeOffset) {
 
     var diffDate = this._getDiffDate(utcTime, localTime);
     if (diffDate == 0) {
-        log.info('same day');
+        log.info('C Aqi> same day');
     }
     else if (diffDate == 1) {
-        log.info('next day');
+        log.info('C Aqi> next day');
         utcTime.setUTCDate(utcTime.getUTCDate()+1);
     }
     else if (diffDate == -1) {
-        log.info('previous day');
+        log.info('C Aqi> previous day');
         utcTime.setUTCDate(utcTime.getUTCDate()-1);
     }
     utcTime.setUTCHours(0);

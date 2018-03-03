@@ -1392,14 +1392,14 @@ ConCollector.prototype._getLocalLast0H = function (timeOffset) {
 
     var diffDate = this._getDiffDate(utcTime, localTime);
     if (diffDate == 0) {
-        log.info('same day');
+        log.info('_getLocalLast0H : same day');
     }
     else if (diffDate == 1) {
-        log.info('next day');
+        log.info('_getLocalLast0H : next day');
         utcTime.setUTCDate(utcTime.getUTCDate()+1);
     }
     else if (diffDate == -1) {
-        log.info('previous day');
+        log.info('_getLocalLast0H : previous day');
         utcTime.setUTCDate(utcTime.getUTCDate()-1);
     }
     utcTime.setUTCHours(0);
@@ -1524,6 +1524,79 @@ ConCollector.prototype.arrangDsfData = function(geocode, timeOffset, DsfData){
     return res;
 };
 
+ConCollector.prototype._isSameDay = function(date, timeOffset){
+    let timeOffset_ms = timeOffset * 60 * 60 * 1000; /* ms */
+    let curDate = new Date();
+    let targetDate = new Date(date.getTime() + timeOffset_ms);
+
+    curDate.setTime(curDate.getTime() + timeOffset_ms);
+
+    if(curDate.getUTCFullYear() != targetDate.getUTCFullYear()){
+        return false;
+    }
+    if(curDate.getUTCMonth() != targetDate.getUTCMonth()){
+        return false
+    }
+    if(curDate.getUTCDate() != targetDate.getUTCDate()){
+        return false;
+    }
+
+    return true;
+};
+
+ConCollector.prototype._removeDsfDb = function(geocode, callback){
+    let self = this;
+
+    modelDSForecast.find({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}, function(err, list){
+        if(err){
+            log.error('Req Dsf> _removeDsfDb : fail to find from DB');
+            return callback(err);
+        }
+        if(list.length === 0){
+            log.warn('Req Dsf> _removeDsfDb : There is no DSF data for ', geocode);
+            return callback(null);
+        }
+
+        let dsfData = list[0].data;
+        let timeOffset = list[0].timeOffset;
+        if(dsfData.length != 3 /* yester day, today from 0:00, current */){
+            log.info('Req Dsf> The count of data is not 3 : ', dsfData.length);
+            return self.removeAllDsfDb(geocode, callback);
+        }
+
+        log.info('Req Dsf> [0] : ', dsfData[0].current.dateObj.toString(), ' | ' ,dsfData[0].current.date);
+        log.info('Req Dsf> [1] : ', dsfData[1].current.dateObj.toString(), ' | ' ,dsfData[1].current.date);
+        log.info('Req Dsf> [2] : ', dsfData[2].current.dateObj.toString(), ' | ' ,dsfData[2].current.date);
+
+        // check date of db's data,
+        // if it's not the same as current date, it would remove all db data and receive all again.
+        if(!self._isSameDay(dsfData[2].current.dateObj, timeOffset)){
+            log.info('Req Dsf> It is not same date!');
+            return self.removeAllDsfDb(geocode, callback);
+        }
+
+        let mins = ((new Date()).getTime() - dsfData[2].current.dateObj.getTime()) / 1000 / 60;
+
+        // pop current data
+        list[0].data.pop();
+
+        // check minute,
+        // If difference is bigger than 60 mins, it would remove a data which is started from today 0:00.
+        if(mins > 60) {
+            // pop today data which is from today 0:00
+            list[0].data.pop();
+        }
+        list[0].save(function(err){
+            if(err){
+                return self.removeAllDsfDb(geocode, callback);
+            }else{
+                log.info('Req Dsf> Db data count : ', list[0].data.length);
+                return callback(null, list[0].data);
+            }
+        });
+    });
+};
+
 ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     var self = this;
     var key = self._getDSFKey().key;
@@ -1531,10 +1604,17 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
     var dateList = [];
     var timeoffset = undefined;
 
-    self.removeAllDsfDb(geocode, function(err) {
+    self._removeDsfDb(geocode, function(err, pastData) {
         if (err) {
             log.error('Req Dsf> fail to delete all data');
             return callback(err);
+        }
+
+        if(pastData != undefined){
+            log.info('req Dsf> past data count :', pastData.length);
+            // if length is 1, that means it removed today's data which is from 0:00 and current data, so need to request one past data.
+            // if count is 2, that means it removed only current data, so no need to request past data.
+            To = (pastData.length === 2)? 0:1;
         }
         async.waterfall([
                 function (cb1) {
@@ -1601,14 +1681,40 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
 
                     log.info(JSON.stringify(dateList), todayData.timeOffset);
 
-                    self.getPastDsfData(geocode, dateList, todayData.timeOffset, function (err, results) {
-                        if (err) {
-                            log.warn('Req Dsf> Fail to get past-data');
-                            return cb3('4. GET FAIL PAST-DATA');
-                        }
-                        results.push(todayData);
-                        return cb3(null, results);
-                    });
+                    return cb3(null, todayData, dateList);
+                },
+                function(todayData, dateList, cb4){
+                    var results = [];
+                    if(pastData != undefined){
+                        pastData.forEach(function(item){
+                            var dsfData = {
+                                geocode: geocode,
+                                address: todayData.address,
+                                date: todayData.date,
+                                dateObj: todayData.dateObj,
+                                timeOffset: timeoffset,
+                                data: [item]
+                            };
+                            results.push(dsfData);
+                        });
+                    }
+                    results.push(todayData);
+
+                    if(dateList.length === 0){
+                        log.info('Req Dsf> re-use all Past data');
+
+                        return cb4(null, results);
+                    }else{
+                        self.getPastDsfData(geocode, dateList, todayData.timeOffset, function (err, res) {
+                            if (err) {
+                                log.warn('Req Dsf> Fail to get past-data');
+                                return cb4('4. GET FAIL PAST-DATA');
+                            }
+                            log.info('Req Dsf> Past data count :', res.length);
+                            res.forEach((item)=>{results.push(item);});
+                            return cb4(null, results);
+                        });
+                    }
                 }
             ],
             function (err, results) {
