@@ -117,6 +117,15 @@ angular.module('controller.searchctrl', [])
                 };
                 $scope.cityList.push(data);
                 loadWeatherData(i);
+                if (city.currentPosition) {
+                    var indexOfCurrentPositionCity = i;
+                    updateCurrentPosition().then(function(geoInfo) {
+                        console.info(JSON.stringify({'newGeoInfo':geoInfo}));
+                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        WeatherInfo.reloadCity(indexOfCurrentPositionCity);
+                        loadWeatherData(indexOfCurrentPositionCity);
+                    });
+                }
             }
           
             window.addEventListener('native.keyboardshow', function () {
