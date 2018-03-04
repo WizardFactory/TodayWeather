@@ -230,36 +230,38 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       color: #666666;
       font-size: 13px;
     }
-    .chart-header {
-      width: 100%;
-      text-align: center;
-      .day-title-list {
-        position: relative;
-        height: 14px;
-        margin-bottom: 5px;
-        .day-title {
-          position: absolute;
-          top: 0;
-          width: 120px;
-          background-color: #F5F5F5;
-          font-size: 13px;
-          font-weight: 400;
+    .chart-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      .chart-header {
+        width: 100%;
+        text-align: center;
+        .day-title-list {
+          position: relative;
+          height: 14px;
+          margin-bottom: 5px;
+          .day-title {
+            position: absolute;
+            font-size: 15px;
+            font-weight: 400;
+            text-align: left;
+          }
+        }
+        .chart-title {
+          width: 100%;
+          padding: 2px;
+          font-size: 17px;
+        }
+        .chart-small-title {
+          width: 100%;
+          padding: 2px;
+          font-size: 15px;
         }
       }
-      .chart-title {
+      .chart-content {
         width: 100%;
-        padding: 2px;
-        font-size: 17px;
       }
-      .chart-small-title {
-        width: 100%;
-        padding: 2px;
-        font-size: 15px;
-      }
-    }
-    .chart-content {
-      width: 100%;
-      margin: 0 0 4px;
     }
     .chart-label {
       background: rgba(0, 0, 0, 0.1);
@@ -314,15 +316,14 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
       max-width: 50%;
       height: 8px;
       border-right: 1px solid #444;
-      display: flex;
+      margin: 0 1px;
     }
   }
   .air-std-box {
     display: flex;
-    margin-top: -2px;
     .air-std {
       flex-basis: 100%;
-      padding: 1px;
+      margin: 0 1px;
       text-overflow:ellipsis;
       overflow:hidden;
       white-space:nowrap;
@@ -352,6 +353,12 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 
 .chart-bar {
   fill: #7aa4d1;
+}
+
+.guide-vivid-line {
+  stroke: #c0d6f0;
+  stroke-width: 1;
+  stroke-opacity: 0.6;
 }
 
 .guide-line {

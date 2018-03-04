@@ -520,7 +520,13 @@ angular.module('starter', [
                             });
 
                         guideLines.enter().append('line')
-                            .attr('class', 'guide-line')
+                            .attr('class', function (d) {
+                                if (d.value.time === 24) {
+                                    return 'guide-vivid-line';
+                                } else {
+                                    return 'guide-line';
+                                }
+                            })
                             .attr('x1', function (d, i) {
                                 return x.rangeBand() * i + x.rangeBand() / 2+0.5;
                             })
