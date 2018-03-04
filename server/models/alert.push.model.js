@@ -6,12 +6,14 @@
 var mongoose = require("mongoose");
 
 var alertPushSchema = new mongoose.Schema({
+    type: String, //ios, android, windows, amazon ..
     registrationId: String,
+    cityIndex: Number, //index of city in client
+    id: Number,                 //city안의 id임
     startTime: Number,          //UTChours*60*60 + UTCMinutes*60
     endTime: Number,            //UTChours*60*60 + UTCMinutes*60
     reverseTime: {type: Boolean, default: false}, //true when startTime > endTime
-    cityIndex: Number, //index of city in client
-    type: String, //ios, android, windows, amazon ..
+    enable: {type: Boolean, default: true},
     town: {first: String, second: String, third: String},
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
@@ -30,7 +32,7 @@ var alertPushSchema = new mongoose.Schema({
     },
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540 for filtering day of week
-    dayOfWeeks: [Number], // Sunday - Saturday : 0 - 6
+    dayOfWeek: [Boolean], // Sunday - Saturday : 0 - 6 [false, true, true, true, true, true, false]
     airAlertsBreakPoint: Number, //사용자 설정한 기준값 민감군주의, 나쁨, 매우나쁨,...기본 나쁨
     precipAlerts: {
         lastState: Number, //start time에 갱신, 폴링시 체크때마다 갱신

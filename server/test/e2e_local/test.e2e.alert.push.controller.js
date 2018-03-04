@@ -54,7 +54,7 @@ describe('unit test - alert push controller', function() {
             precipitationUnit: "mm",
             airUnit: "airkorea"
         },
-        dayOfWeeks: [1,5],
+        dayOfWeek: [false, true, false, false, false, true, false],
         timezoneOffset: 540,
         airAlertsBreakPoint: 2
     };
@@ -77,7 +77,7 @@ describe('unit test - alert push controller', function() {
             distanceUnit: "miles",
             precipitationUnit: "inch"
         },
-        dayOfWeeks: [1,2,3,4,5],
+        dayOfWeek: [false, true, true, true, true, true, false],
         timezoneOffset: 540,
         airAlertsBreakPoint: 2
     };

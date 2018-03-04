@@ -90,7 +90,7 @@ describe('e2e local test - controller push', function() {
             precipitationUnit: "mm",
             airUnit: "airkorea"
         },
-        dayOfWeeks: [1,5],
+        dayOfWeek: [false, true, false, false, false, true, false],
         timezoneOffset: 540,
         airAlertsBreakPoint: 2
     };

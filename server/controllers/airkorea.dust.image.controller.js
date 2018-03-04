@@ -146,6 +146,14 @@ AirkoreaDustImageController.prototype.parseMapImage = function(path, type, callb
     });
 };
 
+AirkoreaDustImageController.prototype._isValidGeocode = function(lat, lon){
+    if(lat > this.coordinate.top_left.lat) return false;
+    if(lat < this.coordinate.bottom_left.lat) return false;
+    if(lon < this.coordinate.top_left.lon) return false;
+    if(lon > this.coordinate.top_right.lon) return false;
+    return true;
+};
+
 AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqiUnit, callback){
     var self = this;
 
@@ -153,13 +161,17 @@ AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqi
         return callback(new Error('1. There is no image information : ', type));
     }
 
+    if(!self._isValidGeocode(lat, lon)){
+        return callback(new Error('2. Invalid geocode :', lat, lon));
+    }
+
     var pixels = self.imagePixels[type].data;
     var x = parseInt((lon - self.coordinate.top_left.lon) / pixels.map_pixel_distance_width) + pixels.map_area.left;
     var y = parseInt((self.coordinate.top_left.lat - lat) / pixels.map_pixel_distance_height) + pixels.map_area.top;
 
-    log.info('Airkorea Image > lat: ', lat, 'lon: ', lon);
-    log.info('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
-    log.info('Airkorea Image > x: ', x, 'y: ',y);
+    log.debug('Airkorea Image > lat: ', lat, 'lon: ', lon);
+    log.debug('Airkorea Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
+    log.debug('Airkorea Image > x: ', x, 'y: ',y);
 
     var result = [];
     var colorTable = self.colorTable_pm10;

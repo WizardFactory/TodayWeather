@@ -344,6 +344,17 @@ function controllerWorldWeather() {
         return false;
     };
 
+    self._getUntil1Hour = function(current, target){
+        log.info('Compare Date', current, target);
+        var currentDate = new Date(current);
+        var targetDate = new Date(target);
+        var MS_1H = 1000*60*60;
+
+        if (currentDate.getTime()-MS_1H < targetDate.getTime()) {
+            return true;
+        }
+        return false;
+    };
 
     self._checkHour = function(date, hourList){
         // YYYY.mm.dd HH:MM
@@ -1359,6 +1370,7 @@ function controllerWorldWeather() {
 
             //log.info("hourly list = "+hourlyList.length);
 
+            var foundYesterday = false;
             hourlyList.forEach(function(dbItem, dataIndex) {
                 var isExist = false;
                 if(self._compareDateString(yesterdayDate, dbItem.dateObj)) {
@@ -1374,6 +1386,7 @@ function controllerWorldWeather() {
                         log.info('DSF yesterday > Found yesterday data', dbItem.dateObj, meta);
                         req.result.thisTime.push(self._makeCurrentDataFromDSFCurrent(dbItem, res));
                     }
+                    foundYesterday = true;
                 }
 
                 isExist = false;
@@ -1399,6 +1412,12 @@ function controllerWorldWeather() {
                     }
                 }
             });
+
+            if (!foundYesterday) {
+                log.error("Fail to find yesterday data!");
+                var yesterdayObj = {date: yesterdayDate};
+                req.result.thisTime.push(yesterdayObj);
+            }
         }
         next();
     };
@@ -1447,7 +1466,7 @@ function controllerWorldWeather() {
 
             dsf.data.forEach(function (item) {
                 var isExist = false;
-                if(self._compareDateString(curDate, item.current.dateObj)){
+                if(self._getUntil1Hour(curDate, item.current.dateObj)){
                     req.result.thisTime.forEach(function(thisTime, index) {
                         if (thisTime.date != undefined &&
                             self._compareDateString(curDate, thisTime.date)) {
@@ -2811,15 +2830,25 @@ function controllerWorldWeather() {
                 return;
             }
 
-            if(list[0].hasOwnProperty('timeOffset')){
-                if(!req.hasOwnProperty('result')){
-                    req.result = {};
+            if(!req.hasOwnProperty('result')){
+                req.result = {};
+            }
+            // timezoneId
+            if(list[0].hasOwnProperty('address') && list[0].hasOwnProperty('country')){
+                if(!req.result.hasOwnProperty('timezone')){
+                    req.result.timezone = {};
                 }
+                req.result.timezone.timezoneId = list[0].address.country;
+            }
+            // timezone offset
+            if(list[0].hasOwnProperty('timeOffset')){
                 if(!req.result.hasOwnProperty('timezone')){
                     req.result.timezone = {};
                 }
                 req.result.timezone.min = list[0].timeOffset * 60;
                 req.result.timezone.ms = req.result.timezone.min * 60 * 1000;
+            }else{
+                log.error('gDSF> There is no timeOffset value in the DB!!!', geocode);
             }
 
             req.DSF = list[0];

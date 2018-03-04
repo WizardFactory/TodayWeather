@@ -51,8 +51,8 @@ var i18n = require('i18n');
 function ControllerPush() {
     this.timeInterval = 60*1000; //1min
 
-    this.domain = config.push.serviceServer.replace('http://', '').replace('https://', '');
-    this.url = config.push.serviceServer;
+    this.domain = config.apiServer.url.replace('http://', '').replace('https://', '');
+    this.url = config.apiServer.url;
 
     [apnGateway, this.domain].forEach(function (value) {
         var domain = value;
@@ -115,8 +115,13 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
         return callback(new Error('invalid info pushInfo:'+JSON.stringify(pushInfo)));
     }
 
+    if (pushInfo.id == undefined) {
+        pushInfo.id = pushInfo.cityIndex;
+    }
+
     PushInfo.update(
-        {registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex},
+        {type:pushInfo.type, registrationId: pushInfo.registrationId,
+            cityIndex:pushInfo.cityIndex, id: pushInfo.id},
         pushInfo,
         {upsert : true},
         function (err, result) {
@@ -130,10 +135,12 @@ ControllerPush.prototype.updatePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
-    PushInfo.remove({
-            registrationId: pushInfo.registrationId,
-            type:pushInfo.type,
-            cityIndex: pushInfo.cityIndex},
+    var query = {type:pushInfo.type, registrationId: pushInfo.registrationId, cityIndex: pushInfo.cityIndex};
+    if (pushInfo.id) {
+        query.id = pushInfo.id;
+    }
+
+    PushInfo.remove(query,
         function (err, result) {
             if (err) {
                 return callback(err);
@@ -149,10 +156,17 @@ ControllerPush.prototype.removePushInfo = function (pushInfo, callback) {
 };
 
 ControllerPush.prototype.getPushByTime = function (time, callback) {
-    PushInfo.find({pushTime: time}).lean().exec(function (err, pushList) {
+
+    function enable() {
+        //enable이 없거나, true이면 true
+        return this.enable !== false;
+    }
+
+    PushInfo.find({pushTime: time}).$where(enable).lean().exec(function (err, pushList) {
         if (err) {
             return callback(err);
         }
+
         if (pushList.length == 0) {
             return callback('No push info time='+time);
         }
@@ -867,8 +881,8 @@ ControllerPush.prototype._removeOldList = function (pushList, callback) {
  * @private
  */
 ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
-    var filteredList = pushList.filter(function (pushInfo) {
-        if (pushInfo.hasOwnProperty('dayOfWeeks')) {
+    return pushList.filter(function (pushInfo) {
+        if (pushInfo.dayOfWeek && pushInfo.dayOfWeek.length > 0) {
             if (!pushInfo.hasOwnProperty('timezoneOffset')) {
                 log.error("timezone offset is undefined pushInfo:"+JSON.stringify(pushInfo));
                 return false;
@@ -877,17 +891,17 @@ ControllerPush.prototype._filterByDayOfWeek = function (pushList, current) {
             var localCurrent = kmaTimeLib.toLocalTime(pushInfo.timezoneOffset, current);
             var day = localCurrent.getDay();
 
-            var findIt = pushInfo.dayOfWeeks.find(function (value) {
-                return day === value;
-            });
-            return findIt != undefined;
+            var send = pushInfo.dayOfWeek[day];
+            if (send === false) {
+               log.info('skip day:', day, ', pushInfo:', pushInfo);
+            }
+            return send;
         }
         else {
+            log.info('there is not dayOfWeek');
             return true;
         }
     });
-
-    return filteredList;
 };
 
 ControllerPush.prototype.sendPush = function (time, callback) {
@@ -915,7 +929,7 @@ ControllerPush.prototype.sendPush = function (time, callback) {
                     log.error(err);
                     return callback(err);
                 }
-                callback(filteredList);
+                callback(undefined, filteredList);
             },
             function(pushList, callback) {
                 async.mapSeries(pushList, function (pushInfo, mCallback) {
@@ -942,7 +956,7 @@ ControllerPush.prototype.sendPush = function (time, callback) {
         ],
         function(err, result) {
             if (err) {
-                return log.warn(err);
+                log.warn(err);
             }
             log.info(result);
             if (callback) {

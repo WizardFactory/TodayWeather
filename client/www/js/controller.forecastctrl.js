@@ -129,7 +129,7 @@ angular.module('controller.forecastctrl', [])
         };
 
         var regionSize;
-        var regionSumSize;
+        // var regionSumSize;
         var bigDigitSize;
         //var bigTempPointSize;
         var bigSkyStateSize;
@@ -242,9 +242,9 @@ angular.module('controller.forecastctrl', [])
             regionSize = regionSize<33.04?regionSize:33.04;
             $scope.regionSize = regionSize;
 
-            regionSumSize = mainHeight * 0.0336 * padding; //0.047
-            regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
-            $scope.regionSumSize = regionSumSize;
+            // regionSumSize = mainHeight * 0.0336 * padding; //0.047
+            // regionSumSize = regionSumSize<30.45?regionSumSize:30.45;
+            // $scope.regionSumSize = regionSumSize;
 
             bigDigitSize = mainHeight * 0.12264 * padding; //0.2193
             bigDigitSize = bigDigitSize<142.1?bigDigitSize:142.1;
@@ -456,6 +456,8 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
 
+                $scope.currentPosition = cityData.currentPosition;
+
                 shortenAddress = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
                 console.log(shortenAddress);
 
@@ -569,7 +571,15 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 $scope.showDetailWeather = true;
-                $scope.summary = $scope.currentWeather.summary;
+                if ($scope.currentWeather.summaryWeather) {
+                    $scope.summary = $scope.currentWeather.summaryWeather;
+                }
+                else {
+                    $scope.summary = $scope.currentWeather.summary;
+                }
+                if ($scope.currentWeather.summaryAir) {
+                    $scope.summaryAir = $scope.currentWeather.summaryAir;
+                }
 
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
                 if ($scope.forecastType == 'short') {

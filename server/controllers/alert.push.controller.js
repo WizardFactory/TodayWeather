@@ -69,12 +69,13 @@ class AlertPushController {
             pushInfo.units = obj;
         }
 
-        let apiVersion = "v000901";
-        let url = config.push.serviceServer;
+        let apiVersion = 'v000902';
+        let url = config.serviceServer.url;
         let town = pushInfo.town;
+        let source = pushInfo.source.toLowerCase();
 
         if (pushInfo.geo) {
-            url += '/weather/coord';
+            url += '/'+apiVersion+'/'+source+'/coord';
             url += '/'+pushInfo.geo[1]+","+pushInfo.geo[0];
         }
         else if (pushInfo.town) {
@@ -300,7 +301,8 @@ class AlertPushController {
     _updateDb(alertPush, callback) {
         log.info(JSON.stringify({alertPush: alertPush}));
         AlertPush.update(
-            {registrationId: alertPush.registrationId, cityIndex: alertPush.cityIndex},
+            {type: alertPush.type, registrationId: alertPush.registrationId,
+                cityIndex: alertPush.cityIndex, id: alertPush.id},
             alertPush,
             {upsert : true},
             function (err, result) {
@@ -397,7 +399,7 @@ class AlertPushController {
      *
      * @param alertPush
      * @param infoObj
-     * @returns {string} weather|air|''
+     * @returns {string} weather|air|all|none
      * @private
      */
     _compareWithLastInfo(alertPush, infoObj) {
@@ -680,25 +682,22 @@ class AlertPushController {
 
         /**
          * 둘다 push한 시간이 6시간 이내여만 추가로 검토하지 않음.
+         * 아래 function이 mongodb 내부에서 도는지 es6를 지원하지 않는 경우도 있음.
          * @returns {boolean}
          */
         function checkUpdateInterval() {
-            let limitPushTime = new Date();
+            var limitPushTime = new Date();
             limitPushTime.setHours(limitPushTime.getHours()-6);
-            let needToCheck = true;
+            var needToCheck = true;
             if (this.precipAlerts) {
-                if (this.precipAlerts.hasOwnProperty('pushTime')) {
                    if (this.precipAlerts.pushTime >= limitPushTime) {
                        needToCheck = false;
                    }
-                }
             }
 
             if (this.airAlerts) {
-                if (this.airAlerts.hasOwnProperty('pushTime')) {
-                    if (this.airAlerts.pushTime >= limitPushTime) {
-                        needToCheck = false;
-                    }
+                if (this.airAlerts.pushTime >= limitPushTime) {
+                    needToCheck = false;
                 }
             }
 
@@ -711,8 +710,8 @@ class AlertPushController {
          * 0시  startTime     {time}       endtime   24시
          * @type {{reverseTime: boolean, startTime: {$lte: *}, endTime: {$gte: *}}}
          */
-        let queryN = {reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
-        let queryR = {reverseTime: true, $or: [{startTime: {$lte:time}}, {endTime: {$gte:time}}]};
+        let queryN = {enable: true, reverseTime: false, startTime: {$lte:time}, endTime: {$gte:time}};
+        let queryR = {enable: true, reverseTime: true, $or: [{startTime: {$lte:time}}, {endTime: {$gte:time}}]};
         let queryList = [];
         queryList.push(queryN);
         queryList.push(queryR);
@@ -726,6 +725,7 @@ class AlertPushController {
     }
 
     sendAlertPushList(time, callback) {
+        log.info('try to send alert push list time:'+time);
         this.time = time;
 
         async.waterfall([
@@ -780,7 +780,7 @@ class AlertPushController {
             let date = new Date();
             let min = date.getUTCMinutes();
             if (min === 0 || min === 15 || min === 30 || min === 45) {
-                let timeUTC = date.getUTCHours() * 60 * 60 + date.getUTCMinutes() * 60;
+                let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
                 this.sendAlertPushList(timeUTC);
                 this._removeOldList();
             }
@@ -791,7 +791,9 @@ class AlertPushController {
     updateAlertPush(alertPush, callback) {
         alertPush.updatedAt = new Date();
         alertPush.reverseTime = alertPush.startTime > alertPush.endTime;
-        AlertPush.find({registrationId: alertPush.registrationId, cityIndex: alertPush.cityIndex})
+        AlertPush.find({
+            type: alertPush.type, registrationId: alertPush.registrationId,
+            cityIndex: alertPush.cityIndex, id: alertPush.id})
             .exec((err, list) => {
                 if (err) {
                     return callback(err);
@@ -815,9 +817,10 @@ class AlertPushController {
 
     removeAlertPush(pushInfo, callback) {
         AlertPush.remove({
-                registrationId: pushInfo.registrationId,
                 type:pushInfo.type,
-                cityIndex: pushInfo.cityIndex},
+                registrationId: pushInfo.registrationId,
+                cityIndex: pushInfo.cityIndex,
+                id: pushInfo.id},
             function (err, result) {
                 if (err) {
                     return callback(err);

@@ -2,6 +2,74 @@ angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
                                      $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Units, $q) {
         var currentTime;
+        var lastClickTime = 0;
+        var refreshTimer = null;
+        var gLocationAuthorizationStatus;
+        var confirmPopup;
+        var airUnit;
+        var aqiStandard = {
+            "airkorea": {
+                "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
+                "value": {
+                    "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
+                    "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
+                    "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
+                    "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
+                    "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
+                    "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
+                    "aqi" : [0, 50, 100, 250, 500]      //index
+                }
+            },
+            "airkorea_who": {
+                "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
+                "value": {
+                    "pm25" : [0, 15, 25, 50, 500],      //ug/m3
+                    "pm10" : [0, 30, 50, 100, 600],     //ug/m3
+                    "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm
+                    "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm
+                    "co" : [0, 2, 9, 15, 50],           //ppm
+                    "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
+                    "aqi" : [0, 50, 100, 250, 500]      //ppm
+                }
+            },
+            "airnow": {
+                "color": ['#00c73c', '#d2d211',
+                    '#ff6f00', '#FF0000',
+                    '#b4004b', '#940021'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
+                    'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
+                "value": {
+                    "pm25" : [0, 12.0, 35.4, 55.4, 150.4, 250.4, 500.4],    //ug/m3 (avg 24h)
+                    "pm10" : [0, 54, 154, 254, 354, 424, 604],              //ug/m3 (avg 24h)
+                    "o3" : [0, 0.054, 0.124, 0.164, 0.204, 0.404, 0.604],   //ppm (avg 8h, 1h)
+                    "no2" : [0, 0.053, 0.1, 0.36, 0.649, 1.249, 2.049],     //ppm (avg 1h)
+                    "co" : [0, 4.4, 9.4, 12.4, 15.4, 30.4, 50.4],           //ppm (avg 8h)
+                    "so2" : [0, 0.035, 0.75, 0.185, 0.304, 0.604, 1.004],   //ppm (avg 1h, 24h)
+                    "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
+                    //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
+                    //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
+                    //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
+                }
+            },
+            "aqicn": {
+                "color": ['#00c73c', '#d2d211',
+                    '#ff6f00', '#FF0000',
+                    '#b4004b', '#940021'],
+                "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
+                    'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
+                "value": {
+                    "pm25" : [0, 35, 75, 115, 150, 250, 500],    //ug/m3 (avg 1h)
+                    "pm10" : [0, 50, 150, 250, 350, 420, 600],   //ug/m3 (avg 1h)
+                    "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
+                    "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
+                    "co" : [0, 5, 10, 35, 60, 90, 150],          //ug/m3 (avg 1h)
+                    "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
+                    "aqi" : [0, 50, 100, 150, 200, 300, 500]
+                }
+            }
+        };
 
         $scope.data = { 'autoSearch': false };
 
@@ -25,12 +93,10 @@ angular.module('controller.tabctrl', [])
             //    }
             //}, 1000);
 
+            setAirUnit();
             TwAds.init();
-
             $scope.$broadcast('reloadEvent', 'init');
         }
-
-        var lastClickTime = 0;
 
         $scope.doTabForecast = function(forecastType) {
             var clickTime = new Date().getTime();
@@ -128,15 +194,25 @@ angular.module('controller.tabctrl', [])
             else {
                 cityName = WeatherUtil.getShortenAddress(cityData.address);
             }
-            var t1h = cityData.currentWeather.t1h;
-            var emoji = WeatherUtil.getWeatherEmoji(cityData.currentWeather.skyIcon);
+            var currentWeather = cityData.currentWeather;
+            var t1h = currentWeather.t1h;
+            var emoji = WeatherUtil.getWeatherEmoji(currentWeather.skyIcon);
             var tmx;
             var tmn;
-            var summary = $rootScope.summary;
+            var summary;
             var shareUrl = 'http://abr.ge/mxld';
-            if (cityData.currentWeather.today) {
-                tmx = cityData.currentWeather.today.tmx;
-                tmn = cityData.currentWeather.today.tmn;
+            if (currentWeather.today) {
+                tmx = currentWeather.today.tmx;
+                tmn = currentWeather.today.tmn;
+            }
+            if (currentWeather.hasOwnProperty('summaryWeather')) {
+               summary =  currentWeather.summaryWeather;
+               if (currentWeather.hasOwnProperty('summaryAir')) {
+                   summary += " " + currentWeather.summaryAir;
+               }
+            }
+            else if (currentWeather.hasOwnProperty('summary')) {
+                summary = currentWeather.summary;
             }
 
             var message = '';
@@ -145,20 +221,31 @@ angular.module('controller.tabctrl', [])
                 message += translations.LOC_CURRENT+' '+t1h+'˚ ';
                 message += emoji+'\n';
                 message += translations.LOC_HIGHEST+' '+tmx+'˚, '+translations.LOC_LOWEST+' '+tmn+'˚\n';
-                message += summary+'\n\n';
+                if (summary) {
+                    message += summary+'\n';
+                }
+                message += '\n';
                 message += translations.LOC_TODAYWEATHER + ' ' + shareUrl;
             }, function (translationIds) {
-                message += cityName+'\n';
-                message += translationIds.LOC_CURRENT+' '+t1h+'˚ ';
-                message += emoji+'\n';
-                message += translationIds.LOC_HIGHEST+' '+tmx+'˚, '+translationIds.LOC_LOWEST+' '+tmn+'˚\n';
-                message += summary+'\n\n';
-                message += translationIds.LOC_TODAYWEATHER + ' ' + shareUrl;
+                Util.ga.trackEvent('action', 'error', 'fail to translate for sharing');
             }).finally(function () {
                 window.plugins.socialsharing.share(message, null, null, null);
             });
 
             Util.ga.trackEvent('action', 'tab', 'share');
+        };
+
+        $scope.goAirInfoPage = function(code) {
+            console.log('go air info page code='+code);
+            var path = '/tab/air';
+            if (code) {
+                path += '?code='+code;
+            }
+            $location.url(path);
+        };
+
+        $scope.goUnitsPage = function() {
+            $location.path('/units');
         };
 
         /**
@@ -224,12 +311,14 @@ angular.module('controller.tabctrl', [])
             });
         };
 
-        var gLocationAuthorizationStatus;
+        $scope.isLocationEnabled = function () {
+            return Util.isLocationEnabled();
+        };
+
         $scope.setLocationAuthorizationStatus = function (status) {
             gLocationAuthorizationStatus = status;
         };
 
-        var confirmPopup;
         $scope.getConfirmPopup = function () {
            return confirmPopup;
         };
@@ -444,8 +533,198 @@ angular.module('controller.tabctrl', [])
             });
         };
 
-        $scope.$on('showUpdateInfo', function(event) {
-            Util.ga.trackEvent('window', 'show', 'updateInfoPopup');
+        $scope.dayToFullString = function(day) {
+            var dayFullStr = ['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY',
+                'LOC_FRIDAY', 'LOC_SATURDAY'];
+            return dayFullStr[day];
+        };
+
+        $scope.getDayString = function (day) {
+            var dayFromTodayStr =['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY',
+                'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW',
+                'LOC_FROM_TODAY'];
+            if (-3 <= day && day <= 3) {
+                return dayFromTodayStr[day + 3];
+            }
+            else {
+                //이 케이스 아직 없음.
+                return dayFromTodayStr[dayFromTodayStr.length-1];
+            }
+
+            //console.error("Fail to get day string day=" + day);
+            //return "";
+        };
+
+        $scope.dayToString = function(day) {
+            var dayStr = ['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT'];
+            return dayStr[day];
+        };
+
+        $scope.convertMMDD = function (value) {
+            if (typeof value == 'string') {
+                return value.substr(5,2)+'/'+value.substr(8,2);
+            }
+            return value;
+        };
+
+        $scope.getCurrentAirUnitStr = function () {
+            return Units.getAirUnitStr(Units.getUnit('airUnit'));
+        };
+
+        $scope.getForecastAirUnitStr = function () {
+            return Units.getAirUnitStr('airkorea');
+        };
+
+        /**
+         * sentiment_satisfied, sentiment_neutral, ...
+         * @param grade
+         * @returns {*}
+         */
+        $scope.getSentimentIcon = function (grade) {
+            var str = '&#xE814;';
+            var airUnit = Units.getUnit('airUnit');
+
+            if (airUnit === 'airkorea' || airUnit === 'airkorea_who') {
+                switch (grade) {
+                    case 1: // Good
+                        str = '&#xE815;';
+                        break;
+                    case 2: // Moderate
+                        str = '&#xE812;';
+                        break;
+                    case 3: // Unhealthy
+                        str = '&#xE811;';
+                        break;
+                    case 4: // Very unhealthy
+                        str = '&#xE814;';
+                        break;
+                    default:
+                        console.log('Fail to find grade='+grade);
+                }
+            } else { // 'airnow', 'aqicn'
+                switch (grade) {
+                    case 1: // Good
+                        str = '&#xE815;';
+                        break;
+                    case 2: // Moderate
+                        str = '&#xE812;';
+                        break;
+                    case 3: // Unhealthy for sensitive groups
+                        str = '&#xE811;';
+                        break;
+                    case 4: // Unhealthy
+                        str = '&#xE811;';
+                        break;
+                    case 5: // Very unhealthy
+                        str = '&#xE7F3;';
+                        break;
+                    case 6: // Hazardous
+                        str = '&#xE814;';
+                        break;
+                    default:
+                        console.log('Fail to find grade='+grade);
+                }
+            }
+            return $sce.trustAsHtml(str);
+        };
+
+        /**
+         * 데이터가 없는 경우 defaultColor에 따라 표시. defaultColor가 없으면 기본 스타일로 표시
+         * @param grade
+         * @param defaultColor
+         * @returns {string}
+         */
+        $scope.grade2Color = function (grade, defaultColor) {
+            var color = '';
+            if (defaultColor != undefined) {
+                color = defaultColor;
+            }
+
+            try {
+                if (!$scope.hasOwnProperty('aqiStandard') || grade == undefined) {
+                    return color;
+                }
+                if (grade > $scope.aqiStandard.length) {
+                    Util.ga.trackEvent('air', 'error', 'invalidGradeAtGrade2Color', grade);
+                    grade = $scope.aqiStandard.length;
+                }
+                color = $scope.aqiStandard[grade-1].color;
+            }
+            catch (err) {
+                Util.ga.trackException(err, false);
+            }
+            return color;
+        };
+
+        $scope.airkoreaGrade2Color = function (grade) {
+            var color = '';
+            try {
+                var airkoreaColor = aqiStandard.airkorea.color;
+                if (grade > airkoreaColor.length) {
+                    Util.ga.trackEvent('air', 'error', 'invalidGradeAtAirekoreaGrade2Color', grade);
+                    grade = airkoreaColor.length;
+                }
+                color = airkoreaColor[grade-1];
+            }
+            catch (err) {
+                Util.ga.trackException(err, false);
+            }
+            return color;
+        };
+
+        $scope.onSwipeLeft = function() {
+            if (WeatherInfo.getEnabledCityCount() === 1) {
+                return;
+            }
+
+            Util.ga.trackEvent('action', 'click', 'swipeleft');
+
+            WeatherInfo.setNextCityIndex();
+            loadWeatherData();
+        };
+
+        $scope.onSwipeRight = function() {
+            if (WeatherInfo.getEnabledCityCount() === 1) {
+                return;
+            }
+
+            Util.ga.trackEvent('action', 'click', 'swiperight');
+
+            WeatherInfo.setPrevCityIndex();
+            loadWeatherData();
+        };
+
+        $scope.$on('reloadEvent', function(event, sender) {
+            Util.ga.trackEvent('reload', 'sender', sender);
+
+            if ($scope.getConfirmPopup()) {
+                Util.ga.trackEvent('reload', 'skip', 'popup', 1);
+                return;
+            }
+
+            if (sender === 'resume') {
+                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === false) {
+                    Util.ga.trackEvent('reload', 'warn', 'load city', 0);
+                    return;
+                }
+            } else if (sender === 'locationOn') {
+                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
+                if (cityData && cityData.currentPosition === false) {
+                    Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
+                    return;
+                }
+            } else if (sender === 'setRefreshInterval') {
+                setRefreshTimer();
+                return;
+            }
+
+            console.log('called by update weather event by '+sender);
+            WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
+            loadWeatherData();
+        });
+
+        $scope.$on('showUpdateInfoEvent', function(event) {
+            Util.ga.trackEvent('window', 'show', 'showUpdateInfoEvent');
             var strFeedback = "";
             var strRate = "";
             var strClose = "";
@@ -561,126 +840,12 @@ angular.module('controller.tabctrl', [])
                 });
         });
 
-        /**
-         * sentiment_satisfied, sentiment_neutral, ...
-         * @param grade
-         * @returns {*}
-         */
-        $scope.getSentimentIcon = function (grade) {
-            var str = '&#xE814;';
-            switch (grade) {
-                case 1:
-                    str = '&#xE813;';
-                    break;
-                case 2:
-                    str = '&#xE812;';
-                    break;
-                case 3:
-                    str = '&#xE811;';
-                    break;
-                case 4:
-                    str = '&#xE814;';
-                    break;
-                case 5:
-                    str = '&#xE814;';
-                    break;
-                default:
-                    console.log('Fail to find grade='+grade);
-            }
-            return $sce.trustAsHtml(str);
-        };
+        $scope.$on('changeAirUnitEvent', function(event) {
+            setAirUnit();
+        });
 
-        $scope.dayToFullString = function(day) {
-            var dayFullStr = ['LOC_SUNDAY', 'LOC_MONDAY', 'LOC_TUESDAY', 'LOC_WEDNESDAY', 'LOC_THURSDAY',
-                'LOC_FRIDAY', 'LOC_SATURDAY'];
-            return dayFullStr[day];
-        };
-
-        $scope.getDayString = function (day) {
-            var dayFromTodayStr =['LOC_A_COUPLE_OF_DAYS_AGO', 'LOC_THE_DAY_BEFORE_YESTERDAY', 'LOC_YESTERDAY',
-                'LOC_TODAY', 'LOC_TOMORROW', 'LOC_THE_DAY_AFTER_TOMORROW', 'LOC_TWO_DAYS_AFTER_TOMORROW',
-                'LOC_FROM_TODAY'];
-            if (-3 <= day && day <= 3) {
-                return dayFromTodayStr[day + 3];
-            }
-            else {
-                //이 케이스 아직 없음.
-                return dayFromTodayStr[dayFromTodayStr.length-1];
-            }
-
-            //console.error("Fail to get day string day=" + day);
-            //return "";
-        };
-
-        $scope.dayToString = function(day) {
-            var dayStr = ['LOC_SUN', 'LOC_MON', 'LOC_TUE', 'LOC_WED', 'LOC_THU', 'LOC_FRI', 'LOC_SAT'];
-            return dayStr[day];
-        };
-
-        $scope.convertMMDD = function (value) {
-            if (typeof value == 'string') {
-                return value.substr(5,2)+'/'+value.substr(8,2);
-            }
-            return value;
-        };
-
-        $scope.getCurrentAirUnitStr = function () {
-            return Units.getAirUnitStr(Units.getUnit('airUnit'));
-        };
-
-        $scope.getForecastAirUnitStr = function () {
-            return Units.getAirUnitStr('airkorea');
-        };
-
-        $scope.onSwipeLeft = function() {
-            if (WeatherInfo.getEnabledCityCount() === 1) {
-                return;
-            }
-
-            Util.ga.trackEvent('action', 'click', 'swipeleft');
-
-            WeatherInfo.setNextCityIndex();
-            loadWeatherData();
-        };
-
-        $scope.onSwipeRight = function() {
-            if (WeatherInfo.getEnabledCityCount() === 1) {
-                return;
-            }
-
-            Util.ga.trackEvent('action', 'click', 'swiperight');
-
-            WeatherInfo.setPrevCityIndex();
-            loadWeatherData();
-        };
-
-        $scope.$on('reloadEvent', function(event, sender) {
-            Util.ga.trackEvent('reload', 'sender', sender);
-
-            if ($scope.getConfirmPopup()) {
-                Util.ga.trackEvent('reload', 'skip', 'popup', 1);
-                return;
-            }
-
-            if (sender === 'resume') {
-                if (WeatherInfo.canLoadCity(WeatherInfo.getCityIndex()) === false) {
-                    Util.ga.trackEvent('reload', 'warn', 'load city', 0);
-                    return;
-                }
-            } else if (sender === 'locationOn') {
-                var cityData = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-                if (cityData && cityData.currentPosition === false) {
-                    Util.ga.trackEvent('reload', 'skip', 'currentPosition', 0);
-                    return;
-                }
-            } else if (sender === 'setRefreshInterval') {
-                setRefreshTimer();
-                return;
-            }
-
-            console.log('called by update weather event by '+sender);
-            WeatherInfo.reloadCity(WeatherInfo.getCityIndex());
-            loadWeatherData();
+        $scope.$on('$destroy',function(){
+            clearTimeout(refreshTimer);
         });
 
         function loadWeatherData() {
@@ -695,8 +860,6 @@ angular.module('controller.tabctrl', [])
                     Util.ga.trackEvent('weather', 'error', 'failToGetCityIndex', cityIndex);
                     return;
                 }
-
-                $scope.currentPosition = weatherInfo.currentPosition;
 
                 showLoadingIndicator();
                 updateWeatherData(weatherInfo).then(function () {
@@ -785,8 +948,6 @@ angular.module('controller.tabctrl', [])
         function hideLoadingIndicator() {
             $scope.showLoadingIndicator = false;
         }
-
-        var refreshTimer = null;
 
         function setRefreshTimer() {
             clearTimeout(refreshTimer);
@@ -980,28 +1141,37 @@ angular.module('controller.tabctrl', [])
             return deferred.promise;
         }
 
-        $scope.clickEvent = function (item) {
-            if (item === 'units') {
-                $location.path('/units');
+        function setAirUnit() {
+            try {
+                airUnit = Units.getUnit('airUnit');
+                Util.ga.trackEvent('air', 'getUnit', airUnit);
+
+                var length = aqiStandard[airUnit].color.length;
+                var list = [];
+                for (var i=0; i<length; i++) {
+                    var obj = {
+                        "color": aqiStandard[airUnit].color[i],
+                        "str": aqiStandard[airUnit].str[i],
+                        "value": {
+                            "pm25": aqiStandard[airUnit].value["pm25"][i + 1],
+                            "pm10": aqiStandard[airUnit].value["pm10"][i + 1],
+                            "o3": aqiStandard[airUnit].value["o3"][i + 1],
+                            "no2": aqiStandard[airUnit].value["no2"][i + 1],
+                            "co": aqiStandard[airUnit].value["co"][i + 1],
+                            "so2": aqiStandard[airUnit].value["so2"][i + 1],
+                            "aqi": aqiStandard[airUnit].value["aqi"][i + 1]
+                        }
+                    };
+                    list.push(obj);
+                }
+
+                $scope.aqiStandard = list;
+                console.info($scope.aqiStandard);
             }
-        };
-
-        $scope.$on('$destroy',function(){
-            clearTimeout(refreshTimer);
-        });
-
-        $scope.goAirInfoPage = function(code) {
-            console.log('go air info page code='+code);
-            var path = '/tab/air';
-            if (code) {
-               path += '?code='+code;
+            catch (err) {
+                Util.ga.trackException(err, false);
             }
-            $location.url(path);
-        };
-
-        $scope.isLocationEnabled = function () {
-            return Util.isLocationEnabled();
-        };
+        }
 
         $scope.$on('notificationEvent', function(event, data) {
             console.log('got notification event');

@@ -981,14 +981,15 @@ function ControllerTown() {
         if (weather !== undefined) {
             var weatherPty;
 
+            //순서 중요함.
             if (weather.indexOf("끝") >= 0) {
                 weatherPty = 0;
             }
-            else if (weather.indexOf("비") >= 0) {
-                weatherPty =  1;
-            }
             else if (weather.indexOf("진눈깨비") >= 0) {
                 weatherPty =  2;
+            }
+            else if (weather.indexOf("비") >= 0) {
+                weatherPty =  1;
             }
             else if (weather.indexOf("눈") >= 0) {
                 weatherPty =  3;
@@ -1002,26 +1003,35 @@ function ControllerTown() {
             }
         }
 
-        // currentPty가 3(눈)인 경우 rns로 업데이트 하지 않음.
-        if (rns !== undefined && currentPty !== 3) {
+        if (rns !== undefined) {
             var rnsPty;
-            if (rns === true) {
-                //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
-                //0~3도는 눈/비
-                if (temp !== undefined) {
-                    if (temp > 3) {
-                        rnsPty = 1;
-                    }
-                    else if (temp >= 0) {
-                        rnsPty = 2;
-                    }
-                    else {
-                        rnsPty = 3;
+
+            if (currentPty === 0) {
+                // currentPty가 0인 경우 rns가 true인 경우 보정
+                if (rns === true) {
+                    //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                    //0~3도는 눈/비
+                    if (temp !== undefined) {
+                        if (temp > 3) {
+                            rnsPty = 1;
+                        }
+                        else if (temp >= 0) {
+                            rnsPty = 2;
+                        }
+                        else {
+                            rnsPty = 3;
+                        }
                     }
                 }
             }
-            else if (rns === false) {
-               rnsPty = 0;
+            else if (currentPty === 1 || currentPty === 2) {
+                // currentPty가 1(비),2(비/눈)인 경우만 rns가 false인 경우 보정
+                if (rns === false) {
+                    rnsPty = 0;
+                }
+            }
+            else if (currentPty === 3) {
+                //snow는 rns로 보정하지 않음.
             }
 
             if (rnsPty !== undefined) {
@@ -1536,9 +1546,13 @@ function ControllerTown() {
 
             var date = kmaTimeLib.convertDateToYYYYMMDD(now);
             var time = kmaTimeLib.convertDateToHHMM(now);
-            log.debug(date+time, meta);
+            log.info('>sID=', req.sessionID, 'dateTime:', date+time);
 
-            controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, req.current, function (err, stnWeatherInfo) {
+            var reqCurrent = req.current;
+
+            log.info('>sID=', req.sessionID, 'req.current:', JSON.stringify(reqCurrent));
+
+            controllerKmaStnWeather.getStnHourlyAndMinRns(townInfo, date+time, reqCurrent, function (err, stnWeatherInfo) {
                 if (err) {
                     log.error(err);
                     next();
@@ -1552,6 +1566,8 @@ function ControllerTown() {
                     return;
                 }
 
+                log.info('>sID=', req.sessionID, 'stnWeatherInfo:', JSON.stringify(stnWeatherInfo));
+
                 try {
                     var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
                     var stnFirst = true;
@@ -1561,21 +1577,19 @@ function ControllerTown() {
                         if (currentTime.getTime() >= stnWeatherInfoTime.getTime()) {
 
                             log.info('>sID=',req.sessionID,
-                                'use api first, just append new data of stn hourly weather info', meta);
+                                'use api first, just append new data of stn hourly weather info');
                             stnFirst = false;
                         }
                         else {
-                            log.info('>sID=',req.sessionID, 'overwrite all data', meta);
+                            log.debug('>sID=',req.sessionID, 'overwrite all data');
                         }
                     }
 
                     for (var key in stnWeatherInfo) {
-                        if (stnFirst || req.current[key] == undefined) {
-                            req.current[key] = stnWeatherInfo[key];
+                        if (stnFirst || reqCurrent[key] == undefined) {
+                            reqCurrent[key] = stnWeatherInfo[key];
                         }
                     }
-
-                    var reqCurrent = req.current;
 
                     if (stnFirst) {
                         reqCurrent.overwrite = true;
@@ -1610,6 +1624,8 @@ function ControllerTown() {
                     controllerKmaStnWeather.updateWeather(reqCurrent);
                     reqCurrent.weather = ControllerWeatherDesc.getWeatherStr(reqCurrent.weatherType, res);
                     self._updateCurrentFromMinWeather(req.currentList, reqCurrent);
+
+                    log.info('>sID=', req.sessionID, 'reqCurrent:', JSON.stringify(reqCurrent));
                 }
                 catch(err) {
                     log.error(err);
@@ -2114,6 +2130,11 @@ function ControllerTown() {
                     next();
                     return;
                 }
+
+                if (!townInfo.hasOwnProperty('areaNo')) {
+                    throw new Error('There is not areaNo '+JSON.stringify(townInfo));
+                }
+
                 req.params.areaNo = townInfo.areaNo;
                 req.geocode = {
                     lat: townInfo.gCoord.lat,
