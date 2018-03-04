@@ -31,6 +31,10 @@ angular.module('controller.setting.radio', [])
             if (this.type.indexOf('Unit') >= 0) {
                 if (Units.setUnit(this.type, this.value)) {
                     Units.saveUnits();
+
+                    if (this.type === 'airUnit') {
+                        $rootScope.$broadcast('changeAirUnitEvent');
+                    }
                 }
             }
             else if (this.type === 'startupPage' || this.type === 'refreshInterval') {
