@@ -82,8 +82,76 @@ controllerKmaStnWeather.updateWeather = function (current) {
 
        }
     }
-    else if (current.pty == 0) {
-
+    else if (current.pty === 0) {
+        switch (current.weatherType) {
+            //비/눈/진눈깨비는 변경
+            case 14:
+            case 15:
+            case 16:
+            case 18:
+            case 19:
+            case 20:
+            case 21:
+            case 22:
+            case 23:
+            case 24:
+            case 25:
+            case 26:
+            case 29:
+            case 30:
+            case 31:
+            case 32:
+            case 33:
+            case 34:
+            case 35:
+            case 36:
+            case 37:
+            case 38:
+            case 39:
+            case 42:
+            case 43:
+            case 44:
+            case 45:
+            case 46:
+            case 47:
+            case 49:
+            case 53:
+            case 54:
+            case 58:
+            case 64:
+            case 65:
+            case 66:
+                //맑음,구름조금,구름많음, 흐름
+                switch (current.sky) {
+                    case 1:
+                       current.weather = "맑음";
+                       current.weatherType = 0;
+                       break;
+                    case 2:
+                        current.weather = "구름조금";
+                        current.weatherType = 1;
+                        break;
+                    case 3:
+                        current.weather = "구름많음";
+                        current.weatherType = 2;
+                        break;
+                    case 4:
+                        current.weather = "흐름";
+                        current.weatherType = 3;
+                        break;
+                    default:
+                        current.weather = "";
+                        current.weatherType = -1;
+                        break;
+                }
+                break;
+            case 50:
+            case 51:
+            case 52:
+                current.weather = '번개';
+                current.weatherType = 55;
+                break;
+        }
         // icon 준비되면 적용
         // switch (current.weatherType) {
         //     case 4:
