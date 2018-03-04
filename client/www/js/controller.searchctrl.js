@@ -117,12 +117,13 @@ angular.module('controller.searchctrl', [])
                 };
                 $scope.cityList.push(data);
                 loadWeatherData(i);
-                if (i === 0) {
+                if (city.currentPosition) {
+                    var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
                         console.info(JSON.stringify({'newGeoInfo':geoInfo}));
-                        WeatherInfo.updateCity(0, geoInfo);
-                        WeatherInfo.reloadCity(0);
-                        loadWeatherData(0);
+                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        WeatherInfo.reloadCity(indexOfCurrentPositionCity);
+                        loadWeatherData(indexOfCurrentPositionCity);
                     });
                 }
             }
