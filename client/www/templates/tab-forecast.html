@@ -185,7 +185,7 @@
         <div class="card" ng-if="showDetailWeather && currentWeather.arpltn">
             <div class="card-title">{{"LOC_DETAIL_AQI"|translate}}</div>
             <table class="colgroup-box">
-                <tr ng-if="currentWeather.arpltn.pm25Value">
+                <tr ng-if="currentWeather.arpltn.pm25Value != undefined">
                     <td>
                         <span>{{"LOC_PM25"|translate}}</span>
                     </td>
@@ -196,7 +196,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.pm10Value">
+                <tr ng-if="currentWeather.arpltn.pm10Value != undefined">
                     <td>
                         <span>{{"LOC_PM10"|translate}}</span>
                     </td>
@@ -207,7 +207,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.o3Value">
+                <tr ng-if="currentWeather.arpltn.o3Value != undefined">
                     <td>
                         <span>{{"LOC_O3"|translate}}</span>
                     </td>
@@ -218,7 +218,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.no2Value">
+                <tr ng-if="currentWeather.arpltn.no2Value != undefined">
                     <td>
                         <span>{{"LOC_NO2"|translate}}</span>
                     </td>
@@ -229,7 +229,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.coValue">
+                <tr ng-if="currentWeather.arpltn.coValue != undefined">
                     <td>
                         <span>{{"LOC_CO"|translate}}</span>
                     </td>
@@ -240,7 +240,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.so2Value">
+                <tr ng-if="currentWeather.arpltn.so2Value != undefined">
                     <td>
                         <span>{{"LOC_SO2"|translate}}</span>
                     </td>
@@ -251,7 +251,7 @@
                         </span>
                     </td>
                 </tr>
-                <tr ng-if="currentWeather.arpltn.khaiValue">
+                <tr ng-if="currentWeather.arpltn.khaiValue != undefined">
                     <td>
                         <span>{{"LOC_AQI"|translate}}</span>
                     </td>
