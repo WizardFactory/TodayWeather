@@ -154,7 +154,7 @@ angular.module('controller.air', [])
                         obj.code = propertyName;
                         list.push(obj);
                     }
-                    else if (pollutants.hasOwnProperty(propertyName)) {
+                    else if (pollutants && pollutants.hasOwnProperty(propertyName)) {
                         obj.name = _getAQIname(propertyName);
                         obj.code = propertyName;
                         obj.value = '-';
