@@ -1575,17 +1575,23 @@ ConCollector.prototype._removeDsfDb = function(geocode, callback){
             return self.removeAllDsfDb(geocode, callback);
         }
 
-        let mins = ((new Date()).getTime() - dsfData[2].current.dateObj.getTime()) / 1000 / 60;
+        //let mins = ((new Date()).getTime() - dsfData[2].current.dateObj.getTime()) / 1000 / 60;
 
         // pop current data
         list[0].data.pop();
 
+        // pop today from 00:00
+        list[0].data.pop();
+
+        /*
         // check minute,
         // If difference is bigger than 60 mins, it would remove a data which is started from today 0:00.
         if(mins > 60) {
             // pop today data which is from today 0:00
             list[0].data.pop();
         }
+        */
+
         list[0].save(function(err){
             if(err){
                 return self.removeAllDsfDb(geocode, callback);
