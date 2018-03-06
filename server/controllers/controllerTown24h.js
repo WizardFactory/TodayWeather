@@ -1388,6 +1388,11 @@ function ControllerTown24h() {
                         var resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
                         log.error('Same date in dailyData', JSON.stringify(resInfo));
                     }
+
+                    if (daily[i].dayOfWeek === daily[i+1].dayOfWeek) {
+                        resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
+                        log.error('Same day of week in dailyData', JSON.stringify(resInfo));
+                    }
                 }
 
                 result.midData = req.midData;
