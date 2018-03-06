@@ -1,16 +1,12 @@
 angular.module('controller.settingctrl', [])
     .controller('SettingCtrl', function($scope, $rootScope, Util, Purchase, $ionicHistory, $translate,
-                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList) {
+                                        $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList, WeatherInfo) {
 
         var menuContent = null;
         var strOkay = "OK";
         var strCancel = "Cancel";
-        $translate(['LOC_OK', 'LOC_CANCEL']).then(function (translations) {
-            strOkay = translations.LOC_OK;
-            strCancel = translations.LOC_CANCEL;
-        }, function (translationIds) {
-            console.log("Fail to translate : "+JSON.stringify(translationIds));
-        });
+        var strCurrent = "Current";
+        var strLocation = "Location";
 
         function init() {
             if (ionic.Platform.isIOS()) {
@@ -28,6 +24,18 @@ angular.module('controller.settingctrl', [])
 
             console.info(settingsInfo);
             $rootScope.settingsInfo = settingsInfo;
+
+            if (
+                Util.language.indexOf("ko") != -1 ||
+                Util.language.indexOf("ja") != -1 ||
+                Util.language.indexOf("zh-CN") != -1 ||
+                Util.language.indexOf("zh-TU") != -1) {
+
+                $scope.strCurrentPosition = strCurrent+strLocation;
+            }
+            else {
+                $scope.strCurrentPosition = strCurrent+" "+strLocation;
+            }
         }
 
         $scope.clickMenu = function (menu) {
@@ -155,10 +163,21 @@ angular.module('controller.settingctrl', [])
                     return {label: $scope.getRefreshIntervalValueStr(value), value: value};
                 });
             }
+            else if (name === 'currentPosition') {
+                title = $scope.strCurrentPosition;
+                list = [{label:'On', value:true}, {label:'Off', value:false}].map(function (obj) {
+                    return {label:obj.label, value: obj.value}
+                });
+            }
             console.info(JSON.stringify({name: name, title: title, value: $rootScope.settingsInfo[name], list: list}));
             radioList.type = name;
             radioList.title = title;
-            radioList.setValue($rootScope.settingsInfo[name]);
+            if (name === 'currentPosition') {
+                radioList.setValue(!WeatherInfo.getCityOfIndex(0).disable);
+            }
+            else {
+                radioList.setValue($rootScope.settingsInfo[name]);
+            }
             radioList.importData(list);
             $location.path('/setting-radio');
         };
@@ -197,5 +216,34 @@ angular.module('controller.settingctrl', [])
             return 'N/A'
         };
 
-        init();
+        $scope.getCurrentPositionStatus = function () {
+            var city = WeatherInfo.getCityOfIndex(0);
+            if (!city) {
+                return "Off";
+            }
+            return city.disable?"Off":"On";
+        };
+
+        $scope.canDisableCurrentPosition = function () {
+            return WeatherInfo.getCityCount() > 1;
+        };
+
+        $scope.getCurrentPositionStr = function () {
+           return strCurrentLocation;
+        };
+
+        $translate(['LOC_OK', 'LOC_CANCEL', 'LOC_CURRENT', 'LOC_LOCATION'])
+            .then(
+                function (translations) {
+                    strOkay = translations.LOC_OK;
+                    strCancel = translations.LOC_CANCEL;
+                    strCurrent = translations.LOC_CURRENT;
+                    strLocation = translations.LOC_LOCATION;
+                },
+                function (translationIds) {
+                    console.log("Fail to translate : "+JSON.stringify(translationIds));
+                })
+            .finally(function () {
+                init();
+            });
     });

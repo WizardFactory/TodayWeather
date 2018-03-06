@@ -99,6 +99,10 @@
                         {{'LOC_REFRESH_INTERVAL'|translate}}
                         <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
+                <label class="item" ng-disabled="canDisableCurrentPosition()" ng-click="settingRadio('currentPosition')">
+                        {{strCurrentPosition}}
+                        <span style="float: right">{{getCurrentPositionStatus()|translate}}</span>
+                </label>
                 <a class="item item-input" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
                     <div class="input-label">
                         {{'LOC_REMOVE_ADS'|translate}}

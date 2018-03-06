@@ -3,7 +3,7 @@
  */
 
 angular.module('controller.setting.radio', [])
-    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util) {
+    .factory("radioList", function RadioList($rootScope, Units, TwStorage, Util, WeatherInfo) {
         var radioList = {};
         radioList.type = "";
         radioList.title = "";
@@ -36,6 +36,7 @@ angular.module('controller.setting.radio', [])
                         $rootScope.$broadcast('changeAirUnitEvent');
                     }
                 }
+                return true;
             }
             else if (this.type === 'startupPage' || this.type === 'refreshInterval') {
                 var settingsInfo = TwStorage.get("settingsInfo");
@@ -52,10 +53,20 @@ angular.module('controller.setting.radio', [])
                 if (this.type === 'refreshInterval') {
                     $rootScope.$broadcast('reloadEvent', 'setRefreshInterval');
                 }
+                return false;
+            }
+            else if (this.type === 'currentPosition') {
+                WeatherInfo.disableCity(!value);
+                if (value === true)  {
+                    WeatherInfo.setCityIndex(0);
+                    return true;
+                }
+                return false;
             }
             else {
                 Util.ga.trackEvent('action', 'error', 'unknown type='+this.type);
             }
+            return false;
         };
 
         radioList.getValue = function () {
@@ -84,8 +95,10 @@ angular.module('controller.setting.radio', [])
         $scope.list = radioList.list;
         $scope.data = {value: radioList.getValue()};
         $scope.valueChanged = function(item) {
-            radioList.setValue(item.value);
-            _resetUpdateTimeCities();
+            var needToResetUpdateTime = radioList.setValue(item.value);
+            if (needToResetUpdateTime) {
+                _resetUpdateTimeCities();
+            }
         };
     });
 
