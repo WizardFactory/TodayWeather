@@ -10,7 +10,7 @@
         </p>
     </ion-nav-title>
     <ion-content class="purchase-content" scroll="false" ng-if="accountLevel != 'premium'">
-        <div style="margin-top: 96px;">
+        <div style="margin-top: 72px;">
             <img class="item-center" width="96px" src="img/app_icon.png" style="margin-bottom: 16px">
             <div ng-style="::{'width':listWidth+'px'}" ng-if="product != undefined"
                  style="padding: 16px; border-width: 1px; border-color:#ddd; border-style: solid;">
@@ -40,7 +40,7 @@
                 </button>
             </div>
         </div>
-        <div style="position: absolute; bottom: 24px; width: 100%" ng-if="showRenew == true">
+        <div style="position: absolute; bottom: 16px; width: 100%" ng-if="showRenew == true">
             <button class="button button-outline button-positive item-center" style="opacity: 0.84" ng-click="order()" translate="LOC_RENEW">
             </button>
         </div>

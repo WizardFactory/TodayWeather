@@ -948,3 +948,16 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
     width: 1059px; //58.85px per col * 18
   }
 }
+
+/* iPhone X */
+@media only screen and (device-width : 375px) and (device-height : 812px) and (-webkit-device-pixel-ratio : 3)
+{
+  .purchase-content {
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+
+  .start-content {
+    margin-top: 32px;
+  }
+}
