@@ -237,6 +237,27 @@ class AqiConverter {
         return Math.round(ppb * molList[Mol] / 22.4);
     }
 
+    /**
+     *
+     * @param Mol
+     * @param value
+     * @returns {number}
+     */
+    static um2ppm (Mol, value) {
+        var molList = {
+            so2: 64.05,
+            no2: 45.99,
+            o3: 47.97,
+            co: 28.00
+        };
+
+        if (molList[Mol] == undefined) {
+            return -1;
+        }
+
+        return Math.round((value*22.4/molList[Mol]))/1000;
+    }
+
     static value2grade(airUnit, code, v) {
         var unit;
 

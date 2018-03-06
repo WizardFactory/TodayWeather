@@ -51,5 +51,22 @@ describe('unit test - aqi converter', function() {
             assert.equal(index, aqicn[name]);
         });
     });
+
+
+    it('test um2ppm', function(){
+        var aqicnValue = {
+            "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
+            "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
+            "co" : [0, 5000, 10000, 35000, 60000, 90000, 150000], //ug/m3 (avg 1h)
+            "so2" : [0, 150, 500, 650, 800, 1600, 2620]  //ug/m3
+        };
+
+        ['o3', 'no2', 'co', 'so2'].forEach(function (name) {
+           aqicnValue[name] = aqicnValue[name].map(function (value) {
+               return AqiConverter.um2ppm(name, value);
+           });
+        });
+        console.info(JSON.stringify(aqicnValue));
+    });
 });
 
