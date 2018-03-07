@@ -73,7 +73,7 @@ module.exports = {
     },
     apiServer: {
         url: (process.env.API_SERVER || 'http://localhost')
-    }
+    },
     image:{
         airkorea_korea_image:{
             coordi: {
