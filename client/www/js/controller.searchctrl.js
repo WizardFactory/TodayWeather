@@ -73,13 +73,14 @@ angular.module('controller.searchctrl', [])
                 var address;
                 var todayData;
 
-                if (city.disable) {
-                    continue;
-                }
-
-                address = WeatherUtil.getShortenAddress(city.address).split(",");
                 if (city.name) {
                     address = [city.name];
+                }
+                else if (city.address) {
+                    address = WeatherUtil.getShortenAddress(city.address).split(",");
+                }
+                else {
+                    address = [""];
                 }
 
                 if (city.currentPosition && city.address === null) {
@@ -122,7 +123,7 @@ angular.module('controller.searchctrl', [])
                 };
                 $scope.cityList.push(data);
                 loadWeatherData(i);
-                if (city.currentPosition) {
+                if (city.currentPosition && city.disable !== true) {
                     var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
                         console.info(JSON.stringify({'newGeoInfo':geoInfo}));
