@@ -248,6 +248,16 @@ angular.module('controller.tabctrl', [])
             $location.path('/units');
         };
 
+        $scope.goPushPage = function () {
+            var index = WeatherInfo.getCityIndex();
+            console.log('go setting-push fav index='+index);
+            var path = '/setting-push';
+            if (index != undefined) {
+                path += '?fav='+index;
+            }
+            $location.url(path);
+        };
+
         /**
          * getEnableCount가 0이면 호출되는데, #2018 이슈에서 enable city가 있는데 불리는 경우가 있어 보임
          * 기본값은 즐겨찾기 이동으로 변경하여, 사용자가 잘 못 클릭해도 현재위치가 추가되지 않게 방지
@@ -1173,6 +1183,20 @@ angular.module('controller.tabctrl', [])
             }
         }
 
+        $scope.$on('notificationEvent', function(event, data) {
+            console.log('got notification event');
+            var template = data.title+'<br>'+data.message;
+            $ionicPopup.show({
+                title: strWeather||'Notification',
+                template: template,
+                buttons: [{
+                    text: strOkay||'OK',
+                    type: 'button-dark'
+                }]
+            });
+        });
+
+        var strWeather = "Weather";
         var strOkay = "OK";
         var strCancel = "Cancel";
         var strError = "Error";
@@ -1187,7 +1211,7 @@ angular.module('controller.tabctrl', [])
 
         $translate(['LOC_ERROR', 'LOC_ADD_LOCATIONS', 'LOC_HOUR', 'LOC_CLOSE', 'LOC_RETRY',
             'LOC_FAIL_TO_GET_LOCATION_INFORMATION', 'LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION',
-            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL'])
+            'LOC_FAIL_TO_GET_WEATHER_INFO', 'LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI', 'LOC_OK', 'LOC_CANCEL', 'LOC_WEATHER'])
             .then(function (translations) {
                     strError = translations.LOC_ERROR;
                     strAddLocation = translations.LOC_ADD_LOCATIONS;
@@ -1199,6 +1223,7 @@ angular.module('controller.tabctrl', [])
                     strPleaseTurnOnLocationWiFi = translations.LOC_PLEASE_TURN_ON_LOCATION_AND_WIFI;
                     strOkay = translations.LOC_OK;
                     strCancel = translations.LOC_CANCEL;
+                    strWeather = translations.LOC_WEATHER;
                     $scope.strHour = translations.LOC_HOUR;
                 },
                 function (translationIds) {

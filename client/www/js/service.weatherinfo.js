@@ -249,11 +249,7 @@ angular.module('service.weatherinfo', [])
             }
 
             if (updatePush && window.push) {
-                var alarmInfo = window.push.getAlarm(index);
-
-                if (alarmInfo) {
-                    window.push.updateAlarm(index, alarmInfo.time);
-                }
+                window.push.updateCityInfo(index);
             }
 
             city.loadTime = new Date();

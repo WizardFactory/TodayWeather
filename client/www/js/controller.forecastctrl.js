@@ -1,6 +1,6 @@
 angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, Purchase, $stateParams,
-                                          $location, $ionicHistory, $translate, Units) {
+                                          $location, $ionicHistory, $translate, Units, Push) {
         var TABLET_WIDTH = 640;
         var ASPECT_RATIO_16_9 = 1.7;
         var bodyWidth;
@@ -456,6 +456,7 @@ angular.module('controller.forecastctrl', [])
                     return;
                 }
 
+                $scope.hasPush = Push.hasPushInfo(cityIndex);
                 $scope.currentPosition = cityData.currentPosition;
 
                 shortenAddress = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
@@ -476,6 +477,10 @@ angular.module('controller.forecastctrl', [])
                 $scope.dailyAqiForecast = undefined;
 
                 $scope.currentWeather = cityData.currentWeather;
+
+                $scope.hourlyAqiForecast = undefined;
+                $scope.dailyAqiForecast = undefined;
+
                 if (cityData.airInfo &&
                     cityData.airInfo.pollutants &&
                     cityData.airInfo.pollutants.aqi) {
@@ -774,5 +779,15 @@ angular.module('controller.forecastctrl', [])
             applyWeatherData();
         });
 
-        init();
+        var strOkay = "OK";
+        $translate(['LOC_OK'])
+            .then(function (translations) {
+                    strOkay = translations.LOC_OK;
+                },
+                function (translationIds) {
+                    console.log("Fail to translate : " + JSON.stringify(translationIds));
+                })
+            .finally(function () {
+                init();
+            });
     });
