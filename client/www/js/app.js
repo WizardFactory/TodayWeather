@@ -286,7 +286,13 @@ angular.module('starter', [
             $rootScope.weatherImgPath = window.theme.weather;
 
             WeatherInfo.loadCities();
-            Push.init();
+            if (Push.init() === true) {
+                //show notify alert info popup
+                setTimeout(function () {
+                    Util.ga.trackEvent('app', 'event', 'triggerShowAlertInfoEvent');
+                    $rootScope.$broadcast('showAlertInfoEvent');
+                }, 500);
+            }
             Purchase.init();
             Units.loadUnits();
 
