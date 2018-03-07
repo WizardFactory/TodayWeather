@@ -74,4 +74,18 @@ module.exports = {
     apiServer: {
         url: (process.env.API_SERVER || 'http://localhost')
     }
+    image:{
+        airkorea_korea_image:{
+            coordi: {
+                top_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT || '0'),
+                bottom_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT || '0'),
+                left_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON || '0'),
+                right_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON || '0')
+            },
+            size: {
+                width: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_WIDTH || '0'),
+                height: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT || '0')
+            }
+        }
+    }
 };

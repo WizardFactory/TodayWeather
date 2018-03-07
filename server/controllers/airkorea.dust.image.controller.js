@@ -11,13 +11,6 @@ var modelMinuDustFrcst = require('../models/modelMinuDustFrcst');
 var AqiConverter = require('../lib/aqi.converter');
 
 function AirkoreaDustImageController(){
-    // image default geocode
-    this.coordinate = {
-        top_left: {lat: 39.3769, lon: 123.9523},
-        top_right: {lat: 39.3769, lon: 130.6741},
-        bottom_left: {lat: 32.6942, lon: 123.9523},
-        bottom_right: {lat: 32.6942, lon: 130.6741}
-    };
     this.colorTable_pm10 = [
         {"r":104,"g":0,"b":0,"val":600},    {"r":142,"g":0,"b":0,"val":320},
         {"r":153,"g":0,"b":0,"val":280},    {"r":179,"g":0,"b":0,"val":260},
@@ -83,7 +76,7 @@ function AirkoreaDustImageController(){
     ];
     this.parser = new libAirkoreaImageParser();
     this.imagePixels = {};
-
+    this.coordinate = this.parser.getDefaultCoordi();
     return this;
 }
 /*
@@ -153,6 +146,7 @@ AirkoreaDustImageController.prototype._isValidGeocode = function(lat, lon){
     if(lon > this.coordinate.top_right.lon) return false;
     return true;
 };
+
 
 AirkoreaDustImageController.prototype.getDustInfo = function(lat, lon, type, aqiUnit, callback){
     var self = this;

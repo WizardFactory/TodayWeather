@@ -5,19 +5,46 @@
 
 var getPixels = require('get-pixels');
 //var fs = require('fs');
+var airkoreaDustImage = require('../config/config').image.airkorea_korea_image;
+
 
 
 function AirkoreaImageParser(){
-    this.default_coordinate = {
-        top_left: {lat: 39.3769, lon: 123.9523},
-        top_right: {lat: 39.3769, lon: 130.6741},
-        bottom_left: {lat: 32.6942, lon: 123.9523},
-        bottom_right: {lat: 32.6942, lon: 130.6741}
-    };
     //self.map_area = {left:12, right:597, top: 72, bottom:790}
     this.map_area = {left:78, right:663, top: 80, bottom:798};
 
 }
+
+AirkoreaImageParser.prototype.getDefaultCoordi = function(){
+    var coordi = airkoreaDustImage.coordi;
+    return {
+        top_left:{
+            lat: parseFloat(coordi.top_lat),
+            lon: parseFloat(coordi.left_lon)
+        },
+        top_right:{
+            lat: parseFloat(coordi.top_lat),
+            lon: parseFloat(coordi.right_lon)
+        },
+        bottom_left:{
+            lat: parseFloat(coordi.bottom_lat),
+            lon: parseFloat(coordi.left_lon)
+        },
+        bottom_right:{
+            lat: parseFloat(coordi.bottom_lat),
+            lon: parseFloat(coordi.right_lon)
+        }
+    };
+};
+
+AirkoreaImageParser.prototype.isValidImage = function(width, height){
+    var size = {
+        width : parseInt(airkoreaDustImage.size.width),
+        height: parseInt(airkoreaDustImage.size.height)
+    };
+
+    return (size.width === width && size.height === height);
+};
 
 AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
     var self = this;
@@ -29,6 +56,11 @@ AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
                 cb(err);
             }
             return;
+        }
+
+        if(!self.isValidImage(pixels.shape[1], pixels.shape[2])){
+            log.error('ImgParser> Invalid Image size :', pixels.shape[1], pixels.shape[2]);
+            return cb('INVALID_IMAGE');
         }
 
         var result = {
@@ -82,12 +114,13 @@ AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
         }
         */
 
+        var default_coordinate = self.getDefaultCoordi();
         // map's width&height (count of pixels)
         result.map_width = self.map_area.right - self.map_area.left;
         result.map_height = self.map_area.bottom - self.map_area.top;
         if(coordnate === null){
-            result.map_pixel_distance_width = parseFloat((self.default_coordinate.top_right.lon - self.default_coordinate.top_left.lon) / result.map_width);
-            result.map_pixel_distance_height = parseFloat((self.default_coordinate.top_left.lat - self.default_coordinate.bottom_left.lat) / result.map_height);
+            result.map_pixel_distance_width = parseFloat((default_coordinate.top_right.lon - default_coordinate.top_left.lon) / result.map_width);
+            result.map_pixel_distance_height = parseFloat((default_coordinate.top_left.lat - default_coordinate.bottom_left.lat) / result.map_height);
         }else{
             result.map_pixel_distance_width = parseFloat((coordnate.top_right.lon - coordnate.top_left.lon) / result.map_width);
             result.map_pixel_distance_height = parseFloat((coordnate.top_left.lat - coordnate.bottom_left.lat) / result.map_height);
