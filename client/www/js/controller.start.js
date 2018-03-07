@@ -136,7 +136,6 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
 
     function _makeFavoriteList() {
         var favoriteList1 = [
-            {name: $translate.instant("LOC_FIND_BY_LOCATION")},
             {name: "서울", country: "KR", address: "대한민국 서울특별시", location: {lat: 37.567, long: 126.978}},
             {name: "New York", country: "US", address: "New York, NY, United States", location: {lat: 43.299, long: -74.218}},
             {name: "東京", country: "JP", address: "日本 東京", location: {lat: 35.709, long: 139.732}},
@@ -455,73 +454,85 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             }
         }
         else if (isLocationEnabled === false) {
-            if (window.cordova && cordova.plugins.locationAccuracy) {
-                cordova.plugins.locationAccuracy.request (
-                    function (success) {
-                        Util.ga.trackEvent("position", "status", "successUserAgreed");
-                        //메세지 없이 통과시키고, reload by locationOn.
-                        deferred.reject(null);
-                    },
-                    function (error) {
-                        Util.ga.trackEvent("position", "error", error.message);
-                        msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
-                        deferred.reject(msg);
-                    },
-                    cordova.plugins.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+            if (isLocationAuthorized === true) {
+                if (window.cordova && cordova.plugins.locationAccuracy) {
+                    cordova.plugins.locationAccuracy.request(
+                        function (success) {
+                            Util.ga.trackEvent("position", "status", "successUserAgreed");
+                            //메세지 없이 통과시키고, reload by locationOn.
+                            deferred.reject(null);
+                        },
+                        function (error) {
+                            Util.ga.trackEvent("position", "error", error.message);
+                            msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                            deferred.reject(msg);
+                        },
+                        cordova.plugins.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+                }
+                else {
+                    Util.ga.trackEvent("plugin", "error", "loadLocationAccuracy");
+                    msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                    deferred.reject(msg);
+                }
             }
-            else {
-                Util.ga.trackEvent("plugin", "error", "loadLocationAccuracy");
-                msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+            else if (isLocationAuthorized === false) {
+                msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                 deferred.reject(msg);
+            }
+            else if (isLocationAuthorized === undefined) {
+                if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                    // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
+                    // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
+
+                    cordova.plugins.diagnostic.getLocationAuthorizationStatus(function(status){
+                        switch(status){
+                            case cordova.plugins.diagnostic.permissionStatus.DENIED:
+                                console.log("Permission denied");
+                                $scope.setLocationAuthorizationStatus(status);
+                                msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                deferred.reject(msg);
+                                break;
+                            case cordova.plugins.diagnostic.permissionStatus.GRANTED:
+                                console.error("Permission granted always");
+                                break;
+                            case cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE:
+                                console.error("Permission granted only when in use");
+                                break;
+                            case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+                                console.log("Permission not requested");
+                                cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
+                                    if (ionic.Platform.isAndroid()) {
+                                        $scope.setLocationAuthorizationStatus(status);
+                                        if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                            msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                            deferred.reject(msg);
+                                        }
+                                        else {
+                                            console.log('status='+status+ ' by request location authorization and reload by resume');
+                                            deferred.reject(null);
+                                        }
+                                    }
+                                    else {
+                                        //메세지 없이 통과시키고, reload by locationOn.
+                                        deferred.reject(null);
+                                    }
+                                }, function (error) {
+                                    Util.ga.trackEvent('position', 'error', 'request location authorization');
+                                    Util.ga.trackException(error, false);
+                                    deferred.reject(null);
+                                }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
+                                break;
+                        }
+                    }, function(error){
+                        console.error("The following error occurred: "+error);
+                    });
+                }
+                else {
+                    deferred.reject(null);
+                }
             }
         }
     }
-
-    function _onSearchCurrentPosition() {
-        Util.ga.trackEvent('position', 'get', 'OnSearch');
-        //$scope.isEditing = false;
-
-        showLoadingIndicator();
-
-        updateCurrentPosition().then(function(geoInfo) {
-            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
-                if (saveCity(weatherData, geoInfo, false) == false) {
-                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                }
-                else {
-                    close();
-                }
-                $ionicLoading.hide();
-            }, function (err) {
-                Util.ga.trackEvent('weather', 'error', err);
-                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
-                $ionicLoading.hide();
-            });
-
-        }, function(msg) {
-            hideLoadingIndicator();
-            if (msg !== null) {
-                $scope.showRetryConfirm(strError, msg, 'search');
-            }
-            else {
-                $scope.$broadcast('searchCurrentPositionEvent');
-            }
-        });
-    }
-
-    $scope.$on('searchCurrentPositionEvent', function(event) {
-        Util.ga.trackEvent('action', 'event', 'searchCurrentPositionEvent');
-        _onSearchCurrentPosition();
-    });
-
-    /**
-     * get geoinfo of current position
-     * @constructor
-     */
-    $scope.OnSearchCurrentPosition = function() {
-        Util.ga.trackEvent('action', 'click', 'OnSearchCurrentPosition');
-        _onSearchCurrentPosition();
-    };
 
     function saveCity(weatherData, geoInfo, currentPosition) {
         var city = WeatherUtil.convertWeatherData(weatherData);
@@ -554,29 +565,23 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     }
 
     $scope.OnGetWeather = function (index) {
-        if (index == 0) {
-            $scope.OnSearchCurrentPosition();
-            //get location
-        }
-        else {
-            Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
-            $ionicLoading.show();
-            var geoInfo = $scope.favoriteCityList[index];
-            WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
+        Util.ga.trackEvent('action', 'click', 'OnGetWeather', index);
+        $ionicLoading.show();
+        var geoInfo = $scope.favoriteCityList[index];
+        WeatherUtil.getWeatherByGeoInfo(geoInfo).then(function (weatherData) {
 
-                if (saveCity(weatherData, geoInfo) == false) {
-                    $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
-                }
-                else {
-                    close();
-                }
-                $ionicLoading.hide();
-            }, function (err) {
-                Util.ga.trackEvent('weather', 'error', err);
-                $rootScope.showAlert(strError, strFailToGetWeatherInfo);
-                $ionicLoading.hide();
-            });
-        }
+            if (saveCity(weatherData, geoInfo) == false) {
+                $rootScope.showAlert(strError, strAlreadyTheSameLocationHasBeenAdded);
+            }
+            else {
+                close();
+            }
+            $ionicLoading.hide();
+        }, function (err) {
+            Util.ga.trackEvent('weather', 'error', err);
+            $rootScope.showAlert(strError, strFailToGetWeatherInfo);
+            $ionicLoading.hide();
+        });
     };
 
     function _onUseLocationService() {

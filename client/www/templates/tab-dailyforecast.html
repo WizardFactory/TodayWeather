@@ -5,176 +5,156 @@
     <ion-nav-title>
         <p class="title dailyforecast-header">
             <span>{{address}}</span>
-            <i ng-if="currentPosition && showLoadingIndicator != true" class="material-icons"
+            <i class="material-icons" ng-if="currentPosition && showLoadingIndicator != true"
                ng-click="switchToLocationSettings()">{{isLocationEnabled()?'&#xE0C8;':'&#xE0C7;'}}</i>
-            <ion-spinner ng-if="showLoadingIndicator" icon="bubbles"></ion-spinner>
+            <ion-spinner icon="bubbles" ng-if="showLoadingIndicator"></ion-spinner>
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
         <button class="button button-icon button-positive icon ion-ios-upload-outline" ng-if="!isAndroid()" ng-click="doTabShare()"></button>
         <button class="button button-icon button-positive icon ion-android-share-alt" ng-if="isAndroid()" ng-click="doTabShare()"></button>
     </ion-nav-buttons>
-    <ion-content delegate-handle="body" direction="y"
-                 zooming="false" scrollbar-y="false" scrollbar-x="false" has-bouncing="false" tabs-shrink>
-        <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()"
-             class="row row-no-padding" ng-style="{'height':headerHeight+'px'}">
-            <div class="cityArrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
-                <span class="icon-left ion-chevron-left"></span>
+    <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
+                 has-bouncing="false" tabs-shrink class="main-content">
+        <div class="card">
+            <div md-page-header on-swipe-left="onSwipeLeft()" on-swipe-right="onSwipeRight()" class="row row-no-padding"
+                 ng-style="{'height':headerHeight+'px'}">
+                <div class="main-box-arrow" ng-click="onSwipeRight()" ng-if="cityCount > 1">
+                    <span class="icon-left ion-chevron-left"></span>
+                </div>
+                <div class="main-box" ng-if="currentWeather">
+                    <div class="main-box-forecast-content">
+                        <div ng-style="::{'font-size':bigDigitSize+'px'}">
+                            {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}">˚</span>
+                        </div>
+                        <div style="margin: auto">
+                            <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                        </div>
+                    </div>
+                    <div class="main-box-summary">
+                        {{summary}}<br ng-if="summaryAir">
+                        <span ng-if="summaryAir" ng-click="goAirInfoPage('aqi')">{{summaryAir}}</span>
+                    </div>
+                </div>
+                <div class="main-box-arrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
+                    <span class="icon-right ion-chevron-right"></span>
+                </div>
             </div>
-            <div class="topMainBox" ng-if="currentWeather">
-                <div class="row row-no-padding">
-                    <div style="margin: auto">
+            <div id="chartScroll" class="chart-scroll">
+                <div ng-style="{'width':dayWidth +'px'}">
+                    <div class="chart-header" ng-if="dayChart[0].values">
                         <div class="row row-no-padding">
-                            <p ng-style="::{'font-size':bigDigitSize+'px'}" style="margin: 0; font-weight:300">
-                                {{getTemp(currentWeather.t1h)}}<span ng-if="currentWeather" ng-style="::{'font-size':bigDigitSize/2+'px'}" style="vertical-align: super;">˚</span>
-                            </p>
-                            <div style="text-align: left; margin: auto">
-                                <img id="imgBigSkyStateSize" ng-style="::{'height':bigSkyStateSize+'px'}" ng-src="{{::weatherImgPath}}/{{currentWeather.skyIcon}}.png">
+                            <div class="chart-small-title" ng-repeat="value in dayChart[0].values">
+                                {{dayToString(value.dayOfWeek)|translate}}
+                            </div>
+                        </div>
+                        <div class="row row-no-padding">
+                            <div class="chart-title" ng-repeat="value in dayChart[0].values">
+                                {{value.date.substr(6,2)}}
                             </div>
                         </div>
                     </div>
+                    <div ng-mid-chart class="chart-content" ng-style="{'height':chartMidHeight+'px'}"></div>
                 </div>
-                <p class="textFont" style="margin: 0; font-size: 17px;">{{summary}}
-                    <br ng-if="summaryAir"><span ng-if="summaryAir" ng-click="goAirInfoPage('aqi')">{{summaryAir}}</span></p>
-            </div>
-            <div class="cityArrow" ng-click="onSwipeLeft()" ng-if="cityCount > 1">
-                <span class="icon-right ion-chevron-right"></span>
             </div>
         </div>
-        <div class="main-content mid-forecast">
-            <div class="col extend-content">
-                <div id="chartScroll" style="overflow: auto;white-space: nowrap;">
-                    <div class="col chartBox" style="margin: auto" ng-style="{'width':dayWidth +'px'}">
-                        <div id="midTable" class="col table-content" ng-if="dayChart[0].values">
-                            <div class="row row-no-padding" style="flex: 1; text-align: center; border-bottom: 1px solid rgba(254,254,254,0.5);">
-                                <div class="col table-items" ng-repeat="value in dayChart[0].values">
-                                    <p class="body1" style="margin: 0;"
-                                       ng-style="{'opacity': value.fromToday===0?'1':'0.84'}">{{dayToString(value.dayOfWeek)|translate}}
-                                    </p>
+        <div class="card" ng-if="hasDustForecast()">
+            <div class="card-title">{{"LOC_DAILY_AQI_FORECAST"|translate}}</div>
+            <table class="rowgroup-vspacing-aqi-box" ng-if="dailyAqiForecast && dailyAqiForecast.length" ng-click="goAirInfoPage('aqi')">
+                <tr>
+                    <td ng-repeat="day in dailyAqiForecast">
+                        <p>{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.maxGrade)" class="material-icons" ng-style="{'color': grade2Color(day.maxGrade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.maxGrade)}">{{day.maxStr}}</span>
+                    </td>
+                </tr>
+            </table>
+            <table class="rowgroup-vspacing-aqi-box" ng-if="dailyAqiForecast == undefined && dayChart[0].values">
+                <tr ng-if="($index == 7 || $index == 8) && day.dustForecast" ng-repeat="day in dayChart[0].values">
+                    <td colspan="2">
+                        <p>{{dayToFullString(day.dayOfWeek)|translate}}</p>
+                        <div>
+                            <i>{{day.date.substr(6,2)}}</i><br>
+                            <b>{{getDayString(day.fromToday)|translate}}</b>
+                        </div>
+                    </td>
+                    <td ng-click="goAirInfoPage('pm25')">
+                        <p>{{"LOC_PM25"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.dustForecast.pm25Grade)" class="material-icons" ng-style="{'color': grade2Color(day.dustForecast.pm25Grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.dustForecast.pm25Grade)}">{{day.dustForecast.pm25Str}}</span>
+                    </td>
+                    <td ng-click="goAirInfoPage('pm10')">
+                        <p>{{"LOC_PM10"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.dustForecast.pm10Grade)" class="material-icons" ng-style="{'color': grade2Color(day.dustForecast.pm10Grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.dustForecast.pm10Grade)}">{{day.dustForecast.pm10Str}}</span>
+                    </td>
+                    <td ng-if="day.dustForecast.o3Grade != undefined" ng-click="goAirInfoPage('o3')">
+                        <p>{{"LOC_O3"|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.dustForecast.o3Grade)" class="material-icons" ng-style="{'color': grade2Color(day.dustForecast.o3Grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.dustForecast.o3Grade)}">{{day.dustForecast.o3Str}}</span>
+                    </td>
+                </tr>
+           </table>
+        </div>
+        <div class="card" ng-if="dayChart">
+            <div class="card-title">{{"LOC_DETAIL_WEATHER"|translate}}</div>
+            <div class="card-scroll">
+                <table class="rowgroup-vspacing-box">
+                    <tr>
+                        <td ng-repeat="day in dayChart[0].values" ng-if="checkDailyDetailWeather(day)" style="min-width: 132px;">
+                            <div>
+                                <i class="icon ion-calendar"> {{convertMMDD(day.dateObj)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</i>
+                            </div>
+                            <div ng-if="day.reh">
+                                <img ng-src="{{::iconsImgPath}}/humidity_{{day.reh?day.reh - day.reh%10:'00'}}.png">
+                                <div>
+                                    <div>{{day.reh}}<small>%</small></div>
+                                    <span class="sub-text">{{"LOC_HUMIDITY"|translate}}</span>
                                 </div>
                             </div>
-                        </div>
-                        <div ng-mid-chart class="chart-content" ng-style="{'height':chartMidHeight+'px'}"></div>
-                    </div>
-                </div>
-                <div class="col" style="margin: 0; padding: 0">
-                   <hr ng-if="hasDustForecast()" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                   <p ng-if="hasDustForecast()" class="caption" style="margin: 5px;">{{"LOC_DAILY_AQI_FORECAST"|translate}}</p>
-
-                    <table style="width: 100%" ng-if="dailyAqiForecast && dailyAqiForecast.length" ng-click="goAirInfoPage('aqi')">
-                        <tr>
-                            <td style="text-align: center; margin: auto" ng-repeat="day in dailyAqiForecast">
-                                <p class="body1" style="margin: 0;">{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
-                                <p class="display1" style="margin: 0; opacity: 1">
-                                    <i class="material-icons" style="font-size: 32px;"
-                                       ng-bind-html="getSentimentIcon(day.maxGrade)">
-                                    </i>
-                                </p>
-                                <p class="body2" style="margin: 0;">{{day.maxStr}}</p>
-                            </td>
-                        </tr>
-                    </table>
-                    <table style="width: 100%" ng-if="dailyAqiForecast == undefined && dayChart[0].values">
-                       <tr ng-if="($index == 7 || $index == 8) && day.dustForecast"
-                           ng-repeat="day in dayChart[0].values">
-                           <td style="text-align: center; margin: auto">
-                               <p class="body1" style="margin: 0;">{{dayToFullString(day.dayOfWeek)|translate}}</p>
-                               <div style="border-right: 1px rgba(254, 254, 254, .4) solid;">
-                                   <p class="display1" style="margin: 0; opacity: 0.84">{{day.date.substr(6,2)}}</p>
-                                   <p class="body2" style="margin: 0 0 5px;">{{getDayString(day.fromToday)|translate}}</p>
-                               </div>
-                           </td>
-                           <td style="text-align: center; margin: auto" ng-click="goAirInfoPage('pm25')">
-                               <p class="body1" style="margin: 0;">{{"LOC_PM25"|translate}}</p>
-                               <p class="display1" style="margin: 0; opacity: 1">
-                                   <i class="material-icons" style="font-size: 32px"
-                                      ng-bind-html="getSentimentIcon(day.dustForecast.pm25Grade)">
-                                   </i>
-                               </p>
-                               <p class="body2"
-                                  style="margin: 0 0 5px;">{{day.dustForecast.pm25Str}}</p>
-                           </td>
-                           <td style="text-align: center; margin: auto" ng-click="goAirInfoPage('pm10')">
-                               <p class="body1" style="margin: 0;">{{"LOC_PM10"|translate}}</p>
-                               <p class="display1" style="margin: 0; opacity: 1">
-                                   <i class="material-icons" style="font-size: 32px;"
-                                      ng-bind-html="getSentimentIcon(day.dustForecast.pm10Grade)"></i>
-                               </p>
-                               <p class="body2"
-                                  style="margin: 0 0 5px;">{{day.dustForecast.pm10Str}}</p>
-                           </td>
-                           <td style="text-align: center; margin: auto" ng-if="day.dustForecast.o3Grade != undefined" ng-click="goAirInfoPage('o3')">
-                               <p class="body1" style="margin: 0;">{{"LOC_O3"|translate}}</p>
-                               <p class="display1" style="margin: 0; opacity: 1">
-                                   <i class="material-icons" style="font-size: 32px"
-                                      ng-bind-html="getSentimentIcon(day.dustForecast.o3Grade)">
-                                   </i>
-                               </p>
-                               <p class="body2"
-                                  style="margin: 0 0 5px;">{{day.dustForecast.o3Str}}</p>
-                           </td>
-                       </tr>
-                   </table>
-                   <hr ng-if="dayChart" style="margin: 5px; border: 0; border-top:1px solid rgba(254,254,254,0.6);">
-                   <p ng-if="dayChart" class="caption" style="margin: 5px 5px 0 5px;">{{"LOC_DETAIL_WEATHER"|translate}}</p>
-                   <ion-scroll delegate-handle="weeklyTable" direction="x" zooming="false" has-bouncing="false"
-                               scrollbar-x="false" scrollbar-y="false" style="width: 100%; height: 100%">
-                       <div class="row" style="margin: auto;">
-                           <div style="margin: 0 auto; min-width: 132px" ng-if="checkDailyDetailWeather(day)" ng-repeat="day in dayChart[0].values">
-                               <div class="row" style="margin: 0">
-                                   <a class="icon ion-calendar" style="color: white; margin: 0 12px; min-width: 90px"> {{convertMMDD(day.dateObj)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</a>
-                               </div>
-                               <div class="row" style="margin: 0" ng-if="day.reh">
-                                   <img ng-src="{{::iconsImgPath}}/humidity_{{day.reh?day.reh - day.reh%10:'00'}}.png" style="height: 24px; margin: auto 0;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{day.reh}}<small>%</small></p>
-                                       <span class="caption">{{"LOC_HUMIDITY"|translate}}</span>
-                                   </div>
-                               </div>
-                               <div class="row subheading" style="margin: 0" ng-if="day.wsd">
-                                   <img ng-src="{{::iconsImgPath}}/wind_and_cloud.svg" style="height: 22px; margin: auto 1px;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{day.wsd}}<small>{{getWindSpdUnit()}}</small></p>
-                                       <span class="caption">{{"LOC_WIND"|translate}}</span>
-                                   </div>
-                               </div>
-                               <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['pop'])">
-                                   <img ng-src="{{::iconsImgPath}}/umbrella.png" style="height: 24px; margin: auto 0;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{day.pop}}<small>%</small></p>
-                                       <span class="caption">{{"LOC_PROBABILITY_OF_PRECIPITATION"|translate}}</span>
-                                   </div>
-                               </div>
-                               <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['ultrvGrade'])">
-                                   <img ng-src="{{::iconsImgPath}}/ultrv.png" style="height: 24px; margin: auto 0;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{day.ultrvStr}}</p>
-                                       <span class="caption">{{"LOC_UV"|translate}}</span>
-                                   </div>
-                               </div>
-                               <div class="row subheading" style="margin: 0" ng-if="day.fsnGrade != undefined">
-                                   <img ng-src="{{::iconsImgPath}}/fish.svg" style="height: 20px; margin: auto 2px;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{day.fsnStr}}</p>
-                                       <span class="caption">{{"LOC_FOOD_POISONING"|translate}}</span>
-                                   </div>
-                               </div>
-                               <div class="row subheading" style="margin: 0" ng-if="hasPropertyInThreeDays(['pty', 'rn1', 'r06', 's06'])">
-                                   <img ng-src="{{::iconsImgPath}}/glass_with_water.svg" style="height: 20px; margin: auto 2px;">
-                                   <div style="margin: auto 8px">
-                                       <p class="subheading" style="margin: 0;">{{getRainSnowFall(day)}}<small>{{getPrecipUnit()}}</small></p>
-                                       <span class="caption" ng-if="getRainSnowFallSymbol(day)=='snow'">{{'LOC_DAILY_SNOWFALL'|translate}}</span>
-                                       <span class="caption" ng-if="getRainSnowFallSymbol(day)=='rain'">{{'LOC_DAILY_PRECIPITATION'|translate}}</span>
-                                   </div>
-                               </div>
-                           </div>
-                       </div>
-                   </ion-scroll>
-               </div>
-           </div>
+                            <div ng-if="day.wsd">
+                                <img ng-src="{{::iconsImgPath}}/wind.png">
+                                <div>
+                                    <div>{{day.wsd}}<small>{{getWindSpdUnit()}}</small></div>
+                                    <span class="sub-text">{{"LOC_WIND"|translate}}</span>
+                                </div>
+                            </div>
+                            <div ng-if="hasPropertyInThreeDays(['pop'])">
+                                <img ng-src="{{::iconsImgPath}}/umbrella.png">
+                                <div>
+                                    <div>{{day.pop}}<small>%</small></div>
+                                    <span class="sub-text">{{"LOC_PROBABILITY_OF_PRECIPITATION"|translate}}</span>
+                                </div>
+                            </div>
+                            <div ng-if="hasPropertyInThreeDays(['ultrvGrade'])">
+                                <img ng-src="{{::iconsImgPath}}/ultrv.png">
+                                <div>
+                                    <div>{{day.ultrvStr}}</div>
+                                    <span class="sub-text">{{"LOC_UV"|translate}}</span>
+                                </div>
+                            </div>
+                            <div ng-if="day.fsnGrade != undefined">
+                                <img ng-src="{{::iconsImgPath}}/food_poisoning.png">
+                                <div>
+                                    <div>{{day.fsnStr}}</div>
+                                    <span class="sub-text">{{"LOC_FOOD_POISONING"|translate}}</span>
+                                </div>
+                            </div>
+                            <div ng-if="hasPropertyInThreeDays(['pty', 'rn1', 'r06', 's06'])">
+                                <img ng-src="{{::iconsImgPath}}/precipitation.png">
+                                <div>
+                                    <div>{{getRainSnowFall(day)}}<small>{{getPrecipUnit()}}</small></div>
+                                    <span class="sub-text" ng-if="getRainSnowFallSymbol(day)=='snow'">{{'LOC_DAILY_SNOWFALL'|translate}}</span>
+                                    <span class="sub-text" ng-if="getRainSnowFallSymbol(day)=='rain'">{{'LOC_DAILY_PRECIPITATION'|translate}}</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
-        <div ng-if="source == 'DSF'" style="width: 100%; text-align: center; background-color: rgba(0,0,0,0.05);">
-            <img src="img/poweredby_darksky_darkbackground.png" width="160px" ng-click="openUrl('https://darksky.net/poweredby')">
+        <div ng-if="source == 'DSF'" style="text-align: center;">
+            <img src="img/poweredby_darksky.png" width="160px" ng-click="openUrl('https://darksky.net/poweredby')">
         </div>
     </ion-content>
 </ion-view>

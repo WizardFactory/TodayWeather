@@ -472,6 +472,9 @@ angular.module('controller.forecastctrl', [])
                 $scope.timeWidth = colWidth * cityData.timeTable.length;
                 $scope.dayWidth = colWidth * dayTable.length;
 
+                $scope.hourlyAqiForecast = undefined;
+                $scope.dailyAqiForecast = undefined;
+
                 $scope.currentWeather = cityData.currentWeather;
                 if (cityData.airInfo &&
                     cityData.airInfo.pollutants &&

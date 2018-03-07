@@ -3,87 +3,8 @@ angular.module('controller.air', [])
                                      $ionicScrollDelegate, $ionicHistory) {
 
         var TABLET_WIDTH = 640;
-
         var cityData;
         var aqiCode;
-        var airUnit;
-
-        var aqiStandard = {
-                "airkorea": {
-                    "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
-                    "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
-                    "value": {
-                        "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
-                        "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
-                        "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
-                        "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
-                        "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
-                        "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
-                        "aqi" : [0, 50, 100, 250, 500]      //index
-                    }
-                },
-                "airkorea_who": {
-                    "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
-                    "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
-                    "value": {
-                        "pm25" : [0, 15, 25, 50, 500],      //ug/m3
-                        "pm10" : [0, 30, 50, 100, 600],     //ug/m3
-                        "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm
-                        "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm
-                        "co" : [0, 2, 9, 15, 50],           //ppm
-                        "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
-                        "aqi" : [0, 50, 100, 250, 500]      //ppm
-                    }
-                },
-                "airnow": {
-                    "color": ['#00c73c', '#d2d211',
-                        '#ff6f00', '#FF0000',
-                        '#b4004b', '#940021'],
-                    "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
-                        'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
-                    "value": {
-                        "pm25" : [0, 12.0, 35.4, 55.4, 150.4, 250.4, 500.4],    //ug/m3 (avg 24h)
-                        "pm10" : [0, 54, 154, 254, 354, 424, 604],              //ug/m3 (avg 24h)
-                        "o3" : [0, 0.054, 0.124, 0.164, 0.204, 0.404, 0.604],   //ppm (avg 8h, 1h)
-                        "no2" : [0, 0.053, 0.1, 0.36, 0.649, 1.249, 2.049],     //ppm (avg 1h)
-                        "co" : [0, 4.4, 9.4, 12.4, 15.4, 30.4, 50.4],           //ppm (avg 8h)
-                        "so2" : [0, 0.035, 0.75, 0.185, 0.304, 0.604, 1.004],   //ppm (avg 1h, 24h)
-                        "aqi" : [0, 50, 100, 150, 200, 300, 500]                //index
-                        //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
-                        //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
-                        //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
-                    }
-                },
-                "aqicn": {
-                    "color": ['#00c73c', '#d2d211',
-                        '#ff6f00', '#FF0000',
-                        '#b4004b', '#940021'],
-                    "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS',
-                        'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY', 'LOC_HAZARDOUS'],
-                    "value": {
-                        "pm25" : [0, 35, 75, 115, 150, 250, 500],    //ug/m3 (avg 1h)
-                        "pm10" : [0, 50, 150, 250, 350, 420, 600],   //ug/m3 (avg 1h)
-                        "o3" : [0, 160, 200, 300, 400, 800, 1200],    //ug/m3 (avg 1h)
-                        "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
-                        "co" : [0, 5, 10, 35, 60, 90, 150],          //ug/m3 (avg 1h)
-                        "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
-                        "aqi" : [0, 50, 100, 150, 200, 300, 500]
-                    }
-                }
-            };
-
-        $scope.getAqiStnWidth = function (len) {
-            var w;
-            var r;
-            try {
-                w = angular.element(document.getElementById("aqistd")).prop('offsetWidth');
-                r = (w-len*2)/len;
-            }
-            catch (err) {
-                Util.ga.trackException(err, false);
-            }
-            return r;
-        };
 
         $scope.getLabelPosition = function (grade, val) {
             var w;
@@ -101,12 +22,12 @@ angular.module('controller.air', [])
                 count = $scope.aqiStandard.length;
                 gradeW = w/count;
                 if (grade >= 2) {
-                    startV = $scope.aqiStandard[grade-2].value;
+                    startV = $scope.aqiStandard[grade-2].value[aqiCode];
                 }
                 else {
                     startV = 0;
                 }
-                endV = $scope.aqiStandard[grade-1].value;
+                endV = $scope.aqiStandard[grade-1].value[aqiCode];
 
                 diff = (val - startV)/(endV-startV);
                 gradeD = diff*gradeW;
@@ -124,68 +45,6 @@ angular.module('controller.air', [])
                 x=0;
             }
             return x;
-        };
-
-        /**
-         * 데이터가 없는 경우 아무것도 그리지 않음.
-         * @param grade
-         * @returns {string}
-         */
-        $scope.grade2Color = function (grade) {
-            var color = 'white';
-            try {
-                if (!$scope.hasOwnProperty('aqiStandard') || grade == undefined) {
-                    return color;
-                }
-                if (grade > $scope.aqiStandard.length) {
-                    Util.ga.trackEvent('air', 'error', 'invalidGradeAtGrade2Color', grade);
-                    grade = $scope.aqiStandard.length;
-                }
-                color = $scope.aqiStandard[grade-1].color;
-            }
-            catch (err) {
-                Util.ga.trackException(err, false);
-            }
-            return color;
-        };
-
-        /**
-         * 데이터가 없는 경우 검은 아이콘 표시
-         * @param grade
-         * @returns {string}
-         */
-        $scope.mainGrade2Color = function (grade) {
-            var color = '';
-            try {
-                if (!$scope.hasOwnProperty('aqiStandard') || grade == undefined) {
-                    return color;
-                }
-                if (grade > $scope.aqiStandard.length) {
-                    Util.ga.trackEvent('air', 'error', 'invalidGradeAtMainGrade2Color', grade);
-                    grade = $scope.aqiStandard.length;
-                }
-                color = $scope.aqiStandard[grade-1].color;
-            }
-            catch (err) {
-                Util.ga.trackException(err, false);
-            }
-            return color;
-        };
-
-        $scope.airkoreaGrade2Color = function (grade) {
-            var color = '';
-            try {
-                var airkoreaColor = aqiStandard.airkorea.color;
-                if (grade > airkoreaColor.length) {
-                    Util.ga.trackEvent('air', 'error', 'invalidGradeAtAirekoreaGrade2Color', grade);
-                    grade = airkoreaColor.length;
-                }
-                color = airkoreaColor[grade-1];
-            }
-            catch (err) {
-                Util.ga.trackException(err, false);
-            }
-            return color;
         };
 
         $scope.getAirCodeUnit = function (code) {
@@ -295,7 +154,7 @@ angular.module('controller.air', [])
                         obj.code = propertyName;
                         list.push(obj);
                     }
-                    else if (pollutants.hasOwnProperty(propertyName)) {
+                    else if (pollutants && pollutants.hasOwnProperty(propertyName)) {
                         obj.name = _getAQIname(propertyName);
                         obj.code = propertyName;
                         obj.value = '-';
@@ -307,30 +166,6 @@ angular.module('controller.air', [])
                 Util.ga.trackException(err, false);
             }
             return list;
-        }
-
-        function _setUnit() {
-            try {
-                airUnit = Units.getUnit('airUnit');
-                Util.ga.trackEvent('air', 'setUnit', airUnit);
-
-                var length = aqiStandard[airUnit].color.length;
-                var list = [];
-                for (var i=0; i<length; i++) {
-                    var obj = {
-                        "color": aqiStandard[airUnit].color[i],
-                        "str": aqiStandard[airUnit].str[i],
-                        "value": aqiStandard[airUnit].value[aqiCode][i+1]
-                    };
-                    list.push(obj);
-                }
-
-                $scope.aqiStandard = list;
-                console.info($scope.aqiStandard);
-            }
-            catch (err) {
-                Util.ga.trackException(err, false);
-            }
         }
 
         function _setMainAqiCode(code) {
@@ -420,8 +255,6 @@ angular.module('controller.air', [])
                 _setMainAqiCode('aqi');
             }
 
-            _setUnit();
-
             if (WeatherInfo.getEnabledCityCount() === 0) {
                 Util.ga.trackEvent('city', 'error', 'No enabled cities');
                 return;
@@ -458,7 +291,6 @@ angular.module('controller.air', [])
         $scope.setMainAqiCode = function(code) {
             Util.ga.trackEvent('air', 'action', 'setMainAqiCodeByUser');
             _setMainAqiCode(code);
-            _setUnit();
             var data = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
             _applyWeatherData(data);
             $ionicScrollDelegate.scrollTop();
