@@ -63,6 +63,7 @@ angular.module('service.push', [])
                     pushInfo.id = pushInfo.cityIndex+1;
                     pushInfo.enable = true;
                     pushInfo.dayOfWeek = [true, true, true, true, true, true, true];
+                    return pushInfo;
                 });
 
                 self.pushData.pushList = alertList.concat(alarmList);
@@ -545,10 +546,16 @@ angular.module('service.push', [])
         };
 
         obj.hasPushInfo = function (cityIndex) {
-            var list = this.pushData.pushList.filter(function (value) {
-                return value.cityIndex === cityIndex && value.enable;
-            });
-            return list.length > 0;
+            try {
+                var list = this.pushData.pushList.filter(function (value) {
+                    return value.cityIndex === cityIndex && value.enable;
+                });
+                return list.length > 0;
+            }
+            catch (err) {
+                console.error(err);
+                return 0;
+            }
         };
 
         /**
