@@ -70,9 +70,14 @@ angular.module('controller.searchctrl', [])
 
             for (var i = 0; i < WeatherInfo.getCityCount(); i += 1) {
                 var city = WeatherInfo.getCityOfIndex(i);
-                var address = WeatherUtil.getShortenAddress(city.address).split(",");
+                var address;
                 var todayData;
 
+                if (city.disable) {
+                    continue;
+                }
+
+                address = WeatherUtil.getShortenAddress(city.address).split(",");
                 if (city.name) {
                     address = [city.name];
                 }
