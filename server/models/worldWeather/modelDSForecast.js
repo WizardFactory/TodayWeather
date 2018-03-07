@@ -7,12 +7,12 @@ var mongoose = require("mongoose");
 var dsForecastSchema = new mongoose.Schema({
     geocode: {lat: Number, lon: Number},
     address: {country:String, city:String, zipcode:Number, postcode:Number},
-    date:    {type: Number, default: 0},   // GMT time YYYYMMDDHHMM
-    dateObj: {type: Object, default: Date},// UTC time
+    date:    {type: Number, default: 0},   // timetick
+    dateObj: {type: Object, default: Date},// date object
     timeOffset: {type: Number, default: 0},
     data: [{
         current:{
-            dateObj:    {type: Object, default: Date},  // UTC time
+            dateObj:    {type: Object, default: Date},  // UTC time object
             date:       {type: Number, default: 0}, // GMT time
             summary:    {type: String, default: ''},
             pre_int:    {type: Number, default:0},  // 강수 강도 (0, 0.002, 0.017, 0.1, 0.4)

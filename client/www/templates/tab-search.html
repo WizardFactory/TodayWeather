@@ -29,7 +29,7 @@
                     </div>
                 </div>
             </div>
-            <div class="item item-divider dark-text-secondary" ng-if="searchResults.length > 0">
+            <div class="item item-divider logo-text" ng-if="searchResults.length > 0">
                 powered by TodayWeather
             </div>
             <div class="item" ng-repeat="result in searchResults2" ng-click="OnSelectResult(result)">
@@ -58,8 +58,8 @@
                         <span>{{city.t1h.toFixed(0)}}˚</span><br>
                         <span style="font-size: 12px;">{{city.tmn.toFixed(0)}}˚/{{city.tmx.toFixed(0)}}˚</span>
                     </div>
-                    <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenTimePicker($index)">
-                        <a class="icon" ng-class="city.alarmInfo == undefined?'ion-android-notifications-none':'ion-android-notifications'"></a>
+                    <div class="search-item last-item" ng-show="!isEditing" ng-click="OnOpenSettingPush($index)">
+                        <a class="icon" ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"></a>
                     </div>
                     <div class="search-item last-item" ng-show="isEditing && city.currentPosition">
                         <label class="toggle toggle-search">

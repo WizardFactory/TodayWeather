@@ -307,20 +307,14 @@ function controllerWorldWeather() {
         });
     };
 
+    /**
+     * @param cDate
+     * @param sDate
+     * @returns {boolean}
+     */
     self.checkValidDate = function(cDate, sDate){
-        if(cDate.getYear() != sDate.getYear()) {
-            return false;
-        }
-
-        if(cDate.getMonth() != sDate.getMonth()) {
-            return false;
-        }
-
-        if(cDate.getDate() != sDate.getDate()) {
-            return false;
-        }
-
-        if(cDate.getHours() != sDate.getHours()) {
+        // If the time difference is over 15 minutes, it's not valid date.
+        if(cDate.getTime() > sDate.setMinutes(sDate.getMinutes() + 15)){
             return false;
         }
 
@@ -484,7 +478,7 @@ function controllerWorldWeather() {
                         log.info('cDate : ', cDate.toString());
                         log.info('DB Date : ', req.DSF.dateObj.toString());
 
-                        //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
+                        //업데이트 시간이 15분을 넘어가면 어제,오늘,예보 갱신.
                         if(!self.checkValidDate(cDate, req.DSF.dateObj)){
                             log.info('TWW> Invaild DSF data', meta);
                             log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
@@ -1637,6 +1631,15 @@ function controllerWorldWeather() {
             if ( current.hasOwnProperty('arpltn') ) {
                 result.airInfo = {source: "aqicn"};
                 result.airInfo.last = current.arpltn;
+
+                var last = result.airInfo.last;
+                var airUnit = req.query.airUnit;
+                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                    if (last.hasOwnProperty(propertyName+'Grade')) {
+                        last[propertyName+'ActionGuide'] =
+                            aqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
+                    }
+                });
             }
         }
         catch (err) {

@@ -9,6 +9,10 @@
     <!-- compiled css output -->
     <link href="css/ionic.app.css" rel="stylesheet">
 
+    <link rel="stylesheet" href="lib/ion.rangeSlider/css/normalize.css" />
+    <link rel="stylesheet" href="lib/ion.rangeSlider/css/ion.rangeSlider.css" />
+    <link rel="stylesheet" href="lib/ion.rangeSlider/css/ion.rangeSlider.skinFlat.css" />
+
     <!-- ionic/angularjs js -->
     <script src="lib/ionic/js/ionic.bundle.min.js"></script>
 
@@ -24,6 +28,9 @@
     <script src="lib/d3/d3.min.js"></script>
     <script src="lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js"></script>
 
+    <script src="lib/jquery/dist/jquery.slim.min.js"></script>
+    <script src="lib/ion.rangeSlider/js/ion.rangeSlider.min.js"></script>
+
     <!-- your app's js -->
     <script src="js/app.js"></script>
     <script src="js/controller.start.js"></script>
@@ -37,6 +44,7 @@
     <script src="js/controller.nation.js"></script>
     <script src="js/controller.setting.radio.js"></script>
     <script src="js/controller.air.js"></script>
+    <script src="js/controller.push.js"></script>
 
     <script src="js/service.twads.js"></script>
     <script src="js/service.weatherinfo.js"></script>
@@ -56,7 +64,7 @@
         }, false);
     </script>
 </head>
-<body style="background-color: #03A9F4; line-height: normal;" ng-style="{'background-color': viewColor}">
+<body style="background-color: #F5F5F5; line-height: normal;" ng-style="{'background-color': viewColor}">
 <!--
   The nav bar that will be updated as we navigate between views.
 -->
@@ -123,7 +131,7 @@
                     </div>
                     <i>{{version}}</i>
                 </a>
-                <a class="item item-input" ng-click="clickMenu('guide')">
+                <a class="item item-input" ng-click="clickMenu('guide')" ng-if="false">
                     <div class="input-label">
                         {{'LOC_GUIDE'|translate}}
                     </div>
@@ -140,7 +148,7 @@
     </ion-side-menu>
 
     <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">
-        <ion-nav-bar></ion-nav-bar>
+        <ion-nav-bar class="bar-dark bar-hidden"></ion-nav-bar>
         <ion-nav-view></ion-nav-view>
     </ion-side-menu-content>
 

@@ -113,10 +113,19 @@ angular.module('controller.searchctrl', [])
                     t1h: city.currentWeather.t1h,
                     tmn: todayData.tmn,
                     tmx: todayData.tmx,
-                    alarmInfo: Push.getAlarm(i)
+                    hasPush: Push.hasPushInfo(i)
                 };
                 $scope.cityList.push(data);
                 loadWeatherData(i);
+                if (city.currentPosition) {
+                    var indexOfCurrentPositionCity = i;
+                    updateCurrentPosition().then(function(geoInfo) {
+                        console.info(JSON.stringify({'newGeoInfo':geoInfo}));
+                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        WeatherInfo.reloadCity(indexOfCurrentPositionCity);
+                        loadWeatherData(indexOfCurrentPositionCity);
+                    });
+                }
             }
           
             window.addEventListener('native.keyboardshow', function () {
@@ -468,7 +477,7 @@ angular.module('controller.searchctrl', [])
                 console.log('updated current position');
                 WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
-                    index = WeatherInfo.getIndexOfCity(city);
+                    var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
                         WeatherInfo.updateCity(index, city);
 
@@ -529,8 +538,8 @@ angular.module('controller.searchctrl', [])
         $scope.OnDeleteCity = function(index) {
             Util.ga.trackEvent('city', 'delete', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
 
-            if ($scope.cityList[index].alarmInfo != undefined) {
-                Push.removeAlarm($scope.cityList[index].alarmInfo);
+            if ($scope.cityList[index].hasPush) {
+                Push.removePushListByCityIndex(index);
             }
             $scope.cityList.splice(index, 1);
             WeatherInfo.removeCity(index);
@@ -538,67 +547,13 @@ angular.module('controller.searchctrl', [])
             return false; //OnSelectCity가 호출되지 않도록 이벤트 막음
         };
 
-        $scope.OnOpenTimePicker = function (index) {
-            Util.ga.trackEvent('alarm', 'open', 'timePicker');
-            var ipObj1 = {
-                callback: function (val) {      //Mandatory
-                    if (typeof(val) === 'undefined') {
-                        Util.ga.trackEvent('alarm', 'close', 'timePicker');
-                        console.log('closed');
-                    } else if (val == 0) {
-                        Util.ga.trackEvent('alarm', 'cancel', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
-
-                        console.log('cityIndex='+index+' alarm canceled');
-                        if ($scope.cityList[index].alarmInfo != undefined) {
-                            Push.removeAlarm($scope.cityList[index].alarmInfo);
-                            $scope.cityList[index].alarmInfo = undefined;
-                        }
-                    } else {
-                        Util.ga.trackEvent('alarm', 'set', WeatherUtil.getShortenAddress(WeatherInfo.getCityOfIndex(index).address), index);
-
-                        var selectedTime = new Date();
-                        selectedTime.setHours(0,0,0,0);
-                        selectedTime.setSeconds(val);
-
-                        console.log('index=' + index + ' Selected epoch is : ' + val + 'and the time is ' +
-                                    selectedTime.toString());
-
-                        Push.updateAlarm(index, selectedTime, function (err, alarmInfo) {
-                            if (err) {
-                                Util.ga.trackEvent('alarm', 'error', err.message, index);
-                                return;
-                            }
-                            console.log('alarm='+JSON.stringify(alarmInfo));
-                            $scope.cityList[index].alarmInfo = alarmInfo;
-                        });
-                    }
-                }
-            };
-            if ($scope.cityList[index].alarmInfo != undefined) {
-                var date = new Date($scope.cityList[index].alarmInfo.time);
-                console.log(date);
-                ipObj1.inputTime = date.getHours() * 60 * 60 + date.getMinutes() * 60;
-                console.log('inputTime='+ipObj1.inputTime);
+        $scope.OnOpenSettingPush = function (index) {
+            console.log('go setting-push fav index='+index);
+            var path = '/setting-push';
+            if (index != undefined) {
+                path += '?fav='+index;
             }
-            else {
-                ipObj1.inputTime = 8*60*60; //AM 8:00
-            }
-
-            var strSetting = "Setting";
-            var strDelete = "Delete";
-            var strClose = "Close";
-            $translate(['LOC_SETTING', 'LOC_DELETE', 'LOC_CLOSE']).then(function (translations) {
-                strSetting = translations.LOC_SETTING;
-                strDelete = translations.LOC_DELETE;
-                strClose = translations.LOC_CLOSE;
-            }, function (translationIds) {
-                console.log("Fail to translate "+ JSON.stringify(translationIds));
-            }).finally(function () {
-                ipObj1.setLabel = strSetting;
-                ipObj1.cancelLabel = strDelete;
-                ipObj1.closeLabel = strClose;
-                ionicTimePicker.openTimePicker(ipObj1);
-            });
+            $location.url(path);
         };
 
         function showLoadingIndicator() {
@@ -722,25 +677,82 @@ angular.module('controller.searchctrl', [])
                 }
             }
             else if (isLocationEnabled === false) {
-                if (window.cordova && cordova.plugins.locationAccuracy) {
-                    cordova.plugins.locationAccuracy.request (
-                        function (success) {
-                            console.log(success);
-                            Util.ga.trackEvent("position", "status", "successUserAgreed");
-                            //메세지 없이 통과시키고, reload by locationOn.
-                            deferred.reject(null);
-                        },
-                        function (error) {
-                            Util.ga.trackEvent("position", "error", error.message);
-                            msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
-                            deferred.reject(msg);
-                        },
-                        cordova.plugins.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+                if (isLocationAuthorized === true) {
+                    if (window.cordova && cordova.plugins.locationAccuracy) {
+                        cordova.plugins.locationAccuracy.request(
+                            function (success) {
+                                Util.ga.trackEvent("position", "status", "successUserAgreed");
+                                //메세지 없이 통과시키고, reload by locationOn.
+                                deferred.reject(null);
+                            },
+                            function (error) {
+                                Util.ga.trackEvent("position", "error", error.message);
+                                msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                                deferred.reject(msg);
+                            },
+                            cordova.plugins.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+                    }
+                    else {
+                        Util.ga.trackEvent("plugin", "error", "loadLocationAccuracy");
+                        msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                        deferred.reject(msg);
+                    }
                 }
-                else {
-                    Util.ga.trackEvent("plugin", "error", "loadLocationAccuracy");
-                    msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                else if (isLocationAuthorized === false) {
+                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                     deferred.reject(msg);
+                }
+                else if (isLocationAuthorized === undefined) {
+                    if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
+                        // ios : 앱을 사용하는 동안 '오늘날씨'에서 사용자의 위치에 접근하도록 허용하겠습니까?
+                        // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
+
+                        cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
+                            switch (status) {
+                                case cordova.plugins.diagnostic.permissionStatus.DENIED:
+                                    console.log("Permission denied");
+                                    $scope.setLocationAuthorizationStatus(status);
+                                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                    deferred.reject(msg);
+                                    break;
+                                case cordova.plugins.diagnostic.permissionStatus.GRANTED:
+                                    console.error("Permission granted always");
+                                    break;
+                                case cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE:
+                                    console.error("Permission granted only when in use");
+                                    break;
+                                case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+                                    console.log("Permission not requested");
+                                    cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
+                                        if (ionic.Platform.isAndroid()) {
+                                            $scope.setLocationAuthorizationStatus(status);
+                                            if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
+                                                msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                                deferred.reject(msg);
+                                            }
+                                            else {
+                                                console.log('status=' + status + ' by request location authorization and reload by resume');
+                                                deferred.reject(null);
+                                            }
+                                        }
+                                        else {
+                                            //메세지 없이 통과시키고, reload by locationOn.
+                                            deferred.reject(null);
+                                        }
+                                    }, function (error) {
+                                        Util.ga.trackEvent('position', 'error', 'request location authorization');
+                                        Util.ga.trackException(error, false);
+                                        deferred.reject(null);
+                                    }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
+                                    break;
+                            }
+                        }, function (error) {
+                            console.error("The following error occurred: " + error);
+                        });
+                    }
+                    else {
+                        deferred.reject(null);
+                    }
                 }
             }
         }
