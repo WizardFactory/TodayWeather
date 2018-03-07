@@ -295,6 +295,6 @@
   "LOC_ALARM_DESCRIPTION": "天氣預警會在用戶設置的時間發送天氣信息。",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "已關閉通知。請允許app的通知權限。",
   "LOC_SAVE" : "商店",
-  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Added bad weather alert function!\nGet alerts about areas you receive weather alarms for."
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "已添加恶劣天气警报功能！\n请收到天气提醒的地区接收警报。"
 }
 

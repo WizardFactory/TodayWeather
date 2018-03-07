@@ -295,5 +295,5 @@
   "LOC_ALARM_DESCRIPTION": "Der Alarm gibt Wetter-information zur bestimmten Zeit, die ein Nutzer selber eingestellt hat.",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP" : "Benachrichtigung ist deaktiviert. Bitte erlauben Sie die Verwendung von Benachrichtigungen für diese App.",
   "LOC_SAVE" : "Sparen",
-  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Added bad weather alert function!\nGet alerts about areas you receive weather alarms for."
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Die Funktion einer Unwetterwarnung ist hinzugefügt!\nNehmen Sie die Warnung über das Gebiet für einen Wetteralarm."
 }
