@@ -50,14 +50,22 @@ angular.module('service.push', [])
             if (pushData != null) {
                 self.pushData.registrationId = pushData.registrationId;
                 self.pushData.type = pushData.type;
-                self.pushData.pushList = pushData.alarmList;
-                self.pushData.pushList.forEach(function (pushInfo) {
+
+                var alertList = pushData.alarmList.map(function (pushInfo) {
+                    var alertInfo = self.newPushAlert(1, pushInfo.cityIndex, 7, 22);
+                    alertInfo.enable = false;
+                    return alertInfo;
+                });
+
+                var alarmList = pushData.alarmList.map(function (pushInfo) {
                     pushInfo.time = new Date(pushInfo.time);
                     pushInfo.category = 'alarm';
-                    pushInfo.id = pushInfo.cityIndex;
+                    pushInfo.id = pushInfo.cityIndex+1;
                     pushInfo.enable = true;
                     pushInfo.dayOfWeek = [true, true, true, true, true, true, true];
                 });
+
+                self.pushData.pushList = alertList.concat(alarmList);
 
                 //update alarmInfo to server for sync
                 if (self.pushData.pushList.length > 0) {
@@ -67,7 +75,7 @@ angular.module('service.push', [])
                 }
             }
             console.log('load push data');
-            console.log(self);
+            console.log(JSON.stringify({pushList:self.pushData.pushList}));
         };
 
         /**

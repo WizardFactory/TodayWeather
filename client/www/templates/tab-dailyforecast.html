@@ -11,16 +11,24 @@
         </p>
     </ion-nav-title>
     <ion-nav-buttons side="right">
-        <!--<button class="button button-icon button-positive icon"-->
-                <!--ng-class="city.hasPush?'ion-ios-bell':'ion-ios-bell-outline'"-->
-                <!--ng-if="!isAndroid()"-->
-                <!--ng-click="doTabShare()"></button>-->
-        <!--<button class="button button-icon button-positive icon"-->
-                <!--ng-class="city.hasPush?'ion-android-notifications':'ion-android-notifications-none'"-->
-                <!--ng-if="isAndroid()" -->
-                <!--ng-click="doTabShare()"></button>-->
-        <button class="button button-icon button-positive icon ion-ios-upload-outline" ng-if="!isAndroid()" ng-click="doTabShare()"></button>
-        <button class="button button-icon button-positive icon ion-android-share-alt" ng-if="isAndroid()" ng-click="doTabShare()"></button>
+        <button class="button button-icon button-positive icon"
+                ng-class="hasPush?'ion-ios-bell':'ion-ios-bell-outline'"
+                ng-if="!isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon button-positive icon"
+                ng-class="hasPush?'ion-android-notifications':'ion-android-notifications-none'"
+                ng-if="isAndroid()"
+                ng-click="goPushPage()"
+                style="padding: 0 4px"></button>
+        <button class="button button-icon button-positive icon ion-ios-upload-outline"
+                ng-if="!isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
+        <button class="button button-icon button-positive icon ion-android-share-alt"
+                ng-if="isAndroid()"
+                ng-click="doTabShare()"
+                style="padding: 0 4px;margin-right: 4px"></button>
     </ion-nav-buttons>
     <ion-content delegate-handle="body" direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
                  has-bouncing="false" tabs-shrink class="main-content">

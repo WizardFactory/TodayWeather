@@ -248,6 +248,16 @@ angular.module('controller.tabctrl', [])
             $location.path('/units');
         };
 
+        $scope.goPushPage = function () {
+            var index = WeatherInfo.getCityIndex();
+            console.log('go setting-push fav index='+index);
+            var path = '/setting-push';
+            if (index != undefined) {
+                path += '?fav='+index;
+            }
+            $location.url(path);
+        };
+
         /**
          * getEnableCount가 0이면 호출되는데, #2018 이슈에서 enable city가 있는데 불리는 경우가 있어 보임
          * 기본값은 즐겨찾기 이동으로 변경하여, 사용자가 잘 못 클릭해도 현재위치가 추가되지 않게 방지
