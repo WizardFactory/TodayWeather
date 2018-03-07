@@ -1,6 +1,6 @@
 angular.module('controller.air', [])
     .controller('AirCtrl', function ($scope, $stateParams, $sce, WeatherInfo, WeatherUtil, Units, Util,
-                                     $ionicScrollDelegate, $ionicHistory) {
+                                     $ionicScrollDelegate, $ionicHistory, Push) {
 
         var TABLET_WIDTH = 640;
         var cityData;
@@ -174,9 +174,11 @@ angular.module('controller.air', [])
             $scope.airCodeName = _getAQIname(aqiCode);
         }
 
-        function _applyWeatherData(data) {
-            cityData = data;
+        function _applyWeatherData() {
             try {
+                var cityIndex = WeatherInfo.getCityIndex();
+                var cityData = WeatherInfo.getCityOfIndex(cityIndex);
+
                 Util.ga.trackEvent('air', 'applyWeatherData');
                 var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
                 if (latestAirInfo[aqiCode+'Value'] == undefined && cityData.airInfo.pollutants[aqiCode] == undefined) {
@@ -188,6 +190,7 @@ angular.module('controller.air', [])
                     _setMainAqiCode(newAqiCode);
                 }
 
+                $scope.hasPush = Push.hasPushInfo(cityIndex);
                 $scope.currentPosition = cityData.currentPosition;
                 $scope.airInfo = latestAirInfo;
                 $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
@@ -283,23 +286,19 @@ angular.module('controller.air', [])
             }
 
             $scope.headerHeight = bodyWidth*(3/4) - (44+41); //HEADER + BOTTOM/2
-
-            var data = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-            _applyWeatherData(data);
+            _applyWeatherData();
         }
 
         $scope.setMainAqiCode = function(code) {
             Util.ga.trackEvent('air', 'action', 'setMainAqiCodeByUser');
             _setMainAqiCode(code);
-            var data = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-            _applyWeatherData(data);
+            _applyWeatherData();
             $ionicScrollDelegate.scrollTop();
         };
 
         $scope.$on('applyEvent', function(event, sender) {
             Util.ga.trackEvent('event', 'apply', sender);
-            var data = WeatherInfo.getCityOfIndex(WeatherInfo.getCityIndex());
-            _applyWeatherData(data);
+            _applyWeatherData();
         });
 
         init();

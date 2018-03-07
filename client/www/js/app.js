@@ -26,7 +26,8 @@ angular.module('starter', [
     'controller.units',
     'controller.start',
     'controller.nation',
-    'controller.setting.radio'
+    'controller.setting.radio',
+    'controller.push'
 ])
     .factory('$exceptionHandler', function (Util) {
         return function (exception, cause) {
@@ -1372,6 +1373,12 @@ angular.module('starter', [
         // Set up the various states which the app can be in.
         // Each state's controller can be found in controller.forecastctrl.js
         $stateProvider
+            .state('setting-push', {
+                url: '/setting-push?fav',
+                cache: false,
+                templateUrl: 'templates/setting-push.html',
+                controller: 'PushCtrl'
+            })
             .state('nation', {
                 url: '/nation',
                 cache: false,

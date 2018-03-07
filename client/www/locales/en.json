@@ -289,5 +289,10 @@
   "LOC_IT_WILL_BE_SNOWY_FROM_H": "It's expected to snow from %dh.",
   "LOC_IT_WILL_BE_SLEETING_FROM_H": "It's expected to snow or rain from %dh.",
   "LOC_H_POLLUTANT_IS_GRADE": "%dh %s is %s.",
-  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "From %dh %s is expected to be at %s."
+  "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "From %dh %s is expected to be at %s.",
+  "LOC_WEATHER_ALERT": "Weather alert",
+  "LOC_ALERT_DESCRIPTION": "A weather alert notifies you in case of snow/rain or when dust particles become worse. It also notifies you in case of coming snow/rain/dust particles in the near future.",
+  "LOC_ALARM_DESCRIPTION": "A weather alarm brings weather information at the set time of you.",
+  "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "Notification is off. Please allow the use of notification on this app.",
+  "LOC_SAVE" : "Save"
 }

@@ -1631,6 +1631,15 @@ function controllerWorldWeather() {
             if ( current.hasOwnProperty('arpltn') ) {
                 result.airInfo = {source: "aqicn"};
                 result.airInfo.last = current.arpltn;
+
+                var last = result.airInfo.last;
+                var airUnit = req.query.airUnit;
+                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                    if (last.hasOwnProperty(propertyName+'Grade')) {
+                        last[propertyName+'ActionGuide'] =
+                            aqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
+                    }
+                });
             }
         }
         catch (err) {
