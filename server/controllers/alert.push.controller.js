@@ -335,16 +335,14 @@ class AlertPushController {
                 alertPush.precipAlerts = {};
             }
 
-            if (weather.hasOwnProperty('forecast') &&
-                weather.forecast.pty > 0)
-            {
-                alertPush.precipAlerts.lastState = weather.forecast.pty;
-            }
-
-            //forecast보다 current를 우선하기 때문에 current가 상태가 0이상이면 적용한다.
             if (weather.hasOwnProperty('pty')) {
-                if (!alertPush.precipAlerts.hasOwnProperty('lastState') ||
-                    alertPush.precipAlerts.lastState === 0) {
+                //current.pty가 0인데, forecast가 1이상인 경우 forecast.pty로 예보가 push되기 때문에, lastState는 forecast.pty
+                //그외에는 모두 weather.pty를 유지함.
+                if (weather.pty === 0 &&
+                    weather.hasOwnProperty('forecast') && weather.forecast.pty > 0) {
+                    alertPush.precipAlerts.lastState = weather.forecast.pty;
+                }
+                else {
                     alertPush.precipAlerts.lastState = infoObj.weather.pty;
                 }
             }
@@ -362,17 +360,15 @@ class AlertPushController {
                 alertPush.airAlerts = {};
             }
 
-            if (air.hasOwnProperty('forecast') &&
-                air.forecast.grade >= alertPush.airAlertsBreakPoint)
-            {
-                alertPush.airAlerts.lastGrade = air.forecast.grade;
-                alertPush.airAlerts.lastCode = air.forecast.name;
-            }
-
             if (air.hasOwnProperty('grade')) {
-                if (!alertPush.airAlerts.hasOwnProperty('lastGrade') ||
-                    alertPush.airAlerts.lastGrade < alertPush.airAlertsBreakPoint)
+                if (air.grade < alertPush.airAlertsBreakPoint &&
+                    air.hasOwnProperty('forecast') &&
+                    air.forecast.grade >= alertPush.airAlertsBreakPoint )
                 {
+                    alertPush.airAlerts.lastGrade = air.forecast.grade;
+                    alertPush.airAlerts.lastCode = air.forecast.name;
+                }
+                else {
                     alertPush.airAlerts.lastGrade = air.grade;
                     alertPush.airAlerts.lastCode = air.name;
                 }
@@ -392,7 +388,7 @@ class AlertPushController {
             alertPush.airAlerts.pushTime = time;
         }
 
-        log.debug(JSON.stringify({alertPush: alertPush}));
+        log.debug(JSON.stringify({newAlertPush: alertPush}));
     }
 
     /**
@@ -406,6 +402,9 @@ class AlertPushController {
         let limitPushTime = new Date();
         let send = 'none';
 
+        log.info(JSON.stringify({alertPush: alertPush}));
+        log.info(JSON.stringify({infoObj: infoObj}));
+
         if (alertPush.startTime === this.time ||
             alertPush.precipAlerts == undefined ||
             alertPush.precipAlerts.lastState == undefined) {
@@ -417,34 +416,39 @@ class AlertPushController {
         }
 
         limitPushTime.setHours(limitPushTime.getHours()-6);
-        if (!alertPush.precipAlerts.hasOwnProperty('pushTime') ||
-            alertPush.precipAlerts.pushTime < limitPushTime) {
+        let precipAlerts = alertPush.precipAlerts;
+        if (!precipAlerts.hasOwnProperty('pushTime') || precipAlerts.pushTime < limitPushTime) {
            //check weather
             if (infoObj.hasOwnProperty('weather')) {
                 let weather = infoObj.weather;
-                if (weather.pty > 0)  {
-                    send = 'weather';
-                }
-                else if (weather.hasOwnProperty('forecast')) {
-                    if (weather.forecast.pty > 0) {
+
+                if (precipAlerts.lastState === 0) {
+                    if (weather.pty > 0)  {
                         send = 'weather';
+                    }
+                    else if (weather.hasOwnProperty('forecast')) {
+                        if (weather.forecast.pty > 0) {
+                            send = 'weather';
+                        }
                     }
                 }
             }
         }
 
         if (alertPush.airAlerts) {
-            if (!alertPush.airAlerts.hasOwnProperty('pushTime') ||
-                alertPush.airAlerts.pushTime < limitPushTime )
+            let airAlerts = alertPush.airAlerts;
+            if (!airAlerts.hasOwnProperty('pushTime') || airAlerts.pushTime < limitPushTime )
             {
                 if (infoObj.hasOwnProperty('air')) {
                     let air = infoObj.air;
-                    if (air.grade >= alertPush.airAlertsBreakPoint) {
-                        send = send === 'weather'?'all':'air';
-                    }
-                    else if (air.hasOwnProperty('forecast')) {
-                        if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
+                    if (airAlerts.lastGrade < alertPush.airAlertsBreakPoint) {
+                        if (air.grade >= alertPush.airAlertsBreakPoint) {
                             send = send === 'weather'?'all':'air';
+                        }
+                        else if (air.hasOwnProperty('forecast')) {
+                            if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
+                                send = send === 'weather'?'all':'air';
+                            }
                         }
                     }
                 }
@@ -599,7 +603,6 @@ class AlertPushController {
                     let infoObj;
                     try {
                         infoObj = this._parseWeatherAirData(alertPush, weatherData) ;
-                        log.info(JSON.stringify({infoObj: infoObj}));
                     }
                     catch (err) {
                         return callback(err);
