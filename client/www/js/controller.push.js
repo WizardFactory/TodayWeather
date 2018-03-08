@@ -41,7 +41,10 @@ angular.module('controller.push', [])
             }
 
             if (pushInfo.alarmList.length === 0) {
-                [7*3600+40*60, 11*3600+40*60, 17*3600+40*60].forEach(function (value) {
+                /**
+                 * 점심, 퇴근 시간전의 알림이 매끄럽지 않아, 아침,저녁으로 기본 알람 설정
+                 */
+                [7*3600+40*60, 20*3600+20*60].forEach(function (value) {
                     var alarm = Push.newPushAlarm(_generateId(), cityIndex, value, pushInfo.dayOfWeek);
                     //var alarm = {id: Push.generatePushInfoId(), cityIndex: cityIndex, time: value, dayOfWeek: pushInfo.dayOfWeek};
                     pushInfo.alarmList.push(alarm);
