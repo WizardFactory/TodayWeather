@@ -272,6 +272,42 @@ ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
     return str;
 };
 
+ControllerPush.prototype._makeStrTmnTmx = function (theDay, preDay) {
+    var str = "";
+    var diff;
+    str +=  parseInt(theDay.tmn)+"˚";
+    if (preDay && preDay.tmn) {
+        diff = Math.round(theDay.tmn - preDay.tmn);
+        if (diff !== 0) {
+            str +=  "(";
+            if (diff > 0) {
+                str += "+"+diff;
+            }
+            else {
+                str += diff;
+            }
+            str += ")";
+        }
+    }
+    str += "/";
+    str +=  parseInt(theDay.tmx)+"˚";
+    if (preDay && preDay.tmx) {
+        diff = Math.round(theDay.tmx - preDay.tmx);
+        if (diff !== 0) {
+            str +=  "(";
+            if (diff > 0) {
+                str += "+"+diff;
+            }
+            else {
+                str += diff;
+            }
+            str += ")";
+        }
+    }
+
+    return str;
+};
+
 /**
  *
  * @param pushInfo
@@ -316,6 +352,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     var time = current.time;
     var theDay;
     var today;
+    var preDay;
 
     today = weatherInfo.midData.dailyData.find(function (dayInfo) {
         if (dayInfo.fromToday === 0) {
@@ -326,6 +363,11 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     if (time < 18) {
         theDay = today;
         dailySummary += trans.__("LOC_TODAY")+": ";
+        preDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
+            if (dayInfo.fromToday === -1) {
+                return dayInfo;
+            }
+        });
     }
     else {
         theDay = weatherInfo.midData.dailyData.find(function (dayInfo) {
@@ -334,17 +376,24 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
             }
         });
         dailySummary += trans.__("LOC_TOMORROW")+": ";
+        preDay = today;
     }
 
+    var str;
     if (theDay.skyAm && theDay.skyPm) {
-        dailyArray.push(cTown._getWeatherEmoji(theDay.skyAm)+cTown._getEmoji("RightwardsArrow")+cTown._getWeatherEmoji(theDay.skyPm));
+        str = "";
+        str += theDay.wfAm+cTown._getWeatherEmoji(theDay.skyAm);
+        str += cTown._getEmoji("RightwardsArrow");
+        str += theDay.wfPm+cTown._getWeatherEmoji(theDay.skyPm);
+        dailyArray.push(str);
     }
     else if (theDay.skyIcon) {
         dailyArray.push(cTown._getWeatherEmoji(theDay.skyIcon));
     }
 
     if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
-        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
+        str = this._makeStrTmnTmx(theDay, preDay);
+        dailyArray.push(str);
     }
     if (theDay.pty && theDay.pty > 0) {
         if (theDay.pop && current.pty <= 0) {
@@ -589,6 +638,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     var theDay;
     var today;
     var targetDate;
+    var preDay;
 
     if (time < 18) {
         targetDate = currentDate.getDate();
@@ -609,6 +659,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
         }
         if (dailyDate == targetDate) {
             theDay = dailyList[i];
+            preDay = dailyList[i-1];
             break;
         }
     }
@@ -621,7 +672,8 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     }
 
     if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
-        dailyArray.push(parseInt(theDay.tmn)+"˚/"+parseInt(theDay.tmx)+"˚");
+        var str = this._makeStrTmnTmx(theDay, preDay);
+        dailyArray.push(str);
     }
 
     if (theDay.pty && theDay.pty > 0) {
