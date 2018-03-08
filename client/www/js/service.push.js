@@ -77,6 +77,7 @@ angular.module('service.push', [])
             }
             console.log('load push data');
             console.log(JSON.stringify({pushList:self.pushData.pushList}));
+            return pushData;
         };
 
         /**
@@ -600,16 +601,33 @@ angular.module('service.push', [])
             return time;
         };
 
+        obj.enableAlertForOldAlarm = function (enable) {
+            var list = this.pushData.pushList;
+            if (enable) {
+                list.forEach(function (value) {
+                    if (value.category === 'alert') {
+                        value.enable = true;
+                    }
+                });
+                this._postPushList(list);
+            }
+            this.savePushInfo();
+        };
+
         obj.init = function () {
             var self = this;
+            var showAlertInfo = false;
 
             if (self.loadPushInfo() == null) {
-                self.loadOldPushInfo();
+                if (self.loadOldPushInfo()) {
+                    //show popup
+                    showAlertInfo = true;
+                }
             }
 
             if (!window.PushNotification) {
                 Util.ga.trackEvent('push', 'error', 'loadPlugin');
-                return;
+                return showAlertInfo;
             }
 
             if (ionic.Platform.isIOS()) {
@@ -628,12 +646,14 @@ angular.module('service.push', [])
 
                 if (window.push) {
                     console.log('Already set push notification');
-                    return;
+                    return showAlertInfo;
                 }
                 self.register(function (err, registrationId) {
                     console.log('start push registrationId='+registrationId);
                 });
             }
+
+            return showAlertInfo;
         };
 
         return obj;

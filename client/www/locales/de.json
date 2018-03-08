@@ -294,5 +294,6 @@
   "LOC_ALERT_DESCRIPTION": "Der Aufmerksam informiert Sie, wenn es regnet oder schneit, oder Feinstaub stark wird. Sonst informiert er auch vorher, bevor sie passieren.",
   "LOC_ALARM_DESCRIPTION": "Der Alarm gibt Wetter-information zur bestimmten Zeit, die ein Nutzer selber eingestellt hat.",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP" : "Benachrichtigung ist deaktiviert. Bitte erlauben Sie die Verwendung von Benachrichtigungen für diese App.",
-  "LOC_SAVE" : "Sparen"
+  "LOC_SAVE" : "Sparen",
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "Die Funktion einer Unwetterwarnung ist hinzugefügt!\nNehmen Sie die Warnung über das Gebiet für einen Wetteralarm."
 }
