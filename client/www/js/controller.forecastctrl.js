@@ -203,7 +203,7 @@ angular.module('controller.forecastctrl', [])
             //console.log(headerE);
             //console.log("startHeight=", startHeight);
 
-            headerE.css('height', startHeight+'px');
+            headerE.css('min-height', startHeight+'px');
             //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
             $scope.headerHeight = startHeight;
 
