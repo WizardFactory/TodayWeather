@@ -439,6 +439,18 @@
         return String;
     }
     
+    
+    NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
+    if(nsOSVer.majorVersion >= 10)
+    {
+        NSLog(@"ios version is more than 10!!!");
+    }
+    else
+    {
+        NSRange sAllRange = [nssAirState rangeOfString:nssAirState];
+        [String addAttribute:NSForegroundColorAttributeName value:[UIColor lightGrayColor] range:sAllRange];
+    }
+
     [String addAttribute:NSForegroundColorAttributeName value:stateColor range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의
     [String addAttribute:NSFontAttributeName value:font range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의색상을 변경
 
