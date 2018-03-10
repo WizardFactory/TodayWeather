@@ -186,13 +186,11 @@ static TodayViewController *todayVC = nil;
         {
             NSLog(@"Widget Mode is Compact!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeCompact];
-            //showMoreView.hidden = YES;
         }
         else
         {
             NSLog(@"Widget Mode is Expanded!!!");
             [self.extensionContext setWidgetLargestAvailableDisplayMode:NCWidgetDisplayModeExpanded];
-            //showMoreView.hidden = NO;
         }
                     });
     }
@@ -201,7 +199,6 @@ static TodayViewController *todayVC = nil;
         dispatch_async(dispatch_get_main_queue(), ^{
             addressLabel.textColor  = [UIColor lightGrayColor];
             curTempLabel.textColor  = [UIColor lightGrayColor];
-            curDustLabel.textColor  = [UIColor lightGrayColor];
             todayMaxMinTempLabel.textColor = [UIColor lightGrayColor];
             noLocationLabel.textColor = [UIColor lightGrayColor];
             showMoreView.hidden = YES;
@@ -210,9 +207,9 @@ static TodayViewController *todayVC = nil;
             currentSize.height = WIDGET_COMPACT_HEIGHT;
             self.preferredContentSize = currentSize;
         });
-
         NSLog(@"This OSVersion can't use Show More feature!!!");
     }
+    
     
     [todayWSM showDailyWeatherAsWidth];
 }
@@ -233,12 +230,7 @@ static TodayViewController *todayVC = nil;
     if (activeDisplayMode == NCWidgetDisplayModeCompact){
         // Changed to compact mode
         self.preferredContentSize   = maxSize;
-//        [todayWSM transitView:showMoreView
-//                   transition:UIViewAnimationTransitionFlipFromLeft
-//                     duration:0.75f];
-
         showMoreView.hidden         = true;
-            
         NSLog(@"NCWidgetDisplayModeCompact width : %f, height : %f", self.preferredContentSize.width, self.preferredContentSize.height);
     }
     else
@@ -246,9 +238,6 @@ static TodayViewController *todayVC = nil;
         // Changed to expanded mode
         self.extensionContext.widgetLargestAvailableDisplayMode = NCWidgetDisplayModeExpanded;
         self.preferredContentSize   = CGSizeMake(self.view.frame.size.width, WIDGET_PADDING);
-//        [todayWSM transitView:showMoreView
-//                   transition:UIViewAnimationTransitionFlipFromRight
-//                     duration:0.75f];
         showMoreView.hidden         = false;
         NSLog(@"expanded height : %f", self.preferredContentSize.height);
     }
@@ -360,6 +349,8 @@ static TodayViewController *todayVC = nil;
     
     // Do any additional setup after loading the view from its nib.
     locationView.hidden = true;
+    //fineDustView.hidden = true;
+    
     bIsDateView = true;
     [twAppBtn setTitle:LSTR_TODAYWEATHER forState:UIControlStateNormal];
     //[twAppBtn sizeToFit];
