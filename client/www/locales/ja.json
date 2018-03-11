@@ -294,5 +294,6 @@
   "LOC_ALERT_DESCRIPTION": "天気のお知らせは雪/雨が降ったり、pm2.5が悪化する時教えてくれます。あるいは近いうちに雪/雨の予報、pm2.5の段階が悪いと予報がある場合にも教えてくれます。",
   "LOC_ALARM_DESCRIPTION": "天気アラームは使用者が直接設定した時間に天気情報をお伝えします。",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP": "お知らせが消しております。このアプリに対するお知らせを許容してください。",
-  "LOC_SAVE" : "保存"
+  "LOC_SAVE" : "保存",
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "悪天候警報アラーム機能が追加されました!\nお天気通知を受信して、地域に関するアラームを受信してみてください。"
 }

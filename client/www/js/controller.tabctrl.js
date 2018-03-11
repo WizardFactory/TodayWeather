@@ -1,6 +1,7 @@
 angular.module('controller.tabctrl', [])
     .controller('TabCtrl', function($scope, $ionicPopup, $interval, WeatherInfo, WeatherUtil,
-                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce, Units, $q) {
+                                     $location, TwAds, $rootScope, Util, $translate, TwStorage, $sce,
+                                    Push, Units, $q) {
         var currentTime;
         var lastClickTime = 0;
         var refreshTimer = null;
@@ -1198,6 +1199,54 @@ angular.module('controller.tabctrl', [])
                     type: 'button-dark'
                 }]
             });
+        });
+
+        $scope.$on('showAlertInfoEvent', function(event, data) {
+            Util.ga.trackEvent('app', 'event', 'showAlertInfoPopup');
+
+            var strWeatherAlert = "Weather alert";
+            var strAddedBadWeatherAlertFunction = "Added bad weather alert function!\n" +
+                "Get alerts about areas you receive weather alarms for.";
+
+            $translate(['LOC_WEATHER_ALERT', 'LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION'])
+                .then(function (translations) {
+                        strWeatherAlert = translations.LOC_WEATHER_ALERT;
+                        strAddedBadWeatherAlertFunction = translations.LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION;
+                        strAddedBadWeatherAlertFunction = strAddedBadWeatherAlertFunction.replace('\n', '<br>');
+                    },
+                    function (translationIds) {
+                        console.log("Fail to translate : " + JSON.stringify(translationIds));
+                    })
+                .finally(function () {
+                    var showAlertInfo = $ionicPopup.show({
+                        title: strWeatherAlert,
+                        template: strAddedBadWeatherAlertFunction,
+                        buttons: [
+                            {
+                                text: strClose||'Close',
+                                onTap: function () {
+                                    return 'close';
+                                }
+                            },
+                            {
+                                text: strOkay||'OK',
+                                type: 'button-dark',
+                                onTap: function () {
+                                    return 'ok';
+                                }
+                            }]
+                    });
+
+                    showAlertInfo.then(function (res) {
+                        Util.ga.trackEvent('app', 'event', 'enableAlertForOldAlarm', res===true?1:0);
+                        if (res === 'ok') {
+                            Push.enableAlertForOldAlarm(true);
+                        }
+                        else if (res === 'close') {
+                            Push.enableAlertForOldAlarm(false);
+                        }
+                    });
+                });
         });
 
         var strWeather = "Weather";

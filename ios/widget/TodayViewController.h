@@ -57,6 +57,8 @@
     
     __weak IBOutlet UIView *locationView;
     IBOutlet UIView         *noLocationView;                // No Location View
+    //__weak IBOutlet UIView  *fineDustView;
+    
     IBOutlet UILabel        *descLabel;                     // descLabel
     IBOutlet UIButton       *noLocEditWidgetBtn;
     

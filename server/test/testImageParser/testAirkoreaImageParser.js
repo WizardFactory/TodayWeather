@@ -146,12 +146,14 @@ describe('Test - Airkorea Image parser ', function(){
         controller.startDustImageMgr(function(err, pixel){
             if(err){
                 log.info('1. ERROR!!!');
+                assert.fail();
                 return done();
             }
             log.info(pixel.PM10.data.image_count);
             controller.getDustInfo(geocode.lat, geocode.lon, 'PM10', 'airkorea', function(err, result){
                 if(err){
                     log.info('2. ERROR!!!!');
+                    assert.fail();
                     return done();
                 }
 
@@ -163,6 +165,7 @@ describe('Test - Airkorea Image parser ', function(){
                 controller.getDustInfo(geocode.lat, geocode.lon, 'PM25', 'airkorea', function(err, result){
                     if(err){
                         log.info('3. ERROR!!!!');
+                        assert.fail();
                         return done();
                     }
 
