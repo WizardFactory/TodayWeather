@@ -833,6 +833,10 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 }
 
 /* common */
+ion-side-menu-content > ion-nav-view {
+  border-bottom: 1px solid #d2d2d2;
+}
+
 .pane, .view {
   background-color: transparent;
 }
