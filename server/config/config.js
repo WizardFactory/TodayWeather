@@ -85,6 +85,12 @@ module.exports = {
             size: {
                 width: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_WIDTH || '0'),
                 height: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT || '0')
+            },
+            pixel_pos: {
+                left: (process.env.AIRKOREA_KOREA_IMAGE_MAP_LEFT || '0'),
+                right: (process.env.AIRKOREA_KOREA_IMAGE_MAP_RIGHT || '0'),
+                top: (process.env.AIRKOREA_KOREA_IMAGE_MAP_TOP || '0'),
+                bottom: (process.env.AIRKOREA_KOREA_IMAGE_MAP_BOTTOM || '0')
             }
         }
     }
