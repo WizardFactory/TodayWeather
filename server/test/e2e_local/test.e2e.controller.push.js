@@ -21,10 +21,11 @@ i18n.configure({
     cookie: 'twcookie',
 
     // where to store json files - defaults to './locales'
-    directory: __dirname + './../locales',
+    directory: __dirname + '/../../locales',
 
     register: global
 });
+
 global.i18n = i18n;
 
 describe('e2e local test - controller push', function() {
