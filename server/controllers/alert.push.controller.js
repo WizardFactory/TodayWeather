@@ -136,9 +136,7 @@ class AlertPushController {
             current = resData.current;
         }
         else if (resData.source === 'DSF') {
-            if (resData.thisTime.length === 2) {
-                current = resData.thisTime[1];
-            }
+            current = resData.thisTime[1];
         }
         else {
             throw new Error("Unknown source "+JSON.stringify({resData:resData}));
