@@ -1181,7 +1181,7 @@ function ControllerTown24h() {
         log.info(JSON.stringify(itemList));
 
         if (itemList.length === 0) {
-            log.error("Fail to make summary");
+            log.warn("Fail to make air summary");
             return "";
         }
         else {
@@ -1281,7 +1281,7 @@ function ControllerTown24h() {
         log.info(JSON.stringify(itemList));
 
         if (itemList.length === 0) {
-            log.error("Fail to make summary");
+            log.error("Fail to make weather summary");
             return "";
         }
         else if(itemList.length > 1) {
