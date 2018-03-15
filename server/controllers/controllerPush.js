@@ -272,9 +272,10 @@ ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
     return str;
 };
 
-ControllerPush.prototype._makeStrTmnTmx = function (theDay, preDay) {
+ControllerPush.prototype._makeStrTmnTmx = function (theDay, preDay, trans) {
     var str = "";
     var diff;
+    str += trans.__('LOC_LOWEST');
     str +=  parseInt(theDay.tmn)+"˚";
     if (preDay && preDay.tmn) {
         diff = Math.round(theDay.tmn - preDay.tmn);
@@ -289,7 +290,8 @@ ControllerPush.prototype._makeStrTmnTmx = function (theDay, preDay) {
             str += ")";
         }
     }
-    str += "/";
+    str += " ";
+    str += trans.__('LOC_HIGHEST');
     str +=  parseInt(theDay.tmx)+"˚";
     if (preDay && preDay.tmx) {
         diff = Math.round(theDay.tmx - preDay.tmx);
@@ -392,7 +394,7 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     }
 
     if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
-        str = this._makeStrTmnTmx(theDay, preDay);
+        str = this._makeStrTmnTmx(theDay, preDay, trans);
         dailyArray.push(str);
     }
     if (theDay.pty && theDay.pty > 0) {
@@ -489,7 +491,6 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
         count ++;
     }
 
-    log.info('request url='+url);
     var options = {
         url : url,
         headers: {
@@ -497,6 +498,8 @@ ControllerPush.prototype._requestKmaDailySummary = function (pushInfo, callback)
         },
         json:true
     };
+
+    log.info(JSON.stringify({requestOptions:options}));
 
     req(options, function(err, response, body) {
         log.info('Finished '+ url +' '+new Date());
@@ -672,7 +675,7 @@ ControllerPush.prototype._makeDsfPushMessage = function(pushInfo, worldWeatherDa
     }
 
     if (theDay.hasOwnProperty('tmn') && theDay.hasOwnProperty('tmx')) {
-        var str = this._makeStrTmnTmx(theDay, preDay);
+        var str = this._makeStrTmnTmx(theDay, preDay, trans);
         dailyArray.push(str);
     }
 
