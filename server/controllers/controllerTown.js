@@ -969,14 +969,19 @@ function ControllerTown() {
 
     /**
      * current.pty -> awsStn.weather -> awsStn.rns(pty가 3(snow)인 경우 rns로 업데이트 하지 않음)
+     * 비 그침은 AWS Time이 30분 이상 경과하고, 이슬비, 약한비, 약진눈깨비가 아닌 경우에만 적용
      * @param currentPty
-     * @param weather
-     * @param rns
-     * @param temp
+     * @param stnWeatherInfo
      * @returns {number}
      * @private
      */
-    function _convertStnWeather2Pty(currentPty, weather, rns, temp) {
+    function _convertStnWeather2Pty(currentPty, stnWeatherInfo) {
+
+        var weather = stnWeatherInfo.weather;
+        var rns = stnWeatherInfo.rns;
+        var temp = stnWeatherInfo.t1h;
+        var weatherType = stnWeatherInfo.weatherType;
+        var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
 
         if (weather !== undefined) {
             var weatherPty;
@@ -1027,7 +1032,21 @@ function ControllerTown() {
             else if (currentPty === 1 || currentPty === 2) {
                 // currentPty가 1(비),2(비/눈)인 경우만 rns가 false인 경우 보정
                 if (rns === false) {
-                    rnsPty = 0;
+                    //이슬비, 약한비, 약진눈깨비 제외
+                    switch (weatherType) {
+                        case 14:
+                        case 15:
+                        case 16:
+                        case 18:
+                        case 19:
+                        case 29:
+                            //skip
+                            break;
+                        default:
+                            if (stnWeatherInfoTime && stnWeatherInfoTime.getMinutes() >= 30) {
+                                rnsPty = 0;
+                            }
+                    }
                 }
             }
             else if (currentPty === 3) {
@@ -1093,7 +1112,7 @@ function ControllerTown() {
                             current.rn1 = hourlyData.rs1h;
                             current.sky = _convertCloud2SKy(current.sky, hourlyData.cloud);
                             current.reh = hourlyData.reh;
-                            current.pty = _convertStnWeather2Pty(current.pty, hourlyData.weather, hourlyData.rns, hourlyData.t1h);
+                            current.pty = _convertStnWeather2Pty(current.pty, hourlyData);
                             current.lgt = _convertStnWeather2Lgt(current.lgt, hourlyData.weather);
                             current.vec = hourlyData.vec;
                             current.wsd = hourlyData.wsd;
@@ -1114,7 +1133,7 @@ function ControllerTown() {
                                 reqC.rn1 = hourlyData.rs1h;
                                 reqC.sky = _convertCloud2SKy(reqC.sky, hourlyData.cloud);
                                 reqC.reh = hourlyData.reh;
-                                reqC.pty = _convertStnWeather2Pty(reqC.pty, hourlyData.weather, hourlyData.rns, hourlyData.t1h);
+                                reqC.pty = _convertStnWeather2Pty(reqC.pty, hourlyData);
                                 reqC.lgt = _convertStnWeather2Lgt(reqC.lgt, hourlyData.weather);
                                 reqC.vec = hourlyData.vec;
                                 reqC.wsd = hourlyData.wsd;
@@ -1616,8 +1635,7 @@ function ControllerTown() {
 
                     reqCurrent.sky = _convertCloud2SKy(reqCurrent.sky, stnWeatherInfo.cloud);
 
-                    reqCurrent.pty = _convertStnWeather2Pty(reqCurrent.pty, stnWeatherInfo.weather,
-                                        stnWeatherInfo.rns, stnWeatherInfo.t1h);
+                    reqCurrent.pty = _convertStnWeather2Pty(reqCurrent.pty, stnWeatherInfo);
 
                     reqCurrent.lgt = _convertStnWeather2Lgt(reqCurrent.lgt, stnWeatherInfo.weather);
 
