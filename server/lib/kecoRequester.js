@@ -483,6 +483,16 @@ Keco.prototype.completeGeoMsrStnInfo = function(list, callback) {
                 return cb(undefined, msrStn);
             }
 
+            if (msrStn.addr == null || msrStn.addr.length == 0) {
+                log.warn('There is not addr msrStn:'+JSON.stringify(msrStn));
+                return cb(undefined, msrStn);
+            }
+            else if (msrStn.addr.indexOf('이동차량') >= 0) {
+                //강원 평창군 대관령면 솔봉로 325이동차량
+                log.warn('stn location is not fixed msrStn:'+JSON.stringify(msrStn));
+                msrStn.addr = msrStn.addr.replace('이동차량', '');
+            }
+
             self.getGeoInfo(msrStn.addr, function (err, result) {
                 if (err) {
                     log.error(err);
@@ -492,7 +502,7 @@ Keco.prototype.completeGeoMsrStnInfo = function(list, callback) {
                     msrStn.dmY = result.lon;
                     msrStn.dmX = result.lat;
                 }
-                return cb(err, msrStn);
+                return cb(null, msrStn);
             });
         },
         function (err, results) {

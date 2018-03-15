@@ -546,11 +546,19 @@ class AlertPushController {
                 text += sprintf(str, dataTime,  name, air.str);
             }
             else if (air.hasOwnProperty('forecast') && air.forecast.grade >= pushInfo.airAlertsBreakPoint) {
-                if (hasWeather)  {
-                    text += " "+trans.__('LOC_HOURLY_AQI_FORECAST');
+                let strAirForecast = '';
+                if (pushInfo.lang.indexOf('ko') >= 0) {
+                    strAirForecast = '대기' + trans.__('LOC_FORECAST');
                 }
                 else {
-                    title += " "+trans.__('LOC_HOURLY_AQI_FORECAST');
+                    strAirForecast = trans.__('LOC_AQI')+' '+trans.__('LOC_FORECAST');
+
+                }
+                if (hasWeather)  {
+                    text += " " + strAirForecast;
+                }
+                else {
+                    title += " "+ strAirForecast;
                 }
 
                 let forecast = air.forecast;

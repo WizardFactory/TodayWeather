@@ -1181,7 +1181,7 @@ function ControllerTown24h() {
         log.info(JSON.stringify(itemList));
 
         if (itemList.length === 0) {
-            log.error("Fail to make summary");
+            log.warn("Fail to make air summary");
             return "";
         }
         else {
@@ -1281,7 +1281,7 @@ function ControllerTown24h() {
         log.info(JSON.stringify(itemList));
 
         if (itemList.length === 0) {
-            log.error("Fail to make summary");
+            log.error("Fail to make weather summary");
             return "";
         }
         else if(itemList.length > 1) {
@@ -1389,7 +1389,7 @@ function ControllerTown24h() {
                         log.error('Same date in dailyData', JSON.stringify(resInfo));
                     }
 
-                    if (daily[i].dayOfWeek === daily[i+1].dayOfWeek) {
+                    if (daily[i].dayOfWeek != undefined && daily[i].dayOfWeek === daily[i+1].dayOfWeek) {
                         resInfo = {index: i, date: daily[i].date, regionName: regionName, cityName: cityName, townName: townName};
                         log.error('Same day of week in dailyData', JSON.stringify(resInfo));
                     }
