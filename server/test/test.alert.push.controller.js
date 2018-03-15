@@ -502,6 +502,24 @@ describe('unit test - alert push controller', function() {
                 pushInfo.precipAlerts = {lastState: 0};
 
                 let ctrlAlertPush = new AlertPushController();
+                ctrlAlertPush.time = 10 * 60 * 60 + 5 * 60;
+                let infoObj = ctrlAlertPush._parseWeatherAirData(pushInfo, data);
+                let send;
+                let notification;
+                send = ctrlAlertPush._compareWithLastInfo(pushInfo, infoObj);
+                ctrlAlertPush._updateAlertPush(pushInfo, infoObj, send);
+                notification = ctrlAlertPush._convertToNotification(pushInfo, infoObj);
+
+                console.log(JSON.stringify({infoObj: infoObj}));
+                console.log({send: send});
+                console.log(JSON.stringify({pushInfo: pushInfo}));
+                console.log({notification: notification});
+            });
+
+            it('test '+JSON.stringify({push:pushInfo, data:data}), function () {
+                pushInfo.precipAlerts = {lastState: 0};
+
+                let ctrlAlertPush = new AlertPushController();
                 ctrlAlertPush.time = 10 * 60 * 60 + 45 * 60;
                 let infoObj = ctrlAlertPush._parseWeatherAirData(pushInfo, data);
                 let send;

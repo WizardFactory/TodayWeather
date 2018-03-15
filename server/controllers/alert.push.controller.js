@@ -234,9 +234,11 @@ class AlertPushController {
             }
 
             if (weather.forecast) {
-                log.info('send forecast alert '+JSON.stringify(weather.forecast));
-                //for slack
-                log.error('send forecast alert '+JSON.stringify(weather.forecast));
+                if (weather.forecast.pty > 0) {
+                    log.info('send weather forecast alert '+JSON.stringify(weather));
+                    //for slack
+                    log.error('send weather forecast weather:'+JSON.stringify(weather)+' alert:'+JSON.stringify(alertPush));
+                }
                 delete weather.forecast;
             }
         }
@@ -307,9 +309,11 @@ class AlertPushController {
            }
 
            if (air.forecast) {
-                log.info('send air forecast alert '+JSON.stringify(air.forecast));
-                //for slack
-                log.error('send air forecast alert '+JSON.stringify(air.forecast));
+               if (air.forecast.grade > alertPush.airAlertsBreakPoint) {
+                   log.info('send air forecast alert '+JSON.stringify(air));
+                   //for slack
+                   log.error('send air forecast air:'+JSON.stringify(air)+' alert:'+JSON.stringify(alertPush));
+               }
                delete air.forecast;
            }
         }
