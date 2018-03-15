@@ -16,8 +16,14 @@ class KaqDustImageController{
             PM10: [],
             PM25: []
         };
-        this.value_pos = [50, 59, 68, 77, 86, 95, 100, 109, 118, 127, 136, 145, 152, 161, 170, 179, 188, 197, 205, 214, 223, 232, 241, 250, 257, 266, 275, 284, 293, 302, 311, 320];
-        this.value = [999, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0];
+        this.value_pos = {
+            PM10 : [50, 59, 68, 77, 86, 95, 100, 109, 118, 127, 136, 145, 152, 161, 170, 179, 188, 197, 205, 214, 223, 232, 241, 250, 257, 266, 275, 284, 293, 302, 311, 320],
+            PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
+        };
+        this.value = {
+            PM10 : [999, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
+            PM25 : [999, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+        };
         this.parser = new libKaqImageParser();
         this.imagePixels = {};
         this.coordinate = this.parser.getDefaultCoordi();
@@ -206,15 +212,16 @@ class KaqDustImageController{
      */
     makeColorTable(type, pixels, callback){
         let x = 280;
+        let value = this.value[type];
 
         this.colorTable[type] = [];
         for(var i=0 ; i < pixels.image_count ; i++){
-            this.value_pos.forEach((y, j)=>{
+            this.value_pos[type].forEach((y, j)=>{
                 var rgb = {
                     r: pixels.pixels.get(i, x, y, 0),
                     g: pixels.pixels.get(i, x, y, 1),
                     b: pixels.pixels.get(i, x, y, 2),
-                    val: this.value[j]
+                    val: value[j]
                 };
 
                 let found = this.colorTable[type].find((item)=>{
