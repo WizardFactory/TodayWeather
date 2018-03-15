@@ -172,12 +172,25 @@ class AlertPushController {
         if (current.pty === 0) { //맑음
             if (mins > 40) {
                if (resData.hasOwnProperty('shortest'))  {
-                   let shortest = resData.shortest.find(function (obj) {
+                   let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
                    });
-                   if (shortest) {
-                       weather.forecast = shortest;
-                       weather.forecast.pubDate = resData.shortestPubDate;
+                   if (forecastIndex >= 0) {
+                       let shortest1 = resData.shortest[forecastIndex];
+                       let shortest2 = resData.shortest[forecastIndex+1];
+                       let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
+                       if (shortest1.pty > 0) {
+                           if (shortest2 != undefined) {
+                               if (shortest2.pty > 0) {
+                                   forecastObj.pty = shortest1.pty;
+                               }
+                           }
+                           else {
+                               forecastObj.pty = shortest1.pty;
+                           }
+                       }
+
+                       weather.forecast = forecastObj;
                    }
                    else {
                        log.warn("Fail to find shortest date="+strForecastTime);
