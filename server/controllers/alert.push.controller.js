@@ -170,7 +170,7 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins > 40) {
+            if (mins < 10) {
                if (resData.hasOwnProperty('shortest'))  {
                    let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
@@ -231,6 +231,13 @@ class AlertPushController {
                        }
                    }
                }
+            }
+
+            if (weather.forecast) {
+                log.info('send forecast alert '+JSON.stringify(weather.forecast));
+                //for slack
+                log.error('send forecast alert '+JSON.stringify(weather.forecast));
+                delete weather.forecast;
             }
         }
 
@@ -297,6 +304,13 @@ class AlertPushController {
                    air.forecast.pubDate = airInfo.forecastPubDate;
                    air.forecast.source = airInfo.forecastSource;
                }
+           }
+
+           if (air.forecast) {
+                log.info('send air forecast alert '+JSON.stringify(air.forecast));
+                //for slack
+                log.error('send air forecast alert '+JSON.stringify(air.forecast));
+               delete air.forecast;
            }
         }
 
