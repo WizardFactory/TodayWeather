@@ -92,6 +92,24 @@ module.exports = {
                 top: (process.env.AIRKOREA_KOREA_IMAGE_MAP_TOP || '0'),
                 bottom: (process.env.AIRKOREA_KOREA_IMAGE_MAP_BOTTOM || '0')
             }
+        },
+        kaq_korea_image:{
+            coordi: {
+                top_lat: (process.env.KAQ_KOREA_IMAGE_COORDI_TOP_LAT || '0'),
+                bottom_lat: (process.env.KAQ_KOREA_IMAGE_COORDI_BOTTOM_LAT || '00'),
+                left_lon: (process.env.KAQ_KOREA_IMAGE_COORDI_LEFT_LON || '0'),
+                right_lon: (process.env.KAQ_KOREA_IMAGE_COORDI_RIGHT_LON || '0')
+            },
+            size: {
+                width: (process.env.KAQ_KOREA_IMAGE_SIZE_WIDTH || '0'),
+                height: (process.env.KAQ_KOREA_IMAGE_SIZE_HEIGHT || '0')
+            },
+            pixel_pos: {
+                left: (process.env.KAQ_KOREA_IMAGE_MAP_LEFT || '0'),
+                right: (process.env.KAQ_KOREA_IMAGE_MAP_RIGHT || '0'),
+                top: (process.env.KAQ_KOREA_IMAGE_MAP_TOP || '0'),
+                bottom: (process.env.KAQ_KOREA_IMAGE_MAP_BOTTOM || '0')
+            }
         }
     }
 };
