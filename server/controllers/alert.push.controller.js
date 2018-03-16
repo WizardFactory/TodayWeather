@@ -170,7 +170,7 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins < 10) {
+            if (mins === 15) {
                if (resData.hasOwnProperty('shortest'))  {
                    let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;

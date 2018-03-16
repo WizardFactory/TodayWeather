@@ -502,7 +502,7 @@ describe('unit test - alert push controller', function() {
                 pushInfo.precipAlerts = {lastState: 0};
 
                 let ctrlAlertPush = new AlertPushController();
-                ctrlAlertPush.time = 10 * 60 * 60 + 5 * 60;
+                ctrlAlertPush.time = 10 * 60 * 60 + 15 * 60;
                 let infoObj = ctrlAlertPush._parseWeatherAirData(pushInfo, data);
                 let send;
                 let notification;
