@@ -296,15 +296,17 @@ MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
                 });
             },
             function(integratedData, callback) {
-                if(config.db.version == '2.0'){
+                self.saveMidRss(integratedData, function (err, result) {
+                    callback(err, result);
+                });
+                // if(config.db.version == '2.0'){
                     self.saveMidRssNewForm(integratedData, function (err, result) {
-                        callback(err, result);
+                        if (err) {
+                            log.error(err);
+                        }
+                        // callback(err, result);
                     });
-                }else{
-                    self.saveMidRss(integratedData, function (err, result) {
-                        callback(err, result);
-                    });
-                }
+                // }
             }],
         function (err, result) { //pubDate = lastUpdateTime
             if (err) {

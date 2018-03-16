@@ -502,12 +502,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
                 });
             },
             function(err){
-                var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
                 log.info('KMA Town S-RSS> finished to save town.short.rss data');
-                log.info('KMA Town S-RSS> remove item if it is before : ', limitedTime.toString());
-
-                modelKmaTownShortRss.remove({"mCoord": newData.mCoord, "fcsDate": {$lte:limitedTime}}).exec();
-
                 callback(err);
             }
         );
@@ -633,43 +628,43 @@ TownRss.prototype.getData = function(index, item, cb){
             return;
         }
 
-        self.parseShortRss(index, RssData, function(err, result){
-            if(err){
+        self.parseShortRss(index, RssData, function(err, result) {
+            if (err) {
                 log.error('failed to parse short rss(%d)', index);
-                if(cb) {
+                if (cb) {
                     cb(err);
                 }
                 return;
             }
-            if(config.db.version === '2.0'){
-                self.saveShortRssNewForm(index, result, function(err){
-                    if(err){
-                        log.error('failed to save the data to DB');
-                        if(cb) {
-                            cb(err);
-                        }
-                        return;
-                    }
 
-                    if(cb) {
-                        cb();
+            self.saveShortRss(index, result, function (err) {
+                if (err) {
+                    log.error('failed to save the data to DB');
+                    if (cb) {
+                        cb(err);
                     }
-                });
-            }else{
-                self.saveShortRss(index, result, function(err){
-                    if(err){
-                        log.error('failed to save the data to DB');
-                        if(cb) {
-                            cb(err);
-                        }
-                        return;
-                    }
+                    return;
+                }
 
-                    if(cb) {
-                        cb();
-                    }
-                });
-            }
+                if (cb) {
+                    cb();
+                }
+            });
+
+            // if(config.db.version === '2.0'){
+            self.saveShortRssNewForm(index, result, function (err) {
+                if (err) {
+                    log.error('failed to save the data to DB');
+                    // if(cb) {
+                    //     cb(err);
+                    // }
+                    // return;
+                }
+                // if(cb) {
+                //     cb();
+                // }
+            });
+            // }
         });
     });
 };
@@ -801,6 +796,8 @@ TownRss.prototype.mainTask = function(completionCallback){
                 }
             });
     });
+
+    self.remove(new Date());
 };
 
 TownRss.prototype.StartShortRss = function(){
@@ -813,6 +810,12 @@ TownRss.prototype.StartShortRss = function(){
         self.mainTask();
 
     }, self.TIME_PERIOD_TOWN_RSS);
+};
+
+TownRss.prototype.remove = function (pubDate) {
+    var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
+    log.info('KMA Town S-RSS> remove item if it is before : ', limitedTime.toString());
+    modelKmaTownShortRss.remove({"fcsDate": {$lte:limitedTime}}).exec();
 };
 
 module.exports = TownRss;

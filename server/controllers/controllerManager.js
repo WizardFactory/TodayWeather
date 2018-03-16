@@ -926,38 +926,50 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    if(config.db.version === '2.0'){
-        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidForecast, newData[0], callback);
-    }
+    this.saveMid(modelMidForecast, newData[0], callback);
+    // if(config.db.version === '2.0'){
+    this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidLand, newData[0], callback);
-    }
+    this.saveMid(modelMidLand, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidTemp, newData[0], callback);
-    }
+    this.saveMid(modelMidTemp, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidSea, newData[0], callback);
-    }
+    this.saveMid(modelMidSea, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, function(err) {
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
@@ -1346,6 +1358,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
         return this;
     });
 
+    kmaTownShort.remove(new Date());
     return this;
 };
 
@@ -1407,6 +1420,8 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 
         return this;
     });
+
+    kmaTownShortest.remove(new Date());
     return this;
 };
 
@@ -1468,6 +1483,8 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
         });
         return this;
     });
+
+    kmaTownCurrent.remove(new Date());
     return this;
 };
 
@@ -1899,23 +1916,38 @@ Manager.prototype.getDataTypeName = function(value) {
 Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
-            if(config.db.version === '2.0'){
-                return kmaTownCurrent.saveCurrent;
-            }else{
-                return this.saveCurrent;
-            }
+            return function saveCurrent(newData, callback) {
+                this.saveCurrent(newData, callback);
+                // if(config.db.version === '2.0'){
+                kmaTownCurrent.saveCurrent(newData, function(err) {
+                    if (err) {
+                        log.error(err);
+                    }
+                });
+                // }
+            };
         case this.DATA_TYPE.TOWN_SHORTEST:
-            if(config.db.version === '2.0'){
-                return kmaTownShortest.saveShortest;
-            }else{
-                return this.saveShortest;
-            }
+            return function saveShortest(newData, callback) {
+                this.saveShortest(newData, callback);
+                // if(config.db.version === '2.0'){
+                kmaTownShortest.saveShortest(newData, function(err) {
+                    if (err) {
+                        log.error(err);
+                    }
+                });
+                // }
+            };
         case this.DATA_TYPE.TOWN_SHORT:
-            if(config.db.version === '2.0'){
-                return kmaTownShort.saveShort;
-            }else{
-                return this.saveShort;
-            }
+            return function saveShort(newData, callback) {
+               this.saveShort(newData, callback);
+               // if(config.db.version === '2.0'){
+               kmaTownShort.saveShort(newData, function(err) {
+                   if (err) {
+                       log.error(err);
+                   }
+               })
+               // }
+            };
         case this.DATA_TYPE.MID_FORECAST:
             return this.saveMidForecast;
         case this.DATA_TYPE.MID_LAND:
