@@ -983,24 +983,41 @@ function ControllerTown() {
         var weatherType = stnWeatherInfo.weatherType;
         var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
 
-        if (weather !== undefined) {
+        if (weather !== undefined && weatherType !== -1) {
             var weatherPty;
 
             //순서 중요함.
-            if (weather.indexOf("끝") >= 0) {
-                weatherPty = 0;
-            }
-            else if (weather.indexOf("진눈깨비") >= 0) {
+            if (weather.indexOf("뇌우끝,비") >= 0) {
                 weatherPty =  2;
             }
-            else if (weather.indexOf("비") >= 0) {
+            else if (weather.indexOf("뇌우끝,눈") >= 0) {
+                weatherPty =  3;
+            }
+            else if (weather.indexOf("끝") >= 0) {
+                weatherPty = 0;
+            }
+            else if (weather.indexOf("진눈깨비") >= 0 ||
+                weather.indexOf("비/눈") >= 0 ||
+                weather.indexOf("눈/비") >= 0)
+            {
+                weatherPty =  2;
+            }
+            else if (weather.indexOf("비") >= 0 ||
+                weather.indexOf("강수") >= 0 ||
+                weather.indexOf("뇌우") >= 0 ||
+                weather.indexOf('소나기') >= 0)
+            {
                 weatherPty =  1;
             }
-            else if (weather.indexOf("눈") >= 0) {
+            else if (weather.indexOf("눈") >= 0 ||
+                weather.indexOf("얼음") >= 0 || //얼음싸라기
+                weather.indexOf("우박") >= 0)
+            {
                 weatherPty =  3;
             }
-            else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
-                weatherPty =  3;
+            else if (weather.indexOf("번개") >= 0) {
+               //비가 오는지 안오는지 알수 없음 모니터링용 로그 추가함.
+                log.error('weather is 번개');
             }
             else {
                 //이부분으로 current의 pty는 무시됨 TW-92
