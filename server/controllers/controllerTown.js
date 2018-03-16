@@ -983,7 +983,7 @@ function ControllerTown() {
         var weatherType = stnWeatherInfo.weatherType;
         var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
 
-        if (weather !== undefined && weatherType !== -1) {
+        if (weather !== undefined) {
             var weatherPty;
 
             //순서 중요함.
@@ -1018,10 +1018,6 @@ function ControllerTown() {
             else if (weather.indexOf("번개") >= 0) {
                //비가 오는지 안오는지 알수 없음 모니터링용 로그 추가함.
                 log.error('weather is 번개');
-            }
-            else {
-                //이부분으로 current의 pty는 무시됨 TW-92
-                weatherPty = 0;
             }
 
             if (weatherPty !== undefined) {
