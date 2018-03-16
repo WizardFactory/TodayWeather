@@ -1002,6 +1002,10 @@ function ControllerTown() {
             else if (weather.indexOf("얼음") >= 0) { //얼음싸라기
                 weatherPty =  3;
             }
+            else {
+                //이부분으로 current의 pty는 무시됨 TW-92
+                weatherPty = 0;
+            }
 
             if (weatherPty !== undefined) {
                currentPty = weatherPty;
