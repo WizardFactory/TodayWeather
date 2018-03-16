@@ -170,14 +170,27 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins > 40) {
+            if (mins === 15) {
                if (resData.hasOwnProperty('shortest'))  {
-                   let shortest = resData.shortest.find(function (obj) {
+                   let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
                    });
-                   if (shortest) {
-                       weather.forecast = shortest;
-                       weather.forecast.pubDate = resData.shortestPubDate;
+                   if (forecastIndex >= 0) {
+                       let shortest1 = resData.shortest[forecastIndex];
+                       let shortest2 = resData.shortest[forecastIndex+1];
+                       let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
+                       if (shortest1.pty > 0) {
+                           if (shortest2 != undefined) {
+                               if (shortest2.pty > 0) {
+                                   forecastObj.pty = shortest1.pty;
+                               }
+                           }
+                           else {
+                               forecastObj.pty = shortest1.pty;
+                           }
+                       }
+
+                       weather.forecast = forecastObj;
                    }
                    else {
                        log.warn("Fail to find shortest date="+strForecastTime);
@@ -218,6 +231,15 @@ class AlertPushController {
                        }
                    }
                }
+            }
+
+            if (weather.forecast) {
+                if (weather.forecast.pty > 0) {
+                    log.info('send weather forecast alert '+JSON.stringify(weather));
+                    //for slack
+                    log.error('send weather forecast weather:'+JSON.stringify(weather)+' alert:'+JSON.stringify(alertPush));
+                }
+                delete weather.forecast;
             }
         }
 
@@ -284,6 +306,15 @@ class AlertPushController {
                    air.forecast.pubDate = airInfo.forecastPubDate;
                    air.forecast.source = airInfo.forecastSource;
                }
+           }
+
+           if (air.forecast) {
+               if (air.forecast.grade > alertPush.airAlertsBreakPoint) {
+                   log.info('send air forecast alert '+JSON.stringify(air));
+                   //for slack
+                   log.error('send air forecast air:'+JSON.stringify(air)+' alert:'+JSON.stringify(alertPush));
+               }
+               delete air.forecast;
            }
         }
 

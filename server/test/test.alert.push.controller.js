@@ -423,8 +423,98 @@ describe('unit test - alert push controller', function() {
         }
     });
 
+    dataList.push({
+        source: "KMA",
+        current: {
+            pty: 0,
+            weather: "맑음",
+            dateObj: "2018.02.09 14:19"
+        },
+        shortestPubDate: "201802091530",
+        shortest: [
+            {
+                pty: 1,
+                dateObj: "2018.02.09 15:00"
+            },
+            {
+                pty: 0,
+                dateObj: "2018.02.09 16:00"
+            }
+        ],
+        airInfo: {
+            last: {
+                dataTime: "2018-02-09 14:00",
+                pm10Grade: 1,
+                pm10Str: "좋음",
+            },
+            pollutants: {
+                pm25: {
+                    hourly: [{
+                        date: "2018-02-09 15:00",
+                        grade: 4,
+                        str: "나쁨"
+                    }]
+                }
+            }
+        }
+    });
+
+    dataList.push({
+        source: "KMA",
+        current: {
+            pty: 0,
+            weather: "맑음",
+            dateObj: "2018.02.09 14:19"
+        },
+        shortestPubDate: "201802091530",
+        shortest: [
+            {
+                pty: 1,
+                dateObj: "2018.02.09 15:00"
+            },
+            {
+                pty: 1,
+                dateObj: "2018.02.09 16:00"
+            }
+        ],
+        airInfo: {
+            last: {
+                dataTime: "2018-02-09 14:00",
+                pm10Grade: 1,
+                pm10Str: "좋음",
+            },
+            pollutants: {
+                pm25: {
+                    hourly: [{
+                        date: "2018-02-09 15:00",
+                        grade: 4,
+                        str: "나쁨"
+                    }]
+                }
+            }
+        }
+    });
+
     pushInfoList.forEach(function (pushInfo) {
         dataList.forEach(function (data) {
+
+            it('test '+JSON.stringify({push:pushInfo, data:data}), function () {
+                pushInfo.precipAlerts = {lastState: 0};
+
+                let ctrlAlertPush = new AlertPushController();
+                ctrlAlertPush.time = 10 * 60 * 60 + 15 * 60;
+                let infoObj = ctrlAlertPush._parseWeatherAirData(pushInfo, data);
+                let send;
+                let notification;
+                send = ctrlAlertPush._compareWithLastInfo(pushInfo, infoObj);
+                ctrlAlertPush._updateAlertPush(pushInfo, infoObj, send);
+                notification = ctrlAlertPush._convertToNotification(pushInfo, infoObj);
+
+                console.log(JSON.stringify({infoObj: infoObj}));
+                console.log({send: send});
+                console.log(JSON.stringify({pushInfo: pushInfo}));
+                console.log({notification: notification});
+            });
 
             it('test '+JSON.stringify({push:pushInfo, data:data}), function () {
                 pushInfo.precipAlerts = {lastState: 0};
