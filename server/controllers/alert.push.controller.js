@@ -664,6 +664,9 @@ class AlertPushController {
                     });
 
                     log.info({send:send, registrationId: alertPush.registrationId});
+                    if (send !== 'none') {
+                        log.error({send:send, registrationId: alertPush.registrationId});
+                    }
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -693,7 +696,7 @@ class AlertPushController {
     }
 
     _streamAlertPush (list, callback) {
-        async.mapLimit(list, 100,
+        async.mapLimit(list, 10,
             (alertPush, callback) => {
                 this._sendAlertPush(alertPush, (err, result) =>{
                     if (err) {
@@ -756,7 +759,7 @@ class AlertPushController {
         queryList.push(queryN);
         queryList.push(queryR);
         let query = {$or: queryList};
-        AlertPush.find(query).$where(checkUpdateInterval).lean().exec( (err, list) => {
+        AlertPush.find(query, {_id: 0}).$where(checkUpdateInterval).lean().exec( (err, list) => {
             if (err) {
                 return callback(err);
             }
@@ -797,6 +800,7 @@ class AlertPushController {
                else {
                    log.debug(result);
                }
+               log.info('end send alert push list time:'+time);
                if (callback) {
                    callback();
                }
