@@ -1430,41 +1430,15 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
             return this;
         }
 
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownCurrent.checkPubDate;
-        }
-        checkPubDate(modelCurrent, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
-            }
-            //log.info('C> try to get current data');
-            if (srcList.length === 0) {
-                log.info('C> All current was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
-            }
-            else {
-                log.info('C> srcList length=', srcList.length);
-            }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, undefined, function (err, results) {
-                log.info('C> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err) {
-                    return log.error(err);
-                }
-            });
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, undefined, function (err, results) {
+            log.info('C> save OK');
+            if (callback) {
+                return callback(err, results);
+            }
+            if (err) {
+                return log.error(err);
+            }
         });
         return this;
     });
@@ -2244,7 +2218,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 41 || putAll) {
+    if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
         //direct request current
         log.info('push current');
         //self.asyncTasks.push(function Current(callback) {
@@ -2255,7 +2229,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 46 || putAll) {
+    if (time === 47 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
@@ -2289,16 +2263,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 55 || putAll) {
-        //direct request updateInvalidt1h
-        log.info('push updateInvalidt1h');
-        //self.asyncTasks.push(function UpdateInvalidT1H(callback) {
-        self._requestApi("updateInvalidt1h", function () {
-            log.info('updateInvalidt1h done');
-            //        callback();
-        });
-        //});
-    }
+    // if (time === 55 || putAll) {
+    //     //direct request updateInvalidt1h
+    //     log.info('push updateInvalidt1h');
+    //     //self.asyncTasks.push(function UpdateInvalidT1H(callback) {
+    //     self._requestApi("updateInvalidt1h", function () {
+    //         log.info('updateInvalidt1h done');
+    //         //        callback();
+    //     });
+    //     //});
+    // }
 
     if (self.asyncTasks.length <= 17) {
         log.debug('wait '+self.asyncTasks.length+' tasks');
