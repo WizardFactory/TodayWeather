@@ -46,12 +46,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
                 });
             },
             function(err){
-                var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
                 log.info('KMA Town C> finished to save town.current data');
-                log.info('KMA Town C> remove item if it is before : ', limitedTime.toString());
-
-                modelKmaTownCurrent.remove({"mCoord": coord, "pubDate": {$lte:limitedTime}}).exec();
-
                 callback(err);
             }
         );
@@ -177,6 +172,12 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
     }
 
     return this;
+};
+
+kmaTownCurrentController.prototype.remove = function (pubDate) {
+    var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
+    log.info('KMA Town C> remove item if it is before : ', limitedTime.toString());
+    modelKmaTownCurrent.remove({"pubDate": {$lte:limitedTime}}).exec();
 };
 
 module.exports = kmaTownCurrentController;

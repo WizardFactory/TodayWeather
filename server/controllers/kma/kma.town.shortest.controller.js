@@ -39,12 +39,7 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback){
                 });
             },
             function(err){
-                var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
                 log.info('KMA Town ST> finished to save town.short data');
-                log.info('KMA Town ST> remove item if it is before : ', limitedTime.toString());
-
-                modelKmaTownShortest.remove({"mCoord": coord, "fcsDate": {$lte:limitedTime}}).exec();
-
                 callback(err);
             }
         );
@@ -161,6 +156,12 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
     }
 
     return this;
+};
+
+kmaTownShortestController.prototype.remove = function (pubDate) {
+    var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
+    log.info('KMA Town ST> remove item if it is before : ', limitedTime.toString());
+    modelKmaTownShortest.remove({"fcsDate": {$lte:limitedTime}}).exec();
 };
 
 module.exports = kmaTownShortestController;
