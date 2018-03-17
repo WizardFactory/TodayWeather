@@ -185,7 +185,9 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 4,
+                pm10Value: 80,
                 pm25Grade: 3,
+                pm25Value: 50,
                 pm10Str: "나쁨",
                 pm25Str: "민감군주의",
             }
@@ -208,7 +210,9 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 4,
+                pm10Value: 80,
                 pm25Grade: 3,
+                pm25Value: 50,
                 pm10Str: "나쁨",
                 pm25Str: "민감군주의",
             }
@@ -231,7 +235,9 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 4,
+                pm10Value: 80,
                 pm25Grade: 3,
+                pm25Value: 50,
                 pm10Str: "나쁨",
                 pm25Str: "민감군주의",
             }
@@ -254,6 +260,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {}
@@ -276,6 +283,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -300,6 +308,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -326,6 +335,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -352,6 +362,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -380,6 +391,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -409,6 +421,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -445,6 +458,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -481,6 +495,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -714,7 +729,9 @@ describe('unit test - alert push controller', function() {
         airInfo:{
             last:{
                 dataTime: "2018-02-09 14:00",
+                pm25Value: 5,
                 pm25Grade: 1,
+                pm10Value: 50,
                 pm10Grade: 3
             }
         }
@@ -732,7 +749,9 @@ describe('unit test - alert push controller', function() {
         airInfo:{
             last:{
                 dataTime: "2018-02-09 14:00",
+                pm25Value: 30,
                 pm25Grade: 3,
+                pm10Value: 50,
                 pm10Grade: 3
             }
         }
@@ -750,7 +769,9 @@ describe('unit test - alert push controller', function() {
         airInfo:{
             last:{
                 dataTime: "2018-02-09 14:00",
+                pm25Value: 50,
                 pm25Grade: 4,
+                pm10Value: 10,
                 pm10Grade: 1
             }
         }
@@ -768,7 +789,9 @@ describe('unit test - alert push controller', function() {
         airInfo:{
             last:{
                 dataTime: "2018-02-09 14:00",
+                pm25Value: 50,
                 pm25Grade: 4,
+                pm10Value: 10,
                 pm10Grade: 1,
                 pm25Str: "unhealth"
             }
@@ -816,6 +839,7 @@ describe('unit test - alert push controller', function() {
             last: {
                 dataTime: "2018-02-09 14:00",
                 pm10Grade: 1,
+                pm10Value: 10,
                 pm10Str: "좋음",
             },
             pollutants: {
@@ -845,6 +869,7 @@ describe('unit test - alert push controller', function() {
 
     temp = JSON.parse(JSON.stringify(data));
     temp.airInfo.last.pm10Grade = 4;
+    temp.airInfo.last.pm10Value = 80;
     temp.airInfo.last.pm10Str = '나쁨';
     dataList.push(temp);
 
@@ -857,12 +882,14 @@ describe('unit test - alert push controller', function() {
     temp.current.pty = 1;
     temp.current.weather = '비';
     temp.airInfo.last.pm10Grade = 4;
+    temp.airInfo.last.pm10Value = 80;
     temp.airInfo.last.pm10Str = '나쁨';
     dataList.push(temp);
 
     temp = JSON.parse(JSON.stringify(data));
     temp.shortest[0].pty = 1;
     temp.airInfo.last.pm10Grade = 4;
+    temp.airInfo.last.pm10Value = 80;
     temp.airInfo.last.pm10Str = '나쁨';
     dataList.push(temp);
 

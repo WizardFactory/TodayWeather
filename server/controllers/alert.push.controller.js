@@ -256,13 +256,15 @@ class AlertPushController {
             return infoObj;
         }
 
-        let airList = [{name:'pm10', grade:airInfo.pm10Grade},
-            {name:'pm25', grade:airInfo.pm25Grade},
-            {name:'aqi', grade:airInfo.aqiGrade}];
+        let airList = [];
+        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(name => {
+          airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+        });
         airList = AqiConverter.sortByGrade(airList);
         if (airList[0].grade) {
             air.name = airList[0].name;
             air.grade = airList[0].grade;
+            air.value = airList[0].value;
             air.str = airInfo[air.name+'Str'];
         }
         air.dataTime = airInfo.dataTime;
@@ -665,7 +667,7 @@ class AlertPushController {
 
                     log.info({send:send, registrationId: alertPush.registrationId});
                     if (send !== 'none') {
-                        log.error({send:send, registrationId: alertPush.registrationId});
+                        log.error({send:send, infoObj:infoObj, alertPush: alertPush});
                     }
                     callback(null, {send:send, data: infoObj});
                 },
