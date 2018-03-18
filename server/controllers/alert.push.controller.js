@@ -154,6 +154,9 @@ class AlertPushController {
         if (current.pty && current.rns) {
             weather.pty = current.pty;
         }
+        else if (current.pty > 0) {
+            log.error('rns and pty are different. current:'+current);
+        }
 
         weather.desc = current.weather;
 
