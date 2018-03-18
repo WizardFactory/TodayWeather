@@ -148,7 +148,13 @@ class AlertPushController {
 
         let weather = infoObj.weather = {};
 
-        weather.pty = current.pty || 0;
+        /**
+         * TW-165 current가 정상적으로 비로 표시되시만, 보수적인 접근으로 rns도 true인 경우에는만 Push전송
+         */
+        if (current.pty && current.rns) {
+            weather.pty = current.pty;
+        }
+
         weather.desc = current.weather;
 
         if (current.hasOwnProperty('ptyStationName')) {
