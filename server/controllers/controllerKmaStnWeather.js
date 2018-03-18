@@ -1080,7 +1080,7 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                 });
             },
             function (pCallback) {
-                self.getStnList(coords, 0.2, undefined, 5, function (err, kmaStnList) {
+                self.getStnList(coords, 0.1, undefined, 5, function (err, kmaStnList) {
                     if (err) {
                         return pCallback(err);
                     }
