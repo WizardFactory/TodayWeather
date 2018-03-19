@@ -148,14 +148,24 @@ class AlertPushController {
 
         let weather = infoObj.weather = {};
 
+        infoObj.name = resData.name;
+        if (infoObj.name == undefined) {
+            if (resData.townName && resData.townName.length > 0) {
+                infoObj.name = resData.townName;
+            }
+            else if (resData.cityName && resData.cityName.length > 0) {
+                infoObj.name = resData.cityName;
+            }
+        }
+
         weather.pty = current.pty || 0;
         weather.desc = current.weather;
 
-        if (current.hasOwnProperty('ptyStationName')) {
-            weather.stationName = current.ptyStationName;
+        if (current.hasOwnProperty('rnsStnName')) {
+            weather.stnName = current.rnsStnName;
         }
-        else if (current.hasOwnProperty('stationName')) {
-            weather.stationName = current.stationName;
+        else if (current.hasOwnProperty('stnName')) {
+            weather.stnName = current.stnName;
         }
 
         if (current.hasOwnProperty('dateObj')) {
@@ -266,6 +276,7 @@ class AlertPushController {
             air.grade = airList[0].grade;
             air.value = airList[0].value;
             air.str = airInfo[air.name+'Str'];
+            air.stationName = airInfo.stationName;
         }
         air.dataTime = airInfo.dataTime;
 
@@ -517,32 +528,46 @@ class AlertPushController {
         //잠실본동 날씨예보
         //1시부터 비,눈,진눈깨비가 내릴 예정입니다.
         //잠실본동 대기정보
-        //12시 미세먼지/초미세먼지/오존/이산화질소/일산화탄소/아황산가스/통합대기가 나쁨입니다. 외부활동에 주의하세요.
+        //12시부터 미세먼지/초미세먼지/오존/이산화질소/일산화탄소/아황산가스/통합대기가 나쁨입니다. 외부활동에 주의하세요.
         //잠실본동 대기예보
         //13시부터 미세먼지/초미세먼지/오존/통합대기가 ‘보통’ 수준을 나타낼 것으로 예상됩니다. 외부활동에 주의하세요.
+        //12:35
+        //stnName 비가 내리고 있습니다.
+        //대기정보 | 대기예보
+        //복정동 12시부터 미세먼지가 나쁨/32입니다.
 
-        let title = pushInfo.name;
-        let text ="";
+        let cityName = pushInfo.name || infoObj.name || "";
+        let title = "";
+        let text = "";
         let hasWeather = false;
         if (infoObj.hasOwnProperty('weather')) {
             let weather = infoObj.weather;
+            if (cityName.length === 0){
+                if (weather.stnName) {
+                    text += weather.stnName + " ";
+                }
+            }
+            else {
+                title += cityName + " ";
+            }
+
             if (weather.pty > 0) {
-                title += " " + weather.dateObj.substr(11,5);
+                title += weather.dateObj.substr(11,5);
                 if (weather.pty === 1) {
-                    text = trans.__("LOC_IT_IS_RAINING");
+                    text += trans.__("LOC_IT_IS_RAINING");
                 }
                 else if (weather.pty === 2) {
-                    text = trans.__("LOC_IT_IS_SLEETING");
+                    text += trans.__("LOC_IT_IS_SLEETING");
                 }
                 else if (weather.pty === 3) {
-                    text = trans.__("LOC_IT_IS_SNOWING");
+                    text += trans.__("LOC_IT_IS_SNOWING");
                 }
                 hasWeather = true;
             }
             else if (weather.forecast && weather.forecast.pty > 0) {
                 let forecast = weather.forecast;
                 let forecastTime = (new Date(forecast.dateObj)).getHours();
-                title += " " + trans.__("LOC_FORECAST");
+                title += trans.__("LOC_FORECAST");
 
                 let str;
                 if (forecast.pty === 1) {
@@ -560,21 +585,32 @@ class AlertPushController {
         }
         if (infoObj.hasOwnProperty('air')) {
             let air = infoObj.air;
+
+            if (hasWeather) {
+                text += " ";
+            }
+
+            if (cityName.length === 0) {
+                text += air.stationName + " ";
+            }
+            else {
+                if (hasWeather == false) {
+                   title += cityName  + " "
+                }
+            }
+
             if (air.grade >= pushInfo.airAlertsBreakPoint) {
                 if (hasWeather) {
-                    text += " "+trans.__('LOC_AIR_INFORMATION');
+                    text += trans.__('LOC_AIR_INFORMATION');
                 }
                 else {
-                    title += " "+trans.__('LOC_AIR_INFORMATION');
+                    title += trans.__('LOC_AIR_INFORMATION') + " ";
                 }
 
                 let str = trans.__('LOC_H_POLLUTANT_IS_GRADE');
                 let dataTime = (new Date(air.dataTime)).getHours();
                 let name = trans.__(AqiConverter.name2string(air.name));
-                if (hasWeather) {
-                    text += " ";
-                }
-                text += sprintf(str, dataTime,  name, air.str);
+                text += sprintf(str, dataTime,  name, air.str || air.value);
             }
             else if (air.hasOwnProperty('forecast') && air.forecast.grade >= pushInfo.airAlertsBreakPoint) {
                 let strAirForecast = '';
@@ -586,19 +622,16 @@ class AlertPushController {
 
                 }
                 if (hasWeather)  {
-                    text += " " + strAirForecast;
+                    text += strAirForecast + " ";
                 }
                 else {
-                    title += " "+ strAirForecast;
+                    title += strAirForecast;
                 }
 
                 let forecast = air.forecast;
 
                 let str = trans.__('LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H');
                 let dataTime = (new Date(forecast.date)).getHours();
-                if (hasWeather) {
-                    text += " ";
-                }
                 let name = trans.__(AqiConverter.name2string(forecast.name));
                 text += sprintf(str, dataTime, name, forecast.str);
             }
