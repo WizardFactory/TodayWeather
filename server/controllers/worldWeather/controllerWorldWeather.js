@@ -338,13 +338,13 @@ function controllerWorldWeather() {
         return false;
     };
 
-    self._getUntil1Hour = function(current, target){
+    self._getUntil15Mins = function(current, target){
         log.info('Compare Date', current, target);
         var currentDate = new Date(current);
         var targetDate = new Date(target);
-        var MS_1H = 1000*60*60;
+        var MS_15MINS = 1000*60*15;
 
-        if (currentDate.getTime()-MS_1H < targetDate.getTime()) {
+        if (currentDate.getTime()-MS_15MINS < targetDate.getTime()) {
             return true;
         }
         return false;
@@ -1460,7 +1460,7 @@ function controllerWorldWeather() {
 
             dsf.data.forEach(function (item) {
                 var isExist = false;
-                if(self._getUntil1Hour(curDate, item.current.dateObj)){
+                if(self._getUntil15Mins(curDate, item.current.dateObj)){
                     req.result.thisTime.forEach(function(thisTime, index) {
                         if (thisTime.date != undefined &&
                             self._compareDateString(curDate, thisTime.date)) {
