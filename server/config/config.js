@@ -39,7 +39,7 @@ module.exports = {
             key: (process.env.WAQI_SECRET_KEY || 'You have to set key of WAQI')
         }],
         daum_keys : (process.env.DAUM_SECRET_KEYS || '["set string of array of daum keys","key1", "key2"]'),
-        kma_keys: (process.env.KMA_SECRET_KEYS || '["key1","key2"]'),
+        dongnae_forecast_keys: (process.env.DONGNAE_SECRET_KEYS || '["key1","key2"]'),
         airkorea_keys : (process.env.AIRKOREA_SECRET_KEYS || '["key1", "key2"]'),
         google_key : (process.env.GOOGLE_SECRET_KEY || 'You have to set googe api key')
     },
@@ -91,6 +91,24 @@ module.exports = {
                 right: (process.env.AIRKOREA_KOREA_IMAGE_MAP_RIGHT || '0'),
                 top: (process.env.AIRKOREA_KOREA_IMAGE_MAP_TOP || '0'),
                 bottom: (process.env.AIRKOREA_KOREA_IMAGE_MAP_BOTTOM || '0')
+            }
+        },
+        kaq_korea_image:{
+            coordi: {
+                top_lat: (process.env.KAQ_KOREA_IMAGE_COORDI_TOP_LAT || '0'),
+                bottom_lat: (process.env.KAQ_KOREA_IMAGE_COORDI_BOTTOM_LAT || '00'),
+                left_lon: (process.env.KAQ_KOREA_IMAGE_COORDI_LEFT_LON || '0'),
+                right_lon: (process.env.KAQ_KOREA_IMAGE_COORDI_RIGHT_LON || '0')
+            },
+            size: {
+                width: (process.env.KAQ_KOREA_IMAGE_SIZE_WIDTH || '0'),
+                height: (process.env.KAQ_KOREA_IMAGE_SIZE_HEIGHT || '0')
+            },
+            pixel_pos: {
+                left: (process.env.KAQ_KOREA_IMAGE_MAP_LEFT || '0'),
+                right: (process.env.KAQ_KOREA_IMAGE_MAP_RIGHT || '0'),
+                top: (process.env.KAQ_KOREA_IMAGE_MAP_TOP || '0'),
+                bottom: (process.env.KAQ_KOREA_IMAGE_MAP_BOTTOM || '0')
             }
         }
     }

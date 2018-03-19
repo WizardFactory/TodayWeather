@@ -7,6 +7,7 @@
 var router = require('express').Router();
 var server_key = require('../../config/config').keyString.cert_key;
 var normal_key = require('../../config/config').keyString.normal;
+var dongnae_keys = JSON.parse(require('../../config/config').keyString.dongnae_forecast_keys);
 
 var Scrape = require('../../lib/kmaScraper');
 var PastConditionGather = require('../../lib/PastConditionGather');
@@ -25,8 +26,9 @@ router.get('/current/:mx/:my', function(req, res) {
         res.sendStatus(400);
         return;
     }
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
     var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("current", mCoord, server_key, function (err, results) {
+    manager.getKmaData("current", mCoord, key, function (err, results) {
         if (err) {
             res.status(500).send(err.message);
         }
@@ -37,7 +39,8 @@ router.get('/current/:mx/:my', function(req, res) {
 });
 
 router.get('/current', function(req, res) {
-    manager.getTownCurrentData(9, server_key, function (err) {
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
+    manager.getTownCurrentData(9, key, function (err) {
         if (err) {
             log.error(err);
         }
@@ -46,8 +49,9 @@ router.get('/current', function(req, res) {
 });
 
 router.get('/past', function(req, res) {
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
     var pastGather = new PastConditionGather();
-    pastGather.start(1, server_key, function (err) {
+    pastGather.start(1, key, function (err) {
         if (err) {
             log.error(err);
         }
@@ -140,8 +144,10 @@ router.get('/short/:mx/:my', function(req, res) {
         res.sendStatus(400);
         return;
     }
+
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
     var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("short", mCoord, server_key, function (err, results) {
+    manager.getKmaData("short", mCoord, key, function (err, results) {
         if (err) {
             res.status(500).send(err.message);
         }
@@ -152,7 +158,8 @@ router.get('/short/:mx/:my', function(req, res) {
 });
 
 router.get('/short', function(req, res) {
-    manager.getTownShortData(9, server_key, function (err) {
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
+    manager.getTownShortData(9, key, function (err) {
         if (err) {
             log.error(err);
         }
@@ -165,8 +172,9 @@ router.get('/shortest/:mx/:my', function(req, res) {
         res.sendStatus(400);
         return;
     }
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
     var mCoord = {mx:req.params.mx, my:req.params.my};
-    manager.getKmaData("shortest", mCoord, server_key, function (err, results) {
+    manager.getKmaData("shortest", mCoord, key, function (err, results) {
         if (err) {
             res.status(500).send(err.message);
         }
@@ -177,7 +185,8 @@ router.get('/shortest/:mx/:my', function(req, res) {
 });
 
 router.get('/shortest', function(req, res) {
-    manager.getTownShortestData(9, server_key, function (err) {
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
+    manager.getTownShortestData(9, key, function (err) {
         if (err) {
             log.error(err);
         }
@@ -315,7 +324,8 @@ router.get('/gatherKasiRiseSet', function(req, res) {
 });
 
 router.get('/updateInvalidt1h', function(req, res) {
-    manager.updateInvalidT1hData(9, server_key, function (err) {
+    var key = dongnae_keys[Math.floor(Math.random() * dongnae_keys.length)];
+    manager.updateInvalidT1hData(9, key, function (err) {
         if (err) {
             log.error(err);
         }

@@ -926,38 +926,50 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    if(config.db.version === '2.0'){
-        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidForecast, newData[0], callback);
-    }
+    this.saveMid(modelMidForecast, newData[0], callback);
+    // if(config.db.version === '2.0'){
+    this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidLand, newData[0], callback);
-    }
+    this.saveMid(modelMidLand, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidTemp, newData[0], callback);
-    }
+    this.saveMid(modelMidTemp, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, function(err){
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    if(config.db.version === '2.0') {
-        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
-    }else{
-        this.saveMid(modelMidSea, newData[0], callback);
-    }
+    this.saveMid(modelMidSea, newData[0], callback);
+    // if(config.db.version === '2.0') {
+    this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, function(err) {
+        if (err) {
+            log.error(err);
+        }
+    });
+    // }
     return this;
 };
 
@@ -1346,6 +1358,7 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
         return this;
     });
 
+    kmaTownShort.remove(new Date());
     return this;
 };
 
@@ -1407,6 +1420,8 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
 
         return this;
     });
+
+    kmaTownShortest.remove(new Date());
     return this;
 };
 
@@ -1430,44 +1445,20 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
             return this;
         }
 
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownCurrent.checkPubDate;
-        }
-        checkPubDate(modelCurrent, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
-            }
-            //log.info('C> try to get current data');
-            if (srcList.length === 0) {
-                log.info('C> All current was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
-            }
-            else {
-                log.info('C> srcList length=', srcList.length);
-            }
 
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, undefined, function (err, results) {
-                log.info('C> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err) {
-                    return log.error(err);
-                }
-            });
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_CURRENT, key, dateString, 20, undefined, function (err, results) {
+            log.info('C> save OK');
+            if (callback) {
+                return callback(err, results);
+            }
+            if (err) {
+                return log.error(err);
+            }
         });
         return this;
     });
+
+    kmaTownCurrent.remove(new Date());
     return this;
 };
 
@@ -1899,23 +1890,38 @@ Manager.prototype.getDataTypeName = function(value) {
 Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
-            if(config.db.version === '2.0'){
-                return kmaTownCurrent.saveCurrent;
-            }else{
-                return this.saveCurrent;
-            }
+            return function saveCurrent(newData, callback) {
+                this.saveCurrent(newData, callback);
+                // if(config.db.version === '2.0'){
+                kmaTownCurrent.saveCurrent(newData, function(err) {
+                    if (err) {
+                        log.error(err);
+                    }
+                });
+                // }
+            };
         case this.DATA_TYPE.TOWN_SHORTEST:
-            if(config.db.version === '2.0'){
-                return kmaTownShortest.saveShortest;
-            }else{
-                return this.saveShortest;
-            }
+            return function saveShortest(newData, callback) {
+                this.saveShortest(newData, callback);
+                // if(config.db.version === '2.0'){
+                kmaTownShortest.saveShortest(newData, function(err) {
+                    if (err) {
+                        log.error(err);
+                    }
+                });
+                // }
+            };
         case this.DATA_TYPE.TOWN_SHORT:
-            if(config.db.version === '2.0'){
-                return kmaTownShort.saveShort;
-            }else{
-                return this.saveShort;
-            }
+            return function saveShort(newData, callback) {
+               this.saveShort(newData, callback);
+               // if(config.db.version === '2.0'){
+               kmaTownShort.saveShort(newData, function(err) {
+                   if (err) {
+                       log.error(err);
+                   }
+               })
+               // }
+            };
         case this.DATA_TYPE.MID_FORECAST:
             return this.saveMidForecast;
         case this.DATA_TYPE.MID_LAND:
@@ -2244,7 +2250,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 41 || putAll) {
+    if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
         //direct request current
         log.info('push current');
         //self.asyncTasks.push(function Current(callback) {
@@ -2255,7 +2261,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 46 || putAll) {
+    if (time === 47 || putAll) {
         log.info('push shortest');
         self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
@@ -2289,16 +2295,16 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 55 || putAll) {
-        //direct request updateInvalidt1h
-        log.info('push updateInvalidt1h');
-        //self.asyncTasks.push(function UpdateInvalidT1H(callback) {
-        self._requestApi("updateInvalidt1h", function () {
-            log.info('updateInvalidt1h done');
-            //        callback();
-        });
-        //});
-    }
+    // if (time === 55 || putAll) {
+    //     //direct request updateInvalidt1h
+    //     log.info('push updateInvalidt1h');
+    //     //self.asyncTasks.push(function UpdateInvalidT1H(callback) {
+    //     self._requestApi("updateInvalidt1h", function () {
+    //         log.info('updateInvalidt1h done');
+    //         //        callback();
+    //     });
+    //     //});
+    // }
 
     if (self.asyncTasks.length <= 17) {
         log.debug('wait '+self.asyncTasks.length+' tasks');

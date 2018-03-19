@@ -136,9 +136,7 @@ class AlertPushController {
             current = resData.current;
         }
         else if (resData.source === 'DSF') {
-            if (resData.thisTime.length === 2) {
-                current = resData.thisTime[1];
-            }
+            current = resData.thisTime[1];
         }
         else {
             throw new Error("Unknown source "+JSON.stringify({resData:resData}));
@@ -172,14 +170,27 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins > 40) {
+            if (mins === 15) {
                if (resData.hasOwnProperty('shortest'))  {
-                   let shortest = resData.shortest.find(function (obj) {
+                   let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
                    });
-                   if (shortest) {
-                       weather.forecast = shortest;
-                       weather.forecast.pubDate = resData.shortestPubDate;
+                   if (forecastIndex >= 0) {
+                       let shortest1 = resData.shortest[forecastIndex];
+                       let shortest2 = resData.shortest[forecastIndex+1];
+                       let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
+                       if (shortest1.pty > 0) {
+                           if (shortest2 != undefined) {
+                               if (shortest2.pty > 0) {
+                                   forecastObj.pty = shortest1.pty;
+                               }
+                           }
+                           else {
+                               forecastObj.pty = shortest1.pty;
+                           }
+                       }
+
+                       weather.forecast = forecastObj;
                    }
                    else {
                        log.warn("Fail to find shortest date="+strForecastTime);
@@ -221,6 +232,15 @@ class AlertPushController {
                    }
                }
             }
+
+            if (weather.forecast) {
+                if (weather.forecast.pty > 0) {
+                    log.info('send weather forecast alert '+JSON.stringify(weather));
+                    //for slack
+                    log.error('send weather forecast weather:'+JSON.stringify(weather)+' alert:'+JSON.stringify(alertPush));
+                }
+                delete weather.forecast;
+            }
         }
 
         let air = infoObj.air = {};
@@ -236,13 +256,15 @@ class AlertPushController {
             return infoObj;
         }
 
-        let airList = [{name:'pm10', grade:airInfo.pm10Grade},
-            {name:'pm25', grade:airInfo.pm25Grade},
-            {name:'aqi', grade:airInfo.aqiGrade}];
+        let airList = [];
+        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(name => {
+          airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+        });
         airList = AqiConverter.sortByGrade(airList);
         if (airList[0].grade) {
             air.name = airList[0].name;
             air.grade = airList[0].grade;
+            air.value = airList[0].value;
             air.str = airInfo[air.name+'Str'];
         }
         air.dataTime = airInfo.dataTime;
@@ -286,6 +308,15 @@ class AlertPushController {
                    air.forecast.pubDate = airInfo.forecastPubDate;
                    air.forecast.source = airInfo.forecastSource;
                }
+           }
+
+           if (air.forecast) {
+               if (air.forecast.grade > alertPush.airAlertsBreakPoint) {
+                   log.info('send air forecast alert '+JSON.stringify(air));
+                   //for slack
+                   log.error('send air forecast air:'+JSON.stringify(air)+' alert:'+JSON.stringify(alertPush));
+               }
+               delete air.forecast;
            }
         }
 
@@ -635,6 +666,9 @@ class AlertPushController {
                     });
 
                     log.info({send:send, registrationId: alertPush.registrationId});
+                    if (send !== 'none') {
+                        log.error({send:send, infoObj:infoObj, alertPush: alertPush});
+                    }
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -664,7 +698,7 @@ class AlertPushController {
     }
 
     _streamAlertPush (list, callback) {
-        async.mapLimit(list, 100,
+        async.mapLimit(list, 10,
             (alertPush, callback) => {
                 this._sendAlertPush(alertPush, (err, result) =>{
                     if (err) {
@@ -727,7 +761,7 @@ class AlertPushController {
         queryList.push(queryN);
         queryList.push(queryR);
         let query = {$or: queryList};
-        AlertPush.find(query).$where(checkUpdateInterval).lean().exec( (err, list) => {
+        AlertPush.find(query, {_id: 0}).$where(checkUpdateInterval).lean().exec( (err, list) => {
             if (err) {
                 return callback(err);
             }
@@ -768,6 +802,7 @@ class AlertPushController {
                else {
                    log.debug(result);
                }
+               log.info('end send alert push list time:'+time);
                if (callback) {
                    callback();
                }

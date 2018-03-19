@@ -382,9 +382,14 @@ kmaTimeLib.getPast3DaysTime = function(curTime){
     return now;
 };
 
+/**
+ * 시차 고려하여 9일이전것부터 지우게 변겸.
+ * @param curTime
+ * @returns {Date}
+ */
 kmaTimeLib.getPast8DaysTime = function(curTime){
     var now = new Date(curTime.getTime());
-    var tz = now.getTime() + (-192 * 3600000);
+    var tz = now.getTime() + (-216 * 3600000);
     //var tz = now.getTime() + (3 * 3600000);
     now.setTime(tz);
 
