@@ -161,11 +161,14 @@ class AlertPushController {
         /**
          * TW-165 current가 정상적으로 비로 표시되시만, 보수적인 접근으로 rns도 true인 경우에는만 Push전송
          */
-        if (current.pty && current.rns) {
+        if (current.pty > 0 && current.rns === true) {
             weather.pty = current.pty;
         }
-        else if (current.pty > 0) {
-            log.error('rns and pty are different. current:'+current);
+        else {
+            if (current.pty > 0 || current.rns) {
+                log.error('rns and pty are different. current:' + current);
+            }
+            weather.pty = 0;
         }
 
         weather.desc = current.weather;
