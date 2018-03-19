@@ -146,8 +146,6 @@ class AlertPushController {
             throw new Error("data current is undefined "+JSON.stringify({resData:resData}));
         }
 
-        let weather = infoObj.weather = {};
-
         infoObj.name = resData.name;
         if (infoObj.name == undefined) {
             if (resData.townName && resData.townName.length > 0) {
@@ -158,7 +156,21 @@ class AlertPushController {
             }
         }
 
-        weather.pty = current.pty || 0;
+        let weather = infoObj.weather = {};
+
+        /**
+         * TW-165 current가 정상적으로 비로 표시되시만, 보수적인 접근으로 rns도 true인 경우에는만 Push전송
+         */
+        if (current.pty > 0 && current.rns === true) {
+            weather.pty = current.pty;
+        }
+        else {
+            if (current.pty > 0 || current.rns) {
+                log.error('rns and pty are different. current:' + current);
+            }
+            weather.pty = 0;
+        }
+
         weather.desc = current.weather;
 
         if (current.hasOwnProperty('rnsStnName')) {
