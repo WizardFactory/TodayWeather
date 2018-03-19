@@ -981,13 +981,20 @@ function ControllerTown() {
         var rns = stnWeatherInfo.rns;
         var temp = stnWeatherInfo.t1h;
         var weatherType = stnWeatherInfo.weatherType;
-        var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
 
         if (weather !== undefined) {
             var weatherPty;
 
             //순서 중요함.
-            if (weather.indexOf("뇌우끝,비") >= 0) {
+            if (weather.length === 0) {
+                if (currentPty > 0) {
+                    log.info('CheckWeather : pty is over 0, please check weather');
+                }
+                if (rns === true) {
+                    log.info('CheckWeather : rns is false, please check weather');
+                }
+            }
+            else if (weather.indexOf("뇌우끝,비") >= 0) {
                 weatherPty =  2;
             }
             else if (weather.indexOf("뇌우끝,눈") >= 0) {
@@ -1017,12 +1024,15 @@ function ControllerTown() {
             }
             else if (weather.indexOf("번개") >= 0) {
                //비가 오는지 안오는지 알수 없음 모니터링용 로그 추가함.
-                log.error('weather is 번개');
+                log.info('CheckWeather : weather is 번개');
             }
 
             if (weatherPty !== undefined) {
                currentPty = weatherPty;
             }
+        }
+        else {
+            log.info('CheckWeather : weather is undefined');
         }
 
         if (rns !== undefined) {
@@ -1060,19 +1070,25 @@ function ControllerTown() {
                             //skip
                             break;
                         default:
-                            if (stnWeatherInfoTime && stnWeatherInfoTime.getMinutes() >= 30) {
-                                rnsPty = 0;
-                            }
+                            log.info('CheckWeather : pty is over 0 but rns is false');
+                            //todo check weather type and shortest
+                            //rnsPty = 0;
                     }
                 }
             }
             else if (currentPty === 3) {
                 //snow는 rns로 보정하지 않음.
+                if (rns === false) {
+                    log.info('pty is 3, so rns is ignored');
+                }
             }
 
             if (rnsPty !== undefined) {
                 currentPty = rnsPty;
             }
+        }
+        else {
+            log.info('CheckWeather : rns is undefined');
         }
 
         return currentPty;

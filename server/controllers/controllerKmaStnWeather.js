@@ -1080,28 +1080,41 @@ controllerKmaStnWeather.getStnHourlyAndMinRns = function (townInfo, dateTime, cu
                 });
             },
             function (pCallback) {
-                self.getStnList(coords, 0.1, undefined, 5, function (err, kmaStnList) {
+                self.getStnList(coords, 0.2, undefined, 5, function (err, kmaStnList) {
+                    //error가 발생해도, 기존 정보로 cover하므로 skip함.
                     if (err) {
-                        return pCallback(err);
+                        log.error(err);
+                        kmaStnList = [];
                     }
-                    return pCallback(err, kmaStnList);
+                    return pCallback(null, kmaStnList);
                 });
             },
             function (stnList, aCallback) {
-                if (stnWeather.rns == true) {
-                   //skip
+                if (stnList.length < 2) {
+                    log.warn('Fail to find local stn townInfo:', JSON.stringify(townInfo));
                     return aCallback();
                 }
 
                 self._checkPrecipFromStnMinuteList(stnList, stnDateTime, function (err, result) {
                     if (err) {
-                        return aCallback(err);
+                        log.error(err);
                     }
 
                     if (result == undefined) {
                         //no precip
+                        if (stnWeather.rns === true) {
+                            log.info('CheckWeather : city rns is true but local rns is false stnList:',
+                                JSON.stringify(stnList));
+                        }
                         return aCallback();
                     }
+                    else {
+                        if (stnWeather.rns === false) {
+                            log.info('CheckWeather : city rns is false but local rns is true result: ',
+                                JSON.stringify(result));
+                        }
+                    }
+
 
                     stnWeather.rns = true;
                     stnWeather.rnsStnId = result.stnId;
