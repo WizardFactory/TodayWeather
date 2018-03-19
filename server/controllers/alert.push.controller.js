@@ -189,21 +189,24 @@ class AlertPushController {
                        let shortest1 = resData.shortest[forecastIndex];
                        let shortest2 = resData.shortest[forecastIndex+1];
                        let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
-                       if (shortest1.pty > 0) {
-                           if (shortest2 != undefined) {
-                               if (shortest2.pty > 0) {
-                                   forecastObj.pty = shortest1.pty;
-                               }
+                       if (shortest1 && shortest1.pty > 0) {
+                           if (shortest2 && shortest2.pty > 0) {
+                               forecastObj.pty = shortest1.pty;
+                               log.info(JSON.stringify({shortestPubDate: resData.shortestPubDate,
+                                   shortest:resData.shortest}));
                            }
                            else {
-                               forecastObj.pty = shortest1.pty;
+                               log.info('parseWeatherAirData : only shortest1 pty is '+shortest1.pty);
                            }
+                       }
+                       else if (shortest1 == undefined) {
+                           log.error('parseWeatherAirData : shortest1 is undefined');
                        }
 
                        weather.forecast = forecastObj;
                    }
                    else {
-                       log.warn("Fail to find shortest date="+strForecastTime);
+                       log.error("parseWeatherAirData : Fail to find shortest date="+strForecastTime);
                    }
                }
                //didn't find forecast from short
