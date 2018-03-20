@@ -981,17 +981,32 @@ function ControllerTown() {
         var rns = stnWeatherInfo.rns;
         var temp = stnWeatherInfo.t1h;
         var weatherType = stnWeatherInfo.weatherType;
-        var stnWeatherInfoTime = new Date(stnWeatherInfo.stnDateTime);
+
+        if (stnWeatherInfo.rnsSource) {
+            log.info('CheckWeather : rns set by '+stnWeatherInfo.rnsSource);
+        }
 
         if (weather !== undefined) {
             var weatherPty;
 
             //순서 중요함.
-            if (weather.indexOf("뇌우끝,비") >= 0) {
+            if (weather.length === 0) {
+                if (currentPty > 0) {
+                    log.info('CheckWeather : pty is over 0, please check weather');
+                }
+                if (rns === true) {
+                    log.info('CheckWeather : rns is false, please check weather');
+                }
+            }
+            else if (weather.indexOf("뇌우끝,비") >= 0) {
                 weatherPty =  2;
             }
             else if (weather.indexOf("뇌우끝,눈") >= 0) {
                 weatherPty =  3;
+                if (stnWeatherInfo.rns === false) {
+                    stnWeatherInfo.rns = true;
+                    stnWeatherInfo.rnsSource = 'weather';
+                }
             }
             else if (weather.indexOf("끝") >= 0) {
                 weatherPty = 0;
@@ -1000,6 +1015,10 @@ function ControllerTown() {
                 weather.indexOf("비/눈") >= 0 ||
                 weather.indexOf("눈/비") >= 0)
             {
+                if (weatherType === 29 && stnWeatherInfo.rns === false) { //약진눈깨비
+                    stnWeatherInfo.rns = true;
+                    stnWeatherInfo.rnsSource = 'weather';
+                }
                 weatherPty =  2;
             }
             else if (weather.indexOf("비") >= 0 ||
@@ -1007,6 +1026,19 @@ function ControllerTown() {
                 weather.indexOf("뇌우") >= 0 ||
                 weather.indexOf('소나기') >= 0)
             {
+                //이슬비, 약한비, 약진눈깨비 rns변경
+                switch (weatherType) {
+                    case 14:
+                    case 15:
+                    case 16:
+                    case 18:
+                    case 19:
+                        if (stnWeatherInfo.rns === false) {
+                            stnWeatherInfo.rns = true;
+                            stnWeatherInfo.rnsSource = 'weather';
+                        }
+                        break;
+                }
                 weatherPty =  1;
             }
             else if (weather.indexOf("눈") >= 0 ||
@@ -1014,15 +1046,22 @@ function ControllerTown() {
                 weather.indexOf("우박") >= 0)
             {
                 weatherPty =  3;
+                if (stnWeatherInfo.rns === false) {
+                    stnWeatherInfo.rns = true;
+                    stnWeatherInfo.rnsSource = 'weather';
+                }
             }
             else if (weather.indexOf("번개") >= 0) {
                //비가 오는지 안오는지 알수 없음 모니터링용 로그 추가함.
-                log.error('weather is 번개');
+                log.info('CheckWeather : weather is 번개');
             }
 
             if (weatherPty !== undefined) {
                currentPty = weatherPty;
             }
+        }
+        else {
+            log.info('CheckWeather : weather is undefined');
         }
 
         if (rns !== undefined) {
@@ -1031,48 +1070,48 @@ function ControllerTown() {
             if (currentPty === 0) {
                 // currentPty가 0인 경우 rns가 true인 경우 보정
                 if (rns === true) {
-                    //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
-                    //0~3도는 눈/비
-                    if (temp !== undefined) {
-                        if (temp > 3) {
-                            rnsPty = 1;
-                        }
-                        else if (temp >= 0) {
-                            rnsPty = 2;
+                    if (stnWeatherInfo.localMinAws) {
+                        //온도에 따라 눈/비 구분.. 대충 잡은 값임. 추후 최적화 필요함.
+                        //0~3도는 눈/비
+                        if (temp !== undefined) {
+                            if (temp > 3) {
+                                rnsPty = 1;
+                            }
+                            else if (temp >= 0) {
+                                rnsPty = 2;
+                            }
+                            else {
+                                rnsPty = 3;
+                            }
                         }
                         else {
-                            rnsPty = 3;
+                            log.error('CheckWeather : temp(t1h) is invalid');
                         }
+                    }
+                    else {
+                        log.info('CheckWeather : rns is true but localMinAws is undefined');
                     }
                 }
             }
             else if (currentPty === 1 || currentPty === 2) {
                 // currentPty가 1(비),2(비/눈)인 경우만 rns가 false인 경우 보정
                 if (rns === false) {
-                    //이슬비, 약한비, 약진눈깨비 제외
-                    switch (weatherType) {
-                        case 14:
-                        case 15:
-                        case 16:
-                        case 18:
-                        case 19:
-                        case 29:
-                            //skip
-                            break;
-                        default:
-                            if (stnWeatherInfoTime && stnWeatherInfoTime.getMinutes() >= 30) {
-                                rnsPty = 0;
-                            }
-                    }
+                    log.info('CheckWeather : pty is over 0 but rns is false');
                 }
             }
             else if (currentPty === 3) {
                 //snow는 rns로 보정하지 않음.
+                if (rns === false) {
+                    log.info('pty is 3, so rns is ignored');
+                }
             }
 
             if (rnsPty !== undefined) {
                 currentPty = rnsPty;
             }
+        }
+        else {
+            log.info('CheckWeather : rns is undefined');
         }
 
         return currentPty;
@@ -1621,6 +1660,8 @@ function ControllerTown() {
                         }
                     }
 
+                    reqCurrent.dongnae = JSON.parse(JSON.stringify(reqCurrent));
+
                     for (var key in stnWeatherInfo) {
                         if (stnFirst || reqCurrent[key] == undefined) {
                             reqCurrent[key] = stnWeatherInfo[key];
@@ -1653,6 +1694,11 @@ function ControllerTown() {
                     reqCurrent.sky = _convertCloud2SKy(reqCurrent.sky, stnWeatherInfo.cloud);
 
                     reqCurrent.pty = _convertStnWeather2Pty(reqCurrent.pty, stnWeatherInfo);
+                    //code 위치가 좋지 못함 그러나 일단 Go
+                    if (stnWeatherInfo.rnsSource) {
+                        reqCurrent.rns = stnWeatherInfo.rns;
+                        reqCurrent.rnsSource = stnWeatherInfo.rnsSource;
+                    }
 
                     reqCurrent.lgt = _convertStnWeather2Lgt(reqCurrent.lgt, stnWeatherInfo.weather);
 
