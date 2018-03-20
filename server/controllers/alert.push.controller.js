@@ -343,10 +343,8 @@ class AlertPushController {
     _updateDb(alertPush, callback) {
         log.info(JSON.stringify({alertPush: alertPush}));
         AlertPush.update(
-            {type: alertPush.type, registrationId: alertPush.registrationId,
-                cityIndex: alertPush.cityIndex, id: alertPush.id},
-            alertPush,
-            {upsert : true},
+            {_id: alertPush._id},
+            {$set: {"airAlerts": alertPush.airAlerts, "precipAlerts": alertPush.precipAlerts}},
             function (err, result) {
                 if (err) {
                     return callback(err);
@@ -794,7 +792,7 @@ class AlertPushController {
         queryList.push(queryN);
         queryList.push(queryR);
         let query = {$or: queryList};
-        AlertPush.find(query, {_id: 0}).$where(checkUpdateInterval).lean().exec( (err, list) => {
+        AlertPush.find(query).$where(checkUpdateInterval).lean().exec( (err, list) => {
             if (err) {
                 return callback(err);
             }
