@@ -137,6 +137,9 @@ class AlertPushController {
         }
         else if (resData.source === 'DSF') {
             current = resData.thisTime[1];
+            if (current.pty > 0) {
+                current.rns = true;
+            }
         }
         else {
             throw new Error("Unknown source "+JSON.stringify({resData:resData}));
@@ -158,20 +161,22 @@ class AlertPushController {
 
         let weather = infoObj.weather = {};
 
-        /**
-         * TW-165 current가 정상적으로 비로 표시되시만, 보수적인 접근으로 rns도 true인 경우에는만 Push전송
-         */
-        if (current.pty > 0 && current.rns === true) {
-            weather.pty = current.pty;
-        }
-        else {
-            if (current.pty > 0 || current.rns) {
-                log.error('rns and pty are different. current:' + current);
-            }
-            weather.pty = 0;
-        }
-
+        weather.pty = current.pty || 0;
+        weather.rns = current.rns || false;
         weather.desc = current.weather;
+
+        if (current.pty > 0 && current.rns === false) {
+            // if (current.pty === 3) {
+            //     if (resData.shortest &&
+            //         resData.shortest[0] &&
+            //         resData.shortest[0].pty === 3)
+            //     {
+            //         //It is snow but too late to send push
+            //     }
+            // }
+            log.error('rns and pty are different.',
+                JSON.stringify(alertPush.geo), JSON.stringify({current: current}));
+        }
 
         if (current.hasOwnProperty('rnsStnName')) {
             weather.stnName = current.rnsStnName;
@@ -192,7 +197,7 @@ class AlertPushController {
         log.debug({mins: mins});
 
         if (current.pty === 0) { //맑음
-            if (mins === 15) {
+            if (mins < 30) {
                if (resData.hasOwnProperty('shortest'))  {
                    let forecastIndex = resData.shortest.findIndex((obj) => {
                       return obj.dateObj === strForecastTime;
@@ -300,7 +305,7 @@ class AlertPushController {
         let strAirForecastTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastTime);
 
         if (!air.hasOwnProperty('grade') || air.grade < alertPush.airAlertsBreakPoint ) {
-           if (mins >= 40 && resData.hasOwnProperty('airInfo') &&
+           if (mins > 30 && resData.hasOwnProperty('airInfo') &&
                resData.airInfo.hasOwnProperty('pollutants'))
            {
                let pollutants = resData.airInfo.pollutants;
@@ -480,7 +485,11 @@ class AlertPushController {
                 let weather = infoObj.weather;
 
                 if (precipAlerts.lastState === 0) {
-                    if (weather.pty > 0)  {
+                    /**
+                     * TW-165 pty는 확실한 비이지만, 동네 실황은 너무 늦기 때문에 보수적인 접근으로 rns도 true인 경우에는만 Push전송
+                     * lastState는 pty로 변경함
+                     */
+                    if (weather.pty > 0 && weather.rns)  {
                         send = 'weather';
                     }
                     else if (weather.hasOwnProperty('forecast')) {
@@ -746,7 +755,7 @@ class AlertPushController {
     }
 
     _streamAlertPush (list, callback) {
-        async.mapLimit(list, 10,
+        async.mapLimit(list, 6,
             (alertPush, callback) => {
                 this._sendAlertPush(alertPush, (err, result) =>{
                     if (err) {
@@ -873,7 +882,9 @@ class AlertPushController {
         setInterval( () => {
             let date = new Date();
             let min = date.getUTCMinutes();
-            if (min === 0 || min === 15 || min === 30 || min === 45) {
+            //7 - 도시별날씨가 6분에 갱신
+            //17 - 대기정보가 갱신된 시간
+            if (min === 7 || min === 17 || min === 35 || min === 50) {
                 let timeUTC = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60;
                 this.sendAlertPushList(timeUTC);
                 this._removeOldList();

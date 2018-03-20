@@ -24,6 +24,7 @@ var kshwSchema2 = new mongoose.Schema({
     hPa: Number,
     rs1h: Number, //it just rain, not for snow from KMA AWS, 도시별날씨의 일적설과,일강수가 다름.
     rs1d: Number, //it just rain, not for snow from KMA AWS
+    rs15m: Number,
     rns: Boolean //rain,snow or not pty와 비슷하지만, on/off만 있음. property가 없으면, 동작하지 않거나, 정보 없음.
 });
 

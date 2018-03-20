@@ -1320,41 +1320,16 @@ Manager.prototype.getTownShortData = function(baseTime, key, callback){
             return this;
         }
 
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownShort.checkPubDate;
-        }
-        checkPubDate(modelShort, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, undefined, function (err, results) {
+            log.info('S> save OK');
+            if (callback) {
+                return callback(err, results);
             }
-            if (srcList.length === 0) {
-                log.info('S> All data was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
+            if (err)  {
+                return log.error(err);
             }
-            else {
-                log.info('S> srcList length=', srcList.length);
-            }
-
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORT, key, dateString, 20, undefined, function (err, results) {
-                log.info('S> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err)  {
-                    return log.error(err);
-                }
-            });
         });
+
         return this;
     });
 
@@ -1381,41 +1356,15 @@ Manager.prototype.getTownShortestData = function(baseTime, key, callback){
             }
             return this;
         }
-        var checkPubDate = self._checkPubDate;
-        if(config.db.version === '2.0'){
-            checkPubDate = self.kmaTownShortest.checkPubDate;
-        }
-        checkPubDate(modelShortest, listTownDb, dateString, function (err, srcList) {
-            if (err) {
-                if (callback) {
-                    callback(err);
-                }
-                else {
-                    log.error(err);
-                }
-                return;
+        //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
+        self._recursiveRequestData(listTownDb, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, undefined, function (err, results) {
+            log.info('ST> save OK');
+            if (callback) {
+                return callback(err, results);
             }
-            if (srcList.length === 0) {
-                log.info('ST> All shortest was already updated');
-                if (callback) {
-                    callback(undefined, []);
-                }
-                return;
+            if (err)  {
+                return log.error(err);
             }
-            else {
-                log.info('ST> srcList',srcList.length);
-            }
-
-            //log.info('ST> +++ SHORTEST COORD LIST : ', listTownDb.length);
-            self._recursiveRequestData(srcList, self.DATA_TYPE.TOWN_SHORTEST, key, dateString, 20, undefined, function (err, results) {
-                log.info('ST> save OK');
-                if (callback) {
-                    return callback(err, results);
-                }
-                if (err)  {
-                    return log.error(err);
-                }
-            });
         });
 
         return this;
@@ -2243,7 +2192,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         });
     }
 
-    if (time === 11 || putAll) {
+    if (time === 13 || putAll) {
         log.info('push short');
         self.asyncTasks.push(function Short(callback) {
             self._requestApi("short", callback);
@@ -2261,14 +2210,14 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
         //});
     }
 
-    if (time === 47 || putAll) {
+    if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
         log.info('push shortest');
-        self.asyncTasks.push(function Shortest(callback) {
+        // self.asyncTasks.push(function Shortest(callback) {
             self._requestApi("shortest", function () {
                 log.info('shortest done');
-                callback();
+                // callback();
             });
-        });
+        // });
     }
 
     if(time === 50) {
