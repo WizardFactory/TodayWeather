@@ -342,7 +342,7 @@ function controllerWorldWeather() {
         log.info('Compare Date', current, target);
         var currentDate = new Date(current);
         var targetDate = new Date(target);
-        var MS_15MINS = 1000*60*15;
+        var MS_15MINS = 1000*60*16; // 15 mins means is from 15:00:00 ~ 15:59:99
 
         if (currentDate.getTime()-MS_15MINS < targetDate.getTime()) {
             return true;
