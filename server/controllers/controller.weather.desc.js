@@ -57,6 +57,7 @@ class WeatherDescription {
             case 'light drizzle':
             case '약한이슬비': return 14;
             case 'drizzle':
+            case '비/이슬비':
             case '보통이슬비': return 15;
             case 'heavy drizzle':
             case '강한이슬비': return 16;
