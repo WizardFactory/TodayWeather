@@ -144,7 +144,7 @@ angular.module('controller.air', [])
         function _getAQIList(airInfo, pollutants) {
             var list = [];
             try {
-                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                ['aqi', 'pm25', 'pm10', 'o3', 'no2', 'co', 'so2'].forEach(function (propertyName) {
                     var obj = {};
                     if (airInfo.hasOwnProperty(propertyName+'Value')) {
                         obj.name = _getAQIname(propertyName);
@@ -216,11 +216,31 @@ angular.module('controller.air', [])
                         var pollutant = airInfo.pollutants[aqiCode];
 
                         if (pollutant) {
-                            $scope.hourlyForecast = pollutant.hourly.filter(function (obj) {
+                            var index = pollutant.hourly.findIndex(function (obj) {
                                 return obj.date >= latestAirInfo.dataTime;
                             });
+
+                            // 과거 11개 + 현재 + 미래 12개 표시
+                            $scope.airChart = new Array(24);
+                            for (var i = 0; i < 24; i++) {
+                                $scope.airChart[i] = pollutant.hourly[index - 12 + i];
+                                if ($scope.airChart[i] == undefined) {
+                                    var date = new Date(pollutant.hourly[index].date);
+                                    date.setHours(date.getHours() - 12 + i);
+                                    var pad = function(num) {
+                                        var s = '0' + num;
+                                        return s.substr(s.length - 2);
+                                    };
+
+                                    $scope.airChart[i] = new Object({
+                                        date: [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-') + ' '
+                                                + [pad(date.getHours()), pad(date.getMinutes())].join(':')
+                                    });
+                                }
+                            }
+
                             console.info({code:pollutant.code, pubDate:$scope.forecastPubdate});
-                            //console.log(JSON.stringify($scope.hourlyForecast));
+                            //console.log(JSON.stringify($scope.airChart));
 
                             $scope.dayForecast = pollutant.daily;
                         }
@@ -229,6 +249,8 @@ angular.module('controller.air', [])
                 else {
                     $scope.aqiList = _getAQIList($scope.airInfo);
                 }
+
+                $scope.chartAirHeight = 100;
             }
             catch(err) {
                 Util.ga.trackException(err, false);
