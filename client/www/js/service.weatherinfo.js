@@ -248,7 +248,8 @@ angular.module('service.weatherinfo', [])
                 }
             }
 
-            if (updatePush && window.push) {
+            if (updatePush && window.push && newCityInfo.source) {
+                console.info('update city info for push');
                 window.push.updateCityInfo(index);
             }
 

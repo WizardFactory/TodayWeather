@@ -481,13 +481,14 @@ angular.module('service.push', [])
          * @param {number} cityIndex
          */
         obj.updateCityInfo = function (cityIndex) {
+            var self = this;
             var pushList = this.pushData.pushList;
             var list = pushList.filter(function (obj) {
                return obj.cityIndex === cityIndex;
             });
 
             list.forEach(function (pushInfo) {
-               var city  = this._getSimpleCityInfo(cityIndex);
+               var city  = self._getSimpleCityInfo(cityIndex);
                 for (var key in city) {
                     pushInfo[key] = city[key];
                 }
