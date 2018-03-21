@@ -9,7 +9,8 @@
             <span style="vertical-align: middle">{{getNationName()|translate}}</span>
         </p>
     </ion-nav-title>
-    <ion-content scroll="false" style="background-color: #F5F5F5">
+    <ion-content direction="y" zooming="false" scrollbar-x="false" scrollbar-y="false"
+                 has-bouncing="false" style="background-color: #F5F5F5">
         <!--<div>어제 / 현재날씨 / 오늘 / 내일 / 모레</div>-->
         <div class="button-bar nation-bar">
             <a class="button button-dark button-outline" ng-click="changeWeatherType(0)">{{'LOC_WEATHER'|translate}}/{{'LOC_TEMP'|translate}}</a>
@@ -19,14 +20,12 @@
         </div>
         <p></p>
         <div class="nation" style="width: 330px; height: 485px;" ng-style="{'background-image':'url(./img/kr.png)'}">
-            <div ng-repeat="city in cityList">
-                <div class="nation-label" ng-style="{'top': city.top+'px', 'left':city.left+'px'}">
-                    <div>{{city.name}}</div>
-                    <div>
-                        <img ng-if="getIcon(city.name) !== undefined" ng-src="{{::weatherImgPath}}/{{getIcon(city.name)}}.png">
-                        <div ng-if="getText1(city.name) !== undefined">{{getText1(city.name)}}<span>{{getText1Unit()}}</span></div>
-                        <div ng-if="getText2(city.name) !== undefined">{{getText2(city.name)}}<span>{{getText2Unit()}}</span></div>
-                    </div>
+            <div class="nation-label" ng-style="{'top': city.top+'px', 'left':city.left+'px'}" ng-repeat="city in cityList">
+                <div>{{city.name}}</div>
+                <div>
+                    <img ng-if="getIcon(city.name) !== undefined" ng-src="{{::weatherImgPath}}/{{getIcon(city.name)}}.png">
+                    <div ng-if="getText1(city.name) !== undefined">{{getText1(city.name)}}<span>{{getText1Unit()}}</span></div>
+                    <div ng-if="getText2(city.name) !== undefined">{{getText2(city.name)}}<span>{{getText2Unit()}}</span></div>
                 </div>
             </div>
         </div>
