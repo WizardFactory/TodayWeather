@@ -109,7 +109,9 @@ module.exports = {
                 right: (process.env.KAQ_KOREA_IMAGE_MAP_RIGHT || '0'),
                 top: (process.env.KAQ_KOREA_IMAGE_MAP_TOP || '0'),
                 bottom: (process.env.KAQ_KOREA_IMAGE_MAP_BOTTOM || '0')
-            }
+            },
+            region: (process.env.KAQ_KOREA_IMAGE_MAP_REGION || ''),
+            bucketName: (process.env.KAQ_KOREA_IMAGE_MAP_BUCKET_NAME || ''),
         }
     }
 };
