@@ -421,13 +421,16 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   visibility: hidden;
 }
 
-.axis .minor line {
-  stroke: #777;
-  stroke-dasharray: 2,2;
-}
-
-.x.axis line {
-  stroke: #fff;
+.x-axis {
+  path, line {
+    stroke: #666666;
+    shape-rendering: crispEdges;
+  }
+  text {
+    stroke-width: 0px;
+    fill: #444;
+    font-size: 13px;
+  }
 }
 
 /* tabs */

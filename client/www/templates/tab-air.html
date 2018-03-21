@@ -73,18 +73,10 @@
                 </div>
             </div>
         </div>
-        <div class="card" ng-if="hourlyForecast && hourlyForecast.length > 1">
+        <div class="card" ng-if="airChart && airChart.length > 1">
             <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
-            <div class="card-scroll">
-                <table class="rowgroup-vspacing-aqi-box">
-                    <tr>
-                        <td ng-repeat="obj in hourlyForecast" style="min-width: 48px;">
-                            <p>{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
-                            <i ng-bind-html="getSentimentIcon(obj.grade)" class="material-icons" ng-style="{'color': grade2Color(obj.grade)}"></i><br>
-                            <span ng-style="{'color': grade2Color(obj.grade)}">{{obj.val == undefined?"-":obj.val}}</span>
-                        </td>
-                    </tr>
-                </table>
+            <div id="chartScroll" class="chart-scroll">
+                <div ng-air-chart class="chart-content" ng-style="{'height':chartAirHeight+'px'}"></div>
             </div>
         </div>
         <div class="card" ng-if="dayForecast && dayForecast.length">
