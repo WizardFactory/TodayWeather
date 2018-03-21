@@ -11,7 +11,6 @@ const AWS = require('aws-sdk');
 
 class ControllerS3 {
     constructor(region, bucketName) {
-        //AWS.config.region = 'ap-northeast-2';
         AWS.config.region = region;
         this.s3 = new AWS.S3({params: {Bucket: bucketName}});
     }
