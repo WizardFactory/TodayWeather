@@ -266,10 +266,8 @@ class AlertPushController {
             if (weather.forecast) {
                 if (weather.forecast.pty > 0) {
                     log.info('send weather forecast alert '+JSON.stringify(weather));
-                    //for slack
-                    log.error('send weather forecast weather:'+JSON.stringify(weather)+' alert:'+JSON.stringify(alertPush));
                 }
-                delete weather.forecast;
+                // delete weather.forecast;
             }
         }
 
@@ -721,9 +719,6 @@ class AlertPushController {
                     });
 
                     log.info({send:send, registrationId: alertPush.registrationId});
-                    if (send !== 'none') {
-                        log.error({send:send, infoObj:infoObj, alertPush: alertPush});
-                    }
                     callback(null, {send:send, data: infoObj});
                 },
                 (pushWithWeather, callback) => {
@@ -734,6 +729,8 @@ class AlertPushController {
                     let notification;
                     try {
                         notification = this._convertToNotification(alertPush, pushWithWeather.data);
+                        log.error({send:send, notification: notification, infoObj:pushWithWeather.data,
+                            alertPush: alertPush});
                     }
                     catch(err) {
                         return callback(err);
