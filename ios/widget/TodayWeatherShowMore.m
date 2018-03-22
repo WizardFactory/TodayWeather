@@ -389,47 +389,93 @@
  * Date			: 2017. 04. 23
  * Author		: SeanKim
  * History		: 20170423 SeanKim Create function
- *
+ * Grade4       : "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959']
+ *  좋음 : 파랑
+ *  보통 : 녹색
+ *  민감군주의 : 주황
+ *  나쁨 : 주황
+ *  매우나쁨 : 빨강
+ *  위험 : 빨강
+ * Grade 6      : "color": ['#00c73c', '#d2d211', '#ff6f00', '#FF0000', '#b4004b', '#940021']
+ *  좋음 : 녹색
+ *  보통 : 노랑
+ *  민감군주의 : 주황
+ *  나쁨 : 빨강
+ *  매우나쁨 : 보라
+ *  위험 : 갈색
  ********************************************************************/
 - (NSMutableAttributedString *) getChangedColorAirState:(NSString *)nssAirState
 {
     NSMutableAttributedString *String = [[NSMutableAttributedString alloc] initWithString:nssAirState];    //AttributeString으로
     NSRange sRange;
     UIColor *stateColor = nil;
-    //NSString *boldFontName = [[UIFont boldSystemFontOfSize:17] fontName];
-    //UIFont *font=[UIFont fontWithName:@"Helvetica-Bold" size:17.0f];
     UIFont *font = [UIFont boldSystemFontOfSize:17.0];
+    BOOL isGrade6 = FALSE;
     
+    TodayWeatherUtil *todayUtil = [[TodayWeatherUtil alloc] init];
+    NSDictionary *nssUnits = [todayUtil getUnits];
+    NSString *nssAirUnits = [nssUnits objectForKey:@"airUnit"];
+    NSLog(@"[ByCoord] nssAirUnits: %@", nssAirUnits);
+    
+    if( [nssAirUnits isEqualToString:@"airnow"] || [nssAirUnits isEqualToString:@"aqicn"] )
+        isGrade6       = TRUE;
+        
     if([nssAirState hasSuffix:@"좋음"])
     {
         sRange = [nssAirState rangeOfString:@"좋음"];     //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0x32a1ff);
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x339933);           // 기존녹색
+            //stateColor = UIColorFromRGB(0x00c73c);           // 녹색
+        else
+            stateColor = UIColorFromRGB(0x32a1ff);           // 파랑
     }
     else if([nssAirState hasSuffix:@"보통"])
     {
-        sRange = [nssAirState rangeOfString:@"보통"];     //원하는 텍스트라는 글자의 위치가져오기
-//        stateColor = UIColorFromRGB(0x7acf16);
-        stateColor = UIColorFromRGB(0x339933);
+        sRange = [nssAirState rangeOfString:@"보통"];        //원하는 텍스트라는 글자의 위치가져오기
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xffff33);              // 기존노랑
+            //stateColor = UIColorFromRGB(0xd2d211);              // 노랑
+        else
+            stateColor = UIColorFromRGB(0x339933);              // 녹색
     }
     else if([nssAirState hasSuffix:@"민감군주의"])
     {
         sRange = [nssAirState rangeOfString:@"민감군주의"];      //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0xfd934c);                // 나쁨과 동일
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xfd934c);                // 기존주황
+            //stateColor = UIColorFromRGB(0xff6f00);                // 주황
+        else
+            stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
     }
     else if([nssAirState hasSuffix:@"매우나쁨"])
     {
         sRange = [nssAirState rangeOfString:@"매우나쁨"];     //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0xff7070);
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x540099);              // 기존보라
+            //stateColor = UIColorFromRGB(0xb4004b);              // 보라
+        else
+            stateColor = UIColorFromRGB(0xff7070);              // 빨강
+        
     }
     else if([nssAirState hasSuffix:@"나쁨"])
     {
         sRange = [nssAirState rangeOfString:@"나쁨"];     //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0xfd934c);
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0xff7070);             // 기존빨강
+            //stateColor = UIColorFromRGB(0xff0000);             // 빨강
+        else
+            stateColor = UIColorFromRGB(0xfd934c);                // 주황 나쁨과 동일
     }
     else if([nssAirState hasSuffix:@"위험"])
     {
         sRange = [nssAirState rangeOfString:@"위험"];     //원하는 텍스트라는 글자의 위치가져오기
-        stateColor = UIColorFromRGB(0xff7070);           // 매우나쁨과 동일
+        if(isGrade6 == TRUE)
+            stateColor = UIColorFromRGB(0x800000);           // 기존갈색
+            //stateColor = UIColorFromRGB(0x940021);           // 갈색
+        else
+            stateColor = UIColorFromRGB(0xff7070);           // 빨강
+        
+        
     }
     else
     {
@@ -438,7 +484,6 @@
         
         return String;
     }
-    
     
     NSOperatingSystemVersion nsOSVer = [[NSProcessInfo processInfo] operatingSystemVersion];
     if(nsOSVer.majorVersion >= 10)
@@ -450,10 +495,10 @@
         NSRange sAllRange = [nssAirState rangeOfString:nssAirState];
         [String addAttribute:NSForegroundColorAttributeName value:[UIColor lightGrayColor] range:sAllRange];
     }
-
+    
     [String addAttribute:NSForegroundColorAttributeName value:stateColor range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의
     [String addAttribute:NSFontAttributeName value:font range:sRange];     //attString의 Range위치에 있는 "Nice"의 글자의색상을 변경
-
+    
     return String;
 }
 
