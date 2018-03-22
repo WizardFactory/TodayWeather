@@ -240,17 +240,6 @@ function ControllerTown() {
                                 }
                             );
                         });
-                    },
-                    function (callback) {
-                        var date = self._getCurrentTimeValue(+9).date;
-                        KecoController.getDustFrcst({region:req.params.region, city:req.params.city}, date, function (err, results) {
-                            if (err) {
-                                return callback(err);
-                            }
-                            log.info('K DATA[DustFrcst] sID='+req.sessionID);
-                            req.dustFrcstList = results;
-                            callback();
-                        });
                     }
                     ],
                     function(err){
@@ -2300,6 +2289,13 @@ function ControllerTown() {
         meta.region = req.params.region;
         meta.city = req.params.city;
         meta.town = req.params.town;
+
+        if (req.query.airForecastSource !== 'airkorea') {
+            log.info('>sID=',req.sessionID,
+                'skip get keco dust forecast air forecast source='+req.query.airForecastSource, meta);
+            return next();
+        }
+
         log.info('>sID=',req.sessionID, meta);
 
         if (!req.midData)  {
@@ -2898,6 +2894,9 @@ function ControllerTown() {
 
                         if (pollutant.daily) {
                             pollutant.daily.forEach(function (item) {
+                                if (item.hasOwnProperty('grade')) {
+                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                                }
                                 if (item.hasOwnProperty('minGrade')) {
                                     item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
                                 }

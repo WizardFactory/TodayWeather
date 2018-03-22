@@ -1911,152 +1911,6 @@ Manager.prototype.task = function(callback) {
     });
 };
 
-//It is unused.
-//Manager.prototype.checkTimeAndPushTask = function (putAll) {
-//    var self = this;
-//    var time = (new Date()).getUTCMinutes();
-//
-//    var server_key = config.keyString.cert_key;
-//    var normal_key = config.keyString.normal;
-//
-//    log.info('check time and push task');
-//
-//    if (time === 1 || putAll) {
-//        //short rss
-//        log.info('push short rss');
-//        self.asyncTasks.push(function (callback) {
-//            //need to update sync
-//            townRss.mainTask(function(){
-//                log.info('Rss>complete mainTask for Rss');
-//                callback();
-//            });
-//        //    setTimeout(function () {
-//       //         log.info('Finished ShortRss '+new Date());
-//       //         callback();
-//       //     }, 1000*60); //1min
-//        });
-//        log.info('push mid rss');
-//        self.asyncTasks.push(function (callback) {
-//            midRssKmaRequester.mainProcess(midRssKmaRequester, function (self, err) {
-//                log.info('Finished MidRss '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 2 || putAll) {
-//        log.info('push MidTemp');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidTemp(9, normal_key, function (err) {
-//                log.info('Finished MidTemp '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidLand');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidLand(9, normal_key, function (err) {
-//                log.info('Finished MidLand '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidForecast');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidForecast(9, normal_key, function (err) {
-//                log.info('Finished MidForecast '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push MidSea');
-//        self.asyncTasks.push(function (callback) {
-//            self.getMidSea(9, normal_key, function (err) {
-//                log.info('Finished MidSea '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 10 || putAll) {
-//        log.info('push PastConditionGather');
-//        self.asyncTasks.push(function (callback) {
-//            var pastGather = new PastConditionGather();
-//
-//            pastGather.start(1, server_key, function (err) {
-//                log.info('Finished PastConditionGather '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    //1:06분 일부만 업데이트 됨. 20분에 대부분 갱신됨.
-//    if (time === 20 || putAll) {
-//        log.info('push keco main process');
-//        self.asyncTasks.push(function (callback) {
-//            keco.cbKmaIndexProcess(keco, function (err) {
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 31 || putAll) {
-//        log.info('push Short');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownShortData(9, server_key, function (err) {
-//                log.info('Finished Short '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    if (time === 41 || putAll) {
-//        log.info('push Shortest');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownShortestData(9, server_key, function (err) {
-//                log.info('Finished Shortest '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//        log.info('push Current');
-//        self.asyncTasks.push(function (callback) {
-//            self.getTownCurrentData(9, server_key, function (err) {
-//                log.info('Finished Current '+new Date());
-//                if (err) {
-//                    log.error(err);
-//                }
-//                callback();
-//            });
-//        });
-//    }
-//
-//    log.info('wait '+self.asyncTasks.length+' tasks');
-//};
-
 /**
  *
  * @param items
@@ -2109,6 +1963,20 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     var hours = (new Date()).getUTCHours();
 
     log.verbose('check time and request task');
+
+    if (time === 5 || putAll) {
+        if (hours === 8 || hours === 20 || putAll) {
+            log.info('push kaq hourly forecast');
+            self.asyncTasks.push(function getKaqHourlyForecast(callback) {
+                var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
+                var ctrl = new KaqHourlyForecast();
+                ctrl.do(new Date(), err=> {
+                    log.info('kaq hourly forecast done');
+                    callback();
+                });
+            });
+        }
+    }
 
     if (time === 2 || putAll) {
         //spend long time

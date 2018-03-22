@@ -21,8 +21,8 @@ class KaqDustImageController{
             PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
         };
         this.value = {
-            PM10 : [999, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
-            PM25 : [999, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            PM10 : [150, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
+            PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
         };
         this.parser = new libKaqImageParser();
         this.imagePixels = {};
@@ -376,11 +376,12 @@ class KaqDustImageController{
      */
     getDustImage(imgPaths, callback) {
         log.info('KAQ Image > get dust image -----------');
-        async.applyEach(
+        async.waterfall(
             [
                 (cb)=>{
                     if (imgPaths.pm10 == undefined) {
-                        return cb();
+                        log.error('KAQ PM10 Image > image path is undefined');
+                        return cb(null);
                     }
                     log.info("KAQ Image > pm10 path: "+imgPaths.pm10);
                     this.parseMapImage(imgPaths.pm10, 'image/gif', (err, pixelMap)=>{
@@ -392,22 +393,27 @@ class KaqDustImageController{
                         this.imagePixels.PM10 = {};
                         this.imagePixels.PM10.pubDate = imgPaths.pubDate;
                         this.imagePixels.PM10.data = pixelMap;
-                        return cb();
+                        return cb(null, pixelMap);
                     });
                 },
                 (pixelMap, cb)=>{
+                    if (pixelMap  == undefined) {
+                        log.error('KAQ PM10 Image > pixelMap is undefined');
+                        return cb(null);
+                    }
                     this.makeColorTable('PM10', pixelMap, (err)=>{
                         if(err){
-                            log.error('KAQ Image > Failed to get Grade Table');
+                            log.error('KAQ PM10 Image > Failed to get Grade Table');
                             return cb(err);
                         }
 
-                        return cb();
+                        return cb(null);
                     });
                 },
                 (cb)=>{
                     if (imgPaths.pm25 == undefined) {
-                        return cb();
+                        log.error('KAQ PM25 Image > image path is undefined');
+                        return cb(null);
                     }
                     log.info("KAQ Image > pm25 path: "+imgPaths.pm25);
                     this.parseMapImage(imgPaths.pm25, 'image/gif', (err, pixelMap)=>{
@@ -418,17 +424,21 @@ class KaqDustImageController{
                         this.imagePixels.PM25 = {};
                         this.imagePixels.PM25.pubDate = imgPaths.pubDate;
                         this.imagePixels.PM25.data = pixelMap;
-                        return cb();
+                        return cb(null, pixelMap);
                     });
                 },
                 (pixelMap, cb)=>{
+                    if (pixelMap  == undefined) {
+                        log.error('KAQ PM25 Image > pixelMap is undefined');
+                        return cb(null);
+                    }
                     this.makeColorTable('PM25', pixelMap, (err)=>{
                         if(err){
                             log.error('KAQ Image > Failed to get PM25 Grade Table');
                             return cb(err);
                         }
 
-                        return cb();
+                        return cb(null);
                     });
                 }
             ],
