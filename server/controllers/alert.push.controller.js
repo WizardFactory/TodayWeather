@@ -729,8 +729,8 @@ class AlertPushController {
                     let notification;
                     try {
                         notification = this._convertToNotification(alertPush, pushWithWeather.data);
-                        log.error({send:send, notification: notification, infoObj:pushWithWeather.data,
-                            alertPush: alertPush});
+                        log.error({send:pushWithWeather.send, notification: notification,
+                            infoObj:pushWithWeather.data, alertPush: alertPush});
                     }
                     catch(err) {
                         return callback(err);
