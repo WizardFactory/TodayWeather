@@ -353,5 +353,17 @@ UnitConverter.airGrade2Str = function (airUnit, grade, translate) {
     }
 };
 
+UnitConverter.initUnits = function (units) {
+    units = units || {};
+    units.temperatureUnit = units.temperatureUnit || "C";
+    units.windSpeedUnit = units.windSpeedUnit || "m/s";
+    units.pressureUnit = units.pressureUnit || "hPa";
+    units.distanceUnit = units.distanceUnit || "km";
+    units.precipitationUnit = units.precipitationUnit || "mm";
+    units.airUnit = units.airUnit || "airkorea";
+    units.airForecastSource = units.airForecastSource || "airkorea";
+    return units;
+};
+
 module.exports = UnitConverter;
 

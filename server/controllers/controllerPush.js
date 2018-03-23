@@ -12,6 +12,7 @@ var async = require('async');
 var req = require('request');
 var ControllerTown24h = require('./controllerTown24h');
 var cTown = new ControllerTown24h();
+var UnitConverter = require('../lib/unitConverter');
 
 var kmaTimeLib = require('../lib/kmaTimeLib');
 
@@ -801,16 +802,7 @@ ControllerPush.prototype.requestDailySummary = function (pushInfo, callback) {
         pushInfo.lang = 'ko';
     }
 
-    if (pushInfo.units == undefined) {
-        var obj = {};
-        obj.temperatureUnit = "C";
-        obj.windSpeedUnit = "m/s";
-        obj.pressureUnit = "hPa";
-        obj.distanceUnit = "km";
-        obj.precipitationUnit = "mm";
-        obj.airUnit = "airkorea";
-        pushInfo.units = obj;
-    }
+    pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
     //check source
     if (pushInfo.source == undefined || pushInfo.source === 'KMA') {

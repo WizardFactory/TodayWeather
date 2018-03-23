@@ -26,6 +26,12 @@ function updatePushInfoList(language, pushList, callback) {
                     log.error('pushInfo source is undefined');
                     pushInfo.source = "KMA"
                 }
+                if (pushInfo.category == undefined) {
+                    log.error('pushInfo category is undefined');
+                    pushInfo.category == 'alarm';
+                }
+
+                pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
                 log.info('pushInfo : '+ JSON.stringify(pushInfo));
             }
