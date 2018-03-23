@@ -58,16 +58,7 @@ class AlertPushController {
             pushInfo.lang = 'ko';
         }
 
-        if (pushInfo.units == undefined) {
-            let obj = {};
-            obj.temperatureUnit = "C";
-            obj.windSpeedUnit = "m/s";
-            obj.pressureUnit = "hPa";
-            obj.distanceUnit = "km";
-            obj.precipitationUnit = "mm";
-            obj.airUnit = "airkorea";
-            pushInfo.units = obj;
-        }
+        pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
         let apiVersion = 'v000902';
         let url = config.serviceServer.url;

@@ -25,7 +25,8 @@ var pushSchema = new mongoose.Schema({
         pressureUnit: String,   //hPa, mbar, ..
         distanceUnit: String,   //km, miles
         precipitationUnit: String, //mm, inches
-        airUnit: String //airkorea, airkorea_who, airnow, aqicn
+        airUnit: String, //airkorea, airkorea_who, airnow, aqicn
+        airForecastSource: String //airkorea, kaq, aqicn, ...
     },
     updatedAt: Date,
     timezoneOffset: Number, //mins +9h -> +540
