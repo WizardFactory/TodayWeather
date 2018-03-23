@@ -5,6 +5,7 @@
 	};
 	objectVersion = 46;
 	objects = {
+
 /* Begin PBXBuildFile section */
 		0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0207DA571B56EA530066E2B4 /* Images.xcassets */; };
 		0F1AA34448D543D79DA0BCDF /* WidgetConfig.h in Sources */ = {isa = PBXBuildFile; fileRef = D2A1B115D49B454C8F95941A /* WidgetConfig.h */; };
@@ -22,6 +23,8 @@
 		501B5D63D6C3484D95B9B689 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 7E0EC2E0AEEB4104A933D5DD /* ko.lproj */; };
 		535E054C7BA343D78380C310 /* TodayWeatherUtil.h in Sources */ = {isa = PBXBuildFile; fileRef = A82482EEB75141C08E1386EF /* TodayWeatherUtil.h */; };
 		5439BB1B64D24F1C9730BFFE /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = B3DF8CCC99DD4BEFABDF916C /* zh-Hant.lproj */; };
+		5A0A9BE12031C2F200D310E7 /* TodayWeatherAnalytics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A0A9BE02031C2F200D310E7 /* TodayWeatherAnalytics.m */; };
+		5A852BDF203068A900D9A0D5 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A852BDE203068A800D9A0D5 /* libsqlite3.tbd */; };
 		6AFF5BF91D6E424B00AB3073 /* CDVLaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */; };
 		751D6E395BCA403F81C35BCD /* TodayViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = BC44C4A97E5D48D58E7307B3 /* TodayViewController.h */; };
 		7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1228418F21A1423CAAA77ABD /* NotificationCenter.framework */; };
@@ -30,7 +33,6 @@
 		88BAFD211373452EA2F56EF0 /* LocalizationDefine.h in Sources */ = {isa = PBXBuildFile; fileRef = 8BABE3FF99E74F10ABB37707 /* LocalizationDefine.h */; };
 		8B95AD50BE5D4C92B741A277 /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = A534E7EBD1F5430189CB635C /* zh-Hans.lproj */; };
 		963317871F7148E18F84774F /* TodayWeatherShowMore.m in Sources */ = {isa = PBXBuildFile; fileRef = 9F3DEF3938024A9FB04386EF /* TodayWeatherShowMore.m */; };
-		C33EC32A1FD173130065E35A /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C33EC3291FD173130065E35A /* StoreKit.framework */; };
 		C33EC3321FD173930065E35A /* ja.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32B1FD173910065E35A /* ja.lproj */; };
 		C33EC3331FD173930065E35A /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32C1FD173910065E35A /* zh-Hans.lproj */; };
 		C33EC3341FD173930065E35A /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C33EC32D1FD173910065E35A /* ko.lproj */; };
@@ -105,8 +107,19 @@
 		32CA4F630368D1EE00C91783 /* TodayWeather-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TodayWeather-Prefix.pch"; sourceTree = "<group>"; };
 		34F9BCEEF4C243ECBD3C03A8 /* TodayWeatherUtil.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherUtil.m; sourceTree = "<group>"; };
 		46D79271F0EF4D7290FB0F66 /* weatherIcon2-color */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "weatherIcon2-color"; sourceTree = "<group>"; };
+		5A0A9BE02031C2F200D310E7 /* TodayWeatherAnalytics.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherAnalytics.m; sourceTree = "<group>"; };
+		5A0A9BE22031C33500D310E7 /* TodayWeatherAnalytics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TodayWeatherAnalytics.h; sourceTree = "<group>"; };
+		5A852BDE203068A800D9A0D5 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
+		5A852BE520306BC000D9A0D5 /* libGoogleAnalyticsServices.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGoogleAnalyticsServices.a; path = widget/libGoogleAnalyticsServices.a; sourceTree = "<group>"; };
+		5AC4B786203EDE0A00455CB8 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		5AC4B788203EDE1300455CB8 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		5AC4B78A203EDE1E00455CB8 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		5AC4B78C203EDE4C00455CB8 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
+		5AC4B78E203EDE5400455CB8 /* AdSupport.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdSupport.framework; path = System/Library/Frameworks/AdSupport.framework; sourceTree = SDKROOT; };
+		5AC4B790203EDE6200455CB8 /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
 		6AEED57F06F44325936B9079 /* Base.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = Base.lproj; sourceTree = "<group>"; };
 		6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = CDVLaunchScreen.storyboard; path = TodayWeather/CDVLaunchScreen.storyboard; sourceTree = SOURCE_ROOT; };
+		6F6BFD5BC532489CA954962A /* libGoogleAnalyticsServices.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; name = libGoogleAnalyticsServices.a; path = "TodayWeather/Plugins/cordova-plugin-google-analytics/libGoogleAnalyticsServices.a"; sourceTree = "<group>"; };
 		7D4BC5F6FF97470B87EBF412 /* libCordova.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libCordova.a; sourceTree = "<group>"; };
 		7E0EC2E0AEEB4104A933D5DD /* ko.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ko.lproj; sourceTree = "<group>"; };
 		868E93D37533462C94696CE4 /* ja.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ja.lproj; sourceTree = "<group>"; };
@@ -118,7 +131,6 @@
 		B3DF8CCC99DD4BEFABDF916C /* zh-Hant.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "zh-Hant.lproj"; sourceTree = "<group>"; };
 		BC44C4A97E5D48D58E7307B3 /* TodayViewController.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayViewController.h; sourceTree = "<group>"; };
 		C33EC3281FD1730F0065E35A /* TodayWeather.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = TodayWeather.entitlements; path = TodayWeather/TodayWeather.entitlements; sourceTree = "<group>"; };
-		C33EC3291FD173130065E35A /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		C33EC32B1FD173910065E35A /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ja.lproj; path = TodayWeather/ja.lproj; sourceTree = "<group>"; };
 		C33EC32C1FD173910065E35A /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "zh-Hans.lproj"; path = "TodayWeather/zh-Hans.lproj"; sourceTree = "<group>"; };
 		C33EC32D1FD173910065E35A /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ko.lproj; path = TodayWeather/ko.lproj; sourceTree = "<group>"; };
@@ -141,7 +153,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
-				C33EC32A1FD173130065E35A /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -149,6 +160,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A852BDF203068A900D9A0D5 /* libsqlite3.tbd in Frameworks */,
 				7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */,
 				840BA9FC7D974B7EA7E367A1 /* libCordova.a in Frameworks */,
 			);
@@ -231,9 +243,17 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				C33EC3291FD173130065E35A /* StoreKit.framework */,
+				5AC4B790203EDE6200455CB8 /* CoreTelephony.framework */,
+				5AC4B78E203EDE5400455CB8 /* AdSupport.framework */,
+				5AC4B78C203EDE4C00455CB8 /* MessageUI.framework */,
+				5AC4B78A203EDE1E00455CB8 /* libz.tbd */,
+				5AC4B788203EDE1300455CB8 /* SystemConfiguration.framework */,
+				5AC4B786203EDE0A00455CB8 /* CoreData.framework */,
+				5A852BE520306BC000D9A0D5 /* libGoogleAnalyticsServices.a */,
+				5A852BDE203068A800D9A0D5 /* libsqlite3.tbd */,
 				1228418F21A1423CAAA77ABD /* NotificationCenter.framework */,
 				7D4BC5F6FF97470B87EBF412 /* libCordova.a */,
+				6F6BFD5BC532489CA954962A /* libGoogleAnalyticsServices.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -276,6 +296,8 @@
 				9F3DEF3938024A9FB04386EF /* TodayWeatherShowMore.m */,
 				A82482EEB75141C08E1386EF /* TodayWeatherUtil.h */,
 				34F9BCEEF4C243ECBD3C03A8 /* TodayWeatherUtil.m */,
+				5A0A9BE22031C33500D310E7 /* TodayWeatherAnalytics.h */,
+				5A0A9BE02031C2F200D310E7 /* TodayWeatherAnalytics.m */,
 				D2A1B115D49B454C8F95941A /* WidgetConfig.h */,
 				6AEED57F06F44325936B9079 /* Base.lproj */,
 				C7F5C59919DE4048B49E4FF2 /* MainInterface.storyboard */,
@@ -347,7 +369,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 510;
+				LastUpgradeCheck = 920;
 				TargetAttributes = {
 					1D6058900D05DD3D006BFB54 = {
 						DevelopmentTeam = T9X5DG29UJ;
@@ -489,6 +511,7 @@
 				535E054C7BA343D78380C310 /* TodayWeatherUtil.h in Sources */,
 				E844F8C7445644B68A7F4720 /* TodayWeatherUtil.m in Sources */,
 				0F1AA34448D543D79DA0BCDF /* WidgetConfig.h in Sources */,
+				5A0A9BE12031C2F200D310E7 /* TodayWeatherAnalytics.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -520,6 +543,12 @@
 				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
 				COPY_PHASE_STRIP = NO;
 				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -529,6 +558,8 @@
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -546,6 +577,12 @@
 				CODE_SIGN_ENTITLEMENTS = TodayWeather/TodayWeather.entitlements;
 				COPY_PHASE_STRIP = YES;
 				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+					"\"TodayWeather/Plugins/cordova-admob\"",
+				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "TodayWeather/TodayWeather-Prefix.pch";
 				GCC_THUMB_SUPPORT = NO;
@@ -553,6 +590,8 @@
 				INFOPLIST_FILE = "TodayWeather/TodayWeather-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = TodayWeather;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -566,8 +605,14 @@
 				INFOPLIST_FILE = "widget/widget-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/widget",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.todayext;
 				PRODUCT_NAME = widget;
 				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -577,15 +622,28 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -604,15 +662,27 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -636,8 +706,14 @@
 				INFOPLIST_FILE = "widget/widget-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/widget",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.todayext;
 				PRODUCT_NAME = widget;
 				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
