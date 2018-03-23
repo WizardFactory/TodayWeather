@@ -84,9 +84,9 @@
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-repeat="day in dayForecast">
-                        <p>{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
-                        <i ng-bind-html="getSentimentIcon(day.maxGrade)" class="material-icons" ng-style="{'color': grade2Color(day.maxGrade, 'white')}"></i><br>
-                        <span ng-style="{'color': grade2Color(day.maxGrade, 'white')}">{{day.maxStr}}</span>
+                        <p>{{convertDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.grade)" class="material-icons" ng-style="{'color': grade2Color(day.grade, 'white')}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.grade, 'white')}">{{day.str}}</span>
                     </td>
                 </tr>
             </table>
@@ -126,6 +126,15 @@
                         <span>{{airInfo.dataTime}}</span>
                     </td>
                 </tr>
+                <tr ng-click="goUnitsPage()">
+                    <td>
+                        <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{getCurrentAirUnitStr()|translate}} </a>
+                    </td>
+                </tr>
                 <tr ng-if="forecastPubdate">
                     <td>
                         <span>{{"LOC_FORECAST"|translate}}</span>
@@ -135,13 +144,13 @@
                         <span>{{forecastPubdate}}</span>
                     </td>
                 </tr>
-                <tr ng-click="goUnitsPage()">
+                <tr ng-if="forecastSource" ng-click="popUpAirForecastInfo(forecastSource)">
                     <td>
-                        <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
+                        <span>{{"LOC_AIR_FORECAST_SOURCE"|translate}}</span>
                     </td>
                     <td>
                         <i class="material-icons">&#xE88F;</i>
-                        <a>{{getCurrentAirUnitStr()|translate}} </a>
+                        <a>{{forecastSource.toUpperCase()}} </a>
                     </td>
                 </tr>
             </table>

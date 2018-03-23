@@ -295,5 +295,8 @@
   "LOC_ALARM_DESCRIPTION": "날씨알람은 사용자가 직접 설정한 시간에 날씨정보를 전달해드립니다.",
   "LOC_NOTIFICATION_IS_OFF_TURN_ON_NOTIFICATION_FOR_THIS_APP" : "알림이 꺼져있습니다. 이 앱에 대한 알림을 허용해주세요.",
   "LOC_SAVE" : "저장",
-  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "악천후 경보 기능이 추가 되었습니다!\n날씨 알람을 받고 있는 지역에 대한 경보를 받아보세요."
+  "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "악천후 경보 기능이 추가 되었습니다!\n날씨 알람을 받고 있는 지역에 대한 경보를 받아보세요.",
+  "LOC_AIR_FORECAST_SOURCE" : "예보자료",
+  "LOC_KAQ_DESCRIPTION": "대기질 예보자료는 '안양대학교 기후에너지환경융합연구소(약칭: 안양대학교 기후융합연구소, 소장: 환경에너지공학과 구윤서 교수)'에서 제공하는 자료입니다.",
+  "LOC_AIRKOREA_DESCRIPTION": "환경부는 대기오염으로 인한 국민 건강 피해를 최소화 하기 위해 대기오염 농도를 예보하고 있습니다."
 }

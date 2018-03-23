@@ -79,9 +79,9 @@
             <table class="rowgroup-vspacing-aqi-box" ng-if="dailyAqiForecast && dailyAqiForecast.length" ng-click="goAirInfoPage('aqi')">
                 <tr>
                     <td ng-repeat="day in dailyAqiForecast">
-                        <p>{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
-                        <i ng-bind-html="getSentimentIcon(day.maxGrade)" class="material-icons" ng-style="{'color': grade2Color(day.maxGrade)}"></i><br>
-                        <span ng-style="{'color': grade2Color(day.maxGrade)}">{{day.maxStr}}</span>
+                        <p>{{convertDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.grade)" class="material-icons" ng-style="{'color': grade2Color(day.grade)}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.grade)}">{{day.str}}</span>
                     </td>
                 </tr>
             </table>
