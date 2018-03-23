@@ -28,7 +28,7 @@ function updatePushInfoList(language, pushList, callback) {
                 }
                 if (pushInfo.category == undefined) {
                     log.error('pushInfo category is undefined');
-                    pushInfo.category == 'alarm';
+                    pushInfo.category = 'alarm';
                 }
 
                 pushInfo.units = UnitConverter.initUnits(pushInfo.units);
