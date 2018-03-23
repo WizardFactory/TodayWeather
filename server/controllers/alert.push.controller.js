@@ -562,17 +562,10 @@ class AlertPushController {
         let title = "";
         let text = "";
         let hasWeather = false;
+
+        title += cityName + " ";
         if (infoObj.hasOwnProperty('weather')) {
             let weather = infoObj.weather;
-            if (cityName.length === 0){
-                if (weather.stnName) {
-                    text += weather.stnName + " ";
-                }
-            }
-            else {
-                title += cityName + " ";
-            }
-
             if (weather.pty > 0) {
                 title += weather.dateObj.substr(11,5);
                 if (weather.pty === 1) {
@@ -608,17 +601,8 @@ class AlertPushController {
         if (infoObj.hasOwnProperty('air')) {
             let air = infoObj.air;
 
-            if (hasWeather) {
-                text += " ";
-            }
-
-            if (cityName.length === 0) {
-                text += air.stationName + " ";
-            }
-            else {
-                if (hasWeather == false) {
-                   title += cityName  + " "
-                }
+            if (title.length === 0) {
+                title += air.stationName + " ";
             }
 
             if (air.grade >= pushInfo.airAlertsBreakPoint) {
