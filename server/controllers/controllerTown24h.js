@@ -1032,15 +1032,19 @@ function ControllerTown24h() {
                 var grade = dayObj.dustForecast[propertyName.toUpperCase()+"Grade"]+1;
                 dailyData.minVal = AqiConverter.grade2minMaxValue('airkorea', propertyName, grade).min;
                 dailyData.maxVal = AqiConverter.grade2minMaxValue('airkorea', propertyName, grade).max;
+                dailyData.val = Math.round((dailyData.maxVal+dailyData.minVal)/2);
                 dailyData.minGrade = AqiConverter.value2grade(airUnit, propertyName, dailyData.minVal);
                 dailyData.maxGrade = AqiConverter.value2grade(airUnit, propertyName, dailyData.maxVal);
+                dailyData.grade = AqiConverter.value2grade(airUnit, propertyName, dailyData.val);
                 pollutant.daily.push(dailyData);
 
                 var aqiMinVal = AqiConverter.value2index(airUnit, propertyName, dailyData.minVal);
                 var aqiMaxVal = AqiConverter.value2index(airUnit, propertyName, dailyData.maxVal);
-                var aqiData = {date: dailyData.date, code: propertyName,
+                var aqiVal = Math.round((aqiMinVal+aqiMaxVal)/2);
+                var aqiData = {date: dailyData.date, code: propertyName, val: aqiVal,
                             minVal: aqiMinVal,
                             maxVal: aqiMaxVal,
+                            grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal),
                             minGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMinVal),
                             maxGrade: AqiConverter.value2grade(airUnit, 'aqi', aqiMaxVal)};
                 _insertDailyAqiData(airInfo, aqiData);
