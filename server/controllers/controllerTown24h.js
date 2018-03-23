@@ -839,6 +839,10 @@ function ControllerTown24h() {
                 }
                 dayForecast[forecast.code].hourly.push(forecast.val);
             });
+
+            //remove first and last it does not have full time
+            dailyArray = dailyArray.slice(1, dailyArray.length-1);
+
             dailyArray.forEach(function (dayForecast) {
                 var date = dayForecast.date;
                ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (code) {
