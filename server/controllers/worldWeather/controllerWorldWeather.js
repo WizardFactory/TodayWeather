@@ -344,6 +344,11 @@ function controllerWorldWeather() {
         var targetDate = new Date(target);
         var MS_15MINS = 1000*60*16; // 15 mins means is from 15:00:00 ~ 15:59:99
 
+        if (currentDate.getTime() < targetDate.getTime()) {
+            // if the target is future data, it mustn't be used for thistime.
+            return false;
+        }
+
         if (currentDate.getTime()-MS_15MINS < targetDate.getTime()) {
             return true;
         }
