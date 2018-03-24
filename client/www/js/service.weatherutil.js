@@ -84,6 +84,7 @@ angular.module('service.weatherutil', [])
                 url += key+'='+units[key];
                 count++;
             }
+            url += '&airForecastSource=kaq';
             return url;
         }
 

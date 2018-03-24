@@ -5,6 +5,7 @@ angular.module('controller.air', [])
         var TABLET_WIDTH = 640;
         var cityData;
         var aqiCode;
+        var bodyWidth;
 
         $scope.getLabelPosition = function (grade, val) {
             var w;
@@ -242,7 +243,14 @@ angular.module('controller.air', [])
                             console.info({code:pollutant.code, pubDate:$scope.forecastPubdate});
                             //console.log(JSON.stringify($scope.airChart));
 
-                            $scope.dayForecast = pollutant.daily;
+                            if (Array.isArray(pollutant.daily)) {
+                                if (bodyWidth < 360) {
+                                    $scope.dayForecast = pollutant.daily.slice(0,4);
+                                }
+                                else {
+                                    $scope.dayForecast = pollutant.daily;
+                                }
+                            }
                         }
                     }
                 }
@@ -284,8 +292,6 @@ angular.module('controller.air', [])
                 Util.ga.trackEvent('city', 'error', 'No enabled cities');
                 return;
             }
-
-            var bodyWidth;
 
             if (window.screen.height) {
                 bodyWidth = window.screen.width;

@@ -582,6 +582,13 @@ angular.module('controller.tabctrl', [])
             return value;
         };
 
+        $scope.convertDD = function (value) {
+            if (typeof value == 'string') {
+                return value.substr(8,2);
+            }
+            return value;
+        };
+
         $scope.getCurrentAirUnitStr = function () {
             return Units.getAirUnitStr(Units.getUnit('airUnit'));
         };
@@ -1248,6 +1255,34 @@ angular.module('controller.tabctrl', [])
                     });
                 });
         });
+
+        $scope.popUpAirForecastInfo = function (airForecastSource) {
+            var strKaqDescription = "";
+            var strAirKoreaDescription = "";
+            $translate(['LOC_KAQ_DESCRIPTION', 'LOC_AIRKOREA_DESCRIPTION'])
+                .then(function (translations) {
+                    strKaqDescription = translations.LOC_KAQ_DESCRIPTION;
+                    strAirKoreaDescription = translations.LOC_AIRKOREA_DESCRIPTION;
+                })
+                .finally(function () {
+                    var str;
+                    if (airForecastSource === 'kaq') {
+                        str = strKaqDescription;
+                    }
+                    else if (airForecastSource === 'airkorea') {
+                        str = strAirKoreaDescription;
+                    }
+                    else {
+                        return;
+                    }
+                    $ionicPopup.alert({
+                        template: str,
+                        buttons:[{
+                            text: strClose||'Close'
+                        }]
+                    });
+                });
+        };
 
         var strWeather = "Weather";
         var strOkay = "OK";
