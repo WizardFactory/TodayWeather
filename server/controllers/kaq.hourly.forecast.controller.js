@@ -74,6 +74,11 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 let folderList = results.CommonPrefixes.map(obj => {
                     return obj.Prefix;
                 });
+
+                folderList = folderList.filter(name => {
+                    return name.indexOf('dateBackup') < 0;
+                });
+
                 let folderName = folderList[folderList.length-1];
                 ['pm10', 'pm25'].forEach(value => {
                     let name = value.toUpperCase();
