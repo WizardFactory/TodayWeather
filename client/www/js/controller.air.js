@@ -181,8 +181,9 @@ angular.module('controller.air', [])
                 var cityData = WeatherInfo.getCityOfIndex(cityIndex);
 
                 Util.ga.trackEvent('air', 'applyWeatherData');
-                var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
-                if (latestAirInfo[aqiCode+'Value'] == undefined && cityData.airInfo.pollutants[aqiCode] == undefined) {
+                var latestAirInfo = cityData.airInfo.last || cityData.currentWeather.arpltn;
+                if ((latestAirInfo.hasOwnProperty(aqiCode+'Value') && latestAirInfo[aqiCode+'Value'] == undefined)
+                    && (cityData.airInfo.hasOwnProperty('pollutants') && cityData.airInfo.pollutants[aqiCode] == undefined)) {
                     //skip current aqicode
                     var newAqiCode = ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].find(function (propertyName) {
                         return (latestAirInfo[propertyName+'Value'] != undefined ||
