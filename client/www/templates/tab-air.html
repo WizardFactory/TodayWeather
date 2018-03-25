@@ -39,7 +39,7 @@
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
                 <div class="main-box" ng-if="airInfo" ng-style="{'color': grade2Color(airCodeGrade)}">
-                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade, 'white')}">
+                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade)}">
                         {{airCodeName|translate}}
                     </div>
                     <div class="main-box-air-content">
@@ -106,7 +106,7 @@
                 </table>
             </div>
         </div>
-        <div class="card" ng-if="airInfo">
+        <div class="card" ng-if="airInfo && airInfo.length > 0">
             <table class="colgroup-box">
                 <tr ng-if="airInfo.stationName">
                     <td>
