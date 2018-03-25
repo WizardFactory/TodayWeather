@@ -347,9 +347,6 @@ static TodayViewController *todayVC = nil;
     
     //NSLog(@"width : %f", self.view.bounds.size.width);
     
-    // Do any additional setup after loading the view from its nib.
-    locationView.hidden = true;
-    //fineDustView.hidden = true;
     
     bIsDateView = true;
     [twAppBtn setTitle:LSTR_TODAYWEATHER forState:UIControlStateNormal];
@@ -391,22 +388,6 @@ static TodayViewController *todayVC = nil;
     
     [self loadWeatherData:(unsigned int)[mCityDictList count]];
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (cityList == nil) {
-            //You have to run todayweather for add citylist
-            NSLog(@"show no location view");
-            
-            noLocationView.hidden = false;
-            showMoreView.hidden     = TRUE;
-            return;
-        }
-        else {
-            noLocationView.hidden = true;
-        }
-        
-        [self initWidgetViews];
-    });
-    
     CityInfo *currentCity = nil;
     CityInfo *savedCity = nil;
     NSData *archivedObject = [sharedUserDefaults objectForKey:@"currentCity"];
@@ -432,6 +413,27 @@ static TodayViewController *todayVC = nil;
     //NSLog(@"name : %@", currentCity.name);
     //NSLog(@"address : %@", currentCity.address);
     
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (cityList == nil) {
+            //You have to run todayweather for add citylist
+            NSLog(@"show no location view");
+            
+            noLocationView.hidden   = FALSE;
+            locationView.hidden     = TRUE;
+            showMoreView.hidden     = TRUE;
+            return;
+        }
+        else {
+            noLocationView.hidden = TRUE;
+            locationView.hidden = FALSE;
+            addressLabel.text   = currentCity.name;
+            
+            [self initWidgetViews];
+        }
+        //fineDustView.hidden = true;
+    });
+    
+    
     [self setCityInfo:currentCity];
 }
 
@@ -451,6 +453,7 @@ static TodayViewController *todayVC = nil;
     NSLog(@"User Default WD: %@", jsonDictWD);
     
     mWeatherDataList    = [NSMutableArray array];
+    
     for (NSDictionary *weatherDict in jsonDictWD[@"weatherDataList"]) {
         
         //NSLog(@"[loadWeatherData] nsnIdx : %@, weatherDict : %@", nsnIdx, weatherDict);
@@ -2154,6 +2157,49 @@ static TodayViewController *todayVC = nil;
 
 /********************************************************************
  *
+ * Name            : processPrevInit
+ * Description    : process previous data initialization
+ * Returns        : void
+ * Side effects :
+ * Date            : 2018. 03. 23
+ * Author        : SeanKim
+ * History        : 20180323 SeanKim Create function
+ *
+ ********************************************************************/
+- (void) processPrevInit:(CityInfo *)nextCity
+{
+    addressLabel.text       = nextCity.name;
+    updateTimeLabel.text    = @"";
+    
+    curWTIconIV.image       = [UIImage imageNamed:@""];
+    curTempLabel.text       = @"";
+    curDustLabel.text       = @"";
+    todayMaxMinTempLabel.text   = @"";
+    
+    time1Label.text         = @"";
+    time2Label.text         = @"";
+    time3Label.text         = @"";
+    time4Label.text         = @"";
+    time5Label.text         = @"";
+    time6Label.text         = @"";
+    
+    temp1Label.text         = @"";
+    temp2Label.text         = @"";
+    temp3Label.text         = @"";
+    temp4Label.text         = @"";
+    temp5Label.text         = @"";
+    temp6Label.text         = @"";
+    
+    showMore1IV.image       = [UIImage imageNamed:@""];
+    showMore2IV.image       = [UIImage imageNamed:@""];
+    showMore3IV.image       = [UIImage imageNamed:@""];
+    showMore4IV.image       = [UIImage imageNamed:@""];
+    showMore5IV.image       = [UIImage imageNamed:@""];
+    showMore6IV.image       = [UIImage imageNamed:@""];
+}
+
+/********************************************************************
+ *
  * Name			: processPrevData
  * Description	: process previous data
  * Returns		: void
@@ -2222,6 +2268,7 @@ static TodayViewController *todayVC = nil;
     mCurrentCityIdx = nextCity.index;
     [todayWSM setCurCountry:nextCity.country];
     
+    [self processPrevInit:nextCity];
     [self processPrevData:nextCity.index];
     
     [self processRequestIndicator:FALSE];
@@ -2493,6 +2540,7 @@ static TodayViewController *todayVC = nil;
     nssAirState         = [todayWSM getAirState:currentArpltnDict];
     
     nsmasAirState       = [todayWSM getChangedColorAirState:nssAirState];
+    
     NSLog(@"[ByCoord] nsmasAirState : %@",nsmasAirState);
 
     // Processing current temperature
