@@ -1964,8 +1964,8 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    if (time === 5 || putAll) {
-        if (hours === 8 || hours === 20 || putAll) {
+    if (time === 8 || putAll) {
+        // if (hours === 8 || hours === 20 || putAll) {
             log.info('push kaq hourly forecast');
             self.asyncTasks.push(function getKaqHourlyForecast(callback) {
                 var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
@@ -1975,7 +1975,7 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
                     callback();
                 });
             });
-        }
+        // }
     }
 
     if (time === 2 || putAll) {
