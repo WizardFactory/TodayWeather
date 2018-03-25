@@ -222,10 +222,13 @@ angular.module('controller.air', [])
                             });
 
                             // 과거 11개 + 현재 + 미래 12개 표시
-                            $scope.airChart = new Array(24);
+                            $scope.airChart = {
+                                data: new Array(24),
+                                maxValue: $scope.aqiMaxValue[aqiCode]
+                            };
                             for (var i = 0; i < 24; i++) {
-                                $scope.airChart[i] = pollutant.hourly[index - 12 + i];
-                                if ($scope.airChart[i] == undefined) {
+                                $scope.airChart.data[i] = pollutant.hourly[index - 12 + i];
+                                if ($scope.airChart.data[i] == undefined) {
                                     var date = new Date(pollutant.hourly[index].date);
                                     date.setHours(date.getHours() - 12 + i);
                                     var pad = function(num) {
@@ -233,7 +236,7 @@ angular.module('controller.air', [])
                                         return s.substr(s.length - 2);
                                     };
 
-                                    $scope.airChart[i] = new Object({
+                                    $scope.airChart.data[i] = new Object({
                                         date: [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('-') + ' '
                                                 + [pad(date.getHours()), pad(date.getMinutes())].join(':')
                                     });
