@@ -73,7 +73,7 @@
                 </div>
             </div>
         </div>
-        <div class="card" ng-if="airChart && airChart.length > 1">
+        <div class="card" ng-if="airChart && airChart.data && airChart.data.length > 1">
             <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
             <div id="chartScroll" class="chart-scroll">
                 <div ng-air-chart class="chart-content" ng-style="{'height':chartAirHeight+'px'}"></div>

@@ -20,6 +20,15 @@ angular.module('controller.tabctrl', [])
                     "co" : [0, 2, 9, 15, 50],           //ppm   (avg 1h)
                     "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm   (avg 1h)
                     "aqi" : [0, 50, 100, 250, 500]      //index
+                },
+                "maxValue": {
+                    "pm25" : 100,
+                    "pm10" : 150,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 15,
+                    "so2" : 0.15,
+                    "aqi" : 250
                 }
             },
             "airkorea_who": {
@@ -33,6 +42,15 @@ angular.module('controller.tabctrl', [])
                     "co" : [0, 2, 9, 15, 50],           //ppm
                     "so2" : [0, 0.02, 0.05, 0.15, 1],   //ppm
                     "aqi" : [0, 50, 100, 250, 500]      //ppm
+                },
+                "maxValue": {
+                    "pm25" : 50,
+                    "pm10" : 100,
+                    "o3" : 0.15,
+                    "no2" : 0.2,
+                    "co" : 15,
+                    "so2" : 0.15,
+                    "aqi" : 250
                 }
             },
             "airnow": {
@@ -52,6 +70,15 @@ angular.module('controller.tabctrl', [])
                     //"o3" : [0, 54, 124, 164, 204, 404, 604],              //ppb (avg 8h, 1h)
                     //"no2" : [0, 53, 100, 360, 649, 1249, 2049],           //ppb (avg 1h)
                     //"so2" : [0, 35, 75, 185, 304, 604, 1004],             //ppb (avg 1h, 24h)
+                },
+                "maxValue": {
+                    "pm25" : 250.4,
+                    "pm10" : 424,
+                    "o3" : 0.404,
+                    "no2" : 1.249,
+                    "co" : 30.4,
+                    "so2" : 0.604,
+                    "aqi" : 300
                 }
             },
             "aqicn": {
@@ -63,7 +90,7 @@ angular.module('controller.tabctrl', [])
                 "value": {
                     "pm25" : [0, 35, 75, 115, 150, 250, 500],               //ug/m3 (avg 1h)
                     "pm10" : [0, 50, 150, 250, 350, 420, 600],              //ug/m3 (avg 1h)
-                    "o3" : [0, 0.075, 0.093, 0.14, 0.187, 0.374 ,0.56],     //ppm (avg 1h)
+                    "o3" : [0, 0.075, 0.093, 0.14, 0.187, 0.374, 0.56],     //ppm (avg 1h)
                     "no2" : [0, 0.049, 0.097, 0.341, 0.584, 1.14, 1.87],    //ppm (avg 1h)
                     "co" : [0, 4, 8, 28, 48, 72, 120],                      //ppm (avg 1h)
                     "so2":[0, 0.052, 0.175, 0.227, 0.28, 0.56, 0.916],      //ppm (avg 1h)
@@ -72,6 +99,15 @@ angular.module('controller.tabctrl', [])
                     // "no2" : [0, 100, 200, 700, 1200, 2340, 3840], //ug/m3 (avg 1h)
                     // "co" : [0, 5, 10, 35, 60, 90, 150],          //mg/m3 (avg 1h)
                     // "so2" : [0, 150, 500, 650, 800, 1600, 2620],  //ug/m3
+                },
+                "maxValue": {
+                    "pm25" : 250,
+                    "pm10" : 420,
+                    "o3" : 0.374,
+                    "no2" : 1.14,
+                    "co" : 72,
+                    "so2" : 0.56,
+                    "aqi" : 300
                 }
             }
         };
@@ -1188,6 +1224,7 @@ angular.module('controller.tabctrl', [])
                 }
 
                 $scope.aqiStandard = list;
+                $scope.aqiMaxValue = aqiStandard[airUnit].maxValue;
                 console.info($scope.aqiStandard);
             }
             catch (err) {

@@ -1358,23 +1358,16 @@ angular.module('starter', [
                     });
 
                     var chart = function () {
-                        var data = scope.airChart;
+                        var data = scope.airChart.data;
                         if (x == undefined || y == undefined || svg == undefined || data == undefined) {
                             return;
                         }
 
-                        // min과 max의 중간값이 chart의 중간에 위치하도록 조정
-                        var minValue = d3.min(data, function (d) { return d.val; });
+                        // aqiStandard의 max와 data의 (max+여백) 중 큰 값으로 사용
                         var maxValue = d3.max(data, function (d) { return d.val; });
-                        if (minValue === maxValue) {
-                            maxValue = minValue * 2;
-                            minValue = 0;
-                        }
-                        else {
-                            minValue = Math.max(0, minValue - (maxValue - minValue) / 3);
-                        }
+                        maxValue = Math.max(scope.airChart.maxValue, maxValue + maxValue/10);
                         x.domain(data.map(function(d) { return d.date; }));
-                        y.domain([0, maxValue - minValue]).nice();
+                        y.domain([0, maxValue]).nice();
 
                         var xAxis = d3.svg.axis()
                             .tickFormat(function(d, i) {
@@ -1389,6 +1382,7 @@ angular.module('starter', [
                             .orient('bottom');
 
                         d3.svg.axis()
+                            .outerTickSize(0)
                             .scale(y)
                             .orient('left');
 
@@ -1398,6 +1392,17 @@ angular.module('starter', [
                             .attr('transform', 'translate(0,' + bottom + ')')
                             .call(xAxis);
 
+                        x_axis.selectAll('.x-axis .tick line')
+                            .call(function(t) {
+                                t.each(function (d, i) {
+                                    if (i === 12) {
+                                        var self = d3.select(this);
+                                        self.attr('y1', -bottom)
+                                            .attr('stroke', '#000')
+                                            .attr('stroke-width', '2px');
+                                    }
+                                })
+                            });
                         x_axis.selectAll('.x-axis .tick text')
                             .call(function(t) {
                                 t.each(function (d) {
@@ -1441,13 +1446,13 @@ angular.module('starter', [
                                 if (d.val == undefined) {
                                     return y(0);
                                 }
-                                return y(d.val-minValue);
+                                return y(d.val);
                             })
                             .attr('height', function (d) {
                                 if (d.val == undefined) {
                                     return 0;
                                 }
-                                return y(0) - y(d.val-minValue);
+                                return y(0) - y(d.val);
                             });
                     };
 
