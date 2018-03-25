@@ -154,6 +154,8 @@
 - (BOOL) setCityInfo:(CityInfo *)nextCity;
 
 - (void) processPrevData:(int)idx;
+- (void) processPrevInit:(CityInfo *)nextCity;
+
 - (void) processRequestIndicator:(BOOL)isComplete;
 - (void) processShowMore;
 - (void) processErrorStatus:(NSError *)error;
