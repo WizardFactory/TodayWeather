@@ -83,7 +83,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 ['pm10', 'pm25'].forEach(value => {
                     let name = value.toUpperCase();
                     name = name === 'PM25'?'PM2_5':name;
-                    imgPaths[value] = this.s3Url+folderName+name+'.09km.animation.gif';
+                    imgPaths[value] = this.s3Url+folderName+name+'.09KM.animation.gif';
                 });
 
                 imgPaths.pubDate = this._getPubdate(folderName.slice(0, folderName.length-6));
