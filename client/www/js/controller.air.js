@@ -17,12 +17,13 @@ angular.module('controller.air', [])
             var gradeD;
             var x;
             var LABEL_WIDTH = 52;
+            var AQISTD_MARGIN = 2;
 
             try {
                 w = angular.element(document.getElementById("aqistd")).prop('offsetWidth');
                 var label_w = angular.element(document.getElementById("aqistd-label")).prop('offsetWidth') || LABEL_WIDTH;
                 count = $scope.aqiStandard.length;
-                gradeW = w/count+2;
+                gradeW = w/count+AQISTD_MARGIN;
                 if (grade >= 2) {
                     startV = $scope.aqiStandard[grade-2].value[aqiCode];
                 }
