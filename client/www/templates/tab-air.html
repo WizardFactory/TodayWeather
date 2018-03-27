@@ -40,10 +40,10 @@
                 </div>
                 <div class="main-box" ng-if="airInfo" ng-style="{'color': grade2Color(airCodeGrade)}">
                     <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade)}">
-                        {{airCodeName|translate}}
+                        {{mainName|translate}}
                     </div>
                     <div class="main-box-air-content">
-                        {{airCodeValue}}<span>{{getAirCodeUnit(aqiCode)}}</span>
+                        {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-summary">
                         {{airCodeStr}}
@@ -56,7 +56,7 @@
                 </div>
             </div>
             <div class="air-std-table">
-                <div class="air-label"
+                <div id="aqistd-label" class="air-label"
                      ng-style="{'left':getLabelPosition(airCodeGrade, airCodeValue)+'px'}">
                     <div class="outline"
                          ng-style="{'border-color': grade2Color(airCodeGrade, 'white'), 'color': grade2Color(airCodeGrade, 'white')}">
@@ -74,7 +74,7 @@
             </div>
         </div>
         <div class="card" ng-if="airChart && airChart.data && airChart.data.length > 1">
-            <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
+            <div class="card-title">{{hourlyChartTitle|translate}} (beta)</div>
             <div id="chartScroll" class="chart-scroll">
                 <div ng-air-chart class="chart-content" ng-style="{'height':chartAirHeight+'px'}"></div>
             </div>

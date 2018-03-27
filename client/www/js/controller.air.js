@@ -20,8 +20,9 @@ angular.module('controller.air', [])
 
             try {
                 w = angular.element(document.getElementById("aqistd")).prop('offsetWidth');
+                var label_w = angular.element(document.getElementById("aqistd-label")).prop('offsetWidth') || LABEL_WIDTH;
                 count = $scope.aqiStandard.length;
-                gradeW = w/count;
+                gradeW = w/count+2;
                 if (grade >= 2) {
                     startV = $scope.aqiStandard[grade-2].value[aqiCode];
                 }
@@ -33,12 +34,12 @@ angular.module('controller.air', [])
                 diff = (val - startV)/(endV-startV);
                 gradeD = diff*gradeW;
                 x = gradeW*(grade-1) + gradeD;
-                x -= (LABEL_WIDTH/2);
+                x -= (label_w/2);
                 if (x<0) {
                     x = 0;
                 }
-                if (x > w-LABEL_WIDTH) {
-                    x = w-LABEL_WIDTH;
+                if (x > w-label_w) {
+                    x = w-label_w;
                 }
             }
             catch (err) {
@@ -173,6 +174,12 @@ angular.module('controller.air', [])
             Util.ga.trackEvent('air', 'setMainAqiCode', code);
             $scope.aqiCode = aqiCode = code;
             $scope.airCodeName = _getAQIname(aqiCode);
+            if (code === 'aqi') {
+                $scope.mainName = 'LOC_AIR_STATUS';
+            }
+            else {
+                $scope.mainName = $scope.airCodeName;
+            }
         }
 
         function _applyWeatherData() {
@@ -195,15 +202,24 @@ angular.module('controller.air', [])
                 $scope.hasPush = Push.hasPushInfo(cityIndex);
                 $scope.currentPosition = cityData.currentPosition;
                 $scope.airInfo = latestAirInfo;
-                $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
                 $scope.airCodeGrade = latestAirInfo[aqiCode+'Grade'];
+                $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
                 $scope.airCodeStr = latestAirInfo[aqiCode+'Str'];
+                if (aqiCode === 'aqi') {
+                    $scope.mainInfo = $scope.airCodeStr;
+                    $scope.airCodeStr = '';
+                }
+                else {
+                    $scope.mainInfo = $scope.airCodeValue || '-';
+                }
+
                 $scope.airCodeActionGuide = latestAirInfo[aqiCode+'ActionGuide'];
 
                 console.log($scope.aqiList);
                 $scope.cityCount = WeatherInfo.getEnabledCityCount();
 
-                console.log($scope.dayForecast);
+                $scope.dayForecast = undefined;
+                $scope.airChart = undefined;
 
                 $scope.address = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
                 console.log($scope.address);
@@ -221,6 +237,14 @@ angular.module('controller.air', [])
                             var index = pollutant.hourly.findIndex(function (obj) {
                                 return obj.date >= latestAirInfo.dataTime;
                             });
+
+                            if (index === pollutant.hourly.length-1) {
+                                console.log('There are not hourly forecast');
+                                $scope.hourlyChartTitle = "LOC_HOURLY_AQI_INFORMATION";
+                            }
+                            else {
+                                $scope.hourlyChartTitle = "LOC_HOURLY_AQI_FORECAST";
+                            }
 
                             // 과거 11개 + 현재 + 미래 12개 표시
                             $scope.airChart = {
