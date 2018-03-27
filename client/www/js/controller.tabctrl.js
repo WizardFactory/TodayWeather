@@ -13,7 +13,7 @@ angular.module('controller.tabctrl', [])
                 "color": ['#32a1ff', '#00c73c', '#fd9b5a', '#ff5959'],
                 "str": ['LOC_GOOD', 'LOC_MODERATE', 'LOC_UNHEALTHY', 'LOC_VERY_UNHEALTHY'],
                 "value": {
-                    "pm25" : [0, 15, 50, 100, 500],     //ug/m3 (avg 24h)
+                    "pm25" : [0, 15, 35, 75, 500],     //ug/m3 (avg 24h)
                     "pm10" : [0, 30, 80, 150, 600],     //ug/m3 (avg 24h)
                     "o3" : [0, 0.03, 0.09, 0.15, 0.6],  //ppm   (avg 1h)
                     "no2" : [0, 0.03, 0.06, 0.2, 2],    //ppm   (avg 1h)
