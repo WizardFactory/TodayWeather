@@ -74,11 +74,16 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 let folderList = results.CommonPrefixes.map(obj => {
                     return obj.Prefix;
                 });
+
+                folderList = folderList.filter(name => {
+                    return name.indexOf('dateBackup') < 0;
+                });
+
                 let folderName = folderList[folderList.length-1];
                 ['pm10', 'pm25'].forEach(value => {
                     let name = value.toUpperCase();
                     name = name === 'PM25'?'PM2_5':name;
-                    imgPaths[value] = this.s3Url+folderName+name+'.09km.animation.gif';
+                    imgPaths[value] = this.s3Url+folderName+name+'.09KM.animation.gif';
                 });
 
                 imgPaths.pubDate = this._getPubdate(folderName.slice(0, folderName.length-6));

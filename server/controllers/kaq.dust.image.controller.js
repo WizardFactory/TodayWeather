@@ -151,24 +151,15 @@ class KaqDustImageController{
             }
         }
 
-        //log.info('KAQ Image > result = ', JSON.stringify(result));
-
-        var pubDateStr = kmaTimeLib.convertYYYY_MM_DD_HHStr2YYYY_MM_DD_HHoZZ(this.imagePixels[type].pubDate);
-        var pubDate = new Date(pubDateStr);
-        var forecastDate = kmaTimeLib.toTimeZone(9);
-        //17시, 23시 데이터는 다음날 부터 시작하고, 그 다음날 5시까지 사용되어야 하므로, 현재 시간도 함께 비교
-        if (pubDate.getHours() >= 17 && pubDate.getDate() === forecastDate.getDate()) {
-            forecastDate.setDate(forecastDate.getDate()+1);
-        }
+        //이미지의 시작 시간은 발표시간 20시간전부터임. TW-184
+        //한시간을 더 빼서, 한시간씩 증가시키면서 기록함.
+        var forecastDate = new Date(this.imagePixels[type].pubDate);
+        forecastDate.setHours(forecastDate.getHours()-21);
 
         var forecast = [];
         for(i=0 ; i<137 ; i++){
             var item = {};
-            if(i != 0 && (i% 24) === 0){
-                forecastDate.setDate(forecastDate.getDate()+1);
-            }
-            forecastDate.setHours(i%24);
-            forecastDate.setMinutes(0);
+            forecastDate.setHours(forecastDate.getHours()+1);
             item.date = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(forecastDate);
             if (result[i] !== -1) {
                 item.val = result[i];
