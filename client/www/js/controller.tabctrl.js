@@ -1232,9 +1232,21 @@ angular.module('controller.tabctrl', [])
             }
         }
 
+        /**
+         * iOS의 경우 title이 없음.
+         */
         $scope.$on('notificationEvent', function(event, data) {
             console.log('got notification event');
-            var template = data.title+'<br>'+data.message;
+            var template = '';
+            if (data.title) {
+                template += data.title;
+            }
+            if (data.message) {
+                if (template.length > 0) {
+                    template += '<br>';
+                }
+                template += data.message;
+            }
             $ionicPopup.show({
                 title: strWeather||'Notification',
                 template: template,
