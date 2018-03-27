@@ -277,17 +277,21 @@ class AlertPushController {
 
         let airList = [];
         ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(name => {
-          airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+            if (airInfo[name+'Grade']) {
+                airList.push({name:name, grade:airInfo[name+'Grade'], value: airInfo[name+'Value']});
+            }
         });
-        airList = AqiConverter.sortByGrade(airList);
-        if (airList[0].grade) {
-            air.name = airList[0].name;
-            air.grade = airList[0].grade;
-            air.value = airList[0].value;
-            air.str = airInfo[air.name+'Str'];
-            air.stationName = airInfo.stationName;
+        if (airList.length > 0) {
+            airList = AqiConverter.sortByGrade(airList);
+            if (airList[0].grade) {
+                air.name = airList[0].name;
+                air.grade = airList[0].grade;
+                air.value = airList[0].value;
+                air.str = airInfo[air.name+'Str'];
+                air.stationName = airInfo.stationName;
+            }
+            air.dataTime = airInfo.dataTime;
         }
-        air.dataTime = airInfo.dataTime;
 
         forecastTime.setMinutes(0);
         let strCurrentTime = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(currentTime);
@@ -605,6 +609,9 @@ class AlertPushController {
                 let str = trans.__('LOC_H_POLLUTANT_IS_GRADE');
                 let dataTime = (new Date(air.dataTime)).getHours();
                 let name = trans.__(AqiConverter.name2string(air.name));
+                if (name.indexOf('오존')>=0) {
+                    str = str.replace('가', '이');
+                }
                 text += sprintf(str, dataTime,  name, air.str || air.value);
             }
             else if (air.hasOwnProperty('forecast') && air.forecast.grade >= pushInfo.airAlertsBreakPoint) {
@@ -628,6 +635,9 @@ class AlertPushController {
                 let str = trans.__('LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H');
                 let dataTime = (new Date(forecast.date)).getHours();
                 let name = trans.__(AqiConverter.name2string(forecast.name));
+                if (name.indexOf('오존')>=0) {
+                    str = str.replace('가', '이');
+                }
                 text += sprintf(str, dataTime, name, forecast.str);
             }
         }

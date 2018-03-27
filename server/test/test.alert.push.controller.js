@@ -234,11 +234,11 @@ describe('unit test - alert push controller', function() {
         airInfo: {
             last: {
                 dataTime: "2018-02-09 14:00",
-                pm10Grade: 4,
-                pm10Value: 80,
+                o3Grade: 4,
+                o3Value: 80,
                 pm25Grade: 3,
                 pm25Value: 50,
-                pm10Str: "나쁨",
+                o3Str: "나쁨",
                 pm25Str: "민감군주의",
             }
         }
@@ -499,7 +499,7 @@ describe('unit test - alert push controller', function() {
                 pm10Str: "좋음",
             },
             pollutants: {
-                pm25: {
+                o3: {
                     hourly: [{
                         date: "2018-02-09 15:00",
                         grade: 4,
