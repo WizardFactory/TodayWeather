@@ -114,6 +114,7 @@ router.post('/', function(req, res) {
 
     updatePushInfoList(language, pushList, function (err, result) {
         if (err) {
+            log.error(err);
             if (err.statusCode) {
                 return res.status(err.statusCode).send(err.message);
             }
