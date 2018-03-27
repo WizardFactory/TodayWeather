@@ -207,7 +207,7 @@ angular.module('controller.air', [])
                 $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
                 $scope.airCodeStr = latestAirInfo[aqiCode+'Str'];
                 if (aqiCode === 'aqi') {
-                    $scope.mainInfo = $scope.airCodeStr;
+                    $scope.mainInfo = $scope.airCodeStr || '-';
                     $scope.airCodeStr = '';
                 }
                 else {
