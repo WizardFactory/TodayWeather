@@ -7,6 +7,7 @@ var express = require('express');
 var router = express.Router();
 var ControllerPush = require('../../controllers/controllerPush');
 var AlertPushController = require('../../controllers/alert.push.controller');
+var UnitConverter = require('../../lib/unitConverter');
 
 function updatePushInfoList(language, pushList, callback) {
     if (!Array.isArray(pushList)) {
