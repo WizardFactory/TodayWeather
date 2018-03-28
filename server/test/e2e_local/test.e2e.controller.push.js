@@ -74,6 +74,17 @@ describe('e2e local test - controller push', function() {
         "geo" : [ -79.936, 40.461 ],
         "name" : "New York", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
 
+    var pushInfo4 = { "id":4, "cityIndex" : 4,
+        "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
+        "pushTime" : 82900,
+        "enable" : false,
+        "category" : "alarm",
+        "type" : "ios", "source" : "DSF", "lang" : "ko",
+        "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
+        "geo" : [ 85.324, 27.717 ],
+        "name" : "Kathmandu", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":540};
+
     it('test request daily summary without town', function(done) {
         this.timeout(20*1000);
         var co = new ControllerPush();
