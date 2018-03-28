@@ -257,16 +257,16 @@ ControllerPush.prototype._getAqiStr = function (arpltn, trans) {
         return 0;
     });
 
-    if (priorityArray[0] === 'pm25') {
+    if (priorityArray[0] === 'pm25' && arpltn.pm25Str) {
         str = trans.__("LOC_PM25")+" "+ arpltn.pm25Str;
     }
-    else if (priorityArray[0] === 'pm10') {
+    else if (priorityArray[0] === 'pm10' && arpltn.pm10Str) {
         str = trans.__("LOC_PM10")+" "+ arpltn.pm10Str;
     }
-    else if (priorityArray[0] === 'o3') {
+    else if (priorityArray[0] === 'o3' && arpltn.o3Str) {
         str = trans.__("LOC_O3")+" "+ arpltn.o3Str;
     }
-    else if (priorityArray[0] === 'khai') {
+    else if (priorityArray[0] === 'khai' && arpltn.khaiStr) {
         str = trans.__("LOC_AQI")+" "+ arpltn.khaiStr;
     }
 
