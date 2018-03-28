@@ -1219,12 +1219,35 @@ function ControllerTown24h() {
         var item;
         var itemList = [];
         var tmpGrade;
-        var ts = res;
-
+        var ts = res || global;
         var airInfo = current.arpltn || current;
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
         airInfo.aqiGrade = airInfo.khaiGrade || airInfo.aqiGrade;
         airInfo.aqiStr = airInfo.khaiStr || airInfo.aqiStr;
+
+        //find over moderate pollutants
+        var maxGrade = 0;
+        for (var key in airInfo) {
+            if (key.indexOf('Grade') >= 0) {
+                if (key.indexOf('Grade24') >= 0) {
+                    continue;
+                }
+                if (airInfo[key] > maxGrade) {
+                    maxGrade = airInfo[key];
+                }
+            }
+        }
+        if (maxGrade <= 0) {
+           log.error("airInfo is invalid! ", {airInfo: airInfo});
+        }
+        else if (maxGrade === 1) {
+            //대기상태가 좋아요
+            return ts.__('LOC_AIR_QUALITY_IS_GOOD');
+        }
+        else if (maxGrade === 2) {
+            //대기상태는 보통입니다
+            return ts.__('LOC_AIR_QUALITY_IS_MODERATE');
+        }
 
         var locStr;
         tmpGrade = 0;
