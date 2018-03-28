@@ -1364,8 +1364,10 @@ angular.module('starter', [
                         }
 
                         // aqiStandard의 max와 data의 (max+여백) 중 큰 값으로 사용
-                        var maxValue = d3.max(data, function (d) { return d.val; });
-                        maxValue = Math.max(scope.airChart.maxValue, maxValue + maxValue/10);
+                        var maxValue = d3.max(data, function (d) { return d.val + d.val/10;});
+                        if (scope.airChart.maxValue) {
+                            maxValue = Math.max(scope.airChart.maxValue, maxValue);
+                        }
                         x.domain(data.map(function(d) { return d.date; }));
                         y.domain([0, maxValue]).nice();
 
