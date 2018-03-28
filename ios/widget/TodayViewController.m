@@ -450,7 +450,9 @@ static TodayViewController *todayVC = nil;
     tmpDataWD = [nssWeatherList dataUsingEncoding:NSUTF8StringEncoding];
     if(tmpDataWD)
         jsonDictWD = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpDataWD options:0 error:&errorWD];
-    NSLog(@"User Default WD: %@", jsonDictWD);
+    
+    // Too many data causes crash, just use debug	
+    //NSLog(@"User Default WD: %@", jsonDictWD);
     
     mWeatherDataList    = [NSMutableArray array];
     
@@ -475,8 +477,8 @@ static TodayViewController *todayVC = nil;
             [mWeatherDataList addObject:nsdTmpDict];
         }
     }
-    
-    NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
+    // Too many data causes crash, just use debug
+    //NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
 }
 
 /********************************************************************
