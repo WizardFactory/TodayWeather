@@ -95,7 +95,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn && currentWeather.arpltn.date">
+        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-if="currentWeather.arpltn.pm25Value" ng-click="goAirInfoPage('pm25')">
@@ -198,7 +198,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn && currentWeather.arpltn.date">
+        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <div class="card-title">{{"LOC_DETAIL_AQI"|translate}}</div>
             <table class="colgroup-box">
                 <tr ng-if="currentWeather.arpltn.pm25Value != undefined">
