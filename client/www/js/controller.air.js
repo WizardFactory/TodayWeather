@@ -204,14 +204,19 @@ angular.module('controller.air', [])
                 $scope.currentPosition = cityData.currentPosition;
                 $scope.airInfo = latestAirInfo;
                 $scope.airCodeGrade = latestAirInfo[aqiCode+'Grade'];
-                $scope.airCodeValue = latestAirInfo[aqiCode+'Value'] || '-';
+                $scope.airCodeValue = (function() {
+                    if (latestAirInfo[aqiCode+'Value'] == undefined) {
+                        return '-';
+                    }
+                    return latestAirInfo[aqiCode+'Value'];
+                })();
                 $scope.airCodeStr = latestAirInfo[aqiCode+'Str'];
                 if (aqiCode === 'aqi') {
                     $scope.mainInfo = $scope.airCodeStr || '-';
                     $scope.airCodeStr = '';
                 }
                 else {
-                    $scope.mainInfo = $scope.airCodeValue || '-';
+                    $scope.mainInfo = $scope.airCodeValue;
                 }
 
                 $scope.airCodeActionGuide = latestAirInfo[aqiCode+'ActionGuide'];
