@@ -1,26 +1,30 @@
-window.appVersion = '0.9.83';
+window.appVersion = '0.9.90';
 window.updateInfo = [
     {
         lang: 'en',
-        all: ['* New UI for hourly, daily weather',
-            '* Fix some bugs',
+        all: [
+            '* new chart for hourly air info',
             'have a nice day!'
         ],
-        android: [],
+        android: [
+	    '* new severe weather alert',
+	    '* extend weather alearm'
+	],
         ios: []
     },
     {
         lang: 'ko',
         all: [
-            '* 시간별/일별날씨 화면 개편',
-            '* 시간별 날씨에서 미세먼지 예보 오류 수정',
-            '* 기타 오류 수정',
+            '* 대기정보 페이지의 시간별예보 - 차트로 업데이트',
+	    '* 전국날씨페이지 스크롤 지원',
             '즐거운 하루 되세요. ^^'
         ],
-        android: [],
+        android: [
+            '* new 눈/비 알림, 미세먼지 나쁨 알림!',
+	    '* 한지역에 대하여 5개까지 알람 설정 가능하게 확장'
+	],
         ios: [
-            '* 위젯 겹치는 문제 수정',
-            '* iPhoneX에서 화면 오류 수정',
-        ]
+	    '* widget 대기정보 컬러조정'
+	]
     }
 ];

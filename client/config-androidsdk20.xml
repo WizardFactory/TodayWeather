@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="0.9.83" android-versionCode="9839" xmlns="http://www.w3.org/ns/widgets">
+<widget id="net.wizardfactory.todayweather" version="0.9.90" android-versionCode="9909" xmlns="http://www.w3.org/ns/widgets">
     <name>TodayWeather</name>
     <description>
         Inform how warm or cold it is today than yesterday.
