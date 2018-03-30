@@ -338,6 +338,33 @@ function controllerWorldWeather() {
         return false;
     };
 
+    /**
+     * @param current
+     * @param target
+     * @returns {boolean}
+     * @private
+     */
+    self._checkCurrentDate = function(current, target){
+        log.info('_check current Date', current, target);
+        var targetDate = new Date(target);
+
+        // YYYY.mm.dd HH:MM
+        if(current.slice(0, 10) === target.slice(0, 10)){
+            if(targetDate.getHours() === 1 && targetDate.getMinutes() === 0){
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    /**
+     *
+     * @param current
+     * @param target
+     * @returns {boolean}
+     * @private
+     */
     self._getUntil15Mins = function(current, target){
         log.info('Compare Date', current, target);
         var currentDate = new Date(current);
@@ -1463,18 +1490,22 @@ function controllerWorldWeather() {
             log.info('DSF current> SDate : ', startDate, meta);
             log.info('DSF current> CDdate : ', curDate, meta);
 
-            dsf.data.forEach(function (item) {
+            dsf.data.forEach(function (item, index) {
+                //log.info('index : ', index, ' dateOBj : ', item.current.dateObj);
                 var isExist = false;
                 if(self._getUntil15Mins(curDate, item.current.dateObj)){
                     req.result.thisTime.forEach(function(thisTime, index) {
-                        if (thisTime.date != undefined &&
-                            self._compareDateString(curDate, thisTime.date)) {
-
-                            var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
-                            var isNight = self._isNight(curDate, item.daily.data);
-                            current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
-                            req.result.thisTime[index] = current;
-                            isExist = true;
+                        if(thisTime.date != undefined){
+                            if(self._checkCurrentDate(item.current.dateObj, thisTime.date)){
+                                log.info('DSF current > update data from : ',thisTime.date, ' -->  To :',  item.current.dateObj);
+                                var current = self._makeCurrentDataFromDSFCurrent(item.current, res);
+                                var isNight = self._isNight(curDate, item.daily.data);
+                                current.skyIcon = self._parseWorldSkyState(current.precType, current.cloud, isNight);
+                                req.result.thisTime[index] = current;
+                                isExist = true;
+                            }else if(self._checkCurrentDate(thisTime.date, item.current.dateObj)){
+                                isExist = true;
+                            }
                         }
                     });
 
