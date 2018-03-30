@@ -17,6 +17,9 @@ angular.module('controller.forecastctrl', [])
 
         if ($scope.forecastType == 'mid') {
             $scope.hasDustForecast = function () {
+                if ($scope.dailyAqiForecast) {
+                    return true;
+                }
                 if ($scope.dayChart == undefined) {
                     return false;
                 }
@@ -473,18 +476,19 @@ angular.module('controller.forecastctrl', [])
                 $scope.timeWidth = colWidth * cityData.timeTable.length;
                 $scope.dayWidth = colWidth * dayTable.length;
 
-                $scope.hourlyAqiForecast = undefined;
-                $scope.dailyAqiForecast = undefined;
-
                 $scope.currentWeather = cityData.currentWeather;
 
                 $scope.hourlyAqiForecast = undefined;
                 $scope.dailyAqiForecast = undefined;
+                $scope.airForecastPubdate = undefined;
+                $scope.airForecastSource = undefined;
 
                 if (cityData.airInfo &&
                     cityData.airInfo.pollutants &&
                     cityData.airInfo.pollutants.aqi) {
 
+                    $scope.airForecastPubdate = cityData.airInfo.forecastPubDate;
+                    $scope.airForecastSource = cityData.airInfo.forecastSource;
                     var latestAirInfo =  cityData.airInfo.last || cityData.currentWeather.arpltn;
                     if (cityData.airInfo.pollutants.aqi.hourly) {
                         $scope.hourlyAqiForecast = cityData.airInfo.pollutants.aqi.hourly.filter(function (obj) {
@@ -492,7 +496,12 @@ angular.module('controller.forecastctrl', [])
                         }).slice(0, 4);
                     }
                     if (cityData.airInfo.pollutants.aqi.daily) {
-                        $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                        if (bodyWidth < 360) {
+                            $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily.slice(0,4);
+                        }
+                        else {
+                            $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily;
+                        }
                     }
                 }
 

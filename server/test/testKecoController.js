@@ -114,8 +114,8 @@ describe('unit test - keco controller', function() {
 
         kecoController.recalculateValue(testData, 'airkorea');
         log.info('airkorea : ', testData);
-        assert.equal(testData.pm25Grade, 3);
-        assert.equal(testData.aqiGrade, 3);
+        assert.equal(testData.pm25Grade, 4);
+        assert.equal(testData.aqiGrade, 4);
     });
 });
 

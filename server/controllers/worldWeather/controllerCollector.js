@@ -1265,8 +1265,14 @@ ConCollector.prototype._getAndSaveDSForecast = function(list, date, retryCount, 
                         cb(null);
                         return;
                     }
+                    if (result.code && result.code === 400) {
+                        log.error('Dsf> get fail', geocode, result.err);
+                        //null or error 전송? TW-177
+                        callback(null);
+                        return;
+                    }
 
-                    log.info(result);
+                    log.debug(result);
                     self.saveDSForecast(geocode, date, undefined, result, function(err){
                         cb(null);
                     });
@@ -1426,6 +1432,10 @@ ConCollector.prototype.getPastDsfData = function(geocode, dateList, timeOffset, 
             requester.getForecast(geocode, date, key, function(err, result){
                 if(err){
                     log.warn('Req Dsf> getPastDsfData : Failed to get past weather', geocode, date);
+                    return cb('1. GET FAIL!!_');
+                }
+                if (result.code && result.code === 400) {
+                    log.error('Dsf> getPastDsfData fail', geocode, result.err);
                     return cb('1. GET FAIL!!_');
                 }
 
@@ -1628,6 +1638,10 @@ ConCollector.prototype.requestDsfData = function(geocode, From, To, callback){
                     requester.getForecast(geocode, undefined, key, function (err, result) {
                         if (err) {
                             log.warn('Req Dsf> Failed to get today weather', geocode);
+                            return cb1('1. GET FAIL!!_');
+                        }
+                        if (result.code && result.code === 400) {
+                            log.error('Req Dsf> get fail', geocode, result.err);
                             return cb1('1. GET FAIL!!_');
                         }
 

@@ -84,6 +84,8 @@ angular.module('service.weatherutil', [])
                 url += key+'='+units[key];
                 count++;
             }
+            // Delete temporarily TW-181
+            // url += '&airForecastSource=kaq';
             return url;
         }
 

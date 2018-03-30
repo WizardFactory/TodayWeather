@@ -95,7 +95,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn">
+        <div class="card" ng-if="showDetailWeather && !showHourlyAqiForecast() && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-if="currentWeather.arpltn.pm25Value" ng-click="goAirInfoPage('pm25')">
@@ -198,7 +198,7 @@
                 </tr>
             </table>
         </div>
-        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn">
+        <div class="card" ng-if="showDetailWeather && currentWeather.arpltn && currentWeather.arpltn.dataTime">
             <div class="card-title">{{"LOC_DETAIL_AQI"|translate}}</div>
             <table class="colgroup-box">
                 <tr ng-if="currentWeather.arpltn.pm25Value != undefined">
@@ -303,6 +303,24 @@
                     <td>
                         <i class="material-icons">&#xE88F;</i>
                         <a>{{getCurrentAirUnitStr()|translate}} </a>
+                    </td>
+                </tr>
+                <tr ng-if="airForecastPubdate">
+                    <td>
+                        <span>{{"LOC_FORECAST"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE192;</i>
+                        <span>{{airForecastPubdate}}</span>
+                    </td>
+                </tr>
+                <tr ng-if="airForecastSource" ng-click="popUpAirForecastInfo(airForecastSource)">
+                    <td>
+                        <span>{{"LOC_AIR_FORECAST_SOURCE"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{airForecastSource.toUpperCase()}} </a>
                     </td>
                 </tr>
             </table>

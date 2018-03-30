@@ -7,6 +7,7 @@ var express = require('express');
 var router = express.Router();
 var ControllerPush = require('../../controllers/controllerPush');
 var AlertPushController = require('../../controllers/alert.push.controller');
+var UnitConverter = require('../../lib/unitConverter');
 
 function updatePushInfoList(language, pushList, callback) {
     if (!Array.isArray(pushList)) {
@@ -26,6 +27,12 @@ function updatePushInfoList(language, pushList, callback) {
                     log.error('pushInfo source is undefined');
                     pushInfo.source = "KMA"
                 }
+                if (pushInfo.category == undefined) {
+                    log.error('pushInfo category is undefined');
+                    pushInfo.category = 'alarm';
+                }
+
+                pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
                 log.info('pushInfo : '+ JSON.stringify(pushInfo));
             }
@@ -108,6 +115,7 @@ router.post('/', function(req, res) {
 
     updatePushInfoList(language, pushList, function (err, result) {
         if (err) {
+            log.error(err);
             if (err.statusCode) {
                 return res.status(err.statusCode).send(err.message);
             }

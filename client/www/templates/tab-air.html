@@ -39,11 +39,11 @@
                     <span class="icon-left ion-chevron-left"></span>
                 </div>
                 <div class="main-box" ng-if="airInfo" ng-style="{'color': grade2Color(airCodeGrade)}">
-                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade, 'white')}">
-                        {{airCodeName|translate}}
+                    <div class="main-box-air-title" ng-style="{'border-color': grade2Color(airCodeGrade)}">
+                        {{mainName|translate}}
                     </div>
                     <div class="main-box-air-content">
-                        {{airCodeValue}}<span>{{getAirCodeUnit(aqiCode)}}</span>
+                        {{mainInfo}}<span>{{getAirCodeUnit(aqiCode)}}</span>
                     </div>
                     <div class="main-box-summary">
                         {{airCodeStr}}
@@ -56,7 +56,7 @@
                 </div>
             </div>
             <div class="air-std-table">
-                <div class="air-label"
+                <div id="aqistd-label" class="air-label"
                      ng-style="{'left':getLabelPosition(airCodeGrade, airCodeValue)+'px'}">
                     <div class="outline"
                          ng-style="{'border-color': grade2Color(airCodeGrade, 'white'), 'color': grade2Color(airCodeGrade, 'white')}">
@@ -73,18 +73,10 @@
                 </div>
             </div>
         </div>
-        <div class="card" ng-if="hourlyForecast && hourlyForecast.length > 1">
-            <div class="card-title">{{'LOC_HOURLY_AQI_FORECAST'|translate}} (beta)</div>
-            <div class="card-scroll">
-                <table class="rowgroup-vspacing-aqi-box">
-                    <tr>
-                        <td ng-repeat="obj in hourlyForecast" style="min-width: 48px;">
-                            <p>{{obj.date.substr(11,2)}}{{'LOC_HOUR'|translate}}</p>
-                            <i ng-bind-html="getSentimentIcon(obj.grade)" class="material-icons" ng-style="{'color': grade2Color(obj.grade)}"></i><br>
-                            <span ng-style="{'color': grade2Color(obj.grade)}">{{obj.val == undefined?"-":obj.val}}</span>
-                        </td>
-                    </tr>
-                </table>
+        <div class="card" ng-if="airChart && airChart.data && airChart.data.length > 1">
+            <div class="card-title">{{hourlyChartTitle|translate}} (beta)</div>
+            <div id="chartScroll" class="chart-scroll">
+                <div ng-air-chart class="chart-content" ng-style="{'height':chartAirHeight+'px'}"></div>
             </div>
         </div>
         <div class="card" ng-if="dayForecast && dayForecast.length">
@@ -92,9 +84,9 @@
             <table class="rowgroup-vspacing-aqi-box">
                 <tr>
                     <td ng-repeat="day in dayForecast">
-                        <p>{{convertMMDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
-                        <i ng-bind-html="getSentimentIcon(day.maxGrade)" class="material-icons" ng-style="{'color': grade2Color(day.maxGrade, 'white')}"></i><br>
-                        <span ng-style="{'color': grade2Color(day.maxGrade, 'white')}">{{day.maxStr}}</span>
+                        <p>{{convertDD(day.date)}} {{day.fromToday==0?getDayString(day.fromToday):dayToString(day.dayOfWeek)|translate}}</p>
+                        <i ng-bind-html="getSentimentIcon(day.grade)" class="material-icons" ng-style="{'color': grade2Color(day.grade, 'white')}"></i><br>
+                        <span ng-style="{'color': grade2Color(day.grade, 'white')}">{{day.str}}</span>
                     </td>
                 </tr>
             </table>
@@ -114,7 +106,7 @@
                 </table>
             </div>
         </div>
-        <div class="card" ng-if="airInfo">
+        <div class="card" ng-if="airInfo && airInfo.dataTime">
             <table class="colgroup-box">
                 <tr ng-if="airInfo.stationName">
                     <td>
@@ -134,6 +126,15 @@
                         <span>{{airInfo.dataTime}}</span>
                     </td>
                 </tr>
+                <tr ng-click="goUnitsPage()">
+                    <td>
+                        <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
+                    </td>
+                    <td>
+                        <i class="material-icons">&#xE88F;</i>
+                        <a>{{getCurrentAirUnitStr()|translate}} </a>
+                    </td>
+                </tr>
                 <tr ng-if="forecastPubdate">
                     <td>
                         <span>{{"LOC_FORECAST"|translate}}</span>
@@ -143,13 +144,13 @@
                         <span>{{forecastPubdate}}</span>
                     </td>
                 </tr>
-                <tr ng-click="goUnitsPage()">
+                <tr ng-if="forecastSource" ng-click="popUpAirForecastInfo(forecastSource)">
                     <td>
-                        <span>{{"LOC_AIR_QUALITY_INDEX_UNIT"|translate}}</span>
+                        <span>{{"LOC_AIR_FORECAST_SOURCE"|translate}}</span>
                     </td>
                     <td>
                         <i class="material-icons">&#xE88F;</i>
-                        <a>{{getCurrentAirUnitStr()|translate}} </a>
+                        <a>{{forecastSource.toUpperCase()}} </a>
                     </td>
                 </tr>
             </table>

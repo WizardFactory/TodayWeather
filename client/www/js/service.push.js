@@ -129,6 +129,10 @@ angular.module('service.push', [])
             var postObj;
 
             console.log(pushInfo);
+            var units = Units.getAllUnits();
+            // Delete temporarily TW-181
+            // units.airForecastSource = 'kaq';
+
             /**
              * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
              */
@@ -481,13 +485,14 @@ angular.module('service.push', [])
          * @param {number} cityIndex
          */
         obj.updateCityInfo = function (cityIndex) {
+            var self = this;
             var pushList = this.pushData.pushList;
             var list = pushList.filter(function (obj) {
                return obj.cityIndex === cityIndex;
             });
 
             list.forEach(function (pushInfo) {
-               var city  = this._getSimpleCityInfo(cityIndex);
+               var city  = self._getSimpleCityInfo(cityIndex);
                 for (var key in city) {
                     pushInfo[key] = city[key];
                 }

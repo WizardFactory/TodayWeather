@@ -1315,6 +1315,171 @@ angular.module('starter', [
             };
         });
 
+        $compileProvider.directive('ngAirChart', function() {
+            return {
+                restrict: 'A',
+                transclude: true,
+                link: function (scope, iElement) {
+                    var margin = {top: -5, right: 5, bottom: 35, left: 5};
+                    var width, height, x, y;
+                    var svg;
+
+                    function initSvg() {
+                        x = d3.scale.ordinal().rangeBands([margin.left, width - margin.right]);
+                        y = d3.scale.linear().range([height - margin.bottom, margin.top]);
+
+                        if (svg != undefined) {
+                            svg.selectAll("*").remove();
+                            svg.attr('width', width)
+                                .attr('height', height);
+                        }
+                        else {
+                            svg = d3.select(iElement[0]).append('svg')
+                                .attr('width', width)
+                                .attr('height', height);
+                        }
+                    }
+
+                    scope.$watch(function () {
+                        return iElement[0].getBoundingClientRect().height;
+                    }, function(newValue) {
+                        if (newValue === 0 || height === newValue) {
+                            return;
+                        }
+                        width = iElement[0].getBoundingClientRect().width;
+                        height = iElement[0].getBoundingClientRect().height;
+
+                        console.log("air scope watch");
+
+                        if (!(scope.airChart == undefined)) {
+                            initSvg();
+                            chart();
+                        }
+                    });
+
+                    var chart = function () {
+                        var data = scope.airChart.data;
+                        if (x == undefined || y == undefined || svg == undefined || data == undefined) {
+                            return;
+                        }
+
+                        // aqiStandard의 max와 data의 (max+여백) 중 큰 값으로 사용
+                        var maxValue = d3.max(data, function (d) { return d.val + d.val/10;});
+                        if (scope.airChart.maxValue) {
+                            maxValue = Math.max(scope.airChart.maxValue, maxValue);
+                        }
+                        x.domain(data.map(function(d) { return d.date; }));
+                        y.domain([0, maxValue]).nice();
+
+                        var xAxis = d3.svg.axis()
+                            .tickFormat(function(d, i) {
+                                var hour = parseInt(d.substr(11,2));
+                                if (hour === 0 || hour % 3 === 0) {
+                                    return hour + scope.strHour;
+                                }
+                                return "";
+                            })
+                            .outerTickSize(0)
+                            .scale(x)
+                            .orient('bottom');
+
+                        d3.svg.axis()
+                            .outerTickSize(0)
+                            .scale(y)
+                            .orient('left');
+
+                        var bottom = height - margin.bottom;
+                        var x_axis = svg.append('g')
+                            .attr('class', 'x-axis')
+                            .attr('transform', 'translate(0,' + bottom + ')')
+                            .call(xAxis);
+
+                        x_axis.selectAll('.x-axis .tick line')
+                            .call(function(t) {
+                                t.each(function (d, i) {
+                                    if (i === 12) {
+                                        var self = d3.select(this);
+                                        self.attr('y1', -bottom)
+                                            .attr('stroke', '#000')
+                                            .attr('stroke-width', '2px');
+                                    }
+                                })
+                            });
+                        x_axis.selectAll('.x-axis .tick text')
+                            .call(function(t) {
+                                t.each(function (d) {
+                                    var hour = parseInt(d.substr(11,2));
+                                    if (hour === 0) {
+                                        var self = d3.select(this);
+                                        self.append('tspan')
+                                            .attr('x', function (d, i) {
+                                                return x.rangeBand() * i;
+                                            })
+                                            .attr('dy', parseFloat(self.attr('dy')) * 1.5 + 'em')
+                                            .text(d.substr(5,2)+'.'+d.substr(8,2));
+                                    }
+                                })
+                            });
+
+                        var rects = svg.selectAll('.rect')
+                            .data(data);
+
+                        rects.enter().append('rect')
+                            .attr('class', 'chart-bar');
+
+                        rects.exit().remove();
+
+                        rects.attr('x', function (d, i) {
+                                return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                            })
+                            .attr('width', x.rangeBand() - 2)
+                            .attr('y', 0)
+                            .attr('height', 0)
+                            .style('fill', function (d) {
+                                return scope.grade2Color(d.grade);
+                            })
+                            .style('fill-opacity', function (d, i) {
+                                if (i === 12) {
+                                    return 1.0;
+                                }
+                                return 0.6;
+                            })
+                            .attr('y', function (d) {
+                                if (d.val == undefined) {
+                                    return y(0);
+                                }
+                                return y(d.val);
+                            })
+                            .attr('height', function (d) {
+                                if (d.val == undefined) {
+                                    return 0;
+                                }
+                                return y(0) - y(d.val);
+                            });
+                    };
+
+                    scope.$watch('airWidth', function(newValue) {
+                        if (newValue == undefined || newValue == width) {
+                            console.log('new value is undefined or already set same width='+width);
+                            return;
+                        }
+                        console.log('update airWidth='+newValue);
+                        width = newValue;
+                        return;
+                    });
+
+                    scope.$watch('airChart', function (newVal) {
+                        if (newVal == undefined) {
+                            return;
+                        }
+                        console.log("update airChart");
+                        initSvg();
+                        chart();
+                    });
+                }
+            };
+        });
+
         $compileProvider.directive('tabsShrink', function($document) {
             return {
                 restrict: 'A',

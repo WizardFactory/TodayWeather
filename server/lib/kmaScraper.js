@@ -410,9 +410,9 @@ KmaScraper.prototype.getCityWeather = function(pubDate, callback) {
                             cityWeather[propertyName[i]] = self._convertKrToEng(tdText);
                         }
                         else {
-                            if (tdText.length != 0) {
-                                cityWeather[propertyName[i]] = tdText;
-                            }
+                            //weather(현재일기)가 없는 경우도 특이사항없다는 정보임
+                            //DB상에서는 city weather stn만이 weather값을 가짐
+                            cityWeather[propertyName[i]] = tdText;
                         }
                     }
                     i++;
