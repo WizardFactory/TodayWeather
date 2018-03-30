@@ -458,24 +458,19 @@ class AlertPushController {
         log.info(JSON.stringify({alertPush: alertPush}));
         log.info(JSON.stringify({infoObj: infoObj}));
 
-        if (alertPush.startTime === this.time ||
-            alertPush.precipAlerts == undefined ||
-            alertPush.precipAlerts.lastState == undefined) {
-            return send;
-        }
-
         if (infoObj == undefined) {
             throw new Error('info obj is undefined on compare with last info');
         }
 
         limitPushTime.setHours(limitPushTime.getHours()-6);
-        let precipAlerts = alertPush.precipAlerts;
+
+        let precipAlerts = alertPush.precipAlerts || {};
         if (!precipAlerts.hasOwnProperty('pushTime') || precipAlerts.pushTime < limitPushTime) {
            //check weather
             if (infoObj.hasOwnProperty('weather')) {
                 let weather = infoObj.weather;
 
-                if (precipAlerts.lastState === 0) {
+                if (precipAlerts.lastState === 0 || precipAlerts.lastState == undefined) {
                     /**
                      * TW-165 pty는 확실한 비이지만, 동네 실황은 너무 늦기 때문에 보수적인 접근으로 rns도 true인 경우에는만 Push전송
                      * lastState는 pty로 변경함
@@ -492,20 +487,17 @@ class AlertPushController {
             }
         }
 
-        if (alertPush.airAlerts) {
-            let airAlerts = alertPush.airAlerts;
-            if (!airAlerts.hasOwnProperty('pushTime') || airAlerts.pushTime < limitPushTime )
-            {
-                if (infoObj.hasOwnProperty('air')) {
-                    let air = infoObj.air;
-                    if (airAlerts.lastGrade < alertPush.airAlertsBreakPoint) {
-                        if (air.grade >= alertPush.airAlertsBreakPoint) {
+        let airAlerts = alertPush.airAlerts || {};
+        if (!airAlerts.hasOwnProperty('pushTime') || airAlerts.pushTime < limitPushTime ) {
+            if (infoObj.hasOwnProperty('air')) {
+                let air = infoObj.air;
+                if (airAlerts.lastGrade < alertPush.airAlertsBreakPoint || airAlerts.lastGrade == undefined) {
+                    if (air.grade >= alertPush.airAlertsBreakPoint) {
+                        send = send === 'weather'?'all':'air';
+                    }
+                    else if (air.hasOwnProperty('forecast')) {
+                        if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
                             send = send === 'weather'?'all':'air';
-                        }
-                        else if (air.hasOwnProperty('forecast')) {
-                            if (air.forecast.grade >= alertPush.airAlertsBreakPoint) {
-                                send = send === 'weather'?'all':'air';
-                            }
                         }
                     }
                 }
