@@ -1651,6 +1651,7 @@ angular.module('starter', [
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
         $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
+        $ionicConfigProvider.views.swipeBackEnabled(false);
 
         ionicTimePickerProvider.configTimePicker({
             format: 12,
