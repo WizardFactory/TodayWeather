@@ -1334,14 +1334,20 @@ function ControllerTown24h() {
         var tmpGrade;
         var ts = res;
 
+        /**
+         * diff temp와 weather가 2.5로 특별한 날씨가 정보가 없으면 온도차와 날씨를 표시
+         */
         if (current.hasOwnProperty('t1h') && yesterday && yesterday.hasOwnProperty('t1h')) {
             var obj = self._diffTodayYesterday(current, yesterday, ts);
+            if (obj.grade <= 2) {
+                obj.grade = 2.5;
+            }
             item = {str: obj.str, grade: obj.grade};
             itemList.push(item);
         }
 
         if (current.hasOwnProperty('weatherType')) {
-            tmpGrade = 1;
+            tmpGrade = 2.5;
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
