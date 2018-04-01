@@ -260,7 +260,7 @@ angular.module('controller.air', [])
                             for (var i = 0; i < 24; i++) {
                                 $scope.airChart.data[i] = pollutant.hourly[index - 12 + i];
                                 if ($scope.airChart.data[i] == undefined) {
-                                    var date = new Date(pollutant.hourly[index].date);
+                                    var date = new Date(pollutant.hourly[index].date.replace(/\s+/g, 'T'));
                                     date.setHours(date.getHours() - 12 + i);
                                     var pad = function(num) {
                                         var s = '0' + num;

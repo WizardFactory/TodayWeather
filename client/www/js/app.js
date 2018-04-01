@@ -1430,7 +1430,7 @@ angular.module('starter', [
                         rects.exit().remove();
 
                         rects.attr('x', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                                return x.rangeBand() * i + 1 + margin.left;
                             })
                             .attr('width', x.rangeBand() - 2)
                             .attr('y', 0)
