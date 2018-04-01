@@ -62,44 +62,11 @@
     
     for(int i = 0 ; i < [arrDaysData count]; i++)
     {
-        if(reqType == TYPE_REQUEST_WEATHER_KR)
-        {
-            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-            nssDay              = [nssDate substringFromIndex:6];
-            
-            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
-            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
-            
-//            if(tempUnit == TEMP_UNIT_FAHRENHEIT)
-//            {
-//                taMin = [TodayWeatherUtil convertFromCelsToFahr:taMin];
-//                taMax = [TodayWeatherUtil convertFromCelsToFahr:taMax];
-//            }
-        }
-        else if (reqType == TYPE_REQUEST_WEATHER_GLOBAL)
-        {
-            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-            nssDay              = [nssDate substringFromIndex:6];
-            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
-            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
-            
-//            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-//            nssMonth            = [nssDate substringWithRange:NSMakeRange(5, 2)];
-//            nssDay              = [nssDate substringWithRange:NSMakeRange(8, 2)];
-//
-//            if(tempUnit == TEMP_UNIT_CELSIUS)
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_c"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_c"] intValue];
-//            }
-//            else
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_f"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_f"] intValue];
-//            }
-        }
+        nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
+        nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
+        nssDay              = [nssDate substringFromIndex:6];
+        taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
+        taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
         
         nssTempMaxMin       = [NSString stringWithFormat:@"%d˚/%d˚", taMin, taMax];
         
