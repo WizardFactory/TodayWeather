@@ -7,7 +7,7 @@ angular.module('service.push', [])
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": twClientConfig.googleSenderId
+                "senderID": clientConfig.googleSenderId
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -21,8 +21,8 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/v000902'+'/push';
-        obj.pushListUrl = twClientConfig.serverUrl + '/v000902'+'/push-list';
+        obj.pushUrl = clientConfig.serverUrl + '/v000902'+'/push';
+        obj.pushListUrl = clientConfig.serverUrl + '/v000902'+'/push-list';
 
         /**
          *

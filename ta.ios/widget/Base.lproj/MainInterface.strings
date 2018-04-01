@@ -1,0 +1,60 @@
+
+/* Class = "UIButton"; normalTitle = "<"; ObjectID = "4Z3-ju-bkK"; */
+"4Z3-ju-bkK.normalTitle" = "<";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "5iX-1E-azJ"; */
+"5iX-1E-azJ.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "하늘시 구름동"; ObjectID = "7Ob-o0-XUY"; */
+"7Ob-o0-XUY.text" = "";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "7gG-I5-ury"; */
+"7gG-I5-ury.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "A3e-eu-e5I"; */
+"A3e-eu-e5I.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "Dzo-gC-neN"; */
+"Dzo-gC-neN.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "Ek0-Oa-EEc"; */
+"Ek0-Oa-EEc.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "오늘날씨앱을 실행하여 도시목록을 생성하여 주세요."; ObjectID = "K3l-cK-xrE"; */
+"K3l-cK-xrE.text" = "오늘미세앱을 실행하여 도시목록을 생성하여 주세요.";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "Ljx-w3-iju"; */
+"Ljx-w3-iju.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "-99˚"; ObjectID = "MdD-yn-mdu"; */
+"MdD-yn-mdu.text" = "-99˚";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "NIs-Da-Ite"; */
+"NIs-Da-Ite.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "Rfx-0l-vF5"; */
+"Rfx-0l-vF5.text" = "11/12 토";
+
+/* Class = "UIButton"; normalTitle = "오늘날씨"; ObjectID = "ZE0-QG-bpm"; */
+"ZE0-QG-bpm.normalTitle" = "오늘미세";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "aKK-WN-MK2"; */
+"aKK-WN-MK2.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "-99˚/-99˚"; ObjectID = "ai2-qd-XVV"; */
+"ai2-qd-XVV.text" = "-99˚/-99˚";
+
+/* Class = "UILabel"; text = "업데이트 24:00"; ObjectID = "ay0-Ac-bZT"; */
+"ay0-Ac-bZT.text" = "업데이트 24:00";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "eHe-p9-udY"; */
+"eHe-p9-udY.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "g32-Tt-L23"; */
+"g32-Tt-L23.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "11/12 토"; ObjectID = "k7m-Ka-bbo"; */
+"k7m-Ka-bbo.text" = "11/12 토";
+
+/* Class = "UILabel"; text = "통합대기 매우나쁨"; ObjectID = "tsK-Cz-V1Y"; */
+"tsK-Cz-V1Y.text" = "대기상태?";

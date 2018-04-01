@@ -1,0 +1,21 @@
+<ion-view>
+    <ion-nav-buttons side="left">
+        <button class="button button-icon button-positive icon"
+                ng-class="isAndroid() ? 'ion-android-arrow-back' : 'ion-ios-arrow-back'" ng-click="onClose()">
+        </button>
+    </ion-nav-buttons>
+    <ion-nav-title>
+        <p class="title">
+            <span style="vertical-align: middle">{{title|translate}}</span>
+        </p>
+    </ion-nav-title>
+
+    <ion-content style="background-color: #F5F5F5;">
+        <ion-radio ng-repeat="item in list"
+                   ng-value="item.value"
+                   ng-change="valueChanged(item)"
+                   ng-model="data.value">
+            {{ item.label|translate }}
+        </ion-radio>
+    </ion-content>
+</ion-view>

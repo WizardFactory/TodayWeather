@@ -97,7 +97,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithLocation (location, funcName) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/'+funcName+'/v000902'+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
@@ -113,7 +113,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithAddr (addr, funcName) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/'+funcName+'/v000902'+'/addr/'+ addr;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
@@ -128,7 +128,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithTown (town) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/v000902/kma/addr';
             if (town.first !== '') {
                 url += '/' + town.first;
@@ -465,7 +465,7 @@ angular.module('service.weatherutil', [])
             catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseKmaWeather');
                 Util.ga.trackException(err, false);
-                if (twClientConfig && twClientConfig.debug) {
+                if (clientConfig && clientConfig.debug) {
                     alert(err.message);
                 }
                 return null;
@@ -625,7 +625,7 @@ angular.module('service.weatherutil', [])
             catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseWorldWeather');
                 Util.ga.trackException(err, false);
-                if (twClientConfig && twClientConfig.debug) {
+                if (clientConfig && clientConfig.debug) {
                     alert(err.message);
                 }
                 return null;
@@ -890,7 +890,7 @@ angular.module('service.weatherutil', [])
             var deferred = $q.defer();
             var url;
             try{
-                url = twClientConfig.serverUrl;
+                url = clientConfig.serverUrl;
                 url += '/v000902/nation/'+nationCode;
                 url += _getUnitsParams();
             }

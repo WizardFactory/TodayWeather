@@ -1,0 +1,27 @@
+/*
+ Localizable.strings .strings
+ TodayWeather
+ 
+ Created by KwangHo Kim on 2017. 1. 30..
+ 
+ */
+
+// English
+
+// "Key"					= "Value"
+
+// Widget
+"LOC_UPDATE"						= "Update";
+
+"LOC_YESTERDAY"                     = "Yesterday";
+"LOC_TODAY"                         = "Today";
+"LOC_TOMORROW"                      = "Tomorrow";
+
+"LOC_AQI"                             = "AQI";
+"LOC_PM10"                          = "PM10";
+"LOC_PM25"                          = "PM2.5";
+
+"LOC_PROBABILITY_OF_PRECIPITATION"  = "Chance of precipitation";
+"LOC_TODAYAIR"                  = "TodayAir";
+
+"LOC_PLEASE_EXECUTE_MAIN_APP"       = "Run TodayAir app to create a list of cities";
