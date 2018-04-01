@@ -87,62 +87,46 @@
         </header>
         <ion-content class="has-header menu-content">
             <div class="list">
-                <a class="item item-input" ng-if="getRegion() === 'KR'" ng-click="clickMenu('nation')">
-                    <div class="input-label">
-                        {{'LOC_NATIONAL_WEATHER'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
-                <a class="item item-input" ng-click="clickMenu('units')">
-                    <div class="input-label">
-                        {{'LOC_UNITS'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
+                <label class="item" ng-click="clickMenu('nation')" ng-if="getRegion() === 'KR'">
+                    {{'LOC_NATIONAL_WEATHER'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('units')">
+                    {{'LOC_UNITS'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
                 <label class="item" ng-click="settingRadio('startupPage')">
-                        {{'LOC_STARTUP_PAGE'|translate}}
-                        <span style="float: right">{{getStartupPageValueStr(settingsInfo.startupPage)|translate}}</span>
+                    {{'LOC_STARTUP_PAGE'|translate}}
+                    <span style="float: right">{{getStartupPageValueStr(settingsInfo.startupPage)|translate}}</span>
                 </label>
                 <label class="item" ng-click="settingRadio('refreshInterval')">
-                        {{'LOC_REFRESH_INTERVAL'|translate}}
-                        <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
+                    {{'LOC_REFRESH_INTERVAL'|translate}}
+                    <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
-                <a class="item item-input" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
-                    <div class="input-label">
-                        {{'LOC_REMOVE_ADS'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
-                <a class="item item-input" ng-click="clickMenu('sendMail')">
-                    <div class="input-label">
-                        {{'LOC_SEND_FEEDBACK'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
-                <a class="item item-input" ng-click="clickMenu('openMarket')">
-                    <div class="input-label">
-                        {{'LOC_RATE_THIS_APP'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
-                <a class="item item-input" href="#">
-                    <div class="input-label">
-                        {{'LOC_VERSION'|translate}}
-                    </div>
-                    <i>{{version}}</i>
-                </a>
-                <a class="item item-input" ng-click="clickMenu('guide')" ng-if="false">
-                    <div class="input-label">
-                        {{'LOC_GUIDE'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
-                <a class="item item-input" ng-click="clickMenu('openInfo')" ng-if="showAbout()">
-                    <div class="input-label">
-                        {{'LOC_ABOUT'|translate}}
-                    </div>
-                    <i class="icon ion-chevron-right" ng-if="!isAndroid()"></i>
-                </a>
+                <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
+                    {{'LOC_REMOVE_ADS'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('sendMail')">
+                    {{'LOC_SEND_FEEDBACK'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('openMarket')">
+                    {{'LOC_RATE_THIS_APP'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
+                <label class="item">
+                    {{'LOC_VERSION'|translate}}
+                    <span style="float: right">{{version}}</span>
+                </label>
+                <label class="item" ng-click="clickMenu('guide')" ng-if="false">
+                    {{'LOC_GUIDE'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
+                <label class="item" ng-click="clickMenu('openInfo')" ng-if="showAbout()">
+                    {{'LOC_ABOUT'|translate}}
+                    <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
+                </label>
             </div>
         </ion-content>
     </ion-side-menu>
