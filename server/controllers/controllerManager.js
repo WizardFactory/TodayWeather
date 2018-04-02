@@ -926,50 +926,42 @@ Manager.prototype.saveMid = function(db, newData, callback){
 };
 
 Manager.prototype.saveMidForecast = function(newData, callback) {
-    this.saveMid(modelMidForecast, newData[0], callback);
-    // if(config.db.version === '2.0'){
-    this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidForecast, newData[0], callback);
+    }
+    else if(config.db.version === '2.0'){
+        this.kmaTownMid.saveMid('modelMidForecast', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidLand = function(newData, callback) {
-    this.saveMid(modelMidLand, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidLand, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidLand', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidTemp = function(newData, callback) {
-    this.saveMid(modelMidTemp, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, function(err){
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidTemp, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidTemp', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
 Manager.prototype.saveMidSea = function(newData, callback) {
-    this.saveMid(modelMidSea, newData[0], callback);
-    // if(config.db.version === '2.0') {
-    this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, function(err) {
-        if (err) {
-            log.error(err);
-        }
-    });
-    // }
+    if(config.db.version === '1.0') {
+        this.saveMid(modelMidSea, newData[0], callback);
+    }
+    else if(config.db.version === '2.0') {
+        this.kmaTownMid.saveMid('modelMidSea', newData[0], this.saveOnlyLastOne, callback);
+    }
     return this;
 };
 
@@ -1840,36 +1832,30 @@ Manager.prototype.getSaveFunc = function(value) {
     switch (value) {
         case this.DATA_TYPE.TOWN_CURRENT:
             return function saveCurrent(newData, callback) {
-                this.saveCurrent(newData, callback);
-                // if(config.db.version === '2.0'){
-                kmaTownCurrent.saveCurrent(newData, function(err) {
-                    if (err) {
-                        log.error(err);
-                    }
-                });
-                // }
+                if(config.db.version === '1.0') {
+                    this.saveCurrent(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownCurrent.saveCurrent(newData, callback);
+                }
             };
         case this.DATA_TYPE.TOWN_SHORTEST:
             return function saveShortest(newData, callback) {
-                this.saveShortest(newData, callback);
-                // if(config.db.version === '2.0'){
-                kmaTownShortest.saveShortest(newData, function(err) {
-                    if (err) {
-                        log.error(err);
-                    }
-                });
-                // }
+                if(config.db.version === '1.0') {
+                    this.saveShortest(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownShortest.saveShortest(newData, callback);
+                }
             };
         case this.DATA_TYPE.TOWN_SHORT:
             return function saveShort(newData, callback) {
-               this.saveShort(newData, callback);
-               // if(config.db.version === '2.0'){
-               kmaTownShort.saveShort(newData, function(err) {
-                   if (err) {
-                       log.error(err);
-                   }
-               })
-               // }
+                if(config.db.version === '1.0') {
+                    this.saveShort(newData, callback);
+                }
+                else if(config.db.version === '2.0'){
+                    kmaTownShort.saveShort(newData, callback);
+                }
             };
         case this.DATA_TYPE.MID_FORECAST:
             return this.saveMidForecast;

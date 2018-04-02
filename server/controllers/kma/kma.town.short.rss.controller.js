@@ -637,34 +637,34 @@ TownRss.prototype.getData = function(index, item, cb){
                 return;
             }
 
-            self.saveShortRss(index, result, function (err) {
-                if (err) {
-                    log.error('failed to save the data to DB');
-                    if (cb) {
-                        cb(err);
+            if(config.db.version === '1.0') {
+                self.saveShortRss(index, result, function (err) {
+                    if (err) {
+                        log.error('failed to save the data to DB');
+                        if (cb) {
+                            cb(err);
+                        }
+                        return;
                     }
-                    return;
-                }
-
-                if (cb) {
-                    cb();
-                }
-            });
-
-            // if(config.db.version === '2.0'){
-            self.saveShortRssNewForm(index, result, function (err) {
-                if (err) {
-                    log.error('failed to save the data to DB');
-                    // if(cb) {
-                    //     cb(err);
-                    // }
-                    // return;
-                }
-                // if(cb) {
-                //     cb();
-                // }
-            });
-            // }
+                    if (cb) {
+                        cb();
+                    }
+                });
+            }
+            else if(config.db.version === '2.0') {
+                self.saveShortRssNewForm(index, result, function (err) {
+                    if (err) {
+                        log.error('failed to save the data to DB');
+                        if(cb) {
+                            cb(err);
+                        }
+                        return;
+                    }
+                    if(cb) {
+                        cb();
+                    }
+                });
+            }
         });
     });
 };
