@@ -593,6 +593,9 @@ angular.module('controller.forecastctrl', [])
                 if ($scope.currentWeather.summaryAir) {
                     $scope.summaryAir = $scope.currentWeather.summaryAir;
                 }
+                else {
+                    delete $scope.summaryAir;
+                }
 
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
                 if ($scope.forecastType == 'short') {
