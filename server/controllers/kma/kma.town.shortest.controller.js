@@ -91,6 +91,7 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
                 shortestString.forEach(function(string){
                     newItem[string] = shortestData[string];
                 });
+                newItem.pubDate = kmaTimelib.getKoreaTimeString(item.pubDate);
                 ret.push(newItem);
             });
 
