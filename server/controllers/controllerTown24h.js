@@ -1239,6 +1239,7 @@ function ControllerTown24h() {
         }
         if (maxGrade <= 0) {
            log.error("airInfo is invalid! ", {airInfo: airInfo});
+           return "";
         }
         else if (maxGrade === 1) {
             //대기상태가 좋아요
