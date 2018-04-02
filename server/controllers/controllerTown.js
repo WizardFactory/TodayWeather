@@ -2275,6 +2275,7 @@ function ControllerTown() {
                     }
                     req.current.arpltn = arpltnObj.arpltn;
                     req.arpltnList = arpltnObj.list;
+                    req.arpltnStnList = arpltnObj.stnList;
                     next();
                 });
             });
@@ -2848,6 +2849,47 @@ function ControllerTown() {
         return this;
     };
 
+    this._insertAirInfoStr = function (airInfo, airUnit, res) {
+        if (airInfo.last) {
+            var last = airInfo.last;
+            self._makeArpltnStr(last, airUnit, res);
+            ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                if (last.hasOwnProperty(propertyName+'Grade')) {
+                    last[propertyName+'ActionGuide'] =
+                        AqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
+                }
+            });
+        }
+        if (airInfo.pollutants) {
+            ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
+                var pollutant = airInfo.pollutants[propertyName];
+                if (pollutant) {
+                    if (pollutant.hourly) {
+                        pollutant.hourly.forEach(function (item) {
+                            if (item.hasOwnProperty('grade')) {
+                                item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                            }
+                        });
+                    }
+
+                    if (pollutant.daily) {
+                        pollutant.daily.forEach(function (item) {
+                            if (item.hasOwnProperty('grade')) {
+                                item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
+                            }
+                            if (item.hasOwnProperty('minGrade')) {
+                                item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
+                            }
+                            if (item.hasOwnProperty('maxGrade')) {
+                                item.maxStr = UnitConverter.airGrade2Str(airUnit, item.maxGrade, res);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    };
+
     this.insertStrForData = function (req, res, next) {
         if(req.short){
             req.short.forEach(function (data) {
@@ -2875,45 +2917,13 @@ function ControllerTown() {
             });
         }
 
-        if (req.airInfo) {
-            if (req.airInfo.last) {
-                var last = req.airInfo.last;
-                self._makeArpltnStr(last, airUnit, res);
-                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
-                    if (last.hasOwnProperty(propertyName+'Grade')) {
-                        last[propertyName+'ActionGuide'] =
-                            AqiConverter.getActionGuide(airUnit, propertyName, last[propertyName+'Grade'], res);
-                    }
-                });
-            }
-            if (req.airInfo.pollutants) {
-                ['pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'aqi'].forEach(function (propertyName) {
-                    var pollutant = req.airInfo.pollutants[propertyName];
-                    if (pollutant) {
-                        if (pollutant.hourly) {
-                            pollutant.hourly.forEach(function (item) {
-                                if (item.hasOwnProperty('grade')) {
-                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
-                                }
-                            });
-                        }
-
-                        if (pollutant.daily) {
-                            pollutant.daily.forEach(function (item) {
-                                if (item.hasOwnProperty('grade')) {
-                                    item.str = UnitConverter.airGrade2Str(airUnit, item.grade, res);
-                                }
-                                if (item.hasOwnProperty('minGrade')) {
-                                    item.minStr = UnitConverter.airGrade2Str(airUnit, item.minGrade, res);
-                                }
-                                if (item.hasOwnProperty('maxGrade')) {
-                                    item.maxStr = UnitConverter.airGrade2Str(airUnit, item.maxGrade, res);
-                                }
-                            });
-                        }
-                    }
-                });
-            }
+        if (req.airInfoList) {
+            req.arpltnList.forEach(function (airInfo) {
+                self._insertAirInfoStr(airInfo, airUnit, res) ;
+            });
+        }
+        else if (req.airInfo) {
+           self._insertAirInfoStr(req.airInfo, airUnit, res) ;
         }
 
         next();

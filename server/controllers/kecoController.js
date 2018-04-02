@@ -387,7 +387,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
     async.waterfall([
             function(cb) {
                 var coords = [townInfo.gCoord.lon, townInfo.gCoord.lat];
-                MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(10).lean().exec(function (err, msrStnList) {
+                MsrStn.find({geo: {$near:coords, $maxDistance: 1}}).limit(3).lean().exec(function (err, msrStnList) {
                     if (err) {
                         return cb(err);
                     }
@@ -405,7 +405,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
             function (arpltnList, cb) {
                 //arpltn = [가장 가까운 10개][최근 24시간]
                 var arpltn = self._mergeArpltnList(arpltnList, dateTime);
-                return cb(undefined, {arpltn:arpltn, list: arpltnList[0]});
+                return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList});
             }],
         function(err, arpltnObj) {
             if (err)  {
