@@ -295,7 +295,7 @@ angular.module('service.weatherinfo', [])
 
         obj._saveCitiesPreference = function (cities) {
             var pList = {cityList: []};
-            cities.forEach(function (city) {
+            cities.forEach(function (city, index) {
                 if (!city.disable) {
                     var simpleInfo = {};
                     if (city.name) {
@@ -305,6 +305,7 @@ angular.module('service.weatherinfo', [])
                     simpleInfo.address = city.address;
                     simpleInfo.location = city.location;
                     simpleInfo.country = city.country;
+                    simpleInfo.index = index;
                     pList.cityList.push(simpleInfo);
                 }
             });
