@@ -1581,7 +1581,9 @@ function ControllerTown24h() {
                 result.shortestPubDate = req.shortestPubDate;
             }
             if(req.shortest) {
-                result.shortest = req.shortest;
+                result.shortest = req.shortest.filter(function (shortest) {
+                    return shortest.pubDate === result.shortestPubDate;
+                });
             }
             if(req.currentPubDate) {
                 result.currentPubDate = req.currentPubDate;

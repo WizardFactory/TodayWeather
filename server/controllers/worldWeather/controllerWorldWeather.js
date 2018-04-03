@@ -1396,6 +1396,8 @@ function controllerWorldWeather() {
 
             //log.info("hourly list = "+hourlyList.length);
 
+            var shortest = req.result.shortest = [];
+
             var foundYesterday = false;
             hourlyList.forEach(function(dbItem, dataIndex) {
                 var isExist = false;
@@ -1436,6 +1438,10 @@ function controllerWorldWeather() {
                         var len = req.result.hourly.length;
                         //log.info('NEW! DSF -> Hourly : ', JSON.stringify(req.result.hourly[len-1]));
                     }
+                }
+
+                if (dbItem.dateObj > curDate && shortest.length < 3) {
+                    shortest.push(dbItem);
                 }
             });
 
