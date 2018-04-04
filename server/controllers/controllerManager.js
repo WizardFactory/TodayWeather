@@ -2048,15 +2048,21 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     if (time === 10 || putAll) {
         log.info('push life index');
         self.asyncTasks.push(function LifeIndex(callback) {
-            self._requestApi("lifeindex", callback);
+            self._requestApi("lifeindex", function () {
+                log.info('lifeindex done');
+                callback();
+            });
         });
     }
 
     if (time === 13 || putAll) {
         log.info('push short');
-        self.asyncTasks.push(function Short(callback) {
-            self._requestApi("short", callback);
-        });
+        // self.asyncTasks.push(function Short(callback) {
+            self._requestApi("short", function () {
+                log.info('short done');
+                // callback();
+            });
+        // });
     }
 
     if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
