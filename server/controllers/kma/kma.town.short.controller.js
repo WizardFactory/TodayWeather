@@ -27,7 +27,7 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
-                log.info('KMA Town S> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town S> item : ', JSON.stringify(newItem));
 
                 modelKmaTownShort.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -40,7 +40,7 @@ kmaTownShortController.prototype.saveShort = function(newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town S> finished to save town.short data');
+                log.debug('KMA Town S> finished to save town.short data');
                 callback(err);
             }
         );

@@ -330,11 +330,11 @@ CollectData.prototype.getData = function(index, dataType, url, options, callback
 
     req.get(url, {timeout: 1000*10}, function(err, response, body){
         if(err) {
-            if (err.code == "ETIMEDOUT") {
+            if (err.code === "ETIMEDOUT" || err.code === "ESOCKETTIMEDOUT" || err.code === "ECONNRESET") {
                 log.debug(err);
             }
             else {
-                log.warn(err);
+                log.warn(`err.code=${err.code}`);
             }
             //log.error('#', meta);
 
