@@ -489,7 +489,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date);
                 var newItem = {mCoord: newData.mCoord, pubDate: pubDate, fcsDate: fcsDate, shortData: item};
-                log.info('KMA Town S-RSS> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town S-RSS> item : ', JSON.stringify(newItem));
 
                 modelKmaTownShortRss.update({mCoord: newData.mCoord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -502,7 +502,7 @@ TownRss.prototype.saveShortRssNewForm = function(index, newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town S-RSS> finished to save town.short.rss data');
+                log.debug('KMA Town S-RSS> finished to save town.short.rss data');
                 callback(err);
             }
         );
@@ -766,7 +766,7 @@ TownRss.prototype.mainTask = function(completionCallback){
                         function(cb) {
                             self.checkPubDate(item, lastestPubDate, index, function(err, type){
                                 if(err){
-                                    log.info('shortRss : already latest data');
+                                    log.debug('shortRss : already latest data');
                                     return cb(err, undefined);
                                 }
                                 index++;
