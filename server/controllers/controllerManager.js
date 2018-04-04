@@ -1040,12 +1040,18 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                 }
 
                 if (failedList.length) {
-                    return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                    setTimeout(function() {
+                        self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
+                    }, 0);
+                    return;
                 }
 
                 if(invalidList.length){
                     var adjustedDateString = self.getShortestQueryTime(8);
-                    return self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
+                    setTimeout(function() {
+                        self._recursiveRequestData(invalidList, dataType, key, adjustedDateString, --retryCount, undefined, callback);
+                    }, 0);
+                    return;
                 }
                 log.info('received All ', dataTypeName, ' of ', dateString);
                 if (callback) {
