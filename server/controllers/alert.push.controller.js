@@ -199,7 +199,9 @@ class AlertPushController {
                        let forecastObj = {pty: 0, pubDate: resData.shortestPubDate};
                        if (shortest1 && shortest1.pty > 0) {
                            if (shortest2 && shortest2.pty > 0) {
-                               forecastObj.pty = shortest1.pty;
+                               for(let key in shortest1) {
+                                   forecastObj[key] = shortest1[key];
+                               }
                                log.info(JSON.stringify({shortestPubDate: resData.shortestPubDate,
                                    shortest:resData.shortest}));
                            }
@@ -592,7 +594,7 @@ class AlertPushController {
 
             if (air.grade >= pushInfo.airAlertsBreakPoint) {
                 if (hasWeather) {
-                    text += trans.__('LOC_AIR_INFORMATION');
+                    text += " ";
                 }
                 else {
                     title += trans.__('LOC_AIR_INFORMATION') + " ";
@@ -616,7 +618,7 @@ class AlertPushController {
 
                 }
                 if (hasWeather)  {
-                    text += strAirForecast + " ";
+                    text += " " + strAirForecast + " ";
                 }
                 else {
                     title += strAirForecast;
