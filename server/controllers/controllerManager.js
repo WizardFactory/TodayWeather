@@ -34,6 +34,7 @@ var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
+var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
 
 /*********************/
 
@@ -1039,6 +1040,12 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                     log.error(err);
                 }
 
+                var fList = failedList.map(function (obj) {
+                    return {regName: obj.regName, regId: obj.regId};
+                });
+
+                log.error('faildList', JSON.stringify(fList));
+
                 if (failedList.length) {
                     return self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
                 }
@@ -1608,6 +1615,132 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
     return this;
 };
 
+Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
+     var self = this;
+
+    var currentDate = self.getWorldTime(gmt);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(gmt - 24);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    // check weather today or previous day
+    var today = self.getWorldTime(9);
+    today = today.slice(0, 8);
+    if(today > dateString.date){
+        dateString.time = '1800';
+    }
+
+    log.info('+++ GET MID TEMP Forecast by zone code : ', dateString);
+
+    async.waterfall([
+            function (callback) {
+                var kmaForcastZoneCode = new KmaForecastZoneCode(key);
+                //C:도시
+                kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
+                    .exec(function (err, result) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        result = result.map(function (obj){
+                            obj.code = obj.regId;
+                            return obj;
+                        });
+                        callback(err, result);
+                    });
+            },
+            function (regIdList, callback) {
+                //filter invalid id;
+                var unsupportList = [
+                    {"regName":"연평도","regId":"11A00102"},
+                    {"regName":"소청도","regId":"11A00103"},
+                    {"regName":"안흥","regId":"11C20105"},
+                    {"regName":"치악","regId":"11D10403"},
+                    {"regName":"봉평","regId":"11D10504"},
+                    {"regName":"설악","regId":"11D20101"},
+                    {"regName":"진부","regId":"11D20202"},
+                    {"regName":"묵호","regId":"11D20603"},
+                    {"regName":"완도항","regId":"11F20305"},
+                    {"regName":"여수항","regId":"11F20406"},
+                    {"regName":"녹동항","regId":"11F20407"},
+                    {"regName":"제주항","regId":"11G00202"},
+                    {"regName":"하동(해안)","regId":"11H20406"},
+                    {"regName":"하동(내륙)","regId":"11H20702"},
+                    {"regName":"해남(화원)","regId":"21F20202"},
+                    {"regName":"벽파","regId":"21F20203"}];
+
+                regIdList = regIdList.filter(function (obj) {
+                    var a = unsupportList.find(function (unObj) {
+                       return unObj.regId === obj.regId;
+                    });
+                    return a == undefined ? true : false;
+                });
+
+                callback(null, regIdList);
+            },
+            function (reqIdList, callback) {
+                var fnCheckPubDate = self._checkPubDate;
+                if(config.db.version === '2.0'){
+                    fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
+                }
+                fnCheckPubDate(modelMidTemp, reqIdList, dateString, function (err, srcList) {
+                    if (err) {
+                        if (callback) {
+                            callback(err);
+                        }
+                        else {
+                            log.error(err);
+                        }
+                        return;
+                    }
+                    if (srcList.length === 0) {
+                        log.info('MT> All current was already updated');
+                        if (callback) {
+                            callback('skip');
+                        }
+                        return;
+                    }
+                    else {
+                        log.info('MT> srcList length=', srcList.length);
+                    }
+                    callback(err, srcList);
+                });
+            },
+            function (srcList, callback) {
+                self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20,
+                    undefined,
+                    function (err, results) {
+                        log.info('MT> save OK');
+                        if (callback) {
+                            return callback(err, results);
+                        }
+                        if (err) {
+                            return log.error(err);
+                    }
+                });
+            }
+        ],
+        function (err, result) {
+            if (err === 'skip') {
+                err = null;
+            }
+            callback(err, result);
+        });
+};
+
+
 // get middle range temperature data from data.org by using collectTownForecast.js
 Manager.prototype.getMidTemp = function(gmt, key, callback) {
     var self = this;
@@ -1638,6 +1771,10 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
+
+
+
+
     var fnCheckPubDate = self._checkPubDate;
     if(config.db.version === '2.0'){
         fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
@@ -1950,135 +2087,135 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    if (time === 7 || putAll) {
-        // if (hours === 8 || hours === 20 || putAll) {
-            log.info('push kaq hourly forecast');
-            self.asyncTasks.push(function getKaqHourlyForecast(callback) {
-                var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
-                var ctrl = new KaqHourlyForecast();
-                ctrl.do(new Date(), err=> {
-                    log.info('kaq hourly forecast done');
-                    callback();
-                });
-            });
-        // }
-    }
+    // if (time === 7 || putAll) {
+    //     if (hours === 8 || hours === 20) {
+    //         log.info('push kaq hourly forecast');
+    //         self.asyncTasks.push(function getKaqHourlyForecast(callback) {
+    //             var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
+    //             var ctrl = new KaqHourlyForecast();
+    //             ctrl.do(new Date(), err=> {
+    //                 log.info('kaq hourly forecast done');
+    //                 callback();
+    //             });
+    //         });
+    //     }
+    // }
 
     if (time === 2 || putAll) {
         //spend long time
-        log.info('push past');
-        self.asyncTasks.push(function Past(callback) {
-            self._requestApi("past", callback);
-        });
-
-        log.info('push keco_forecast');
-        self.asyncTasks.push(function KecoForecast(callback) {
-            self._requestApi("kecoForecast", callback);
-        });
-
+        // log.info('push past');
+        // self.asyncTasks.push(function Past(callback) {
+        //     self._requestApi("past", callback);
+        // });
+        //
+        // log.info('push keco_forecast');
+        // self.asyncTasks.push(function KecoForecast(callback) {
+        //     self._requestApi("kecoForecast", callback);
+        // });
+        //
         log.info('push mid temp');
         self.asyncTasks.push(function MidTemp(callback) {
             self._requestApi("midtemp", callback);
         });
-        log.info('push mid land');
-        self.asyncTasks.push(function MidLand(callback) {
-            self._requestApi("midland", callback);
-        });
-        log.info('push mid forecast');
-        self.asyncTasks.push(function MidForecast(callback) {
-            self._requestApi("midforecast", callback);
-        });
-        log.info('push mid sea');
-        self.asyncTasks.push(function MidSea(callback) {
-            self._requestApi("midsea", callback);
-        });
+        // log.info('push mid land');
+        // self.asyncTasks.push(function MidLand(callback) {
+        //     self._requestApi("midland", callback);
+        // });
+        // log.info('push mid forecast');
+        // self.asyncTasks.push(function MidForecast(callback) {
+        //     self._requestApi("midforecast", callback);
+        // });
+        // log.info('push mid sea');
+        // self.asyncTasks.push(function MidSea(callback) {
+        //     self._requestApi("midsea", callback);
+        // });
 
-        log.info('push mid rss');
-        self.asyncTasks.push(function MidRss(callback) {
-            self._requestApi("midrss", callback);
-        });
+        // log.info('push mid rss');
+        // self.asyncTasks.push(function MidRss(callback) {
+        //     self._requestApi("midrss", callback);
+        // });
 
-        log.info('push short rss');
-        self.asyncTasks.push(function ShortRss(callback) {
-            self._requestApi("shortrss", callback);
-        });
+        // log.info('push short rss');
+        // self.asyncTasks.push(function ShortRss(callback) {
+        //     self._requestApi("shortrss", callback);
+        // });
     }
 
     if (time === 10 || putAll) {
-        log.info('push health day');
-
-        var hour = (new Date()).getUTCHours()+9;
-
-        if(hour === 6 || hour === 18 || putAll) {
-            self.asyncTasks.push(function HealthDAy(callback) {
-                self._requestApi('healthday', callback);
-            });
-        }
+        // log.info('push health day');
+        //
+        // var hour = (new Date()).getUTCHours()+9;
+        //
+        // if(hour === 6 || hour === 18 || putAll) {
+        //     self.asyncTasks.push(function HealthDAy(callback) {
+        //         self._requestApi('healthday', callback);
+        //     });
+        // }
     }
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
-        //direct request keco
-        log.info('push keco realtime');
-        //self.asyncTasks.push(function Keco(callback) {
-            self._requestApi("keco", function() {
-                log.info('keco realtime done');
-        //        callback();
-            });
-        //});
+        // //direct request keco
+        // log.info('push keco realtime');
+        // //self.asyncTasks.push(function Keco(callback) {
+        //     self._requestApi("keco", function() {
+        //         log.info('keco realtime done');
+        // //        callback();
+        //     });
+        // //});
     }
 
     if (time === 4 || time === 14 || time === 24 || time === 34 || time === 44 || time === 54 || putAll) {
-        //direct request keco
-        log.info('push keco sido');
-        //self.asyncTasks.push(function Keco(callback) {
-        self._requestApi("kecoSido", function() {
-            log.info('keco sido done');
-            //        callback();
-        });
-        //});
+        // //direct request keco
+        // log.info('push keco sido');
+        // //self.asyncTasks.push(function Keco(callback) {
+        // self._requestApi("kecoSido", function() {
+        //     log.info('keco sido done');
+        //     //        callback();
+        // });
+        // //});
     }
 
     //setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
     if (time === 10 || putAll) {
-        log.info('push life index');
-        self.asyncTasks.push(function LifeIndex(callback) {
-            self._requestApi("lifeindex", callback);
-        });
-    }
-
-    if (time === 13 || putAll) {
-        log.info('push short');
-        self.asyncTasks.push(function Short(callback) {
-            self._requestApi("short", callback);
-        });
-    }
-
-    if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
-        //direct request current
-        log.info('push current');
-        //self.asyncTasks.push(function Current(callback) {
-        self._requestApi("current", function () {
-            log.info('current done');
-            //        callback();
-        });
-        //});
-    }
-
-    if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
-        log.info('push shortest');
-        // self.asyncTasks.push(function Shortest(callback) {
-            self._requestApi("shortest", function () {
-                log.info('shortest done');
-                // callback();
-            });
+        // log.info('push life index');
+        // self.asyncTasks.push(function LifeIndex(callback) {
+        //     self._requestApi("lifeindex", callback);
         // });
     }
 
+    if (time === 13 || putAll) {
+        // log.info('push short');
+        // self.asyncTasks.push(function Short(callback) {
+        //     self._requestApi("short", callback);
+        // });
+    }
+
+    if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
+        // //direct request current
+        // log.info('push current');
+        // //self.asyncTasks.push(function Current(callback) {
+        // self._requestApi("current", function () {
+        //     log.info('current done');
+        //     //        callback();
+        // });
+        // //});
+    }
+
+    if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
+        // log.info('push shortest');
+        // // self.asyncTasks.push(function Shortest(callback) {
+        //     self._requestApi("shortest", function () {
+        //         log.info('shortest done');
+        //         // callback();
+        //     });
+        // // });
+    }
+
     if(time === 50) {
-        log.info('update stn rns hit rate');
-        self._requestApi('updateStnRnsHitRate', function () {
-            log.info('update stn rns hit rate done');
-        });
+        // log.info('update stn rns hit rate');
+        // self._requestApi('updateStnRnsHitRate', function () {
+        //     log.info('update stn rns hit rate done');
+        // });
     }
 
     //if(time === 50 || putAll){
@@ -2089,13 +2226,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //}
 
     if ((time === 55)|| putAll) {
-        log.info('push kasi rise set');
-        //self.asyncTasks.push(function KasiRiseSet(callback) {
-            self._requestApi("gatherKasiRiseSet", function () {
-                log.info('kasi rise set done');
-        //        callback();
-            });
-        //});
+        // log.info('push kasi rise set');
+        // //self.asyncTasks.push(function KasiRiseSet(callback) {
+        //     self._requestApi("gatherKasiRiseSet", function () {
+        //         log.info('kasi rise set done');
+        // //        callback();
+        //     });
+        // //});
     }
 
     // if (time === 55 || putAll) {
@@ -2146,6 +2283,12 @@ Manager.prototype.startManager = function(){
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
+
+    var kmaForecastZoneCode = new KmaForecastZoneCode(config.keyString.test_normal);
+    kmaForecastZoneCode.getFromKma()
+        .catch(function (err) {
+            log.error(err);
+        });
 
     async.parallel([
         function (callback) {

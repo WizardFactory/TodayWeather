@@ -4,7 +4,7 @@
 var mongoose = require('mongoose');
 
 var townMidRssSchema = mongoose.Schema({
-    stnId: String,
+    //stnId: String,          //code of listPointNumber
     regId: String,
     province: String,
     city: String,
