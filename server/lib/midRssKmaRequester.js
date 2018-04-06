@@ -206,6 +206,12 @@ MidRssKmaRequester.prototype.integrateMidRss2 = function (parsedData, callback) 
         });
 };
 
+/**
+ * 폐지 예정
+ * @param parsedData
+ * @param callback
+ * @returns {MidRssKmaRequester}
+ */
 MidRssKmaRequester.prototype.integrateMidRss = function (parsedData, callback) {
     var collectShortInfo = new collectTown();
     parsedData.forEach(function (midRssKma) {
@@ -362,6 +368,12 @@ MidRssKmaRequester.prototype.mainProcessM = function(self, callback) {
         });
 };
 
+/**
+ * 폐지 예정
+ * @param self
+ * @param callback
+ * @returns {MidRssKmaRequester}
+ */
 MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
     log.input('mainProcess');
 

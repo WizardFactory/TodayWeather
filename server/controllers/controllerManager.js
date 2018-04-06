@@ -1748,6 +1748,13 @@ Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
 
 
 // get middle range temperature data from data.org by using collectTownForecast.js
+/**
+ * getMidTempByForecastZone 사용하고 이 함수는 폐지 예정.
+ * @param gmt
+ * @param key
+ * @param callback
+ * @returns {Manager}
+ */
 Manager.prototype.getMidTemp = function(gmt, key, callback) {
     var self = this;
 
@@ -1777,9 +1784,6 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
-
-
-
 
     var fnCheckPubDate = self._checkPubDate;
     if(config.db.version === '2.0'){
