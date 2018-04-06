@@ -837,8 +837,12 @@ function ControllerTown24h() {
                 dayForecast[forecast.code].hourly.push(forecast.val);
             });
 
-            //remove first and last it does not have full time
-            dailyArray = dailyArray.slice(1, dailyArray.length-1);
+            //remove old data and last it does not have full time
+            let strToday = latestPastDate.slice(0, 10);
+            dailyArray = dailyArray.filter(obj => {
+               return obj.date >= strToday;
+            });
+            dailyArray.pop();
 
             dailyArray.forEach(function (dayForecast) {
                 var date = dayForecast.date;
