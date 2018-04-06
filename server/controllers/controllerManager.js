@@ -1040,12 +1040,6 @@ Manager.prototype._recursiveRequestData = function(srcList, dataType, key, dateS
                     log.error(err);
                 }
 
-                var fList = failedList.map(function (obj) {
-                    return {regName: obj.regName, regId: obj.regId};
-                });
-
-                log.error('faildList', JSON.stringify(fList));
-
                 if (failedList.length) {
                     setTimeout(function() {
                         self._recursiveRequestData(failedList, dataType, key, dateString, --retryCount, invalidList, callback);
