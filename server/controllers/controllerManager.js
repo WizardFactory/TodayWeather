@@ -34,6 +34,7 @@ var kmaTownCurrent = new (require('./kma/kma.town.current.controller.js'));
 var kmaTownShort = new (require('./kma/kma.town.short.controller.js'));
 var kmaTownShortest = new (require('./kma/kma.town.shortest.controller.js'));
 var kmaTownMid = new (require('./kma/kma.town.mid.controller.js'));
+var KmaForecastZoneCode = require('./kma/kma.forecast.zone.controller');
 
 /*********************/
 
@@ -1614,7 +1615,140 @@ Manager.prototype.getMidLand = function(gmt, key, callback){
     return this;
 };
 
+Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
+     var self = this;
+
+    var currentDate = self.getWorldTime(gmt);
+    var dateString = {
+        date: currentDate.slice(0, 8),
+        time: currentDate.slice(8,10) + '00'
+    };
+
+    if(parseInt(dateString.time) < 800){
+        currentDate = self.getWorldTime(gmt - 24);
+        dateString.date = currentDate.slice(0, 8);
+        dateString.time = '1800';
+    }
+    else if(parseInt(dateString.time) < 2000){
+        dateString.time = '0600';
+    }
+    else {
+        dateString.time = '1800';
+    }
+
+    // check weather today or previous day
+    var today = self.getWorldTime(9);
+    today = today.slice(0, 8);
+    if(today > dateString.date){
+        dateString.time = '1800';
+    }
+
+    log.info('+++ GET MID TEMP Forecast by zone code : ', dateString);
+
+    async.waterfall([
+            function (callback) {
+                var kmaForcastZoneCode = new KmaForecastZoneCode(key);
+                //C:도시
+                kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
+                    .exec(function (err, result) {
+                        if (err) {
+                            return callback(err);
+                        }
+                        result = result.map(function (obj){
+                            obj.code = obj.regId;
+                            return obj;
+                        });
+                        callback(err, result);
+                    });
+            },
+            function (regIdList, callback) {
+                //filter invalid id;
+                var unsupportList = [
+                    {"regName":"연평도","regId":"11A00102"},
+                    {"regName":"소청도","regId":"11A00103"},
+                    {"regName":"안흥","regId":"11C20105"},
+                    {"regName":"치악","regId":"11D10403"},
+                    {"regName":"봉평","regId":"11D10504"},
+                    {"regName":"설악","regId":"11D20101"},
+                    {"regName":"진부","regId":"11D20202"},
+                    {"regName":"묵호","regId":"11D20603"},
+                    {"regName":"완도항","regId":"11F20305"},
+                    {"regName":"여수항","regId":"11F20406"},
+                    {"regName":"녹동항","regId":"11F20407"},
+                    {"regName":"제주항","regId":"11G00202"},
+                    {"regName":"하동(해안)","regId":"11H20406"},
+                    {"regName":"하동(내륙)","regId":"11H20702"},
+                    {"regName":"해남(화원)","regId":"21F20202"},
+                    {"regName":"벽파","regId":"21F20203"}];
+
+                regIdList = regIdList.filter(function (obj) {
+                    var a = unsupportList.find(function (unObj) {
+                       return unObj.regId === obj.regId;
+                    });
+                    return a == undefined ? true : false;
+                });
+
+                callback(null, regIdList);
+            },
+            function (reqIdList, callback) {
+                var fnCheckPubDate = self._checkPubDate;
+                if(config.db.version === '2.0'){
+                    fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
+                }
+                fnCheckPubDate(modelMidTemp, reqIdList, dateString, function (err, srcList) {
+                    if (err) {
+                        if (callback) {
+                            callback(err);
+                        }
+                        else {
+                            log.error(err);
+                        }
+                        return;
+                    }
+                    if (srcList.length === 0) {
+                        log.info('MT> All current was already updated');
+                        if (callback) {
+                            callback('skip');
+                        }
+                        return;
+                    }
+                    else {
+                        log.info('MT> srcList length=', srcList.length);
+                    }
+                    callback(err, srcList);
+                });
+            },
+            function (srcList, callback) {
+                self._recursiveRequestData(srcList, self.DATA_TYPE.MID_TEMP, key, dateString, 20,
+                    undefined,
+                    function (err, results) {
+                        log.info('MT> save OK');
+                        if (callback) {
+                            return callback(err, results);
+                        }
+                        if (err) {
+                            return log.error(err);
+                    }
+                });
+            }
+        ],
+        function (err, result) {
+            if (err === 'skip') {
+                err = null;
+            }
+            callback(err, result);
+        });
+};
+
+
 // get middle range temperature data from data.org by using collectTownForecast.js
+/**
+ * getMidTempByForecastZone 사용하고 이 함수는 폐지 예정.
+ * @param gmt
+ * @param key
+ * @param callback
+ * @returns {Manager}
+ */
 Manager.prototype.getMidTemp = function(gmt, key, callback) {
     var self = this;
 
@@ -1644,6 +1778,7 @@ Manager.prototype.getMidTemp = function(gmt, key, callback) {
     }
 
     log.info('+++ GET MID TEMP Forecast : ', dateString);
+
     var fnCheckPubDate = self._checkPubDate;
     if(config.db.version === '2.0'){
         fnCheckPubDate = self.kmaTownMid.checkTempPubDate;
@@ -2158,6 +2293,12 @@ Manager.prototype.startManager = function(){
     taskKmaIndexService.setNextGetTime('fsn', new Date());
     taskKmaIndexService.setNextGetTime('ultrv', new Date());
     self.taskKmaIndexService = taskKmaIndexService;
+
+    var kmaForecastZoneCode = new KmaForecastZoneCode(config.keyString.test_normal);
+    kmaForecastZoneCode.getFromKma()
+        .catch(function (err) {
+            log.error(err);
+        });
 
     async.parallel([
         function (callback) {
