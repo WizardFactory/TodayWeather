@@ -23,7 +23,8 @@ function controllerKmaStnWeather() {
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
         if (current.weatherType == undefined) {
-            log.error('weather type is undefined');
+            log.warn('weather type is undefined so set by pty');
+            current.weatherType = 0;
         }
 
         switch (current.weatherType) {
