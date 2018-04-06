@@ -2087,135 +2087,135 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
 
     log.verbose('check time and request task');
 
-    // if (time === 7 || putAll) {
-    //     if (hours === 8 || hours === 20) {
-    //         log.info('push kaq hourly forecast');
-    //         self.asyncTasks.push(function getKaqHourlyForecast(callback) {
-    //             var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
-    //             var ctrl = new KaqHourlyForecast();
-    //             ctrl.do(new Date(), err=> {
-    //                 log.info('kaq hourly forecast done');
-    //                 callback();
-    //             });
-    //         });
-    //     }
-    // }
+    if (time === 7 || putAll) {
+        // if (hours === 8 || hours === 20 || putAll) {
+            log.info('push kaq hourly forecast');
+            self.asyncTasks.push(function getKaqHourlyForecast(callback) {
+                var KaqHourlyForecast = require('./kaq.hourly.forecast.controller');
+                var ctrl = new KaqHourlyForecast();
+                ctrl.do(new Date(), err=> {
+                    log.info('kaq hourly forecast done');
+                    callback();
+                });
+            });
+        // }
+    }
 
     if (time === 2 || putAll) {
         //spend long time
-        // log.info('push past');
-        // self.asyncTasks.push(function Past(callback) {
-        //     self._requestApi("past", callback);
-        // });
-        //
-        // log.info('push keco_forecast');
-        // self.asyncTasks.push(function KecoForecast(callback) {
-        //     self._requestApi("kecoForecast", callback);
-        // });
-        //
+        log.info('push past');
+        self.asyncTasks.push(function Past(callback) {
+            self._requestApi("past", callback);
+        });
+
+        log.info('push keco_forecast');
+        self.asyncTasks.push(function KecoForecast(callback) {
+            self._requestApi("kecoForecast", callback);
+        });
+
         log.info('push mid temp');
         self.asyncTasks.push(function MidTemp(callback) {
             self._requestApi("midtemp", callback);
         });
-        // log.info('push mid land');
-        // self.asyncTasks.push(function MidLand(callback) {
-        //     self._requestApi("midland", callback);
-        // });
-        // log.info('push mid forecast');
-        // self.asyncTasks.push(function MidForecast(callback) {
-        //     self._requestApi("midforecast", callback);
-        // });
-        // log.info('push mid sea');
-        // self.asyncTasks.push(function MidSea(callback) {
-        //     self._requestApi("midsea", callback);
-        // });
+        log.info('push mid land');
+        self.asyncTasks.push(function MidLand(callback) {
+            self._requestApi("midland", callback);
+        });
+        log.info('push mid forecast');
+        self.asyncTasks.push(function MidForecast(callback) {
+            self._requestApi("midforecast", callback);
+        });
+        log.info('push mid sea');
+        self.asyncTasks.push(function MidSea(callback) {
+            self._requestApi("midsea", callback);
+        });
 
-        // log.info('push mid rss');
-        // self.asyncTasks.push(function MidRss(callback) {
-        //     self._requestApi("midrss", callback);
-        // });
+        log.info('push mid rss');
+        self.asyncTasks.push(function MidRss(callback) {
+            self._requestApi("midrss", callback);
+        });
 
-        // log.info('push short rss');
-        // self.asyncTasks.push(function ShortRss(callback) {
-        //     self._requestApi("shortrss", callback);
-        // });
+        log.info('push short rss');
+        self.asyncTasks.push(function ShortRss(callback) {
+            self._requestApi("shortrss", callback);
+        });
     }
 
     if (time === 10 || putAll) {
-        // log.info('push health day');
-        //
-        // var hour = (new Date()).getUTCHours()+9;
-        //
-        // if(hour === 6 || hour === 18 || putAll) {
-        //     self.asyncTasks.push(function HealthDAy(callback) {
-        //         self._requestApi('healthday', callback);
-        //     });
-        // }
+        log.info('push health day');
+
+        var hour = (new Date()).getUTCHours()+9;
+
+        if(hour === 6 || hour === 18 || putAll) {
+            self.asyncTasks.push(function HealthDAy(callback) {
+                self._requestApi('healthday', callback);
+            });
+        }
     }
 
     if (time === 3 || time === 13 || time === 23 || time === 33 || time === 43 || time === 53 || putAll) {
-        // //direct request keco
-        // log.info('push keco realtime');
-        // //self.asyncTasks.push(function Keco(callback) {
-        //     self._requestApi("keco", function() {
-        //         log.info('keco realtime done');
-        // //        callback();
-        //     });
-        // //});
+        //direct request keco
+        log.info('push keco realtime');
+        //self.asyncTasks.push(function Keco(callback) {
+            self._requestApi("keco", function() {
+                log.info('keco realtime done');
+        //        callback();
+            });
+        //});
     }
 
     if (time === 4 || time === 14 || time === 24 || time === 34 || time === 44 || time === 54 || putAll) {
-        // //direct request keco
-        // log.info('push keco sido');
-        // //self.asyncTasks.push(function Keco(callback) {
-        // self._requestApi("kecoSido", function() {
-        //     log.info('keco sido done');
-        //     //        callback();
-        // });
-        // //});
+        //direct request keco
+        log.info('push keco sido');
+        //self.asyncTasks.push(function Keco(callback) {
+        self._requestApi("kecoSido", function() {
+            log.info('keco sido done');
+            //        callback();
+        });
+        //});
     }
 
     //setNextGetTime 에서 10분으로 설정하므로 10분보다 늦어야 함.
     if (time === 10 || putAll) {
-        // log.info('push life index');
-        // self.asyncTasks.push(function LifeIndex(callback) {
-        //     self._requestApi("lifeindex", callback);
-        // });
+        log.info('push life index');
+        self.asyncTasks.push(function LifeIndex(callback) {
+            self._requestApi("lifeindex", callback);
+        });
     }
 
     if (time === 13 || putAll) {
-        // log.info('push short');
-        // self.asyncTasks.push(function Short(callback) {
-        //     self._requestApi("short", callback);
-        // });
+        log.info('push short');
+        self.asyncTasks.push(function Short(callback) {
+            self._requestApi("short", callback);
+        });
     }
 
     if (time === 2 || time === 12 || time === 22 || time === 32 || time === 42 || time === 52 || putAll) {
-        // //direct request current
-        // log.info('push current');
-        // //self.asyncTasks.push(function Current(callback) {
-        // self._requestApi("current", function () {
-        //     log.info('current done');
-        //     //        callback();
-        // });
-        // //});
+        //direct request current
+        log.info('push current');
+        //self.asyncTasks.push(function Current(callback) {
+        self._requestApi("current", function () {
+            log.info('current done');
+            //        callback();
+        });
+        //});
     }
 
     if (time === 48 || time === 54 || time === 4 || time === 14 || putAll) {
-        // log.info('push shortest');
-        // // self.asyncTasks.push(function Shortest(callback) {
-        //     self._requestApi("shortest", function () {
-        //         log.info('shortest done');
-        //         // callback();
-        //     });
-        // // });
+        log.info('push shortest');
+        // self.asyncTasks.push(function Shortest(callback) {
+            self._requestApi("shortest", function () {
+                log.info('shortest done');
+                // callback();
+            });
+        // });
     }
 
     if(time === 50) {
-        // log.info('update stn rns hit rate');
-        // self._requestApi('updateStnRnsHitRate', function () {
-        //     log.info('update stn rns hit rate done');
-        // });
+        log.info('update stn rns hit rate');
+        self._requestApi('updateStnRnsHitRate', function () {
+            log.info('update stn rns hit rate done');
+        });
     }
 
     //if(time === 50 || putAll){
@@ -2226,13 +2226,13 @@ Manager.prototype.checkTimeAndRequestTask = function (putAll) {
     //}
 
     if ((time === 55)|| putAll) {
-        // log.info('push kasi rise set');
-        // //self.asyncTasks.push(function KasiRiseSet(callback) {
-        //     self._requestApi("gatherKasiRiseSet", function () {
-        //         log.info('kasi rise set done');
-        // //        callback();
-        //     });
-        // //});
+        log.info('push kasi rise set');
+        //self.asyncTasks.push(function KasiRiseSet(callback) {
+            self._requestApi("gatherKasiRiseSet", function () {
+                log.info('kasi rise set done');
+        //        callback();
+            });
+        //});
     }
 
     // if (time === 55 || putAll) {
