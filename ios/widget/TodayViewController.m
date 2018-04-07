@@ -366,7 +366,6 @@ static TodayViewController *todayVC = nil;
         jsonDict = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpData options:0 error:&error];
     //NSLog(@"User Default : %@", jsonDict);
 
-    int index = 0;
     mCityList           = [NSMutableArray array];
     mCityDictList       = [NSMutableArray array];
     
@@ -379,7 +378,7 @@ static TodayViewController *todayVC = nil;
         city.country = cityDict[@"country"];
         city.location = cityDict[@"location"];
         NSLog(@"current position : %@ address %@, name : %@, country : %@", city.currentPosition?@"true":@"false", city.address, city.name, city.country);
-        //NSLog(@"location : %@", city.location);
+        NSLog(@"location : %@", city.location);
         
         //cityData.location = {"lat": coords.latitude, "long": coords.longitude};
         [mCityList addObject:city];
@@ -2117,7 +2116,6 @@ static TodayViewController *todayVC = nil;
               newLocation.coordinate.longitude);
         
         [self getWeatherByCoord:gMylatitude longitude:gMylongitude];
-        
     }
 }
 
@@ -2136,6 +2134,7 @@ static TodayViewController *todayVC = nil;
 - (void) locationManager:(CLLocationManager *)manager
         didFailWithError:(NSError *)error
 {
+    NSDictionary *curLocDict;
     NSString *errorType;
     
     if(error.code == kCLErrorDenied)
@@ -2155,6 +2154,23 @@ static TodayViewController *todayVC = nil;
 
     [self processRequestIndicator:TRUE];
     [locationManager stopUpdatingLocation];
+   
+    for (NSDictionary *cityDict in mCityDictList) {
+        bool curPos = [cityDict[@"currentPosition"] boolValue];
+        if(curPos == true)
+        {
+            curLocDict = [NSDictionary dictionaryWithDictionary:cityDict];
+            NSLog(@"[didFailWithError] Finded (index %d) current postion dictionary!!!", [cityDict[@"currentPosition"] intValue]);
+            break;
+        }
+    }
+    NSDictionary *locDict = [curLocDict objectForKey:@"location"];
+    float latitude = [[locDict objectForKey:@"lat"] floatValue];
+    float longitude = [[locDict objectForKey:@"long"] floatValue];
+    
+    NSLog(@"[didFailWithError] lat : %f, long : %f", latitude, longitude);
+    
+    [self getWeatherByCoord:latitude longitude:longitude];
 }
 
 /********************************************************************
