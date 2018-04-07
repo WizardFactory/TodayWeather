@@ -955,7 +955,7 @@ KmaScraper.prototype.getStnMinuteWeather = function (callback) {
             });
         },
         function (results, cb) {
-            self._removeBefore10days("Minute");
+            self._removeOldData("Minute");
             cb(null, results);
         }
     ], function (err, results) {
@@ -1000,21 +1000,21 @@ KmaScraper.prototype.getStnPastHourlyWeather = function (days, callback) {
     return this;
 };
 
-
-KmaScraper.prototype._removeBefore10days = function (name, callback) {
+KmaScraper.prototype._removeOldData = function (name, callback) {
     var removeDate = new Date();
-    removeDate.setDate(removeDate.getDate()-10);
     if (name == 'Hourly') {
-       KmaStnHourly2.remove({"date": {$lt:removeDate} }, function (err) {
-           log.info('removed stn '+name+' date from date : '+removeDate);
-           if (callback)callback(err);
-       });
+        removeDate.setDate(removeDate.getDate()-10);
+        KmaStnHourly2.remove({"date": {$lt:removeDate} }, function (err) {
+            log.info('removed stn '+name+' date from date : '+removeDate);
+            if (callback)callback(err);
+        });
     }
     else {
-       KmaStnMinute2.remove({"date": {$lt:removeDate} }, function(err){
-           log.info('removed stn '+name+' date from date : '+removeDate);
-           if (callback)callback(err);
-       });
+        removeDate.setDate(removeDate.getDate()-1);
+        KmaStnMinute2.remove({"date": {$lt:removeDate} }, function(err){
+            log.info('removed stn '+name+' date from date : '+removeDate);
+            if (callback)callback(err);
+        });
     }
 };
 
@@ -1104,7 +1104,7 @@ KmaScraper.prototype.getStnHourlyWeather = function (day, callback) {
                 return cb(err, results);
             });},
         function (results, cb) {
-            self._removeBefore10days("Hourly");
+            self._removeOldData("Hourly");
             cb(null, results);
         }
     ], function (err, results) {
