@@ -915,7 +915,56 @@ angular.module('service.weatherutil', [])
 
             _getHttp(url, 20000).then(
                 function (data) {
-                    window.weatherPhotos = data.data;
+                    window.weatherPhotos = {
+                        lightning: [],
+                        rain: [],
+                        snow: [],
+                        sun_smallcloud: [],
+                        sun_bigcloud: [],
+                        sun: [],
+                        moon_smallcloud: [],
+                        moon_bigcloud: [],
+                        moon: [],
+                        cloud: []
+                    };
+
+                    for (var i = 0; i < data.data.length; i++) {
+                        if (data.data[i].tags.includes("lightning")) {
+                            window.weatherPhotos.lightning.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("rain")) {
+                            window.weatherPhotos.rain.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("snow")) {
+                            window.weatherPhotos.snow.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("sun")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.sun_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.sun_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.sun.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("moon")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.moon_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.moon_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.moon.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("cloud")) {
+                            window.weatherPhotos.cloud.push(data.data[i]);
+                        }
+                    }
+
                     deferred.resolve();
                 },
                 function (err) {
@@ -931,24 +980,17 @@ angular.module('service.weatherutil', [])
             }
 
             if (currentWeather && currentWeather.skyIcon) {
-                var skyIcons = currentWeather.skyIcon.split("_");
-                var keys = ['fog', 'lightning', 'rainsnow', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
+                var keys = ['lightning', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
                     'moon_smallcloud', 'moon_bigcloud', 'moon', 'cloud'];
-                var tags = keys.find(function (key) {
-                    return skyIcons.includes(key);
-                }).split("_");
-
-                var images = window.weatherPhotos.filter(function (photo) {
-                    for (var i = 0; i < tags.length; i++) {
-                        if (!photo.tags.includes(tags[i])) {
-                            return false;
-                        }
+                var tag = keys.find(function (key) {
+                    if (currentWeather.skyIcon.indexOf(key) != -1) {
+                        return true;
                     }
-                    return true;
                 });
 
-                if (images && images.length > 0) {
-                    return images[Math.floor(Math.random() * (images.length - 1))].twUrls.regular;
+                var photos = window.weatherPhotos[tag];
+                if (photos && photos.length > 0) {
+                    return photos[Math.floor(Math.random() * (photos.length - 1))].twUrls.regular;
                 }
             }
             return null;
