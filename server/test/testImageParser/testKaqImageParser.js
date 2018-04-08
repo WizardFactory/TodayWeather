@@ -18,7 +18,7 @@ global.log  = new Logger(__dirname + "/debug.log");
 
 var town = require('../../models/town');
 
-describe('Test - Airkorea Image parser ', function(){
+describe('Test - KAQ modelimg_CASE4 Image parser ', function(){
     it('get pm10 map pixels', function(done){
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();
         var image_url = './test/testImageParser/PM2_5_Animation.gif';
@@ -296,7 +296,7 @@ describe('Test - Airkorea Image parser ', function(){
 });
 
 
-describe('Test - KAQ Modeling Image parser ', function(){
+describe('Test - KAQ modelimg Image parser ', function(){
 
     it('get pm10 map pixels', function(done){
         var parser = new (require('../../lib/kaq.finedust.image.parser'))();

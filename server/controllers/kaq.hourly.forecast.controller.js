@@ -10,7 +10,8 @@ const reqeust = require('request');
 const kmaTimeLib = require('../lib/kmaTimeLib');
 const config = require('../config/config');
 
-const DustImageController = require('./kaq.dust.image.controller');
+const ModelimgCase4DustImageController = require('./kaq.dust.image.controller');
+const ModelimgDustImageController = require('./kaq.modeling.image.controller');
 const ModelHourlyForecast = require('../models/kaq.hourly.forecast.model');
 const ModelMapCase = require('../models/kaq.map.case.model');
 
@@ -189,7 +190,16 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
         async.waterfall([
                 (callback) => {
                     log.info('Start '+JSON.stringify(modelImg));
-                    this.dustImageMgr = new DustImageController();
+                    if (modelImg.mapCase === 'modelimg_CASE4') {
+                        this.dustImageMgr = new ModelimgCase4DustImageController();
+                    }
+                    else if (modelImg.mapCase === 'modelimg') {
+                        this.dustImageMgr = new ModelimgDustImageController();
+                    }
+                    else {
+                        log.warn('Not support '+JSON.stringify(modelImg.mapCase));
+                        this.dustImageMgr = new ModelimgCase4DustImageController();
+                    }
                     this.dustImageMgr.getDustImage(modelImg.imgPaths, callback);
                 },
                 (result, callback) => {
