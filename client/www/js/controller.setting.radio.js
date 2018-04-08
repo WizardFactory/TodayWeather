@@ -37,12 +37,13 @@ angular.module('controller.setting.radio', [])
                     }
                 }
             }
-            else if (this.type === 'startupPage' || this.type === 'refreshInterval') {
+            else if (this.type === 'startupPage' || this.type === 'refreshInterval' || this.type === 'showWeatherPhotos') {
                 var settingsInfo = TwStorage.get("settingsInfo");
                 if (settingsInfo === null) {
                     settingsInfo = {
                         startupPage: "0", //시간별날씨
-                        refreshInterval: "0" //수동
+                        refreshInterval: "0", //수동
+                        showWeatherPhotos: '1' //켜짐
                     };
                 }
                 settingsInfo[this.type] = value;

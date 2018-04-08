@@ -61,19 +61,36 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
 @import "www/lib/ionic/scss/ionic";
 
 [md-page-header] {
-  padding: 0 0 5px 0;
-  //height: auto;
-  color: #444;
-  background-color: #fff;
-  margin: auto;
-  //background-position: 50% 50%;
-  //background-size: 100%;
-  //background-image: initial;
+  padding: 44px 0 5px 0;
+  margin: 0 auto 5px auto;
+  position: relative;
 
+  &.photo {
+    color: white;
+    text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+    padding: 44px 0 22px 0;
+    background-color: #fff;
+  }
+  &.no-photo {
+    color: #444;
+    background-color: #fff;
+  }
+  .photo-box {
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: 0.8;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
   .main-box {
     width: 80%;
     margin: auto;
     text-align: center;
+    z-index: 1;
     .main-box-forecast-content {
       margin: auto;
       font-weight: 300;
@@ -113,24 +130,14 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
     padding-top: 7%;
     margin: auto;
     text-align: center;
+    z-index: 1;
   }
-}
-
-[md-header-picture] {
-  //  position: relative;
-  //  width: 100%;
-  //  height: 0;
-  //  /* Simple trick to keep a 16:9 ratio on your background image (height=0;padding-bottom=56.25%) */
-  //  padding-bottom: 56.25%;
-  //  overflow: hidden;
-  //  background-size: 160%;
-  //  /* You can override this value if your picture has a weird ratio */
-  background-position: 50% 50%;
 }
 
 .main-content {
   color: #000;
   width: 100%;
+  top: 0;
   .card {
     background-color: #fff;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
@@ -283,6 +290,9 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
         height: 13px;
       }
     }
+  }
+  .card:first-child {
+    padding: 0 0 10px 0;
   }
   .card-scroll {
     overflow: auto;
@@ -446,10 +456,11 @@ $font-family-base: -apple-system, "Roboto", "Noto", "Helvetica Neue", sans-serif
   right: 0px !important;
 }
 
-.bar-hidden {
-  border: none !important;
-  background: none !important;
-  color: #fff !important;
+.bar-clear {
+  text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+  .button, .title {
+    text-shadow: -0.5px -0.5px 0 #8f8f8f, 0.5px -0.5px 0 #8f8f8f, -0.5px 0.5px 0 #8f8f8f, 0.5px 0.5px 0 #8f8f8f;
+  }
 }
 
 [nav-bar-transition="android"] .title,

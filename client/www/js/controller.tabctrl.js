@@ -1333,6 +1333,56 @@ angular.module('controller.tabctrl', [])
                 });
         };
 
+        $scope.initSize = function () {
+            $scope.tabletWidth = 640;
+
+            if (window.screen.height) {
+                $scope.bodyHeight = window.screen.height;
+                $scope.bodyWidth = window.screen.width;
+            }
+            else if (window.innerHeight) {
+                //crosswalk에서 늦게 올라옴.
+                $scope.bodyHeight = window.innerHeight;
+                $scope.bodyWidth = window.innerWidth;
+            }
+            else if (window.outerHeight) {
+                //ios에서는 outer가 없음.
+                $scope.bodyHeight = window.outerHeight;
+                $scope.bodyWidth = window.outerWidth;
+            }
+            else {
+                console.log("Fail to get window width, height");
+                $scope.bodyHeight = 640;
+                $scope.bodyWidth = 360;
+            }
+
+            var headerRatio = 0.4;
+            var contentRatio = 0.6;
+            if ($scope.bodyWidth >= $scope.tabletWidth && $scope.bodyWidth < $scope.bodyHeight) {
+                headerRatio = 0.4;
+                contentRatio = 0.6;
+            }
+            else if ($scope.bodyHeight >= 730) {
+                //note5, nexus5x, iphone 5+
+                if (ionic.Platform.isIOS()) {
+                    headerRatio = 0.40;
+                    contentRatio = 0.60;
+                }
+                else {
+                    headerRatio = 0.32;
+                    contentRatio = 0.68;
+                }
+            }
+            else {
+                headerRatio = 0.32;
+                contentRatio = 0.68;
+            }
+
+            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
+            $scope.headerHeight = $scope.bodyHeight * headerRatio + 44;
+            $scope.mainHeight = $scope.bodyHeight * contentRatio;
+        };
+
         var strWeather = "Weather";
         var strOkay = "OK";
         var strCancel = "Cancel";

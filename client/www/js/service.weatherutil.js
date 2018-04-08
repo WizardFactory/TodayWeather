@@ -909,5 +909,50 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         };
 
+        obj.loadWeatherPhotos = function () {
+            var deferred = $q.defer();
+            var url = twClientConfig.weatherPhotosUrl;
+
+            _getHttp(url, 20000).then(
+                function (data) {
+                    window.weatherPhotos = data.data;
+                    deferred.resolve();
+                },
+                function (err) {
+                    deferred.reject(err);
+                });
+
+            return deferred.promise;
+        };
+
+        obj.findWeatherPhoto = function (currentWeather) {
+            if (window.weatherPhotos == undefined) {
+                return null;
+            }
+
+            if (currentWeather && currentWeather.skyIcon) {
+                var skyIcons = currentWeather.skyIcon.split("_");
+                var keys = ['fog', 'lightning', 'rainsnow', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
+                    'moon_smallcloud', 'moon_bigcloud', 'moon', 'cloud'];
+                var tags = keys.find(function (key) {
+                    return skyIcons.includes(key);
+                }).split("_");
+
+                var images = window.weatherPhotos.filter(function (photo) {
+                    for (var i = 0; i < tags.length; i++) {
+                        if (!photo.tags.includes(tags[i])) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+
+                if (images && images.length > 0) {
+                    return images[Math.floor(Math.random() * (images.length - 1))].twUrls.regular;
+                }
+            }
+            return null;
+        };
+
         return obj;
     });

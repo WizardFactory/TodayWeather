@@ -49,7 +49,7 @@ angular.module('starter', [
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
         if (twClientConfig.debug) {
             Util.ga.debugMode();
         }
@@ -177,7 +177,6 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
-        WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
@@ -228,30 +227,48 @@ angular.module('starter', [
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
-            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
-            headerbar.removeClass('bar-search');
-            headerbar.removeClass('bar-forecast');
-            headerbar.removeClass('bar-dailyforecast');
-            headerbar.removeClass('bar-air');
-            headerbar.removeClass('bar-hidden');
+            var headerbars = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbars.removeClass('bar-search');
+            headerbars.removeClass('bar-forecast');
+            headerbars.removeClass('bar-dailyforecast');
+            headerbars.removeClass('bar-air');
+            headerbars.removeClass('bar-clear');
+            headerbars.removeClass('bar-dark');
+
+            for (var i = 0; i < headerbars.length; i++) {
+                headerbars[i].style.backgroundImage = "";
+            }
 
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-search');
+                headerbars.addClass('bar-search');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-forecast');
+                headerbars.addClass('bar-forecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-dailyforecast');
+                headerbars.addClass('bar-dailyforecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-air');
+                headerbars.addClass('bar-air');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
-                $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-hidden');
+                $rootScope.viewColor = '#fefefe';
+                headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#F5F5F5';
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
@@ -282,6 +299,8 @@ angular.module('starter', [
         }
 
         TwStorage.init().finally(function() {
+            return WeatherUtil.loadWeatherPhotos();
+        }).finally(function () {
             $rootScope.iconsImgPath = window.theme.icons;
             $rootScope.weatherImgPath = window.theme.weather;
 
@@ -1535,6 +1554,35 @@ angular.module('starter', [
                     if (ionic.Platform.isAndroid()) {
                         $element.bind('scroll', onScroll);
                     }
+                }
+            }
+        });
+
+        $compileProvider.directive('barScrolled', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    function onScroll(e) {
+                        if ($scope == undefined || $scope.$root == undefined) {
+                            return;
+                        }
+
+                        var headerbars = angular.element($document[0].querySelectorAll('ion-header-bar'));
+                        if (e.target.scrollTop < 44) {
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage = "";
+                            }
+                        } else {
+                            var start = Math.min(1.0, (e.target.scrollTop - 44) / 88);
+                            var end = start / 2;
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage
+                                    = "linear-gradient(to bottom, rgba(68,68,68," + start + ") 50%, rgba(68,68,68," + end + ") 100%)";
+                            }
+                        }
+                    }
+
+                    $element.bind('scroll', onScroll);
                 }
             }
         });
