@@ -24,7 +24,7 @@ angular.module('service.weatherutil', [])
 
             console.log("retry="+retryCount+" get http");
 
-            timeout = timeout || 6000;
+            timeout = timeout || 10000;
 
             var options = {method: 'GET', url: url, timeout: timeout};
 
