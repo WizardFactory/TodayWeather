@@ -1,0 +1,24 @@
+{
+    "prepare_queue": {
+        "installed": [],
+        "uninstalled": []
+    },
+    "config_munge": {
+        "files": {
+            "*-Debug.plist": {
+                "parents": {
+                    "com.apple.security.application-groups": []
+                }
+            },
+            "*-Release.plist": {
+                "parents": {
+                    "com.apple.security.application-groups": []
+                }
+            }
+        }
+    },
+    "installed_plugins": {},
+    "dependent_plugins": {},
+    "modules": [],
+    "plugin_metadata": {}
+}

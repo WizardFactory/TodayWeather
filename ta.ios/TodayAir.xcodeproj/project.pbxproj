@@ -1,0 +1,690 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0207DA571B56EA530066E2B4 /* Images.xcassets */; };
+		09B14025ECBF460890BD47CA /* TodayWeatherUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = E95B7EBBCA7C4BC294A1D9B3 /* TodayWeatherUtil.m */; };
+		0EB1D8CB48AB4194904ACB00 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 33E4A3028995415C8D9564FF /* ko.lproj */; };
+		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
+		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
+		301BF552109A68D80062928A /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 301BF535109A57CC0062928A /* libCordova.a */; };
+		302D95F114D2391D003F00A1 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 302D95EF14D2391D003F00A1 /* MainViewController.m */; };
+		302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 302D95F014D2391D003F00A1 /* MainViewController.xib */; };
+		43517FDA206BA1CE00F00295 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43517FD9206BA1CE00F00295 /* StoreKit.framework */; };
+		43517FE7206BA32B00F00295 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE0206BA32A00F00295 /* ko.lproj */; };
+		43517FE8206BA32B00F00295 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE1206BA32A00F00295 /* en.lproj */; };
+		43517FE9206BA32B00F00295 /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE2206BA32A00F00295 /* zh-Hant.lproj */; };
+		43517FEA206BA32B00F00295 /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE3206BA32A00F00295 /* zh-Hans.lproj */; };
+		43517FEB206BA32B00F00295 /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE4206BA32A00F00295 /* Base.lproj */; };
+		43517FEC206BA32B00F00295 /* ja.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE5206BA32B00F00295 /* ja.lproj */; };
+		43517FED206BA32B00F00295 /* de.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 43517FE6206BA32B00F00295 /* de.lproj */; };
+		49C9EBE40BB4460C871D9104 /* TodayViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 663279584E7D45B09CA46A65 /* TodayViewController.m */; };
+		6AEBFA62798149F3B5DE517E /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 23C9B7C9D3AA4EC9BD03E2A0 /* Base.lproj */; };
+		6AFF5BF91D6E424B00AB3073 /* CDVLaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */; };
+		77432AC433FB45FFBE1330CA /* de.lproj in Resources */ = {isa = PBXBuildFile; fileRef = FB8826C1310341C48C3DA347 /* de.lproj */; };
+		7DCC15FC85F641A0BAC3A009 /* TodayWeatherUtil.h in Sources */ = {isa = PBXBuildFile; fileRef = 6A6F516FC15541DCA7C57D0A /* TodayWeatherUtil.h */; };
+		8A6F680BDA9F45C8983CA0CB /* TodayViewController.h in Sources */ = {isa = PBXBuildFile; fileRef = 2F996C507ECF4BC3B15F61E9 /* TodayViewController.h */; };
+		9371B5FEB5B4456FB4301690 /* weatherIcon2-color in Resources */ = {isa = PBXBuildFile; fileRef = 1C555EF2F80E4FFEA01F293D /* weatherIcon2-color */; };
+		969C1B7C5892424FBC8062E5 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 085436551F16461488203546 /* MainInterface.storyboard */; };
+		9B5BE76E3B604FF6A841C5C7 /* LocalizationDefine.h in Sources */ = {isa = PBXBuildFile; fileRef = 16782A9934444CDBA4FF79A7 /* LocalizationDefine.h */; };
+		B1E20C4FBE4240E19299DCA3 /* widget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 583E58108EB747ACA76BC19F /* widget.appex */; };
+		B63A39AAB8D84EDF84FBCD31 /* zh-Hant.lproj in Resources */ = {isa = PBXBuildFile; fileRef = E8258FE86D3C48B2B7797C72 /* zh-Hant.lproj */; };
+		BC9C3D2734164967A2C1B329 /* libCordova.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A5F04D31228A41D5A8305742 /* libCordova.a */; };
+		BF140E6135C846B898184244 /* TodayWeatherShowMore.h in Sources */ = {isa = PBXBuildFile; fileRef = 2A698B857C494C20B287B734 /* TodayWeatherShowMore.h */; };
+		C014C43746BD44F3AAEB1C9D /* NotificationCenter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF97CD894FB54170B2EEF756 /* NotificationCenter.framework */; };
+		C338AE9BEFFD4F948F961DE5 /* WidgetConfig.h in Sources */ = {isa = PBXBuildFile; fileRef = 21EF03F79F3F443589666D01 /* WidgetConfig.h */; };
+		D22879045C2D48869FA4ED30 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = F177DBE0B8DD4B3EBC27423B /* en.lproj */; };
+		D5CE42342F71450E87191DD3 /* ja.lproj in Resources */ = {isa = PBXBuildFile; fileRef = C2D91E2DA5354035837532F7 /* ja.lproj */; };
+		DA074A2B244842ACA671D1CC /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = E6AEC8F287EB495BBD31EF18 /* zh-Hans.lproj */; };
+		F583276A13E94353B7EE4B0D /* TodayWeatherShowMore.m in Sources */ = {isa = PBXBuildFile; fileRef = 55D6752F9EEA459D8D0F1BB0 /* TodayWeatherShowMore.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		301BF534109A57CC0062928A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = D2AAC07E0554694100DB518D;
+			remoteInfo = CordovaLib;
+		};
+		301BF550109A68C00062928A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = D2AAC07D0554694100DB518D;
+			remoteInfo = CordovaLib;
+		};
+		72F6BCF82C0D4793A3EBD264 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A9B9437C2A114A5588803E25;
+			remoteInfo = widget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EBC135A18A16414CA53A716D /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B1E20C4FBE4240E19299DCA3 /* widget.appex in Copy Files */,
+			);
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0207DA571B56EA530066E2B4 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = TodayAir/Images.xcassets; sourceTree = SOURCE_ROOT; };
+		085436551F16461488203546 /* MainInterface.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = MainInterface.storyboard; sourceTree = "<group>"; };
+		16782A9934444CDBA4FF79A7 /* LocalizationDefine.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = LocalizationDefine.h; sourceTree = "<group>"; };
+		1C555EF2F80E4FFEA01F293D /* weatherIcon2-color */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "weatherIcon2-color"; sourceTree = "<group>"; };
+		1D3623240D0F684500981E51 /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		1D3623250D0F684500981E51 /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		1D6058910D05DD3D006BFB54 /* TodayAir.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodayAir.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21EF03F79F3F443589666D01 /* WidgetConfig.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = WidgetConfig.h; sourceTree = "<group>"; };
+		23C9B7C9D3AA4EC9BD03E2A0 /* Base.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = Base.lproj; sourceTree = "<group>"; };
+		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		2A698B857C494C20B287B734 /* TodayWeatherShowMore.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayWeatherShowMore.h; sourceTree = "<group>"; };
+		2F996C507ECF4BC3B15F61E9 /* TodayViewController.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayViewController.h; sourceTree = "<group>"; };
+		301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = CordovaLib.xcodeproj; path = CordovaLib/CordovaLib.xcodeproj; sourceTree = "<group>"; };
+		301BF56E109A69640062928A /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; path = www; sourceTree = SOURCE_ROOT; };
+		302D95EE14D2391D003F00A1 /* MainViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
+		302D95EF14D2391D003F00A1 /* MainViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MainViewController.m; sourceTree = "<group>"; };
+		302D95F014D2391D003F00A1 /* MainViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = MainViewController.xib; sourceTree = "<group>"; };
+		3047A50F1AB8059700498E2A /* build-debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = "build-debug.xcconfig"; path = "cordova/build-debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		3047A5101AB8059700498E2A /* build-release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = "build-release.xcconfig"; path = "cordova/build-release.xcconfig"; sourceTree = SOURCE_ROOT; };
+		3047A5111AB8059700498E2A /* build.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = build.xcconfig; path = cordova/build.xcconfig; sourceTree = SOURCE_ROOT; };
+		32CA4F630368D1EE00C91783 /* TodayAir-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TodayAir-Prefix.pch"; sourceTree = "<group>"; };
+		33E4A3028995415C8D9564FF /* ko.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ko.lproj; sourceTree = "<group>"; };
+		43517FD8206BA1C100F00295 /* TodayAir.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = TodayAir.entitlements; path = TodayAir/TodayAir.entitlements; sourceTree = "<group>"; };
+		43517FD9206BA1CE00F00295 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		43517FE0206BA32A00F00295 /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ko.lproj; path = TodayAir/ko.lproj; sourceTree = "<group>"; };
+		43517FE1206BA32A00F00295 /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = en.lproj; path = TodayAir/en.lproj; sourceTree = "<group>"; };
+		43517FE2206BA32A00F00295 /* zh-Hant.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "zh-Hant.lproj"; path = "TodayAir/zh-Hant.lproj"; sourceTree = "<group>"; };
+		43517FE3206BA32A00F00295 /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "zh-Hans.lproj"; path = "TodayAir/zh-Hans.lproj"; sourceTree = "<group>"; };
+		43517FE4206BA32A00F00295 /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = TodayAir/Base.lproj; sourceTree = "<group>"; };
+		43517FE5206BA32B00F00295 /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ja.lproj; path = TodayAir/ja.lproj; sourceTree = "<group>"; };
+		43517FE6206BA32B00F00295 /* de.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = de.lproj; path = TodayAir/de.lproj; sourceTree = "<group>"; };
+		55D6752F9EEA459D8D0F1BB0 /* TodayWeatherShowMore.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherShowMore.m; sourceTree = "<group>"; };
+		583E58108EB747ACA76BC19F /* widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 9; includeInIndex = 0; path = widget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		663279584E7D45B09CA46A65 /* TodayViewController.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; path = TodayViewController.m; sourceTree = "<group>"; };
+		6945E98CE35C4F2D9937C2DA /* widget.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = widget.entitlements; sourceTree = "<group>"; };
+		6A6F516FC15541DCA7C57D0A /* TodayWeatherUtil.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; path = TodayWeatherUtil.h; sourceTree = "<group>"; };
+		6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = CDVLaunchScreen.storyboard; path = TodayAir/CDVLaunchScreen.storyboard; sourceTree = SOURCE_ROOT; };
+		8D1107310486CEB800E47090 /* TodayAir-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "TodayAir-Info.plist"; path = "TodayAir/TodayAir-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = SOURCE_ROOT; };
+		A5F04D31228A41D5A8305742 /* libCordova.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libCordova.a; sourceTree = "<group>"; };
+		BF97CD894FB54170B2EEF756 /* NotificationCenter.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
+		C2D91E2DA5354035837532F7 /* ja.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ja.lproj; sourceTree = "<group>"; };
+		D1A8A4A20E874DF1BBB28314 /* widget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = "widget-Info.plist"; sourceTree = "<group>"; };
+		E6AEC8F287EB495BBD31EF18 /* zh-Hans.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
+		E8258FE86D3C48B2B7797C72 /* zh-Hant.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = "zh-Hant.lproj"; sourceTree = "<group>"; };
+		E95B7EBBCA7C4BC294A1D9B3 /* TodayWeatherUtil.m */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.objc; path = TodayWeatherUtil.m; sourceTree = "<group>"; };
+		EB87FDF31871DA8E0020F90C /* www */ = {isa = PBXFileReference; lastKnownFileType = folder; name = www; path = ../../www; sourceTree = "<group>"; };
+		EB87FDF41871DAF40020F90C /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../../config.xml; sourceTree = "<group>"; };
+		ED33DF2A687741AEAF9F8254 /* Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
+		F177DBE0B8DD4B3EBC27423B /* en.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = en.lproj; sourceTree = "<group>"; };
+		F840E1F0165FE0F500CFE078 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = TodayAir/config.xml; sourceTree = "<group>"; };
+		FB8826C1310341C48C3DA347 /* de.lproj */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = de.lproj; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D60588F0D05DD3D006BFB54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				301BF552109A68D80062928A /* libCordova.a in Frameworks */,
+				43517FDA206BA1CE00F00295 /* StoreKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		70D74AC2739E4129B924C985 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C014C43746BD44F3AAEB1C9D /* NotificationCenter.framework in Frameworks */,
+				BC9C3D2734164967A2C1B329 /* libCordova.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		080E96DDFE201D6D7F000001 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				302D95EE14D2391D003F00A1 /* MainViewController.h */,
+				302D95EF14D2391D003F00A1 /* MainViewController.m */,
+				302D95F014D2391D003F00A1 /* MainViewController.xib */,
+				1D3623240D0F684500981E51 /* AppDelegate.h */,
+				1D3623250D0F684500981E51 /* AppDelegate.m */,
+			);
+			name = Classes;
+			path = TodayAir/Classes;
+			sourceTree = SOURCE_ROOT;
+		};
+		19C28FACFE9D520D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1D6058910D05DD3D006BFB54 /* TodayAir.app */,
+				583E58108EB747ACA76BC19F /* widget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
+			isa = PBXGroup;
+			children = (
+				43517FE4206BA32A00F00295 /* Base.lproj */,
+				43517FE6206BA32B00F00295 /* de.lproj */,
+				43517FE1206BA32A00F00295 /* en.lproj */,
+				43517FE5206BA32B00F00295 /* ja.lproj */,
+				43517FE0206BA32A00F00295 /* ko.lproj */,
+				43517FE3206BA32A00F00295 /* zh-Hans.lproj */,
+				43517FE2206BA32A00F00295 /* zh-Hant.lproj */,
+				43517FD8206BA1C100F00295 /* TodayAir.entitlements */,
+				EB87FDF41871DAF40020F90C /* config.xml */,
+				EB87FDF31871DA8E0020F90C /* www */,
+				EB87FDF11871DA420020F90C /* Staging */,
+				301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */,
+				080E96DDFE201D6D7F000001 /* Classes */,
+				307C750510C5A3420062BCA9 /* Plugins */,
+				29B97315FDCFA39411CA2CEA /* Other Sources */,
+				29B97317FDCFA39411CA2CEA /* Resources */,
+				29B97323FDCFA39411CA2CEA /* Frameworks */,
+				19C28FACFE9D520D11CA2CBB /* Products */,
+				E05E97AACBD84E98936F2F80 /* Widget */,
+			);
+			name = CustomTemplate;
+			sourceTree = "<group>";
+		};
+		29B97315FDCFA39411CA2CEA /* Other Sources */ = {
+			isa = PBXGroup;
+			children = (
+				32CA4F630368D1EE00C91783 /* TodayAir-Prefix.pch */,
+				29B97316FDCFA39411CA2CEA /* main.m */,
+				ED33DF2A687741AEAF9F8254 /* Bridging-Header.h */,
+			);
+			name = "Other Sources";
+			path = TodayAir;
+			sourceTree = "<group>";
+		};
+		29B97317FDCFA39411CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0207DA571B56EA530066E2B4 /* Images.xcassets */,
+				3047A50E1AB8057F00498E2A /* config */,
+				8D1107310486CEB800E47090 /* TodayAir-Info.plist */,
+				6AFF5BF81D6E424B00AB3073 /* CDVLaunchScreen.storyboard */,
+			);
+			name = Resources;
+			path = TodayAir/Resources;
+			sourceTree = "<group>";
+		};
+		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				43517FD9206BA1CE00F00295 /* StoreKit.framework */,
+				BF97CD894FB54170B2EEF756 /* NotificationCenter.framework */,
+				A5F04D31228A41D5A8305742 /* libCordova.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		301BF52E109A57CC0062928A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				301BF535109A57CC0062928A /* libCordova.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3047A50E1AB8057F00498E2A /* config */ = {
+			isa = PBXGroup;
+			children = (
+				3047A50F1AB8059700498E2A /* build-debug.xcconfig */,
+				3047A5101AB8059700498E2A /* build-release.xcconfig */,
+				3047A5111AB8059700498E2A /* build.xcconfig */,
+			);
+			name = config;
+			sourceTree = "<group>";
+		};
+		307C750510C5A3420062BCA9 /* Plugins */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Plugins;
+			path = TodayAir/Plugins;
+			sourceTree = SOURCE_ROOT;
+		};
+		E05E97AACBD84E98936F2F80 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				D1A8A4A20E874DF1BBB28314 /* widget-Info.plist */,
+				6945E98CE35C4F2D9937C2DA /* widget.entitlements */,
+				16782A9934444CDBA4FF79A7 /* LocalizationDefine.h */,
+				2F996C507ECF4BC3B15F61E9 /* TodayViewController.h */,
+				663279584E7D45B09CA46A65 /* TodayViewController.m */,
+				2A698B857C494C20B287B734 /* TodayWeatherShowMore.h */,
+				55D6752F9EEA459D8D0F1BB0 /* TodayWeatherShowMore.m */,
+				6A6F516FC15541DCA7C57D0A /* TodayWeatherUtil.h */,
+				E95B7EBBCA7C4BC294A1D9B3 /* TodayWeatherUtil.m */,
+				21EF03F79F3F443589666D01 /* WidgetConfig.h */,
+				23C9B7C9D3AA4EC9BD03E2A0 /* Base.lproj */,
+				085436551F16461488203546 /* MainInterface.storyboard */,
+				FB8826C1310341C48C3DA347 /* de.lproj */,
+				F177DBE0B8DD4B3EBC27423B /* en.lproj */,
+				C2D91E2DA5354035837532F7 /* ja.lproj */,
+				33E4A3028995415C8D9564FF /* ko.lproj */,
+				1C555EF2F80E4FFEA01F293D /* weatherIcon2-color */,
+				E6AEC8F287EB495BBD31EF18 /* zh-Hans.lproj */,
+				E8258FE86D3C48B2B7797C72 /* zh-Hant.lproj */,
+			);
+			name = Widget;
+			path = widget;
+			sourceTree = "<group>";
+		};
+		EB87FDF11871DA420020F90C /* Staging */ = {
+			isa = PBXGroup;
+			children = (
+				F840E1F0165FE0F500CFE078 /* config.xml */,
+				301BF56E109A69640062928A /* www */,
+			);
+			name = Staging;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D6058900D05DD3D006BFB54 /* TodayAir */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "TodayAir" */;
+			buildPhases = (
+				304B58A110DAC018002A0835 /* Copy www directory */,
+				1D60588D0D05DD3D006BFB54 /* Resources */,
+				1D60588E0D05DD3D006BFB54 /* Sources */,
+				1D60588F0D05DD3D006BFB54 /* Frameworks */,
+				EBC135A18A16414CA53A716D /* Copy Files */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				301BF551109A68C00062928A /* PBXTargetDependency */,
+				0A1E748812C245BC9F8D7305 /* PBXTargetDependency */,
+			);
+			name = TodayAir;
+			productName = TodayAir;
+			productReference = 1D6058910D05DD3D006BFB54 /* TodayAir.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A9B9437C2A114A5588803E25 /* widget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 96F24B01A4A84A18AEFB73E5 /* Build configuration list for PBXNativeTarget "widget" */;
+			buildPhases = (
+				34164EFBA43E4FE495DE7651 /* Sources */,
+				70D74AC2739E4129B924C985 /* Frameworks */,
+				160C4CE2A43F42A58394BEBD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = widget;
+			productName = widget;
+			productReference = 583E58108EB747ACA76BC19F /* widget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29B97313FDCFA39411CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 510;
+				TargetAttributes = {
+					1D6058900D05DD3D006BFB54 = {
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+							com.apple.InAppPurchase = {
+								enabled = 1;
+							};
+							com.apple.Keychain = {
+								enabled = 0;
+							};
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
+					};
+					A9B9437C2A114A5588803E25 = {
+						DevelopmentTeam = T9X5DG29UJ;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "TodayAir" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 301BF52E109A57CC0062928A /* Products */;
+					ProjectRef = 301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				1D6058900D05DD3D006BFB54 /* TodayAir */,
+				A9B9437C2A114A5588803E25 /* widget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		301BF535109A57CC0062928A /* libCordova.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libCordova.a;
+			remoteRef = 301BF534109A57CC0062928A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		160C4CE2A43F42A58394BEBD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AEBFA62798149F3B5DE517E /* Base.lproj in Resources */,
+				969C1B7C5892424FBC8062E5 /* MainInterface.storyboard in Resources */,
+				77432AC433FB45FFBE1330CA /* de.lproj in Resources */,
+				D22879045C2D48869FA4ED30 /* en.lproj in Resources */,
+				D5CE42342F71450E87191DD3 /* ja.lproj in Resources */,
+				0EB1D8CB48AB4194904ACB00 /* ko.lproj in Resources */,
+				9371B5FEB5B4456FB4301690 /* weatherIcon2-color in Resources */,
+				DA074A2B244842ACA671D1CC /* zh-Hans.lproj in Resources */,
+				B63A39AAB8D84EDF84FBCD31 /* zh-Hant.lproj in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1D60588D0D05DD3D006BFB54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				302D95F214D2391D003F00A1 /* MainViewController.xib in Resources */,
+				0207DA581B56EA530066E2B4 /* Images.xcassets in Resources */,
+				43517FEB206BA32B00F00295 /* Base.lproj in Resources */,
+				43517FEA206BA32B00F00295 /* zh-Hans.lproj in Resources */,
+				6AFF5BF91D6E424B00AB3073 /* CDVLaunchScreen.storyboard in Resources */,
+				43517FE8206BA32B00F00295 /* en.lproj in Resources */,
+				43517FE9206BA32B00F00295 /* zh-Hant.lproj in Resources */,
+				43517FEC206BA32B00F00295 /* ja.lproj in Resources */,
+				43517FED206BA32B00F00295 /* de.lproj in Resources */,
+				43517FE7206BA32B00F00295 /* ko.lproj in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		304B58A110DAC018002A0835 /* Copy www directory */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy www directory";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "NODEJS_PATH=/usr/local/bin; NVM_NODE_PATH=~/.nvm/versions/node/`nvm version 2>/dev/null`/bin; N_NODE_PATH=`find /usr/local/n/versions/node/* -maxdepth 0 -type d 2>/dev/null | tail -1`/bin; XCODE_NODE_PATH=`xcode-select --print-path`/usr/share/xcs/Node/bin; PATH=$NODEJS_PATH:$NVM_NODE_PATH:$N_NODE_PATH:$XCODE_NODE_PATH:$PATH && node cordova/lib/copy-www-build-step.js";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D60588E0D05DD3D006BFB54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589B0D05DD56006BFB54 /* main.m in Sources */,
+				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
+				302D95F114D2391D003F00A1 /* MainViewController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		34164EFBA43E4FE495DE7651 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B5BE76E3B604FF6A841C5C7 /* LocalizationDefine.h in Sources */,
+				8A6F680BDA9F45C8983CA0CB /* TodayViewController.h in Sources */,
+				49C9EBE40BB4460C871D9104 /* TodayViewController.m in Sources */,
+				BF140E6135C846B898184244 /* TodayWeatherShowMore.h in Sources */,
+				F583276A13E94353B7EE4B0D /* TodayWeatherShowMore.m in Sources */,
+				7DCC15FC85F641A0BAC3A009 /* TodayWeatherUtil.h in Sources */,
+				09B14025ECBF460890BD47CA /* TodayWeatherUtil.m in Sources */,
+				C338AE9BEFFD4F948F961DE5 /* WidgetConfig.h in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		301BF551109A68C00062928A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CordovaLib;
+			targetProxy = 301BF550109A68C00062928A /* PBXContainerItemProxy */;
+		};
+		0A1E748812C245BC9F8D7305 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A9B9437C2A114A5588803E25 /* widget */;
+			targetProxy = 72F6BCF82C0D4793A3EBD264 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1D6058940D05DD3E006BFB54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3047A50F1AB8059700498E2A /* build-debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = TodayAir/TodayAir.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "TodayAir/TodayAir-Prefix.pch";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				INFOPLIST_FILE = "TodayAir/TodayAir-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				PRODUCT_NAME = TodayAir;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1D6058950D05DD3E006BFB54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3047A5101AB8059700498E2A /* build-release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = TodayAir/TodayAir.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = YES;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "TodayAir/TodayAir-Prefix.pch";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				INFOPLIST_FILE = "TodayAir/TodayAir-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				PRODUCT_NAME = TodayAir;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		52A88A94258E45ACBC0AB707 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				INFOPLIST_FILE = "widget/widget-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayair.todayext;
+				PRODUCT_NAME = widget;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		C01FCF4F08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C01FCF5008A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3047A5111AB8059700498E2A /* build.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0BA565D0E3E84658A23B6120 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = T9X5DG29UJ;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "widget/widget-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayair.todayext;
+				PRODUCT_NAME = widget;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "TodayAir" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D6058940D05DD3E006BFB54 /* Debug */,
+				1D6058950D05DD3E006BFB54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		96F24B01A4A84A18AEFB73E5 /* Build configuration list for PBXNativeTarget "widget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BA565D0E3E84658A23B6120 /* Debug */,
+				52A88A94258E45ACBC0AB707 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "TodayAir" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4F08A954540054247B /* Debug */,
+				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}

@@ -44,18 +44,18 @@ angular.module('starter', [
             else {
                 console.log('util or util.ga is undefined');
             }
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + exception);
             }
         }
     })
     .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
-        if (twClientConfig.debug) {
+        if (clientConfig.debug) {
             Util.ga.debugMode();
         }
 
         if (ionic.Platform.isIOS()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+            Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
 
             // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -66,7 +66,7 @@ angular.module('starter', [
                 });
             }
         } else if (ionic.Platform.isAndroid()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
+            Util.ga.startTrackerWithId(clientConfig.gaAndroidKey, 30);
 
             // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -164,7 +164,7 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
             return false; //suppress Error Alert;
@@ -316,8 +316,8 @@ angular.module('starter', [
             Units.loadUnits();
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
-            if (daumServiceKeys == undefined || daumServiceKeys.length != twClientConfig.daumServiceKeys.length) {
-                TwStorage.set("daumServiceKeys", twClientConfig.daumServiceKeys);
+            if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {
+                TwStorage.set("daumServiceKeys", clientConfig.daumServiceKeys);
             }
 
             var startVersion = TwStorage.get("startVersion");
@@ -401,7 +401,7 @@ angular.module('starter', [
             .determinePreferredLanguage()
             .useSanitizeValueStrategy('escapeParameters');
 
-        //$compileProvider.debugInfoEnabled(twClientConfig.debug);
+        //$compileProvider.debugInfoEnabled(clientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
         $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);

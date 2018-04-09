@@ -11,7 +11,7 @@ var shell = require('gulp-shell');
 
 var deleteLines = require('gulp-delete-lines');
 
-var json = JSON.parse(fs.readFileSync('./package.json'));
+var json = JSON.parse(fs.readFileSync('./tw.package.json'));
 
 var BILLING_KEY = process.env.BILLING_KEY || '111';
 var SENDER_ID = process.env.SENDER_ID || '111';
@@ -53,46 +53,87 @@ gulp.task('build', shell.task([
   'ionic state reset',
   'cp -a ../ios platforms/',
   'ionic state restore --plugins',
-  'npm install',
+  'yarn install',
   'bower install',
   'gulp sass',
   'ionic build'
 ]));
 
-gulp.task('build_ios', shell.task([
+gulp.task('build_tw_ios', shell.task([
+  'cp tw.package.json package.json',
+  'cp tw.config.xml config.xml',
+  'cp tw.ads.client.config.js www/client.config.js',
+  'rm -rf resources;cp -a tw.resources resources',
   'cp package.json import_today_ext/package.json.backup',
-  'cp import_today_ext/empty.package.json package.json',
+  'cp import_today_ext/tw.empty.package.json package.json',
   'ionic state reset',
-  'cp -a ../ios platforms/',
+  'cp -a ../tw.ios/* platforms/ios/',
   'mv import_today_ext/package.json.backup package.json',
   'ionic state restore --plugins',
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
-  'npm install',
+  'yarn install',
   'bower install',
   'gulp sass',
   'ionic build ios'
 ]));
 
-gulp.task('build_android', shell.task([
+gulp.task('build_ta_ios', shell.task([
+  'cp ta.package.json package.json',
+  'cp ta.config.xml config.xml',
+  'cp ta.ads.client.config.js www/client.config.js',
+  'rm -rf resources;cp -a ta.resources resources',
+  'cp package.json import_today_ext/package.json.backup',
+  'cp import_today_ext/ta.empty.package.json package.json',
+  'ionic state reset',
+  'cp -a ../ta.ios/* platforms/ios/',
+  'mv import_today_ext/package.json.backup package.json',
+  'ionic state restore --plugins',
+  'cordova plugin add cordova-plugin-inapppurchase',
+  'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
+  'yarn install',
+  'bower install',
+  'gulp sass',
+  'ionic build ios'
+]));
+
+gulp.task('build_tw_android', shell.task([
+  'cp tw.package.json package.json',
+  'cp tw.config.xml config.xml',
+  'cp tw.ads.client.config.js www/client.config.js',
+  'rm -rf resources;cp -a tw.resources resources',
   'ionic state reset',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
   'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
-  'npm install',
+  'yarn install',
   'bower install',
   'gulp sass',
   'ionic build android'
 ]));
 
-gulp.task('release-min20-android-nonpaid', shell.task([
+gulp.task('build_ta_android', shell.task([
+  'cp ta.package.json package.json',
+  'cp ta.config.xml config.xml',
+  'cp ta.ads.client.config.js www/client.config.js',
+  'rm -rf resources;cp -a ta.resources resources',
+  'ionic state reset',
+  'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
+  'cp -f www/js/controller.purchase.j3k0.js www/js/controller.purchase.js',
+  'yarn install',
+  'bower install',
+  'gulp sass',
+  'ionic build android'
+]));
+
+gulp.task('release-tw-min20-android-nonpaid', shell.task([
   'ionic state reset',
   'cordova platform rm ios',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
-  'npm install',
-  //'cd node_modules/cordova-uglify/;npm install',
+  'yarn install',
+  //'cd node_modules/cordova-uglify/;yarn install',
   'bower install',
   'gulp sass',
 
@@ -104,15 +145,15 @@ gulp.task('release-min20-android-nonpaid', shell.task([
   'cp platforms/android/build/outputs/apk/android-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min20.apk'
 ]));
 
-gulp.task('release-min16-android-nonpaid', shell.task([
+gulp.task('release-tw-min16-android-nonpaid', shell.task([
   'ionic state reset',
   'cordova platform rm ios',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
-  'npm install',
-  //'cd node_modules/cordova-uglify/;npm install',
+  'yarn install',
+  //'cd node_modules/cordova-uglify/;yarn install',
   'bower install',
   'gulp sass',
 
@@ -125,13 +166,13 @@ gulp.task('release-min16-android-nonpaid', shell.task([
   'cp -a platforms/android/build/outputs/apk/android-armv7-release.apk ./TodayWeather_ads_playstore_v'+json.version+'_min16.apk'
 ]));
 
-gulp.task('release-android-nonpaid', shell.task([
+gulp.task('release-tw-android-nonpaid', shell.task([
   'ionic state reset',
   'cordova plugin rm cordova-plugin-console',
   'cordova plugin add https://github.com/WizardFactory/phonegap-plugin-push.git#1.11.1 --variable SENDER_ID="'+SENDER_ID+'"',
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cc.fovea.cordova.purchase  --variable BILLING_KEY="'+BILLING_KEY+'"',
-  'npm install',
+  'yarn install',
   'bower install',
   'gulp sass',
 
@@ -154,9 +195,9 @@ gulp.task('release-android-nonpaid', shell.task([
   //'~/Library/Android/sdk/build-tools/23.0.3/zipalign -v 4 android-armv7-release.apk TodayWeather_ads_playstore_v'+json.version+'_min14.apk',
 ]));
 
-gulp.task('release-ios-nonpaid', shell.task([
+gulp.task('release-tw-ios-nonpaid', shell.task([
   'cp package.json import_today_ext/package.json.backup',
-  'cp import_today_ext/empty.package.json package.json',
+  'cp import_today_ext/tw.empty.package.json package.json',
   'ionic state reset',
   'cp -a ../ios platforms/',
   'mv import_today_ext/package.json.backup package.json',
@@ -166,7 +207,7 @@ gulp.task('release-ios-nonpaid', shell.task([
   'cordova plugin add cordova-fabric-plugin --variable FABRIC_API_KEY="'+FABRIC_API_KEY+'" --variable FABRIC_API_SECRET="'+FABRIC_API_SECRET+'"',
   'cordova plugin add cordova-plugin-inapppurchase',
   'cp -f www/js/controller.purchase.alexdisler.js www/js/controller.purchase.js',
-  'npm install',
+  'yarn install',
   'bower install',
   'gulp sass',
   //'cp ads.ios.tw.client.config.js www/tw.client.config.js',
