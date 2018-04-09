@@ -20,7 +20,7 @@ angular.module('service.weatherutil', [])
                 if (retryCount > 0) {
                     _retryGetHttp(retryCount, url, timeout, callback);
                 }
-            }, 1500);
+            }, 2000);
 
             console.log("retry="+retryCount+" get http");
 
