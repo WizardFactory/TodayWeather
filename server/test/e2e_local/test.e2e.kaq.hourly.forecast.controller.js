@@ -46,7 +46,7 @@ describe('e2e test - kaq hourly forecast controller', function() {
     });
 
     it('test kaq hourly forecast do', function (done) {
-        this.timeout(10*60*1000);
+        this.timeout(20*60*1000);
         let ctrl = new KaqHourlyForecastController();
         ctrl.do(new Date(), err=> {
             if (err) {
