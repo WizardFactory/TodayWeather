@@ -34,13 +34,54 @@ describe('e2e test - kaq hourly forecast controller', function() {
         });
     });
 
-    it('test kaq hourly forecast do', function (done) {
+    it('test kaq hourly forecast get map case', function (done) {
         this.timeout(10*60*1000);
+        let ctrl = new KaqHourlyForecastController();
+        ctrl._getMapCase(new Date(), err=> {
+            if (err) {
+                console.error(err);
+            }
+            done();
+        });
+    });
+
+    it('test kaq hourly forecast do', function (done) {
+        this.timeout(20*60*1000);
         let ctrl = new KaqHourlyForecastController();
         ctrl.do(new Date(), err=> {
             if (err) {
                 console.error(err);
             }
+            done();
+        });
+    });
+
+    it ('test kaq get forecast', function (done) {
+        this.timeout(10*60*1000);
+        let ctrl = new KaqHourlyForecastController();
+        ctrl.getForecast('반송로', (err, forecastList)=> {
+            if (err) {
+                console.error(err);
+            }
+            console.info('length:'+forecastList.length);
+            done();
+        });
+    });
+
+    it ('test kaq get forecast', function (done) {
+        this.timeout(10*60*1000);
+        let ctrl = new KaqHourlyForecastController();
+        ctrl._findLatestMapCase = function () {
+            return new Promise(resolve => {
+                resolve('');
+            });
+        };
+
+        ctrl.getForecast('반송로', (err, forecastList)=> {
+            if (err) {
+                console.error(err);
+            }
+            console.info('length:'+forecastList.length);
             done();
         });
     });

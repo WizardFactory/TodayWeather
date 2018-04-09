@@ -77,7 +77,7 @@ kmaTownMidController.prototype.saveMid = function(type, newData, overwrite, call
             }],
             function(err){
                 var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
-                log.info('KMA Town M> finished to save town.mid : ', type);
+                log.debug('KMA Town M> finished to save town.mid : ', type);
                 if(overwrite){
                     log.info('KMA Town M> remove all item before pubData: ', pubDate.toString());
                     db.remove({regId: regId, "fcsDate": {$lt:pubDate}}).exec();

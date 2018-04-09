@@ -9,7 +9,6 @@ angular.module('controller.searchctrl', [])
         $scope.isEditing = false;
         $scope.isSearching = false;
 
-        var towns = WeatherInfo.towns;
         var searchIndex = -1;
         var isLoadingIndicator = false;
 
@@ -242,8 +241,8 @@ angular.module('controller.searchctrl', [])
 
         $scope.OnScrollResults = function() {
             if ($scope.search.word !== undefined && searchIndex !== -1) {
-                for (var i = searchIndex; i < towns.length; i++) {
-                    var town = towns[i];
+                for (var i = searchIndex; i < window.towns.length; i++) {
+                    var town = window.towns[i];
                     if (town.first.indexOf($scope.search.word) >= 0 || town.second.indexOf($scope.search.word) >= 0
                         || town.third.indexOf($scope.search.word) >= 0) {
                         $scope.searchResults.push(town);

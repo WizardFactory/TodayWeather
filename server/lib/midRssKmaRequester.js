@@ -12,6 +12,8 @@ var config = require('../config/config');
 var MidRssModel = require('../models/modelMidRss');
 var kmaTownMidRss = require('../models/kma/kma.town.mid.rss.model');
 
+var KmaForecastZoneController = require('../controllers/kma/kma.forecast.zone.controller');
+
 var collectTown = require('../lib/collectTownForecast');
 var kmaTimelib = require('./kmaTimeLib');
 
@@ -21,12 +23,13 @@ var dnscache = require('dnscache')({
     "cachesize" : 1000
 });
 
+var WWW_KMA_GO_DOMAIN = 'www.kma.go.kr';
+
 /**
  *
  * @constructor
  */
 function MidRssKmaRequester() {
-    var WWW_KMA_GO_DOMAIN = 'www.kma.go.kr';
     this._nextGetTime = new Date();
     this._url = 'http://'+WWW_KMA_GO_DOMAIN+'/weather/forecast/mid-term-rss3.jsp';
     this._updateTimeTable =  [9, 21];   //kr 18, 06
@@ -72,8 +75,10 @@ MidRssKmaRequester.prototype.setNextGetTime = function(time) {
     return this;
 };
 
-MidRssKmaRequester.prototype.getMidRss = function(callback) {
-    req(this._url, function(err, response, body) {
+MidRssKmaRequester.prototype.getMidRss = function(url, callback) {
+    var url = url || this._url;
+    log.info(`kma mid rss url=${url}`);
+    req(url, function(err, response, body) {
         if (err) {
             return callback(err);
         }
@@ -170,6 +175,43 @@ MidRssKmaRequester.prototype.parseMidRss = function(xmlData, callback) {
     return this;
 };
 
+MidRssKmaRequester.prototype.integrateMidRss2 = function (parsedData, callback) {
+    async.map(parsedData,
+        function(midRssKma, callback) {
+            var city = midRssKma.city;
+            var kmaForecastZoneController = new KmaForecastZoneController();
+            kmaForecastZoneController.findForecastZoneCode({regName:city})
+                .exec(function(err, result) {
+                    if (err) {
+                        log.error(err);
+                    }
+                    if (result.length === 0) {
+                        err = new Error(`Fail to find regName:${city}`);
+                        log.error(err);
+                    }
+                    else if (result.length > 1) {
+                        log.warn('get multi regId', result);
+                    }
+                    if (result.length) {
+                        midRssKma.regId = result[0].regId;
+                    }
+                    callback(null, midRssKma);
+                });
+        },
+        function (err, result) {
+            if (err) {
+                log.error(err);
+            }
+            callback(null, result);
+        });
+};
+
+/**
+ * 폐지 예정
+ * @param parsedData
+ * @param callback
+ * @returns {MidRssKmaRequester}
+ */
 MidRssKmaRequester.prototype.integrateMidRss = function (parsedData, callback) {
     var collectShortInfo = new collectTown();
     parsedData.forEach(function (midRssKma) {
@@ -268,6 +310,70 @@ MidRssKmaRequester.prototype.saveMidRss = function (midKmaList, callback) {
     return this;
 };
 
+MidRssKmaRequester.prototype.processGetMidRss = function (stnId, callback) {
+    var self = this;
+
+    async.waterfall([
+            function(callback) {
+                var url = 'http://'+WWW_KMA_GO_DOMAIN+'/weather/forecast/mid-term-rss3.jsp?stnId='+stnId;
+                self.getMidRss(url, function (err, body) {
+                    callback(err, body);
+                });
+            },
+            function(xmlData, callback) {
+                self.parseMidRss(xmlData, function(err, parsedData) {
+                    callback(err, parsedData);
+                });
+            },
+            function(parsedData, callback) {
+                self.integrateMidRss2(parsedData, function (err, integratedData) {
+                    callback(err, integratedData);
+                });
+            },
+            function(integratedData, callback) {
+                if(config.db.version == '1.0'){
+                    self.saveMidRss(integratedData, function (err, result) {
+                        callback(err, result);
+                    });
+                }
+                else if(config.db.version == '2.0'){
+                    self.saveMidRssNewForm(integratedData, function (err, result) {
+                        callback(err, result);
+                    });
+                }
+            }],
+        function (err, result) { //pubDate = lastUpdateTime
+            if (err) {
+                log.debug(err);
+            }
+            else {
+                log.info("succeed getting MID RSS KMA "+result);
+                self.setNextGetTime();
+            }
+            callback(self, err);
+        });
+
+    return this;
+};
+
+MidRssKmaRequester.prototype.mainProcessM = function(self, callback) {
+    var self = this;
+    var stnList = new collectTown().listPointNumber;
+    async.map(stnList,
+        function (stnObj, callback) {
+            self.processGetMidRss(stnObj.code, callback);
+        },
+        function (err, result) {
+            callback(err, result);
+        });
+};
+
+/**
+ * 폐지 예정
+ * @param self
+ * @param callback
+ * @returns {MidRssKmaRequester}
+ */
 MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
     log.input('mainProcess');
 
@@ -281,7 +387,7 @@ MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
 
     async.waterfall([
             function(callback) {
-                self.getMidRss(function (err, body) {
+                self.getMidRss(null, function (err, body) {
                     callback(err, body);
                 });
             },
@@ -291,22 +397,21 @@ MidRssKmaRequester.prototype.mainProcess = function(self, callback) {
                 });
             },
             function(parsedData, callback) {
-                self.integrateMidRss(parsedData, function (err, integratedData) {
+                self.integrateMidRss2(parsedData, function (err, integratedData) {
                     callback(err, integratedData);
                 });
             },
             function(integratedData, callback) {
-                self.saveMidRss(integratedData, function (err, result) {
-                    callback(err, result);
-                });
-                // if(config.db.version == '2.0'){
-                    self.saveMidRssNewForm(integratedData, function (err, result) {
-                        if (err) {
-                            log.error(err);
-                        }
-                        // callback(err, result);
+                if(config.db.version == '1.0'){
+                    self.saveMidRss(integratedData, function (err, result) {
+                        callback(err, result);
                     });
-                // }
+                }
+                else if(config.db.version == '2.0'){
+                    self.saveMidRssNewForm(integratedData, function (err, result) {
+                        callback(err, result);
+                    });
+                }
             }],
         function (err, result) { //pubDate = lastUpdateTime
             if (err) {

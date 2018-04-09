@@ -2,9 +2,7 @@ angular.module('service.weatherinfo', [])
     .factory('WeatherInfo', function (WeatherUtil, TwStorage, Util) {
         var cities = [];
         var cityIndex = -1;
-        var obj = {
-            towns: []
-        };
+        var obj = {};
 
         var createCity = function (item) {
             var city = {};
@@ -254,6 +252,7 @@ angular.module('service.weatherinfo', [])
             }
 
             city.loadTime = new Date();
+            city.photo = WeatherUtil.findWeatherPhoto(city.currentWeather);
 
             that.saveCities();
         };
@@ -295,7 +294,7 @@ angular.module('service.weatherinfo', [])
 
         obj._saveCitiesPreference = function (cities) {
             var pList = {cityList: []};
-            cities.forEach(function (city) {
+            cities.forEach(function (city, index) {
                 if (!city.disable) {
                     var simpleInfo = {};
                     if (city.name) {
@@ -305,6 +304,7 @@ angular.module('service.weatherinfo', [])
                     simpleInfo.address = city.address;
                     simpleInfo.location = city.location;
                     simpleInfo.country = city.country;
+                    simpleInfo.index = index;
                     pList.cityList.push(simpleInfo);
                 }
             });
@@ -325,12 +325,6 @@ angular.module('service.weatherinfo', [])
         obj.saveCities = function() {
             TwStorage.set("cities", cities);
             this._saveCitiesPreference(cities);
-        };
-
-        obj.loadTowns = function() {
-            var that = this;
-
-            that.towns = window.towns;
         };
 
         //endregion
