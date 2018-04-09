@@ -909,5 +909,92 @@ angular.module('service.weatherutil', [])
             return deferred.promise;
         };
 
+        obj.loadWeatherPhotos = function () {
+            var deferred = $q.defer();
+            var url = twClientConfig.weatherPhotosUrl;
+
+            _getHttp(url, 20000).then(
+                function (data) {
+                    window.weatherPhotos = {
+                        lightning: [],
+                        rain: [],
+                        snow: [],
+                        sun_smallcloud: [],
+                        sun_bigcloud: [],
+                        sun: [],
+                        moon_smallcloud: [],
+                        moon_bigcloud: [],
+                        moon: [],
+                        cloud: []
+                    };
+
+                    for (var i = 0; i < data.data.length; i++) {
+                        if (data.data[i].tags.includes("lightning")) {
+                            window.weatherPhotos.lightning.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("rain")) {
+                            window.weatherPhotos.rain.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("snow")) {
+                            window.weatherPhotos.snow.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("sun")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.sun_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.sun_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.sun.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("moon")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.moon_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.moon_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.moon.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("cloud")) {
+                            window.weatherPhotos.cloud.push(data.data[i]);
+                        }
+                    }
+
+                    deferred.resolve();
+                },
+                function (err) {
+                    deferred.reject(err);
+                });
+
+            return deferred.promise;
+        };
+
+        obj.findWeatherPhoto = function (currentWeather) {
+            if (window.weatherPhotos == undefined) {
+                return null;
+            }
+
+            if (currentWeather && currentWeather.skyIcon) {
+                var keys = ['lightning', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
+                    'moon_smallcloud', 'moon_bigcloud', 'moon', 'cloud'];
+                var tag = keys.find(function (key) {
+                    if (currentWeather.skyIcon.indexOf(key) != -1) {
+                        return true;
+                    }
+                });
+
+                var photos = window.weatherPhotos[tag];
+                if (photos && photos.length > 0) {
+                    return photos[Math.floor(Math.random() * (photos.length - 1))].twUrls.regular;
+                }
+            }
+            return null;
+        };
+
         return obj;
     });

@@ -300,5 +300,8 @@
   "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "악천후 경보 기능이 추가 되었습니다!\n날씨 알람을 받고 있는 지역에 대한 경보를 받아보세요.",
   "LOC_AIR_FORECAST_SOURCE" : "예보자료",
   "LOC_KAQ_DESCRIPTION": "대기질 예보자료는 '안양대학교 기후에너지환경융합연구소(약칭: 안양대학교 기후융합연구소, 소장: 환경에너지공학과 구윤서 교수)'에서 제공하는 자료입니다.",
-  "LOC_AIRKOREA_DESCRIPTION": "환경부는 대기오염으로 인한 국민 건강 피해를 최소화 하기 위해 대기오염 농도를 예보하고 있습니다."
+  "LOC_AIRKOREA_DESCRIPTION": "환경부는 대기오염으로 인한 국민 건강 피해를 최소화 하기 위해 대기오염 농도를 예보하고 있습니다.",
+  "LOC_SHOW_WEATHER_PHOTOS": "날씨 사진 표시",
+  "LOC_OFF": "끄기",
+  "LOC_ON": "켜기"
 }

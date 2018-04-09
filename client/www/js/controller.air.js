@@ -2,10 +2,8 @@ angular.module('controller.air', [])
     .controller('AirCtrl', function ($scope, $stateParams, $sce, WeatherInfo, WeatherUtil, Units, Util,
                                      $ionicScrollDelegate, $ionicHistory, Push) {
 
-        var TABLET_WIDTH = 640;
         var cityData;
         var aqiCode;
-        var bodyWidth;
 
         $scope.getLabelPosition = function (grade, val) {
             var w;
@@ -278,7 +276,7 @@ angular.module('controller.air', [])
                             //console.log(JSON.stringify($scope.airChart));
 
                             if (Array.isArray(pollutant.daily)) {
-                                if (bodyWidth < 360) {
+                                if ($scope.bodyWidth < 360) {
                                     $scope.dayForecast = pollutant.daily.slice(0,4);
                                 }
                                 else {
@@ -301,6 +299,7 @@ angular.module('controller.air', [])
 
         function init() {
             $ionicHistory.clearHistory();
+            $scope.initSize();
 
             var fav = parseInt($stateParams.fav);
             if (!isNaN(fav)) {
@@ -327,27 +326,6 @@ angular.module('controller.air', [])
                 return;
             }
 
-            if (window.screen.height) {
-                bodyWidth = window.screen.width;
-            }
-            else if (window.innerHeight) {
-                //crosswalk에서 늦게 올라옴.
-                bodyWidth = window.innerWidth;
-            }
-            else if (window.outerHeight) {
-                //ios에서는 outer가 없음.
-                bodyWidth = window.outerWidth;
-            }
-            else {
-                console.log("Fail to get window width, height");
-                bodyWidth = 360;
-            }
-
-            if (bodyWidth > TABLET_WIDTH) {
-                bodyWidth = TABLET_WIDTH;
-            }
-
-            $scope.headerHeight = bodyWidth*(3/4) - (44+41); //HEADER + BOTTOM/2
             _applyWeatherData();
         }
 

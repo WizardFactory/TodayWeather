@@ -103,6 +103,10 @@
                     {{'LOC_REFRESH_INTERVAL'|translate}}
                     <span style="float: right">{{getRefreshIntervalValueStr(settingsInfo.refreshInterval)|translate}}</span>
                 </label>
+                <label class="item" ng-click="settingRadio('showWeatherPhotos')">
+                    {{'LOC_SHOW_WEATHER_PHOTOS'|translate}}
+                    <span style="float: right">{{getShowWeatherPhotosValueStr(settingsInfo.showWeatherPhotos)|translate}}</span>
+                </label>
                 <label class="item" ng-click="clickMenu('purchase')" ng-if="hasInAppPurchase()">
                     {{'LOC_REMOVE_ADS'|translate}}
                     <i class="icon ion-chevron-right" style="float: right" ng-if="!isAndroid()"></i>
@@ -132,7 +136,7 @@
     </ion-side-menu>
 
     <ion-side-menu-content drag-content="false" ng-class="isMenuOpen() ? 'menu-open' : ''">
-        <ion-nav-bar class="bar-dark bar-hidden"></ion-nav-bar>
+        <ion-nav-bar class="bar-clear"></ion-nav-bar>
         <ion-nav-view></ion-nav-view>
     </ion-side-menu-content>
 

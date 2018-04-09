@@ -1,10 +1,7 @@
 angular.module('controller.forecastctrl', [])
     .controller('ForecastCtrl', function ($scope, WeatherInfo, WeatherUtil, Util, Purchase, $stateParams,
                                           $location, $ionicHistory, $translate, Units, Push) {
-        var TABLET_WIDTH = 640;
         var ASPECT_RATIO_16_9 = 1.7;
-        var bodyWidth;
-        var bodyHeight;
         var colWidth;
 
         $scope.showDetailWeather = false;
@@ -112,7 +109,7 @@ angular.module('controller.forecastctrl', [])
                 if (value.time > 0) {
                     index -= 1;
                 }
-                return $scope.colWidth/2 + index*colWidth;
+                return colWidth/2 + index*colWidth;
             };
         }
 
@@ -139,102 +136,43 @@ angular.module('controller.forecastctrl', [])
         //var smallTimeSize;
         var smallImageSize;
         //var smallDigitSize;
-        var headerRatio = 0.4;
-        var contentRatio = 0.6;
         var showAqi = false;
-
-        /* The height of a toolbar by default in Angular Material */
-        var legacyToolbarH = 58;
-        var startHeight;
         var headerE;
 
         function init() {
             //identifyUser();
             $ionicHistory.clearHistory();
+            $scope.initSize();
 
-            if (window.screen.height) {
-                bodyHeight = window.screen.height;
-                bodyWidth = window.screen.width;
-            }
-            else if (window.innerHeight) {
-                //crosswalk에서 늦게 올라옴.
-                bodyHeight = window.innerHeight;
-                bodyWidth = window.innerWidth;
-            }
-            else if (window.outerHeight) {
-                //ios에서는 outer가 없음.
-                bodyHeight = window.outerHeight;
-                bodyWidth = window.outerWidth;
-            }
-            else {
-                console.log("Fail to get window width, height");
-                bodyHeight = 640;
-                bodyWidth = 360;
-            }
-
-            colWidth = bodyWidth/7;
-            if (colWidth > 60) {
-                colWidth = 60;
-            }
-            $scope.colWidth = colWidth;
-
-            if (bodyWidth >= TABLET_WIDTH && bodyWidth < bodyHeight) {
-                headerRatio = 0.4;
-                contentRatio = 0.6;
-            }
-            else if (bodyHeight >= 730) {
-                //note5, nexus5x, iphone 5+
-                if (ionic.Platform.isIOS()) {
-                    headerRatio = 0.40;
-                    contentRatio = 0.60;
-                }
-                else {
-                    headerRatio = 0.32;
-                    contentRatio = 0.68;
-                }
-            }
-            else {
-                headerRatio = 0.32;
-                contentRatio = 0.68;
-            }
-
-            /* The height of a toolbar by default in Angular Material */
-            legacyToolbarH = 58;
-            startHeight = bodyHeight * headerRatio - 44;
-            headerE         = angular.element(document.querySelector('[md-page-header]'));
-
-            //console.log(headerE);
-            //console.log("startHeight=", startHeight);
-
-            headerE.css('min-height', startHeight+'px');
-            //빠르게 변경될때, header가 disable-user-behavior class가 추가되면서 화면이 올라가는 문제
-            $scope.headerHeight = startHeight;
+            colWidth = Math.min($scope.bodyWidth / 7, 60);
+            headerE = angular.element(document.querySelector('[md-page-header]'));
+            headerE.css('min-height', $scope.headerHeight+'px');
 
             var padding = 1;
             var smallPadding = 1;
 
             //iphone 4 480-20(status bar)
-            if ((bodyHeight === 460 || bodyHeight === 480) && bodyWidth === 320) {
+            if (($scope.bodyHeight === 460 || $scope.bodyHeight === 480) && $scope.bodyWidth === 320) {
                 padding = 1.125;
                 smallPadding = 1.1;
             }
             //iphone 5 568-20(status bar)
-            if ((bodyHeight === 548 || bodyHeight === 568) && bodyWidth === 320) {
+            if (($scope.bodyHeight === 548 || $scope.bodyHeight === 568) && $scope.bodyWidth === 320) {
                 smallPadding = 1.1;
             }
 
-            if (bodyHeight >= 640) {
+            if ($scope.bodyHeight >= 640) {
                 //대부분의 android와 iPhone6부터 aqi보여줌.
                 showAqi = true;
             }
             else if (Purchase.accountLevel != Purchase.ACCOUNT_LEVEL_FREE
-                && bodyHeight / bodyWidth >= ASPECT_RATIO_16_9) {
+                && $scope.bodyHeight / $scope.bodyWidth >= ASPECT_RATIO_16_9) {
                 //free이상의 유저이며, 16:9 이상 비율은 aqi보여줌.
                 showAqi = true;
             }
 
-            var mainHeight = bodyHeight - 100;
-            if (bodyHeight / bodyWidth > 1.8) {
+            var mainHeight = $scope.bodyHeight - 100;
+            if ($scope.bodyHeight / $scope.bodyWidth > 1.8) {
                 mainHeight *= 0.95
             }
 
@@ -470,6 +408,9 @@ angular.module('controller.forecastctrl', [])
                 if (cityData.source) {
                     $scope.source = cityData.source;
                 }
+                if ($scope.settingsInfo.showWeatherPhotos == '1') {
+                    $scope.photo = cityData.photo || 'img/bg.png'; //이전에 저장된 cityData의 경우 photo가 없을 수 있음
+                }
 
                 dayTable = cityData.dayChart[0].values;
 
@@ -496,7 +437,7 @@ angular.module('controller.forecastctrl', [])
                         }).slice(0, 4);
                     }
                     if (cityData.airInfo.pollutants.aqi.daily) {
-                        if (bodyWidth < 360) {
+                        if ($scope.bodyWidth < 360) {
                             $scope.dailyAqiForecast = cityData.airInfo.pollutants.aqi.daily.slice(0,4);
                         }
                         else {
@@ -540,8 +481,6 @@ angular.module('controller.forecastctrl', [])
 
                 // To share weather information for apple watch.
                 // AppleWatch.setWeatherData(cityData);
-
-                var mainHeight = bodyHeight * contentRatio;
                 var padding = 0;
 
                 //의미상으로 배너 여부이므로, TwAds.enabledAds가 맞지만 loading이 느려, account level로 함.
@@ -551,20 +490,20 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 //16:9 이상의 부분은 padding으로 넘겨 여유 공간으로 사용함
-                if (bodyHeight > 0 && bodyWidth > 0) {
-                    if (bodyHeight / bodyWidth >= 2) {
-                        padding += parseInt((bodyHeight - (bodyWidth * 1.77)) / 2);
+                if ($scope.bodyHeight > 0 && $scope.bodyWidth > 0) {
+                    if ($scope.bodyHeight / $scope.bodyWidth >= 2) {
+                        padding += parseInt(($scope.bodyHeight - ($scope.bodyWidth * 1.77)) / 2);
                     }
                 }
 
-                if (bodyHeight === 480) {
+                if ($scope.bodyHeight === 480) {
                     //iphone4
                     padding -= 32;
                 }
                 else if (ionic.Platform.isAndroid()) {
                     //status bar
                     padding += 24;
-                    if (bodyHeight <= 512) {
+                    if ($scope.bodyHeight <= 512) {
                         //view2 4:3
                         padding -= 32;
                     }
@@ -575,11 +514,11 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 if ($scope.forecastType == 'short') {
-                    var chartShortHeight = mainHeight - (143 + padding);
+                    var chartShortHeight = $scope.mainHeight - (143 + padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                 }
                 else {
-                    var chartMidHeight = mainHeight - (136 + padding);
+                    var chartMidHeight = $scope.mainHeight - (136 + padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                 }
 
@@ -634,7 +573,7 @@ angular.module('controller.forecastctrl', [])
                     return 0;
                 }
 
-                if ($scope.timeChart[1].length*colWidth < TABLET_WIDTH) {
+                if ($scope.timeChart[1].length*colWidth < $scope.tabletWidth) {
                     return 0;
                 }
 
@@ -650,9 +589,8 @@ angular.module('controller.forecastctrl', [])
                 return colWidth*index;
             }
             else if ($scope.forecastType === 'mid') {
-
                 //large tablet
-                if (bodyWidth >= TABLET_WIDTH) {
+                if ($scope.bodyWidth >= $scope.tabletWidth) {
                     return 0;
                 }
                 var dayTable = $scope.dayChart[0].values;

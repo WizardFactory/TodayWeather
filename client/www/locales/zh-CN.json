@@ -300,5 +300,8 @@
   "LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION": "添加了恶劣天气预警功能！\n您将收到有天气通知地区的预警。",
   "LOC_AIR_FORECAST_SOURCE" : "预测材料",
   "LOC_KAQ_DESCRIPTION": "Atmospheric quality forecasting data is provided by Anyang University Climate Energy Environment Convergence Research Institute (abbreviated name: Anyang University, Climate Convergence Research Institute, Director: Professor of Environmental Energy Engineering)",
-  "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution."
+  "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution.",
+  "LOC_SHOW_WEATHER_PHOTOS": "Show weather photos",
+  "LOC_OFF": "Off",
+  "LOC_ON": "On"
 }
