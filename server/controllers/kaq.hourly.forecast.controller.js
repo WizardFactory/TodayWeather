@@ -281,10 +281,12 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
      */
     _getForecastByModelList(stationName, mapCaseList) {
         let forecastList;
+        let date = new Date();
+        date = date.setDate(date.getDate()-1);
         return new Promise((resolve, reject) => {
             async.someSeries(mapCaseList,
                 (mapCase, callback) => {
-                    let query = {stationName: stationName, mapCase: mapCase, date: {$gt: new Date()}};
+                    let query = {stationName: stationName, mapCase: mapCase, date: {$gt: date}};
                     // let query = {stationName: stationName, mapCase: mapCase};
                     this.collection.find(query)
                         .lean()
