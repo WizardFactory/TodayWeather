@@ -384,6 +384,7 @@ static TodayViewController *todayVC = nil;
         //cityData.location = {"lat": coords.latitude, "long": coords.longitude};
         [mCityList addObject:city];
         [mCityDictList addObject:cityDict];
+        NSLog(@"cityDict : %@", cityDict);
     }
     
     [self loadWeatherData:(unsigned int)[mCityDictList count]];
@@ -449,16 +450,18 @@ static TodayViewController *todayVC = nil;
 //    NSLog(@"[loadWeatherData] nssWeatherList: %@", nssWeatherList);
     tmpDataWD = [nssWeatherList dataUsingEncoding:NSUTF8StringEncoding];
     if(tmpDataWD)
+    {
         jsonDictWD = [NSJSONSerialization JSONObjectWithData:(NSData*)tmpDataWD options:0 error:&errorWD];
+    }
     
-    // Too many data causes crash, just use debug	
+    // Too many data causes crash, just use debug
     //NSLog(@"User Default WD: %@", jsonDictWD);
     
     mWeatherDataList    = [NSMutableArray array];
     
     for (NSDictionary *weatherDict in jsonDictWD[@"weatherDataList"]) {
         
-        //NSLog(@"[loadWeatherData] nsnIdx : %@, weatherDict : %@", nsnIdx, weatherDict);
+        //NSLog(@"[loadWeatherData] weatherDict : %@", weatherDict);
     	[mWeatherDataList addObject:weatherDict];
     }
     
@@ -477,7 +480,8 @@ static TodayViewController *todayVC = nil;
             [mWeatherDataList addObject:nsdTmpDict];
         }
     }
-    // Too many data causes crash, just use debug
+    
+    // Too many data causes crash
     //NSLog(@"[loadWeatherData] mWeatherDataList : %@", mWeatherDataList);
 }
 
@@ -558,6 +562,16 @@ static TodayViewController *todayVC = nil;
     [sharedUserDefaults synchronize];
     
     //NSLog(@"nssWeatherList : %@", nssWeatherList);
+    
+    // Update location info for current posiotion exception or request by coord.
+    NSDictionary *nsdLocation = [dict objectForKey:@"location"];
+    // FIXME : TEST
+//    NSDictionary *nsdLocation = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+//                                 [NSNumber numberWithFloat:11.11], @"lat",
+//                                 [NSNumber numberWithFloat:22.22 ], @"long",
+//                                 nil];
+    NSLog(@"[saveWeatherInfo] nsdLocaton : %@", nsdLocation);
+    [self updateCurLocation:nsdLocation];
 }
 
 /********************************************************************
@@ -605,7 +619,11 @@ static TodayViewController *todayVC = nil;
  ********************************************************************/
 - (void) updateCurLocation:(NSDictionary *)nsdLocation
 {
+    NSUserDefaults *sharedUserDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"group.net.wizardfactory.todayweather"];
+    NSError *error = nil;
+    
     NSMutableDictionary* nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
+    //NSLog(@"[updateCurLocation] before nsdCurCity : %@", nsdCurCity);
     
     NSNumber    *nsnIdx                 = [NSNumber numberWithInteger:mCurrentCityIdx];
     NSString    *nssAddress             = [nsdCurCity objectForKey:@"address"];
@@ -620,8 +638,35 @@ static TodayViewController *todayVC = nil;
                                        nsdLocation, @"location",
                                        nssName, @"name",
                                        nil];
-    
     [mCityDictList setObject:nsdTmpDict atIndexedSubscript:mCurrentCityIdx];
+    
+    CityInfo *city = [[CityInfo alloc] init];
+    city.currentPosition = [nsdTmpDict[@"currentPosition"] boolValue];
+    city.address = nsdTmpDict[@"address"];
+    city.name = nsdTmpDict[@"name"];
+    city.index = [nsdTmpDict[@"index"] intValue];
+    city.country = nsdTmpDict[@"country"];
+    city.location = nsdTmpDict[@"location"];
+    [mCityList setObject:city atIndexedSubscript:mCurrentCityIdx];
+    
+    //nsdCurCity = [mCityDictList objectAtIndex:mCurrentCityIdx];
+    //NSLog(@"[updateCurLocation] after nsdCurCity : %@", nsdCurCity);
+    
+    NSMutableDictionary* nsdCityListsDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                             mCityDictList, @"cityList",
+                                             nil];
+    
+    NSData *nsdCityList = [NSJSONSerialization dataWithJSONObject:nsdCityListsDict options:0 error:&error];
+    
+    NSString* nssCityList = [[NSString alloc] initWithData:nsdCityList encoding:NSUTF8StringEncoding];
+    if(nssCityList == nil)
+    {
+        NSLog(@"nssCityList is null!!!");
+        return;
+    }
+    
+    [sharedUserDefaults setObject:nssCityList forKey:@"cityList"];
+    [sharedUserDefaults synchronize];
 }
 
 /********************************************************************
@@ -1084,8 +1129,8 @@ static TodayViewController *todayVC = nil;
     else if (type == TYPE_REQUEST_WEATHER_BY_COORD
              || type == TYPE_REQUEST_WEATHER_KR)
     {
-        [self saveWeatherInfo:jsonDict];
         [self processWeatherResultsByCoord:jsonDict];
+        [self saveWeatherInfo:jsonDict];
         [self processRequestIndicator:TRUE];
     }
     
@@ -2229,7 +2274,7 @@ static TodayViewController *todayVC = nil;
     // idx가 count보다 높은 경우는 return함. mWeatherDataList가 null일때도 리턴함. 근본 원인을 밝혀야함
     NSMutableDictionary *nsdWeatherInfo    = [mWeatherDataList objectAtIndex:idx];
     NSMutableDictionary *nsdWeatherData    = [nsdWeatherInfo objectForKey:@"weatherData"];
-    NSLog(@"nsdWeatherData : %@", nsdWeatherData);
+    //NSLog(@"nsdWeatherData : %@", nsdWeatherData);
     if( (nsdWeatherData == nil) || ([nsdWeatherData isEqual:@""]) )
     {
         NSLog(@"nsdWeatherData is NULL!!!");
