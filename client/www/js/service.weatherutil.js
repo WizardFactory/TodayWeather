@@ -911,7 +911,7 @@ angular.module('service.weatherutil', [])
 
         obj.loadWeatherPhotos = function () {
             var deferred = $q.defer();
-            var url = twClientConfig.weatherPhotosUrl;
+            var url = clientConfig.weatherPhotosUrl;
 
             _getHttp(url, 20000).then(
                 function (data) {
