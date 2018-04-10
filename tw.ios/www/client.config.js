@@ -22,5 +22,5 @@ window.clientConfig = {
     isPaidApp : false,
     debug : true,
     googleapikey : '',
-    package : 'todayAir'
+    package : 'todayWeather'
 };
