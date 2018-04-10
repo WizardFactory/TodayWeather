@@ -293,6 +293,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
         let forecastList;
         let date = new Date();
         date = date.setDate(date.getDate()-1);
+        log.info(`get air forecast stationName=${stationName}, mapCase=${mapCaseList}`);
         return new Promise((resolve, reject) => {
             async.someSeries(mapCaseList,
                 (mapCase, callback) => {
