@@ -22,5 +22,6 @@ window.clientConfig = {
     isPaidApp : false,
     debug : true,
     googleapikey : '',
+    weatherPhotosUrl : '',
     package : 'todayAir'
 };
