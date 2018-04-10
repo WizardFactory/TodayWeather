@@ -146,7 +146,7 @@ angular.module('service.push', [])
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
                 source: pushInfo.source,           //KMA or DSF, ...
-                units: Units.getAllUnits(),
+                units: units,
                 timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
             };
 
@@ -165,6 +165,7 @@ angular.module('service.push', [])
                     postObj.airAlertsBreakPoint = 4;
                 }
             }
+            console.log({postObj: postObj});
             return postObj;
         };
 
