@@ -352,11 +352,17 @@ ControllerPush.prototype._makeKmaPushMessage = function (pushInfo, weatherInfo) 
     var dailySummary = "";
     var current = weatherInfo.current;
 
-    var time = current.time;
+    var time;
     var theDay;
     var today;
     var preDay;
     var fromToday = 0;
+    if (current.dateObj) {
+        time =  new Date(current.dateObj).getHours();
+    }
+    else if (current.time) {
+        time = current.time;
+    }
 
     today = weatherInfo.midData.dailyData.find(function (dayInfo) {
         if (dayInfo.fromToday === 0) {
