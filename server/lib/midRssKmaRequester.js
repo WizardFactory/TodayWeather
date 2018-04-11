@@ -350,7 +350,7 @@ MidRssKmaRequester.prototype.processGetMidRss = function (stnId, callback) {
                 log.info("succeed getting MID RSS KMA "+result);
                 self.setNextGetTime();
             }
-            callback(self, err);
+            callback(err);
         });
 
     return this;
