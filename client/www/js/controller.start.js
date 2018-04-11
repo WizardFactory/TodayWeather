@@ -193,6 +193,13 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     function init() {
         _setShowAds(false);
         _makeFavoriteList();
+
+        if (clientConfig.package === 'todayWeather') {
+            $scope.imgAppIcon = 'img/app_icon.png';
+        }
+        else if (clientConfig.package === 'todayAir') {
+            $scope.imgAppIcon = 'img/ta_app_icon.png';
+        }
     }
 
     $scope.OnSelectResult = function(result) {

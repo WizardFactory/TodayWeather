@@ -1,6 +1,6 @@
 angular.module('controller.air', [])
     .controller('AirCtrl', function ($scope, $stateParams, $sce, WeatherInfo, WeatherUtil, Units, Util,
-                                     $ionicScrollDelegate, $ionicHistory, Push) {
+                                     $ionicScrollDelegate, $ionicHistory, Push, $location) {
 
         var cityData;
         var aqiCode;
@@ -66,6 +66,10 @@ angular.module('controller.air', [])
                     return '';
             }
             return "";
+        };
+
+        $scope.goWeather = function () {
+            $location.path('/tab/forecast');
         };
 
         function _getDustForecast(dayWeatherList) {
@@ -197,6 +201,8 @@ angular.module('controller.air', [])
                     });
                     _setMainAqiCode(newAqiCode);
                 }
+
+                $scope.currentWeather = cityData.currentWeather;
 
                 $scope.hasPush = Push.hasPushInfo(cityIndex);
                 $scope.currentPosition = cityData.currentPosition;

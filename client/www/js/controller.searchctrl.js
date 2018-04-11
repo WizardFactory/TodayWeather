@@ -1,7 +1,7 @@
 angular.module('controller.searchctrl', [])
     .controller('SearchCtrl', function ($scope, $rootScope, $ionicScrollDelegate, TwAds, $q, $ionicHistory,
                                         $location, WeatherInfo, WeatherUtil, Util, ionicTimePicker, Push, $ionicLoading,
-                                        $translate, $ocLazyLoad) {
+                                        $translate, $ocLazyLoad, TwStorage) {
         $scope.search = {};
         $scope.searchResults = [];
         $scope.searchResults2 = [];
@@ -473,7 +473,30 @@ angular.module('controller.searchctrl', [])
             }
 
             WeatherInfo.setCityIndex(index);
-            $location.path('/tab/forecast');
+
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            if (startupPage === "1") { //일별날씨
+                $location.path('/tab/dailyforecast');
+            }
+            else if (startupPage === "3") { //대기정보
+                $location.path('/tab/air');
+            }
+            else { //시간별날씨
+                if (clientConfig.package === 'todayWeather') {
+                    $location.path('/tab/forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $location.path('/tab/air');
+                }
+                else {
+                    $location.path('/tab/forecast');
+                }
+            }
         };
 
         function updateCurrentPositionWeather() {

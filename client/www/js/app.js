@@ -342,7 +342,12 @@ angular.module('starter', [
             } else if (startupPage === "3") { //미세먼지
                 $state.go('tab.air');
             } else { //시간별날씨
-                $state.go('tab.forecast');
+                if (clientConfig.package === 'todayWeather') {
+                    $state.go('tab.forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $state.go('tab.air');
+                }
             }
 
             function showUpdateInfo(triggerTime) {
@@ -1637,10 +1642,15 @@ angular.module('starter', [
                 url: '/tab',
                 abstract: true,
                 templateUrl: function () {
-                    if (ionic.Platform.isAndroid()) {
-                        return  'templates/tabs-android.html';
+                    if (clientConfig.package === 'todayWeather') {
+                        if (ionic.Platform.isAndroid()) {
+                            return  'templates/tabs-android.html';
+                        }
+                        return 'templates/tabs.html';
                     }
-                    return 'templates/tabs.html';
+                    else if (clientConfig.package === 'todayAir') {
+                        return 'templates/ta-tabs.html';
+                    }
                 },
                 controller: 'TabCtrl'
             })
@@ -1656,26 +1666,6 @@ angular.module('starter', [
                     }
                 }
             })
-            .state('tab.forecast', {
-                url: '/forecast?fav',
-                cache: false,
-                views: {
-                    'tab-forecast': {
-                        templateUrl: 'templates/tab-forecast.html',
-                        controller: 'ForecastCtrl'
-                    }
-                }
-            })
-            .state('tab.dailyforecast', {
-                url: '/dailyforecast?fav',
-                cache: false,
-                views: {
-                    'tab-dailyforecast': {
-                        templateUrl: 'templates/tab-dailyforecast.html',
-                        controller: 'ForecastCtrl'
-                    }
-                }
-            })
             .state('tab.air', {
                 url: '/air?fav&code',
                 cache: false,
@@ -1686,6 +1676,43 @@ angular.module('starter', [
                     }
                 }
             });
+
+        if (clientConfig.package === 'todayWeather') {
+          $stateProvider
+            .state('tab.forecast', {
+              url: '/forecast?fav',
+              cache: false,
+              views: {
+                'tab-forecast': {
+                  templateUrl: 'templates/tab-forecast.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            })
+            .state('tab.dailyforecast', {
+              url: '/dailyforecast?fav',
+              cache: false,
+              views: {
+                'tab-dailyforecast': {
+                  templateUrl: 'templates/tab-dailyforecast.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            });
+        }
+        else if (clientConfig.package === 'todayAir') {
+          $stateProvider
+            .state('tab.forecast', {
+              url: '/forecast?fav',
+              cache: false,
+              views: {
+                'tab-forecast': {
+                  templateUrl: 'templates/ta-tab-weather.html',
+                  controller: 'ForecastCtrl'
+                }
+              }
+            });
+        }
 
         $ionicConfigProvider.tabs.style('standard');
         $ionicConfigProvider.tabs.position('bottom');

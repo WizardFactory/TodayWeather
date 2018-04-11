@@ -467,6 +467,13 @@ angular.module('controller.purchase', [])
             }
 
             $scope.listWidth = window.innerWidth;
+
+            if (clientConfig.package === 'todayWeather') {
+                $scope.imgAppIcon = 'img/app_icon.png';
+            }
+            else if (clientConfig.package === 'todayAir') {
+                $scope.imgAppIcon = 'img/ta_app_icon.png';
+            }
         }
 
         init();

@@ -1,0 +1,18 @@
+<ion-tabs class="tabs-icon-top">
+
+    <!-- Search Tab -->
+    <ion-tab  title="{{'LOC_SAVED_LOCATIONS'|translate}}" icon-off="ion-ios-star-outline" icon-on="ion-ios-star" href="#/tab/search">
+        <ion-nav-view name="tab-search"></ion-nav-view>
+    </ion-tab>
+
+    <!-- Air tab-->
+    <ion-tab title="{{'LOC_AIR_INFORMATION'|translate}}" icon-off="ion-ios-cloud-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('air')">
+        <ion-nav-view name="tab-air"></ion-nav-view>
+    </ion-tab>
+
+    <!-- Weather Tab -->
+    <ion-tab title="{{'LOC_WEATHER'|translate}}" icon-off="ion-ios-sunny-outline" icon-on="ion-ios-reload" ng-click="doTabForecast('forecast')">
+        <ion-nav-view name="tab-forecast"></ion-nav-view>
+    </ion-tab>
+
+</ion-tabs>

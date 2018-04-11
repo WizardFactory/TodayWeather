@@ -8,11 +8,14 @@ angular.module('controller.forecastctrl', [])
         if ($location.path() === '/tab/dailyforecast') {
             $scope.forecastType = "mid"; //mid, detail(aqi)
         }
+        else if (clientConfig.package === 'todayAir') {
+          $scope.forecastType = "all"; //mid, detail(aqi)
+        }
         else {
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        if ($scope.forecastType == 'mid') {
+        if ($scope.forecastType === 'mid' || $scope.forecastType === 'all' ) {
             $scope.hasDustForecast = function () {
                 if ($scope.dailyAqiForecast) {
                     return true;
@@ -81,7 +84,7 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
-        if ($scope.forecastType == 'short') {
+        if ($scope.forecastType === 'short' || $scope.forecastType === 'all') {
             var preDayInHourlyTable;
             $scope.isNextDay = function(weatherData, index) {
                 if (weatherData.time == 24 && index == 0) {
@@ -513,11 +516,11 @@ angular.module('controller.forecastctrl', [])
                     padding += 36;
                 }
 
-                if ($scope.forecastType == 'short') {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'all' ) {
                     var chartShortHeight = $scope.mainHeight - (143 + padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                 }
-                else {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'all' ) {
                     var chartMidHeight = $scope.mainHeight - (136 + padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                 }
@@ -537,11 +540,11 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-                if ($scope.forecastType == 'short') {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'all') {
                     $scope.timeTable = cityData.timeTable;
                     $scope.timeChart = cityData.timeChart;
                 }
-                else {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'all') {
                     $scope.dayChart = cityData.dayChart;
                 }
             }
@@ -553,9 +556,17 @@ angular.module('controller.forecastctrl', [])
 
             //많은 이슈가 있음. https://github.com/WizardFactory/TodayWeather/issues/1777
             setTimeout(function () {
-                var el = document.getElementById('chartScroll');
+                var el = document.getElementById('chartShortScroll');
                 if (el) {
-                    el.scrollLeft = getTodayPosition();
+                    el.scrollLeft = getTodayPosition('short');
+                }
+                else {
+                    console.error('chart scroll is null');
+                }
+
+                var el = document.getElementById('chartMidScroll');
+                if (el) {
+                    el.scrollLeft = getTodayPosition('mid');
                 }
                 else {
                     console.error('chart scroll is null');
@@ -563,11 +574,11 @@ angular.module('controller.forecastctrl', [])
             }, 300);
         }
 
-        function getTodayPosition() {
+        function getTodayPosition(chartType) {
             var index = 0;
             var i;
 
-            if ($scope.forecastType === 'short') {
+            if (chartType === 'short') {
                 if ($scope.timeChart == undefined || $scope.timeChart.length <= 1) {
                     console.log("time chart is undefined");
                     return 0;
@@ -588,7 +599,7 @@ angular.module('controller.forecastctrl', [])
 
                 return colWidth*index;
             }
-            else if ($scope.forecastType === 'mid') {
+            else if (chartType === 'mid') {
                 //large tablet
                 if ($scope.bodyWidth >= $scope.tabletWidth) {
                     return 0;
