@@ -2918,7 +2918,7 @@ function ControllerTown() {
         }
 
         if (req.airInfoList) {
-            req.arpltnList.forEach(function (airInfo) {
+            req.airInfoList.forEach(function (airInfo) {
                 self._insertAirInfoStr(airInfo, airUnit, res) ;
             });
         }
