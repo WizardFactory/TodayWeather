@@ -97,7 +97,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithLocation (location, funcName) {
             var url = clientConfig.serverUrl;
-            url += '/'+funcName+'/v000902'+'/coord/'+ location.lat + ','+location.long;
+            url += '/'+funcName+'/v000903'+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -113,7 +113,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithAddr (addr, funcName) {
             var url = clientConfig.serverUrl;
-            url += '/'+funcName+'/v000902'+'/addr/'+ addr;
+            url += '/'+funcName+'/v000903'+'/addr/'+ addr;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
             }
@@ -128,7 +128,7 @@ angular.module('service.weatherutil', [])
          */
         function _makeQueryUrlWithTown (town) {
             var url = clientConfig.serverUrl;
-            url += '/v000902/kma/addr';
+            url += '/v000903/kma/addr';
             if (town.first !== '') {
                 url += '/' + town.first;
             }
@@ -459,6 +459,9 @@ angular.module('service.weatherutil', [])
                 if (weatherData.airInfo) {
                     data.airInfo = weatherData.airInfo;
                 }
+                if (weatherData.airInfoList) {
+                    data.airInfoList = weatherData.airInfoList;
+                }
                 data.source = "KMA";
             }
             catch (err) {
@@ -619,6 +622,9 @@ angular.module('service.weatherutil', [])
 
                 if (weatherData.airInfo) {
                     data.airInfo = weatherData.airInfo;
+                }
+                if (weatherData.airInfoList) {
+                    data.airInfoList = weatherData.airInfoList;
                 }
             }
             catch (err) {
@@ -890,7 +896,7 @@ angular.module('service.weatherutil', [])
             var url;
             try{
                 url = clientConfig.serverUrl;
-                url += '/v000902/nation/'+nationCode;
+                url += '/v000903/nation/'+nationCode;
                 url += _getUnitsParams();
             }
             catch(err) {

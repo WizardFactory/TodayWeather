@@ -64,6 +64,32 @@ angular.module('controller.searchctrl', [])
             });
         };
 
+        function goPage() {
+            var startupPage;
+            var settingsInfo = TwStorage.get("settingsInfo");
+            if (settingsInfo !== null) {
+                startupPage = settingsInfo.startupPage;
+            }
+
+            if (startupPage === "1") { //일별날씨
+                $location.path('/tab/dailyforecast');
+            }
+            else if (startupPage === "3") { //대기정보
+                $location.path('/tab/air');
+            }
+            else { //시간별날씨
+                if (clientConfig.package === 'todayWeather') {
+                    $location.path('/tab/forecast');
+                }
+                else if (clientConfig.package === 'todayAir') {
+                    $location.path('/tab/air');
+                }
+                else {
+                    $location.path('/tab/forecast');
+                }
+            }
+        }
+
         function init() {
             $ionicHistory.clearHistory();
 
@@ -368,7 +394,7 @@ angular.module('controller.searchctrl', [])
                         Util.ga.trackEvent('city', 'add', address, WeatherInfo.getCityCount() - 1);
 
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                     $ionicLoading.hide();
                 }, function (error) {
@@ -426,7 +452,7 @@ angular.module('controller.searchctrl', [])
                             else {
                                 Util.ga.trackEvent('city', 'add', result.description, WeatherInfo.getCityCount() - 1);
                                 WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                                $location.path('/tab/forecast');
+                                goPage();
                             }
                             $ionicLoading.hide();
                         }, function (err) {
@@ -450,7 +476,7 @@ angular.module('controller.searchctrl', [])
                     else {
                         Util.ga.trackEvent('city', 'add', geoInfo.address, WeatherInfo.getCityCount() - 1);
                         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-                        $location.path('/tab/forecast');
+                        goPage();
                     }
                 }, function (err) {
                     Util.ga.trackEvent('weather', 'error', err);

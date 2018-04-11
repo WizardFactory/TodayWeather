@@ -127,11 +127,19 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
     };
 
     function close() {
-
         TwStorage.set("startVersion", Util.startVersion);
         _setShowAds(true);
         WeatherInfo.setCityIndex(WeatherInfo.getCityCount() - 1);
-        $location.path('/tab/forecast');
+
+        if (clientConfig.package === 'todayWeather') {
+            $location.path('/tab/forecast');
+        }
+        else if (clientConfig.package === 'todayAir') {
+            $location.path('/tab/air');
+        }
+        else {
+            $location.path('/tab/forecast');
+        }
     }
 
     function _makeFavoriteList() {
