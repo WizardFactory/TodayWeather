@@ -43,14 +43,14 @@ describe('e2e local test - controller push', function() {
 
     var pushInfo2 = { "id":2, "cityIndex" : 2,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
-        "town" : { "first" : "대전광역시", "second" : "서구", "third" : "정림동" },
+        "town" : { "first" : "대구광역시", "second" : "달서구", "third" : "송현1동" },
         "pushTime" : 82800,
         "enable" : true,
         "category" : "alarm",
         "type" : "ios", "source" : "KMA", "lang" : "ko",
         "units" : { "temperatureUnit" : "C", "windSpeedUnit" : "m/s",
-            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm" },
-        "name" : "정림동2", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
+            "pressureUnit" : "hPa", "distanceUnit" : "km", "precipitationUnit" : "mm", "airForecastSource" : "kaq"},
+        "name" : "송현1동", "dayOfWeek":[false, true, false, true, false, true, false], "timezoneOffset":-540};
 
     var pushInfo3 = { "id":3, "cityIndex" : 2,
         "registrationId" : "3c9b9e4f199b94bbf6a5253860c09a33f2dcabcdb097ec6d3f9a7ab44dba013f",
