@@ -48,6 +48,28 @@ describe('e2e test - kaq hourly forecast controller', function() {
     it('test kaq hourly forecast do', function (done) {
         this.timeout(20*60*1000);
         let ctrl = new KaqHourlyForecastController();
+        ctrl._getModelImgList(new Date(), err=> {
+            if (err) {
+                console.error(err);
+            }
+            done();
+        });
+    });
+
+    it('test kaq hourly forecast do', function (done) {
+        this.timeout(20*60*1000);
+        let ctrl = new KaqHourlyForecastController();
+        ctrl._existAllModelimg([{folderName: '2018-04-09 21:00:00(KST)/'}], err=> {
+            if (err) {
+                console.error(err);
+            }
+            done();
+        });
+    });
+
+    it('test kaq hourly forecast do', function (done) {
+        this.timeout(20*60*1000);
+        let ctrl = new KaqHourlyForecastController();
         ctrl.do(new Date(), err=> {
             if (err) {
                 console.error(err);

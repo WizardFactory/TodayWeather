@@ -92,7 +92,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                         imgPaths[value] = this.s3Url+folderName+mapCase+'.'+name+'.09KM.animation.gif';
                     });
                     imgPaths.pubDate = this._getPubdate(folderName.slice(0, folderName.length-6));
-                    modelImgList.push({mapCase: mapCase, imgPaths: imgPaths});
+                    modelImgList.push({mapCase: mapCase, imgPaths: imgPaths, folderName: folderName});
                 });
 
                 callback(null, modelImgList);
@@ -225,6 +225,7 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
      * @private
      */
     _updateModelImgList(modelImgList, callback) {
+        log.info(`modelImgList:${modelImgList}`);
         async.mapSeries(modelImgList,
             (modelImg, callback)=> {
                 this.mapCase = modelImg.mapCase;
@@ -249,6 +250,28 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
             callback);
     }
 
+    _existAllModelimg(modelImgList, callback) {
+        let folderName = modelImgList[0].folderName;
+        this.s3.ls(folderName)
+            .then(results => {
+                let list = results.Contents.filter(obj => {
+                    return obj.Key.indexOf('PM2_5.09KM') > 0;
+                });
+
+                if (list.length < 4) {
+                    throw new Error('It is not get all modelimg yet');
+                }
+                else if (list.length > 4) {
+                    throw new Error('Maybe found new modelimg!!!');
+                }
+                callback(null, modelImgList);
+            })
+            .catch(err => {
+                log.error(err);
+                callback(err);
+            });
+    }
+
     /**
      *
      * @param {Date} dataTime
@@ -262,6 +285,9 @@ class KaqHourlyForecastController extends ImgHourlyForecastController {
                 },
                 callback => {
                     this._getModelImgList(dataTime, callback);
+                },
+                (modelImgList, callback) => {
+                    this._existAllModelimg(modelImgList, callback);
                 },
                 (modelImgList, callback) => {
                     this._updateModelImgList(modelImgList, callback);
