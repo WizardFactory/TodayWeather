@@ -20,6 +20,9 @@ var aqiConverter = require('../../lib/aqi.converter');
 var commandList = ['restart', 'renewGeocodeList'];
 var weatherCategory = ['forecast', 'current'];
 
+var conCollector = require('./controllerCollector');
+var controllerAqi = require('./controllerAqi');
+
 var itemWuCurrent = ['date', 'desc', 'code', 'tmmp', 'ftemp', 'humid', 'windspd', 'winddir', 'cloud', 'vis', 'slp', 'dewpoint'];
 var itemWuForecastSummary =[
     'date',
@@ -312,9 +315,9 @@ function controllerWorldWeather() {
      * @param sDate
      * @returns {boolean}
      */
-    self.checkValidDate = function(cDate, sDate){
+    self.checkValidDate = function(cDate, sDate, mins){
         // If the time difference is over 15 minutes, it's not valid date.
-        if(cDate.getTime() > sDate.setMinutes(sDate.getMinutes() + 15)){
+        if(cDate.getTime() > sDate.setMinutes(sDate.getMinutes() + mins)){
             return false;
         }
 
@@ -336,6 +339,14 @@ function controllerWorldWeather() {
             return true;
         }
         return false;
+    };
+
+    self._compareDate = function(firstStr, secondStr, diff){
+        var fDate = new Date(firstStr);
+        var sDate = new Date(secondStr);
+        var diffTime = fDate.getTime() - sDate.getTime();
+        var diffHour  = diffTime/(1000*60*60);
+        return diffHour <= diff;
     };
 
     /**
@@ -391,6 +402,203 @@ function controllerWorldWeather() {
         }
 
         return false;
+    };
+
+    /**
+     * get data from db -> dsf api
+     * @param req
+     * @param cDate
+     * @param callback
+     * @private
+     */
+    self._getDarkSkyFromAll = function(req, cDate, callback) {
+        var meta= {};
+        meta.method = 'getDarkSkyFromAll';
+        meta.sID = req.sessionID;
+
+        async.waterfall([
+                function(callback) {
+                    self.getDataFromDSF(req, function(err) {
+                        if (err) {
+                            log.warn('TWW> 1. Fail to get DSF data', err, meta);
+                            callback(null, 'err_exit_DSF');
+                            return;
+                        }
+
+                        if (req.DSF === undefined) {
+                            log.warn('TWW> There is no DSF data', meta);
+                            callback(null, 'err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('cDate : ', cDate.toString());
+                        log.info('DSF DB Date : ', req.DSF.dateObj.toString());
+
+                        //업데이트 시간이 15분을 넘어가면 어제,오늘,예보 갱신.
+                        if (!self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
+                            log.info('TWW> Invaild DSF data', meta);
+                            log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
+                            callback(null, 'err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('TWW> get DSF data', meta);
+                        callback(null, null);
+                    });
+                },
+                function(errMsg, callback) {
+                    if (errMsg == undefined) {
+                       return callback(null);
+                    }
+                    var collector = new conCollector;
+                    collector.requestDsfData(req.geocode, 0, 2, function(err, dsfData, timeoffset) {
+                        if (err) {
+                            log.error('RQ> Fail to requestDsfData', meta);
+                            callback('Fail to requestDsfData');
+                            return;
+                        }
+
+                        if (req.hasOwnProperty('result') === false) {
+                            req.result = {};
+                        }
+                        if (req.result.hasOwnProperty('timezone') === false) {
+                            req.result.timezone = {};
+                        }
+                        // timezone Id
+                        if (dsfData.address.hasOwnProperty('country')) {
+                            req.result.timezone.timezoneId = dsfData.address.country;
+                        }
+
+                        // timezone offset
+                        if (timeoffset != undefined) {
+                            req.result.timezone.min = timeoffset;
+                            req.result.timezone.ms = timeoffset * 60 * 1000;
+                        }
+                        else {
+                            log.error('RQ> No Timeoffset in DSF data!!, ', req.geocode);
+                        }
+
+                        req.DSF = dsfData;
+                        //log.info('==> DSF RESULT:', JSON.stringify(dsfData));
+
+                        callback(null);
+                    });
+                }
+            ],
+            function(err) {
+                callback(err);
+            });
+    };
+
+    /**
+     * get data from db -> waqi api
+     * @param req
+     * @param cDate
+     * @param callback
+     */
+    self._getWaqiFromAll = function(req, cDate, callback) {
+        var meta= {};
+        meta.method = 'getWaqiFromAll';
+        meta.sID = req.sessionID;
+
+        async.waterfall([
+                function (callback) {
+                    self.getDataFromAQI(req, function(err) {
+                        if (err) {
+                            log.warn('TWW> Fail to get AQI data', err, meta);
+                            callback(null, 'err_exit_AQI');
+                            return;
+                        }
+
+                        if (req.AQI === undefined) {
+                            log.warn('TWW> There is no AQI data', meta);
+                            callback(null, 'err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('cDate : ', cDate.toString());
+                        log.info('AQI DB Date : ', req.AQI.dateObj.toString());
+
+                        //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
+                        if (!self.checkValidDate(cDate, req.AQI.dateObj, 60)) {
+                            log.info('TWW> Invaild AQI data', meta);
+                            log.info('TWW> AQI CurDate : ', cDate.toString(), meta);
+                            log.info('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
+                            callback(null, 'err_exit_notValid');
+                            return;
+                        }
+
+                        log.info('TWW> get AQI data', meta);
+                        callback(null, null);
+                    });
+                },
+                function (errMsg, callback) {
+                    if (errMsg == undefined) {
+                        return callback();
+                    }
+                    var collectorAqi = new controllerAqi;
+
+                    collectorAqi.requestAqiData(req.geocode, 0, 0, req.timezone, function(err, aqiData){
+                        if(err){
+                            log.error('RQ> Fail to requestAqiData', meta);
+                            return callback('Fail to requestAqiData');
+                        }
+
+                        req.AQI = aqiData;
+                        //log.info('RQ> AQI result : ', aqiData);
+                        callback(null);
+                    });
+                }
+            ],
+            function(err) {
+                callback(err);
+            });
+    };
+
+    self.queryTwoDaysWeather2 = function(req, res, next) {
+        var cDate = new Date();
+        var meta = {};
+        meta.method = 'queryTwoDaysWeather2';
+        meta.sID = req.sessionID;
+
+        var errMsg;
+        if (!req.validVersion) {
+            errMsg = 'TWW> invalid version : ' + req.validVersion;
+            log.error(errMsg, meta);
+            return res.status(400).send(errMsg);
+        }
+
+        if (!self.isValidCategory(req)) {
+            return next();
+        }
+
+        self.getCode(req);
+        self.getCountry(req);
+        self.getCity(req);
+
+        if (!req.geocode && !req.city) {
+            errMsg = 'It is not valid request';
+            log.error(errMsg, meta);
+            return res.status(400).send(errMsg);
+        }
+
+        log.info('TWW> geocode : ', req.geocode, meta);
+
+        async.parallel([
+                function(callback) {
+                    self._getDarkSkyFromAll(req, cDate, callback);
+                },
+                function(callback) {
+                    self._getWaqiFromAll(req, cDate, callback);
+                }
+            ],
+            function(err) {
+                if(err){
+                    log.info('TWW2 > : ', err, meta);
+                }
+                next();
+            });
     };
 
     /**
@@ -508,10 +716,10 @@ function controllerWorldWeather() {
                         }
 
                         log.info('cDate : ', cDate.toString());
-                        log.info('DB Date : ', req.DSF.dateObj.toString());
+                        log.info('DSF DB Date : ', req.DSF.dateObj.toString());
 
                         //업데이트 시간이 15분을 넘어가면 어제,오늘,예보 갱신.
-                        if(!self.checkValidDate(cDate, req.DSF.dateObj)){
+                        if(!self.checkValidDate(cDate, req.DSF.dateObj, 15)) {
                             log.info('TWW> Invaild DSF data', meta);
                             log.info('TWW> DSF CurDate : ', cDate.toString(), meta);
                             log.info('TWW> DSF DB Date : ', req.DSF.dateObj.toString(), meta);
@@ -538,10 +746,10 @@ function controllerWorldWeather() {
                         }
 
                         log.info('cDate : ', cDate.toString());
-                        log.info('DB Date : ', req.AQI.dateObj.toString());
+                        log.info('AQI DB Date : ', req.AQI.dateObj.toString());
 
                         //업데이트 시간이 한시간을 넘어가면 어제,오늘,예보 갱신.
-                        if(!self.checkValidDate(cDate, req.AQI.dateObj)){
+                        if(!self.checkValidDate(cDate, req.AQI.dateObj, 60)) {
                             log.info('TWW> Invaild AQI data', meta);
                             log.info('TWW> AQI CurDate : ', cDate.toString(), meta);
                             log.info('TWW> AQI DB Date : ', req.AQI.dateObj.toString(), meta);
@@ -1559,7 +1767,7 @@ function controllerWorldWeather() {
                     aqiItem.date = self._convertTimeString(time);
 
                     if (thisTime.date != undefined
-                        && self._compareDateString(thisTime.date, aqiItem.date)){
+                        && self._compareDate(thisTime.date, aqiItem.mTime, 6)){
 
                         thisTime.mTime = aqiItem.mTime || undefined;
                         thisTime.mCity = aqiItem.mCity || undefined;
@@ -1657,6 +1865,9 @@ function controllerWorldWeather() {
                             thisTime.aqiGrade = aqiConverter.index2Grade('aqicn', thisTime.aqiValue);
                             thisTime.aqiStr = UnitConverter.airGrade2Str(thisTime.aqiGrade, 'aqi', res);
                         }
+                    }
+                    else {
+                       log.error(`mismatch time thisTime: ${thisTime.date}, aqi: ${aqiItem.date}`);
                     }
                 });
             });
