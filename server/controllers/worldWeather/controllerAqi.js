@@ -251,7 +251,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
     }
 };
 
-controllerAqi.prototype.feed2data = function(feed) {
+controllerAqi.prototype._feed2data = function(feed) {
     var data = {};
     //aqi
     //idx
@@ -278,26 +278,52 @@ controllerAqi.prototype.feed2data = function(feed) {
     return data;
 };
 
-controllerAqi.prototype.requestAqiDataFromFeed = function(geocode, idx, timeOffset, callback) {
+/**
+ * old feed이거나, data format이 안맞으면 retry
+ * @param idx
+ * @param callback
+ * @private
+ */
+controllerAqi.prototype._getFeed = function(idx, callback) {
     var self = this;
     var requester = new aqiRequester;
+    var url;
+    async.retry(3, function (callback) {
+            async.waterfall([
+                    function (callback) {
+                        url = 'https://api.waqi.info/api/feed/@' + idx + '/obs.en.json';
+                        requester.getDataByAxios(url, function(err, result) {
+                            callback(err, result);
+                        });
+                    },
+                    function (result, callback) {
+                        var data;
+                        try {
+                            data = self._feed2data(result);
+                        }
+                        catch (err) {
+                            return callback(err);
+                        }
+                        callback(null, {data:data});
+                    }
+                ],
+                function(err, result) {
+                    if (err) {
+                        log.warn(err);
+                        log.warn(JSON.stringify({url: url, invalidFeed:result}));
+                    }
+                    callback(err, result);
+                });
+        },
+        callback);
+};
+
+controllerAqi.prototype.requestAqiDataFromFeed = function(geocode, idx, timeOffset, callback) {
+    var self = this;
+
     async.waterfall([
             function (callback) {
-               var url = 'https://api.waqi.info/api/feed/@' + idx + '/obs.en.json';
-               requester.getDataByAxios(url, function(err, result) {
-                   callback(err, result);
-               });
-            },
-            function (result, callback) {
-                var data;
-                try {
-                    data = self.feed2data(result);
-                }
-                catch (err) {
-                    log.info(JSON.stringify({invalidFeed:result}));
-                    return callback(err);
-                }
-                callback(null, {data:data});
+                self._getFeed(idx, callback);
             },
             function (result, callback) {
                 var curTime = new Date();
