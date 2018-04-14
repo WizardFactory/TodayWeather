@@ -1467,10 +1467,13 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.ultrv && Number(current.time) < 1800) {
+        if (current.ultrv && current.time <= 15) {
             tmpGrade = current.ultrvGrade;
+            if (current.time >= 11) {
+                tmpGrade++;
+            }
             str = ts.__('LOC_UV') +' '+current.ultrvStr;
-            item = {str:str, grade: tmpGrade+1};
+            item = {str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
@@ -1480,12 +1483,12 @@ function ControllerTown24h() {
             itemList.push(item);
         }
 
-        if (current.fsnGrade && current.fsnStr) {
-            //주의(1)를 보통으로 보고 보정 1함.
-            str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
-            item = {str: str, grade: current.fsnGrade+1};
-            itemList.push(item);
-        }
+        // if (current.fsnGrade && current.fsnStr) {
+        //     //주의(1)를 보통으로 보고 보정 1함.
+        //     str = ts.__('LOC_FOOD_POISONING') + ' ' + current.fsnStr;
+        //     item = {str: str, grade: current.fsnGrade+1};
+        //     itemList.push(item);
+        // }
 
         //감기
 
