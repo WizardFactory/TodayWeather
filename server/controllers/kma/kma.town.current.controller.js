@@ -25,7 +25,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
 
     var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
 
-    log.info('KMA Town C> pubDate :', pubDate.toString());
+    log.debug('KMA Town C> pubDate :', pubDate.toString());
     //log.info('KMA Town C> db find :', coord);
 
     try{
@@ -33,7 +33,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, currentData: item};
-                log.info('KMA Town C> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town C> item : ', JSON.stringify(newItem));
 
                 modelKmaTownCurrent.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -46,7 +46,7 @@ kmaTownCurrentController.prototype.saveCurrent = function(newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town C> finished to save town.current data');
+                log.debug('KMA Town C> finished to save town.current data');
                 callback(err);
             }
         );
@@ -177,7 +177,7 @@ kmaTownCurrentController.prototype.checkPubDate = function(model, srcList, dateS
 kmaTownCurrentController.prototype.remove = function (pubDate) {
     var limitedTime = kmaTimelib.getPast8DaysTime(pubDate);
     log.info('KMA Town C> remove item if it is before : ', limitedTime.toString());
-    modelKmaTownCurrent.remove({"pubDate": {$lte:limitedTime}}).exec();
+    modelKmaTownCurrent.remove({"fcsDate": {$lte:limitedTime}}).exec();
 };
 
 module.exports = kmaTownCurrentController;

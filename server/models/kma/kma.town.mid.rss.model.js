@@ -4,7 +4,7 @@
 var mongoose = require('mongoose');
 
 var townMidRssSchema = mongoose.Schema({
-    stnId: String,
+    stnId: String,          //code of listPointNumber -> TW-211 이 필드는 사용처가 없는 상태임
     regId: String,
     province: String,
     city: String,

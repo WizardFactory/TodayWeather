@@ -18,31 +18,43 @@ class KaqDustImageController{
         };
         this.value_pos = {
             PM10 : [50, 59, 68, 77, 86, 95, 100, 109, 118, 127, 136, 145, 152, 161, 170, 179, 188, 197, 205, 214, 223, 232, 241, 250, 257, 266, 275, 284, 293, 302, 311, 320],
-            PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
+            // PM25 : [50, 62, 76, 90, 102, 114, 128, 140, 152, 164, 178, 190, 204, 216, 228, 240, 254, 268, 280, 292, 304, 318]
+            PM25 : [48, 58, 68, 79, 89, 99,     //+10.3
+                        110, 120, 130, 141, 151,
+                        162, 172, 183, 193, 203,
+                        214, 224, 235, 245, 255,
+                        266, 276, 286, 297, 307,
+                        318]
         };
         this.value = {
             PM10 : [150, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
-            PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            // PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            PM25 : [60, 50, 48, 46, 44, 42,
+                        40, 38, 36, 34, 32,
+                        30, 28, 26, 24, 22,
+                        20, 18, 16, 14, 12,
+                        10, 8, 6, 4, 2, 0,
+                        0]
         };
         this.parser = new libKaqImageParser();
         this.imagePixels = {};
-        this.coordinate = this.parser.getDefaultCoordi();
+        this.coordinate = this.parser.getDefaultCoordi('CASE4');
         return this;
     }
 
     /**
      *
      * @param path
-     * @param type
+     * @param format
      * @param callback
      * @returns {*}
      */
-    parseMapImage(path, type, callback){
+    parseMapImage(path, format, callback){
         if(this.parser === undefined){
             return callback(new Error('Need to init KaqDustImageController'));
         }
 
-        this.parser.getPixelMap(path, type, this.coordinate, (err, pixelMap)=>{
+        this.parser.getPixelMap(path, 'CASE4', format, this.coordinate, (err, pixelMap)=>{
             if(err){
                 return callback(err);
             }

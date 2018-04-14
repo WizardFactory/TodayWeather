@@ -7,7 +7,7 @@ angular.module('service.push', [])
         var obj = {};
         obj.config = {
             "android": {
-                "senderID": twClientConfig.googleSenderId
+                "senderID": clientConfig.googleSenderId
                 //"icon": "TodayWeather",
                 //"iconColor": "blue"
                 //"forceShow": true,
@@ -21,8 +21,8 @@ angular.module('service.push', [])
             "windows": {}
         };
 
-        obj.pushUrl = twClientConfig.serverUrl + '/v000902'+'/push';
-        obj.pushListUrl = twClientConfig.serverUrl + '/v000902'+'/push-list';
+        obj.pushUrl = clientConfig.serverUrl + '/v000902'+'/push';
+        obj.pushListUrl = clientConfig.serverUrl + '/v000902'+'/push-list';
 
         /**
          *
@@ -130,8 +130,7 @@ angular.module('service.push', [])
 
             console.log(pushInfo);
             var units = Units.getAllUnits();
-            // Delete temporarily TW-181
-            // units.airForecastSource = 'kaq';
+            units.airForecastSource = 'kaq';
 
             /**
              * 기존 호환성때문에 cityIndex로 되어 있지만, alert지원부터 registrationId내에서 유일한 ID임.
@@ -147,7 +146,7 @@ angular.module('service.push', [])
                 location: pushInfo.location,       //lat, long
                 town: pushInfo.town,               //first, second, third
                 source: pushInfo.source,           //KMA or DSF, ...
-                units: Units.getAllUnits(),
+                units: units,
                 timezoneOffset: new Date().getTimezoneOffset()*-1   //+9이면 -9로 결과가 나오기 때문에 뒤집어야 함.
             };
 
@@ -166,6 +165,7 @@ angular.module('service.push', [])
                     postObj.airAlertsBreakPoint = 4;
                 }
             }
+            console.log({postObj: postObj});
             return postObj;
         };
 

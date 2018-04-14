@@ -20,11 +20,11 @@ angular.module('service.weatherutil', [])
                 if (retryCount > 0) {
                     _retryGetHttp(retryCount, url, timeout, callback);
                 }
-            }, 1500);
+            }, 2000);
 
             console.log("retry="+retryCount+" get http");
 
-            timeout = timeout || 6000;
+            timeout = timeout || 10000;
 
             var options = {method: 'GET', url: url, timeout: timeout};
 
@@ -84,8 +84,7 @@ angular.module('service.weatherutil', [])
                 url += key+'='+units[key];
                 count++;
             }
-            // Delete temporarily TW-181
-            // url += '&airForecastSource=kaq';
+            url += '&airForecastSource=kaq';
             return url;
         }
 
@@ -97,7 +96,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithLocation (location, funcName) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/'+funcName+'/v000902'+'/coord/'+ location.lat + ','+location.long;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
@@ -113,7 +112,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithAddr (addr, funcName) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/'+funcName+'/v000902'+'/addr/'+ addr;
             if (funcName === 'weather') {
                 url += _getUnitsParams();
@@ -128,7 +127,7 @@ angular.module('service.weatherutil', [])
          * @private
          */
         function _makeQueryUrlWithTown (town) {
-            var url = twClientConfig.serverUrl;
+            var url = clientConfig.serverUrl;
             url += '/v000902/kma/addr';
             if (town.first !== '') {
                 url += '/' + town.first;
@@ -465,7 +464,7 @@ angular.module('service.weatherutil', [])
             catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseKmaWeather');
                 Util.ga.trackException(err, false);
-                if (twClientConfig && twClientConfig.debug) {
+                if (clientConfig && clientConfig.debug) {
                     alert(err.message);
                 }
                 return null;
@@ -625,7 +624,7 @@ angular.module('service.weatherutil', [])
             catch (err) {
                 Util.ga.trackEvent('weather', 'error', 'parseWorldWeather');
                 Util.ga.trackException(err, false);
-                if (twClientConfig && twClientConfig.debug) {
+                if (clientConfig && clientConfig.debug) {
                     alert(err.message);
                 }
                 return null;
@@ -890,7 +889,7 @@ angular.module('service.weatherutil', [])
             var deferred = $q.defer();
             var url;
             try{
-                url = twClientConfig.serverUrl;
+                url = clientConfig.serverUrl;
                 url += '/v000902/nation/'+nationCode;
                 url += _getUnitsParams();
             }
@@ -908,6 +907,93 @@ angular.module('service.weatherutil', [])
                 });
 
             return deferred.promise;
+        };
+
+        obj.loadWeatherPhotos = function () {
+            var deferred = $q.defer();
+            var url = clientConfig.weatherPhotosUrl;
+
+            _getHttp(url, 20000).then(
+                function (data) {
+                    window.weatherPhotos = {
+                        lightning: [],
+                        rain: [],
+                        snow: [],
+                        sun_smallcloud: [],
+                        sun_bigcloud: [],
+                        sun: [],
+                        moon_smallcloud: [],
+                        moon_bigcloud: [],
+                        moon: [],
+                        cloud: []
+                    };
+
+                    for (var i = 0; i < data.data.length; i++) {
+                        if (data.data[i].tags.includes("lightning")) {
+                            window.weatherPhotos.lightning.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("rain")) {
+                            window.weatherPhotos.rain.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("snow")) {
+                            window.weatherPhotos.snow.push(data.data[i]);
+                        }
+                        else if (data.data[i].tags.includes("sun")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.sun_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.sun_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.sun.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("moon")) {
+                            if (data.data[i].tags.includes("smallcloud")) {
+                                window.weatherPhotos.moon_smallcloud.push(data.data[i]);
+                            }
+                            else if (data.data[i].tags.includes("bigcloud")) {
+                                window.weatherPhotos.moon_bigcloud.push(data.data[i]);
+                            }
+                            else {
+                                window.weatherPhotos.moon.push(data.data[i]);
+                            }
+                        }
+                        else if (data.data[i].tags.includes("cloud")) {
+                            window.weatherPhotos.cloud.push(data.data[i]);
+                        }
+                    }
+
+                    deferred.resolve();
+                },
+                function (err) {
+                    deferred.reject(err);
+                });
+
+            return deferred.promise;
+        };
+
+        obj.findWeatherPhoto = function (currentWeather) {
+            if (window.weatherPhotos == undefined) {
+                return null;
+            }
+
+            if (currentWeather && currentWeather.skyIcon) {
+                var keys = ['lightning', 'rain', 'snow', 'sun_smallcloud', 'sun_bigcloud', 'sun',
+                    'moon_smallcloud', 'moon_bigcloud', 'moon', 'cloud'];
+                var tag = keys.find(function (key) {
+                    if (currentWeather.skyIcon.indexOf(key) != -1) {
+                        return true;
+                    }
+                });
+
+                var photos = window.weatherPhotos[tag];
+                if (photos && photos.length > 0) {
+                    return photos[Math.floor(Math.random() * (photos.length - 1))].twUrls.regular;
+                }
+            }
+            return null;
         };
 
         return obj;

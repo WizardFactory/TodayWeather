@@ -229,16 +229,17 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
                 log.error('Aqi> Fail to update db data: ', geocode, err);
             }
         });
-
-        if(callback){
-            callback(0, res);
-        }
     }
     catch(e){
         log.error('Aqi> Exception!!!');
         if(callback){
             callback(e);
         }
+        return;
+    }
+
+    if(callback){
+        callback(0, res);
     }
 };
 

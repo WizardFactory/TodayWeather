@@ -32,6 +32,7 @@ var townShortSchema = new mongoose.Schema({
     }
 });
 
+townShortSchema.index({fcsDate:1});
 townShortSchema.index({mCoord:1});
 townShortSchema.index({"mCoord.mx" : 1, "mCoord.my" : 1});
 

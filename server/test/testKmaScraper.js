@@ -239,7 +239,7 @@ describe('unit test - kma city weather scraping', function() {
     //it('test special weather situation', function (done) {
     //    this.timeout(100*1000);
     //    var scrape = new Scrape();
-    //    scrape._removeBefore10days("Minute", function (err, result) {
+    //    scrape._removeOldData("Minute", function (err, result) {
     //        if (err) {
     //            log.error(err);
     //        }

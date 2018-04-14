@@ -18,7 +18,7 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback){
     };
 
     var pubDate = kmaTimelib.getKoreaDateObj(newData[0].pubDate);
-    log.info('KMA Town ST> pubDate :', pubDate.toString());
+    log.debug('KMA Town ST> pubDate :', pubDate.toString());
     //log.info('KMA Town ST> db find :', coord);
 
     try{
@@ -26,7 +26,7 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback){
             function(item, cb){
                 var fcsDate = kmaTimelib.getKoreaDateObj(item.date + item.time);
                 var newItem = {mCoord: coord, pubDate: pubDate, fcsDate: fcsDate, shortestData: item};
-                log.info('KMA Town ST> item : ', JSON.stringify(newItem));
+                log.debug('KMA Town ST> item : ', JSON.stringify(newItem));
 
                 modelKmaTownShortest.update({mCoord: coord, fcsDate: fcsDate}, newItem, {upsert:true}, function(err){
                     if(err){
@@ -39,7 +39,7 @@ kmaTownShortestController.prototype.saveShortest = function(newData, callback){
                 });
             },
             function(err){
-                log.info('KMA Town ST> finished to save town.short data');
+                log.debug('KMA Town ST> finished to save town.short data');
                 callback(err);
             }
         );
@@ -91,6 +91,7 @@ kmaTownShortestController.prototype.getShortestFromDB = function(modelCurrent, c
                 shortestString.forEach(function(string){
                     newItem[string] = shortestData[string];
                 });
+                newItem.pubDate = kmaTimelib.getKoreaTimeString(item.pubDate);
                 ret.push(newItem);
             });
 

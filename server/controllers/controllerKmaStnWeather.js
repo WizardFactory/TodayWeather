@@ -22,7 +22,12 @@ function controllerKmaStnWeather() {
 
 controllerKmaStnWeather.updateWeather = function (current) {
     if (current.pty >= 1) {
-       switch (current.weatherType) {
+        if (current.weatherType == undefined) {
+            log.warn('weather type is undefined so set by pty');
+            current.weatherType = 0;
+        }
+
+        switch (current.weatherType) {
            case 0:
            case 1:
            case 2:
@@ -83,6 +88,30 @@ controllerKmaStnWeather.updateWeather = function (current) {
        }
     }
     else if (current.pty === 0) {
+        if (current.weatherType == undefined) {
+            switch (current.sky) {
+                case 0:
+                case 1:
+                    current.weather = '맑음';
+                    current.weatherType = 0;
+                    break;
+                case 2:
+                    current.weather = '구름조금';
+                    current.weatherType = 1;
+                    break;
+                case 3:
+                    current.weather = '구름많음';
+                    current.weatherType = 2;
+                    break;
+                case 4:
+                    current.weather = '흐림';
+                    current.weatherType = 3;
+                    break;
+                default:
+                    log.error('unknown sky:', current.sky);
+                    break;
+            }
+        }
         switch (current.weatherType) {
             //비/눈/진눈깨비는 변경
             case 14:

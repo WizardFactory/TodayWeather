@@ -44,18 +44,18 @@ angular.module('starter', [
             else {
                 console.log('util or util.ga is undefined');
             }
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + exception);
             }
         }
     })
-    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase) {
-        if (twClientConfig.debug) {
+    .run(function($rootScope, $ionicPlatform, $location, $state, TwStorage, WeatherInfo, Units, Util, Push, Purchase, WeatherUtil) {
+        if (clientConfig.debug) {
             Util.ga.debugMode();
         }
 
         if (ionic.Platform.isIOS()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaIOSKey);
+            Util.ga.startTrackerWithId(clientConfig.gaIOSKey);
 
             // isLocationEnabled 요청해야 registerLocationStateChangeHandler가 호출됨
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -66,7 +66,7 @@ angular.module('starter', [
                 });
             }
         } else if (ionic.Platform.isAndroid()) {
-            Util.ga.startTrackerWithId(twClientConfig.gaAndroidKey, 30);
+            Util.ga.startTrackerWithId(clientConfig.gaAndroidKey, 30);
 
             // android는 실행 시 registerLocationStateChangeHandler 호출되지 않으므로 직접 locationMode를 가져와서 설정함
             if (window.cordova && window.cordova.plugins && window.cordova.plugins.diagnostic) {
@@ -164,7 +164,7 @@ angular.module('starter', [
             var errorMsg = "ERROR in " + url + " (line #" + line + "): " + msg;
             Util.ga.trackEvent('window', 'error', errorMsg);
             Util.ga.trackException(errorMsg, true);
-            if (twClientConfig && twClientConfig.debug) {
+            if (clientConfig && clientConfig.debug) {
                 alert("ERROR in " + url + " (line #" + line + "): " + msg);
             }
             return false; //suppress Error Alert;
@@ -177,7 +177,6 @@ angular.module('starter', [
             Util.ga.trackEvent('app', 'status', 'pause');
         }, false);
 
-        WeatherInfo.loadTowns();
         $ionicPlatform.on('resume', function(){
             $rootScope.$broadcast('reloadEvent', 'resume');
         });
@@ -228,30 +227,48 @@ angular.module('starter', [
         });
 
         $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState) {
-            var headerbar = angular.element(document.querySelectorAll('ion-header-bar'));
-            headerbar.removeClass('bar-search');
-            headerbar.removeClass('bar-forecast');
-            headerbar.removeClass('bar-dailyforecast');
-            headerbar.removeClass('bar-air');
-            headerbar.removeClass('bar-hidden');
+            var headerbars = angular.element(document.querySelectorAll('ion-header-bar'));
+            headerbars.removeClass('bar-search');
+            headerbars.removeClass('bar-forecast');
+            headerbars.removeClass('bar-dailyforecast');
+            headerbars.removeClass('bar-air');
+            headerbars.removeClass('bar-clear');
+            headerbars.removeClass('bar-dark');
+
+            for (var i = 0; i < headerbars.length; i++) {
+                headerbars[i].style.backgroundImage = "";
+            }
 
             if (toState.name === 'tab.search') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-search');
+                headerbars.addClass('bar-search');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'tab.forecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-forecast');
+                headerbars.addClass('bar-forecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.dailyforecast') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-dailyforecast');
+                headerbars.addClass('bar-dailyforecast');
+                if ($rootScope.settingsInfo.showWeatherPhotos === '1') {
+                    headerbars.addClass('bar-clear');
+                } else {
+                    headerbars.addClass('bar-dark');
+                }
             } else if (toState.name === 'tab.air') {
                 $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-air');
+                headerbars.addClass('bar-air');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
-                $rootScope.viewColor = '#F5F5F5';
-                headerbar.addClass('bar-hidden');
+                $rootScope.viewColor = '#fefefe';
+                headerbars.addClass('bar-clear');
             } else {
                 $rootScope.viewColor = '#F5F5F5';
+                headerbars.addClass('bar-dark');
             }
 
             Util.ga.trackView(toState.name);
@@ -282,6 +299,8 @@ angular.module('starter', [
         }
 
         TwStorage.init().finally(function() {
+            return WeatherUtil.loadWeatherPhotos();
+        }).finally(function () {
             $rootScope.iconsImgPath = window.theme.icons;
             $rootScope.weatherImgPath = window.theme.weather;
 
@@ -297,8 +316,8 @@ angular.module('starter', [
             Units.loadUnits();
 
             var daumServiceKeys = TwStorage.get("daumServiceKeys");
-            if (daumServiceKeys == undefined || daumServiceKeys.length != twClientConfig.daumServiceKeys.length) {
-                TwStorage.set("daumServiceKeys", twClientConfig.daumServiceKeys);
+            if (daumServiceKeys == undefined || daumServiceKeys.length != clientConfig.daumServiceKeys.length) {
+                TwStorage.set("daumServiceKeys", clientConfig.daumServiceKeys);
             }
 
             var startVersion = TwStorage.get("startVersion");
@@ -382,7 +401,7 @@ angular.module('starter', [
             .determinePreferredLanguage()
             .useSanitizeValueStrategy('escapeParameters');
 
-        //$compileProvider.debugInfoEnabled(twClientConfig.debug);
+        //$compileProvider.debugInfoEnabled(clientConfig.debug);
         $compileProvider.debugInfoEnabled(false);
 
         $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|file|ftp|mailto):/);
@@ -1430,7 +1449,7 @@ angular.module('starter', [
                         rects.exit().remove();
 
                         rects.attr('x', function (d, i) {
-                                return x.rangeBand() * i + x.rangeBand() / 2 - 1;
+                                return x.rangeBand() * i + 1 + margin.left;
                             })
                             .attr('width', x.rangeBand() - 2)
                             .attr('y', 0)
@@ -1535,6 +1554,35 @@ angular.module('starter', [
                     if (ionic.Platform.isAndroid()) {
                         $element.bind('scroll', onScroll);
                     }
+                }
+            }
+        });
+
+        $compileProvider.directive('barScrolled', function($document) {
+            return {
+                restrict: 'A',
+                link: function($scope, $element, $attr) {
+                    function onScroll(e) {
+                        if ($scope == undefined || $scope.$root == undefined) {
+                            return;
+                        }
+
+                        var headerbars = angular.element($document[0].querySelectorAll('ion-header-bar'));
+                        if (e.target.scrollTop < 44) {
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage = "";
+                            }
+                        } else {
+                            var start = Math.min(1.0, (e.target.scrollTop - 44) / 88);
+                            var end = start / 2;
+                            for (var i = 0; i < headerbars.length; i++) {
+                                headerbars[i].style.backgroundImage
+                                    = "linear-gradient(to bottom, rgba(68,68,68," + start + ") 50%, rgba(68,68,68," + end + ") 100%)";
+                            }
+                        }
+                    }
+
+                    $element.bind('scroll', onScroll);
                 }
             }
         });
@@ -1651,6 +1699,7 @@ angular.module('starter', [
         // Enable Native Scrolling on Android
         $ionicConfigProvider.platform.android.scrolling.jsScrolling(false);
         $ionicConfigProvider.platform.ios.scrolling.jsScrolling(false);
+        $ionicConfigProvider.views.swipeBackEnabled(false);
 
         ionicTimePickerProvider.configTimePicker({
             format: 12,
