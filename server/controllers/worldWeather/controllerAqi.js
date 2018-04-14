@@ -230,7 +230,7 @@ controllerAqi.prototype._saveAQI = function(geocode, date, data, callback){
 
         log.info('Aqi> res : ', res);
 
-        query = {geo: res.geo, dateObj: res.dateObj};
+        query = {geo: res.geo, mTime: res.mTime};
     }
     catch(e){
         log.error('Aqi> Exception!!!');
@@ -270,7 +270,6 @@ controllerAqi.prototype._feed2data = function(feed) {
     });
 
     if (msg.time.utc == undefined) {
-        log.error('It can be an old feed!!!');
         throw new Error('It can be an old feed!!!');
     }
     data.time = msg.time.utc;
