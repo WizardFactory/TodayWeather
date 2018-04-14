@@ -43,8 +43,7 @@ var aqiSchema = new mongoose.Schema({
     mCity: String       // measuring city
 });
 
-aqiSchema.index({"geocode.lat" : 1, "geocode.lon" : 1});
-aqiSchema.index({aqi: 1});
+aqiSchema.index({dateObj:1});
 aqiSchema.index({idx:1});
 
 

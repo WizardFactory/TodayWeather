@@ -502,7 +502,19 @@ function controllerWorldWeather() {
         meta.method = 'getWaqiFromAll';
         meta.sID = req.sessionID;
 
+        var collectorAqi = new controllerAqi;
+
         async.waterfall([
+                function (callback) {
+                    var  geocode;
+                    if (req.geocode) {
+                        geocode = req.geocode;
+                    }
+                    else {
+                        return callback(new Error('unknwon geocode'));
+                    }
+                    collectorAqi.removeAqiDb(geocode, callback);
+                },
                 function (callback) {
                     self.getDataFromAQI(req, function(err) {
                         if (err) {
@@ -535,10 +547,38 @@ function controllerWorldWeather() {
                 },
                 function (errMsg, callback) {
                     if (errMsg == undefined) {
+                        return callback(null, null);
+                    }
+                    var idx;
+                    var geocode;
+                    var timezone;
+                    try {
+                       idx = req.AQI.data[0].idx;
+                       geocode = req.geocode;
+                       timezone = req.timezone || req.AQI.timeOffset;
+                    }
+                    catch (err) {
+                        log.debug(err);
+                        return callback(null, errMsg);
+                    }
+                    if (idx >= 0) {
+                        collectorAqi.requestAqiDataFromFeed(geocode, idx, timezone, function(err, aqiData) {
+                            if(err){
+                                log.warn(err);
+                                return callback(null, 'fail_to_requestAqiDataFromFeed');
+                            }
+                            req.AQI = aqiData;
+                            callback(null, null);
+                        });
+                    }
+                    else {
+                        return callback(null, errMsg);
+                    }
+                },
+                function (errMsg, callback) {
+                    if (errMsg == undefined) {
                         return callback();
                     }
-                    var collectorAqi = new controllerAqi;
-
                     collectorAqi.requestAqiData(req.geocode, 0, 0, req.timezone, function(err, aqiData){
                         if(err){
                             log.error('RQ> Fail to requestAqiData', meta);
@@ -2972,8 +3012,7 @@ function controllerWorldWeather() {
         geo.push(parseFloat(req.geocode.lon));
         geo.push(parseFloat(req.geocode.lat));
 
-
-        modelAQI.find({geo:geo}).lean().exec(function(err, list){
+        modelAQI.find({geo:geo}).sort({dateObj:-1}).limit(1).lean().exec(function(err, list){
             if(err){
                 log.error('gAQI> fail to get AQI data', meta);
                 callback(err);
