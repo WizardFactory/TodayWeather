@@ -138,7 +138,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, Pur
             $location.path('/tab/air');
         }
         else {
-            $location.path('/tab/forecast');
+            console.error('unknown package='+clientConfig.package);
         }
     }
 

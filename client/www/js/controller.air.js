@@ -197,6 +197,10 @@ angular.module('controller.air', [])
                 var cityData = WeatherInfo.getCityOfIndex(cityIndex);
 
                 Util.ga.trackEvent('air', 'applyWeatherData');
+
+                $scope.address = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
+                console.log($scope.address);
+
                 var airInfo;
                 if (cityData.airInfoList) {
                     airInfo = cityData.airInfoList[$scope.stnIndex];
@@ -248,9 +252,6 @@ angular.module('controller.air', [])
                 $scope.stnList = undefined;
                 $scope.dayForecast = undefined;
                 $scope.airChart = undefined;
-
-                $scope.address = cityData.name || WeatherUtil.getShortenAddress(cityData.address);
-                console.log($scope.address);
 
                 if (cityData.hasOwnProperty('airInfo') || cityData.hasOwnProperty('airInfoList') ) {
                     $scope.forecastPubdate = airInfo.forecastPubDate;

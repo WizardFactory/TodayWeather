@@ -9,13 +9,13 @@ angular.module('controller.forecastctrl', [])
             $scope.forecastType = "mid"; //mid, detail(aqi)
         }
         else if (clientConfig.package === 'todayAir') {
-          $scope.forecastType = "all"; //mid, detail(aqi)
+            $scope.forecastType = "weather"; //mid, detail(aqi)
         }
         else {
             $scope.forecastType = "short"; //mid, detail(aqi)
         }
 
-        if ($scope.forecastType === 'mid' || $scope.forecastType === 'all' ) {
+        if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather' ) {
             $scope.hasDustForecast = function () {
                 if ($scope.dailyAqiForecast) {
                     return true;
@@ -84,7 +84,7 @@ angular.module('controller.forecastctrl', [])
             }
         }
 
-        if ($scope.forecastType === 'short' || $scope.forecastType === 'all') {
+        if ($scope.forecastType === 'short' || $scope.forecastType === 'weather') {
             var preDayInHourlyTable;
             $scope.isNextDay = function(weatherData, index) {
                 if (weatherData.time == 24 && index == 0) {
@@ -522,11 +522,11 @@ angular.module('controller.forecastctrl', [])
                     padding += 36;
                 }
 
-                if ($scope.forecastType === 'short' || $scope.forecastType === 'all' ) {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'weather' ) {
                     var chartShortHeight = $scope.mainHeight - (143 + padding);
                     $scope.chartShortHeight = chartShortHeight < 300 ? chartShortHeight : 300;
                 }
-                if ($scope.forecastType === 'mid' || $scope.forecastType === 'all' ) {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather' ) {
                     var chartMidHeight = $scope.mainHeight - (136 + padding);
                     $scope.chartMidHeight = chartMidHeight < 300 ? chartMidHeight : 300;
                 }
@@ -546,11 +546,11 @@ angular.module('controller.forecastctrl', [])
                 }
 
                 _diffTodayYesterday($scope.currentWeather, $scope.currentWeather.yesterday);
-                if ($scope.forecastType === 'short' || $scope.forecastType === 'all') {
+                if ($scope.forecastType === 'short' || $scope.forecastType === 'weather') {
                     $scope.timeTable = cityData.timeTable;
                     $scope.timeChart = cityData.timeChart;
                 }
-                if ($scope.forecastType === 'mid' || $scope.forecastType === 'all') {
+                if ($scope.forecastType === 'mid' || $scope.forecastType === 'weather') {
                     $scope.dayChart = cityData.dayChart;
                 }
             }

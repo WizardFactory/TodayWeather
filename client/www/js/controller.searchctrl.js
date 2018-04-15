@@ -77,6 +77,9 @@ angular.module('controller.searchctrl', [])
             else if (startupPage === "3") { //대기정보
                 $location.path('/tab/air');
             }
+            else if (startupPage === "4") { //대기정보
+                $location.path('/tab/weather');
+            }
             else { //시간별날씨
                 if (clientConfig.package === 'todayWeather') {
                     $location.path('/tab/forecast');
@@ -85,7 +88,7 @@ angular.module('controller.searchctrl', [])
                     $location.path('/tab/air');
                 }
                 else {
-                    $location.path('/tab/forecast');
+                    console.error('unknown package='+clientConfig.package);
                 }
             }
         }

@@ -263,6 +263,10 @@ angular.module('starter', [
                 $rootScope.viewColor = '#F5F5F5';
                 headerbars.addClass('bar-air');
                 headerbars.addClass('bar-dark');
+            } else if (toState.name === 'tab.weather') {
+                $rootScope.viewColor = '#F5F5F5';
+                headerbars.addClass('bar-forecast');
+                headerbars.addClass('bar-dark');
             } else if (toState.name === 'start') {
                 $rootScope.viewColor = '#fefefe';
                 headerbars.addClass('bar-clear');
@@ -335,17 +339,29 @@ angular.module('starter', [
 
             Util.ga.trackEvent('app', 'startupPage', startupPage);
 
-            if (startupPage === "1") { //일별날씨
-                $state.go('tab.dailyforecast');
-            } else if (startupPage === "2") { //즐겨찾기
-                $state.go('tab.search');
-            } else if (startupPage === "3") { //미세먼지
-                $state.go('tab.air');
-            } else { //시간별날씨
-                if (clientConfig.package === 'todayWeather') {
+            if (clientConfig.package === 'todayWeather') {
+                if (startupPage === "0") { //일별날씨
+                    $state.go('tab.forecast');
+                } else if (startupPage === "1") { //일별날씨
+                    $state.go('tab.dailyforecast');
+                } else if (startupPage === "2") { //즐겨찾기
+                    $state.go('tab.search');
+                } else if (startupPage === "3") { //미세먼지
+                    $state.go('tab.air');
+                } else {
+                    console.error('unknown page:'+startupPage);
                     $state.go('tab.forecast');
                 }
-                else if (clientConfig.package === 'todayAir') {
+            }
+            else if (clientConfig.package === 'todayAir') {
+                if (startupPage === "2") { //즐겨찾기
+                    $state.go('tab.search');
+                } else if (startupPage === "3") { //대기정보
+                    $state.go('tab.air');
+                } else if (startupPage === "4") { //날씨
+                    $state.go('tab.weather');
+                } else { //대기정보
+                    console.error('unknown page:'+startupPage);
                     $state.go('tab.air');
                 }
             }
@@ -1702,11 +1718,11 @@ angular.module('starter', [
         }
         else if (clientConfig.package === 'todayAir') {
           $stateProvider
-            .state('tab.forecast', {
-              url: '/forecast?fav',
+            .state('tab.weather', {
+              url: '/weather?fav',
               cache: false,
               views: {
-                'tab-forecast': {
+                'tab-weather': {
                   templateUrl: 'templates/ta-tab-weather.html',
                   controller: 'ForecastCtrl'
                 }
