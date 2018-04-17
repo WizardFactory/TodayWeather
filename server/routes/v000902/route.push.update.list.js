@@ -31,6 +31,10 @@ function updatePushInfoList(language, pushList, callback) {
                     log.error('pushInfo category is undefined');
                     pushInfo.category = 'alarm';
                 }
+                if (pushInfo.package == undefined) {
+                    log.error('pushInfo package is undefined');
+                    pushInfo.package = 'todayWeather';
+                }
 
                 pushInfo.units = UnitConverter.initUnits(pushInfo.units);
 
