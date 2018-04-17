@@ -1295,7 +1295,6 @@ function ControllerTown24h() {
         var str = "";
         var item;
         var itemList = [];
-        var tmpGrade;
         var ts = res || global;
         var airInfo = current.arpltn || current;
         airInfo.aqiValue = airInfo.khaiValue || airInfo.aqiValue;
@@ -1326,61 +1325,44 @@ function ControllerTown24h() {
             //대기상태는 보통입니다
             return ts.__('LOC_AIR_QUALITY_IS_MODERATE');
         }
+        //grade가 3(민감군주의or나쁨)이상인 경우 오염물질 표시
 
         var locStr;
-        tmpGrade = 0;
         if (airInfo.pm25Value) {
             locStr = ts.__('LOC_PM25');
-            tmpGrade = airInfo.pm25Value/25;
             str = locStr + " " + airInfo.pm25Value + " " + airInfo.pm25Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm25Index};
             itemList.push(item);
         }
         if (airInfo.pm10Value) {
             locStr = ts.__('LOC_PM10');
-            tmpGrade = airInfo.pm10Value/50;
             str = locStr + " " + airInfo.pm10Value + " " + airInfo.pm10Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.pm10Index};
             itemList.push(item);
         }
         if (airInfo.o3Value) {
             locStr = ts.__('LOC_O3');
-            tmpGrade = airInfo.o3Value/0.06;
             str = locStr + " " + airInfo.o3Value + " " + airInfo.o3Str;
-            item = {str: str, grade: tmpGrade};
+            item = {str: str, grade: airInfo.o3Index};
             itemList.push(item);
         }
-
-        if (itemList.length === 0) {
-            tmpGrade = 0;
-            if (airInfo.aqiGrade) {
-                locStr = ts.__('LOC_AQI');
-                tmpGrade = airInfo.aqiGrade;
-                str = locStr + " " + airInfo.aqiValue + " " + airInfo.aqiStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.coGrade && tmpGrade < airInfo.coGrade) {
-                locStr = ts.__('LOC_CO');
-                tmpGrade = airInfo.coGrade;
-                str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.no2Grade && tmpGrade < airInfo.no2Grade) {
-                locStr = ts.__('LOC_NO2');
-                tmpGrade = airInfo.no2Grade;
-                str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
-            else if (airInfo.so2Grade && tmpGrade < airInfo.so2Grade) {
-                locStr = ts.__('LOC_SO2');
-                tmpGrade = airInfo.so2Grade;
-                str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
-                item = {str: str, grade: tmpGrade};
-                itemList.push(item);
-            }
+        if (airInfo.no2Grade) {
+            locStr = ts.__('LOC_NO2');
+            str = locStr + " " + airInfo.no2Value + " " + airInfo.no2Str;
+            item = {str: str, grade: airInfo.no2Index};
+            itemList.push(item);
+        }
+        if (airInfo.so2Grade) {
+            locStr = ts.__('LOC_SO2');
+            str = locStr + " " + airInfo.so2Value + " " + airInfo.so2Str;
+            item = {str: str, grade: airInfo.so2Index};
+            itemList.push(item);
+        }
+        if (airInfo.coGrade) {
+            locStr = ts.__('LOC_CO');
+            str = locStr + " " + airInfo.coValue + " " + airInfo.coStr;
+            item = {str: str, grade: airInfo.coIndex};
+            itemList.push(item);
         }
 
         itemList.sort(function (a, b) {

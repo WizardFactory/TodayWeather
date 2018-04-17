@@ -55,21 +55,23 @@ arpltnController.recalculateValue = function (arpltn, airUnit) {
         }
     });
 
+    //aqicn은 가산점 줘야 하는지 확인 필요.
+    //summaryAir에서 xxIndex 사용.
+    var aqiValue = -1;
+    ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
+        if (!arpltn.hasOwnProperty(name+'Index')) {
+            arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
+        }
+        if (arpltn[name+'Index'] > aqiValue) {
+            aqiValue = arpltn[name+'Index'];
+        }
+    });
+
     if (airUnit === 'airkorea' && arpltn.khaiValue && arpltn.khaiValue !== -1) {
         arpltn.aqiIndex = arpltn.aqiValue = arpltn.khaiValue;
         arpltn.aqiGrade = arpltn.hasOwnProperty('khaiGrade')?arpltn.khaiGrade: AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
     }
     else {
-        //aqicn은 가산점 줘야 하는지 확인 필요.
-        var aqiValue = -1;
-        ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].forEach(function (name) {
-            if (!arpltn.hasOwnProperty(name+'Index')) {
-                arpltn[name+'Index'] = AqiConverter.value2index(airUnit, name, arpltn[name+'Value']);
-            }
-            if (arpltn[name+'Index'] > aqiValue) {
-                aqiValue = arpltn[name+'Index'];
-            }
-        });
         arpltn.khaiValue = arpltn.aqiIndex = arpltn.aqiValue = aqiValue;
         arpltn.khaiGrade = arpltn.aqiGrade = AqiConverter.value2grade(airUnit, 'aqi', arpltn.aqiValue);
     }

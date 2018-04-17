@@ -303,5 +303,7 @@
   "LOC_AIRKOREA_DESCRIPTION": "환경부는 대기오염으로 인한 국민 건강 피해를 최소화 하기 위해 대기오염 농도를 예보하고 있습니다.",
   "LOC_SHOW_WEATHER_PHOTOS": "날씨 사진 표시",
   "LOC_OFF": "끄기",
-  "LOC_ON": "켜기"
+  "LOC_ON": "켜기",
+  "LOC_AIR_QUALITY_IS_GOOD" : "대기상태가 좋아요",
+  "LOC_AIR_QUALITY_IS_MODERATE" : "대기상태는 보통입니다"
 }
