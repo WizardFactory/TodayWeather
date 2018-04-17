@@ -54,5 +54,7 @@ var townMidSeaSchema = mongoose.Schema({
 });
 
 townMidSeaSchema.index({regId: "hashed"});
+townMidSeaSchema.index({pubDate: 1});
+townMidSeaSchema.index({fcsDate: 1});
 
 module.exports = mongoose.model('kma.town.mid.sea', townMidSeaSchema);

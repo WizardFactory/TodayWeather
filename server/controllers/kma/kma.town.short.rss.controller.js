@@ -674,24 +674,27 @@ TownRss.prototype.checkPubDate = function(item, dateString, index, callback){
 
     if(config.db.version === '2.0'){
         var lastestPubDate = kmaTimelib.getKoreaDateObj(dateString);
-        modelKmaTownShortRss.find({'mCoord.mx': item.mCoord.mx, 'mCoord.my': item.mCoord.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
-            if(err
-                || (dbList.length === 0)
-                || (dbList[0].pubDate === undefined)){
-                log.info('KMA Town S-RSS> There is no data matached to : ', item);
-                log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
-                return callback(errCode);
-            }
-
-            for(var i=0 ; i<dbList.length ; i++){
-                if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
-                    log.info('KMA Town S-RSS> Already updated : ', item, dateString);
-                    errCode = 1;
+        modelKmaTownShortRss.find({'mCoord.mx': item.mCoord.mx, 'mCoord.my': item.mCoord.my}, {_id: 0, mCoord:1, pubDate:1})
+            .sort({"pubDate":1})
+            .lean()
+            .exec(function(err, dbList) {
+                if(err
+                    || (dbList.length === 0)
+                    || (dbList[0].pubDate === undefined)){
+                    log.info('KMA Town S-RSS> There is no data matached to : ', item);
+                    log.info('shortRss : get new data : ' + index + ', (' + item.mCoord.mx + ',' + item.mCoord.my + ')');
                     return callback(errCode);
                 }
-            }
 
-            return callback(errCode);
+                for(var i=0 ; i<dbList.length ; i++){
+                    if(dbList[i].pubDate.getTime() === lastestPubDate.getTime()){
+                        log.info('KMA Town S-RSS> Already updated : ', item, dateString);
+                        errCode = 1;
+                        return callback(errCode);
+                    }
+                }
+
+                return callback(errCode);
         });
     }else{
         shortRssDb.find({'mCoord.my' :item.mCoord.my, 'mCoord.mx':item.mCoord.mx}, function(err, list) {
