@@ -1068,7 +1068,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
     var self = this;
 
     try{
-        modelDSForecast.find({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}, function(err, list){
+        modelDSForecast.find({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}, function(err, list) {
             if(err){
                 log.error('Dsf> fail to find from DB');
                 callback(err);
@@ -1093,9 +1093,10 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
             //    log.info('D> ',item);
             //});
 
-            if(timeOffset){
+            if (timeOffset) {
                 dsfTimeOffset = timeOffset;
-            }else if(data.hasOwnProperty('offset')){
+            }
+            else if (data.hasOwnProperty('offset')) {
                 dsfTimeOffset = parseInt(data.offset);
             }
 
@@ -1107,31 +1108,21 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                 timeOffset: dsfTimeOffset,
                 data: weatherData
             };
-            if(newData.timezone){
+            if (newData.timezone) {
                 res.address['country'] = newData.timezone;
             }
 
             if(list.length === 0) {
                 log.info('Dsf> First time : ', self._getUtcTime('' + date + '000').toString());
-                var newItem = new modelDSForecast({
-                    geocode: geocode,
-                    address: {},
-                    date: date,
-                    dateObj: self._getUtcTime('' + date + '000'),
-                    timeOffset: dsfTimeOffset,
-                    data: weatherData
-                });
-
-                if(newData.timezone){
-                    newItem.address['country'] = newData.timezone;
-                }
+                var newItem = new modelDSForecast(res);
                 newItem.save(function (err) {
                     if (err) {
                         log.error('Dsf> fail to add the new data to DB :', geocode, err);
                         print.error('Dsf> fail to add the new data to DB :', geocode);
                     }
                     else {
-                        log.info('Dsf> First time save to db : ', geocode, " date="+newData.current.dateObj.toISOString());
+                        log.info('Dsf> First time save to db : ', geocode, " date : ",
+                            newData.current.dateObj.toISOString());
                     }
 
                     if (callback) {
@@ -1141,21 +1132,21 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
             }
             else {
                 //print.info('Dsf> add new Item : ', newData);
-                if(list.length > 2){
+                if (list.length > 2) {
                     log.error('Dsf> Wrong DB list(geocode) count : ', list.length, geocode);
                 }
                 var dbData = list[0];
                 var isExist = false;
-                if(dbData.date < date){
+                if (dbData.date < date) {
                     dbData.date = date;
                 }
                 var pubDate = self._getUtcTime('' + date +'000');
                 //log.info('dateOBJ : ', pubDate.toString());
-                if(dbData.dateObj.getTime() < pubDate.getTime()){
+                if (dbData.dateObj.getTime() < pubDate.getTime()) {
                     dbData.dateObj = pubDate;
                 }
 
-                if(dsfTimeOffset != 100){
+                if(dsfTimeOffset != 100) {
                     dbData.timeOffset = dsfTimeOffset;
                 }
 
@@ -1173,7 +1164,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     }
                 });
 
-                if(!isExist){
+                if (!isExist) {
                     dbData.data.push({
                         current : newData.current,
                         hourly : newData.hourly,
@@ -1191,7 +1182,7 @@ ConCollector.prototype.saveDSForecast = function(geocode, date, timeOffset, data
                     return 0;
                 });
 
-                if(dbData.data.length > self.MAX_DSF_COUNT){
+                if (dbData.data.length > self.MAX_DSF_COUNT) {
                     dbData.data.shift();
                 }
 
@@ -1387,7 +1378,7 @@ ConCollector.prototype._getDiffDate = function (utcTime, localTime) {
 
 /**
  *
- * @param timeOffset
+ * @param timeOffset minutes
  * @returns {Date|global.Date}
  * @private
  */
@@ -1494,39 +1485,39 @@ ConCollector.prototype.arrangDsfData = function(geocode, timeOffset, DsfData){
             if(res.data.length === 0){
                 res.data = item.data;
             }else{
-                res.data.forEach(function(dbItem){
-                    var isExist = false;
-                    item.data.forEach(function(newItem){
-                        if(dbItem.current.dateObj.getTime() === newItem.current.dateObj.getTime()){
-                            dbItem.current = newItem.current;
-                            dbItem.hourly = newItem.hourly;
-                            dbItem.daily = newItem.daily;
-                            isExist = true;
-                        }
-
-                        if(!isExist){
-                            res.data.push({
-                                current : newItem.current,
-                                hourly : newItem.hourly,
-                                daily: newItem.daily
-                            });
-                        }
+                item.data.forEach(function(newItem){
+                    var dbItem = res.data.find(function (dbItem) {
+                        return dbItem.current.dateObj.getTime() === newItem.current.dateObj.getTime();
                     });
+                    if (dbItem == undefined) {
+                        log.info('push ', newItem.current.dateObj);
+                        res.data.push({
+                            current : newItem.current,
+                            hourly : newItem.hourly,
+                            daily: newItem.daily
+                        });
+                    }
+                    else {
+                        dbItem.current = newItem.current;
+                        dbItem.hourly = newItem.hourly;
+                        dbItem.daily = newItem.daily;
+                    }
                 });
             }
+        });
 
-            res.data.sort(function(a, b){
-                if(a.current.date > b.current.date){
-                    return 1;
-                }
-                if(a.current.date < b.current.date){
-                    return -1;
-                }
-                return 0;
-            });
+        res.data.sort(function(a, b){
+            if(a.current.date > b.current.date){
+                return 1;
+            }
+            if(a.current.date < b.current.date){
+                return -1;
+            }
+            return 0;
         });
     }
     catch (err) {
+        log.warn(err);
         log.error('Req Dsf> Fail to Parse');
         return;
     }
@@ -1557,30 +1548,30 @@ ConCollector.prototype._isSameDay = function(date, timeOffset){
 ConCollector.prototype._removeDsfDb = function(geocode, callback){
     let self = this;
 
-    modelDSForecast.find({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}, function(err, list){
-        if(err){
-            log.error('Req Dsf> _removeDsfDb : fail to find from DB');
+    modelDSForecast.find({'geocode.lat':geocode.lat, 'geocode.lon':geocode.lon}, function(err, list) {
+        if (err) {
+            log.error('Req Dsf> removeDsfDb : fail to find from DB');
             return callback(err);
         }
-        if(list.length === 0){
-            log.warn('Req Dsf> _removeDsfDb : There is no DSF data for ', geocode);
+        if (list.length === 0) {
+            log.warn('Req Dsf> removeDsfDb : There is no DSF data for ', geocode);
             return callback(null);
         }
 
         let dsfData = list[0].data;
         let timeOffset = list[0].timeOffset;
-        if(dsfData.length != 3 /* yester day, today from 0:00, current */){
+        if (dsfData.length != 3 /* yesterday, today from 0:00, current */) {
             log.info('Req Dsf> The count of data is not 3 : ', dsfData.length);
             return self.removeAllDsfDb(geocode, callback);
         }
 
-        log.info('Req Dsf> [0] : ', dsfData[0].current.dateObj.toString(), ' | ' ,dsfData[0].current.date);
-        log.info('Req Dsf> [1] : ', dsfData[1].current.dateObj.toString(), ' | ' ,dsfData[1].current.date);
-        log.info('Req Dsf> [2] : ', dsfData[2].current.dateObj.toString(), ' | ' ,dsfData[2].current.date);
+        log.info('Req Dsf> [0] : ', dsfData[0].current.dateObj.toString(), ' | ', dsfData[0].current.date);
+        log.info('Req Dsf> [1] : ', dsfData[1].current.dateObj.toString(), ' | ', dsfData[1].current.date);
+        log.info('Req Dsf> [2] : ', dsfData[2].current.dateObj.toString(), ' | ', dsfData[2].current.date);
 
         // check date of db's data,
         // if it's not the same as current date, it would remove all db data and receive all again.
-        if(!self._isSameDay(dsfData[2].current.dateObj, timeOffset)){
+        if(!self._isSameDay(dsfData[2].current.dateObj, timeOffset)) {
             log.info('Req Dsf> It is not same date!');
             return self.removeAllDsfDb(geocode, callback);
         }
@@ -1602,10 +1593,11 @@ ConCollector.prototype._removeDsfDb = function(geocode, callback){
         }
         */
 
-        list[0].save(function(err){
-            if(err){
+        list[0].save(function(err) {
+            if (err) {
                 return self.removeAllDsfDb(geocode, callback);
-            }else{
+            }
+            else {
                 log.info('Req Dsf> Db data count : ', list[0].data.length);
                 return callback(null, list[0].data);
             }
