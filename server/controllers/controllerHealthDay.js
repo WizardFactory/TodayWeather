@@ -115,7 +115,7 @@ var insertDB = function(result, indexType, callback)  {
     var removeDate = kmaTimeLib.convertStringToDate(result[0].date.slice(0,8));
     removeDate.setDate(removeDate.getDate()-10);
 
-    healthDayKmaDB.remove({"indexType":indexType, "date": {$lt:removeDate} });
+    healthDayKmaDB.remove({"date": {$lt:removeDate} });
 
     var healthDataList = [];
     result.forEach(function(data) {
