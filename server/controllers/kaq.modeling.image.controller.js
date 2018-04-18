@@ -17,16 +17,25 @@ const ModelingImageInfo = require('../config/config.js').image.kaq_korea_modelin
 class KaqDustImageController{
     constructor(){
         this.colorTable = {
+            NO2: [],
+            O3: [],
             PM10: [],
-            PM25: []
+            PM25: [],
+            SO2: []
         };
         this.value_pos = {
-            PM10 : [45, 53, 62, 70, 79, 88, 97, 106, 115, 123, 132, 140, 149, 158, 157, 175, 184, 192, 200, 209, 218, 226, 234, 244, 254, 261, 270, 279, 288, 297, 305, 313],
-            PM25 : [45, 60, 72, 85, 98, 110, 125, 135, 149, 160, 172, 184, 198, 210, 225, 235, 249, 262, 274, 288, 298, 310]
+            NO2 : [45, 53, 62, 70, 79, 88, 97, 106, 115, 123, 132, 140, 149, 158, 167, 175, 184, 192, 200, 209, 218, 226, 234, 244, 254, 261, 270, 279, 288, 297, 305, 313],
+            O3 : [45, 53, 62, 70, 79, 88, 97, 106, 115, 123, 132, 140, 149, 158, 167, 175, 184, 192, 200, 209, 218, 226, 234, 244, 254, 261, 270, 279, 288, 297, 305, 313],
+            PM10 : [45, 53, 62, 70, 79, 88, 97, 106, 115, 123, 132, 140, 149, 158, 167, 175, 184, 192, 200, 209, 218, 226, 234, 244, 254, 261, 270, 279, 288, 297, 305, 313],
+            PM25 : [45, 60, 72, 85, 98, 110, 125, 135, 149, 160, 172, 184, 198, 210, 225, 235, 249, 262, 274, 288, 298, 310],
+            SO2: [48, 55, 64, 73, 82, 90, 98, 107, 115, 124, 130, 140, 149, 156, 165, 173, 182, 191, 199, 201, 210, 215, 223, 231, 241, 250, 258, 266, 274, 284, 292, 300, 309]
         };
         this.value = {
+            NO2 : [0.12, 0.1, 0.0965, 0.0932, 0.0899, 0.0866, 0.0833, 0.08, 0.0765, 0.0732, 0.0699, 0.0666, 0.0633, 0.06, 0.0565, 0.0532, 0.0499, 0.0466, 0.0433, 0.04, 0.0365, 0.0332, 0.0299, 0.0266, 0.0233, 0.020, 0.0165, 0.0132, 0.0099, 0.0066, 0.0033,0],
+            O3 : [0.2, 0.18, 0.174, 0.168, 0.162, 0.156, 0.15, 0.144, 0.138, 0.132, 0.126, 0.12, 0.114, 0.108, 0.102, 0.096, 0.09, 0.084, 0.078, 0.072, 0.066, 0.06, 0.054, 0.048, 0.042, 0.036, 0.03, 0.024, 0.018, 0.012, 0.006, 0],
             PM10 : [140, 120, 116, 112, 108, 104, 100, 96, 92, 88, 84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
-            PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0]
+            PM25 : [100, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32, 28, 24, 20, 16, 12, 8, 4, 0],
+            SO2: [0.0160, 0.0150, 0.0145, 0.0140, 0.0135, 0.0130, 0.0125, 0.0120, 0.0115, 0.0110, 0.0105, 0.0100, 0.0095, 0.0090, 0.0085, 0.0080, 0.0075, 0.0070, 0.0065, 0.0060, 0.0055, 0.0050, 0.0045, 0.0040, 0.0035, 0.0030, 0.0025, 0.0020, 0.0015, 0.0010, 0.0005, 0]
         };
         this.parser = new libKaqImageParser();
         this.imagePixels = {};
@@ -122,9 +131,9 @@ class KaqDustImageController{
         x = x + parseInt(ModelingImageInfo.pixel_pos.left);
         y = y + parseInt(ModelingImageInfo.pixel_pos.top);
 
-        log.debug('KAQ Modeling Image > lat: ', lat, 'lon: ', lon);
-        log.debug('KAQ Modeling Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
-        log.debug('KAQ Modeling Image > x: ', x, 'y: ',y);
+        log.info('KAQ Modeling Image > lat: ', lat, 'lon: ', lon);
+        log.info('KAQ Modeling Image > ', pixels.map_pixel_distance_width,  pixels.map_pixel_distance_height);
+        log.info('KAQ Modeling Image > x: ', x, 'y: ',y);
 
         if(!this._isValidPos(x, y)){
             return callback(new Error('KAQ Modeling Image > 4. Invalid X, Y : ', x, y));
@@ -192,7 +201,7 @@ class KaqDustImageController{
             forecast.push(item);
         }
 
-        log.debug('KAQ Modeling Image > result = ', JSON.stringify(forecast));
+        log.info('KAQ Modeling Image > result = ', JSON.stringify(forecast));
 
         if(callback){
             callback(null, {pubDate: this.imagePixels[type].pubDate, hourly: forecast});
@@ -212,8 +221,14 @@ class KaqDustImageController{
         // TODO : This is only for Testing, Need to implement!!!!!!
         if(type === 'PM10'){
             return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/PM10_Animation.gif'});
-        }else{
+        }else if(type === 'PM25') {
             return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/PM2_5_Animation.gif'});
+        }else if(type === 'NO2'){
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_NO2.09KM.Animation.fig'});
+        }else if(type === 'O3'){
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_O3.09KM.Animation.gif'});
+        }else{
+            return callback(undefined, {pubDate: '2017-11-10 11시 발표', path: './test/testImageParser/kma_modeling_SO2.09KM.Animation.gif'});
         }
 
     }
@@ -227,6 +242,10 @@ class KaqDustImageController{
     makeColorTable(type, pixels, callback){
         let x = 285;
         let value = this.value[type];
+
+        if(type == 'SO2'){
+            x = 275;
+        }
 
         this.colorTable[type] = [];
         for(var i=0 ; i < pixels.image_count ; i++){
@@ -367,9 +386,9 @@ class KaqDustImageController{
      * @param callback
      */
     startModelingImageMgr(callback){
-        this.taskModelingImageMgr(callback);
+        this.taskModelImgMgr(callback);
         this.task = setInterval(()=>{
-            this.taskModelingImageMgr(undefined);
+            this.taskModelImgMgr(undefined);
         }, 60 * 60 * 1000);
     };
 
@@ -467,6 +486,84 @@ class KaqDustImageController{
             }
         );
     };
+
+    getImage(imgType, callback) {
+        log.info('KAQ Modeling Image > get image ----------- : ', imgType);
+        async.waterfall(
+            [
+                (cb)=>{
+                    this.getImaggPath(imgType, (err, imgPath)=>{
+                        if(err === '_no_image_url_') {
+                            log.warn('KAQ Modeling Image > There is no image url');
+                            return cb(err);
+                        }
+                        if(err){
+                            log.error('KAQ Modeling Image > Failed to get', imgType, 'image : ', err);
+                            return cb(err);
+                        }
+                        log.info('KAQ Modeling Image > img Path : ', imgPath.path);
+                        this.imagePixels[imgType] = undefined;
+                        return cb(undefined, imgPath);
+                    });
+                },
+                (imgPath, cb)=>{
+                    if (imgPath == undefined) {
+                        log.error('KAQ Modeling Image > image path is undefined');
+                        return cb(null);
+                    }
+
+                    this.parseMapImage(imgPath.path, 'image/gif', (err, pixelMap)=>{
+                        if(err){
+                            return cb(err);
+                        }
+
+                        log.info('KAQ Modeling Image > Got pixel info for ', imgType);
+                        this.imagePixels[imgType] = {};
+                        this.imagePixels[imgType].pubDate = imgPath.pubDate;
+                        this.imagePixels[imgType].data = pixelMap;
+                        return cb(null, pixelMap);
+                    });
+                },
+                (pixelMap, cb)=>{
+                    if (pixelMap  == undefined) {
+                        log.error('KAQ Modeling PM10 Image > pixelMap is undefined');
+                        return cb(null);
+                    }
+                    this.makeColorTable(imgType, pixelMap, (err)=>{
+                        if(err){
+                            log.error('KAQ Modeling Image > Failed to get Grade Table:', imgType);
+                            return cb(err);
+                        }
+
+                        return cb(null);
+                    });
+                }
+            ],
+            (err)=>{
+                if(err){
+                    log.error('KAQ Modeling Image > fail to load image : ', imgType);
+                }
+
+                if(callback){
+                    callback(err, this.imagePixels[imgType]);
+                }
+            }
+        );
+    };
+
+    taskModelImgMgr(callback){
+        log.info('KAQ ModelImg > taskModelImgMgr -----------');
+        async.mapSeries(
+            ['NO2', 'O3', 'PM10', 'PM25', 'SO2'],
+            (dataType, cb)=>{
+                this.getImage(dataType, cb);
+            },
+            (err, results)=>{
+                log.info('KAQ ModelImage Count :', results.length);
+                callback(err, this.imagePixels);
+            }
+        );
+    }
 }
 
 module.exports = KaqDustImageController;
