@@ -155,7 +155,7 @@ angular.module('controller.searchctrl', [])
                     var indexOfCurrentPositionCity = i;
                     updateCurrentPosition().then(function(geoInfo) {
                         console.info(JSON.stringify({'newGeoInfo':geoInfo}));
-                        WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
+                        // WeatherInfo.updateCity(indexOfCurrentPositionCity, geoInfo);
                         WeatherInfo.reloadCity(indexOfCurrentPositionCity);
                         loadWeatherData(indexOfCurrentPositionCity);
                     });
@@ -532,7 +532,7 @@ angular.module('controller.searchctrl', [])
             showLoadingIndicator();
             updateCurrentPosition().then(function(geoInfo) {
                 console.log('updated current position');
-                WeatherInfo.updateCity(0, geoInfo);
+                //WeatherInfo.updateCity(0, geoInfo);
                 updateWeatherData(0).then(function (city) {
                     var index = WeatherInfo.getIndexOfCity(city);
                     if (index !== -1) {
