@@ -301,7 +301,9 @@
   "LOC_AIR_FORECAST_SOURCE" : "Prognosequelle",
   "LOC_KAQ_DESCRIPTION": "Atmospheric quality forecasting data is provided by Anyang University Climate Energy Environment Convergence Research Institute (abbreviated name: Anyang University, Climate Convergence Research Institute, Director: Professor of Environmental Energy Engineering)",
   "LOC_AIRKOREA_DESCRIPTION": "The Ministry of Environment of Korea is predicting the air pollution concentration to minimize the public health damage caused by air pollution.",
-  "LOC_SHOW_WEATHER_PHOTOS": "Show weather photos",
-  "LOC_OFF": "Off",
-  "LOC_ON": "On"
+  "LOC_SHOW_WEATHER_PHOTOS": "Wetter Fotos",
+  "LOC_OFF": "aus",
+  "LOC_ON": "auf",
+  "LOC_AIR_QUALITY_IS_GOOD" : "Die Luftqualität wird als gut bewertet",
+  "LOC_AIR_QUALITY_IS_MODERATE" : "Die Luftqualität wird als befriedigend bewertet"
 }
