@@ -117,21 +117,24 @@ kmaTownShortestController.prototype.checkPubDate = function(model, srcList, date
     try{
         async.mapSeries(srcList,
             function(src,cb){
-                modelKmaTownShortest.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1}).sort({"pubDate":1}).lean().exec(function(err, dbList){
-                    if(err){
-                        log.info('KMA Town ST> There is no data matached to : ', src);
-                        return cb(null, src);
-                    }
-
-                    for(var i=0 ; i<dbList.length ; i++){
-                        if(dbList[i].pubDate.getTime() === pubDate.getTime()){
-                            log.info('KMA Town ST> Already updated : ', src, dateString);
-                            return cb(null);
+                modelKmaTownShortest.find({'mCoord.mx': src.mx, 'mCoord.my': src.my}, {_id: 0, mCoord:1, pubDate:1})
+                    .sort({"pubDate":1})
+                    .lean()
+                    .exec(function(err, dbList) {
+                        if(err){
+                            log.info('KMA Town ST> There is no data matached to : ', src);
+                            return cb(null, src);
                         }
-                    }
 
-                    cb(null, src);
-                });
+                        for(var i=0 ; i<dbList.length ; i++){
+                            if(dbList[i].pubDate.getTime() === pubDate.getTime()){
+                                log.info('KMA Town ST> Already updated : ', src, dateString);
+                                return cb(null);
+                            }
+                        }
+
+                        cb(null, src);
+                    });
             },
             function(err, result){
                 result = result.filter(function(item){
@@ -166,4 +169,3 @@ kmaTownShortestController.prototype.remove = function (pubDate) {
 };
 
 module.exports = kmaTownShortestController;
-
