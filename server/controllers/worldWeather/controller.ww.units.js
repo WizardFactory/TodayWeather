@@ -8,6 +8,7 @@
 var UnitConverter = require('../../lib/unitConverter');
 var ControllerTown24 = require('../controllerTown24h');
 var kmaTimeLib = require('../../lib/kmaTimeLib');
+var AqiConverter = require('../../lib/aqi.converter');
 
 function ControllerWWUnits() {
     var self = this;
@@ -41,8 +42,11 @@ function ControllerWWUnits() {
                 value.time = new Date(value.date).getHours();
                 value.weather = value.desc;
                 self._convertThisTimeWeather(value, req.query);
-                self._makeArpltn(value);
+                self._makeArpltn(value, req.query);
             });
+            if (current.arpltn == undefined) {
+                log.error('Invalid arpltn ',{geocode: req.geocode});
+            }
 
             req.result.daily.forEach(function (value, index) {
                 if (value.date.substr(0,10) === currentDate.substr(0,10)) {
@@ -68,6 +72,7 @@ function ControllerWWUnits() {
             });
         }
         catch (err) {
+            err.message += ' ' + JSON.stringify(req.geocode);
             log.error(err);
         }
         next();
@@ -90,26 +95,32 @@ function ControllerWWUnits() {
     };
 }
 
-ControllerWWUnits.prototype._makeArpltn = function (current) {
-    current.arpltn = {};
+ControllerWWUnits.prototype._makeArpltn = function (current, units) {
+    var arpltn = current.arpltn = {};
 
     ['co', 'no2', 'o3', 'pm10', 'pm25', 'so2', 'aqi'].forEach(function (prefix) {
         ['Value', 'Grade', 'Str'].forEach(function (postfix) {
             var name = prefix+postfix;
             if (current.hasOwnProperty(name)) {
-                current.arpltn[name] = current[name];
+                arpltn[name] = current[name];
                 if (prefix === 'aqi') {
-                    current.arpltn['khai'+postfix] = current[name];
+                    arpltn['khai'+postfix] = current[name];
                 }
             }
         });
+        if (prefix === 'aqi') {
+            arpltn[prefix+'Index'] = arpltn[prefix+'Value'];
+        }
+        else {
+            arpltn[prefix+'Index'] = AqiConverter.value2index(units.airUnit, prefix, arpltn[prefix+'Value']);
+        }
     });
 
     if (current.hasOwnProperty('mTime')) {
-        current.arpltn.dataTime = current.mTime;
+        arpltn.dataTime = current.mTime;
     }
     if (current.hasOwnProperty('mCity')) {
-        current.arpltn.stationName = current.mCity;
+        arpltn.stationName = current.mCity;
     }
 };
 
