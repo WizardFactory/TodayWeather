@@ -1,10 +1,18 @@
 angular.module('service.storage', [])
     .factory('TwStorage', function($q, Util) {
         var obj = {};
-        var suiteName = 'group.net.wizardfactory.todayweather';
+        var suiteName;
         var oldSuiteName = 'net.wizardfactory.todayweather_preferences'; // only android
         var suitePrefs = null;
         var oldSuitePrefs = null;
+
+        if (clientConfig.package) {
+            suiteName = 'group.net.wizardfactory' + '.' + clientConfig.package.toLowerCase();
+            console.info(suiteName);
+        }
+        else {
+            console.error('unknown package:'+clientConfig.package);
+        }
 
         function _hasAppPreferences() {
             if (window.plugins == undefined || plugins.appPreferences == undefined) {

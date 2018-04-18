@@ -219,6 +219,9 @@ angular.module('service.weatherinfo', [])
             if (newCityInfo.airInfo) {
                 city.airInfo = newCityInfo.airInfo;
             }
+            if (newCityInfo.airInfoList) {
+                city.airInfoList = newCityInfo.airInfoList;
+            }
 
             if (city.currentPosition == true) {
                 if (newCityInfo.name) {

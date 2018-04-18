@@ -178,6 +178,15 @@ angular.module('controller.tabctrl', [])
                     Util.ga.trackEvent('action', 'tab', 'reload');
                 }
             }
+            else if ($location.path() === '/tab/weather' && forecastType === 'weather') {
+                if (gap <= 700) {
+                    console.warn('skip reload event on tab!!');
+                }
+                else {
+                    $scope.$broadcast('reloadEvent', 'tab');
+                    Util.ga.trackEvent('action', 'tab', 'reload');
+                }
+            }
             else {
                 if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
                     if (cordova.plugins.Keyboard.isVisible) {
@@ -191,6 +200,9 @@ angular.module('controller.tabctrl', [])
                             }
                             else if (forecastType === 'air') {
                                 $location.path('/tab/air');
+                            }
+                            else if (forecastType === 'weather') {
+                                $location.path('/tab/weather');
                             }
                             else {
                                 $location.path('/tab/forecast');
@@ -209,9 +221,20 @@ angular.module('controller.tabctrl', [])
                 else if (forecastType === 'air') {
                     $location.path('/tab/air');
                 }
+                else if (forecastType === 'weather') {
+                    $location.path('/tab/weather');
+                }
                 else {
                     Util.ga.trackEvent('action', 'error', 'unknownForecastType');
-                    $location.path('/tab/forecast');
+                    if (clientConfig.package === 'todayWeather') {
+                        $location.path('/tab/forecast');
+                    }
+                    else if (clientConfig.package === 'todayAir') {
+                        $location.path('/tab/air');
+                    }
+                    else {
+                        console.error('unknown package='+clientConfig.package);
+                    }
                 }
             }
         };
@@ -342,11 +365,16 @@ angular.module('controller.tabctrl', [])
                     if (res === true) { // autoSearch
                         Util.ga.trackEvent('action', 'click', 'auto search');
                         WeatherInfo.disableCity(false);
-                        if ($location.path() === '/tab/forecast') {
+
+                        var path = '/tab/forecast';
+                        if (clientConfig.package === 'todayAir') {
+                           path =  '/tab/air';
+                        }
+                        if ($location.path() === path) {
                             $scope.$broadcast('reloadEvent', 'startPopup');
                         }
                         else {
-                            $location.path('/tab/forecast');
+                            $location.path(path);
                         }
                     } else {
                         Util.ga.trackEvent('action', 'click', 'city search');

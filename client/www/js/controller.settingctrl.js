@@ -24,6 +24,10 @@ angular.module('controller.settingctrl', [])
                     refreshInterval: "0", //수동
                     showWeatherPhotos: '1' //켜짐
                 };
+                if (clientConfig.package === 'todayAir') {
+                    settingsInfo.startupPage = "3"; //대기정보
+                    settingsInfo.showWeatherPhotos = "0"; //off
+                }
                 TwStorage.set("settingsInfo", settingsInfo);
             }
 
@@ -146,7 +150,13 @@ angular.module('controller.settingctrl', [])
             var list;
             if (name === 'startupPage') {
                 title = 'LOC_STARTUP_PAGE';
-                list = ['0', '1', '2', '3'].map(function (value) {
+                if (clientConfig.package === 'todayWeather') {
+                    list = ['0', '1', '2', '3']
+                }
+                if (clientConfig.package === 'todayAir') {
+                   list = ['3', '4', '2']
+                }
+                list = list.map(function (value) {
                     return {label: $scope.getStartupPageValueStr(value), value: value};
                 });
             }
@@ -181,6 +191,8 @@ angular.module('controller.settingctrl', [])
                     return 'LOC_SAVED_LOCATIONS';
                 case '3':
                     return 'LOC_AIR_INFORMATION';
+                case '4':
+                    return 'LOC_WEATHER';
             }
             return 'N/A'
         };
