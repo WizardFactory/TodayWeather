@@ -1773,6 +1773,9 @@ function controllerWorldWeather() {
                     }
                 }
             });
+            if (req.result.thisTime.length === 0) {
+                log.error('DSF current > Fail to find current data', curDate, meta);
+            }
         }
 
         next();
